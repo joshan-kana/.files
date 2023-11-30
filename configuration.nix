@@ -103,6 +103,7 @@
   htop
   btop
   lshw
+  vscode
   intel-gpu-tools
   # davinci-resolve
 
