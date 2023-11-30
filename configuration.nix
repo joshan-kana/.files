@@ -93,6 +93,7 @@
   lf
   kitty
   brave
+  chromium
   spotify
   flatpak
   flatpak-builder
