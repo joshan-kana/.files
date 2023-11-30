@@ -106,6 +106,7 @@
   lshw
   vscode
   intel-gpu-tools
+  neofetch
   # davinci-resolve
 
   # window manager stuff
