@@ -108,6 +108,7 @@
   intel-gpu-tools
   neofetch
   mpv
+  home-manager
   # davinci-resolve
 
   # window manager stuff
