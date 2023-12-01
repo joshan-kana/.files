@@ -28,8 +28,8 @@
   virtualisation.docker = {
     enable = true;
   };
- 
- 
+
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
