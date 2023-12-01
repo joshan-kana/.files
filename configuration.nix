@@ -107,6 +107,7 @@
   vscode
   intel-gpu-tools
   neofetch
+  mpv
   # davinci-resolve
 
   # window manager stuff
