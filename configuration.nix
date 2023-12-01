@@ -5,9 +5,19 @@
 { config, pkgs, ... }:
 
 {
-  # Installing KDE Plasma
-  services.xserver.enable = true;
-  services.xserver.desktopManager.plasma5.enable = true;
+  # Configuring ZSH
+  # Installing ZSH
+  programs.zsh.enable = true;
+
+  # Setting it as the default shell
+  users.defaultUserShell = pkgs.zsh;
+
+
+  # Installing fonts
+  fonts.packages = with pkgs; [
+     (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
+  ];
+
 
   # Installing Hyprland
   programs.hyprland = {
