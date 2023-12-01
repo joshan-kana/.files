@@ -129,6 +129,18 @@
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
+  # Enabling sound
+  # rtkit is optional but recommended
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    # If you want to use JACK applications, uncomment this
+    #jack.enable = true;
+  };
+
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 47990 11434 11435 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
