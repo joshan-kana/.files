@@ -176,6 +176,7 @@
   # Stylix
 
   stylix.image = ./wallpaper.png;
+  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
   stylix.fonts = {
   serif = config.stylix.fonts.monospace;
   sansSerif = config.stylix.fonts.monospace;
