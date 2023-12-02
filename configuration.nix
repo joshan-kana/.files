@@ -112,7 +112,6 @@
   htop
   btop
   lshw
-  vscode
   intel-gpu-tools
   neofetch
   mpv
