@@ -138,7 +138,7 @@
   waybar
   mako
   libnotify
-  wofi
+  rofi-wayland
   swww
   ];
 
