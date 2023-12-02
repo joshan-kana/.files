@@ -15,14 +15,8 @@
 
   # Installing fonts
   fonts.packages = with pkgs; [
-     (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
+    (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
   ];
-
-
-  # Installing KDE Plasma
-  services.xserver.enable = true;
-  services.xserver.displayManager.sddm.enable = true;
-  services.xserver.desktopManager.plasma5.enable = true;
 
   # Installing Hyprland
   programs.hyprland = {
