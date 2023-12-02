@@ -14,9 +14,9 @@
 
 
   # Installing fonts
-  fonts.packages = with pkgs; [
-    (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
-  ];
+  # fonts.packages = with pkgs; [
+  #  (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
+  # ];
 
   # Installing Hyprland
   programs.hyprland = {
@@ -106,7 +106,6 @@
   flatpak
   flatpak-builder
   nvtop
-  dolphin
   waypipe
   sunshine
   htop
