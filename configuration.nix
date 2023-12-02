@@ -124,6 +124,14 @@
   neofetch
   mpv
   home-manager
+  bitwarden
+  thunderbird
+  obsidian
+  filelight
+  firefox
+  gimp
+  discord
+  stow
   # davinci-resolve
 
   # window manager stuff
@@ -131,6 +139,7 @@
   mako
   libnotify
   wofi
+  swww
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
