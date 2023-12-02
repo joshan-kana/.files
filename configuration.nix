@@ -130,7 +130,6 @@
   waybar
   mako
   libnotify
-  rofi-wayland
   swww
   networkmanagerapplet
   ];
