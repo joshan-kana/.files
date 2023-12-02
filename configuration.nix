@@ -177,5 +177,13 @@
   system.stateVersion = "23.05"; # Did you read the comment?
 
   nix.settings.experimental-features = [ "nix-command" "flakes"];
+  # Stylix
 
+  stylix.image = ./wallpaper.png;
+  stylix.fonts = {
+  serif = config.stylix.fonts.monospace;
+  sansSerif = config.stylix.fonts.monospace;
+  emoji = config.stylix.fonts.monospace;
+  };
+  stylix.polarity = "dark";
 }

@@ -3,16 +3,17 @@
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
+    stylix.url = "github:danth/stylix";
   };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs = { self, nixpkgs, stylix, ... }:
     let
       lib = nixpkgs.lib;
     in {
       nixosConfigurations = {
         nixos = lib.nixosSystem {
         system = "x86_64-linux";
-        modules = [./configuration.nix];
+        modules = [ stylix.nixosModules.stylix ./configuration.nix ];
         };
       };
   };
