@@ -119,7 +119,6 @@
   thunderbird
   obsidian
   filelight
-  firefox
   gimp
   discord
   stow
