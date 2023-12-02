@@ -100,7 +100,6 @@
   wget
   git
   lf
-  kitty
   brave
   chromium
   spotify
