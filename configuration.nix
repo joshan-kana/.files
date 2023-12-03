@@ -172,19 +172,33 @@
   system.stateVersion = "23.05"; # Did you read the comment?
 
   nix.settings.experimental-features = [ "nix-command" "flakes"];
-  # Stylix
-
+  # Stylix (colours)
   stylix.image = ./wallpaper.png;
   stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
   stylix.fonts = {
-  monospace.package = pkgs.fira-code;
-  monospace.name = "Fira Code";
-  serif = config.stylix.fonts.monospace;
-  sansSerif = config.stylix.fonts.monospace;
-  emoji = config.stylix.fonts.monospace;
+    serif = {
+      package = pkgs.nerdfonts;
+      name = "FiraCode Nerd Font";
+    };
+
+    sansSerif = {
+      package = pkgs.nerdfonts;
+      name = "FiraCode Nerd Font";
+    };
+
+    monospace = {
+      package = pkgs.nerdfonts;
+      name = "FiraCode Nerd Font";
+    };
+
+    emoji = {
+      package = pkgs.noto-fonts-emoji;
+      name = "Noto Color Emoji";
+    };
   };
   stylix.polarity = "dark";
 
   stylix.cursor.package = pkgs.bibata-cursors;
-  stylix.cursor.name = "Bibata-Modern-Ice";                                                     stylix.cursor.size = 30;
+  stylix.cursor.name = "Bibata-Modern-Ice";
+  stylix.cursor.size = 30;
 }
