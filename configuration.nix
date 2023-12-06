@@ -122,6 +122,7 @@
   gimp
   discord
   stow
+  dropbox
   # davinci-resolve
 
   # window manager stuff
