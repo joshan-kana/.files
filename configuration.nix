@@ -124,6 +124,7 @@
   stow
   qjackctl
   dropbox
+  xdg-utils
   # davinci-resolve
 
   # window manager stuff
