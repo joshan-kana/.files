@@ -123,6 +123,7 @@
   discord
   stow
   qjackctl
+  dropbox
   # davinci-resolve
 
   # window manager stuff
