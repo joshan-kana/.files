@@ -38,6 +38,9 @@
     enable = true;
   };
 
+  # Virtualisation
+  virtualisation.libvirtd.enable = true;
+  programs.virt-manager.enable = true;
 
   imports =
     [ # Include the results of the hardware scan.
@@ -86,7 +89,7 @@
   users.users.joshan = {
     isNormalUser = true;
     description = "Joshan Kana";
-    extraGroups = [ "networkmanager" "wheel" "docker"];
+    extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd"];
     packages = with pkgs; [];
   };
 
