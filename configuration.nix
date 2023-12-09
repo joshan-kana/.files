@@ -128,6 +128,7 @@
   qjackctl
   dropbox
   xdg-utils
+  wl-clipboard
   # davinci-resolve
 
   # window manager stuff
