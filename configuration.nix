@@ -16,6 +16,8 @@
   # Setting it as the default shell
   users.defaultUserShell = pkgs.zsh;
 
+  # Installing Twingate
+  services.twingate.enable = true;
 
   # Installing fonts
   # fonts.packages = with pkgs; [
