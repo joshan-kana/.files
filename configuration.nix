@@ -5,6 +5,10 @@
 { config, pkgs, ... }:
 
 {
+  # Enable display manager
+  services.xserver.enable = true;
+  services.xserver.displayManager.sddm.enable = true;
+
   # Configuring ZSH
   # Installing ZSH
   programs.zsh.enable = true;
