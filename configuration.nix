@@ -135,7 +135,6 @@
   discord
   stow
   qjackctl
-  dropbox
   xdg-utils
   wl-clipboard
   # davinci-resolve
