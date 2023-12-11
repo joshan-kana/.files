@@ -142,8 +142,8 @@
 
   # window manager stuff
   waybar
-  mako
-  libnotify
+  #mako
+  #libnotify
   swww
   networkmanagerapplet
   ];
