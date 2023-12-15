@@ -148,6 +148,9 @@
   networkmanagerapplet
   ];
 
+  # Added line below to build obsidian as it uses an EOL Electron version
+  nixpkgs.config.permittedInsecurePackages = ["electron-25.9.0"];
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
