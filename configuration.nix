@@ -37,6 +37,9 @@
     
     # hint at electron apps to use wayland
     NIXOS_OZONE_WL = "1";
+
+    # Setting the default editor
+    EDITOR = "nvim";
   };
 
   # Docker 
