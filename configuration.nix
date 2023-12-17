@@ -145,6 +145,8 @@
   xdg-utils
   wl-clipboard
   dropbox
+  quickemu
+  quickgui
   # davinci-resolve
 
   # window manager stuff
