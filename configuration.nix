@@ -12,6 +12,7 @@
   # Configuring ZSH
   # Installing ZSH
   programs.zsh.enable = true;
+  programs.zsh.enableBashCompletion = true;
 
   # Setting it as the default shell
   users.defaultUserShell = pkgs.zsh;
