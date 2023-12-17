@@ -17,6 +17,9 @@
   # Setting it as the default shell
   users.defaultUserShell = pkgs.zsh;
 
+  # Setting up man pages for apropos and man -k
+  documentation.man.generateCaches = true;
+
   # Installing Twingate
   services.twingate.enable = true;
 
