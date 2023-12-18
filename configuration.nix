@@ -147,6 +147,7 @@
   dropbox
   quickemu
   quickgui
+  killall
   # davinci-resolve
 
   # window manager stuff
