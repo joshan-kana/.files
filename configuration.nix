@@ -156,6 +156,7 @@
   #libnotify
   swww
   networkmanagerapplet
+  playerctl
   ];
 
   # Added line below to build obsidian as it uses an EOL Electron version
