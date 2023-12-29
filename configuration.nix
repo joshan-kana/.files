@@ -58,6 +58,9 @@
   # VMware
   virtualisation.vmware.host.enable = true;
 
+  # Polkit
+  security.polkit.enable = true;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
@@ -151,6 +154,7 @@
   quickemu
   quickgui
   killall
+  lxqt.lxqt-policykit
   # davinci-resolve
 
   # window manager stuff
