@@ -163,6 +163,7 @@
   killall
   lxqt.lxqt-policykit
   gparted
+  moonlight-qt
   # davinci-resolve
 
   # window manager stuff
