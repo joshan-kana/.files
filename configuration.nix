@@ -162,6 +162,7 @@
   quickgui
   killall
   lxqt.lxqt-policykit
+  gparted
   # davinci-resolve
 
   # window manager stuff
