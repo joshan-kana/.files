@@ -223,7 +223,7 @@
   nix.settings.experimental-features = [ "nix-command" "flakes"];
   # Stylix (colours)
   stylix.image = ./wallpaper.png;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/tokyo-night-dark.yaml";
+  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-hard.yaml";
   stylix.fonts = {
     serif = {
       package = pkgs.nerdfonts;
