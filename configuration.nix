@@ -68,6 +68,9 @@
   # Polkit
   security.polkit.enable = true;
 
+  # Flatpak
+  services.flatpak.enable = true;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
