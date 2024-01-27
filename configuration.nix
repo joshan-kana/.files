@@ -176,6 +176,7 @@
   swww
   networkmanagerapplet
   playerctl
+  grimblast
   ];
 
   # Added line below to build obsidian as it uses an EOL Electron version
