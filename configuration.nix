@@ -177,6 +177,9 @@
   networkmanagerapplet
   playerctl
   grimblast
+  nwg-panel
+  nwg-dock-hyprland
+  nwg-displays
   ];
 
   # Added line below to build obsidian as it uses an EOL Electron version
