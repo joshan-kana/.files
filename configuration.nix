@@ -71,6 +71,10 @@
   # Flatpak
   services.flatpak.enable = true;
 
+  # Performance
+  # auto-cpu-freq
+  services.auto-cpufreq.enable = true;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
