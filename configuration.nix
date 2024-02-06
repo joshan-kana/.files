@@ -184,6 +184,7 @@
   nwg-panel
   nwg-dock-hyprland
   nwg-displays
+  wlr-randr
   ];
 
   # Added line below to build obsidian as it uses an EOL Electron version
