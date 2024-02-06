@@ -171,7 +171,6 @@
   quickemu
   quickgui
   killall
-  lxqt.lxqt-policykit
   gparted
   moonlight-qt
   # davinci-resolve
@@ -180,6 +179,7 @@
   waybar
   #mako
   #libnotify
+  polkit-kde-agent
   swww
   networkmanagerapplet
   playerctl
