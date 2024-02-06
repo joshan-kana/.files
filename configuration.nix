@@ -75,6 +75,9 @@
   # auto-cpu-freq
   services.auto-cpufreq.enable = true;
 
+  # Dependency for ags mpris
+  services.gvfs.enable = true;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
