@@ -6,8 +6,8 @@
 
 {
   # Enable display manager
-  services.xserver.enable = true;
-  services.xserver.displayManager.sddm.enable = true;
+  # services.xserver.enable = true;
+  # services.xserver.displayManager.sddm.enable = true;
 
   # Configuring ZSH
   # Installing ZSH
@@ -130,6 +130,7 @@
     description = "Joshan Kana";
     extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd"];
     packages = with pkgs; [];
+    initialPassword = "test";
   };
 
   # Allow unfree packages
