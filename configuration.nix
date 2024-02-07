@@ -65,6 +65,14 @@
   # VMware
   virtualisation.vmware.host.enable = true;
 
+  # Config for nixos-rebuild build-vm
+  virtualisation.vmVariant = {
+    virtualisation = {
+      cores = 4;
+      memorySize = 8192;
+    };
+  };
+
   # Polkit
   security.polkit.enable = true;
 
