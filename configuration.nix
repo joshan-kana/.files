@@ -173,6 +173,7 @@
   killall
   gparted
   moonlight-qt
+  distrobox
   # davinci-resolve
 
   # window manager stuff
