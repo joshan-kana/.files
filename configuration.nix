@@ -146,8 +146,6 @@
   brave
   chromium
   spotify
-  flatpak
-  flatpak-builder
   nvtop
   waypipe
   sunshine
