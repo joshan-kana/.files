@@ -44,6 +44,9 @@
 
     # Setting the default editor
     EDITOR = "nvim";
+
+    # Start Hyprland on Nvidia
+    WLR_DRM_DEVICES = "/dev/dri/card1";
   };
 
   # Docker 
