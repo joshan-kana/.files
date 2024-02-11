@@ -46,7 +46,7 @@
     EDITOR = "nvim";
 
     # Start Hyprland on Nvidia
-    WLR_DRM_DEVICES = "/dev/dri/card1";
+    # WLR_DRM_DEVICES = "/dev/dri/card1";
   };
 
   # Docker 
