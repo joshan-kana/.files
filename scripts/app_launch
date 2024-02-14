@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-rofi -combi-modi window#drun#ssh -show-icons -show combi
+tofi-drun --drun-launch=true
