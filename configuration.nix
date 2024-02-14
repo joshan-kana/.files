@@ -199,6 +199,7 @@
   nwg-dock-hyprland
   nwg-displays
   wlr-randr
+  tofi
   ];
 
   # Added line below to build obsidian as it uses an EOL Electron version
