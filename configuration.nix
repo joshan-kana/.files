@@ -89,6 +89,7 @@
   # Dependency for ags mpris
   services.gvfs.enable = true;
 
+  # Set linux kernel to use to following interpreter for app images
   boot.binfmt.registrations.appimage = {
     wrapInterpreterInShell = false;
     interpreter = "${pkgs.appimage-run}/bin/appimage-run";
