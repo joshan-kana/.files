@@ -193,6 +193,7 @@
   gparted
   moonlight-qt
   distrobox
+  bottles
   # davinci-resolve
 
   # window manager stuff
