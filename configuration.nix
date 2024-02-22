@@ -99,6 +99,9 @@
     magicOrExtension = ''\x7fELF....AI\x02'';
   };
 
+  # Setting the linux kernel
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
