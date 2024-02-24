@@ -198,6 +198,7 @@
   moonlight-qt
   distrobox
   bottles
+  upscayl
   # davinci-resolve
 
   # window manager stuff
