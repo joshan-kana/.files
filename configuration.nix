@@ -205,7 +205,7 @@
   waybar
   #mako
   #libnotify
-  polkit-kde-agent
+  polkit_gnome
   swww
   networkmanagerapplet
   playerctl
