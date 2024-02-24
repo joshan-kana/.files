@@ -102,6 +102,9 @@
   # Setting the linux kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
+  # Settings for swaylock to work
+  security.pam.services.swaylock = {};
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
