@@ -286,7 +286,7 @@
   };
   stylix.polarity = "dark";
 
-  stylix.cursor.package = pkgs.bibata-cursors;
-  stylix.cursor.name = "Bibata-Modern-Ice";
+  stylix.cursor.package = pkgs.google-cursor;
+  stylix.cursor.name = "GoogleDot-Black";
   stylix.cursor.size = 30;
 }
