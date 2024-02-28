@@ -201,7 +201,7 @@
   moonlight-qt
   distrobox
   bottles
-  upscayl
+  # upscayl
   # davinci-resolve
 
   # window manager stuff
@@ -219,9 +219,6 @@
   wlr-randr
   tofi
   ];
-
-  # Added line below to build obsidian as it uses an EOL Electron version
-  nixpkgs.config.permittedInsecurePackages = ["electron-25.9.0"];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
