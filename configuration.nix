@@ -201,6 +201,7 @@
   moonlight-qt
   distrobox
   bottles
+  tree
   # upscayl
   # davinci-resolve
 
