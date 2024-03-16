@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, spicetify-nix, ... }:
 
 {
   # Enable display manager
@@ -261,6 +261,33 @@
   system.stateVersion = "23.05"; # Did you read the comment?
 
   nix.settings.experimental-features = [ "nix-command" "flakes"];
+
+  # spicetify
+  programs.spicetify = {
+    enable = true;
+    theme = spicetify-nix.packages.${pkgs.system}.default.themes.Dribbblish;
+    colorScheme = "custom";
+
+    customColorScheme = {
+      text = "${config.lib.stylix.colors.base07}";
+      subtext = "${config.lib.stylix.colors.base07}";
+      sidebar-text = "${config.lib.stylix.colors.base07}";
+      main = "${config.lib.stylix.colors.base00}";
+      sidebar = "${config.lib.stylix.colors.base01}";
+      player = "${config.lib.stylix.colors.base01}";
+      card = "${config.lib.stylix.colors.base01}";
+      shadow = "${config.lib.stylix.colors.base00}";
+      selected-row = "${config.lib.stylix.colors.base0A}";
+      button = "${config.lib.stylix.colors.base0C}";
+      button-active = "${config.lib.stylix.colors.base0B}";
+      button-disabled = "${config.lib.stylix.colors.base0D}";
+      tab-active = "${config.lib.stylix.colors.base04}";
+      notification = "${config.lib.stylix.colors.base03}";
+      notification-error = "${config.lib.stylix.colors.base08}";
+      misc = "${config.lib.stylix.colors.base03}";
+    };
+  };
+
   # Stylix (colours)
   stylix.image = ./wallpaper.png;
   stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-hard.yaml";
