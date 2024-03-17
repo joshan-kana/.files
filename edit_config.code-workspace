@@ -3,9 +3,9 @@
 		{
 			"path": "."
 		},
-		{
-			"path": "../.config/home-manager"
-		}
+		// {
+		// 	"path": "../.config/home-manager"
+		// }
 	],
 	"settings": {}
 }
