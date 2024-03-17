@@ -295,6 +295,8 @@
       sysedit = "code /home/joshan/.files";
       # Update system
       sysup = "sudo nixos-rebuild --flake /home/joshan/.files  --impure switch";
+      # Test system
+      systest = "sudo nixos-rebuild --flake /home/joshan/.files  --impure test";
 
       # edit hyprland
       hyedit = "code /home/joshan/.config/hypr";
