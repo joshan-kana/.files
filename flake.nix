@@ -22,9 +22,16 @@
       url = "github:the-argus/spicetify-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Plasma-manager: a nix flake for managing KDE Plasma
+    plasma-manager = {
+      url = "github:pjones/plasma-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, ... }:
+  outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... }:
     let
       lib = nixpkgs.lib;
     in {
@@ -38,7 +45,10 @@
             home-manager.nixosModules.home-manager {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
-              home-manager.users.joshan = import ./home.nix;
+              home-manager.users.joshan.imports = [
+                plasma-manager.homeManagerModules.plasma-manager
+                ./home.nix
+              ];
 
               # Optionally, use home-manager.extraSpecialArgs to pass
               # arguments to home.nix
