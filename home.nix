@@ -74,7 +74,6 @@
     gnome.nautilus
     # vscode
     vlc
-    spotify-tui
     youtube-tui
     glow
     ulauncher
