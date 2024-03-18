@@ -68,7 +68,7 @@
   # Allow non-free pkgs
   nixpkgs.config.allowUnfree = true;
 
-# List of programs
+  # List of programs
   home.packages = with pkgs; [
     github-desktop
     gnome.nautilus
@@ -85,16 +85,13 @@
     pavucontrol
   ];
 
-# My first set of dotfiles
-# git
+  # My first set of dotfiles
+  # git
   programs.git = {
     enable = true;
     userName = "Joshan Kana";
     userEmail = "joshankana@gmail.com";
   };
-
-
-
 
   # Desktop
   # Compositor: Hyprland
