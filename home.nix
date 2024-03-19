@@ -222,7 +222,7 @@
     settings = {
       global = {
         mouse_right_click = "do_action";
-	dmenu = "/home/joshan/.nix-profile/bin/rofi -dmenu";
+        dmenu = "/home/joshan/.nix-profile/bin/rofi -dmenu";
       };
     };
   };
