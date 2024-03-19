@@ -159,50 +159,50 @@
     settings = {
       mainBar = {
         layer = "top";
-	spacing = 10;
-	modules-left = ["hyprland/workspaces" "mpris"];
-        modules-center = ["clock"];
-        modules-right = ["backlight" "wireplumber" "battery" "tray"];
+	      spacing = 10;
+	      modules-left = ["hyprland/workspaces" "mpris"];
+              modules-center = ["clock"];
+              modules-right = ["backlight" "wireplumber" "battery" "tray"];
 
-	"hyprland/workspaces" = {
-	  on-scroll-up = "hyprctl dispatch workspace e+1";
-	  on-scroll-down = "hyprctl dispatch workspace e-1";
-	};
+	      "hyprland/workspaces" = {
+	        on-scroll-up = "hyprctl dispatch workspace e+1";
+	        on-scroll-down = "hyprctl dispatch workspace e-1";
+	      };
 
-	"mpris" = {
-	  interval = 1;
-	  format = "{player}: {status_icon} {position}/{length}";
-	  status-icons = {
-	    playing = "▶";
-	    paused = "⏸";
-	  };
-	};
+  	    "mpris" = {
+  	      interval = 1;
+  	      format = "{player}: {status_icon} {position}/{length}";
+  	      status-icons = {
+  	        playing = "▶";
+  	        paused = "⏸";
+  	      };
+  	    };
 
-	"clock" = {
-	  format = "{:⎈ %a, %b %d |  %R}";
-	};
+  	    "clock" = {
+  	      format = "{:⎈ %a, %b %d |  %R}";
+  	    };
 
-	"backlight" = {
-	  format = "{percent}% {icon}";
-	  format-icons = ["" ""];
-	  scroll-step = 0.35;
-	};
+  	    "backlight" = {
+  	      format = "{percent}% {icon}";
+  	      format-icons = ["" ""];
+  	      scroll-step = 0.35;
+  	    };
 
-	"battery" = {
-	  interval = 120;
-	  format = "{capacity}% {icon}";
-	  format-icons = ["" "" "" "" ""];
-	};
+  	    "battery" = {
+  	      interval = 120;
+  	      format = "{capacity}% {icon}";
+  	      format-icons = ["" "" "" "" ""];
+  	    };
 
-	"wireplumber" = {
-	  format = "{volume}% {icon}";
-	  format-icons = ["" "" ""];
-	  scroll-step = 0.35;
-	};
+        "wireplumber" = {
+          format = "{volume}% {icon}";
+          format-icons = ["" "" ""];
+          scroll-step = 0.35;
+        };
 
-	"tray" = {
-	  spacing = 10;
-	};
+  	    "tray" = {
+  	      spacing = 10;
+  	    };
       };
     };
   };
