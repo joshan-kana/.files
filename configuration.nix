@@ -204,6 +204,7 @@
   distrobox
   bottles
   tree
+  mullvad-vpn
   # upscayl
   # davinci-resolve
 
