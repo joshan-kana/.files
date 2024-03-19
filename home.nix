@@ -455,7 +455,6 @@
     smoothing.monstercat = 1;
     general.bar_width = 1;
     general.bar_spacing = 0;
-    output.xaxis = "frequency";
     output.channels = "mono";
     
     # Colours
