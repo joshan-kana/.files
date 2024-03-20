@@ -122,7 +122,7 @@
   # Standard X11 rofi seems uneffected
   programs.rofi = {
     enable = true;
-    package = pkgs.rofi;
+    package = pkgs.rofi-wayland;
     terminal = "kitty";
     plugins = with pkgs; [
       rofi-calc
