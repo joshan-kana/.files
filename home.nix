@@ -255,7 +255,7 @@
       enable_audio_bell no
 
       input_delay 0
-      touch_scroll_multiplier 2.0
+      touch_scroll_multiplier 3.0
     '';
   };
 
