@@ -107,6 +107,9 @@
   # Settings for swaylock to work
   security.pam.services.swaylock = {};
 
+  # Service for mullvad vpn
+  services.mullvad-vpn.enable = true;
+
   imports =
     [ # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
