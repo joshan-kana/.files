@@ -70,19 +70,6 @@
 
   # List of programs
   home.packages = with pkgs; [
-    github-desktop
-    gnome.nautilus
-    # vscode
-    vlc
-    youtube-tui
-    glow
-    ulauncher
-    brightnessctl
-    jetbrains.pycharm-professional
-    floorp
-    libreoffice
-    onlyoffice-bin
-    pavucontrol
   ];
 
   # My first set of dotfiles

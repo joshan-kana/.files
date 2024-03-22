@@ -207,6 +207,18 @@
   tree
   mullvad-vpn
   warp-terminal
+  github-desktop
+  gnome.nautilus
+  vlc
+  youtube-tui
+  glow
+  ulauncher
+  brightnessctl
+  jetbrains.pycharm-professional
+  floorp
+  libreoffice
+  onlyoffice-bin
+  pavucontrol
   # upscayl
   # davinci-resolve
 
