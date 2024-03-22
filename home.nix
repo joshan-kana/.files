@@ -294,9 +294,6 @@
       # Test system
       systest = "sudo nixos-rebuild --flake /home/joshan/.files  --impure test";
 
-      # edit hyprland
-      hyedit = "code /home/joshan/.config/hypr";
-
       # Launch Programs
       # Hyprland
       # Hyprland on Intel
