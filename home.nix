@@ -387,6 +387,14 @@
   # Bat (cat clone)
   programs.bat.enable = true; 
 
+  # System monitors (TUI)
+
+  # Htop
+  programs.htop.enable = true;
+
+  # Btop
+  programs.btop.enable = true;
+
   # Text editors
   # Neovim
   programs.neovim = {

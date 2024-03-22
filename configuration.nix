@@ -181,8 +181,6 @@
   nvtop
   waypipe
   sunshine
-  htop
-  btop
   lshw
   intel-gpu-tools
   neofetch
