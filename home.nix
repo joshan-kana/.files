@@ -415,7 +415,12 @@
   # Brave (add to home.packages)
 
   # Media Players
-  programs.mpv.enable = true;
+  programs.mpv = {
+    enable = true;
+    scripts = with pkgs; [
+      mpvScripts.mpris
+    ];
+  };
 
   # Music Streaming Setup
   # Mopidy (MPD)
