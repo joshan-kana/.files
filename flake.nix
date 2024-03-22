@@ -47,6 +47,7 @@
                 plasma-manager.homeManagerModules.plasma-manager
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
+                ./desktop/plasma/plasma.nix
               ];
 
               # Optionally, use home-manager.extraSpecialArgs to pass
