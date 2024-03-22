@@ -206,6 +206,7 @@
   bottles
   tree
   mullvad-vpn
+  warp-terminal
   # upscayl
   # davinci-resolve
 
