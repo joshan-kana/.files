@@ -96,7 +96,7 @@
   # Desktop
   # Compositor: Hyprland
   home.file.".config/hypr/hyprland.conf" = {
-    source = ./hyprland/hyprland.conf;
+    source = ./desktop/hyprland/hyprland.conf;
     onChange = "/run/current-system/sw/bin/hyprctl reload";
   };
 
