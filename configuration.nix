@@ -219,6 +219,7 @@
   libreoffice
   onlyoffice-bin
   pavucontrol
+  python3
   # upscayl
   # davinci-resolve
 
