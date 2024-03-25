@@ -220,6 +220,7 @@
   onlyoffice-bin
   pavucontrol
   python3
+  trash-cli
   # upscayl
   # davinci-resolve
 
