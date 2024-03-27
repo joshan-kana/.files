@@ -37,10 +37,10 @@
   };
 
   environment.sessionVariables = {
-    
+
     # invisible cursor fix
     WLR_NO_HARDWARE_CURSORS = "1";
-    
+
     # hint at electron apps to use wayland
     NIXOS_OZONE_WL = "1";
 
@@ -105,13 +105,14 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # Settings for swaylock to work
-  security.pam.services.swaylock = {};
+  security.pam.services.swaylock = { };
 
   # Service for mullvad vpn
   services.mullvad-vpn.enable = true;
 
   imports =
-    [ # Include the results of the hardware scan.
+    [
+      # Include the results of the hardware scan.
       /etc/nixos/hardware-configuration.nix
     ];
 
@@ -160,8 +161,8 @@
   users.users.joshan = {
     isNormalUser = true;
     description = "Joshan Kana";
-    extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd"];
-    packages = with pkgs; [];
+    extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd" ];
+    packages = with pkgs; [ ];
     initialPassword = "test";
   };
 
@@ -171,73 +172,73 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  wget
-  git
-  lf
-  brave
-  chromium
-  spotify
-  nvtop
-  waypipe
-  sunshine
-  lshw
-  intel-gpu-tools
-  neofetch
-  mpv
-  home-manager
-  bitwarden
-  thunderbird
-  obsidian
-  filelight
-  gimp
-  discord
-  stow
-  qjackctl
-  xdg-utils
-  wl-clipboard
-  dropbox
-  quickemu
-  quickgui
-  killall
-  gparted
-  moonlight-qt
-  distrobox
-  bottles
-  tree
-  mullvad-vpn
-  warp-terminal
-  github-desktop
-  gnome.nautilus
-  vlc
-  youtube-tui
-  glow
-  ulauncher
-  brightnessctl
-  jetbrains.pycharm-professional
-  floorp
-  libreoffice
-  onlyoffice-bin
-  pavucontrol
-  python3
-  trash-cli
-  # upscayl
-  # davinci-resolve
+    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    wget
+    git
+    lf
+    brave
+    chromium
+    spotify
+    nvtop
+    waypipe
+    sunshine
+    lshw
+    intel-gpu-tools
+    neofetch
+    mpv
+    home-manager
+    bitwarden
+    thunderbird
+    obsidian
+    filelight
+    gimp
+    discord
+    stow
+    qjackctl
+    xdg-utils
+    wl-clipboard
+    dropbox
+    quickemu
+    quickgui
+    killall
+    gparted
+    moonlight-qt
+    distrobox
+    bottles
+    tree
+    mullvad-vpn
+    warp-terminal
+    github-desktop
+    gnome.nautilus
+    vlc
+    youtube-tui
+    glow
+    ulauncher
+    brightnessctl
+    jetbrains.pycharm-professional
+    floorp
+    libreoffice
+    onlyoffice-bin
+    pavucontrol
+    python3
+    trash-cli
+    # upscayl
+    # davinci-resolve
 
-  # window manager stuff
-  waybar
-  #mako
-  #libnotify
-  polkit_gnome
-  swww
-  networkmanagerapplet
-  playerctl
-  grimblast
-  nwg-panel
-  nwg-dock-hyprland
-  nwg-displays
-  wlr-randr
-  tofi
+    # window manager stuff
+    waybar
+    #mako
+    #libnotify
+    polkit_gnome
+    swww
+    networkmanagerapplet
+    playerctl
+    grimblast
+    nwg-panel
+    nwg-dock-hyprland
+    nwg-displays
+    wlr-randr
+    tofi
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -279,7 +280,7 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "23.05"; # Did you read the comment?
 
-  nix.settings.experimental-features = [ "nix-command" "flakes"];
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Stylix (colours)
   stylix.image = ./wallpaper.png;

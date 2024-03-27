@@ -34,13 +34,15 @@
   outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... }:
     let
       lib = nixpkgs.lib;
-    in {
+    in
+    {
       nixosConfigurations = {
         nixos = lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             stylix.nixosModules.stylix
-            home-manager.nixosModules.home-manager {
+            home-manager.nixosModules.home-manager
+            {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
               home-manager.users.joshan.imports = [

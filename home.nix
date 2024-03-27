@@ -16,22 +16,22 @@
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-    # # Adds the 'hello' command to your environment. It prints a friendly
-    # # "Hello, world!" when run.
-    # pkgs.hello
+  # # Adds the 'hello' command to your environment. It prints a friendly
+  # # "Hello, world!" when run.
+  # pkgs.hello
 
-    # # It is sometimes useful to fine-tune packages, for example, by applying
-    # # overrides. You can do that directly here, just don't forget the
-    # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
-    # # fonts?
-    # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
+  # # It is sometimes useful to fine-tune packages, for example, by applying
+  # # overrides. You can do that directly here, just don't forget the
+  # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
+  # # fonts?
+  # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
-    # # You can also create simple shell scripts directly inside your
-    # # configuration. For example, this adds a command 'my-hello' to your
-    # # environment:
-    # (pkgs.writeShellScriptBin "my-hello" ''
-    #   echo "Hello, ${config.home.username}!"
-    # '')
+  # # You can also create simple shell scripts directly inside your
+  # # configuration. For example, this adds a command 'my-hello' to your
+  # # environment:
+  # (pkgs.writeShellScriptBin "my-hello" ''
+  #   echo "Hello, ${config.home.username}!"
+  # '')
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
@@ -139,50 +139,50 @@
     settings = {
       mainBar = {
         layer = "top";
-	      spacing = 10;
-	      modules-left = ["hyprland/workspaces" "mpris"];
-              modules-center = ["clock"];
-              modules-right = ["backlight" "wireplumber" "battery" "tray"];
+        spacing = 10;
+        modules-left = [ "hyprland/workspaces" "mpris" ];
+        modules-center = [ "clock" ];
+        modules-right = [ "backlight" "wireplumber" "battery" "tray" ];
 
-	      "hyprland/workspaces" = {
-	        on-scroll-up = "hyprctl dispatch workspace e+1";
-	        on-scroll-down = "hyprctl dispatch workspace e-1";
-	      };
+        "hyprland/workspaces" = {
+          on-scroll-up = "hyprctl dispatch workspace e+1";
+          on-scroll-down = "hyprctl dispatch workspace e-1";
+        };
 
-  	    "mpris" = {
-  	      interval = 1;
-  	      format = "{player}: {status_icon} {position}/{length}";
-  	      status-icons = {
-  	        playing = "▶";
-  	        paused = "⏸";
-  	      };
-  	    };
+        "mpris" = {
+          interval = 1;
+          format = "{player}: {status_icon} {position}/{length}";
+          status-icons = {
+            playing = "▶";
+            paused = "⏸";
+          };
+        };
 
-  	    "clock" = {
-  	      format = "⎈ {:%a, %b %d |  %R}";
-  	    };
+        "clock" = {
+          format = "⎈ {:%a, %b %d |  %R}";
+        };
 
-  	    "backlight" = {
-  	      format = "{percent}% {icon}";
-  	      format-icons = ["" ""];
-  	      scroll-step = 0.35;
-  	    };
-
-  	    "battery" = {
-  	      interval = 120;
-  	      format = "{capacity}% {icon}";
-  	      format-icons = ["" "" "" "" ""];
-  	    };
-
-        "wireplumber" = {
-          format = "{volume}% {icon}";
-          format-icons = ["" "" ""];
+        "backlight" = {
+          format = "{percent}% {icon}";
+          format-icons = [ "" "" ];
           scroll-step = 0.35;
         };
 
-  	    "tray" = {
-  	      spacing = 10;
-  	    };
+        "battery" = {
+          interval = 120;
+          format = "{capacity}% {icon}";
+          format-icons = [ "" "" "" "" "" ];
+        };
+
+        "wireplumber" = {
+          format = "{volume}% {icon}";
+          format-icons = [ "" "" "" ];
+          scroll-step = 0.35;
+        };
+
+        "tray" = {
+          spacing = 10;
+        };
       };
     };
   };
@@ -365,7 +365,7 @@
   # File explorer
   programs.lf.enable = true;
   # Bat (cat clone)
-  programs.bat.enable = true; 
+  programs.bat.enable = true;
 
   # System monitors (TUI)
 
@@ -387,7 +387,7 @@
     extraConfig = ''
       autocmd BufRead * autocmd FileType <buffer> ++once
       \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
-      '';
+    '';
   };
 
   # VSCode
@@ -421,8 +421,8 @@
     settings = {
       mpd = {
         enabled = true;
-	hostname = "127.0.0.1";
-	port = "6600";
+        hostname = "127.0.0.1";
+        port = "6600";
       };
     };
   };
@@ -446,7 +446,7 @@
     general.bar_width = 1;
     general.bar_spacing = 0;
     output.channels = "mono";
-    
+
     # Colours
     color.gradient = 1;
     color.gradient_count = 8;
@@ -491,8 +491,8 @@
   stylix.cursor.name = "GoogleDot-Black";
   stylix.cursor.size = 30;
   gtk.iconTheme = {
-      package = (pkgs.catppuccin-papirus-folders.override { flavor = "mocha"; accent = "peach"; });
-      name  = "Papirus-Dark";
+    package = (pkgs.catppuccin-papirus-folders.override { flavor = "mocha"; accent = "peach"; });
+    name = "Papirus-Dark";
   };
 
   # spicetify
