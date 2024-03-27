@@ -32,7 +32,7 @@
   programs.eww = {
     enable = true;
     package = pkgs.eww;
-    configDir = ./eww;
+    configDir = ./desktop/eww;
   };
 
   # Application launcher: Wofi
