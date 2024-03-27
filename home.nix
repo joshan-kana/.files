@@ -80,13 +80,6 @@
     userEmail = "joshankana@gmail.com";
   };
 
-  # Desktop
-  # Compositor: Hyprland
-  home.file.".config/hypr/hyprland.conf" = {
-    source = ./desktop/hyprland/hyprland.conf;
-    onChange = "/run/current-system/sw/bin/hyprctl reload";
-  };
-
   # Widgets: Eww
   programs.eww = {
     enable = true;

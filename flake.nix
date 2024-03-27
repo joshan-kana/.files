@@ -48,6 +48,7 @@
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
                 ./desktop/plasma/plasma.nix
+                ./desktop/hyprland/hyprland.nix
               ];
 
               # Optionally, use home-manager.extraSpecialArgs to pass
