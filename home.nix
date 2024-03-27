@@ -1,66 +1,14 @@
 { config, pkgs, spicetify-nix, ... }:
 
 {
-  # Home Manager needs a bit of information about you and the paths it should
-  # manage.
+  # User information
   home.username = "joshan";
   home.homeDirectory = "/home/joshan";
-  # This value determines the Home Manager release that your configuration is
-  # compatible with. This helps avoid breakage when a new Home Manager release
-  # introduces backwards incompatible changes.
-  #
+
   # You should not change this value, even if you update Home Manager. If you do
   # want to update the value, then make sure to first check the Home Manager
   # release notes.
   home.stateVersion = "23.05"; # Please read the comment before changing.
-
-  # The home.packages option allows you to install Nix packages into your
-  # environment.
-  # # Adds the 'hello' command to your environment. It prints a friendly
-  # # "Hello, world!" when run.
-  # pkgs.hello
-
-  # # It is sometimes useful to fine-tune packages, for example, by applying
-  # # overrides. You can do that directly here, just don't forget the
-  # # parentheses. Maybe you want to install Nerd Fonts with a limited number of
-  # # fonts?
-  # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
-
-  # # You can also create simple shell scripts directly inside your
-  # # configuration. For example, this adds a command 'my-hello' to your
-  # # environment:
-  # (pkgs.writeShellScriptBin "my-hello" ''
-  #   echo "Hello, ${config.home.username}!"
-  # '')
-
-  # Home Manager is pretty good at managing dotfiles. The primary way to manage
-  # plain files is through 'home.file'.
-  home.file = {
-    # # Building this configuration will create a copy of 'dotfiles/screenrc' in
-    # # the Nix store. Activating the configuration will then make '~/.screenrc' a
-    # # symlink to the Nix store copy.
-    # ".screenrc".source = dotfiles/screenrc;
-
-    # # You can also set the file content immediately.
-    # ".gradle/gradle.properties".text = ''
-    #   org.gradle.console=verbose
-    #   org.gradle.daemon.idletimeout=3600000
-    # '';
-  };
-
-  # You can also manage environment variables but you will have to manually
-  # source
-  #
-  #  ~/.nix-profile/etc/profile.d/hm-session-vars.sh
-  #
-  # or
-  #
-  #  /etc/profiles/per-user/joshan/etc/profile.d/hm-session-vars.sh
-  #
-  # if you don't want to manage your shell through Home Manager.
-  home.sessionVariables = {
-    # EDITOR = "emacs";
-  };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
@@ -459,40 +407,6 @@
     color.gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
     color.gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
     color.gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
-  };
-
-  # Stylix (colours)
-  stylix.image = ./wallpaper.png;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-hard.yaml";
-  stylix.fonts = {
-    serif = {
-      package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font";
-    };
-
-    sansSerif = {
-      package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font";
-    };
-
-    monospace = {
-      package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font";
-    };
-
-    emoji = {
-      package = pkgs.noto-fonts-emoji;
-      name = "Noto Color Emoji";
-    };
-  };
-  stylix.polarity = "dark";
-
-  stylix.cursor.package = pkgs.google-cursor;
-  stylix.cursor.name = "GoogleDot-Black";
-  stylix.cursor.size = 30;
-  gtk.iconTheme = {
-    package = (pkgs.catppuccin-papirus-folders.override { flavor = "mocha"; accent = "peach"; });
-    name = "Papirus-Dark";
   };
 
   # spicetify
