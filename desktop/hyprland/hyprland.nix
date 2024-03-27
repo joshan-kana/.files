@@ -56,7 +56,7 @@
     exec-once = dropbox
 
     # Polkit
-    exec-once = /nix/store/$(ls -la /nix/store | grep polkit-gnome-0 | grep '^d' | awk '{print $9}')/libexec/polkit-gnome-authentication-agent-1
+    exec-once = ${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1
 
     # Source a file (multi-file configs)
     # source = ~/.config/hypr/myColors.conf
