@@ -389,14 +389,9 @@
       \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
       '';
   };
+
+  # VSCode
   programs.vscode.enable = true;
-  # programs.vscode.package = (pkgs.vscode.override{ isInsiders = true; }).overrideAttrs (oldAttrs: rec {
-  #   src = (builtins.fetchTarball {
-  #     url = "https://code.visualstudio.com/sha/download?build=insider&os=linux-x64";
-  #     sha256 = "1xhni4bxl0h5i57z78k1xnw6bzp5svbfh20sbb3xga0vsgrm4vkm";
-  #   });
-  #   version = "latest";
-  # });
 
   # Disabling stylix for vscode
   stylix.targets.vscode.enable = false;
