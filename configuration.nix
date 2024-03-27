@@ -222,6 +222,7 @@
     pavucontrol
     python3
     trash-cli
+    nixpkgs-fmt
     # upscayl
     # davinci-resolve
 
