@@ -434,4 +434,10 @@
       misc = "${config.lib.stylix.colors.base03}";
     };
   };
+
+  # GTK Icon Theme
+  gtk.iconTheme = {
+    package = pkgs.gruvbox-dark-icons-gtk;
+    name = "oomox-gruvbox-dark";
+  };
 }
