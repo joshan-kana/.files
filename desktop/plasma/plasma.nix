@@ -108,7 +108,7 @@
       "kwin"."Switch to Screen to the Right" = [ ];
       "kwin"."Toggle Night Color" = [ ];
       "kwin"."Toggle Window Raise/Lower" = [ ];
-      "kwin"."TrackMouse" = "Meta+Shift+E";
+      "kwin"."TrackMouse" = [ ];
       "kwin"."Walk Through Windows" = "Alt+Tab";
       "kwin"."Walk Through Windows (Reverse)" = "Alt+Shift+Tab";
       "kwin"."Walk Through Windows Alternative" = [ ];
@@ -252,6 +252,7 @@
       "services/services.services.playerctl.desktop"."_launch" = "Meta+Alt+D";
       "services/services.services.playerctld.desktop"."_launch" = "Meta+Alt+F";
       "services/services.systemsettings.desktop"."_launch" = [ "" "" "" "Tools" "Meta+I" ];
+      "services/sysedit.desktop"."_launch" = "Meta+Shift+E";
     };
     configFile = {
       "baloofilerc"."General"."dbVersion".value = 2;
