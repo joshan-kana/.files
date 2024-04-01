@@ -30,12 +30,6 @@
   #  (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
   # ];
 
-  # Installing Hyprland
-  programs.hyprland = {
-    enable = true;
-    xwayland.enable = true;
-  };
-
   environment.sessionVariables = {
 
     # invisible cursor fix
