@@ -221,6 +221,8 @@
       sysup = "sudo nixos-rebuild --flake /home/joshan/.files  --impure switch";
       # Test system
       systest = "sudo nixos-rebuild --flake /home/joshan/.files  --impure test";
+      # Create VM from flake
+      sysvm = "sudo nixos-rebuild --flake /home/joshan/.files  --impure build-vm";
 
       # Launch Programs
       # Hyprland
