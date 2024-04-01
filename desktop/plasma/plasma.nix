@@ -249,7 +249,7 @@
       "services/services.services.playerctl-2.desktop"."_launch" = "Meta+Alt+S";
       "services/services.services.playerctl.desktop"."_launch" = "Meta+Alt+D";
       "services/services.services.playerctld.desktop"."_launch" = "Meta+Alt+F";
-      "services/services.systemsettings.desktop"."_launch" = [ "" "" "Tools" "Meta+I" ];
+      "services/services.systemsettings.desktop"."_launch" = [ "" "" "" "Tools" "Meta+I" ];
     };
     configFile = {
       "baloofilerc"."General"."dbVersion".value = 2;
@@ -280,7 +280,6 @@
       "kdeglobals"."General"."TerminalApplication".value = "kitty";
       "kdeglobals"."General"."TerminalService".value = "kitty.desktop";
       "kdeglobals"."KDE"."AnimationDurationFactor".value = 0.5;
-      "kdeglobals"."KDE"."SingleClick".value = true;
       "kdeglobals"."KFileDialog Settings"."Allow Expansion".value = false;
       "kdeglobals"."KFileDialog Settings"."Automatically select filename extension".value = true;
       "kdeglobals"."KFileDialog Settings"."Breadcrumb Navigation".value = true;
