@@ -240,6 +240,8 @@
       "plasmashell"."switch to next activity" = [ ];
       "plasmashell"."switch to previous activity" = [ ];
       "plasmashell"."toggle do not disturb" = [ ];
+      "services/playerctl-2.desktop"."_launch" = "Meta+Alt+S";
+      "services/playerctl.desktop"."_launch" = "Meta+Alt+D";
       "services/services.code-2.desktop"."_launch" = "Meta+Shift+E";
       "services/services.org.kde.spectacle.desktop"."_launch" = "Print";
       "services/services.playerctl-2.desktop"."_launch" = "Meta+Alt+S";
