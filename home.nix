@@ -216,13 +216,13 @@
       # Update home-manager
       homeup = "home-manager switch --flake /home/joshan/.config/home-manager";
       # Edit system
-      sysedit = "code /home/joshan/.files/edit_config.code-workspace";
+      sysedit = "code $DOTFILES edit_config.code-workspace";
       # Update system
-      sysup = "sudo nixos-rebuild --flake /home/joshan/.files  --impure switch";
+      sysup = "sudo nixos-rebuild --flake $DOTFILES --impure switch";
       # Test system
-      systest = "sudo nixos-rebuild --flake /home/joshan/.files  --impure test";
+      systest = "sudo nixos-rebuild --flake $DOTFILES --impure test";
       # Create VM from flake
-      sysvm = "sudo nixos-rebuild --flake /home/joshan/.files  --impure build-vm";
+      sysvm = "sudo nixos-rebuild --flake $DOTFILES --impure build-vm";
 
       # Launch Programs
       # Hyprland
