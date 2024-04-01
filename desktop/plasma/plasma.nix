@@ -54,7 +54,7 @@
       "kwin"."PoloniumInsertBelow" = "Meta+Shift+J";
       "kwin"."PoloniumInsertLeft" = "Meta+Shift+H";
       "kwin"."PoloniumInsertRight" = "Meta+Shift+L";
-      "kwin"."PoloniumOpenSettings" = ", ";
+      "kwin"."PoloniumOpenSettings" = [ ];
       "kwin"."PoloniumResizeAbove" = "Meta+Shift+W";
       "kwin"."PoloniumResizeBelow" = [ ];
       "kwin"."PoloniumResizeLeft" = "Meta+Shift+A";
@@ -249,7 +249,7 @@
       "services/services.services.playerctl-2.desktop"."_launch" = "Meta+Alt+S";
       "services/services.services.playerctl.desktop"."_launch" = "Meta+Alt+D";
       "services/services.services.playerctld.desktop"."_launch" = "Meta+Alt+F";
-      "services/services.systemsettings.desktop"."_launch" = [ "" "Tools" "Meta+I" ];
+      "services/services.systemsettings.desktop"."_launch" = [ "" "" "Tools" "Meta+I" ];
     };
     configFile = {
       "baloofilerc"."General"."dbVersion".value = 2;
@@ -269,8 +269,9 @@
       "kcminputrc"."Libinput/1133/16478/Logitech M720 Triathlon"."PointerAccelerationProfile".value = 1;
       "kcminputrc"."Libinput/1133/16478/Logitech M720 Triathlon"."ScrollFactor".value = 1;
       "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Mouse"."PointerAccelerationProfile".value = 1;
+      "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."Enabled".value = true;
       "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."NaturalScroll".value = true;
-      "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."PointerAcceleration".value = 0.600;
+      "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."PointerAcceleration".value = 0.6;
       "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."PointerAccelerationProfile".value = 1;
       "kcminputrc"."Libinput/1267/12600/MSFT0001:01 04F3:3138 Touchpad"."ScrollFactor".value = 0.5;
       "kded5rc"."Module-browserintegrationreminder"."autoload".value = false;
@@ -364,4 +365,3 @@
     };
   };
 }
-
