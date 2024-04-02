@@ -220,6 +220,7 @@
     python3
     trash-cli
     nixpkgs-fmt
+    gnumake
     # upscayl
     # davinci-resolve
 
