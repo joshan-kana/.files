@@ -316,6 +316,8 @@
   programs.lf.enable = true;
   # Bat (cat clone)
   programs.bat.enable = true;
+  # Eza (a better ls)
+  programs.eza.enable = true;
 
   # System monitors (TUI)
 
