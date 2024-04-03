@@ -262,6 +262,11 @@
 
       # Neovim alias
       v = "nvim";
+
+      # ls alias
+      l = "eza -a";
+      ll = "eza -lah";
+      ls = "eza";
     };
     initExtra = ''
       # Keybindings
