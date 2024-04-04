@@ -286,17 +286,17 @@
   stylix.fonts = {
     serif = {
       package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font Mono";
+      name = "MonaspiceNe Nerd Font Mono";
     };
 
     sansSerif = {
       package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font Mono";
+      name = "MonaspiceNe Nerd Font Mono";
     };
 
     monospace = {
       package = pkgs.nerdfonts;
-      name = "JetBrainsMono Nerd Font Mono";
+      name = "MonaspiceNe Nerd Font Mono";
     };
 
     emoji = {
