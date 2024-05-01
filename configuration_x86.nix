@@ -6,9 +6,6 @@
   # VMware
   virtualisation.vmware.host.enable = true;
 
-  # Bootloader
-  boot.loader.systemd-boot.enable = true;
-
   environment.systemPackages = with pkgs; [
     brave
     spotify

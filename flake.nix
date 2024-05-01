@@ -90,6 +90,7 @@
             }
             ./configuration.nix
             ./ssh.nix
+            ./boot.nix
             /etc/nixos/hardware-configuration.nix
           ];
         };
