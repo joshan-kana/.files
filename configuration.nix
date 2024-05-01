@@ -91,9 +91,6 @@
   # Settings for swaylock to work
   security.pam.services.swaylock = { };
 
-  # Service for mullvad vpn
-  services.mullvad-vpn.enable = true;
-
   # Bootloader.
   boot.loader.efi.canTouchEfiVariables = true;
 

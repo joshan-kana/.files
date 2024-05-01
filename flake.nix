@@ -64,6 +64,7 @@
             ./profile_nixos.nix
             ./configuration_x86.nix
             ./ssh.nix
+            ./vpn.nix
             /etc/nixos/hardware-configuration.nix
           ];
         };
@@ -92,6 +93,7 @@
             ./configuration.nix
             ./profile_nixos-arm.nix
             ./ssh.nix
+            ./vpn.nix
             ./boot.nix
             ./desktop/plasma/plasma.nix
             /etc/nixos/hardware-configuration.nix
