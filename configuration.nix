@@ -22,9 +22,6 @@
   # Setting up man pages for apropos and man -k
   documentation.man.generateCaches = true;
 
-  # Installing Twingate
-  services.twingate.enable = true;
-
   # Installing fonts
   # fonts.packages = with pkgs; [
   #  (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
@@ -63,9 +60,6 @@
     };
   };
   programs.virt-manager.enable = true;
-
-  # VMware
-  virtualisation.vmware.host.enable = true;
 
   # Config for nixos-rebuild build-vm
   virtualisation.vmVariant = {
@@ -107,14 +101,7 @@
   # Service for mullvad vpn
   services.mullvad-vpn.enable = true;
 
-  imports =
-    [
-      # Include the results of the hardware scan.
-      /etc/nixos/hardware-configuration.nix
-    ];
-
   # Bootloader.
-  boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Use boot animation
@@ -173,28 +160,21 @@
     wget
     git
     lf
-    brave
     chromium
-    spotify
-    nvtop
     waypipe
     sunshine
     lshw
-    intel-gpu-tools
     neofetch
     mpv
     home-manager
-    bitwarden
     thunderbird
     obsidian
     filelight
     gimp
-    discord
     stow
     qjackctl
     xdg-utils
     wl-clipboard
-    dropbox
     quickemu
     quickgui
     killall
@@ -204,7 +184,6 @@
     bottles
     tree
     mullvad-vpn
-    warp-terminal
     github-desktop
     gnome.nautilus
     vlc
@@ -215,7 +194,6 @@
     jetbrains.pycharm-professional
     floorp
     libreoffice
-    onlyoffice-bin
     pavucontrol
     python3
     trash-cli
@@ -250,8 +228,6 @@
 
   # List services that you want to enable:
 
-  # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
 
   # Enabling sound
   # rtkit is optional but recommended
