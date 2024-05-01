@@ -66,6 +66,33 @@
             /etc/nixos/hardware-configuration.nix
           ];
         };
+        nixos-arm = lib.nixosSystem {
+          system = "aarch64-linux";
+          modules = [
+            stylix.nixosModules.stylix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.joshan.imports = [
+                plasma-manager.homeManagerModules.plasma-manager
+                spicetify-nix.homeManagerModules.default
+                ./home.nix
+                ./desktop/plasma/plasma.nix
+                ./desktop/hyprland/hyprland.nix
+              ];
+
+              # Optionally, use home-manager.extraSpecialArgs to pass
+              # arguments to home.nix
+              home-manager.extraSpecialArgs = {
+                inherit spicetify-nix;
+              };
+            }
+            ./configuration.nix
+            ./ssh.nix
+            /etc/nixos/hardware-configuration.nix
+          ];
+        };
         nixos-orbstack = lib.nixosSystem {
           system = "aarch64-linux";
           modules = [
