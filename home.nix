@@ -218,7 +218,7 @@
       # Edit system
       sysedit = "code $DOTFILES edit_config.code-workspace";
       # Update system
-      sysup = "sudo nixos-rebuild --flake $DOTFILES --impure switch";
+      sysup = "sudo nixos-rebuild --flake# $FLK_PROFILE $DOTFILES --impure switch";
       # Test system
       systest = "sudo nixos-rebuild --flake $DOTFILES --impure test";
       # Create VM from flake

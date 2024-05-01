@@ -38,9 +38,6 @@
     # Setting the default editor
     EDITOR = "nvim";
 
-    # Setting path for dotfiles directory
-    DOTFILES = "/home/joshan/.files";
-
     # Start Hyprland on Nvidia
     # WLR_DRM_DEVICES = "/dev/dri/card1";
   };

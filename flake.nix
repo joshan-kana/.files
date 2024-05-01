@@ -61,6 +61,7 @@
               };
             }
             ./configuration.nix
+            ./profile_nixos.nix
             ./configuration_x86.nix
             ./ssh.nix
             /etc/nixos/hardware-configuration.nix
@@ -89,6 +90,7 @@
               };
             }
             ./configuration.nix
+            ./profile_nixos-arm.nix
             ./ssh.nix
             ./boot.nix
             /etc/nixos/hardware-configuration.nix
@@ -117,6 +119,7 @@
               };
             }
             ./configuration.nix
+            ./profile_nixos-orbstack.nix
             ./orbstack.nix
           ];
         };
