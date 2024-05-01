@@ -6,7 +6,11 @@
 
 {
   # Enable display manager
-  services.xserver.enable = true;
+  services.xserver = {
+    enable = true;
+    displayManager.lightdm.enable = false;
+  };
+
   # services.xserver.displayManager.sddm.enable = true;
   # services.xserver.displayManager.sddm.wayland.enable = true;
 
