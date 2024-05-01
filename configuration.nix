@@ -237,6 +237,9 @@
     jack.enable = true;
   };
 
+  # Disabling pulseaudio (for assertion)
+  hardware.pulseaudio.enable = false;
+
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 47990 11434 11435 ];
   # networking.firewall.allowedUDPPorts = [ ... ];
