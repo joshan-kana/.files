@@ -68,9 +68,6 @@
   # Polkit
   security.polkit.enable = true;
 
-  # Flatpak
-  services.flatpak.enable = true;
-
   # Performance
   # auto-cpu-freq
   services.auto-cpufreq.enable = true;
