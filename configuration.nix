@@ -35,6 +35,9 @@
     # invisible cursor fix
     WLR_NO_HARDWARE_CURSORS = "1";
 
+    # invisible cursor fix (KDE Plasma)
+    KWIN_FORCE_SW_CURSOR = "1";
+
     # hint at electron apps to use wayland
     NIXOS_OZONE_WL = "1";
 
