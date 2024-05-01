@@ -79,7 +79,7 @@
                 plasma-manager.homeManagerModules.plasma-manager
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
-                ./desktop/plasma/plasma.nix
+                ./desktop/plasma/plasma_hm.nix
                 ./desktop/hyprland/hyprland.nix
               ];
 
@@ -93,6 +93,7 @@
             ./profile_nixos-arm.nix
             ./ssh.nix
             ./boot.nix
+	    ./desktop/plasma/plasma.nix
             /etc/nixos/hardware-configuration.nix
           ];
         };
