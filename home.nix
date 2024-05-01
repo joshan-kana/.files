@@ -218,11 +218,11 @@
       # Edit system
       sysedit = "code $DOTFILES edit_config.code-workspace";
       # Update system
-      sysup = "sudo nixos-rebuild --flake# $FLK_PROFILE $DOTFILES --impure switch";
+      sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure switch";
       # Test system
-      systest = "sudo nixos-rebuild --flake $DOTFILES --impure test";
+      systest = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure test";
       # Create VM from flake
-      sysvm = "sudo nixos-rebuild --flake $DOTFILES --impure build-vm";
+      sysvm = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure build-vm";
 
       # Launch Programs
       # Hyprland
