@@ -294,6 +294,7 @@
     settings = {
       character.success_symbol = "[➜](bold green) ";
       character.error_symbol = "[✗](bold red) ";
+      container.disabled = true;
     };
   };
 
