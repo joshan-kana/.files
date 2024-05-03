@@ -258,7 +258,7 @@
 
   # Stylix (colours)
   stylix.image = ./wallpaper.png;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-hard.yaml";
+  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-material-dark-hard.yaml";
   stylix.fonts = {
     serif = {
       package = pkgs.nerdfonts;
