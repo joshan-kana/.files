@@ -267,6 +267,9 @@
       l = "eza -a";
       ll = "eza -lah";
       ls = "eza";
+
+      # neofetch alias
+      neofetch = "fastfetch";
     };
     initExtra = ''
       # Keybindings

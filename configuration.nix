@@ -161,7 +161,7 @@
     waypipe
     sunshine
     lshw
-    neofetch
+    fastfetch
     mpv
     home-manager
     thunderbird
