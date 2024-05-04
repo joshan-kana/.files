@@ -196,6 +196,7 @@
     trash-cli
     nixpkgs-fmt
     gnumake
+    devbox
     # upscayl
     # davinci-resolve
 
