@@ -173,7 +173,6 @@
     xdg-utils
     wl-clipboard
     quickemu
-    quickgui
     killall
     gparted
     moonlight-qt
