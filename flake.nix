@@ -50,7 +50,7 @@
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
                 ./home_x86.nix
-                ./desktop/plasma/plasma.nix
+                ./desktop/plasma/plasma_hm.nix
                 ./desktop/hyprland/hyprland.nix
               ];
 
@@ -65,6 +65,8 @@
             ./configuration_x86.nix
             ./ssh.nix
             ./vpn.nix
+	    ./boot.nix
+	    ./desktop/plasma/plasma.nix
             /etc/nixos/hardware-configuration.nix
           ];
         };
