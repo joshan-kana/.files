@@ -196,6 +196,7 @@
     nixpkgs-fmt
     gnumake
     devbox
+    has
     # upscayl
     # davinci-resolve
 
