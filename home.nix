@@ -26,6 +26,9 @@
     enable = true;
     userName = "Joshan Kana";
     userEmail = "joshankana@gmail.com";
+    extraConfig = {
+      init.defaultBranch = "main";
+    };
   };
 
   # Widgets: Eww
