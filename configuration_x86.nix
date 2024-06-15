@@ -3,6 +3,10 @@
   # Installing Twingate
   services.twingate.enable = true;
 
+  # Performance
+  # auto-cpu-freq
+  services.auto-cpufreq.enable = true;
+
   # VMware
   virtualisation.vmware.host.enable = true;
 
