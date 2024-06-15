@@ -1,6 +1,6 @@
 { config, pkgs, ... }:
-  # KDE Plasma
-  {
+# KDE Plasma
+{
   programs.plasma = {
     enable = true;
     shortcuts = {

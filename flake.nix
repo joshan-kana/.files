@@ -65,8 +65,8 @@
             ./configuration_x86.nix
             ./ssh.nix
             ./vpn.nix
-	    ./boot.nix
-	    ./desktop/plasma/plasma.nix
+            ./boot.nix
+            ./desktop/plasma/plasma.nix
             /etc/nixos/hardware-configuration.nix
           ];
         };
