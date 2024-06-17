@@ -184,7 +184,7 @@
     ulauncher
     brightnessctl
     jetbrains.pycharm-professional
-    floorp
+    # floorp
     libreoffice
     pavucontrol
     python3
@@ -254,6 +254,7 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Stylix (colours)
+  stylix.enable = true;
   stylix.image = ./wallpaper.png;
   stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-material-dark-hard.yaml";
   stylix.fonts = {
