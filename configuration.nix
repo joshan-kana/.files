@@ -184,7 +184,7 @@
     ulauncher
     brightnessctl
     jetbrains.pycharm-professional
-    # floorp
+    floorp
     libreoffice
     pavucontrol
     python3
