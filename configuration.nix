@@ -177,7 +177,7 @@
     tree
     mullvad-vpn
     github-desktop
-    gnome.nautilus
+    nautilus
     vlc
     youtube-tui
     glow
