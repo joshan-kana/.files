@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   # Enable display manager
@@ -205,7 +205,7 @@
     networkmanagerapplet
     playerctl
     grimblast
-    nwg-panel
+    inputs.old-nwg-panel-nixpkgs.legacyPackages.${pkgs.system}.nwg-panel
     nwg-dock-hyprland
     nwg-displays
     wlr-randr
