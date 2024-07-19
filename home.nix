@@ -197,7 +197,7 @@
   # Zsh
   programs.zsh = {
     enable = true;
-    enableAutosuggestions = true;
+    autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     # Extra plugins for zsh
     plugins = [
