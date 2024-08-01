@@ -237,21 +237,6 @@
         "type": "indirect"
       }
     },
-    "old-nwg-panel-nixpkgs": {
-      "locked": {
-        "lastModified": 1718543737,
-        "narHash": "sha256-e8S/ODM1vkKHIexSVn9nIvne7vRO5M+35VAq/6JOYto=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "683aa7c4e385509ca651d49eeb35e58c7a1baad6",
-        "type": "github"
-      },
-      "original": {
-        "id": "nixpkgs",
-        "rev": "683aa7c4e385509ca651d49eeb35e58c7a1baad6",
-        "type": "indirect"
-      }
-    },
     "plasma-manager": {
       "inputs": {
         "home-manager": [
@@ -279,7 +264,6 @@
       "inputs": {
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
-        "old-nwg-panel-nixpkgs": "old-nwg-panel-nixpkgs",
         "plasma-manager": "plasma-manager",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix"

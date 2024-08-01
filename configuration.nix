@@ -207,7 +207,7 @@
     networkmanagerapplet
     playerctl
     grimblast
-    inputs.old-nwg-panel-nixpkgs.legacyPackages.${pkgs.system}.nwg-panel
+    nwg-panel
     nwg-dock-hyprland
     nwg-displays
     wlr-randr

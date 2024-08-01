@@ -5,9 +5,6 @@
     # Nixpkgs: a collection of packages for the Nix package manager
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
-    # nwg-panel v0.9.32
-    old-nwg-panel-nixpkgs.url = "nixpkgs/683aa7c4e385509ca651d49eeb35e58c7a1baad6";
-
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:danth/stylix";
@@ -34,7 +31,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, old-nwg-panel-nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... } @ inputs:
+  outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... } @ inputs:
     let
       lib = nixpkgs.lib;
     in
