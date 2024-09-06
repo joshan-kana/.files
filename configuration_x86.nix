@@ -8,7 +8,7 @@
   services.auto-cpufreq.enable = true;
 
   # VMware
-  virtualisation.vmware.host.enable = true;
+  # virtualisation.vmware.host.enable = true;
 
   environment.systemPackages = with pkgs; [
     brave
