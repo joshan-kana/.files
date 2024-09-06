@@ -13,7 +13,7 @@
   environment.systemPackages = with pkgs; [
     brave
     spotify
-    nvtop
+    nvtopPackages.full
     intel-gpu-tools
     bitwarden
     discord
