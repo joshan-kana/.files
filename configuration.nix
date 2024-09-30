@@ -260,18 +260,10 @@
   stylix.image = ./wallpaper.png;
   stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-material-dark-hard.yaml";
   stylix.fonts = {
-    serif = {
-      package = pkgs.nerdfonts;
-      name = "MonaspiceNe Nerd Font Mono";
-    };
-
-    sansSerif = {
-      package = pkgs.nerdfonts;
-      name = "MonaspiceNe Nerd Font Mono";
-    };
-
+    serif = config.stylix.fonts.monospace;
+    sansSerif = config.stylix.fonts.monospace;
     monospace = {
-      package = pkgs.nerdfonts;
+      package = pkgs.nerdfonts.override { fonts = [ "Monaspace" ]; };
       name = "MonaspiceNe Nerd Font Mono";
     };
 
