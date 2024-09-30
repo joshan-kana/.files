@@ -18,8 +18,8 @@
 
   # spicetify
   programs.spicetify = {
-    enable = false;
-    theme = spicetify-nix.packages.${pkgs.system}.default.themes.Dribbblish;
+    enable = true;
+    theme = spicetify-nix.legacyPackages.${pkgs.system}.themes.dribbblish;
     colorScheme = "custom";
 
     customColorScheme = {
