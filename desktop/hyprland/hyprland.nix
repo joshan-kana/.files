@@ -118,9 +118,12 @@
               passes = 1
           }
 
-          drop_shadow = yes
-          shadow_range = 30
-          shadow_render_power = 3
+          # add drop shadows behind windows for depth effect
+          shadow {
+            enabled = true
+            range = 30
+            render_power = 3
+          }
       }
 
       animations {
@@ -150,10 +153,8 @@
           new_status = slave
       }
 
-      gestures {
-          # See https://wiki.hyprland.org/Configuring/Variables/ for more
-          workspace_swipe = on
-      }
+      # gesture: 3 finger swipe horizontal to move workspaces horizontally
+      gesture = 3, horizontal, workspace
 
       misc {
           # See https://wiki.hyprland.org/Configuring/Variables/ for more
@@ -181,9 +182,10 @@
       # See https://wiki.hyprland.org/Configuring/Window-Rules/ for more
       #
       # Make Polkit (KDE) always be floating, centred and a fixed size
-      windowrule = float,polkit-kde-authentication-agent-1
-      windowrule = center,polkit-kde-authentication-agent-1
-      windowrule = size 500 250,polkit-kde-authentication-agent-1
+      # must add class: before program name
+      windowrule = float, class:polkit-kde-authentication-agent-1
+      windowrule = center, class:polkit-kde-authentication-agent-1
+      windowrule = size 500 250, class:polkit-kde-authentication-agent-1
 
 
       # BINDINGS (Keyboard Shortcuts)

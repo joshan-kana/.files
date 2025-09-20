@@ -164,7 +164,7 @@
     home-manager
     thunderbird
     obsidian
-    filelight
+    kdePackages.filelight
     gimp
     stow
     qjackctl
@@ -183,10 +183,10 @@
     vlc
     youtube-tui
     glow
-    ulauncher
+    # ulauncher # disable until nixpkgs updates after v5.15.7
     brightnessctl
     jetbrains.pycharm-professional
-    floorp
+    floorp-bin
     libreoffice
     pavucontrol
     python3
@@ -268,7 +268,7 @@
     serif = config.stylix.fonts.monospace;
     sansSerif = config.stylix.fonts.monospace;
     monospace = {
-      package = pkgs.nerdfonts.override { fonts = [ "Monaspace" ]; };
+      package = pkgs.nerd-fonts.monaspace;
       name = "MonaspiceNe Nerd Font Mono";
     };
 
