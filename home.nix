@@ -219,7 +219,7 @@
       # Update home-manager
       homeup = "home-manager switch --flake /home/joshan/.config/home-manager";
       # Edit system
-      sysedit = "code $DOTFILES edit_config.code-workspace";
+      sysedit = "code $DOTFILES/edit_config.code-workspace";
       # Update system
       sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure switch";
       # Test system
