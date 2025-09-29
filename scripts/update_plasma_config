@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+
+# Script to update plasma configuration using nix-community/plasma-manager
+# This script runs plasma-manager and replaces the content in plasma_hm.nix from line 3 onwards
+
+set -euo pipefail
+
+# Define paths
+PLASMA_CONFIG_FILE="$HOME/.files/desktop/plasma/plasma_hm.nix"
+TEMP_FILE=$(mktemp)
+
+# Check if the plasma config file exists
+if [[ ! -f "$PLASMA_CONFIG_FILE" ]]; then
+    echo "Error: Plasma config file not found at $PLASMA_CONFIG_FILE"
+    exit 1
+fi
+
+echo "Running nix-community/plasma-manager to generate new configuration..."
+
+# Run the plasma-manager command and capture output
+if ! nix run github:nix-community/plasma-manager > "$TEMP_FILE" 2>&1; then
+    echo "Error: Failed to run nix-community/plasma-manager"
+    echo "Output:"
+    cat "$TEMP_FILE"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
+echo "Updating $PLASMA_CONFIG_FILE..."
+
+# Extract the first two lines (header) from the original file
+head -n 2 "$PLASMA_CONFIG_FILE" > "${TEMP_FILE}.new"
+
+# Append the output from plasma-manager to the new file
+cat "$TEMP_FILE" >> "${TEMP_FILE}.new"
+
+# Replace the original file with the updated content
+mv "${TEMP_FILE}.new" "$PLASMA_CONFIG_FILE"
+
+# Clean up
+rm -f "$TEMP_FILE"
+
+echo "Successfully updated $PLASMA_CONFIG_FILE"
+echo "The file has been updated with the latest plasma-manager configuration."
