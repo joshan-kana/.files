@@ -81,6 +81,12 @@
           kb_options =
           kb_rules =
 
+          # key repeat rate
+          repeat_rate = 35
+
+          # key repeat delay
+          repeat_delay = 250
+
           follow_mouse = 1
 
           accel_profile = flat
