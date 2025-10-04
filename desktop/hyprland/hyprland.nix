@@ -85,7 +85,7 @@
           repeat_rate = 35
 
           # key repeat delay
-          repeat_delay = 250
+          repeat_delay = 225
 
           follow_mouse = 1
 
