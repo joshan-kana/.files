@@ -273,6 +273,9 @@
 
       # neofetch alias
       neofetch = "fastfetch";
+
+      # copy current path/directory to clipboard
+      cpd = ''printf "%s" \"$(pwd | tr -d "\n")\" | wl-copy && echo "📋 Copied path!"'';
     };
     initExtra = ''
       # Keybindings
