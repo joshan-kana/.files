@@ -276,6 +276,9 @@
 
       # copy current path/directory to clipboard
       cpd = ''printf "%s" \"$(pwd | tr -d "\n")\" | wl-copy && echo "📋 Copied path!"'';
+
+      # playing audio files (my music) with my preferred options (no pitch correction when slowing down and looping enabled)
+      p = "mpv --audio-pitch-correction=no --loop=yes";
     };
     initExtra = ''
       # Keybindings
