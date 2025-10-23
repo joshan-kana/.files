@@ -279,6 +279,9 @@
 
       # playing audio files (my music) with my preferred options (no pitch correction when slowing down and looping enabled)
       p = "mpv --audio-pitch-correction=no --loop=yes";
+
+      # size of directory or file with preffered flags
+      sz = "du -sh";
     };
     initExtra = ''
       # Keybindings
