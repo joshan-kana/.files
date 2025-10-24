@@ -25,6 +25,9 @@
   # Setting up man pages for apropos and man -k
   documentation.man.generateCaches = true;
 
+  # Enabling direnv
+  programs.direnv.enable = true;
+
   # Installing fonts
   # fonts.packages = with pkgs; [
   #  (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })

@@ -288,6 +288,9 @@
 
       # size of directory or file with preffered flags
       sz = "du -sh";
+
+      # allow direnv to load in directory
+      da = "direnv allow";
     };
     initExtra = ''
       # Keybindings
