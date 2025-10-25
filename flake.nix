@@ -34,12 +34,36 @@
   outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... } @ inputs:
     let
       lib = nixpkgs.lib;
+
+      # Centralised profile-specific variables
+      profiles = {
+        nixos = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos";
+          ollamaUrl = "http://localhost:11434/v1";
+        };
+
+        nixos-arm = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos-arm";
+          ollamaUrl = "http://localhost:11434/v1";
+        };
+
+        nixos-orbstack = {
+          dotfilesPath = "/Users/joshan/.files";
+          profileName = "nixos-orbstack";
+          ollamaUrl = "http://host.orb.internal:11434/v1";
+        };
+      };
     in
     {
       nixosConfigurations = {
         nixos = lib.nixosSystem {
           system = "x86_64-linux";
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos) dotfilesPath profileName ollamaUrl;
+          };
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -59,6 +83,7 @@
               # arguments to home.nix
               home-manager.extraSpecialArgs = {
                 inherit spicetify-nix;
+                inherit (profiles.nixos) dotfilesPath profileName ollamaUrl;
               };
             }
             ./configuration.nix
@@ -73,7 +98,10 @@
         };
         nixos-arm = lib.nixosSystem {
           system = "aarch64-linux";
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl;
+          };
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -92,6 +120,7 @@
               # arguments to home.nix
               home-manager.extraSpecialArgs = {
                 inherit spicetify-nix;
+                inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl;
               };
             }
             ./configuration.nix
@@ -105,7 +134,10 @@
         };
         nixos-orbstack = lib.nixosSystem {
           system = "aarch64-linux";
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl;
+          };
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -118,6 +150,10 @@
 
               # Optionally, use home-manager.extraSpecialArgs to pass
               # arguments to home.nix
+              home-manager.extraSpecialArgs = {
+                inherit spicetify-nix;
+                inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl;
+              };
             }
             ./configuration.nix
             ./profile_nixos-orbstack.nix

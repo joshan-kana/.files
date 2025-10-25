@@ -1,10 +1,9 @@
-{ config, ... }:
+{ dotfilesPath, profileName, ollamaUrl, ... }:
+
 {
   environment.sessionVariables = {
-    # Setting path for dotfiles directory
-    DOTFILES = "/home/joshan/.files";
-
-    # Settings flake profile
-    FLK_PROFILE = "nixos";
+    DOTFILES = dotfilesPath;
+    FLK_PROFILE = profileName;
+    OLLAMA_URL = ollamaUrl;
   };
 }

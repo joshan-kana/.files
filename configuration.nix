@@ -218,6 +218,7 @@
     nwg-displays
     wlr-randr
     tofi
+    tmuxai
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
