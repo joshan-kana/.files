@@ -26,7 +26,10 @@
   documentation.man.generateCaches = true;
 
   # Enabling direnv
-  programs.direnv.enable = true;
+  programs.direnv = {
+    enable = true;
+    silent = true;
+  };
 
   # Installing fonts
   # fonts.packages = with pkgs; [
