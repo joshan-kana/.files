@@ -24,10 +24,14 @@
   # git
   programs.git = {
     enable = true;
-    userName = "Joshan Kana";
-    userEmail = "joshankana@gmail.com";
-    extraConfig = {
-      init.defaultBranch = "main";
+    settings = {
+      user = {
+        name = "Joshan Kana";
+        email = "joshankana@gmail.com";
+      };
+      extraConfig = {
+        init.defaultBranch = "main";
+      };
     };
   };
 
