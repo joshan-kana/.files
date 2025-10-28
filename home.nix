@@ -406,6 +406,10 @@
   # Browsers
   # Firefox
   programs.firefox.enable = true;
+  # enable theming from stylix
+  stylix.targets.firefox.profileNames = [ "themed" ];
+  stylix.targets.firefox.colorTheme.enable = true;
+  programs.firefox.profiles.themed.extensions.force = true;
   # Brave (add to home.packages)
 
   # Media Players
