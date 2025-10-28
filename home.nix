@@ -410,6 +410,11 @@
   stylix.targets.firefox.profileNames = [ "themed" ];
   stylix.targets.firefox.colorTheme.enable = true;
   programs.firefox.profiles.themed.extensions.force = true;
+  # Floorp
+  programs.floorp.enable = true;
+  stylix.targets.floorp.profileNames = [ "themed" ];
+  stylix.targets.floorp.colorTheme.enable = true;
+  programs.floorp.profiles.themed.extensions.force = true;
   # Brave (add to home.packages)
 
   # Media Players
