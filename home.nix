@@ -292,7 +292,7 @@
       # allow direnv to load in directory
       da = "direnv allow";
     };
-    initExtra = ''
+    initContent = ''
       # Keybindings
       # Moving forwards and backwards by a word
       bindkey "^[[1;5D" backward-word
