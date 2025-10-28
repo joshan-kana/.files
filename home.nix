@@ -239,11 +239,16 @@
 
       # Launch Programs
       # Hyprland
+      h = "Hyprland";
+
       # Hyprland on Intel
       HI = "~/.files/scripts/hyprland_intel";
 
       # Hyprland on Nvidia
       HN = "~/.files/scripts/hyprland_nvidia";
+
+      # KDE Plasma
+      k = "startplasma-wayland";
 
       # Git aliases
       # git status
