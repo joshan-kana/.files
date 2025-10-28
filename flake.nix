@@ -71,7 +71,7 @@
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
               home-manager.users.joshan.imports = [
-                plasma-manager.homeManagerModules.plasma-manager
+                plasma-manager.homeModules.plasma-manager
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
                 ./home_x86.nix
@@ -109,7 +109,7 @@
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
               home-manager.users.joshan.imports = [
-                plasma-manager.homeManagerModules.plasma-manager
+                plasma-manager.homeModules.plasma-manager
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
                 ./desktop/plasma/plasma_hm.nix
