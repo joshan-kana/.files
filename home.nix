@@ -179,6 +179,9 @@
   # Audio Effects: EasyEffects
   services.easyeffects.enable = true;
 
+  # set the styling type for qt applications to use "qtct" and not "kde"
+  stylix.targets.qt.platform = "qtct";
+
   # Terminal stuff
   # Terminal Emulators
   # Kitty
