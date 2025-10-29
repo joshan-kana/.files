@@ -194,7 +194,7 @@
     pavucontrol
     python3
     trash-cli
-    nixpkgs-fmt
+    nixfmt-rfc-style
     gnumake
     devbox
     has
