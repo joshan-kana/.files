@@ -340,12 +340,12 @@
   # tmuxai (not a plugin, standalone app for tmux)
   home.file.".config/tmuxai/config.yaml" = {
     text = ''
-    models:
-      primary:
-        provider: openrouter
-        model: gemma3:12b
-        api_key: XXXXXXXXXXXXXXX
-        base_url: ${ollamaUrl}
+      models:
+        primary:
+          provider: openrouter
+          model: gemma3:12b
+          api_key: XXXXXXXXXXXXXXX
+          base_url: ${ollamaUrl}
     '';
   };
 
