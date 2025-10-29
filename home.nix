@@ -214,12 +214,6 @@
         file = "share/fzf-tab/fzf-tab.plugin.zsh";
         src = pkgs.zsh-fzf-tab;
       }
-      {
-        # improved vi-mode
-        name = "vi-mode";
-        src = pkgs.zsh-vi-mode;
-        file = "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh";
-      }
     ];
     shellAliases = {
       # Go back to the parent directory
@@ -320,8 +314,8 @@
       bindkey '^xe' edit-command-line
       bindkey '^x^e' edit-command-line
 
-      # # fix bug in zsh where can't delete left of cursor after entering normal mode and then insert mode
-      # bindkey -v '^?' backward-delete-char
+      # fix bug in zsh where can't delete left of cursor after entering normal mode and then insert mode
+      bindkey -v '^?' backward-delete-char
     '';
   };
 
