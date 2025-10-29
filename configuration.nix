@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, inputs, dotfilesPath, ... }:
 
 {
   # Enable display manager
@@ -13,6 +13,13 @@
 
   # services.xserver.displayManager.sddm.enable = true;
   # services.xserver.displayManager.sddm.wayland.enable = true;
+
+  # nh: yet another cli helper for nh
+  # to activate config with nh: sudo nh os switch --hostname <profile-name> --impure
+  programs.nh = {
+    enable = true;
+    flake = dotfilesPath;
+  };
 
   # Configuring ZSH
   # Installing ZSH
