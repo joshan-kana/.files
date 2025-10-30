@@ -223,6 +223,7 @@
     wlr-randr
     tofi
     tmuxai
+    nvd
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
