@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# nix-flake-update
+# Preview NixOS package updates using nvd between main branch and a dedicated 'system-upgrade' branch.
+# Uses --impure builds to respect local configuration changes.
+# Temporary derivations cleaned automatically; the system-upgrade worktree is persistent for editing.
+
+set -euo pipefail
+
+# Arguments
+FLAKE_PATH=${1:-}
+PROFILE=${2:-}
+
+# Constants
+MAIN_BRANCH="main"
+TEMP_BRANCH="system-upgrade"
+
+if [[ -z "$FLAKE_PATH" || -z "$PROFILE" ]]; then
+  echo "Usage: $0 /path/to/flake <profile>"
+  exit 1
+fi
+
+# Change to flake directory
+cd "$FLAKE_PATH" || { echo "Error: cannot cd to $FLAKE_PATH"; exit 1; }
+
+# Ensure inside a Git repository
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Error: $FLAKE_PATH is not a Git repository"
+  exit 1
+fi
+
+# Determine a persistent worktree path beside the repo
+REPO_DIR=$(git rev-parse --show-toplevel)
+REPO_PARENT=$(dirname "$REPO_DIR")
+REPO_NAME=$(basename "$REPO_DIR")
+PERSISTENT_WORKTREE="$REPO_PARENT/${REPO_NAME}-${TEMP_BRANCH}"
+
+# Safety check: ensure worktree is not inside repo
+if [[ "$PERSISTENT_WORKTREE" == "$REPO_DIR" ]]; then
+  echo "❌ Worktree path '$PERSISTENT_WORKTREE' is inside the repository. Please move it outside."
+  exit 1
+fi
+
+# Temporary directories for derivations
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+OLD_OUT="$TMPDIR/old_build"
+NEW_OUT="$TMPDIR/new_build"
+
+# Function to build a NixOS system derivation
+build_derivation() {
+  local dir=$1
+  local out=$2
+  echo "Building derivation in $dir..."
+  nix build --impure "${dir}#nixosConfigurations.${PROFILE}.config.system.build.toplevel" -o "$out"
+}
+
+# Step 1: Prepare old derivation from main branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ "$CURRENT_BRANCH" == "$MAIN_BRANCH" ]]; then
+    echo "Current directory is already on main. Using it for old derivation."
+    OLD_WT="$PWD"
+else
+    EXISTING_MAIN_WT=$(git worktree list | grep " $MAIN_BRANCH$" | awk '{print $1}' || true)
+    if [[ -n "$EXISTING_MAIN_WT" ]]; then
+        echo "Main branch worktree exists at $EXISTING_MAIN_WT. Using it."
+        OLD_WT="$EXISTING_MAIN_WT"
+    else
+        OLD_WT="$TMPDIR/old_worktree"
+        git worktree add "$OLD_WT" "$MAIN_BRANCH"
+    fi
+fi
+
+(cd "$OLD_WT" && git switch "$MAIN_BRANCH")
+build_derivation "$OLD_WT" "$OLD_OUT"
+
+# Step 2: Prepare persistent system-upgrade worktree
+if [[ ! -d "$PERSISTENT_WORKTREE" ]]; then
+    if git rev-parse --verify --quiet "$TEMP_BRANCH" >/dev/null; then
+        echo "Branch '$TEMP_BRANCH' exists, adding worktree..."
+        git worktree add "$PERSISTENT_WORKTREE" "$TEMP_BRANCH"
+    else
+        echo "Creating new branch '$TEMP_BRANCH' and worktree..."
+        git worktree add -b "$TEMP_BRANCH" "$PERSISTENT_WORKTREE"
+    fi
+else
+    echo "Using existing persistent worktree at $PERSISTENT_WORKTREE"
+fi
+
+# Switch into the system-upgrade worktree
+(cd "$PERSISTENT_WORKTREE" && git switch "$TEMP_BRANCH")
+
+# Step 3: Update flake inputs only on system-upgrade branch
+echo "Updating flake inputs in system-upgrade..."
+(cd "$PERSISTENT_WORKTREE" && nix flake update)
+
+# Build new derivation
+if ! build_derivation "$PERSISTENT_WORKTREE" "$NEW_OUT"; then
+    echo "Please edit $TEMP_BRANCH branch at worktree $PERSISTENT_WORKTREE"
+    exit 1
+fi
+
+# Step 4: Run nvd diff
+nvd diff "$OLD_OUT" "$NEW_OUT"
