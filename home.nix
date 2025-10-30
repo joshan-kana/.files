@@ -1,4 +1,4 @@
-{ config, pkgs, spicetify-nix, ollamaUrl, ... }:
+{ config, pkgs, spicetify-nix, ollamaUrl, dotfilesPath, profileName, ... }:
 
 {
   # User information
@@ -227,6 +227,8 @@
       homeup = "home-manager switch --flake /home/joshan/.config/home-manager";
       # Edit system
       sysedit = "code $DOTFILES/edit_config.code-workspace";
+      # Update flake
+      sysfu = "${dotfilesPath}/scripts/nix-flake-update ${dotfilesPath} ${profileName}";
       # Update system
       sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure switch";
       # Test system
