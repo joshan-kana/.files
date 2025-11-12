@@ -15,6 +15,6 @@
     discord
     dropbox
     warp-terminal
-    onlyoffice-bin
+    onlyoffice-desktopeditors
   ];
 }
