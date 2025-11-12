@@ -11,7 +11,7 @@
     spotify
     nvtopPackages.full
     intel-gpu-tools
-    bitwarden
+    bitwarden-desktop
     discord
     dropbox
     warp-terminal
