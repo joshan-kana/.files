@@ -86,6 +86,7 @@
                 inherit (profiles.nixos) dotfilesPath profileName ollamaUrl;
               };
             }
+            ./overlays/nvtop-overlay.nix
             ./configuration.nix
             ./profile_nixos.nix
             ./configuration_x86.nix
