@@ -9,5 +9,5 @@ includes:
 
 this flake has three flake profiles
 - nixos-x86: a full config on x86 arch
-- nixos-arm: a full config on arm arch
+- nixos-arm-parallels: a full config on aarch64 arch (Parallels VM on macOS)
 - nixos-orbstack: a minimal config for orbstack "linux machines on macos, like WSL"

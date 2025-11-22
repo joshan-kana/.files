@@ -44,9 +44,9 @@
           nixosRebuildFlags = "--impure";
         };
 
-        nixos-arm = {
+        nixos-arm-parallels = {
           dotfilesPath = "/home/joshan/.files";
-          profileName = "nixos-arm";
+          profileName = "nixos-arm-parallels";
           ollamaUrl = "http://localhost:11434/v1";
           nixosRebuildFlags = "--impure";
         };
@@ -97,10 +97,10 @@
           ];
         };
         
-        nixos-arm = let
+        nixos-arm-parallels = let
           specialArgs = {
             inherit inputs;
-            inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+            inherit (profiles.nixos-arm-parallels) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
         in lib.nixosSystem {
           inherit specialArgs;
@@ -122,7 +122,7 @@
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
-            ./profile_nixos-arm.nix
+            ./profile_nixos-arm-parallels.nix
             ./ssh.nix
             ./vpn.nix
             ./boot.nix
