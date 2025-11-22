@@ -79,7 +79,7 @@
                 plasma-manager.homeModules.plasma-manager
                 spicetify-nix.homeManagerModules.default
                 ./home.nix
-                ./home_x86.nix
+                ./profiles/nixos/home_x86.nix
                 ./desktop/plasma/plasma_hm.nix
                 ./desktop/hyprland/hyprland.nix
               ];
@@ -89,7 +89,7 @@
             ./overlays/nvtop-overlay.nix
             ./configuration.nix
             ./profiles/nixos/profile_nixos.nix
-            ./configuration_x86.nix
+            ./profiles/nixos/configuration_x86.nix
             ./ssh.nix
             ./vpn.nix
             ./boot.nix
