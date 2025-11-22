@@ -86,6 +86,7 @@
 
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
+            ./overlays/nvtop-overlay.nix
             ./configuration.nix
             ./profiles/nixos/profile_nixos.nix
             ./configuration_x86.nix

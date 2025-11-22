@@ -3,10 +3,6 @@
   # Installing Twingate
   services.twingate.enable = true;
 
-  # Performance
-  # auto-cpu-freq
-  services.auto-cpufreq.enable = true;
-
   # VMware
   # virtualisation.vmware.host.enable = true;
 
@@ -15,10 +11,10 @@
     spotify
     nvtopPackages.full
     intel-gpu-tools
-    bitwarden
+    bitwarden-desktop
     discord
     dropbox
     warp-terminal
-    onlyoffice-bin
+    onlyoffice-desktopeditors
   ];
 }
