@@ -48,7 +48,7 @@
           dotfilesPath = "/home/joshan/.files";
           profileName = "nixos-arm-parallels";
           ollamaUrl = "http://localhost:11434/v1";
-          nixosRebuildFlags = "--impure";
+          nixosRebuildFlags = "";
         };
 
         nixos-orbstack = {
@@ -127,7 +127,7 @@
             ./vpn.nix
             ./boot.nix
             ./desktop/plasma/plasma.nix
-            /etc/nixos/hardware-configuration.nix
+            ./profiles/nixos-arm-parallels/hardware-configuration.nix
           ];
         };
         
