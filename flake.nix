@@ -61,12 +61,14 @@
     in
     {
       nixosConfigurations = {
-        nixos = lib.nixosSystem {
-          system = "x86_64-linux";
+        nixos = let
           specialArgs = {
             inherit inputs;
             inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
+        in lib.nixosSystem {
+          inherit specialArgs;
+          system = "x86_64-linux";
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -82,12 +84,7 @@
                 ./desktop/hyprland/hyprland.nix
               ];
 
-              # Optionally, use home-manager.extraSpecialArgs to pass
-              # arguments to home.nix
-              home-manager.extraSpecialArgs = {
-                inherit spicetify-nix;
-                inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-              };
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
             ./profile_nixos.nix
@@ -99,12 +96,15 @@
             /etc/nixos/hardware-configuration.nix
           ];
         };
-        nixos-arm = lib.nixosSystem {
-          system = "aarch64-linux";
+        
+        nixos-arm = let
           specialArgs = {
             inherit inputs;
             inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
+        in lib.nixosSystem {
+          inherit specialArgs;
+          system = "aarch64-linux";
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -119,12 +119,7 @@
                 ./desktop/hyprland/hyprland.nix
               ];
 
-              # Optionally, use home-manager.extraSpecialArgs to pass
-              # arguments to home.nix
-              home-manager.extraSpecialArgs = {
-                inherit spicetify-nix;
-                inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-              };
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
             ./profile_nixos-arm.nix
@@ -135,12 +130,15 @@
             /etc/nixos/hardware-configuration.nix
           ];
         };
-        nixos-orbstack = lib.nixosSystem {
-          system = "aarch64-linux";
+        
+        nixos-orbstack = let
           specialArgs = {
             inherit inputs;
             inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
+        in lib.nixosSystem {
+          inherit specialArgs;
+          system = "aarch64-linux";
           modules = [
             stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
@@ -151,12 +149,7 @@
                 ./home.nix
               ];
 
-              # Optionally, use home-manager.extraSpecialArgs to pass
-              # arguments to home.nix
-              home-manager.extraSpecialArgs = {
-                inherit spicetify-nix;
-                inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-              };
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
             ./profile_nixos-orbstack.nix
