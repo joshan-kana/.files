@@ -1,4 +1,4 @@
-{ config, pkgs, spicetify-nix, ollamaUrl, dotfilesPath, profileName, ... }:
+{ config, pkgs, spicetify-nix, ollamaUrl, dotfilesPath, profileName, nixosRebuildFlags, ... }:
 
 {
   # User information
@@ -230,11 +230,11 @@
       # Update flake
       sysfu = "${dotfilesPath}/scripts/nix-flake-update ${dotfilesPath} ${profileName}";
       # Update system
-      sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure switch";
+      sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS switch";
       # Test system
-      systest = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure test";
+      systest = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS test";
       # Create VM from flake
-      sysvm = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE --impure build-vm";
+      sysvm = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS build-vm";
 
       # Launch Programs
       # Hyprland

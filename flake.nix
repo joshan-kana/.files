@@ -41,18 +41,21 @@
           dotfilesPath = "/home/joshan/.files";
           profileName = "nixos";
           ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "--impure";
         };
 
         nixos-arm = {
           dotfilesPath = "/home/joshan/.files";
           profileName = "nixos-arm";
           ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "--impure";
         };
 
         nixos-orbstack = {
           dotfilesPath = "/Users/joshan/.files";
           profileName = "nixos-orbstack";
           ollamaUrl = "http://host.orb.internal:11434/v1";
+          nixosRebuildFlags = "--impure";
         };
       };
     in
@@ -62,7 +65,7 @@
           system = "x86_64-linux";
           specialArgs = {
             inherit inputs;
-            inherit (profiles.nixos) dotfilesPath profileName ollamaUrl;
+            inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
           modules = [
             stylix.nixosModules.stylix
@@ -83,7 +86,7 @@
               # arguments to home.nix
               home-manager.extraSpecialArgs = {
                 inherit spicetify-nix;
-                inherit (profiles.nixos) dotfilesPath profileName ollamaUrl;
+                inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
               };
             }
             ./configuration.nix
@@ -100,7 +103,7 @@
           system = "aarch64-linux";
           specialArgs = {
             inherit inputs;
-            inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl;
+            inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
           modules = [
             stylix.nixosModules.stylix
@@ -120,7 +123,7 @@
               # arguments to home.nix
               home-manager.extraSpecialArgs = {
                 inherit spicetify-nix;
-                inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl;
+                inherit (profiles.nixos-arm) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
               };
             }
             ./configuration.nix
@@ -136,7 +139,7 @@
           system = "aarch64-linux";
           specialArgs = {
             inherit inputs;
-            inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl;
+            inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
           };
           modules = [
             stylix.nixosModules.stylix
@@ -152,7 +155,7 @@
               # arguments to home.nix
               home-manager.extraSpecialArgs = {
                 inherit spicetify-nix;
-                inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl;
+                inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
               };
             }
             ./configuration.nix
