@@ -87,7 +87,7 @@
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
-            ./profile_nixos.nix
+            ./profiles/nixos/profile_nixos.nix
             ./configuration_x86.nix
             ./ssh.nix
             ./vpn.nix
@@ -122,7 +122,7 @@
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
-            ./profile_nixos-arm-parallels.nix
+            ./profiles/nixos-arm-parallels/profile_nixos-arm-parallels.nix
             ./ssh.nix
             ./vpn.nix
             ./boot.nix
@@ -152,7 +152,7 @@
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./configuration.nix
-            ./profile_nixos-orbstack.nix
+            ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
             ./orbstack.nix
           ];
         };
