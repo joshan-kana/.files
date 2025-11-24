@@ -51,7 +51,7 @@ build_derivation() {
   local dir=$1
   local out=$2
   echo "Building derivation in $dir..."
-  nix build --impure "${dir}#nixosConfigurations.${PROFILE}.config.system.build.toplevel" -o "$out"
+  nix build $NIXOS_REBUILD_FLAGS "${dir}#nixosConfigurations.${PROFILE}.config.system.build.toplevel" -o "$out"
 }
 
 # Step 1: Prepare old derivation from main branch
