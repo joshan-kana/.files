@@ -229,6 +229,8 @@
       sysedit = "code $DOTFILES/edit_config.code-workspace";
       # Update flake
       sysfu = "${dotfilesPath}/scripts/nix-flake-update ${dotfilesPath} ${profileName}";
+      # Build flake
+      sysbld = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS build";
       # Update system
       sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS switch";
       # Test system
