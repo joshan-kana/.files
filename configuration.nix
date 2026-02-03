@@ -268,6 +268,7 @@
 
   nix = {
     settings = {
+      trusted-users = [ "joshan" ];
       experimental-features = [ "nix-command" "flakes" ];
       warn-dirty = false;
     };
