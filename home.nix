@@ -357,7 +357,7 @@
       direnv_hook_toggle() {
         typeset -ag precmd_functions
         if (( ''${precmd_functions[(I)_direnv_hook]} )); then
-          direnv_disable
+          direnv_hook_disable
         else
           direnv_hook_enable
         fi
