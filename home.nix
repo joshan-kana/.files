@@ -225,6 +225,8 @@
       homedit = "code /home/joshan/.config/home-manager";
       # Update home-manager
       homeup = "home-manager switch --flake /home/joshan/.config/home-manager";
+      # cd into flake
+      syscd = "cd $DOTFILES";
       # Edit system
       sysedit = "code $DOTFILES/edit_config.code-workspace";
       # Update flake
