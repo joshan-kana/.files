@@ -301,6 +301,9 @@
 
       # allow direnv to load in directory
       da = "direnv allow";
+
+      # direnv toggle
+      dt = "direnv_hook_toggle";
     };
     initContent = ''
       # Keybindings
@@ -320,6 +323,45 @@
 
       # fix bug in zsh where can't delete left of cursor after entering normal mode and then insert mode
       bindkey -v '^?' backward-delete-char
+
+      # direnv enable/disable solutions
+      # see: https://github.com/direnv/direnv/pull/1048
+      _direnv_hook() {
+        trap -- ''' SIGINT
+        eval "$("${pkgs.direnv}/bin/direnv" export zsh)"
+        trap - SIGINT
+      }
+
+      direnv_hook_disable() {
+        typeset -ag precmd_functions
+        if (( ''${precmd_functions[(I)_direnv_hook]} )); then
+          precmd_functions=(''${precmd_functions:#_direnv_hook})
+        fi
+        typeset -ag chpwd_functions
+        if (( ''${chpwd_functions[(I)_direnv_hook]} )); then
+          chpwd_functions=(''${chpwd_functions#_direnv_hook})
+        fi
+      }
+
+      direnv_hook_enable() {
+        typeset -ag precmd_functions
+        if (( ! ''${precmd_functions[(I)_direnv_hook]} )); then
+          precmd_functions=(_direnv_hook $precmd_functions)
+        fi
+        typeset -ag chpwd_functions
+        if (( ! ''${chpwd_functions[(I)_direnv_hook]} )); then
+          chpwd_functions=(_direnv_hook $chpwd_functions)
+        fi
+      }
+
+      direnv_hook_toggle() {
+        typeset -ag precmd_functions
+        if (( ''${precmd_functions[(I)_direnv_hook]} )); then
+          direnv_disable
+        else
+          direnv_hook_enable
+        fi
+      }
     '';
   };
 

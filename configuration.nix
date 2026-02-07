@@ -36,6 +36,7 @@
   programs.direnv = {
     enable = true;
     silent = true;
+    enableZshIntegration = false;
   };
 
   # Installing fonts
