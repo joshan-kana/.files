@@ -189,9 +189,9 @@
       #
       # Make Polkit (KDE) always be floating, centred and a fixed size
       # must add class: before program name
-      windowrule = float, class:polkit-kde-authentication-agent-1
-      windowrule = center, class:polkit-kde-authentication-agent-1
-      windowrule = size 500 250, class:polkit-kde-authentication-agent-1
+      windowrule = float on, match:class = polkit-kde-authentication-agent-1
+      windowrule = center on, match:class = polkit-kde-authentication-agent-1
+      windowrule = size 500 250, match:class = polkit-kde-authentication-agent-1
 
 
       # BINDINGS (Keyboard Shortcuts)
