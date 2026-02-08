@@ -197,7 +197,7 @@
     glow
     # ulauncher # disable until nixpkgs updates after v5.15.7
     brightnessctl
-    jetbrains.pycharm-professional
+    jetbrains.pycharm
     libreoffice
     pavucontrol
     python3
