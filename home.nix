@@ -242,7 +242,7 @@
 
       # Launch Programs
       # Hyprland
-      h = "Hyprland";
+      h = "start-hyprland";
 
       # Hyprland on Intel
       HI = "~/.files/scripts/hyprland_intel";
