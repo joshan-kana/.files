@@ -37,6 +37,16 @@
   # networking.interfaces.enp0s5.useDHCP = lib.mkDefault true;
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
-  hardware.parallels.enable = true;
+  hardware.parallels = {
+    enable = true;
+    package = pkgs.prl-tools.overrideAttrs (
+      finalAttrs: previousAttrs: {
+        version = "26.1.1-57288";
+        src = previousAttrs.src.overrideAttrs {
+          outputHash = "sha256-11IyKI2oOffzSPTB65XksZI3PD9W2+0SPZIfpb0RLuU=";
+        };
+      }
+    );
+  };
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "prl-tools" ];
 }
