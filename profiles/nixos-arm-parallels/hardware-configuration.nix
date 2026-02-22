@@ -49,4 +49,8 @@
     );
   };
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "prl-tools" ];
+
+  networking.firewall = {
+    trustedInterfaces = [ "enp0s5" ];
+  };
 }
