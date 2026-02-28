@@ -30,7 +30,12 @@
   users.defaultUserShell = pkgs.zsh;
 
   # Setting up man pages for apropos and man -k
-  documentation.man.generateCaches = true;
+
+  documentation = {
+    enable = true;
+    man.enable = true;
+    man.generateCaches = true;
+  };
 
   # Enabling direnv
   programs.direnv = {
