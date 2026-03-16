@@ -179,8 +179,9 @@
   # Audio Effects: EasyEffects
   services.easyeffects.enable = true;
 
-  # set the styling type for qt applications to use "qtct" and not "kde"
-  stylix.targets.qt.platform = "qtct";
+  # set stylix targets to kde
+  # do not set "qtct" when running kde plasma as it will cause the theme to be forced to kvantum (which does not exist)
+  stylix.targets.qt.platform = "kde";
 
   # Terminal stuff
   # Terminal Emulators
