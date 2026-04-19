@@ -308,25 +308,27 @@
   };
 
   # Stylix (colours)
-  stylix.enable = true;
-  stylix.image = ./wallpaper.png;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/framer.yaml";
-  stylix.fonts = {
-    serif = config.stylix.fonts.monospace;
-    sansSerif = config.stylix.fonts.monospace;
-    monospace = {
-      package = pkgs.monaspace-liga;
-      name = "Monaspace Neon";
+  stylix = {
+    enable = true;
+    image = ./wallpaper.png;
+    base16Scheme = "${pkgs.base16-schemes}/share/themes/framer.yaml";
+    fonts = {
+      serif = config.stylix.fonts.monospace;
+      sansSerif = config.stylix.fonts.monospace;
+      monospace = {
+        package = pkgs.monaspace-liga;
+        name = "Monaspace Neon";
+      };
+      emoji = {
+        package = pkgs.noto-fonts-color-emoji;
+        name = "Noto Color Emoji";
+      };
     };
-
-    emoji = {
-      package = pkgs.noto-fonts-color-emoji;
-      name = "Noto Color Emoji";
+    polarity = "dark";
+    cursor = {
+      package = pkgs.google-cursor;
+      name = "GoogleDot-Black";
+      size = 30;
     };
   };
-  stylix.polarity = "dark";
-
-  stylix.cursor.package = pkgs.google-cursor;
-  stylix.cursor.name = "GoogleDot-Black";
-  stylix.cursor.size = 30;
 }
