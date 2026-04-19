@@ -13,9 +13,6 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  # Allow non-free pkgs
-  nixpkgs.config.allowUnfree = true;
-
   # List of programs
   home.packages = with pkgs; [
   ];
