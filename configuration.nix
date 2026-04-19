@@ -33,8 +33,10 @@
 
   documentation = {
     enable = true;
-    man.enable = true;
-    man.generateCaches = true;
+    man = {
+      enable = true;
+      cache.enable = true;
+    };
   };
 
   # Enabling direnv
