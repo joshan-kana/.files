@@ -508,8 +508,12 @@
   };
 
   # GTK Icon Theme
-  gtk.iconTheme = {
-    package = pkgs.gruvbox-dark-icons-gtk;
-    name = "oomox-gruvbox-dark";
+  gtk = {
+    iconTheme = {
+      package = pkgs.gruvbox-dark-icons-gtk;
+      name = "oomox-gruvbox-dark";
+    }; 
+  # legacy default for gtk theme
+  gtk4.theme = config.gtk.theme;
   };
 }
