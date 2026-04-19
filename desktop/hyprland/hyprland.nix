@@ -30,7 +30,7 @@
       # exec-once = waybar & hyprpaper & firefox
 
       # Wallpaper daemon
-      exec-once = swww init && swww img ~/.config/home-manager/wallpaper.png
+      exec-once = awww init && awww img ~/.config/home-manager/wallpaper.png
 
       # Status bar
       exec-once = waybar

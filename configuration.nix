@@ -243,7 +243,7 @@
     #mako
     #libnotify
     polkit_gnome
-    swww
+    awww
     networkmanagerapplet
     playerctl
     grimblast
