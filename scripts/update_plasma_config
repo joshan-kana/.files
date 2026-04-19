@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Define paths
-PLASMA_CONFIG_FILE="$HOME/.files/desktop/plasma/plasma_hm.nix"
+PLASMA_CONFIG_FILE="$DOTFILES/desktop/plasma/plasma_hm.nix"
 TEMP_FILE=$(mktemp)
 ERR_FILE=$(mktemp)
 
