@@ -87,6 +87,7 @@
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./overlays/nvtop-overlay.nix
+            ./overlays/monaspace-liga-overlay.nix
             ./configuration.nix
             ./profiles/nixos/profile_nixos.nix
             ./profiles/nixos/configuration_x86.nix
@@ -122,6 +123,7 @@
 
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
+            ./overlays/monaspace-liga-overlay.nix
             ./configuration.nix
             ./profiles/nixos-arm-parallels/profile_nixos-arm-parallels.nix
             ./ssh.nix
@@ -152,6 +154,7 @@
 
               home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
+            ./overlays/monaspace-liga-overlay.nix
             ./configuration.nix
             ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
             ./orbstack.nix

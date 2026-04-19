@@ -45,9 +45,33 @@
   };
 
   # Installing fonts
-  # fonts.packages = with pkgs; [
-  #  (nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
-  # ];
+  # Fixes mismatched glyph sizing by ensuring icon/PUA glyphs resolve to a
+  # dedicated Nerd Font symbols face instead of an arbitrary fallback.
+  fonts =
+    let
+      nerdSymbols =
+        if builtins.hasAttr "nerd-fonts" pkgs
+        then pkgs."nerd-fonts".symbols-only
+        else (pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; });
+    in
+    {
+      packages = [
+        config.stylix.fonts.monospace.package
+        config.stylix.fonts.emoji.package
+        nerdSymbols
+      ];
+
+      fontconfig.defaultFonts = {
+        monospace = [
+          config.stylix.fonts.monospace.name
+          "Symbols Nerd Font Mono"
+          "Symbols Nerd Font"
+        ];
+        sansSerif = [ config.stylix.fonts.sansSerif.name ];
+        serif = [ config.stylix.fonts.serif.name ];
+        emoji = [ config.stylix.fonts.emoji.name ];
+      };
+    };
 
   environment.sessionVariables = {
 
@@ -289,8 +313,8 @@
     serif = config.stylix.fonts.monospace;
     sansSerif = config.stylix.fonts.monospace;
     monospace = {
-      package = pkgs.nerd-fonts.monaspace;
-      name = "MonaspiceNe Nerd Font Mono";
+      package = pkgs.monaspace-liga;
+      name = "Monaspace Neon";
     };
 
     emoji = {
