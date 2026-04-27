@@ -456,6 +456,7 @@
   stylix.targets.firefox.profileNames = [ "themed" ];
   stylix.targets.firefox.colorTheme.enable = true;
   programs.firefox.profiles.themed.extensions.force = true;
+  programs.firefox.configPath = ".mozilla/firefox";
   # Floorp
   programs.floorp.enable = true;
   stylix.targets.floorp.profileNames = [ "themed" ];
