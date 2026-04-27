@@ -515,4 +515,7 @@
   # legacy default for gtk theme
   gtk4.theme = config.gtk.theme;
   };
+
+  # force overwrite .gtkrc-2.0 file during system rebuild
+  home.file."/home/joshan/.gtkrc-2.0".force = pkgs.lib.mkForce true;
 }
