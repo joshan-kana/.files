@@ -94,6 +94,8 @@
             ./ssh.nix
             ./vpn.nix
             ./boot.nix
+            ./desktop/display-manager.nix
+            ./desktop/hyprland/hyprland_nixos.nix
             ./desktop/plasma/plasma.nix
             /etc/nixos/hardware-configuration.nix
           ];
@@ -129,6 +131,8 @@
             ./ssh.nix
             ./vpn.nix
             ./boot.nix
+            ./desktop/display-manager.nix
+            ./desktop/hyprland/hyprland_nixos.nix
             ./desktop/plasma/plasma.nix
             ./profiles/nixos-arm-parallels/hardware-configuration.nix
           ];
