@@ -432,6 +432,12 @@
     };
   };
 
+  # yazi: TUI file manager
+  programs.yazi = {
+    enable = true;
+    shellWrapperName = "y";
+  };
+
   # Text editors
   # Neovim
   programs.neovim = {

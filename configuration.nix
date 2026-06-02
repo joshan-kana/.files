@@ -269,6 +269,10 @@
   # };
 
   # List services that you want to enable:
+  # yazi: TUI file manager
+  programs.yazi = {
+    enable = true;
+  };
 
 
   # Enabling sound
