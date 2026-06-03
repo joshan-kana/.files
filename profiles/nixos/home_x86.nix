@@ -1,4 +1,9 @@
-{ config, pkgs, spicetify-nix, ... }:
+{
+  config,
+  pkgs,
+  spicetify-nix,
+  ...
+}:
 {
   # Mopidy (MPD)
   services.mopidy = {

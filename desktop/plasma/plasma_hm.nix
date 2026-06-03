@@ -14,10 +14,18 @@
       kmix.increase_microphone_volume = "Microphone Volume Up";
       kmix.increase_volume = "Volume Up";
       kmix.increase_volume_small = "Shift+Volume Up";
-      kmix.mic_mute = ["" "Microphone Mute" "Meta+Volume Mute"];
+      kmix.mic_mute = [
+        ""
+        "Microphone Mute"
+        "Meta+Volume Mute"
+      ];
       kmix.mute = "Volume Mute";
       ksmserver."Halt Without Confirmation" = [ ];
-      ksmserver."Lock Session" = ["" "Meta+L" "Screensaver"];
+      ksmserver."Lock Session" = [
+        ""
+        "Meta+L"
+        "Screensaver"
+      ];
       ksmserver."Log Out" = "Ctrl+Alt+Del";
       ksmserver."Log Out Without Confirmation" = [ ];
       ksmserver.LogOut = [ ];
@@ -30,7 +38,11 @@
       kwin."Decrease Opacity" = [ ];
       kwin."Edit Tiles" = "Meta+T";
       kwin.Expose = "Ctrl+F9";
-      kwin.ExposeAll = ["" "Launch (C)" "Ctrl+F10"];
+      kwin.ExposeAll = [
+        ""
+        "Launch (C)"
+        "Ctrl+F10"
+      ];
       kwin.ExposeClass = "Ctrl+F7";
       kwin.ExposeClassCurrentDesktop = [ ];
       kwin."Grid View" = "Meta+G";
@@ -64,13 +76,25 @@
       kwin."Suspend Compositing" = "Alt+Shift+F12";
       kwin."Switch One Desktop Down" = "Meta+Ctrl+Down";
       kwin."Switch One Desktop Up" = "Meta+Ctrl+Up";
-      kwin."Switch One Desktop to the Left" = ["" "Meta+Ctrl+Left" "Meta+Ctrl+A"];
-      kwin."Switch One Desktop to the Right" = ["" "Meta+Ctrl+Right" "Meta+Ctrl+D"];
+      kwin."Switch One Desktop to the Left" = [
+        ""
+        "Meta+Ctrl+Left"
+        "Meta+Ctrl+A"
+      ];
+      kwin."Switch One Desktop to the Right" = [
+        ""
+        "Meta+Ctrl+Right"
+        "Meta+Ctrl+D"
+      ];
       kwin."Switch Window Down" = "Meta+Alt+Down";
       kwin."Switch Window Left" = "Meta+Alt+Left";
       kwin."Switch Window Right" = "Meta+Alt+Right";
       kwin."Switch Window Up" = "Meta+Alt+Up";
-      kwin."Switch to Desktop 1" = ["" "Ctrl+F1" "Meta+1"];
+      kwin."Switch to Desktop 1" = [
+        ""
+        "Ctrl+F1"
+        "Meta+1"
+      ];
       kwin."Switch to Desktop 10" = [ ];
       kwin."Switch to Desktop 11" = [ ];
       kwin."Switch to Desktop 12" = [ ];
@@ -81,15 +105,27 @@
       kwin."Switch to Desktop 17" = [ ];
       kwin."Switch to Desktop 18" = [ ];
       kwin."Switch to Desktop 19" = [ ];
-      kwin."Switch to Desktop 2" = ["" "Ctrl+F2" "Meta+2"];
+      kwin."Switch to Desktop 2" = [
+        ""
+        "Ctrl+F2"
+        "Meta+2"
+      ];
       kwin."Switch to Desktop 20" = [ ];
       kwin."Switch to Desktop 21" = [ ];
       kwin."Switch to Desktop 22" = [ ];
       kwin."Switch to Desktop 23" = [ ];
       kwin."Switch to Desktop 24" = [ ];
       kwin."Switch to Desktop 25" = [ ];
-      kwin."Switch to Desktop 3" = ["" "Meta+3" "Ctrl+F3"];
-      kwin."Switch to Desktop 4" = ["" "Ctrl+F4" "Meta+4"];
+      kwin."Switch to Desktop 3" = [
+        ""
+        "Meta+3"
+        "Ctrl+F3"
+      ];
+      kwin."Switch to Desktop 4" = [
+        ""
+        "Ctrl+F4"
+        "Meta+4"
+      ];
       kwin."Switch to Desktop 5" = "Meta+5";
       kwin."Switch to Desktop 6" = "Meta+6";
       kwin."Switch to Desktop 7" = "Meta+7";
@@ -124,7 +160,11 @@
       kwin."Walk Through Windows of Current Application Alternative (Reverse)" = [ ];
       kwin."Window Above Other Windows" = [ ];
       kwin."Window Below Other Windows" = [ ];
-      kwin."Window Close" = ["" "Alt+F4" "Meta+Q"];
+      kwin."Window Close" = [
+        ""
+        "Alt+F4"
+        "Meta+Q"
+      ];
       kwin."Window Custom Quick Tile Bottom" = [ ];
       kwin."Window Custom Quick Tile Left" = [ ];
       kwin."Window Custom Quick Tile Right" = [ ];
@@ -206,15 +246,31 @@
       kwin."Window to Screen 7" = [ ];
       kwin.disableInputCapture = "Meta+Shift+Esc";
       kwin.view_actual_size = "Meta+0";
-      kwin.view_zoom_in = ["" "Meta++" ""];
+      kwin.view_zoom_in = [
+        ""
+        "Meta++"
+        ""
+      ];
       kwin.view_zoom_out = "Meta+-";
       mediacontrol.mediavolumedown = [ ];
       mediacontrol.mediavolumeup = [ ];
-      mediacontrol.nextmedia = ["" "Media Next" "Meta+Alt+C"];
+      mediacontrol.nextmedia = [
+        ""
+        "Media Next"
+        "Meta+Alt+C"
+      ];
       mediacontrol.pausemedia = "Media Pause";
       mediacontrol.playmedia = [ ];
-      mediacontrol.playpausemedia = ["" "Meta+Alt+X" "Media Play"];
-      mediacontrol.previousmedia = ["" "Media Previous" "Meta+Alt+Z"];
+      mediacontrol.playpausemedia = [
+        ""
+        "Meta+Alt+X"
+        "Media Play"
+      ];
+      mediacontrol.previousmedia = [
+        ""
+        "Media Previous"
+        "Meta+Alt+Z"
+      ];
       mediacontrol.seekbackwardmedia = "Media Rewind";
       mediacontrol.seekbackwardmedialong = [ ];
       mediacontrol.seekforwardmedia = "Media Fast Forward";
@@ -232,9 +288,16 @@
       org_kde_powerdevil.Sleep = "Sleep";
       org_kde_powerdevil."Toggle Keyboard Backlight" = "Keyboard Light On/Off";
       org_kde_powerdevil."Turn Off Screen" = [ ];
-      org_kde_powerdevil.powerProfile = ["" "Battery" "Meta+B"];
+      org_kde_powerdevil.powerProfile = [
+        ""
+        "Battery"
+        "Meta+B"
+      ];
       plasmashell."Slideshow Wallpaper Next Image" = [ ];
-      plasmashell."activate application launcher" = ["Meta" "Alt+F1"];
+      plasmashell."activate application launcher" = [
+        "Meta"
+        "Alt+F1"
+      ];
       plasmashell."activate task manager entry 1" = [ ];
       plasmashell."activate task manager entry 10" = [ ];
       plasmashell."activate task manager entry 2" = [ ];
@@ -262,7 +325,11 @@
       plasmashell."switch to next activity" = [ ];
       plasmashell."switch to previous activity" = [ ];
       plasmashell."toggle do not disturb" = [ ];
-      "services/org.kde.touchpadshortcuts.desktop".ToggleTouchpad = ["" "Touchpad Toggle" "Meta+Ctrl+Zenkaku Hankaku"];
+      "services/org.kde.touchpadshortcuts.desktop".ToggleTouchpad = [
+        ""
+        "Touchpad Toggle"
+        "Meta+Ctrl+Zenkaku Hankaku"
+      ];
       "services/playerctl-2.desktop"._launch = "Meta+Alt+S";
       "services/playerctl.desktop"._launch = "Meta+Alt+D";
       "services/services.code-2.desktop"._launch = "Meta+Shift+E";
@@ -274,12 +341,20 @@
       "services/services.services.playerctl-2.desktop"._launch = "Meta+Alt+S";
       "services/services.services.playerctl.desktop"._launch = "Meta+Alt+D";
       "services/services.services.playerctld.desktop"._launch = "Meta+Alt+F";
-      "services/services.systemsettings.desktop"._launch = ["" "" "" "" "Tools" "Meta+I"];
+      "services/services.systemsettings.desktop"._launch = [
+        ""
+        ""
+        ""
+        ""
+        "Tools"
+        "Meta+I"
+      ];
       "services/sysedit.desktop"._launch = "Meta+Shift+E";
     };
     configFile = {
       baloofilerc.General.dbVersion = 2;
-      baloofilerc.General."exclude filters" = "*~,*.part,*.o,*.la,*.lo,*.loT,*.moc,moc_*.cpp,qrc_*.cpp,ui_*.h,cmake_install.cmake,CMakeCache.txt,CTestTestfile.cmake,libtool,config.status,confdefs.h,autom4te,conftest,confstat,Makefile.am,*.gcode,.ninja_deps,.ninja_log,build.ninja,*.csproj,*.m4,*.rej,*.gmo,*.pc,*.omf,*.aux,*.tmp,*.po,*.vm*,*.nvram,*.rcore,*.swp,*.swap,lzo,litmain.sh,*.orig,.histfile.*,.xsession-errors*,*.map,*.so,*.a,*.db,*.qrc,*.ini,*.init,*.img,*.vdi,*.vbox*,vbox.log,*.qcow2,*.vmdk,*.vhd,*.vhdx,*.sql,*.sql.gz,*.ytdl,*.tfstate*,*.class,*.pyc,*.pyo,*.elc,*.qmlc,*.jsc,*.fastq,*.fq,*.gb,*.fasta,*.fna,*.gbff,*.faa,po,CVS,.svn,.git,_darcs,.bzr,.hg,CMakeFiles,CMakeTmp,CMakeTmpQmake,.moc,.obj,.pch,.uic,.npm,.yarn,.yarn-cache,__pycache__,node_modules,node_packages,nbproject,.terraform,.venv,venv,core-dumps,lost+found";
+      baloofilerc.General."exclude filters" =
+        "*~,*.part,*.o,*.la,*.lo,*.loT,*.moc,moc_*.cpp,qrc_*.cpp,ui_*.h,cmake_install.cmake,CMakeCache.txt,CTestTestfile.cmake,libtool,config.status,confdefs.h,autom4te,conftest,confstat,Makefile.am,*.gcode,.ninja_deps,.ninja_log,build.ninja,*.csproj,*.m4,*.rej,*.gmo,*.pc,*.omf,*.aux,*.tmp,*.po,*.vm*,*.nvram,*.rcore,*.swp,*.swap,lzo,litmain.sh,*.orig,.histfile.*,.xsession-errors*,*.map,*.so,*.a,*.db,*.qrc,*.ini,*.init,*.img,*.vdi,*.vbox*,vbox.log,*.qcow2,*.vmdk,*.vhd,*.vhdx,*.sql,*.sql.gz,*.ytdl,*.tfstate*,*.class,*.pyc,*.pyo,*.elc,*.qmlc,*.jsc,*.fastq,*.fq,*.gb,*.fasta,*.fna,*.gbff,*.faa,po,CVS,.svn,.git,_darcs,.bzr,.hg,CMakeFiles,CMakeTmp,CMakeTmpQmake,.moc,.obj,.pch,.uic,.npm,.yarn,.yarn-cache,__pycache__,node_modules,node_packages,nbproject,.terraform,.venv,venv,core-dumps,lost+found";
       baloofilerc.General."exclude filters version" = 9;
       dolphinrc.General.ViewPropsTimestamp = "2025,9,16,19,47,20.062";
       dolphinrc."KFileDialog Settings"."Places Icons Auto-resize" = false;
@@ -365,32 +440,58 @@
       kwinrc.Script-polonium.KeepTiledBelow = false;
       kwinrc.Script-polonium.ResizeAmount = 17;
       kwinrc.Script-polonium.TimerDelay = 3;
-      kwinrc."Tiling.f3244e44-4004-5526-a53a-152fabf66ecd".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
-      kwinrc."Tiling.f543e7f1-a9ce-5e64-8a9b-f1bdd336dd8e".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
-      kwinrc."Tiling/0ddd6e83-d9b4-4f3e-9989-899ff0af0cec/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/0ddd6e83-d9b4-4f3e-9989-899ff0af0cec/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/285712a6-31d1-5e3a-95e8-b6f4629caf9f".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/3c782741-2746-4eeb-9a68-3802895ffafa/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/3c782741-2746-4eeb-9a68-3802895ffafa/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/4c85f5bb-4dcb-5bec-8433-5c0e6860d679".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/4fe209f5-a35d-46d4-825c-b4ceb53ac2b7/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/4fe209f5-a35d-46d4-825c-b4ceb53ac2b7/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/6b9fb101-cf8d-45bc-8491-eedd5963bcfc/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 8;
-      kwinrc."Tiling/6b9fb101-cf8d-45bc-8491-eedd5963bcfc/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/7b31bf4b-eb14-470b-96b6-7b1718df83b1/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/7b31bf4b-eb14-470b-96b6-7b1718df83b1/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/7fb8c463-c102-5440-8fb7-5253b26b5d9c".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/99ecae0b-098f-4600-b98f-2685af293ef6/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/99ecae0b-098f-4600-b98f-2685af293ef6/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/e33580f6-e56d-4d98-b3a7-7a750ccb3aea/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/e33580f6-e56d-4d98-b3a7-7a750ccb3aea/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/ed5ed2f1-417f-4ea7-99f6-473e72ef5c51/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/ed5ed2f1-417f-4ea7-99f6-473e72ef5c51/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
-      kwinrc."Tiling/f3244e44-4004-5526-a53a-152fabf66ecd".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
-      kwinrc."Tiling/f543e7f1-a9ce-5e64-8a9b-f1bdd336dd8e".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
-      kwinrc."Tiling/f79cbca8-71ab-5500-b22d-065fb6297b45".tiles = "{\"layoutDirection\":\"floating\",\"tiles\":x5bx5d}";
-      kwinrc."Tiling/fd56cfe0-be24-4029-9694-5235d51ae552/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding = 4;
-      kwinrc."Tiling/fd56cfe0-be24-4029-9694-5235d51ae552/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles = "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling.f3244e44-4004-5526-a53a-152fabf66ecd".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
+      kwinrc."Tiling.f543e7f1-a9ce-5e64-8a9b-f1bdd336dd8e".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
+      kwinrc."Tiling/0ddd6e83-d9b4-4f3e-9989-899ff0af0cec/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/0ddd6e83-d9b4-4f3e-9989-899ff0af0cec/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/285712a6-31d1-5e3a-95e8-b6f4629caf9f".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/3c782741-2746-4eeb-9a68-3802895ffafa/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/3c782741-2746-4eeb-9a68-3802895ffafa/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/4c85f5bb-4dcb-5bec-8433-5c0e6860d679".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/4fe209f5-a35d-46d4-825c-b4ceb53ac2b7/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/4fe209f5-a35d-46d4-825c-b4ceb53ac2b7/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/6b9fb101-cf8d-45bc-8491-eedd5963bcfc/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        8;
+      kwinrc."Tiling/6b9fb101-cf8d-45bc-8491-eedd5963bcfc/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/7b31bf4b-eb14-470b-96b6-7b1718df83b1/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/7b31bf4b-eb14-470b-96b6-7b1718df83b1/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/7fb8c463-c102-5440-8fb7-5253b26b5d9c".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/99ecae0b-098f-4600-b98f-2685af293ef6/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/99ecae0b-098f-4600-b98f-2685af293ef6/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/e33580f6-e56d-4d98-b3a7-7a750ccb3aea/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/e33580f6-e56d-4d98-b3a7-7a750ccb3aea/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/ed5ed2f1-417f-4ea7-99f6-473e72ef5c51/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/ed5ed2f1-417f-4ea7-99f6-473e72ef5c51/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
+      kwinrc."Tiling/f3244e44-4004-5526-a53a-152fabf66ecd".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
+      kwinrc."Tiling/f543e7f1-a9ce-5e64-8a9b-f1bdd336dd8e".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":x5bx5d}";
+      kwinrc."Tiling/f79cbca8-71ab-5500-b22d-065fb6297b45".tiles =
+        "{\"layoutDirection\":\"floating\",\"tiles\":x5bx5d}";
+      kwinrc."Tiling/fd56cfe0-be24-4029-9694-5235d51ae552/b94e80c0-16b0-4b0b-bd51-e205287be8ae".padding =
+        4;
+      kwinrc."Tiling/fd56cfe0-be24-4029-9694-5235d51ae552/b94e80c0-16b0-4b0b-bd51-e205287be8ae".tiles =
+        "{\"layoutDirection\":\"horizontal\",\"tiles\":[{\"width\":0.25},{\"width\":0.5},{\"width\":0.25}]}";
       kwinrc.Windows.DelayFocusInterval = 0;
       kwinrc.Windows.FocusPolicy = "FocusFollowsMouse";
       kwinrc.Windows.FocusStealingPreventionLevel = 0;

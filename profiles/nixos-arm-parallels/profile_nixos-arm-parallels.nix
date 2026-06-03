@@ -1,4 +1,10 @@
-{ dotfilesPath, profileName, ollamaUrl, nixosRebuildFlags, ... }:
+{
+  dotfilesPath,
+  profileName,
+  ollamaUrl,
+  nixosRebuildFlags,
+  ...
+}:
 
 {
   environment.sessionVariables = {

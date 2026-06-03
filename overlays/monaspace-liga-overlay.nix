@@ -1,7 +1,8 @@
 { config, pkgs, ... }:
 {
   nixpkgs.overlays = [
-    (final: prev:
+    (
+      final: prev:
       let
         python = prev.python3.withPackages (ps: [ ps.fonttools ]);
         patchScript = prev.writeText "monaspace-promote-all-gsub-to-liga.py" ''
@@ -186,7 +187,7 @@
           pname = "monaspace-liga";
           version = prev.monaspace.version or "unknown";
           dontUnpack = true;
-                    phases = [ "installPhase" ];
+          phases = [ "installPhase" ];
           nativeBuildInputs = [ python ];
 
           # Fonts-only output; skip the expensive generic fixup scans.
@@ -211,9 +212,10 @@
           '';
 
           meta = (prev.monaspace.meta or { }) // {
-                        description = "Monaspace with code-oriented GSUB features promoted into 'liga' (calt/ssXX/cvXX; excludes sub/sup/fractions)";
+            description = "Monaspace with code-oriented GSUB features promoted into 'liga' (calt/ssXX/cvXX; excludes sub/sup/fractions)";
           };
         };
-      })
+      }
+    )
   ];
 }
