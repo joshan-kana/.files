@@ -31,125 +31,117 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    home-manager,
-    stylix,
-    spicetify-nix,
-    plasma-manager,
-    ...
-  } @ inputs: let
-    lib = nixpkgs.lib;
+  outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... } @ inputs:
+    let
+      lib = nixpkgs.lib;
 
-    systems = [
-      "x86_64-linux"
-      "aarch64-linux"
-      "x86_64-darwin"
-      "aarch64-darwin"
-    ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
-    forAllSystems = f: lib.genAttrs systems (system: f system);
+      forAllSystems = f: lib.genAttrs systems (system: f system);
 
-    pkgsFor = system: import nixpkgs {inherit system;};
+      pkgsFor = system: import nixpkgs { inherit system; };
 
-    repoFormatterFor = pkgs:
-      pkgs.writeShellApplication {
-        name = "nixfmt";
-        runtimeInputs = [
-          pkgs.git
-          pkgs.nixfmt
-        ];
-        text = ''
-          if [ "$#" -gt 0 ]; then
-            exec nixfmt "$@"
-          fi
+      repoFormatterFor = pkgs:
+        pkgs.writeShellApplication {
+          name = "nixfmt";
+          runtimeInputs = [
+            pkgs.git
+            pkgs.nixfmt
+          ];
+          text = ''
+            if [ "$#" -gt 0 ]; then
+              exec nixfmt "$@"
+            fi
 
-          git ls-files -z '*.nix' | xargs -0 nixfmt
-        '';
-      };
-
-    # Centralised profile-specific variables
-    profiles = {
-      nixos = {
-        dotfilesPath = "/home/joshan/.files";
-        profileName = "nixos";
-        ollamaUrl = "http://localhost:11434/v1";
-        nixosRebuildFlags = "--impure";
-      };
-
-      nixos-arm-parallels = {
-        dotfilesPath = "/home/joshan/.files";
-        profileName = "nixos-arm-parallels";
-        ollamaUrl = "http://localhost:11434/v1";
-        nixosRebuildFlags = "";
-      };
-
-      nixos-orbstack = {
-        dotfilesPath = "/Users/joshan/.files";
-        profileName = "nixos-orbstack";
-        ollamaUrl = "http://host.orb.internal:11434/v1";
-        nixosRebuildFlags = "--impure";
-      };
-    };
-  in {
-    formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
-
-    devShells = forAllSystems (
-      system: let
-        pkgs = pkgsFor system;
-        commonTools = with pkgs; [
-          nixfmt
-          nixd
-          nil
-          statix
-          deadnix
-        ];
-
-        vscodePkg =
-          if pkgs ? vscodium
-          then pkgs.vscodium
-          else if pkgs ? vscode
-          then pkgs.vscode
-          else null;
-      in {
-        default = pkgs.mkShell {
-          packages = commonTools;
+            git ls-files -z '*.nix' | xargs -0 nixfmt
+          '';
         };
 
-        vscode = pkgs.mkShell {
-          packages = commonTools ++ lib.optionals (vscodePkg != null) [vscodePkg];
+      # Centralised profile-specific variables
+      profiles = {
+        nixos = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos";
+          ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "--impure";
         };
 
-      }
-    );
+        nixos-arm-parallels = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos-arm-parallels";
+          ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "";
+        };
 
-    apps = forAllSystems (
-      system: let
-        pkgs = pkgsFor system;
-        vscodePkg =
-          if pkgs ? vscodium
-          then pkgs.vscodium
-          else if pkgs ? vscode
-          then pkgs.vscode
-          else null;
-      in
-        lib.optionalAttrs (vscodePkg != null) {
-          code = {
-            type = "app";
-            program = lib.getExe vscodePkg;
+        nixos-orbstack = {
+          dotfilesPath = "/Users/joshan/.files";
+          profileName = "nixos-orbstack";
+          ollamaUrl = "http://host.orb.internal:11434/v1";
+          nixosRebuildFlags = "--impure";
+        };
+      };
+    in
+    {
+      formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
+
+      devShells = forAllSystems (
+        system: let
+          pkgs = pkgsFor system;
+          commonTools = with pkgs; [
+            nixfmt
+            nixd
+            nil
+            statix
+            deadnix
+          ];
+
+          vscodePkg =
+            if pkgs ? vscodium
+            then pkgs.vscodium
+            else if pkgs ? vscode
+            then pkgs.vscode
+            else null;
+        in {
+          default = pkgs.mkShell {
+            packages = commonTools;
+          };
+
+          vscode = pkgs.mkShell {
+            packages = commonTools ++ lib.optionals (vscodePkg != null) [vscodePkg];
           };
         }
-    );
+      );
 
-    nixosConfigurations = {
-      nixos = let
-        specialArgs = {
-          inherit inputs;
-          inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-        };
-      in
-        lib.nixosSystem {
+      apps = forAllSystems (
+        system: let
+          pkgs = pkgsFor system;
+          vscodePkg =
+            if pkgs ? vscodium
+            then pkgs.vscodium
+            else if pkgs ? vscode
+            then pkgs.vscode
+            else null;
+        in
+          lib.optionalAttrs (vscodePkg != null) {
+            code = {
+              type = "app";
+              program = lib.getExe vscodePkg;
+            };
+          }
+      );
+
+      nixosConfigurations = {
+        nixos = let
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+          };
+        in lib.nixosSystem {
           inherit specialArgs;
           system = "x86_64-linux";
           modules = [
@@ -167,7 +159,7 @@
                 ./desktop/hyprland/hyprland.nix
               ];
 
-              home-manager.extraSpecialArgs = specialArgs // {inherit spicetify-nix;};
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./overlays/nvtop-overlay.nix
             ./overlays/monaspace-liga-overlay.nix
@@ -183,14 +175,13 @@
             /etc/nixos/hardware-configuration.nix
           ];
         };
-
-      nixos-arm-parallels = let
-        specialArgs = {
-          inherit inputs;
-          inherit (profiles.nixos-arm-parallels) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-        };
-      in
-        lib.nixosSystem {
+        
+        nixos-arm-parallels = let
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos-arm-parallels) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+          };
+        in lib.nixosSystem {
           inherit specialArgs;
           system = "aarch64-linux";
           modules = [
@@ -207,7 +198,7 @@
                 ./desktop/hyprland/hyprland.nix
               ];
 
-              home-manager.extraSpecialArgs = specialArgs // {inherit spicetify-nix;};
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./overlays/monaspace-liga-overlay.nix
             ./configuration.nix
@@ -221,14 +212,13 @@
             ./profiles/nixos-arm-parallels/hardware-configuration.nix
           ];
         };
-
-      nixos-orbstack = let
-        specialArgs = {
-          inherit inputs;
-          inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-        };
-      in
-        lib.nixosSystem {
+        
+        nixos-orbstack = let
+          specialArgs = {
+            inherit inputs;
+            inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+          };
+        in lib.nixosSystem {
           inherit specialArgs;
           system = "aarch64-linux";
           modules = [
@@ -241,7 +231,7 @@
                 ./home.nix
               ];
 
-              home-manager.extraSpecialArgs = specialArgs // {inherit spicetify-nix;};
+              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
             }
             ./overlays/monaspace-liga-overlay.nix
             ./configuration.nix
@@ -249,6 +239,6 @@
             ./orbstack.nix
           ];
         };
+      };
     };
-  };
 }
