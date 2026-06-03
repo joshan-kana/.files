@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# Update flake inputs on the current branch, build the selected target before
+# and after the update, and evaluate the rest of the fleet before merging.
+
+set -euo pipefail
+
+MAIN_BRANCH=${MAIN_BRANCH:-main}
+read -r -a nix_flags <<< "${NIXOS_REBUILD_FLAGS:-}"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/flake-update <target> [inputs...]
+
+Targets:
+  linux-desktop       Alias for nixos
+  nixos               Full x86_64 Linux desktop
+  nixos-arm-parallels ARM Linux desktop VM
+  nixos-orbstack      OrbStack Linux container
+  all                 All current NixOS configurations
+
+Inputs:
+  If inputs are provided, only those inputs are updated.
+  If no inputs are provided, all inputs are updated.
+
+Examples:
+  scripts/flake-update linux-desktop nixpkgs
+  scripts/flake-update nixos home-manager stylix
+  scripts/flake-update all
+EOF
+}
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a Git repository"
+cd "$repo_root"
+
+target=${1:-}
+[[ -n "$target" ]] || {
+  usage
+  exit 1
+}
+shift
+
+if [[ "$target" == "-h" || "$target" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+current_branch=$(git branch --show-current)
+[[ -n "$current_branch" ]] || die "detached HEAD is not supported for update branches"
+[[ "$current_branch" != "$MAIN_BRANCH" ]] || die "create an update branch first; refusing to update flake.lock on $MAIN_BRANCH"
+
+git diff --quiet || die "working tree has unstaged changes"
+git diff --cached --quiet || die "index has staged changes"
+
+map_target() {
+  case "$1" in
+    linux-desktop) echo "nixos" ;;
+    nixos | nixos-arm-parallels | nixos-orbstack) echo "$1" ;;
+    *) return 1 ;;
+  esac
+}
+
+all_profiles=(nixos nixos-arm-parallels nixos-orbstack)
+
+if [[ "$target" == "all" ]]; then
+  target_profiles=("${all_profiles[@]}")
+else
+  profile=$(map_target "$target") || die "unknown target '$target'"
+  target_profiles=("$profile")
+fi
+
+main_flake="git+file://${repo_root}?ref=${MAIN_BRANCH}"
+current_flake="."
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+system_attr() {
+  local flake_ref=$1
+  local profile=$2
+  printf '%s#nixosConfigurations.%s.config.system.build.toplevel' "$flake_ref" "$profile"
+}
+
+eval_profile() {
+  local flake_ref=$1
+  local profile=$2
+  echo "Evaluating ${profile} from ${flake_ref}..."
+  nix eval "${nix_flags[@]}" --raw "$(system_attr "$flake_ref" "$profile").drvPath" >/dev/null
+}
+
+build_profile() {
+  local flake_ref=$1
+  local profile=$2
+  local output=$3
+  echo "Building ${profile} from ${flake_ref}..."
+  nix build "${nix_flags[@]}" "$(system_attr "$flake_ref" "$profile")" -o "$output"
+}
+
+diff_closures() {
+  local old_out=$1
+  local new_out=$2
+
+  if command -v nvd >/dev/null 2>&1; then
+    nvd diff "$old_out" "$new_out"
+  else
+    nix store diff-closures "$old_out" "$new_out"
+  fi
+}
+
+echo "Target profiles: ${target_profiles[*]}"
+
+echo "Checking current ${MAIN_BRANCH} evaluations before updating..."
+for profile in "${all_profiles[@]}"; do
+  eval_profile "$main_flake" "$profile"
+done
+
+for profile in "${target_profiles[@]}"; do
+  build_profile "$main_flake" "$profile" "$tmpdir/${profile}-old"
+done
+
+if [[ "$#" -gt 0 ]]; then
+  echo "Updating selected flake inputs: $*"
+  nix flake update "$@"
+else
+  echo "Updating all flake inputs..."
+  nix flake update
+fi
+
+echo "Checking updated branch evaluations..."
+for profile in "${all_profiles[@]}"; do
+  eval_profile "$current_flake" "$profile"
+done
+
+for profile in "${target_profiles[@]}"; do
+  build_profile "$current_flake" "$profile" "$tmpdir/${profile}-new"
+  echo
+  echo "Diff for ${profile}:"
+  diff_closures "$tmpdir/${profile}-old" "$tmpdir/${profile}-new"
+done
+
+cat <<EOF
+
+Update branch is ready for review.
+
+Useful inspection commands:
+  git diff ${MAIN_BRANCH} -- flake.lock
+  nix-tree result
+  nix why-depends result /nix/store/...-package
+EOF
