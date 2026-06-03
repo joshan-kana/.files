@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+if ! git diff --cached --quiet -- '*.nix'; then
+  echo "Checking staged Nix formatting..."
+  git diff --cached --name-only -z -- '*.nix' | xargs -0 nix run .#fmt -- --check
+fi
+
+git diff --check --cached

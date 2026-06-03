@@ -77,7 +77,7 @@
       };
     };
   in {
-    formatter = forAllSystems (system: (pkgsFor system).nixfmt-rfc-style);
+    formatter = forAllSystems (system: (pkgsFor system).nixfmt);
 
     packages = forAllSystems (
       system: let
@@ -87,7 +87,7 @@
           name = "fmt";
           runtimeInputs = [
             pkgs.git
-            pkgs.nixfmt-rfc-style
+            pkgs.nixfmt
           ];
           text = ''
             if [ "$#" -gt 0 ]; then
@@ -104,7 +104,7 @@
       system: let
         pkgs = pkgsFor system;
         commonTools = with pkgs; [
-          nixfmt-rfc-style
+          nixfmt
           nixd
           nil
           statix
@@ -146,6 +146,20 @@
           fmt = {
             type = "app";
             program = lib.getExe self.packages.${system}.fmt;
+          };
+
+          install-git-hooks = {
+            type = "app";
+            program = lib.getExe (
+              pkgs.writeShellApplication {
+                name = "install-git-hooks";
+                runtimeInputs = [pkgs.git];
+                text = ''
+                  git config core.hooksPath .githooks
+                  echo "Git hooks enabled from .githooks"
+                '';
+              }
+            );
           };
 
           nvim = {
