@@ -48,17 +48,13 @@
 
       repoFormatterFor = pkgs:
         pkgs.writeShellApplication {
-          name = "nixfmt";
+          name = "treefmt";
           runtimeInputs = [
-            pkgs.git
             pkgs.nixfmt
+            pkgs.treefmt
           ];
           text = ''
-            if [ "$#" -gt 0 ]; then
-              exec nixfmt "$@"
-            fi
-
-            git ls-files -z '*.nix' | xargs -0 nixfmt
+            exec treefmt "$@"
           '';
         };
 
@@ -94,6 +90,7 @@
           pkgs = pkgsFor system;
           commonTools = with pkgs; [
             nixfmt
+            treefmt
             nixd
             nil
             statix

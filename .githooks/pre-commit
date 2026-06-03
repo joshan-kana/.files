@@ -6,7 +6,7 @@ cd "$repo_root"
 
 if ! git diff --cached --quiet -- '*.nix'; then
   echo "Checking staged Nix formatting..."
-  git diff --cached --name-only -z -- '*.nix' | xargs -0 nix fmt -- --check
+  git diff --cached --name-only -z -- '*.nix' | xargs -0 nix fmt -- --fail-on-change
 fi
 
 git diff --check --cached
