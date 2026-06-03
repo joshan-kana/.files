@@ -1,0 +1,48 @@
+{
+  "Attrset assignment (adds };)": {
+    "scope": "nix",
+    "prefix": ["set;", "attrset;"],
+    "body": [
+      "${1:attr} = {",
+      "\t$0",
+      "};"
+    ],
+    "description": "Create an attrset assignment that ends with };"
+  },
+
+  "Function args attrset (adds : )": {
+    "scope": "nix",
+    "prefix": ["args:", "fnargs:", "lambda:"],
+    "body": [
+      "{ ${1:args} }:",
+      "$0"
+    ],
+    "description": "Create a function argument attrset ending with ':'"
+  },
+
+  "Module skeleton ({ ... }: { ... })": {
+    "scope": "nix",
+    "prefix": ["module;", "mod;"],
+    "body": [
+      "{",
+      "\t${1:config},",
+      "\t${2:pkgs},",
+      "\t...",
+      "}: {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Common Nix module/function skeleton with args attrset and result attrset"
+  },
+
+  "programs.<name> = { ... };": {
+    "scope": "nix",
+    "prefix": ["programs;", "program;"],
+    "body": [
+      "programs.${1:name} = {",
+      "\t$0",
+      "};"
+    ],
+    "description": "Create a programs.<name> attrset block ending with };"
+  }
+}
