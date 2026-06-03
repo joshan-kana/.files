@@ -53,6 +53,22 @@
 
     pkgsFor = system: import nixpkgs {inherit system;};
 
+    repoFormatterFor = pkgs:
+      pkgs.writeShellApplication {
+        name = "nixfmt";
+        runtimeInputs = [
+          pkgs.git
+          pkgs.nixfmt
+        ];
+        text = ''
+          if [ "$#" -gt 0 ]; then
+            exec nixfmt "$@"
+          fi
+
+          git ls-files -z '*.nix' | xargs -0 nixfmt
+        '';
+      };
+
     # Centralised profile-specific variables
     profiles = {
       nixos = {
@@ -77,28 +93,7 @@
       };
     };
   in {
-    formatter = forAllSystems (system: (pkgsFor system).nixfmt);
-
-    packages = forAllSystems (
-      system: let
-        pkgs = pkgsFor system;
-      in {
-        fmt = pkgs.writeShellApplication {
-          name = "fmt";
-          runtimeInputs = [
-            pkgs.git
-            pkgs.nixfmt
-          ];
-          text = ''
-            if [ "$#" -gt 0 ]; then
-              exec nixfmt "$@"
-            fi
-
-            git ls-files -z '*.nix' | xargs -0 nixfmt
-          '';
-        };
-      }
-    );
+    formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
 
     devShells = forAllSystems (
       system: let
@@ -143,25 +138,6 @@
           else null;
       in
         {
-          fmt = {
-            type = "app";
-            program = lib.getExe self.packages.${system}.fmt;
-          };
-
-          install-git-hooks = {
-            type = "app";
-            program = lib.getExe (
-              pkgs.writeShellApplication {
-                name = "install-git-hooks";
-                runtimeInputs = [pkgs.git];
-                text = ''
-                  git config core.hooksPath .githooks
-                  echo "Git hooks enabled from .githooks"
-                '';
-              }
-            );
-          };
-
           nvim = {
             type = "app";
             program = lib.getExe pkgs.neovim;

@@ -39,9 +39,8 @@ Shell aliases are defined in [`home.nix`](home.nix):
 - `sysedit` - Edit configuration in VSCode
 
 ### Formatting
-- `nix fmt` - Format Nix files passed to it (uses the flake `formatter`, currently `nixfmt` from nixpkgs)
-- `nix run .#fmt` - Same as above (handy for CI / muscle memory)
-- `nix run .#install-git-hooks` - Configure Git to run repo hooks from `.githooks/`
+- `nix fmt` - Format all tracked `.nix` files in this repo
+- `git config core.hooksPath .githooks` - Configure Git to run repo hooks from `.githooks/`
 
 ### Editor dev shells
 - `nix develop .#vscode` - Nix language tooling (nixd + nixfmt + lint tools) and optionally VS Code/VSCodium if available
