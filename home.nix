@@ -1,4 +1,13 @@
-{ config, pkgs, spicetify-nix, ollamaUrl, dotfilesPath, profileName, nixosRebuildFlags, ... }:
+{
+  config,
+  pkgs,
+  spicetify-nix,
+  ollamaUrl,
+  dotfilesPath,
+  profileName,
+  nixosRebuildFlags,
+  ...
+}:
 
 {
   # User information
@@ -93,9 +102,17 @@
       mainBar = {
         layer = "top";
         spacing = 10;
-        modules-left = [ "hyprland/workspaces" "mpris" ];
+        modules-left = [
+          "hyprland/workspaces"
+          "mpris"
+        ];
         modules-center = [ "clock" ];
-        modules-right = [ "backlight" "wireplumber" "battery" "tray" ];
+        modules-right = [
+          "backlight"
+          "wireplumber"
+          "battery"
+          "tray"
+        ];
 
         "hyprland/workspaces" = {
           on-scroll-up = "hyprctl dispatch workspace e+1";
@@ -117,19 +134,32 @@
 
         "backlight" = {
           format = "{percent}% {icon}";
-          format-icons = [ "" "" ];
+          format-icons = [
+            ""
+            ""
+          ];
           scroll-step = 0.35;
         };
 
         "battery" = {
           interval = 120;
           format = "{capacity}% {icon}";
-          format-icons = [ "" "" "" "" "" ];
+          format-icons = [
+            ""
+            ""
+            ""
+            ""
+            ""
+          ];
         };
 
         "wireplumber" = {
           format = "{volume}% {icon}";
-          format-icons = [ "" "" "" ];
+          format-icons = [
+            ""
+            ""
+            ""
+          ];
           scroll-step = 0.35;
         };
 
@@ -188,7 +218,7 @@
     enable = true;
     extraConfig = ''
       confirm_os_window_close 0
-      
+
       enable_audio_bell no
 
       input_delay 0
@@ -313,7 +343,7 @@
       # Moving forwards and backwards by a word
       bindkey "^[[1;5D" backward-word
       bindkey "^[[1;5C" forward-word
-      
+
       # Deleting by a word
       bindkey "^H" backward-kill-word
       bindkey "^[[3;3~" kill-word
@@ -456,7 +486,6 @@
   # Disabling stylix for vscode
   stylix.targets.vscode.enable = false;
 
-
   # Browsers
   # Firefox
   programs.firefox.enable = true;
@@ -520,9 +549,9 @@
     iconTheme = {
       package = pkgs.gruvbox-dark-icons-gtk;
       name = "oomox-gruvbox-dark";
-    }; 
-  # legacy default for gtk theme
-  gtk4.theme = config.gtk.theme;
+    };
+    # legacy default for gtk theme
+    gtk4.theme = config.gtk.theme;
   };
 
   # force overwrite .gtkrc-2.0 file during system rebuild

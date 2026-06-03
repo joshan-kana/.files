@@ -31,7 +31,16 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, stylix, spicetify-nix, plasma-manager, ... } @ inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      stylix,
+      spicetify-nix,
+      plasma-manager,
+      ...
+    }@inputs:
     let
       lib = nixpkgs.lib;
 
@@ -46,7 +55,8 @@
 
       pkgsFor = system: import nixpkgs { inherit system; };
 
-      repoFormatterFor = pkgs:
+      repoFormatterFor =
+        pkgs:
         pkgs.writeShellApplication {
           name = "treefmt";
           runtimeInputs = [
@@ -86,7 +96,8 @@
       formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
 
       devShells = forAllSystems (
-        system: let
+        system:
+        let
           pkgs = pkgsFor system;
           commonTools = with pkgs; [
             nixfmt
@@ -98,144 +109,175 @@
           ];
 
           vscodePkg =
-            if pkgs ? vscodium
-            then pkgs.vscodium
-            else if pkgs ? vscode
-            then pkgs.vscode
-            else null;
-        in {
+            if pkgs ? vscodium then
+              pkgs.vscodium
+            else if pkgs ? vscode then
+              pkgs.vscode
+            else
+              null;
+        in
+        {
           default = pkgs.mkShell {
             packages = commonTools;
           };
 
           vscode = pkgs.mkShell {
-            packages = commonTools ++ lib.optionals (vscodePkg != null) [vscodePkg];
+            packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
           };
         }
       );
 
       apps = forAllSystems (
-        system: let
+        system:
+        let
           pkgs = pkgsFor system;
           vscodePkg =
-            if pkgs ? vscodium
-            then pkgs.vscodium
-            else if pkgs ? vscode
-            then pkgs.vscode
-            else null;
+            if pkgs ? vscodium then
+              pkgs.vscodium
+            else if pkgs ? vscode then
+              pkgs.vscode
+            else
+              null;
         in
-          lib.optionalAttrs (vscodePkg != null) {
-            code = {
-              type = "app";
-              program = lib.getExe vscodePkg;
-            };
-          }
+        lib.optionalAttrs (vscodePkg != null) {
+          code = {
+            type = "app";
+            program = lib.getExe vscodePkg;
+          };
+        }
       );
 
       nixosConfigurations = {
-        nixos = let
-          specialArgs = {
-            inherit inputs;
-            inherit (profiles.nixos) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
-          };
-        in lib.nixosSystem {
-          inherit specialArgs;
-          system = "x86_64-linux";
-          modules = [
-            stylix.nixosModules.stylix
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.joshan.imports = [
-                plasma-manager.homeModules.plasma-manager
-                spicetify-nix.homeManagerModules.default
-                ./home.nix
-                ./profiles/nixos/home_x86.nix
-                ./desktop/plasma/plasma_hm.nix
-                ./desktop/hyprland/hyprland.nix
-              ];
+        nixos =
+          let
+            specialArgs = {
+              inherit inputs;
+              inherit (profiles.nixos)
+                dotfilesPath
+                profileName
+                ollamaUrl
+                nixosRebuildFlags
+                ;
+            };
+          in
+          lib.nixosSystem {
+            inherit specialArgs;
+            system = "x86_64-linux";
+            modules = [
+              stylix.nixosModules.stylix
+              home-manager.nixosModules.home-manager
+              {
+                home-manager.useGlobalPkgs = true;
+                home-manager.useUserPackages = true;
+                home-manager.users.joshan.imports = [
+                  plasma-manager.homeModules.plasma-manager
+                  spicetify-nix.homeManagerModules.default
+                  ./home.nix
+                  ./profiles/nixos/home_x86.nix
+                  ./desktop/plasma/plasma_hm.nix
+                  ./desktop/hyprland/hyprland.nix
+                ];
 
-              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
-            }
-            ./overlays/nvtop-overlay.nix
-            ./overlays/monaspace-liga-overlay.nix
-            ./configuration.nix
-            ./profiles/nixos/profile_nixos.nix
-            ./profiles/nixos/configuration_x86.nix
-            ./ssh.nix
-            ./vpn.nix
-            ./boot.nix
-            ./desktop/display-manager.nix
-            ./desktop/hyprland/hyprland_nixos.nix
-            ./desktop/plasma/plasma.nix
-            /etc/nixos/hardware-configuration.nix
-          ];
-        };
-        
-        nixos-arm-parallels = let
-          specialArgs = {
-            inherit inputs;
-            inherit (profiles.nixos-arm-parallels) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+                home-manager.extraSpecialArgs = specialArgs // {
+                  inherit spicetify-nix;
+                };
+              }
+              ./overlays/nvtop-overlay.nix
+              ./overlays/monaspace-liga-overlay.nix
+              ./configuration.nix
+              ./profiles/nixos/profile_nixos.nix
+              ./profiles/nixos/configuration_x86.nix
+              ./ssh.nix
+              ./vpn.nix
+              ./boot.nix
+              ./desktop/display-manager.nix
+              ./desktop/hyprland/hyprland_nixos.nix
+              ./desktop/plasma/plasma.nix
+              /etc/nixos/hardware-configuration.nix
+            ];
           };
-        in lib.nixosSystem {
-          inherit specialArgs;
-          system = "aarch64-linux";
-          modules = [
-            stylix.nixosModules.stylix
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.joshan.imports = [
-                plasma-manager.homeModules.plasma-manager
-                spicetify-nix.homeManagerModules.default
-                ./home.nix
-                ./desktop/plasma/plasma_hm.nix
-                ./desktop/hyprland/hyprland.nix
-              ];
 
-              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
-            }
-            ./overlays/monaspace-liga-overlay.nix
-            ./configuration.nix
-            ./profiles/nixos-arm-parallels/profile_nixos-arm-parallels.nix
-            ./ssh.nix
-            ./vpn.nix
-            ./boot.nix
-            ./desktop/display-manager.nix
-            ./desktop/hyprland/hyprland_nixos.nix
-            ./desktop/plasma/plasma.nix
-            ./profiles/nixos-arm-parallels/hardware-configuration.nix
-          ];
-        };
-        
-        nixos-orbstack = let
-          specialArgs = {
-            inherit inputs;
-            inherit (profiles.nixos-orbstack) dotfilesPath profileName ollamaUrl nixosRebuildFlags;
+        nixos-arm-parallels =
+          let
+            specialArgs = {
+              inherit inputs;
+              inherit (profiles.nixos-arm-parallels)
+                dotfilesPath
+                profileName
+                ollamaUrl
+                nixosRebuildFlags
+                ;
+            };
+          in
+          lib.nixosSystem {
+            inherit specialArgs;
+            system = "aarch64-linux";
+            modules = [
+              stylix.nixosModules.stylix
+              home-manager.nixosModules.home-manager
+              {
+                home-manager.useGlobalPkgs = true;
+                home-manager.useUserPackages = true;
+                home-manager.users.joshan.imports = [
+                  plasma-manager.homeModules.plasma-manager
+                  spicetify-nix.homeManagerModules.default
+                  ./home.nix
+                  ./desktop/plasma/plasma_hm.nix
+                  ./desktop/hyprland/hyprland.nix
+                ];
+
+                home-manager.extraSpecialArgs = specialArgs // {
+                  inherit spicetify-nix;
+                };
+              }
+              ./overlays/monaspace-liga-overlay.nix
+              ./configuration.nix
+              ./profiles/nixos-arm-parallels/profile_nixos-arm-parallels.nix
+              ./ssh.nix
+              ./vpn.nix
+              ./boot.nix
+              ./desktop/display-manager.nix
+              ./desktop/hyprland/hyprland_nixos.nix
+              ./desktop/plasma/plasma.nix
+              ./profiles/nixos-arm-parallels/hardware-configuration.nix
+            ];
           };
-        in lib.nixosSystem {
-          inherit specialArgs;
-          system = "aarch64-linux";
-          modules = [
-            stylix.nixosModules.stylix
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.users.joshan.imports = [
-                ./home.nix
-              ];
 
-              home-manager.extraSpecialArgs = specialArgs // { inherit spicetify-nix; };
-            }
-            ./overlays/monaspace-liga-overlay.nix
-            ./configuration.nix
-            ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
-            ./orbstack.nix
-          ];
-        };
+        nixos-orbstack =
+          let
+            specialArgs = {
+              inherit inputs;
+              inherit (profiles.nixos-orbstack)
+                dotfilesPath
+                profileName
+                ollamaUrl
+                nixosRebuildFlags
+                ;
+            };
+          in
+          lib.nixosSystem {
+            inherit specialArgs;
+            system = "aarch64-linux";
+            modules = [
+              stylix.nixosModules.stylix
+              home-manager.nixosModules.home-manager
+              {
+                home-manager.useGlobalPkgs = true;
+                home-manager.useUserPackages = true;
+                home-manager.users.joshan.imports = [
+                  ./home.nix
+                ];
+
+                home-manager.extraSpecialArgs = specialArgs // {
+                  inherit spicetify-nix;
+                };
+              }
+              ./overlays/monaspace-liga-overlay.nix
+              ./configuration.nix
+              ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
+              ./orbstack.nix
+            ];
+          };
       };
     };
 }

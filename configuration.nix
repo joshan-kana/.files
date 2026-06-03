@@ -2,7 +2,13 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, inputs, dotfilesPath, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  dotfilesPath,
+  ...
+}:
 
 {
   # Enable display manager
@@ -52,9 +58,10 @@
   fonts =
     let
       nerdSymbols =
-        if builtins.hasAttr "nerd-fonts" pkgs
-        then pkgs."nerd-fonts".symbols-only
-        else (pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; });
+        if builtins.hasAttr "nerd-fonts" pkgs then
+          pkgs."nerd-fonts".symbols-only
+        else
+          (pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; });
     in
     {
       packages = [
@@ -93,7 +100,7 @@
     # WLR_DRM_DEVICES = "/dev/dri/card1";
   };
 
-  # Docker 
+  # Docker
   virtualisation.docker = {
     enable = true;
   };
@@ -183,7 +190,12 @@
   users.users.joshan = {
     isNormalUser = true;
     description = "Joshan Kana";
-    extraGroups = [ "networkmanager" "wheel" "docker" "libvirtd" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "docker"
+      "libvirtd"
+    ];
     packages = with pkgs; [ ];
     initialPassword = "test";
   };
@@ -274,7 +286,6 @@
     enable = true;
   };
 
-
   # Enabling sound
   # rtkit is optional but recommended
   security.rtkit.enable = true;
@@ -290,7 +301,12 @@
   services.pulseaudio.enable = false;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 47990 11434 11435 ];
+  networking.firewall.allowedTCPPorts = [
+    22
+    47990
+    11434
+    11435
+  ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
@@ -306,7 +322,10 @@
   nix = {
     settings = {
       trusted-users = [ "joshan" ];
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       warn-dirty = false;
       # Use binary caches as much as possible.
       substituters = [
