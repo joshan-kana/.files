@@ -399,6 +399,7 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 ### Flake updates
 - `scripts/flake-update <target> [inputs...]` - Update flake inputs on an update branch, compare the selected target, and evaluate the rest of the fleet
 - Targets: `linux-desktop`, `nixos`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
+- Run this on a machine or remote builder that can build the selected target; unavailable non-target profiles are reported and skipped during local validation
 - Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
 ### Formatting
