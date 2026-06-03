@@ -38,6 +38,18 @@ Shell aliases are defined in [`home.nix`](home.nix):
 - `sysfu` - Preview flake updates with nvd diff
 - `sysedit` - Edit configuration in VSCode
 
+### Formatting
+- `nix fmt` - Format all `.nix` files in this repo with treefmt
+- `git config core.hooksPath .githooks` - Configure Git to run repo hooks from `.githooks/`
+
+### Editor dev shells
+- `nix develop .#vscode` - Nix language tooling (nixd + nixfmt + treefmt + lint tools) and optionally VS Code/VSCodium if available
+
+VS Code config lives in `.vscode/` (recommended extensions, nixd config, and a couple snippets that end blocks with `};`).
+
+Suggested launch commands (so `nixd`/`nixfmt` are on `PATH` for the extension):
+- `nix develop .#vscode -c code .` (or `codium .` depending on what nixpkgs provides)
+
 ### Desktop environments
 - `h` - Start Hyprland
 - `HI` - Start Hyprland on Intel GPU

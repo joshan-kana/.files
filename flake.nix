@@ -35,6 +35,29 @@
     let
       lib = nixpkgs.lib;
 
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
+      forAllSystems = f: lib.genAttrs systems (system: f system);
+
+      pkgsFor = system: import nixpkgs { inherit system; };
+
+      repoFormatterFor = pkgs:
+        pkgs.writeShellApplication {
+          name = "treefmt";
+          runtimeInputs = [
+            pkgs.nixfmt
+            pkgs.treefmt
+          ];
+          text = ''
+            exec treefmt "$@"
+          '';
+        };
+
       # Centralised profile-specific variables
       profiles = {
         nixos = {
@@ -60,6 +83,55 @@
       };
     in
     {
+      formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
+
+      devShells = forAllSystems (
+        system: let
+          pkgs = pkgsFor system;
+          commonTools = with pkgs; [
+            nixfmt
+            treefmt
+            nixd
+            nil
+            statix
+            deadnix
+          ];
+
+          vscodePkg =
+            if pkgs ? vscodium
+            then pkgs.vscodium
+            else if pkgs ? vscode
+            then pkgs.vscode
+            else null;
+        in {
+          default = pkgs.mkShell {
+            packages = commonTools;
+          };
+
+          vscode = pkgs.mkShell {
+            packages = commonTools ++ lib.optionals (vscodePkg != null) [vscodePkg];
+          };
+        }
+      );
+
+      apps = forAllSystems (
+        system: let
+          pkgs = pkgsFor system;
+          vscodePkg =
+            if pkgs ? vscodium
+            then pkgs.vscodium
+            else if pkgs ? vscode
+            then pkgs.vscode
+            else null;
+        in
+          lib.optionalAttrs (vscodePkg != null) {
+            code = {
+              type = "app";
+              program = lib.getExe vscodePkg;
+            };
+          }
+      );
+
       nixosConfigurations = {
         nixos = let
           specialArgs = {
