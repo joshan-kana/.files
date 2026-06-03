@@ -393,8 +393,13 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - `sysup` - Rebuild and switch to new system configuration
 - `systest` - Test system configuration without switching
 - `sysvm` - Build and run NixOS VM with current config
-- `sysfu` - Preview flake updates with nvd diff
+- `sysfu` - Preview flake updates with validation and nvd diff
 - `sysedit` - Edit configuration in VSCode
+
+### Flake updates
+- `scripts/flake-update <target> [inputs...]` - Update flake inputs on an update branch, compare the selected target, and evaluate the rest of the fleet
+- Targets: `linux-desktop`, `nixos`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
+- Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
 ### Formatting
 - `nix fmt` - Format all `.nix` files in this repo with treefmt
