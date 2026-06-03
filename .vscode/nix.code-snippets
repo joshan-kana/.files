@@ -1,13 +1,25 @@
 {
-  "Attrset assignment (adds };)": {
+  "Option path attrset (adds };)": {
     "scope": "nix",
-    "prefix": ["set;", "attrset;"],
+    "prefix": ["set;", "attrset;", "option;", "block;"],
     "body": [
-      "${1:attr} = {",
+      "${1:option.path} = {",
       "\t$0",
       "};"
     ],
-    "description": "Create an attrset assignment that ends with };"
+    "description": "Create any option-path attrset block ending with };"
+  },
+
+  "Enableable option block": {
+    "scope": "nix",
+    "prefix": ["enable;", "enabled;", "configblock;"],
+    "body": [
+      "${1:option.path} = {",
+      "\tenable = ${2:true};",
+      "\t${3:configDir} = ${4:path};",
+      "};"
+    ],
+    "description": "Expand an option path into a block with enable and one extra setting"
   },
 
   "Function args attrset (adds : )": {
@@ -44,5 +56,40 @@
       "};"
     ],
     "description": "Create a programs.<name> attrset block ending with };"
+  },
+
+  "programs.<name> enabled block": {
+    "scope": "nix",
+    "prefix": ["program-enable;", "programs-enable;"],
+    "body": [
+      "programs.${1:name} = {",
+      "\tenable = ${2:true};",
+      "\t$0",
+      "};"
+    ],
+    "description": "Create an enabled programs.<name> block ending with };"
+  },
+
+  "services.<name> = { ... };": {
+    "scope": "nix",
+    "prefix": ["services;", "service;"],
+    "body": [
+      "services.${1:name} = {",
+      "\t$0",
+      "};"
+    ],
+    "description": "Create a services.<name> attrset block ending with };"
+  },
+
+  "services.<name> enabled block": {
+    "scope": "nix",
+    "prefix": ["service-enable;", "services-enable;"],
+    "body": [
+      "services.${1:name} = {",
+      "\tenable = ${2:true};",
+      "\t$0",
+      "};"
+    ],
+    "description": "Create an enabled services.<name> block ending with };"
   }
 }
