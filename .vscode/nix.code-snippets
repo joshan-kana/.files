@@ -45,51 +45,5 @@
       "}"
     ],
     "description": "Common Nix module/function skeleton with args attrset and result attrset"
-  },
-
-  "programs.<name> = { ... };": {
-    "scope": "nix",
-    "prefix": ["programs;", "program;"],
-    "body": [
-      "programs.${1:name} = {",
-      "\t$0",
-      "};"
-    ],
-    "description": "Create a programs.<name> attrset block ending with };"
-  },
-
-  "programs.<name> enabled block": {
-    "scope": "nix",
-    "prefix": ["program-enable;", "programs-enable;"],
-    "body": [
-      "programs.${1:name} = {",
-      "\tenable = ${2:true};",
-      "\t$0",
-      "};"
-    ],
-    "description": "Create an enabled programs.<name> block ending with };"
-  },
-
-  "services.<name> = { ... };": {
-    "scope": "nix",
-    "prefix": ["services;", "service;"],
-    "body": [
-      "services.${1:name} = {",
-      "\t$0",
-      "};"
-    ],
-    "description": "Create a services.<name> attrset block ending with };"
-  },
-
-  "services.<name> enabled block": {
-    "scope": "nix",
-    "prefix": ["service-enable;", "services-enable;"],
-    "body": [
-      "services.${1:name} = {",
-      "\tenable = ${2:true};",
-      "\t$0",
-      "};"
-    ],
-    "description": "Create an enabled services.<name> block ending with };"
   }
 }

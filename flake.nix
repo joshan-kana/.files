@@ -121,9 +121,6 @@
           packages = commonTools ++ lib.optionals (vscodePkg != null) [vscodePkg];
         };
 
-        neovim = pkgs.mkShell {
-          packages = commonTools ++ (with pkgs; [neovim]);
-        };
       }
     );
 
@@ -137,13 +134,7 @@
           then pkgs.vscode
           else null;
       in
-        {
-          nvim = {
-            type = "app";
-            program = lib.getExe pkgs.neovim;
-          };
-        }
-        // lib.optionalAttrs (vscodePkg != null) {
+        lib.optionalAttrs (vscodePkg != null) {
           code = {
             type = "app";
             program = lib.getExe vscodePkg;
