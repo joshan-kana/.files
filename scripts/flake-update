@@ -5,7 +5,11 @@
 set -euo pipefail
 
 MAIN_BRANCH=${MAIN_BRANCH:-main}
-read -r -a nix_flags <<< "${NIXOS_REBUILD_FLAGS:-}"
+if [[ -v NIXOS_REBUILD_FLAGS ]]; then
+  read -r -a nix_flags <<< "$NIXOS_REBUILD_FLAGS"
+else
+  nix_flags=()
+fi
 
 usage() {
   cat <<'EOF'
@@ -26,6 +30,10 @@ Examples:
   scripts/flake-update linux-desktop nixpkgs
   scripts/flake-update nixos home-manager stylix
   scripts/flake-update all
+
+Environment:
+  MAIN_BRANCH          Branch to compare against. Defaults to main.
+  NIXOS_REBUILD_FLAGS  Extra nix eval/build flags. Defaults to none.
 EOF
 }
 
