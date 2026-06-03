@@ -100,6 +100,15 @@ eval_profile() {
   nix eval "${nix_flags[@]}" --raw "$(system_attr "$flake_ref" "$profile").drvPath" >/dev/null
 }
 
+eval_profile_optional() {
+  local flake_ref=$1
+  local profile=$2
+  if ! eval_profile "$flake_ref" "$profile"; then
+    echo "warning: skipped ${profile}; it is not evaluable from this machine" >&2
+    return 0
+  fi
+}
+
 build_profile() {
   local flake_ref=$1
   local profile=$2
@@ -123,6 +132,11 @@ echo "Target profiles: ${target_profiles[*]}"
 
 echo "Checking current ${MAIN_BRANCH} evaluations before updating..."
 for profile in "${all_profiles[@]}"; do
+  eval_profile_optional "$main_flake" "$profile"
+done
+
+echo "Checking selected target evaluations before updating..."
+for profile in "${target_profiles[@]}"; do
   eval_profile "$main_flake" "$profile"
 done
 
@@ -140,6 +154,11 @@ fi
 
 echo "Checking updated branch evaluations..."
 for profile in "${all_profiles[@]}"; do
+  eval_profile_optional "$current_flake" "$profile"
+done
+
+echo "Checking selected updated target evaluations..."
+for profile in "${target_profiles[@]}"; do
   eval_profile "$current_flake" "$profile"
 done
 
