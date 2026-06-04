@@ -105,7 +105,7 @@ def redact_text(text):
                 redacted.append(f"{prefix}: REDACTED")
                 continue
         redacted.append(SECRETISH_VALUE.sub("REDACTED", line))
-    return "\n".join(redacted) + "\n"
+    return "\n".join(redacted).rstrip() + "\n"
 
 
 def write_snapshot_file(output_root, archive_name, member_name, content):
