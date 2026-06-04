@@ -15,7 +15,7 @@ let
     parentInterface = "end0";
     subnet = "192.168.1.0/24";
     gateway = "192.168.1.1";
-    containerIp = "192.168.1.53";
+    containerIp = "192.168.1.2";
     hostShimIp = "192.168.1.54";
   };
 
