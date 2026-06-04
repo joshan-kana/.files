@@ -109,4 +109,4 @@ mistake into two mistakes with a tiny hat.
 `/var/lib/home-assistant/www/media/ha-bambulab` is excluded from the default
 restic backup because the HAOS backup showed it dominates the size. If those
 printer media files matter, back them up separately or remove that exclude from
-`modules/home-assistant-stack.nix`.
+`profiles/nixos-server/home-assistant-stack.nix`.

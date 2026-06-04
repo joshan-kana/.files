@@ -303,8 +303,8 @@
             inherit specialArgs;
             system = "aarch64-linux";
             modules = [
-              ./modules/home-assistant-stack.nix
               ./profiles/nixos-server/configuration_nixos-server.nix
+              ./profiles/nixos-server/home-assistant-stack.nix
               ./profiles/nixos-server/hardware-configuration.nix
             ];
           };
