@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Update flake inputs on the current branch, build the selected target before
-# and after the update, and evaluate the rest of the fleet before merging.
+# Update flake inputs on a dedicated upgrade branch, build the selected target
+# before and after the update, and evaluate the rest of the fleet before merging.
 
 set -euo pipefail
 
 MAIN_BRANCH=${MAIN_BRANCH:-main}
+UPDATE_BRANCH=${UPDATE_BRANCH:-system-upgrade}
 if [[ -v NIXOS_REBUILD_FLAGS ]]; then
   read -r -a nix_flags <<< "$NIXOS_REBUILD_FLAGS"
 else
@@ -13,7 +14,7 @@ fi
 
 usage() {
   cat <<'EOF'
-Usage: scripts/flake-update <target> [inputs...]
+Usage: scripts/flake-update <target> [options] [inputs...]
 
 Targets:
   linux-desktop       Alias for nixos
@@ -26,13 +27,26 @@ Inputs:
   If inputs are provided, only those inputs are updated.
   If no inputs are provided, all inputs are updated.
 
+Options:
+  --input-ref <input>=<flake-ref>
+      Pin one input to a specific flake ref instead of updating it to latest.
+      Can be repeated.
+
+  --nixpkgs-ref <rev-or-ref>
+      Shorthand for --input-ref nixpkgs=<ref>. Plain revisions or branch names
+      are expanded to github:NixOS/nixpkgs/<rev-or-ref>.
+
 Examples:
   scripts/flake-update linux-desktop nixpkgs
   scripts/flake-update nixos home-manager stylix
+  scripts/flake-update nixos --nixpkgs-ref nixos-25.05
+  scripts/flake-update nixos --nixpkgs-ref 331800de5053fce193d25d75f7c39b2b449c9a2f
+  scripts/flake-update nixos --input-ref nixpkgs=github:NixOS/nixpkgs/nixos-unstable
   scripts/flake-update all
 
 Environment:
   MAIN_BRANCH          Branch to compare against. Defaults to main.
+  UPDATE_BRANCH        Branch used for update work. Defaults to system-upgrade.
   NIXOS_REBUILD_FLAGS  Extra nix eval/build flags. Defaults to none.
 EOF
 }
@@ -59,10 +73,64 @@ fi
 
 current_branch=$(git branch --show-current)
 [[ -n "$current_branch" ]] || die "detached HEAD is not supported for update branches"
-[[ "$current_branch" != "$MAIN_BRANCH" ]] || die "create an update branch first; refusing to update flake.lock on $MAIN_BRANCH"
 
-git diff --quiet || die "working tree has unstaged changes"
-git diff --cached --quiet || die "index has staged changes"
+if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
+  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
+    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
+    git switch "$UPDATE_BRANCH"
+  else
+    echo "Creating update branch ${UPDATE_BRANCH}..."
+    git switch -c "$UPDATE_BRANCH"
+  fi
+fi
+
+normalize_nixpkgs_ref() {
+  case "$1" in
+    github:* | git+* | path:* | "flake:"* | "tarball:"*) echo "$1" ;;
+    *) echo "github:NixOS/nixpkgs/$1" ;;
+  esac
+}
+
+input_refs=()
+inputs=()
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --input-ref)
+      [[ "$#" -ge 2 ]] || die "--input-ref requires input=flake-ref"
+      [[ "$2" == *=* ]] || die "--input-ref must be formatted as input=flake-ref"
+      input_refs+=("$2")
+      shift 2
+      ;;
+    --input-ref=*)
+      input_ref=${1#--input-ref=}
+      [[ "$input_ref" == *=* ]] || die "--input-ref must be formatted as input=flake-ref"
+      input_refs+=("$input_ref")
+      shift
+      ;;
+    --nixpkgs-ref)
+      [[ "$#" -ge 2 ]] || die "--nixpkgs-ref requires a revision, branch, or flake ref"
+      input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "$2")")
+      shift 2
+      ;;
+    --nixpkgs-ref=*)
+      input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "${1#--nixpkgs-ref=}")")
+      shift
+      ;;
+    --)
+      shift
+      inputs+=("$@")
+      break
+      ;;
+    -*)
+      die "unknown option '$1'"
+      ;;
+    *)
+      inputs+=("$1")
+      shift
+      ;;
+  esac
+done
 
 map_target() {
   case "$1" in
@@ -103,8 +171,18 @@ eval_profile() {
 eval_profile_optional() {
   local flake_ref=$1
   local profile=$2
-  if ! eval_profile "$flake_ref" "$profile"; then
-    echo "warning: skipped ${profile}; it is not evaluable from this machine" >&2
+  local err_file="$tmpdir/eval-${profile}.err"
+
+  if ! eval_profile "$flake_ref" "$profile" 2>"$err_file"; then
+    cat "$err_file" >&2
+    if grep -Eq "path '.*' does not exist|access to absolute path .* is forbidden" "$err_file"; then
+      echo "warning: skipped ${profile}; it needs a local path that is not available on this machine" >&2
+      return 0
+    fi
+
+    die "${profile} failed evaluation. This is not being skipped because it does not look like a local-path availability issue."
+  else
+    rm -f "$err_file"
     return 0
   fi
 }
@@ -144,12 +222,23 @@ for profile in "${target_profiles[@]}"; do
   build_profile "$main_flake" "$profile" "$tmpdir/${profile}-old"
 done
 
-if [[ "$#" -gt 0 ]]; then
-  echo "Updating selected flake inputs: $*"
-  nix flake update "$@"
-else
+if [[ "${#inputs[@]}" -gt 0 ]]; then
+  echo "Updating selected flake inputs: ${inputs[*]}"
+  nix flake update "${inputs[@]}"
+elif [[ "${#input_refs[@]}" -eq 0 ]]; then
   echo "Updating all flake inputs..."
   nix flake update
+fi
+
+for input_ref in "${input_refs[@]}"; do
+  input_name=${input_ref%%=*}
+  flake_ref=${input_ref#*=}
+  echo "Pinning ${input_name} to ${flake_ref}..."
+  nix flake lock --override-input "$input_name" "$flake_ref"
+done
+
+if [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -gt 0 ]]; then
+  echo "Only pinned inputs were changed; no full flake update was run."
 fi
 
 echo "Checking updated branch evaluations..."
@@ -175,6 +264,7 @@ Update branch is ready for review.
 
 Useful inspection commands:
   git diff ${MAIN_BRANCH} -- flake.lock
+  git diff ${MAIN_BRANCH}
   nix-tree result
   nix why-depends result /nix/store/...-package
 EOF
