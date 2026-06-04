@@ -357,6 +357,7 @@
       _sysfu() {
         _arguments -C \
           '(-h --help)'{-h,--help}'[show help]' \
+          '--list-nixpkgs-commits[list recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
           '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
           '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
           '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
