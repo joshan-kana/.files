@@ -11,6 +11,20 @@
 {
   networking.hostName = "nixos-server";
   networking.networkmanager.enable = true;
+  networking.networkmanager.ensureProfiles.profiles."end0-static" = {
+    connection = {
+      id = "end0-static";
+      type = "ethernet";
+      interface-name = "end0";
+      autoconnect = true;
+    };
+    ipv4 = {
+      method = "manual";
+      addresses1 = "192.168.1.2/24,192.168.1.1";
+      dns = "192.168.1.1;1.1.1.1;";
+    };
+    ipv6.method = "auto";
+  };
   time.timeZone = "Australia/Perth";
 
   nixpkgs.config.allowUnfree = true;
