@@ -1,5 +1,8 @@
 # Home Assistant Infrastructure
 
+Start with `ha/README.md` for the main operator flow. This file is the deeper
+infrastructure note.
+
 ## What Runs Where
 
 Everything runs on the Raspberry Pi NixOS host.
@@ -19,7 +22,7 @@ policy. The app config/data itself stays as editable files under `/var/lib/...`.
 The stack config lives in:
 
 ```text
-profiles/nixos-server/home-assistant-stack.nix
+profiles/nixos-server/hosted-stack.nix
 ```
 
 It is direct server configuration, not a reusable `mkOption` module. To remove a
@@ -63,12 +66,12 @@ The current LAN address plan is:
 | `192.168.1.2` | AdGuard Home / DNS | Dedicated macvlan container IP for DNS/admin |
 | `192.168.1.3` | NixOS server / Home Assistant | Home Assistant uses host networking on `:8123` |
 | `192.168.1.11` | LEDWALL / WLED | Existing static IP |
-| `192.168.1.54` | NixOS host AdGuard shim | Lets the host reach the AdGuard macvlan container |
+| `192.168.1.4` | NixOS host AdGuard shim | Lets the host reach the AdGuard macvlan container |
 | `192.168.1.100-192.168.1.199` | DHCP pool | Router-assigned clients |
 | `192.168.1.200` | Swann DVR | Fixed in router |
 
 Edit these values at the top of
-`profiles/nixos-server/home-assistant-stack.nix` before deploying:
+`profiles/nixos-server/hosted-stack.nix` before deploying:
 
 ```nix
 adguardNetwork = {
@@ -77,7 +80,7 @@ adguardNetwork = {
   subnet = "192.168.1.0/24";
   gateway = "192.168.1.1";
   containerIp = "192.168.1.2";
-  hostShimIp = "192.168.1.54";
+  hostShimIp = "192.168.1.4";
 };
 ```
 
@@ -113,7 +116,7 @@ Home Assistant works the same way:
 ## Why Tmpfiles Creates Directories
 
 `systemd.tmpfiles.rules` in
-`profiles/nixos-server/home-assistant-stack.nix` creates the app data
+`profiles/nixos-server/hosted-stack.nix` creates the app data
 directories and `/root/secrets` with known permissions.
 
 Despite the name, tmpfiles is not only for temporary files. On NixOS it is also
@@ -283,7 +286,7 @@ under `/var/lib/openclaw` and be included in Snapper/restic with the rest of the
 app data.
 
 Before enabling, confirm the image tag in
-`profiles/nixos-server/home-assistant-stack.nix`.
+`profiles/nixos-server/hosted-stack.nix`.
 The image is declared in the OpenClaw container block because NixOS needs the
 OCI image name to run the container. The current default is the tag found in the
 HAOS backup:

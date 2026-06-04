@@ -1,5 +1,8 @@
 # Installing NixOS On The Raspberry Pi 4
 
+Start with `ha/README.md` for the main operator flow. This file is the
+installation-specific note.
+
 ## Shape Of This Host
 
 The flake has one server target:
