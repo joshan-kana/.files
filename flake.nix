@@ -90,6 +90,13 @@
           ollamaUrl = "http://host.orb.internal:11434/v1";
           nixosRebuildFlags = "--impure";
         };
+
+        nixos-server = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos-server";
+          ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "";
+        };
       };
     in
     {
@@ -276,6 +283,28 @@
               ./configuration.nix
               ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
               ./orbstack.nix
+            ];
+          };
+
+        nixos-server =
+          let
+            specialArgs = {
+              inherit inputs;
+              inherit (profiles.nixos-server)
+                dotfilesPath
+                profileName
+                ollamaUrl
+                nixosRebuildFlags
+                ;
+            };
+          in
+          lib.nixosSystem {
+            inherit specialArgs;
+            system = "x86_64-linux";
+            modules = [
+              ./modules/home-assistant-stack.nix
+              ./profiles/nixos-server/configuration_nixos-server.nix
+              /etc/nixos/hardware-configuration.nix
             ];
           };
       };
