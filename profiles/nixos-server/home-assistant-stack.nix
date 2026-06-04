@@ -192,7 +192,6 @@ in
     rcloneConfigFile = rcloneConfigFile;
     paths = backupPaths;
     exclude = [
-      "${dataRoot}/home-assistant/home-assistant_v2.db-wal"
       "${dataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [

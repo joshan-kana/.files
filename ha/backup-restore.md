@@ -106,7 +106,14 @@ mistake into two mistakes with a tiny hat.
 
 ## Media Policy
 
-`/var/lib/home-assistant/www/media/ha-bambulab` is excluded from the default
-restic backup because the HAOS backup showed it dominates the size. If those
-printer media files matter, back them up separately or remove that exclude from
+The only default restic exclusion is:
+
+```text
+/var/lib/home-assistant/www/media/ha-bambulab
+```
+
+The raw HAOS backup showed that Bambu Lab printer media dominates the Home
+Assistant backup size. SQLite files such as Home Assistant and n8n databases are
+included because they are app state. If the printer media matters, back it up
+separately or remove that exclude from
 `profiles/nixos-server/home-assistant-stack.nix`.
