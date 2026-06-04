@@ -36,11 +36,16 @@ Options:
       Shorthand for --input-ref nixpkgs=<ref>. Plain revisions or branch names
       are expanded to github:NixOS/nixpkgs/<rev-or-ref>.
 
+  --choose-nixpkgs-ref [branch]
+      Choose from recent nixpkgs commits on a branch. Defaults to nixos-unstable.
+
 Examples:
   scripts/flake-update linux-desktop nixpkgs
   scripts/flake-update nixos home-manager stylix
   scripts/flake-update nixos --nixpkgs-ref nixos-25.05
   scripts/flake-update nixos --nixpkgs-ref 331800de5053fce193d25d75f7c39b2b449c9a2f
+  scripts/flake-update nixos --choose-nixpkgs-ref
+  scripts/flake-update nixos --choose-nixpkgs-ref nixos-25.05
   scripts/flake-update nixos --input-ref nixpkgs=github:NixOS/nixpkgs/nixos-unstable
   scripts/flake-update all
 
@@ -74,15 +79,8 @@ fi
 current_branch=$(git branch --show-current)
 [[ -n "$current_branch" ]] || die "detached HEAD is not supported for update branches"
 
-if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
-  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
-    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
-    git switch "$UPDATE_BRANCH"
-  else
-    echo "Creating update branch ${UPDATE_BRANCH}..."
-    git switch -c "$UPDATE_BRANCH"
-  fi
-fi
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
 
 normalize_nixpkgs_ref() {
   case "$1" in
@@ -91,11 +89,48 @@ normalize_nixpkgs_ref() {
   esac
 }
 
+choose_nixpkgs_ref() {
+  local branch=${1:-nixos-unstable}
+  local depth=${NIXPKGS_COMMIT_CHOOSER_DEPTH:-80}
+  local repo_url=${NIXPKGS_COMMIT_CHOOSER_REPO:-https://github.com/NixOS/nixpkgs.git}
+  local chooser_dir="$tmpdir/nixpkgs-chooser"
+  local chosen
+
+  echo "Fetching the latest ${depth} nixpkgs commits from ${branch}..." >&2
+  mkdir -p "$chooser_dir"
+  git -C "$chooser_dir" init --quiet
+  git -C "$chooser_dir" remote add origin "$repo_url"
+  git -C "$chooser_dir" fetch --quiet --depth "$depth" origin "$branch"
+
+  if command -v fzf >/dev/null 2>&1; then
+    chosen=$(
+      git -C "$chooser_dir" log --format='%h %cs %s' FETCH_HEAD |
+        fzf --height=40% --reverse --prompt="nixpkgs ${branch}> "
+    )
+    [[ -n "$chosen" ]] || die "no nixpkgs commit selected"
+    git -C "$chooser_dir" rev-parse "${chosen%% *}"
+    return
+  fi
+
+  git -C "$chooser_dir" log --format='%h %cs %s' FETCH_HEAD | nl -w2 -s'. ' >&2
+  echo >&2
+  read -r -p "Choose a nixpkgs commit number: " chosen </dev/tty
+  [[ "$chosen" =~ ^[0-9]+$ ]] || die "selection must be a number"
+
+  chosen=$(git -C "$chooser_dir" log --format='%H' FETCH_HEAD | sed -n "${chosen}p")
+  [[ -n "$chosen" ]] || die "selection is outside the fetched commit list"
+  echo "$chosen"
+}
+
 input_refs=()
 inputs=()
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
     --input-ref)
       [[ "$#" -ge 2 ]] || die "--input-ref requires input=flake-ref"
       [[ "$2" == *=* ]] || die "--input-ref must be formatted as input=flake-ref"
@@ -117,6 +152,21 @@ while [[ "$#" -gt 0 ]]; do
       input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "${1#--nixpkgs-ref=}")")
       shift
       ;;
+    --choose-nixpkgs-ref)
+      if [[ "${2:-}" != "" && "${2:-}" != -* ]]; then
+        chosen_ref=$(choose_nixpkgs_ref "$2")
+        shift 2
+      else
+        chosen_ref=$(choose_nixpkgs_ref)
+        shift
+      fi
+      input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "$chosen_ref")")
+      ;;
+    --choose-nixpkgs-ref=*)
+      chosen_ref=$(choose_nixpkgs_ref "${1#--choose-nixpkgs-ref=}")
+      input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "$chosen_ref")")
+      shift
+      ;;
     --)
       shift
       inputs+=("$@")
@@ -131,6 +181,16 @@ while [[ "$#" -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
+  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
+    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
+    git switch "$UPDATE_BRANCH"
+  else
+    echo "Creating update branch ${UPDATE_BRANCH}..."
+    git switch -c "$UPDATE_BRANCH"
+  fi
+fi
 
 map_target() {
   case "$1" in
@@ -151,9 +211,6 @@ fi
 
 main_flake="git+file://${repo_root}?ref=${MAIN_BRANCH}"
 current_flake="."
-
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
 
 system_attr() {
   local flake_ref=$1

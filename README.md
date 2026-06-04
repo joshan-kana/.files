@@ -403,6 +403,7 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - Run this on a machine or remote builder that can build the selected target
 - Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
 - Use `--nixpkgs-ref <rev-or-ref>` to test a specific nixpkgs commit, branch, or flake ref, for example `scripts/flake-update nixos --nixpkgs-ref nixos-25.05`
+- Use `--choose-nixpkgs-ref [branch]` to choose from recent nixpkgs commits, for example `sysfu --choose-nixpkgs-ref nixos-unstable`
 - Use `--input-ref <input>=<flake-ref>` to pin another input explicitly, for example `scripts/flake-update nixos --input-ref home-manager=github:nix-community/home-manager/release-25.05`
 - Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
