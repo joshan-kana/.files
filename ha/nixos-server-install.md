@@ -39,6 +39,22 @@ High-level flow:
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
+## Required Secret Files
+
+Create these on the Pi before expecting backups or optional secret-backed
+containers to work:
+
+| File | Required when |
+| --- | --- |
+| `/root/secrets/restic-password` | Always, for Dropbox/restic backups |
+| `/root/secrets/rclone.conf` | Always, for Dropbox/restic backups |
+| `/root/secrets/openclaw.env` | Only when OpenClaw needs env-based secrets |
+| `/root/secrets/twingate-connector.env` | Only when Twingate is enabled |
+
+Do not commit these files. Keep a separate encrypted copy of them outside the
+restic repository, such as a password manager secure note or later `sops-nix`
+encrypted files in this private repo.
+
 ## Disk Layout
 
 The checked-in hardware config expects:

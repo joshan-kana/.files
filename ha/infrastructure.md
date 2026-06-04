@@ -16,30 +16,80 @@ Everything runs on the Raspberry Pi NixOS host.
 NixOS declares the containers, ports, directories, backup timers, and snapshot
 policy. The app config/data itself stays as editable files under `/var/lib/...`.
 
-## Why The Restic Paths Are Options
+## How App Configs Are Connected
 
-These module options:
+Each app keeps its normal config format. Nix connects that config to the app by
+mounting a host directory into the container.
 
-```nix
-services.homeAssistantStack.backups.passwordFile
-services.homeAssistantStack.backups.rcloneConfigFile
+For AdGuard Home:
+
+| Host path | Container path | Meaning |
+| --- | --- | --- |
+| `/var/lib/adguard/conf` | `/opt/adguardhome/conf` | AdGuard settings, including `AdGuardHome.yaml` |
+| `/var/lib/adguard/work` | `/opt/adguardhome/work` | AdGuard runtime data |
+
+That means AdGuard still reads and writes its own config. Nix only starts the
+container and gives it stable storage.
+
+Home Assistant works the same way:
+
+| Host path | Container path |
+| --- | --- |
+| `/var/lib/home-assistant` | `/config` |
+
+## Secrets
+
+Runtime secret files go here on the server:
+
+```text
+/root/secrets
 ```
 
-are used here:
+This directory is created by NixOS with `0700` permissions, but the secret file
+contents are not stored in Git and are not put in the Nix store.
 
-```nix
-services.restic.backups.home-assistant.passwordFile = cfg.backups.passwordFile;
-services.restic.backups.home-assistant.rcloneConfigFile = cfg.backups.rcloneConfigFile;
+Current secret files:
+
+| File | Used by |
+| --- | --- |
+| `/root/secrets/restic-password` | Unlocks the encrypted restic backup repository |
+| `/root/secrets/rclone.conf` | Lets rclone connect restic to Dropbox |
+| `/root/secrets/twingate-connector.env` | Optional Twingate connector credentials |
+| `/root/secrets/openclaw.env` | Optional OpenClaw passwords/tokens as environment variables |
+
+Home Assistant's own `secrets.yaml` stays inside:
+
+```text
+/var/lib/home-assistant/secrets.yaml
 ```
 
-They are not secrets and they are not the files themselves. They are only paths
-to runtime files that must exist on the server:
+App-owned secret config, such as AdGuard login hashes or OpenClaw config files,
+stays in that app's `/var/lib/...` directory unless the app specifically needs
+environment variables.
 
-- `/root/secrets/restic-password`
-- `/root/secrets/rclone.conf`
+## Secret Backup Policy
 
-The paths are options so the host can move them later without editing the module
-internals. The secret contents stay out of Git and out of the Nix store.
+There are two categories:
+
+| Secret type | Backed up by restic? | Restore note |
+| --- | --- | --- |
+| App secrets under `/var/lib/...` | Yes | They restore with the app data |
+| Bootstrap secrets under `/root/secrets` | No | Keep a separate encrypted copy |
+
+`/root/secrets` is deliberately not backed up into the same restic repository.
+The important reason: `restic-password` is the key needed to open that
+repository. If the only copy of the key is inside the locked backup, restore is
+stuck in a silly little logic cupboard.
+
+Use one of these for `/root/secrets`:
+
+- Best simple option: store `restic-password`, `rclone.conf`, and optional app
+  env files in a password manager secure note.
+- Git-adjacent option: use `sops-nix` later and commit only encrypted secrets to
+  the private repo.
+- Dropbox option: keep an encrypted archive of `/root/secrets` in Dropbox
+  outside the restic repo, and store the archive password in your password
+  manager.
 
 ## Local Rollback
 
@@ -121,6 +171,19 @@ Enable it in `profiles/nixos-server/configuration_nixos-server.nix`:
 ```nix
 services.homeAssistantStack.containers.openclaw.enable = true;
 ```
+
+Then create the env file for any OpenClaw credentials or tokens:
+
+```sh
+sudo install -d -m 0700 /root/secrets
+sudo install -m 0400 /dev/null /root/secrets/openclaw.env
+sudoedit /root/secrets/openclaw.env
+```
+
+Use the environment variable names OpenClaw expects. Keep this file out of Git.
+If OpenClaw stores passwords in its own config directory instead, they will live
+under `/var/lib/openclaw` and be included in Snapper/restic with the rest of the
+app data.
 
 Before enabling, confirm the image tag in `modules/home-assistant-stack.nix`.
 The current default is the tag found in the HAOS backup:
