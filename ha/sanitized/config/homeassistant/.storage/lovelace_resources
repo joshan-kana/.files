@@ -1,0 +1,14 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "REDACTED",
+        "type": "module",
+        "url": "/bambu_lab/ha-bambulab-cards.js?v=0.6.47"
+      }
+    ]
+  },
+  "key": "REDACTED",
+  "minor_version": 1,
+  "version": 1
+}

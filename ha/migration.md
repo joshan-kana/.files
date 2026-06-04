@@ -13,6 +13,13 @@ scripts/ha-backup-inventory /Users/joshan/Downloads/automatic_backup_2026_5_4 \
   --output ha/sanitized/backup-inventory.md
 ```
 
+Use `scripts/ha-sanitized-snapshot` to regenerate the redacted config snapshot:
+
+```sh
+scripts/ha-sanitized-snapshot /Users/joshan/Downloads/automatic_backup_2026_5_4 \
+  --output-dir ha/sanitized/config
+```
+
 ## Current Add-on Mapping
 
 | HAOS add-on | NixOS target | Notes |

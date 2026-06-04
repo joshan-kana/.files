@@ -1,0 +1,25 @@
+new_script:
+  sequence:
+  - alias: 'Stage 1: Update All Add-ons Without Backups'
+    action: update.install
+    target:
+      entity_id: "{{ states.update \n\n   | selectattr('state', 'eq', 'on') \n   |
+        map(attribute='entity_id') \n   | reject('match', 'update.home_assistant_')
+        \n   | list }}\n"
+    data:
+      backup: false
+  - alias: 'Stage 2: Backup and Update Core and HAOS'
+    parallel:
+    - action: update.install
+      target:
+        entity_id: update.home_assistant_core_update
+      data:
+        backup: true
+    - action: update.install
+      target:
+        entity_id: update.home_assistant_operating_system_update
+      data:
+        backup: true
+  mode: single
+  alias: New script
+  description: ''

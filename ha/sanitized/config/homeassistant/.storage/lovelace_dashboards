@@ -1,0 +1,18 @@
+{
+  "data": {
+    "items": [
+      {
+        "icon": "mdi:map",
+        "id": "map",
+        "mode": "storage",
+        "require_admin": false,
+        "show_in_sidebar": true,
+        "title": "Map",
+        "url_path": "map"
+      }
+    ]
+  },
+  "key": "REDACTED",
+  "minor_version": 1,
+  "version": 1
+}
