@@ -7,7 +7,7 @@ Everything runs on the Raspberry Pi NixOS host.
 | App | How it runs | URL/port | Data |
 | --- | --- | --- | --- |
 | Home Assistant | Docker/OCI container | `http://<server>:8123` | `/var/lib/home-assistant` |
-| AdGuard Home | Docker/OCI container | DNS `:53`, setup/admin `:3000` | `/var/lib/adguard` |
+| AdGuard Home | Docker/OCI container on its own LAN IP | DNS/admin on the AdGuard IP | `/var/lib/adguard` |
 | Matter Server | Docker/OCI container | `:5580`, host networking | `/var/lib/matter-server` |
 | n8n | Docker/OCI container | `http://<server>:5678` | `/var/lib/n8n` |
 | OpenClaw | Optional Docker/OCI container | terminal `:7681`, gateway `:18789` | `/var/lib/openclaw` |
@@ -15,6 +15,42 @@ Everything runs on the Raspberry Pi NixOS host.
 
 NixOS declares the containers, ports, directories, backup timers, and snapshot
 policy. The app config/data itself stays as editable files under `/var/lib/...`.
+
+The stack config lives in:
+
+```text
+profiles/nixos-server/home-assistant-stack.nix
+```
+
+It is direct server configuration, not a reusable `mkOption` module. To remove a
+container, remove its entry from `virtualisation.oci-containers.containers` or
+set up a simple local boolean in that same file.
+
+## AdGuard Stable IP
+
+AdGuard uses a Docker macvlan network so it can have a stable LAN IP independent
+of the NixOS host address.
+
+Edit these values at the top of
+`profiles/nixos-server/home-assistant-stack.nix` before deploying:
+
+```nix
+adguardNetwork = {
+  name = "adguard_lan";
+  parentInterface = "end0";
+  subnet = "192.168.1.0/24";
+  gateway = "192.168.1.1";
+  containerIp = "192.168.1.53";
+  hostShimIp = "192.168.1.54";
+};
+```
+
+`containerIp` is the DNS IP your router/clients should use. Reserve it in your
+router or keep it outside the DHCP pool.
+
+`hostShimIp` is a small host-side macvlan address. Without it, the NixOS host
+and host-networked Home Assistant can have trouble reaching the AdGuard
+container because macvlan isolates the parent host by default.
 
 ## How App Configs Are Connected
 
@@ -159,17 +195,17 @@ systemctl status restic-backups-home-assistant.service
 
 ## OpenClaw
 
-OpenClaw is declared but disabled by default because you wanted to reset it.
-Fresh state will live in:
+OpenClaw is disabled by default because you wanted to reset it. Fresh state will
+live in:
 
 ```text
 /var/lib/openclaw
 ```
 
-Enable it in `profiles/nixos-server/configuration_nixos-server.nix`:
+Enable it in `profiles/nixos-server/home-assistant-stack.nix`:
 
 ```nix
-services.homeAssistantStack.containers.openclaw.enable = true;
+enableOpenClaw = true;
 ```
 
 Then create the env file for any OpenClaw credentials or tokens:
@@ -185,20 +221,18 @@ If OpenClaw stores passwords in its own config directory instead, they will live
 under `/var/lib/openclaw` and be included in Snapper/restic with the rest of the
 app data.
 
-Before enabling, confirm the image tag in `modules/home-assistant-stack.nix`.
+Before enabling, confirm the image tag in
+`profiles/nixos-server/home-assistant-stack.nix`.
 The current default is the tag found in the HAOS backup:
 
 ```text
 docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77
 ```
 
-If OpenClaw publishes a preferred upstream image, set that image explicitly:
+If OpenClaw publishes a preferred upstream image, set `openclawImage` explicitly:
 
 ```nix
-services.homeAssistantStack.containers.openclaw = {
-  enable = true;
-  image = "example/openclaw:version";
-};
+openclawImage = "example/openclaw:version";
 ```
 
 ## References
