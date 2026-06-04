@@ -397,9 +397,13 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - `sysedit` - Edit configuration in VSCode
 
 ### Flake updates
-- `scripts/flake-update <target> [inputs...]` - Update flake inputs on an update branch, compare the selected target, and evaluate the rest of the fleet
+- `scripts/flake-update <target> [options] [inputs...]` - Update flake inputs on the `system-upgrade` branch, compare the selected target, and evaluate the rest of the fleet
 - Targets: `linux-desktop`, `nixos`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
-- Run this on a machine or remote builder that can build the selected target; unavailable non-target profiles are reported and skipped during local validation
+- The script creates or switches to `system-upgrade`; it does not require your working tree or index to be clean
+- Run this on a machine or remote builder that can build the selected target
+- Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
+- Use `--nixpkgs-ref <rev-or-ref>` to test a specific nixpkgs commit, branch, or flake ref, for example `scripts/flake-update nixos --nixpkgs-ref nixos-25.05`
+- Use `--input-ref <input>=<flake-ref>` to pin another input explicitly, for example `scripts/flake-update nixos --input-ref home-manager=github:nix-community/home-manager/release-25.05`
 - Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
 ### Formatting
