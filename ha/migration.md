@@ -1,15 +1,18 @@
 # Home Assistant Migration
 
+Start with `ha/README.md` for the main install, update, and restore flow. This
+file is the migration-specific note.
+
 ## Source Backup
 
 Parsed backup: `automatic_backup_2026_5_4`
 
-Do not commit the raw backup archive, extracted backup folders, or secrets. The
-checked-in `ha/reference/home-assistant-backup` files are a redacted review
-snapshot only. They are not imported by NixOS and are not live server state. For
-future exports, prefer Home Assistant's own backup UI plus standard inspection
-tools such as `tar`, `jq`, and `yq`; avoid keeping one-off parser scripts in
-this repo.
+Do not commit the raw backup archive, extracted backup folders, or secrets.
+Keep any working inspection copy under `ha/reference-local/`, which is ignored
+by Git. It is not imported by NixOS and is not live server state. For future
+exports, prefer Home Assistant's own backup UI plus standard inspection tools
+such as `tar`, `jq`, and `yq`; avoid keeping one-off parser scripts in this
+repo.
 
 ## Current Add-on Mapping
 
