@@ -12,6 +12,7 @@ let
     mkIf
     mkOption
     optionalAttrs
+    optionals
     types
     ;
 
@@ -25,6 +26,7 @@ let
     "${dataRoot}/zigbee2mqtt"
     "${dataRoot}/zwave-js-ui"
     "${dataRoot}/esphome"
+    "${dataRoot}/openclaw"
   ];
 in
 {
@@ -93,6 +95,24 @@ in
         default = false;
         description = "Run the Twingate connector once its env file is provided.";
       };
+
+      openclaw = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Run OpenClaw Assistant as an OCI container with fresh state.";
+        };
+
+        image = mkOption {
+          type = types.str;
+          default = "docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77";
+          description = ''
+            OpenClaw container image to run. The default matches the image tag
+            found in the HAOS backup; change this to the preferred upstream
+            image/tag before enabling if a newer supported image exists.
+          '';
+        };
+      };
     };
   };
 
@@ -116,6 +136,8 @@ in
       "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
       "d ${dataRoot}/zwave-js-ui 0750 root root - -"
       "d ${dataRoot}/esphome 0750 root root - -"
+      "d ${dataRoot}/openclaw/config 0750 root root - -"
+      "d ${dataRoot}/openclaw/data 0750 root root - -"
       "d /root/secrets 0700 root root - -"
     ];
 
@@ -125,6 +147,10 @@ in
       3000 # AdGuard initial setup/admin
       5678 # n8n
       5580 # Matter Server
+    ]
+    ++ optionals cfg.containers.openclaw.enable [
+      7681 # OpenClaw terminal
+      18789 # OpenClaw gateway
     ];
     networking.firewall.allowedUDPPorts = [
       53 # AdGuard DNS
@@ -173,6 +199,19 @@ in
       twingate-connector = {
         image = "twingate/connector:latest";
         environmentFiles = [ "/root/secrets/twingate-connector.env" ];
+      };
+    }
+    // optionalAttrs cfg.containers.openclaw.enable {
+      openclaw = {
+        image = cfg.containers.openclaw.image;
+        ports = [
+          "7681:7681/tcp"
+          "18789:18789/tcp"
+        ];
+        volumes = [
+          "${dataRoot}/openclaw/config:/config"
+          "${dataRoot}/openclaw/data:/data"
+        ];
       };
     };
 

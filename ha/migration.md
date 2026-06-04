@@ -21,7 +21,7 @@ repo.
 | Twingate Connector | Optional OCI container | Disabled until `/root/secrets/twingate-connector.env` is provided. |
 | Studio Code Server | Not migrated as an add-on | Use SSH/editor tooling on the NixOS host instead. |
 | Get HACS | Not a runtime service | HACS/custom components are part of the HA config restore. |
-| OpenClaw Assistant | Ignored | Intentionally reset from scratch. |
+| OpenClaw Assistant | Optional OCI container | Old state ignored; fresh state starts in `/var/lib/openclaw`. |
 
 ## Restore Order
 
@@ -40,4 +40,4 @@ sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 - Home Assistant includes HACS and custom components.
 - The Bambu Lab integration contributes most media weight under `www/media/ha-bambulab`.
 - Home Assistant has 35 device registry entries and 235 entity registry entries in the parsed backup.
-- OpenClaw data is deliberately excluded from inventory and migration decisions.
+- OpenClaw backup state is deliberately excluded from migration; the NixOS module starts it fresh when enabled.

@@ -98,12 +98,6 @@
           nixosRebuildFlags = "";
         };
 
-        nixos-server-vm = {
-          dotfilesPath = "/home/joshan/.files";
-          profileName = "nixos-server-vm";
-          ollamaUrl = "http://localhost:11434/v1";
-          nixosRebuildFlags = "";
-        };
       };
     in
     {
@@ -315,27 +309,6 @@
             ];
           };
 
-        nixos-server-vm =
-          let
-            specialArgs = {
-              inherit inputs;
-              inherit (profiles.nixos-server-vm)
-                dotfilesPath
-                profileName
-                ollamaUrl
-                nixosRebuildFlags
-                ;
-            };
-          in
-          lib.nixosSystem {
-            inherit specialArgs;
-            system = "aarch64-linux";
-            modules = [
-              ./modules/home-assistant-stack.nix
-              ./profiles/nixos-server/configuration_nixos-server.nix
-              ./profiles/nixos-server/vm.nix
-            ];
-          };
       };
     };
 }

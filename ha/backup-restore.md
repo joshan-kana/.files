@@ -1,31 +1,57 @@
-# Home Assistant Backup And Restore
+# Backup And Restore
 
-## Runtime Data
+## What Nix Manages
 
-Keep mutable app data in explicit bind-mounted directories:
+NixOS manages the normal backup/rollback machinery:
 
-- `/var/lib/home-assistant`
-- `/var/lib/adguard`
-- `/var/lib/matter-server`
-- `/var/lib/n8n`
-- `/var/lib/mosquitto`
-- `/var/lib/zigbee2mqtt`
-- `/var/lib/zwave-js-ui`
-- `/var/lib/esphome`
+- `services.snapper`: creates local `/var/lib` snapshots every 15 minutes.
+- `services.restic.backups.home-assistant`: backs up app data to Dropbox every
+  30 minutes.
+- `virtualisation.oci-containers`: runs Home Assistant and the migrated add-on
+  apps with explicit `/var/lib/...` storage.
 
-Avoid anonymous Docker volumes for Home Assistant-related services. They are
-harder to audit, snapshot, and restore.
+You should not normally run backup commands by hand. The manual commands below
+are for setup checks, “did it work?” verification, and emergency restore.
 
-## Rollback Model
+## Two Different Rollbacks
 
-Use Git for Nix config rollback:
+There are two kinds of state:
 
-```sh
-git checkout <known-good-commit>
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
-```
+| Thing | Where it lives | How to roll back |
+| --- | --- | --- |
+| NixOS config | Git repo | Check out an older commit and rebuild |
+| Home Assistant/app data | `/var/lib/...` | Restore a Snapper snapshot or restic backup |
 
-Use Snapper for mutable data rollback:
+That split is intentional. If a Home Assistant edit breaks something, you can
+roll back `/var/lib/home-assistant` without rolling back the whole NixOS system.
+
+## App Data Locations
+
+Each app gets a plain directory:
+
+- Home Assistant: `/var/lib/home-assistant`
+- AdGuard Home: `/var/lib/adguard`
+- Matter Server: `/var/lib/matter-server`
+- n8n: `/var/lib/n8n`
+- OpenClaw: `/var/lib/openclaw`
+- Future MQTT/Zigbee/Z-Wave/ESPHome data:
+  - `/var/lib/mosquitto`
+  - `/var/lib/zigbee2mqtt`
+  - `/var/lib/zwave-js-ui`
+  - `/var/lib/esphome`
+
+These directories are what Snapper snapshots and restic backs up.
+
+## Fast Local Restore
+
+Use this when you made a bad config change and want to go back quickly.
+
+1. Stop the affected app.
+2. Pick a snapshot.
+3. Restore only the relevant files.
+4. Start the app again.
+
+Example for Home Assistant:
 
 ```sh
 sudo systemctl stop docker-home-assistant.service
@@ -34,48 +60,35 @@ sudo snapper -c var-lib undochange <old>..<new>
 sudo systemctl start docker-home-assistant.service
 ```
 
-This intentionally rolls back `/var/lib` without rolling back the Nix profile.
+`<old>..<new>` is the snapshot range Snapper shows from `snapper list`. Think of
+this as “make `/var/lib` look like it did before the bad edit.”
 
-## Dropbox Offsite Backup
+## Offsite Restore From Dropbox
 
-The NixOS profile declares a restic repository at:
+Use this if the local disk is lost or the local snapshots are not enough.
 
-```text
-rclone:dropbox:Backups/nixos-home-assistant/restic
-```
-
-Create these files on the server, outside Git:
-
-```text
-/root/secrets/restic-password
-/root/secrets/rclone.conf
-```
-
-The `dropbox` remote in `rclone.conf` must match the repository name above.
-The restic job runs every 30 minutes and keeps hourly, daily, weekly, and
-monthly snapshots.
-
-## Restore From Restic
-
-List snapshots:
+List encrypted backup points:
 
 ```sh
-sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic snapshots
+sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic \
+  --password-file /root/secrets/restic-password snapshots
 ```
 
-Restore one app path to a temporary directory:
+Restore Home Assistant into a temporary directory first:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service
-sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic restore latest \
+sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic \
+  --password-file /root/secrets/restic-password restore latest \
   --target /tmp/ha-restore \
   --include /var/lib/home-assistant
 ```
 
-Inspect the restored data before replacing live files.
+Inspect `/tmp/ha-restore` before replacing live files. This avoids turning one
+mistake into two mistakes with a tiny hat.
 
 ## Media Policy
 
-The backup excludes `/var/lib/home-assistant/www/media/ha-bambulab` by default
-because the HAOS backup shows it dominates the data size. Back it up separately
-if those printer media files matter.
+`/var/lib/home-assistant/www/media/ha-bambulab` is excluded from the default
+restic backup because the HAOS backup showed it dominates the size. If those
+printer media files matter, back them up separately or remove that exclude from
+`modules/home-assistant-stack.nix`.

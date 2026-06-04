@@ -56,6 +56,11 @@
       cores = 4;
       memorySize = 8192;
     };
+
+    services.homeAssistantStack = {
+      snapshots.enable = false;
+      backups.enable = false;
+    };
   };
 
   services.homeAssistantStack = {
