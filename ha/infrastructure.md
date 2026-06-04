@@ -55,6 +55,18 @@ normal updates.
 AdGuard uses a Docker macvlan network so it can have a stable LAN IP independent
 of the NixOS host address.
 
+The current LAN address plan is:
+
+| Address | Owner | Notes |
+| --- | --- | --- |
+| `192.168.1.1` | Router | Default gateway |
+| `192.168.1.2` | NixOS server / Home Assistant | Home Assistant uses host networking on `:8123` |
+| `192.168.1.11` | LEDWALL / WLED | Existing static IP |
+| `192.168.1.53` | AdGuard Home | Dedicated macvlan container IP for DNS/admin |
+| `192.168.1.54` | NixOS host AdGuard shim | Lets the host reach the AdGuard macvlan container |
+| `192.168.1.100-192.168.1.199` | DHCP pool | Router-assigned clients |
+| `192.168.1.200` | Swann DVR | Fixed in router |
+
 Edit these values at the top of
 `profiles/nixos-server/home-assistant-stack.nix` before deploying:
 
