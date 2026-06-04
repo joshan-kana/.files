@@ -402,7 +402,7 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - The script creates or switches to `system-upgrade`; it does not require your working tree or index to be clean
 - Run this on a machine or remote builder that can build the selected target
 - Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
-- Run `sysfu` with no arguments to open the interactive selector
+- Run `sysfu` with no arguments to open the interactive selector; the first menu item chooses which `nixosConfiguration` to upgrade
 - Use `--list-nixpkgs-commits [branch]` to print recent nixpkgs commits, for example `sysfu --list-nixpkgs-commits nixos-unstable`
 - Use `--nixpkgs-ref <rev-or-ref>` to test a specific nixpkgs commit, branch, or flake ref, for example `scripts/flake-update nixos --nixpkgs-ref nixos-25.05`
 - Use `--choose-nixpkgs-ref [branch]` to choose from recent nixpkgs commits, for example `sysfu --choose-nixpkgs-ref nixos-unstable`

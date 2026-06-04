@@ -97,41 +97,60 @@ fetch_nixpkgs_commits() {
   local branch=${1:-nixos-unstable}
   local depth=${NIXPKGS_COMMIT_CHOOSER_DEPTH:-80}
   local repo_url=${NIXPKGS_COMMIT_CHOOSER_REPO:-https://github.com/NixOS/nixpkgs.git}
-  local chooser_dir="$tmpdir/nixpkgs-chooser-${branch//[^a-zA-Z0-9_.-]/-}"
+  local safe_branch=${branch//[^a-zA-Z0-9_.-]/-}
+  local commit_file="$tmpdir/nixpkgs-commits-${safe_branch}.txt"
+  local chooser_dir="$tmpdir/nixpkgs-chooser-${safe_branch}"
+  local api_url="https://api.github.com/repos/NixOS/nixpkgs/commits?sha=${branch}&per_page=${depth}"
 
-  echo "Fetching the latest ${depth} nixpkgs commits from ${branch}..." >&2
+  if [[ -s "$commit_file" ]]; then
+    echo "$commit_file"
+    return
+  fi
+
+  if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    echo "Fetching the latest ${depth} nixpkgs commits from ${branch}..." >&2
+    if curl -fsSL "$api_url" |
+      jq -r '.[] | "\(.sha) \(.sha[0:9]) \(.commit.author.date[0:10]) \(.commit.message | split("\n")[0])"' > "$commit_file" &&
+      [[ -s "$commit_file" ]]; then
+      echo "$commit_file"
+      return
+    fi
+  fi
+
+  echo "Fetching the latest ${depth} nixpkgs commits from ${branch} with git..." >&2
   mkdir -p "$chooser_dir"
   git -C "$chooser_dir" init --quiet
   if ! git -C "$chooser_dir" remote get-url origin >/dev/null 2>&1; then
     git -C "$chooser_dir" remote add origin "$repo_url"
   fi
   git -C "$chooser_dir" fetch --quiet --depth "$depth" origin "$branch"
-  echo "$chooser_dir"
+  git -C "$chooser_dir" log --format='%H %h %cs %s' FETCH_HEAD > "$commit_file"
+  echo "$commit_file"
 }
 
 list_nixpkgs_commits() {
   local branch=${1:-nixos-unstable}
-  local chooser_dir
+  local commit_file
 
-  chooser_dir=$(fetch_nixpkgs_commits "$branch")
-  git -C "$chooser_dir" log --format='%h %cs %s' FETCH_HEAD
+  commit_file=$(fetch_nixpkgs_commits "$branch")
+  cut -d ' ' -f 2- "$commit_file"
 }
 
 choose_nixpkgs_ref() {
   local branch=${1:-nixos-unstable}
   local allow_back=${2:-false}
-  local chooser_dir
+  local commit_file
   local chosen
 
-  chooser_dir=$(fetch_nixpkgs_commits "$branch")
+  commit_file=$(fetch_nixpkgs_commits "$branch")
 
   if command -v fzf >/dev/null 2>&1; then
     chosen=$(
       {
         [[ "$allow_back" == true ]] && echo "__BACK__ Back"
-        git -C "$chooser_dir" log --format='%H %h %cs %s' FETCH_HEAD
+        cat "$commit_file"
       } |
-        fzf --height=60% --reverse --prompt="nixpkgs ${branch}> " || true
+        fzf --height=60% --reverse --with-nth=2.. --prompt="nixpkgs ${branch}> " || true
     )
     if [[ -z "$chosen" ]]; then
       [[ "$allow_back" == true ]] && {
@@ -151,7 +170,7 @@ choose_nixpkgs_ref() {
   if [[ "$allow_back" == true ]]; then
     echo " 0. Back" >&2
   fi
-  git -C "$chooser_dir" log --format='%h %cs %s' FETCH_HEAD | nl -w2 -s'. ' >&2
+  cut -d ' ' -f 2- "$commit_file" | nl -w2 -s'. ' >&2
   echo >&2
   read -r -p "Choose a nixpkgs commit number: " chosen </dev/tty
   if [[ "$allow_back" == true && "$chosen" == 0 ]]; then
@@ -160,7 +179,7 @@ choose_nixpkgs_ref() {
   fi
   [[ "$chosen" =~ ^[0-9]+$ ]] || die "selection must be a number"
 
-  chosen=$(git -C "$chooser_dir" log --format='%H' FETCH_HEAD | sed -n "${chosen}p")
+  chosen=$(sed -n "${chosen}p" "$commit_file" | cut -d ' ' -f 1)
   [[ -n "$chosen" ]] || die "selection is outside the fetched commit list"
   echo "$chosen"
 }
@@ -187,6 +206,54 @@ select_menu_item() {
   echo "$item"
 }
 
+discover_nixos_configurations() {
+  local configs_json
+
+  configs_json=$(
+    nix eval "${nix_flags[@]}" --json '.#nixosConfigurations' --apply 'configs: builtins.attrNames configs'
+  ) || die "failed to discover nixosConfigurations from the flake"
+
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s\n' "$configs_json" | jq -r '.[]'
+  else
+    printf '%s\n' "$configs_json" | tr -d '[]" ' | tr ',' '\n'
+  fi
+}
+
+select_nixos_configuration() {
+  local profiles=("$@")
+
+  select_menu_item "nixosConfiguration> " "${profiles[@]}" "Back"
+}
+
+map_target() {
+  local config
+
+  case "$1" in
+    linux-desktop) echo "nixos"; return 0 ;;
+  esac
+
+  for config in "${all_profiles[@]}"; do
+    if [[ "$1" == "$config" ]]; then
+      echo "$1"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+set_target_profiles() {
+  local profile
+
+  if [[ "$target" == "all" ]]; then
+    target_profiles=("${all_profiles[@]}")
+  else
+    profile=$(map_target "$target") || die "unknown target '$target'"
+    target_profiles=("$profile")
+  fi
+}
+
 confirm() {
   local answer
   read -r -p "$1 [y/N] " answer </dev/tty
@@ -199,6 +266,7 @@ run_interactive_menu() {
   while true; do
     choice=$(
       select_menu_item "sysfu> " \
+        "Choose NixOS configuration (${target})" \
         "Update all inputs to latest" \
         "Choose nixpkgs commit" \
         "List recent nixpkgs commits" \
@@ -210,6 +278,12 @@ run_interactive_menu() {
     [[ -z "$choice" ]] && continue
 
     case "$choice" in
+      "Choose NixOS configuration ("*")")
+        selected=$(select_nixos_configuration "${all_profiles[@]}")
+        [[ -z "$selected" || "$selected" == "Back" ]] && continue
+        target=$selected
+        target_profiles=("$target")
+        ;;
       "Update all inputs to latest")
         return
         ;;
@@ -356,6 +430,14 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
+all_profiles=()
+while IFS= read -r profile; do
+  all_profiles+=("$profile")
+done < <(discover_nixos_configurations)
+[[ "${#all_profiles[@]}" -gt 0 ]] || die "flake does not expose any nixosConfigurations"
+
+set_target_profiles
+
 if [[ "$interactive_menu" == true ]]; then
   run_interactive_menu
 fi
@@ -378,23 +460,6 @@ if [[ "$undo_lock" == true ]]; then
   fi
   echo "Undo cancelled."
   exit 0
-fi
-
-map_target() {
-  case "$1" in
-    linux-desktop) echo "nixos" ;;
-    nixos | nixos-arm-parallels | nixos-orbstack) echo "$1" ;;
-    *) return 1 ;;
-  esac
-}
-
-all_profiles=(nixos nixos-arm-parallels nixos-orbstack)
-
-if [[ "$target" == "all" ]]; then
-  target_profiles=("${all_profiles[@]}")
-else
-  profile=$(map_target "$target") || die "unknown target '$target'"
-  target_profiles=("$profile")
 fi
 
 main_flake="git+file://${repo_root}?ref=${MAIN_BRANCH}"
