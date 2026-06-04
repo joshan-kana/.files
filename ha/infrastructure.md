@@ -26,6 +26,21 @@ It is direct server configuration, not a reusable `mkOption` module. To remove a
 container, remove its entry from `virtualisation.oci-containers.containers` or
 set up a simple local boolean in that same file.
 
+## Binary Caches
+
+The server config declares these Nix substituters:
+
+```text
+https://cache.nixos.org/
+https://nix-community.cachix.org
+https://nixos-raspberrypi.cachix.org
+```
+
+`fallback = false` is intentional. If a requested path is not available from the
+configured binary caches, Nix fails instead of compiling locally on the Pi. That
+keeps updates fast and predictable; the tradeoff is that some updates may need
+to wait for cache availability or be built on a stronger machine.
+
 ## AdGuard Stable IP
 
 AdGuard uses a Docker macvlan network so it can have a stable LAN IP independent
