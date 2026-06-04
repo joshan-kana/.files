@@ -1,10 +1,11 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   hardware.enableRedistributableFirmware = true;
 
   boot.loader.grub.enable = false;
   boot.loader.generic-extlinux-compatible.enable = true;
+  boot.kernelPackages = lib.mkForce pkgs.linuxPackages;
 
   boot.initrd.availableKernelModules = [
     "xhci_pci"

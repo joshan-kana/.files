@@ -41,6 +41,11 @@ configured binary caches, Nix fails instead of compiling locally on the Pi. That
 keeps updates fast and predictable; the tradeoff is that some updates may need
 to wait for cache availability or be built on a stronger machine.
 
+The server uses the Raspberry Pi 4 hardware profile with the mainline NixOS
+kernel instead of the Raspberry Pi vendor kernel. That keeps the hardware
+configuration Pi-aware while avoiding slow local vendor-kernel builds during
+normal updates.
+
 ## AdGuard Stable IP
 
 AdGuard uses a Docker macvlan network so it can have a stable LAN IP independent
