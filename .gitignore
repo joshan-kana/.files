@@ -2,6 +2,7 @@
 
 ha-migration-input/
 ha-migration-work/
+ha/reference-local/
 automatic_backup_*/
 *.tar
 *.tar.gz
