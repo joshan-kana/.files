@@ -316,7 +316,7 @@
             modules = [
               nixos-hardware.nixosModules.raspberry-pi-4
               ./profiles/nixos-server/configuration_nixos-server.nix
-              ./profiles/nixos-server/home-assistant-stack.nix
+              ./profiles/nixos-server/hosted-stack.nix
               ./profiles/nixos-server/hardware-configuration.nix
             ];
           };
