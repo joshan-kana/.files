@@ -49,7 +49,7 @@ containers to work:
 | --- | --- |
 | `/root/secrets/restic-password` | Always, for Dropbox/restic backups |
 | `/root/secrets/rclone.conf` | Always, for Dropbox/restic backups |
-| `/root/secrets/openclaw.env` | Only when OpenClaw needs env-based secrets |
+| `/root/secrets/openclaw.env` | OpenClaw container startup |
 | `/root/secrets/twingate-connector.env` | Only when Twingate is enabled |
 
 Do not commit these files. Keep a separate encrypted copy of them outside the

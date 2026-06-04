@@ -10,7 +10,7 @@ Everything runs on the Raspberry Pi NixOS host.
 | AdGuard Home | Docker/OCI container on its own LAN IP | DNS/admin on the AdGuard IP | `/var/lib/adguard` |
 | Matter Server | Docker/OCI container | `:5580`, host networking | `/var/lib/matter-server` |
 | n8n | Docker/OCI container | `http://<server>:5678` | `/var/lib/n8n` |
-| OpenClaw | Optional Docker/OCI container | terminal `:7681`, gateway `:18789` | `/var/lib/openclaw` |
+| OpenClaw | Docker/OCI container | terminal `:7681`, gateway `:18789` | `/var/lib/openclaw` |
 | Twingate | Optional Docker/OCI container | no public port | env file in `/root/secrets` |
 
 NixOS declares the containers, ports, directories, backup timers, and snapshot
@@ -195,17 +195,10 @@ systemctl status restic-backups-home-assistant.service
 
 ## OpenClaw
 
-OpenClaw is disabled by default because you wanted to reset it. Fresh state will
-live in:
+OpenClaw runs as part of the server stack. Fresh state will live in:
 
 ```text
 /var/lib/openclaw
-```
-
-Enable it in `profiles/nixos-server/home-assistant-stack.nix`:
-
-```nix
-enableOpenClaw = true;
 ```
 
 Then create the env file for any OpenClaw credentials or tokens:
@@ -223,16 +216,18 @@ app data.
 
 Before enabling, confirm the image tag in
 `profiles/nixos-server/home-assistant-stack.nix`.
-The current default is the tag found in the HAOS backup:
+The image is declared in the OpenClaw container block because NixOS needs the
+OCI image name to run the container. The current default is the tag found in the
+HAOS backup:
 
 ```text
 docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77
 ```
 
-If OpenClaw publishes a preferred upstream image, set `openclawImage` explicitly:
+If OpenClaw publishes a preferred upstream image, change the container image:
 
 ```nix
-openclawImage = "example/openclaw:version";
+image = "example/openclaw:version";
 ```
 
 ## References
