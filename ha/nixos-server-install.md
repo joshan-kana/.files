@@ -12,7 +12,8 @@ The target also has a NixOS VM variant, so test builds use the same name:
 nixos-rebuild build-vm --flake .#nixos-server
 ```
 
-The server target does not import `/etc/nixos/hardware-configuration.nix`. Its
+The server target does not import `/etc/nixos/hardware-configuration.nix`. It
+uses the Raspberry Pi 4 profile from `nixos-hardware`, while the local
 hardware/filesystem assumptions are checked into
 `profiles/nixos-server/hardware-configuration.nix`.
 

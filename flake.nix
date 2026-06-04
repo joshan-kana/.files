@@ -5,6 +5,12 @@
     # Nixpkgs: a collection of packages for the Nix package manager
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
+    # NixOS hardware profiles, including Raspberry Pi 4 defaults.
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";
@@ -35,6 +41,7 @@
     {
       self,
       nixpkgs,
+      nixos-hardware,
       home-manager,
       stylix,
       spicetify-nix,
@@ -303,6 +310,7 @@
             inherit specialArgs;
             system = "aarch64-linux";
             modules = [
+              nixos-hardware.nixosModules.raspberry-pi-4
               ./profiles/nixos-server/configuration_nixos-server.nix
               ./profiles/nixos-server/home-assistant-stack.nix
               ./profiles/nixos-server/hardware-configuration.nix
