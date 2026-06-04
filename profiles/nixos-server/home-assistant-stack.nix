@@ -8,8 +8,6 @@ let
   dataRoot = "/var/lib";
   secretsDir = "/root/secrets";
 
-  enableTwingate = false;
-
   # Change these to match the LAN before deploying. The AdGuard IP should be
   # outside the DHCP pool, or reserved so another device cannot claim it.
   adguardNetwork = {
@@ -35,6 +33,7 @@ let
     "${dataRoot}/zwave-js-ui"
     "${dataRoot}/esphome"
     "${dataRoot}/openclaw"
+    "${dataRoot}/tailscale"
   ];
 in
 {
@@ -63,6 +62,12 @@ in
     "d ${dataRoot}/openclaw/data 0750 root root - -"
     "d ${secretsDir} 0700 root root - -"
   ];
+
+  services.tailscale = {
+    enable = true;
+    openFirewall = true;
+    authKeyFile = "${secretsDir}/tailscale-authkey";
+  };
 
   networking.firewall.allowedTCPPorts = [
     8123 # Home Assistant
@@ -162,12 +167,6 @@ in
         "${dataRoot}/openclaw/data:/data"
       ];
       environmentFiles = [ "${secretsDir}/openclaw.env" ];
-    };
-  }
-  // lib.optionalAttrs enableTwingate {
-    twingate-connector = {
-      image = "twingate/connector:latest";
-      environmentFiles = [ "${secretsDir}/twingate-connector.env" ];
     };
   };
 

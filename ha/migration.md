@@ -19,7 +19,7 @@ this repo.
 | AdGuard Home | `adguard` OCI container | Config/data lives in `/var/lib/adguard`. DNS/admin are served from the dedicated AdGuard LAN IP. |
 | Matter Server | `matter-server` OCI container | Uses host networking for discovery. |
 | n8n | `n8n` OCI container | Data lives in `/var/lib/n8n`. |
-| Twingate Connector | Optional OCI container | Disabled until `/root/secrets/twingate-connector.env` is provided. |
+| Twingate Connector | Replaced by Tailscale | Tailscale is managed by the NixOS service and stores state in `/var/lib/tailscale`. |
 | Studio Code Server | Not migrated as an add-on | Use SSH/editor tooling on the NixOS host instead. |
 | Get HACS | Not a runtime service | HACS/custom components are part of the HA config restore. |
 | OpenClaw Assistant | `openclaw` OCI container | Old state ignored; fresh state starts in `/var/lib/openclaw`. |
