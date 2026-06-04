@@ -106,6 +106,16 @@ lib.mkIf cfg.features.cli.enable {
       bindkey '^xe' edit-command-line
       bindkey '^x^e' edit-command-line
 
+      _sysfu() {
+        _arguments -C \
+          '(-h --help)'{-h,--help}'[show help]' \
+          '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
+          '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
+          '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
+          '*:flake input:(nixpkgs home-manager stylix spicetify-nix plasma-manager)'
+      }
+      compdef _sysfu sysfu
+
       bindkey -v '^?' backward-delete-char
 
       _direnv_hook() {
