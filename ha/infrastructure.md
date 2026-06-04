@@ -11,7 +11,7 @@ Everything runs on the Raspberry Pi NixOS host.
 | Matter Server | Docker/OCI container | `:5580`, host networking | `/var/lib/matter-server` |
 | n8n | Docker/OCI container | `http://<server>:5678` | `/var/lib/n8n` |
 | OpenClaw | Docker/OCI container | terminal `:7681`, gateway `:18789` | `/var/lib/openclaw` |
-| Twingate | Optional Docker/OCI container | no public port | env file in `/root/secrets` |
+| Tailscale | NixOS service | no public port | `/var/lib/tailscale` |
 
 NixOS declares the containers, ports, directories, backup timers, and snapshot
 policy. The app config/data itself stays as editable files under `/var/lib/...`.
@@ -50,7 +50,8 @@ router or keep it outside the DHCP pool.
 
 `hostShimIp` is a small host-side macvlan address. Without it, the NixOS host
 and host-networked Home Assistant can have trouble reaching the AdGuard
-container because macvlan isolates the parent host by default.
+container because macvlan isolates the parent host by default. The stack creates
+this host-side link as `adguard-shim`.
 
 ## How App Configs Are Connected
 
@@ -100,7 +101,7 @@ Current secret files:
 | --- | --- |
 | `/root/secrets/restic-password` | Unlocks the encrypted restic backup repository |
 | `/root/secrets/rclone.conf` | Lets rclone connect restic to Dropbox |
-| `/root/secrets/twingate-connector.env` | Optional Twingate connector credentials |
+| `/root/secrets/tailscale-authkey` | Tailscale first-boot auth key |
 | `/root/secrets/openclaw.env` | Optional OpenClaw passwords/tokens as environment variables |
 
 Home Assistant's own `secrets.yaml` stays inside:
@@ -111,7 +112,8 @@ Home Assistant's own `secrets.yaml` stays inside:
 
 App-owned secret config, such as AdGuard login hashes or OpenClaw config files,
 stays in that app's `/var/lib/...` directory unless the app specifically needs
-environment variables.
+environment variables. Tailscale's ongoing machine identity lives under
+`/var/lib/tailscale`.
 
 ## Secret Backup Policy
 
@@ -202,6 +204,26 @@ After that, NixOS owns the backup timer. You can check it with:
 systemctl list-timers 'restic*'
 systemctl status restic-backups-home-assistant.service
 ```
+
+## Tailscale
+
+Tailscale is managed by the NixOS `services.tailscale` module, not by Docker.
+The node state lives in:
+
+```text
+/var/lib/tailscale
+```
+
+Create a reusable or ephemeral auth key in the Tailscale admin console and put
+it here before first boot:
+
+```text
+/root/secrets/tailscale-authkey
+```
+
+That auth key is bootstrap material, so keep it out of Git. After the machine is
+registered, the ongoing Tailscale identity is app state under `/var/lib/tailscale`
+and is included in Snapper/restic.
 
 ## OpenClaw
 

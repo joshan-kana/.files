@@ -50,7 +50,7 @@ containers to work:
 | `/root/secrets/restic-password` | Always, for Dropbox/restic backups |
 | `/root/secrets/rclone.conf` | Always, for Dropbox/restic backups |
 | `/root/secrets/openclaw.env` | OpenClaw container startup |
-| `/root/secrets/twingate-connector.env` | Only when Twingate is enabled |
+| `/root/secrets/tailscale-authkey` | Tailscale first boot/auth |
 
 Do not commit these files. Keep a separate encrypted copy of them outside the
 restic repository, such as a password manager secure note or later `sops-nix`

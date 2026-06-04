@@ -34,6 +34,7 @@ Each app gets a plain directory:
 - Matter Server: `/var/lib/matter-server`
 - n8n: `/var/lib/n8n`
 - OpenClaw: `/var/lib/openclaw`
+- Tailscale: `/var/lib/tailscale`
 - Future MQTT/Zigbee/Z-Wave/ESPHome data:
   - `/var/lib/mosquitto`
   - `/var/lib/zigbee2mqtt`
@@ -52,7 +53,9 @@ Secrets are split into two buckets:
 | AdGuard admin hash/config secrets | `/var/lib/adguard/conf` | Snapper and restic |
 | n8n credentials database | `/var/lib/n8n` | Snapper and restic |
 | OpenClaw app config/passwords | `/var/lib/openclaw` if app-owned | Snapper and restic |
+| Tailscale machine state | `/var/lib/tailscale` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
+| Tailscale first-boot auth key | `/root/secrets/tailscale-authkey` | Separate encrypted copy |
 | Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
 | Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
 
