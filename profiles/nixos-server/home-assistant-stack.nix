@@ -8,7 +8,6 @@ let
   dataRoot = "/var/lib";
   secretsDir = "/root/secrets";
 
-  enableOpenClaw = false;
   enableTwingate = false;
 
   # Change these to match the LAN before deploying. The AdGuard IP should be
@@ -21,8 +20,6 @@ let
     containerIp = "192.168.1.53";
     hostShimIp = "192.168.1.54";
   };
-
-  openclawImage = "docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77";
 
   resticRepository = "rclone:dropbox:Backups/nixos-home-assistant/restic";
   resticPasswordFile = "${secretsDir}/restic-password";
@@ -71,8 +68,6 @@ in
     8123 # Home Assistant
     5678 # n8n
     5580 # Matter Server
-  ]
-  ++ lib.optionals enableOpenClaw [
     7681 # OpenClaw terminal
     18789 # OpenClaw gateway
   ];
@@ -155,16 +150,9 @@ in
       ports = [ "5678:5678/tcp" ];
       volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
     };
-  }
-  // lib.optionalAttrs enableTwingate {
-    twingate-connector = {
-      image = "twingate/connector:latest";
-      environmentFiles = [ "${secretsDir}/twingate-connector.env" ];
-    };
-  }
-  // lib.optionalAttrs enableOpenClaw {
+
     openclaw = {
-      image = openclawImage;
+      image = "docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77";
       ports = [
         "7681:7681/tcp"
         "18789:18789/tcp"
@@ -174,6 +162,12 @@ in
         "${dataRoot}/openclaw/data:/data"
       ];
       environmentFiles = [ "${secretsDir}/openclaw.env" ];
+    };
+  }
+  // lib.optionalAttrs enableTwingate {
+    twingate-connector = {
+      image = "twingate/connector:latest";
+      environmentFiles = [ "${secretsDir}/twingate-connector.env" ];
     };
   };
 
