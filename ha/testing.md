@@ -1,5 +1,8 @@
 # Server Test Notes
 
+Start with `ha/README.md` for the main operator flow. This file is the build
+and verification note.
+
 These checks were run before installing on the Raspberry Pi.
 
 ## Evaluation

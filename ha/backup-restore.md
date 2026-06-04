@@ -1,5 +1,8 @@
 # Backup And Restore
 
+Start with `ha/README.md` for the main install, update, and restore flow. This
+file is the deeper backup/rollback note.
+
 ## What Nix Manages
 
 NixOS manages the normal backup/rollback machinery:
@@ -119,4 +122,4 @@ The raw HAOS backup showed that Bambu Lab printer media dominates the Home
 Assistant backup size. SQLite files such as Home Assistant and n8n databases are
 included because they are app state. If the printer media matters, back it up
 separately or remove that exclude from
-`profiles/nixos-server/home-assistant-stack.nix`.
+`profiles/nixos-server/hosted-stack.nix`.
