@@ -1,1 +1,16 @@
 /result
+
+ha-migration-input/
+ha-migration-work/
+automatic_backup_*/
+*.tar
+*.tar.gz
+*.tgz
+
+# Backup credentials and local backup tool state must stay outside Git.
+restic-password*
+tailscale-authkey*
+rclone.conf
+*.credentials
+*.secret
+.env
