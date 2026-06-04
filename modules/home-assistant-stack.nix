@@ -120,9 +120,11 @@ in
     ];
 
     networking.firewall.allowedTCPPorts = [
+      53 # AdGuard DNS
       8123 # Home Assistant
       3000 # AdGuard initial setup/admin
       5678 # n8n
+      5580 # Matter Server
     ];
     networking.firewall.allowedUDPPorts = [
       53 # AdGuard DNS
@@ -192,6 +194,7 @@ in
       initialize = true;
       repository = cfg.backups.repository;
       passwordFile = cfg.backups.passwordFile;
+      rcloneConfigFile = cfg.backups.rcloneConfigFile;
       paths = backupPaths;
       exclude = [
         "${dataRoot}/home-assistant/home-assistant_v2.db-wal"
@@ -209,10 +212,6 @@ in
         RandomizedDelaySec = "5m";
       };
       checkOpts = [ "--read-data-subset=1G" ];
-    };
-
-    systemd.services.restic-backups-home-assistant.environment = mkIf cfg.backups.enable {
-      RCLONE_CONFIG = cfg.backups.rcloneConfigFile;
     };
   };
 }
