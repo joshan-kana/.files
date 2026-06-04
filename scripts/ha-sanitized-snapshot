@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import re
+import tarfile
+from pathlib import Path
+
+
+SENSITIVE_KEY = re.compile(
+    r"(secret|token|password|passwd|credential|authorization|auth|key|cert|"
+    r"private|cookie|session|refresh|access|client_secret|api)",
+    re.IGNORECASE,
+)
+
+SECRETISH_VALUE = re.compile(
+    r"(Bearer\s+[A-Za-z0-9._-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|"
+    r"[A-Fa-f0-9]{32,}|[A-Za-z0-9_-]{48,})"
+)
+
+
+TEXT_SNAPSHOT_FILES = {
+    "homeassistant.tar.gz": [
+        "data/configuration.yaml",
+        "data/automations.yaml",
+        "data/scripts.yaml",
+        "data/scenes.yaml",
+        "data/secrets.yaml",
+    ],
+    "a0d7b954_adguard.tar.gz": [
+        "data/options.json",
+        "data/adguard/AdGuardHome.yaml",
+    ],
+    "3cfc8f0f_hass-n8n.tar.gz": [
+        "data/options.json",
+        "data/n8n/.n8n/nodes/package.json",
+    ],
+    "a71912a0_twingate-connector.tar.gz": [
+        "data/options.json",
+    ],
+    "core_matter_server.tar.gz": [
+        "data/options.json",
+    ],
+    "cb646a50_get.tar.gz": [
+        "data/options.json",
+    ],
+}
+
+
+STORAGE_JSON_FILES = [
+    "data/.storage/core.config",
+    "data/.storage/core.config_entries",
+    "data/.storage/core.area_registry",
+    "data/.storage/core.category_registry",
+    "data/.storage/core.device_registry",
+    "data/.storage/core.entity_registry",
+    "data/.storage/hacs.repositories",
+    "data/.storage/lovelace_dashboards",
+    "data/.storage/lovelace_resources",
+]
+
+
+def member_names(name):
+    return [name, f"./{name}"]
+
+
+def read_member(tar, name, max_size=512 * 1024):
+    member = None
+    for candidate in member_names(name):
+        try:
+            member = tar.getmember(candidate)
+            break
+        except KeyError:
+            continue
+    if member is None or not member.isfile() or member.size > max_size:
+        return None
+    extracted = tar.extractfile(member)
+    if extracted is None:
+        return None
+    return extracted.read().decode("utf-8", errors="replace")
+
+
+def redact_json(value, key=""):
+    if SENSITIVE_KEY.search(key):
+        return "REDACTED"
+    if isinstance(value, dict):
+        return {k: redact_json(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact_json(v, key) for v in value]
+    if isinstance(value, str):
+        if SECRETISH_VALUE.search(value):
+            return "REDACTED"
+        if len(value) > 120:
+            return "REDACTED_LONG_VALUE"
+    return value
+
+
+def redact_text(text):
+    redacted = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if ":" in stripped:
+            key = stripped.split(":", 1)[0]
+            if SENSITIVE_KEY.search(key):
+                prefix = line.split(":", 1)[0]
+                redacted.append(f"{prefix}: REDACTED")
+                continue
+        redacted.append(SECRETISH_VALUE.sub("REDACTED", line))
+    return "\n".join(redacted) + "\n"
+
+
+def write_snapshot_file(output_root, archive_name, member_name, content):
+    target = output_root / archive_name.removesuffix(".tar.gz") / member_name.removeprefix("data/")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content)
+
+
+def snapshot_archive(backup_dir, output_root, archive_name, members):
+    archive = backup_dir / archive_name
+    if not archive.exists():
+        return
+    with tarfile.open(archive, "r:*") as tar:
+        for member_name in members:
+            text = read_member(tar, member_name)
+            if text is None:
+                continue
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                content = redact_text(text)
+            else:
+                content = json.dumps(redact_json(data), indent=2, sort_keys=True) + "\n"
+            write_snapshot_file(output_root, archive_name, member_name, content)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Create redacted HA config snapshots.")
+    parser.add_argument("backup_dir", type=Path)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for archive_name, members in TEXT_SNAPSHOT_FILES.items():
+        snapshot_archive(args.backup_dir, args.output_dir, archive_name, members)
+    snapshot_archive(args.backup_dir, args.output_dir, "homeassistant.tar.gz", STORAGE_JSON_FILES)
+
+
+if __name__ == "__main__":
+    main()
