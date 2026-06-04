@@ -28,6 +28,10 @@ set up a simple local boolean in that same file.
 
 ## Binary Caches
 
+The server is evaluated with the stable NixOS channel, currently
+`nixos-26.05`, even though the rest of this flake can keep using unstable. This
+keeps Raspberry Pi updates calmer and makes cache hits more predictable.
+
 The server config declares these Nix substituters:
 
 ```text
