@@ -4,21 +4,11 @@
 
 Parsed backup: `automatic_backup_2026_5_4`
 
-Do not commit the raw backup archive, extracted backup folders, or secrets. Use
-`scripts/ha-backup-inventory` to regenerate the sanitized inventory after a new
-backup export:
-
-```sh
-scripts/ha-backup-inventory /Users/joshan/Downloads/automatic_backup_2026_5_4 \
-  --output ha/sanitized/backup-inventory.md
-```
-
-Use `scripts/ha-sanitized-snapshot` to regenerate the redacted config snapshot:
-
-```sh
-scripts/ha-sanitized-snapshot /Users/joshan/Downloads/automatic_backup_2026_5_4 \
-  --output-dir ha/sanitized/config
-```
+Do not commit the raw backup archive, extracted backup folders, or secrets. The
+checked-in `ha/sanitized` files are a redacted review snapshot only. For future
+exports, prefer Home Assistant's own backup UI plus standard inspection tools
+such as `tar`, `jq`, and `yq`; avoid keeping one-off parser scripts in this
+repo.
 
 ## Current Add-on Mapping
 
@@ -37,10 +27,9 @@ scripts/ha-sanitized-snapshot /Users/joshan/Downloads/automatic_backup_2026_5_4 
 
 1. Install NixOS with a Btrfs `/var/lib` subvolume if possible.
 2. Copy the repo to `/home/joshan/.files`.
-3. Copy the target hardware configuration to `/etc/nixos/hardware-configuration.nix`.
-4. Create `/root/secrets/restic-password` and `/root/secrets/rclone.conf`.
-5. Restore Home Assistant and app data into `/var/lib/...`.
-6. Switch the profile:
+3. Create `/root/secrets/restic-password` and `/root/secrets/rclone.conf`.
+4. Restore Home Assistant and app data into `/var/lib/...`.
+5. Switch the profile:
 
 ```sh
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
