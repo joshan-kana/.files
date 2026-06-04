@@ -73,6 +73,16 @@ Home Assistant works the same way:
 | --- | --- |
 | `/var/lib/home-assistant` | `/config` |
 
+## Why Tmpfiles Creates Directories
+
+`systemd.tmpfiles.rules` in
+`profiles/nixos-server/home-assistant-stack.nix` creates the app data
+directories and `/root/secrets` with known permissions.
+
+Despite the name, tmpfiles is not only for temporary files. On NixOS it is also
+the normal declarative way to create runtime directories. Here it prevents
+Docker from auto-creating missing bind-mount directories with implicit defaults.
+
 ## Secrets
 
 Runtime secret files go here on the server:
