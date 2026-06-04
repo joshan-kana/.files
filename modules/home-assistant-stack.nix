@@ -17,6 +17,10 @@ let
     ;
 
   dataRoot = cfg.dataRoot;
+  secretsDir = "/root/secrets";
+  resticRepository = "rclone:dropbox:Backups/nixos-home-assistant/restic";
+  resticPasswordFile = "${secretsDir}/restic-password";
+  rcloneConfigFile = "${secretsDir}/rclone.conf";
   backupPaths = [
     "${dataRoot}/home-assistant"
     "${dataRoot}/adguard"
@@ -50,24 +54,6 @@ in
         type = types.bool;
         default = true;
         description = "Enable encrypted restic backups for Home Assistant app data.";
-      };
-
-      repository = mkOption {
-        type = types.str;
-        default = "rclone:dropbox:Backups/nixos-home-assistant/restic";
-        description = "Restic repository target. Dropbox is reached through rclone.";
-      };
-
-      passwordFile = mkOption {
-        type = types.str;
-        default = "/root/secrets/restic-password";
-        description = "Runtime path to the restic repository password file.";
-      };
-
-      rcloneConfigFile = mkOption {
-        type = types.str;
-        default = "/root/secrets/rclone.conf";
-        description = "Runtime path to the rclone config containing the Dropbox remote.";
       };
     };
 
@@ -138,7 +124,7 @@ in
       "d ${dataRoot}/esphome 0750 root root - -"
       "d ${dataRoot}/openclaw/config 0750 root root - -"
       "d ${dataRoot}/openclaw/data 0750 root root - -"
-      "d /root/secrets 0700 root root - -"
+      "d ${secretsDir} 0700 root root - -"
     ];
 
     networking.firewall.allowedTCPPorts = [
@@ -198,7 +184,7 @@ in
     // optionalAttrs cfg.containers.twingate.enable {
       twingate-connector = {
         image = "twingate/connector:latest";
-        environmentFiles = [ "/root/secrets/twingate-connector.env" ];
+        environmentFiles = [ "${secretsDir}/twingate-connector.env" ];
       };
     }
     // optionalAttrs cfg.containers.openclaw.enable {
@@ -212,6 +198,7 @@ in
           "${dataRoot}/openclaw/config:/config"
           "${dataRoot}/openclaw/data:/data"
         ];
+        environmentFiles = [ "${secretsDir}/openclaw.env" ];
       };
     };
 
@@ -231,9 +218,9 @@ in
 
     services.restic.backups.home-assistant = mkIf cfg.backups.enable {
       initialize = true;
-      repository = cfg.backups.repository;
-      passwordFile = cfg.backups.passwordFile;
-      rcloneConfigFile = cfg.backups.rcloneConfigFile;
+      repository = resticRepository;
+      passwordFile = resticPasswordFile;
+      rcloneConfigFile = rcloneConfigFile;
       paths = backupPaths;
       exclude = [
         "${dataRoot}/home-assistant/home-assistant_v2.db-wal"

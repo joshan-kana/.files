@@ -42,6 +42,24 @@ Each app gets a plain directory:
 
 These directories are what Snapper snapshots and restic backs up.
 
+## What About Secrets?
+
+Secrets are split into two buckets:
+
+| Secret | Where it lives | Backed up how |
+| --- | --- | --- |
+| Home Assistant `secrets.yaml` | `/var/lib/home-assistant/secrets.yaml` | Snapper and restic |
+| AdGuard admin hash/config secrets | `/var/lib/adguard/conf` | Snapper and restic |
+| n8n credentials database | `/var/lib/n8n` | Snapper and restic |
+| OpenClaw app config/passwords | `/var/lib/openclaw` if app-owned | Snapper and restic |
+| OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
+| Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
+| Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
+
+The `/root/secrets` files are the keys needed before restic can restore
+anything. Keep copies in a password manager, `sops-nix`, or an encrypted archive
+whose password is stored somewhere you can reach after the Pi dies.
+
 ## Fast Local Restore
 
 Use this when you made a bad config change and want to go back quickly.
