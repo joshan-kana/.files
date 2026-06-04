@@ -2,13 +2,18 @@
 
 ## Shape Of This Host
 
-The flake has two server targets:
+The flake has one server target:
 
 - `nixos-server`: the real Raspberry Pi 4 target, built for `aarch64-linux`.
-- `nixos-server-vm`: an x86_64 VM target for testing the same service stack.
 
-The real target does not import `/etc/nixos/hardware-configuration.nix`. Its
-hardware/filesystem assumptions live in
+The target also has a NixOS VM variant, so test builds use the same name:
+
+```sh
+nixos-rebuild build-vm --flake .#nixos-server
+```
+
+The server target does not import `/etc/nixos/hardware-configuration.nix`. Its
+hardware/filesystem assumptions are checked into
 `profiles/nixos-server/hardware-configuration.nix`.
 
 ## Recommended Install Path
