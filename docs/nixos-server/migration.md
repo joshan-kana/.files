@@ -21,7 +21,7 @@ keeping one-off parser scripts in this repo.
 | Twingate Connector | Replaced by Tailscale | Tailscale is managed by the NixOS service and stores state in `/var/lib/tailscale`. |
 | Studio Code Server | Not migrated as an add-on | Use SSH/editor tooling on the NixOS host instead. |
 | Get HACS | Not a runtime service | HACS/custom components are part of the HA config restore. |
-| OpenClaw Assistant | `openclaw` OCI container | Old state ignored; fresh state starts in `/var/lib/openclaw`. |
+| OpenClaw Assistant | native `openclaw-gateway` service | Old state ignored; fresh state starts in `/var/lib/openclaw`. |
 
 ## Restore Order
 

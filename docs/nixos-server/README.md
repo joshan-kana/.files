@@ -9,8 +9,8 @@ Raspberry Pi home server documentation.
   and day-two operations guide.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and bare-metal services.
-- `profiles/nixos-server/hosted-stack.nix`: Home Assistant, AdGuard, Matter,
-  OpenClaw, n8n, backups, Snapper, and the AdGuard macvlan network.
+- `profiles/nixos-server/hosted-stack.nix`: Home Assistant, app containers,
+  OpenClaw, backups, Snapper, and the AdGuard macvlan network.
 - `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
