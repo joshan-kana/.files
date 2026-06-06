@@ -63,7 +63,7 @@ The current LAN address plan is:
 | `192.168.1.2` | AdGuard Home / DNS | Dedicated macvlan container IP for DNS/admin |
 | `192.168.1.3` | NixOS server / Home Assistant | Home Assistant uses host networking on `:8123` |
 | `192.168.1.11` | LEDWALL / WLED | Existing static IP |
-| `192.168.1.4` | NixOS host AdGuard shim | Lets the host reach the AdGuard macvlan container |
+| `192.168.1.5` | NixOS host AdGuard shim | Lets the host reach the AdGuard macvlan container |
 | `192.168.1.100-192.168.1.199` | DHCP pool | Router-assigned clients |
 | `192.168.1.200` | Swann DVR | Fixed in router |
 
@@ -77,7 +77,7 @@ adguardNetwork = {
   subnet = "192.168.1.0/24";
   gateway = "192.168.1.1";
   containerIp = "192.168.1.2";
-  hostShimIp = "192.168.1.4";
+  hostShimIp = "192.168.1.5";
 };
 ```
 
@@ -244,6 +244,7 @@ systemctl status restic-backups-home-assistant.service
 ## Tailscale
 
 Tailscale is managed by the NixOS `services.tailscale` module, not by Docker.
+This server uses it as a subnet router for the home LAN.
 The node state lives in:
 
 ```text

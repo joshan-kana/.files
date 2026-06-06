@@ -2,14 +2,13 @@
 
 ## Source Backup
 
-Parsed backup: `automatic_backup_2026_5_4`
+Parsed backup: Home Assistant manual backup export
 
 Do not commit the raw backup archive, extracted backup folders, or secrets.
-Keep any working inspection copy under `docs/nixos-server/reference-local/`, which is ignored
-by Git. It is not imported by NixOS and is not live server state. For future
-exports, prefer Home Assistant's own backup UI plus standard inspection tools
-such as `tar`, `jq`, and `yq`; avoid keeping one-off parser scripts in this
-repo.
+Keep any working inspection copy outside Git. It is not imported by NixOS and
+is not live server state. For future exports, prefer Home Assistant's own
+backup UI plus standard inspection tools such as `tar`, `jq`, and `yq`; avoid
+keeping one-off parser scripts in this repo.
 
 ## Current Add-on Mapping
 
