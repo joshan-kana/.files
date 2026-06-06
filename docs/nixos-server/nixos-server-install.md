@@ -152,7 +152,7 @@ File contents:
 - `rclone.conf`: rclone config containing a Dropbox remote named `dropbox`
 - `tailscale-authkey`: a Tailscale auth key for first boot
 - `n8n.env`: runtime environment for n8n secrets such as the encryption key
-- `openclaw.env`: optional OpenClaw environment variables in Docker
+- `openclaw.env`: optional OpenClaw gateway environment variables
   `NAME=value` format
 - `id_ed25519`: the GitHub SSH private key copied from the user's machine
 - `id_ed25519.pub`: the matching GitHub SSH public key
@@ -206,9 +206,9 @@ rclone authorize dropbox
 Paste the returned token into `rclone config` when it asks for remote
 authorization, then copy the resulting `rclone.conf` into `SECRETS_DIR`.
 
-The NixOS config passes `n8n.env` and `openclaw.env` directly to their
-containers as environment files. Leave them empty until the service needs
-runtime secrets. Add one variable per line when needed:
+The NixOS config passes `n8n.env` and `openclaw.env` directly to the
+corresponding services as environment files. Leave them empty until the
+service needs runtime secrets. Add one variable per line when needed:
 
 ```text
 NAME=value

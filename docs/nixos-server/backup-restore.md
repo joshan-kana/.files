@@ -7,8 +7,8 @@ NixOS manages the normal backup/rollback machinery:
 - `services.snapper`: creates local `/var/lib` snapshots every 15 minutes.
 - `services.restic.backups.home-assistant`: backs up app data to Dropbox every
   30 minutes.
-- `virtualisation.oci-containers`: runs Home Assistant and the migrated add-on
-  apps with explicit `/var/lib/...` storage.
+- `virtualisation.oci-containers` and native services: run the hosted apps with
+  explicit `/var/lib/...` storage.
 
 You should not normally run backup commands by hand. The manual commands below
 are for setup checks, “did it work?” verification, and emergency restore.
