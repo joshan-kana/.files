@@ -1,0 +1,3 @@
+[submodule "docs/nixos-server/infrastructure-docs"]
+	path = docs/nixos-server/infrastructure-docs
+	url = https://github.com/joshan-kana/infrastructure-docs
