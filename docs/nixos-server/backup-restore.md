@@ -1,8 +1,5 @@
 # Backup And Restore
 
-Start with `ha/README.md` for the main install, update, and restore flow. This
-file is the deeper backup/rollback note.
-
 ## What Nix Manages
 
 NixOS manages the normal backup/rollback machinery:
