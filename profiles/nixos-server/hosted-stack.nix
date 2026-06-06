@@ -54,7 +54,6 @@ in
     "d ${dataRoot}/adguard/work 0750 root root - -"
     "d ${dataRoot}/adguard/conf 0750 root root - -"
     "d ${dataRoot}/matter-server 0750 root root - -"
-    "d ${dataRoot}/n8n 0750 root root - -"
     "d ${dataRoot}/mosquitto 0750 root root - -"
     "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
     "d ${dataRoot}/zwave-js-ui 0750 root root - -"
@@ -80,6 +79,13 @@ in
   networking.firewall.allowedUDPPorts = [
     5353 # mDNS for Home Assistant discovery
   ];
+
+  services.n8n = {
+    enable = true;
+    openFirewall = false;
+  };
+
+  systemd.services.n8n.serviceConfig.EnvironmentFile = [ "${secretsDir}/n8n.env" ];
 
   systemd.services.docker-network-adguard = {
     description = "Create Docker macvlan network for AdGuard Home";
@@ -150,13 +156,6 @@ in
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
       volumes = [ "${dataRoot}/matter-server:/data" ];
       extraOptions = [ "--network=host" ];
-    };
-
-    n8n = {
-      image = "docker.n8n.io/n8nio/n8n:latest";
-      ports = [ "5678:5678/tcp" ];
-      volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
-      environmentFiles = [ "${secretsDir}/n8n.env" ];
     };
 
     openclaw = {
