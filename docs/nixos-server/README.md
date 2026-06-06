@@ -13,6 +13,8 @@ Raspberry Pi home server documentation.
   backups, Snapper, and the AdGuard macvlan network.
 - `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
+- `docs/nixos-server/infrastructure-docs/docs/NETWORKING.md`: source-of-truth
+  networking notes from the external infrastructure docs repo.
 
 ## Hardware Sources
 
