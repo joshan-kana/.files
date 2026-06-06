@@ -15,28 +15,6 @@ Raspberry Pi home server documentation.
   filesystem layout.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
 
-## Working With The Submodule
-
-The networking doc lives in a Git submodule. When cloning this repo, either use:
-
-```sh
-git clone --recurse-submodules <repo-url>
-```
-
-or, after a normal clone, run:
-
-```sh
-git submodule update --init --recursive
-```
-
-When updating this repo later, refresh the submodule first so the docs links
-stay valid:
-
-```sh
-git pull
-git submodule update --init --recursive
-```
-
 ## Hardware Sources
 
 `nixos-hardware.nixosModules.raspberry-pi-4` and
