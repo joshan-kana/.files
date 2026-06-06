@@ -10,10 +10,13 @@ Raspberry Pi home server documentation.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and host-level services.
 - `profiles/nixos-server/hosted-stack.nix`: hosted applications and their
-  supporting runtime wiring, including Home Assistant, AdGuard, Matter, n8n,
-  OpenClaw, backups, Snapper, and the AdGuard macvlan network.
+  supporting runtime wiring, including app containers, backups,
+  Snapper, and the AdGuard macvlan network.
 - `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
+- `profiles/nixos-server/image.nix`: the Raspberry Pi SD card image
+  definition with the `FIRMWARE` boot partition, a 12 GiB seed image, and a
+  Btrfs root layout that grows to the full card on first boot.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
 
 ## Hardware Sources
@@ -63,12 +66,10 @@ routes.
 
 ## Install
 
-1. Flash the official NixOS AArch64 SD image for Raspberry Pi.
-2. Prepare the target disk with:
-   - `FIRMWARE` as the FAT boot partition
-   - `NIXOS` as the Btrfs partition
-   - Btrfs subvolumes `root` and `var-lib`
-3. Clone this repo to `/home/joshan/.files` on the Pi.
+1. Build the `nixos-server` SD image from this repo on an `aarch64-linux`
+   machine.
+2. Flash the resulting image to the microSD card.
+3. Boot the Pi and clone this repo to `/home/joshan/.files`.
    Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
    after cloning so `docs/infrastructure-docs` is present.
 4. Create `/root/secrets` files:
@@ -98,8 +99,8 @@ Special cases:
 - AdGuard `work/` data is not present in the HA backup. Let the NixOS
   container recreate `/var/lib/adguard/work`.
 - OpenClaw old state is not migrated by default. Start fresh in
-  `/var/lib/openclaw` unless you later choose to restore pieces of
-  `17e0cc66_openclaw_assistant/`.
+  `/var/lib/openclaw` and `/var/lib/openclaw-auth` unless you later choose to
+  restore pieces of `17e0cc66_openclaw_assistant/`.
 - Twingate is not restored. Tailscale replaces it, advertises the LAN route,
   and stores live state in `/var/lib/tailscale`.
 - Home Assistant's `secrets.yaml` is restored as part of
@@ -108,7 +109,7 @@ Special cases:
 Restore flow:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service n8n.service 2>/dev/null || true
+sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service docker-n8n.service docker-openclaw.service 2>/dev/null || true
 sudo rsync -a /path/to/extracted/homeassistant/data/ /var/lib/home-assistant/
 sudo rsync -a /path/to/extracted/a0d7b954_adguard/data/adguard/ /var/lib/adguard/conf/
 sudo rsync -a /path/to/extracted/core_matter_server/data/ /var/lib/matter-server/
@@ -136,8 +137,7 @@ This updates NixOS itself plus bare-metal services such as Tailscale.
 
 3. Hosted app version updates:
    Change the image tag or digest in `profiles/nixos-server/hosted-stack.nix`
-   for containerized services, or update the server package set for native
-   services such as `n8n`, then commit and rebuild.
+   for containerized services, then commit and rebuild.
 
 Floating tags like `stable` and `latest` still exist in the stack. Pinned
 versions or digests are better for reproducible rollbacks.
