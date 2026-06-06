@@ -1,8 +1,5 @@
 # Home Assistant Infrastructure
 
-Start with `ha/README.md` for the main operator flow. This file is the deeper
-infrastructure note.
-
 ## What Runs Where
 
 Everything runs on the Raspberry Pi NixOS host.
@@ -266,13 +263,13 @@ and is included in Snapper/restic.
 
 ## OpenClaw
 
-OpenClaw runs as part of the server stack. Fresh state will live in:
+OpenClaw runs as part of the server stack. Fresh state lives in:
 
 ```text
 /var/lib/openclaw
 ```
 
-Then create the env file for any OpenClaw credentials or tokens:
+Create the env file for OpenClaw credentials or tokens:
 
 ```sh
 sudo install -d -m 0700 /root/secrets
@@ -285,11 +282,8 @@ If OpenClaw stores passwords in its own config directory instead, they will live
 under `/var/lib/openclaw` and be included in Snapper/restic with the rest of the
 app data.
 
-Before enabling, confirm the image tag in
-`profiles/nixos-server/hosted-stack.nix`.
-The image is declared in the OpenClaw container block because NixOS needs the
-OCI image name to run the container. The current default is the tag found in the
-HAOS backup:
+The image is declared in `profiles/nixos-server/hosted-stack.nix` because NixOS
+needs the OCI image name to run the container. The current default is:
 
 ```text
 docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77
