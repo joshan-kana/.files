@@ -13,8 +13,7 @@ Raspberry Pi home server documentation.
   backups, Snapper, and the AdGuard macvlan network.
 - `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
-- `docs/nixos-server/infrastructure-docs/docs/NETWORKING.md`: source-of-truth
-  networking notes from the external infrastructure docs repo.
+- [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
 
 ## Hardware Sources
 
@@ -69,6 +68,8 @@ routes.
    - `NIXOS` as the Btrfs partition
    - Btrfs subvolumes `root` and `var-lib`
 3. Clone this repo to `/home/joshan/.files` on the Pi.
+   Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
+   after cloning so `docs/infrastructure-docs` is present.
 4. Create `/root/secrets` files:
    - `restic-password`
    - `rclone.conf`
@@ -122,9 +123,10 @@ There are three update paths:
    AdGuard config, or the n8n database.
 
 2. NixOS and bare-metal service updates:
-   Edit the repo, commit the change, then run:
+   Edit the repo, update the submodule, commit the change, then run:
 
 ```sh
+git submodule update --init --recursive
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
