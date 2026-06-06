@@ -16,8 +16,7 @@ let
     subnet = "192.168.1.0/24";
     gateway = "192.168.1.1";
     containerIp = "192.168.1.2";
-    # This second macvlan address lets the host and host-networked Home
-    # Assistant talk to the AdGuard macvlan container.
+    # Host-side macvlan address for reaching the AdGuard container.
     hostShimIp = "192.168.1.4";
   };
 
@@ -115,8 +114,7 @@ in
 
       ip addr replace ${adguardNetwork.hostShimIp}/32 dev adguard-shim
       ip link set adguard-shim up
-      # A /32 route is enough because the host only needs to reach the AdGuard
-      # container IP itself, not the whole macvlan subnet.
+      # Route only the AdGuard container IP through the host shim.
       ip route replace ${adguardNetwork.containerIp}/32 dev adguard-shim
     '';
   };
@@ -214,8 +212,7 @@ in
   virtualisation.vmVariant = {
     services.restic.backups = lib.mkForce { };
     services.snapper.configs = lib.mkForce { };
-    # The VM does not have the Pi's real LAN interface, so the AdGuard macvlan
-    # network cannot exist there. Fall back to normal port publishing.
+    # VM builds do not have the real LAN interface used by the macvlan network.
     systemd.services.docker-network-adguard = lib.mkForce { };
     virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
     virtualisation.oci-containers.containers.adguard.ports = [
