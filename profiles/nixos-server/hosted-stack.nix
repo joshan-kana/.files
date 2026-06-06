@@ -17,7 +17,7 @@ let
     gateway = "192.168.1.1";
     containerIp = "192.168.1.2";
     # Host-side macvlan address for reaching the AdGuard container.
-    hostShimIp = "192.168.1.4";
+    hostShimIp = "192.168.1.5";
   };
 
   resticRepository = "rclone:dropbox:Backups/nixos-home-assistant/restic";

@@ -1,17 +1,17 @@
 # NixOS Server Guide
 
-Raspberry Pi Home Assistant server documentation.
+Raspberry Pi home server documentation.
 
 ## Files
 
-- `flake.nix`: declares the `nixos-server` host.
+- `flake.nix`: declares the `nixos-server` host target.
 - `docs/nixos-server/nixos-server-install.md`: end-to-end install, restore,
   and day-two operations guide.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and bare-metal services.
 - `profiles/nixos-server/hosted-stack.nix`: Home Assistant and app containers,
   backups, Snapper, and the AdGuard macvlan network.
-- `profiles/nixos-server/hardware-configuration.nix`: this machine's disk and
+- `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
 
 ## Hardware Sources
@@ -32,11 +32,14 @@ assumptions.
 - Router: `192.168.1.1`
 - AdGuard: `192.168.1.2`
 - NixOS host and Home Assistant: `192.168.1.3`
-- AdGuard host shim: `192.168.1.4`
+- AdGuard host shim: `192.168.1.5`
 - DHCP pool: `192.168.1.100-192.168.1.199`
 
 Home Assistant uses host networking, so it is reached at
 `http://192.168.1.3:8123`.
+
+The machine hostname is `nixos-server`, and the flake target is also
+`nixos-server`.
 
 AdGuard has its own macvlan IP because DNS clients should not care which host
 it runs on.
@@ -50,7 +53,7 @@ Assistant reach AdGuard.
 That is why `hosted-stack.nix` creates:
 
 - container IP `192.168.1.2` for AdGuard itself
-- host shim IP `192.168.1.4` on `adguard-shim`
+- host shim IP `192.168.1.5` on `adguard-shim`
 - a `/32` route for `192.168.1.2` through that shim
 
 If more macvlan services are added later, widen the route or add more `/32`
@@ -78,8 +81,7 @@ sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 
 ## Restore Map
 
-From the extracted Home Assistant backup in
-`/Users/joshan/Downloads/automatic_backup_2026_5_4`:
+From the extracted Home Assistant backup:
 
 - `homeassistant/data/` -> `/var/lib/home-assistant/`
 - `a0d7b954_adguard/data/adguard/` -> `/var/lib/adguard/conf/`
@@ -93,8 +95,8 @@ Special cases:
 - OpenClaw old state is not migrated by default. Start fresh in
   `/var/lib/openclaw` unless you later choose to restore pieces of
   `17e0cc66_openclaw_assistant/`.
-- Twingate is not restored. Tailscale replaces it and stores live state in
-  `/var/lib/tailscale`.
+- Twingate is not restored. Tailscale replaces it, advertises the LAN route,
+  and stores live state in `/var/lib/tailscale`.
 - Home Assistant's `secrets.yaml` is restored as part of
   `/var/lib/home-assistant/`.
 

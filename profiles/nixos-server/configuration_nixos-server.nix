@@ -77,6 +77,10 @@
 
   security.sudo.wheelNeedsPassword = true;
   services.openssh.enable = true;
+  services.tailscale = {
+    useRoutingFeatures = "server";
+    extraUpFlags = [ "--advertise-routes=192.168.1.0/24" ];
+  };
 
   environment.sessionVariables = {
     DOTFILES = dotfilesPath;
