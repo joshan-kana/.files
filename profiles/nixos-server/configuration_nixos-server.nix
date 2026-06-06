@@ -62,6 +62,7 @@
   users.defaultUserShell = pkgs.zsh;
 
   users.users.joshan = {
+    initialPassword = "test";
     isNormalUser = true;
     description = "Joshan Kana";
     extraGroups = [
