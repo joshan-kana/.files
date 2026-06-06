@@ -200,7 +200,7 @@ export IMAGE_ZST="$(find "$HOME/Downloads/nixos-server-image" -name '*.raw.zst' 
 test -n "${DISK_N:?DISK_N is not set}"
 test -f "$IMAGE_ZST"
 diskutil unmountDisk "/dev/disk${DISK_N}" &&
-  zstd -d --stdout "$IMAGE_ZST" | sudo dd of="/dev/rdisk${DISK_N}" bs=4m status=progress conv=sync &&
+  zstd -d --stdout "$IMAGE_ZST" | sudo dd of="/dev/rdisk${DISK_N}" bs=4m status=progress &&
   sync &&
   diskutil eject "/dev/disk${DISK_N}"
 ```
