@@ -200,8 +200,9 @@ assumptions and fail.
 
 Do not keep extracted Home Assistant backups in Git, even sanitized ones. Use:
 
-- `docs/nixos-server/reference-local/` for local, ignored inspection copies
 - Dropbox or another encrypted backup target for the real archives
+- a local directory outside the repo when you need to inspect a backup beside
+  the working tree
 
-`docs/nixos-server/reference-local/` is ignored by Git so you can inspect a
-backup beside the repo without committing it.
+Keep raw archives, extracted contents, and any secret-bearing inspection copies
+out of the repository.
