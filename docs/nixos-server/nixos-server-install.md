@@ -446,3 +446,218 @@ chown -R 1000:100 /mnt/home/joshan/.ssh
 nixos-install --flake "$INSTALL_DOTFILES#$FLK_PROFILE"
 reboot
 ```
+
+## Step 6: Boot The Pi
+
+Do this on the Pi.
+
+1. Insert the SD card.
+2. Connect Ethernet.
+3. Connect power.
+4. Wait for the board to boot.
+
+If you use a temporary screen, the Raspberry Pi 4 wiki notes that the login
+prompt may appear on the second HDMI port even if boot logs appeared on the
+first.
+
+## Step 7: Find The Pi On The Network
+
+Run this on the user's machine.
+
+Use the router lease table, or run the discovery block below if you prefer a
+terminal check:
+
+```sh
+PI_INSTALL_IP="$(
+  nix shell nixpkgs#nmap -c sh -c '
+    nmap -sn 192.168.1.0/24 >/tmp/nmap-ping.txt
+    nmap -p 22 --open 192.168.1.0/24 >/tmp/nmap-ssh.txt
+    cat /tmp/nmap-ping.txt /tmp/nmap-ssh.txt
+  ' | awk '
+    /Nmap scan report for/ { host = $5 }
+    /Discovered open port 22/ { print host; exit }
+  '
+)"
+ssh-keygen -R "$PI_INSTALL_IP"
+until ssh -o BatchMode=yes -o ConnectTimeout=5 nixos@"$PI_INSTALL_IP" true; do
+  sleep 10
+done
+export PI_INSTALL_IP
+```
+
+## Step 8: Enter The Installer
+
+Run this on the user's machine.
+
+```sh
+ssh nixos@"$PI_INSTALL_IP"
+```
+
+If you reach the installer with the key you copied earlier, no password should
+be needed. Once connected, switch to root:
+
+```sh
+sudo -i
+```
+
+## Step 9: Finish The Target Disk
+
+Run this on the Pi.
+
+```sh
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL
+export DISK_DEV="$(
+  lsblk -dpno NAME,TRAN,TYPE | awk '$2 == "mmc" && $3 == "disk" { print $1; exit }'
+)"
+test -n "$DISK_DEV"
+printf 'Using SD disk: %s\n' "$DISK_DEV"
+
+parted "$DISK_DEV" -- mklabel gpt
+parted "$DISK_DEV" -- mkpart primary fat32 1MiB 512MiB
+parted "$DISK_DEV" -- set 1 esp on
+parted "$DISK_DEV" -- name 1 FIRMWARE
+parted "$DISK_DEV" -- mkpart primary btrfs 512MiB 100%
+parted "$DISK_DEV" -- name 2 NIXOS
+mkfs.fat -F 32 -n FIRMWARE "${DISK_DEV}p1"
+mkfs.btrfs -f -L NIXOS "${DISK_DEV}p2"
+mount /dev/disk/by-label/NIXOS /mnt
+btrfs subvolume create /mnt/root
+btrfs subvolume create /mnt/var-lib
+umount /mnt
+mount -o compress=zstd,subvol=root /dev/disk/by-label/NIXOS /mnt
+mkdir -p /mnt/boot /mnt/var/lib
+mount /dev/disk/by-label/FIRMWARE /mnt/boot
+mount -o compress=zstd,subvol=var-lib /dev/disk/by-label/NIXOS /mnt/var/lib
+nixos-generate-config --root /mnt
+```
+
+## Step 10: Copy The Repo And Data
+
+Run this on the user's machine first.
+
+```sh
+rsync -a --exclude .git "$REPO_DIR"/ nixos@"$PI_INSTALL_IP":/home/nixos/nixos-server/
+rsync -a "$HA_BACKUP_DIR"/ nixos@"$PI_INSTALL_IP":/home/nixos/ha-backup/
+rsync -a "$SECRETS_DIR"/ nixos@"$PI_INSTALL_IP":/home/nixos/nixos-server-secrets/
+```
+
+Then on the Pi:
+
+```sh
+mkdir -p /mnt/home/joshan
+cp -a /home/nixos/nixos-server/. /mnt/home/joshan/.files
+rsync -a /home/nixos/ha-backup/ /mnt/home/joshan/ha-backup/
+install -d -m 700 /mnt/root/secrets
+install -m 400 /home/nixos/nixos-server-secrets/restic-password /mnt/root/secrets/restic-password
+install -m 400 /home/nixos/nixos-server-secrets/rclone.conf /mnt/root/secrets/rclone.conf
+install -m 400 /home/nixos/nixos-server-secrets/tailscale-authkey /mnt/root/secrets/tailscale-authkey
+install -m 400 /home/nixos/nixos-server-secrets/openclaw.env /mnt/root/secrets/openclaw.env
+install -d -m 700 /mnt/home/joshan/.ssh
+install -m 600 /home/nixos/nixos-server-secrets/id_ed25519 /mnt/home/joshan/.ssh/id_ed25519
+install -m 644 /home/nixos/nixos-server-secrets/id_ed25519.pub /mnt/home/joshan/.ssh/id_ed25519.pub
+cat > /mnt/home/joshan/.ssh/config <<'EOF'
+Host github.com
+  HostName ssh.github.com
+  Port 443
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+EOF
+chmod 600 /mnt/home/joshan/.ssh/config
+chown -R 1000:100 /mnt/home/joshan/.ssh
+```
+
+## Step 11: Install The System
+
+Run this on the Pi.
+
+```sh
+nixos-install --flake "$INSTALL_DOTFILES#$FLK_PROFILE"
+reboot
+```
+
+## Step 12: Reconnect
+
+After reboot, connect from the user's machine:
+
+```sh
+ssh joshan@192.168.1.3
+```
+
+If `ping` fails, check the router lease/static table. If SSH fails, use a local
+console once and inspect `systemctl status sshd.service`.
+
+## Step 13: First Login Fixups
+
+Run this on the Pi after the real system is up.
+
+```sh
+sudo passwd joshan
+ls /home/joshan/.files
+sudo ls -l /root/secrets
+```
+
+## Step 14: Re-apply The Current Config
+
+Run this on the Pi.
+
+```sh
+cd "$DOTFILES"
+git pull
+sudo nixos-rebuild $NIXOS_REBUILD_FLAGS switch --flake .#$FLK_PROFILE
+```
+
+## Step 15: Verify Services
+
+Run this on the Pi.
+
+```sh
+systemctl status docker-home-assistant.service
+systemctl status docker-adguard.service
+systemctl status docker-matter-server.service
+systemctl status docker-n8n.service
+systemctl status tailscaled.service
+systemctl list-timers 'restic*'
+```
+
+Then verify from the user's machine:
+
+1. open `http://192.168.1.3:8123`
+2. verify AdGuard responds on `192.168.1.2`
+3. confirm a client can use `192.168.1.2` as DNS
+
+## Step 16: What Lives Where
+
+System configuration:
+
+- `/home/joshan/.files`
+
+Mutable app data:
+
+- `/var/lib/home-assistant`
+- `/var/lib/adguard`
+- `/var/lib/matter-server`
+- `/var/lib/n8n`
+- `/var/lib/openclaw`
+- `/var/lib/tailscale`
+
+Bootstrap secrets:
+
+- `/root/secrets/restic-password`
+- `/root/secrets/rclone.conf`
+- `/root/secrets/tailscale-authkey`
+- `/root/secrets/openclaw.env`
+
+## Step 17: Update Later
+
+Use Git for NixOS config updates:
+
+```sh
+cd /home/joshan/.files
+git pull
+sudo nixos-rebuild $NIXOS_REBUILD_FLAGS switch --flake .#$FLK_PROFILE
+```
+
+Edit mutable app data directly under `/var/lib/...` when the app owns the
+state. Restic and Snapper cover that data, while Nix/Git cover the system
+configuration.
