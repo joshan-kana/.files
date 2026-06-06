@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    nix-openclaw = {
+      url = "github:openclaw/nix-openclaw";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";
@@ -46,6 +51,7 @@
       nixpkgs,
       nixpkgs-stable,
       nixos-hardware,
+      nix-openclaw,
       home-manager,
       stylix,
       spicetify-nix,
@@ -315,6 +321,10 @@
             system = "aarch64-linux";
             modules = [
               nixos-hardware.nixosModules.raspberry-pi-4
+              nix-openclaw.nixosModules.openclaw-gateway
+              {
+                nixpkgs.overlays = [ nix-openclaw.overlays.default ];
+              }
               ./profiles/nixos-server/configuration_nixos-server.nix
               ./profiles/nixos-server/hosted-stack.nix
               ./profiles/nixos-server/hardware-configuration.nix
