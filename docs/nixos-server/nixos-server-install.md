@@ -371,25 +371,37 @@ client.
 Network scan method:
 
 ```sh
-PI_INSTALL_IP="$(
+export PI_INSTALL_IP="$(
   nix shell nixpkgs#nmap -c sh -c '
-    nmap -sn 192.168.1.0/24 >/tmp/nmap-ping.txt
-    nmap -p 22 --open 192.168.1.0/24 >/tmp/nmap-ssh.txt
-    cat /tmp/nmap-ping.txt /tmp/nmap-ssh.txt
+    nmap -p 22 --open 192.168.1.0/24
   ' | awk '
     /Nmap scan report for/ { host = $5 }
-    /Discovered open port 22/ { print host; exit }
+    /22\/tcp open/ { print host; exit }
   '
 )"
+printf 'PI_INSTALL_IP=%s\n' "$PI_INSTALL_IP"
+test -n "$PI_INSTALL_IP"
 ssh-keygen -R "$PI_INSTALL_IP"
+ssh -v nixos@"$PI_INSTALL_IP" true
+```
+
+If that command does not return an address, check the router lease table or run
+`arp -a` and set `PI_INSTALL_IP` manually.
+
+If the SSH test falls back to a password prompt, the public key was not written
+onto the SD card correctly and the flash/bootstrap step should be repeated
+before continuing.
+
+After a successful key-based SSH test, the wait loop is safe to use:
+
+```sh
 until ssh -o BatchMode=yes -o ConnectTimeout=5 nixos@"$PI_INSTALL_IP" true; do
   sleep 10
 done
-export PI_INSTALL_IP
 ```
 
-If that script does not return an address, check the router lease table or run
-`arp -a` and set `PI_INSTALL_IP` manually.
+If `ssh-keygen -R` reports that `~/.ssh/known_hosts` is invalid, clean the bad
+lines first or move the broken file aside before retrying.
 
 Keep `PI_INSTALL_IP` in the same terminal used for the later `rsync` and `scp`
 commands. If the terminal closes, re-export it before continuing.
