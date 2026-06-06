@@ -313,8 +313,15 @@ export NIXOS_SD_VOL="$(diskutil info "/dev/disk${DISK_N}s1" | awk -F': *' '/Volu
 install -d -m 700 "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh"
 cat ~/.ssh/id_ed25519.pub > "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
 chmod 600 "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
+ls -ld "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh"
+ls -l "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
+cat "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
 diskutil eject "/dev/disk${DISK_N}"
 ```
+
+The installer user key should live at `/home/nixos/.ssh/authorized_keys`. If
+the mounted SD card does not expose that path on the user's machine, do not
+continue assuming SSH key login will work.
 
 ### Raspberry Pi Imager
 
@@ -328,7 +335,8 @@ Select `nixos-aarch64-sd-image.img`, select the SD card, and flash it.
 Do not choose a Raspberry Pi OS image. The Pi 4 wiki explicitly says the Pi 4B
 works with the generic NixOS SD image.
 
-If you cannot access the writable partition from the user's machine, boot once
+If the user's machine cannot access the writable Linux partition on the SD
+card, or the `authorized_keys` verification above does not succeed, boot once
 with a temporary keyboard and screen, log in as `nixos`, and set a password
 with:
 
