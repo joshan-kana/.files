@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   ...
@@ -34,6 +35,7 @@ let
     "${dataRoot}/zwave-js-ui"
     "${dataRoot}/esphome"
     "${dataRoot}/openclaw"
+    "${dataRoot}/openclaw-auth"
     "${dataRoot}/tailscale"
   ];
 in
@@ -54,10 +56,13 @@ in
     "d ${dataRoot}/adguard/work 0750 root root - -"
     "d ${dataRoot}/adguard/conf 0750 root root - -"
     "d ${dataRoot}/matter-server 0750 root root - -"
+    "d ${dataRoot}/n8n 0750 root root - -"
     "d ${dataRoot}/mosquitto 0750 root root - -"
     "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
     "d ${dataRoot}/zwave-js-ui 0750 root root - -"
     "d ${dataRoot}/esphome 0750 root root - -"
+    "d ${dataRoot}/openclaw 0750 root root - -"
+    "d ${dataRoot}/openclaw-auth 0750 root root - -"
     "d ${secretsDir} 0700 root root - -"
   ];
 
@@ -76,20 +81,6 @@ in
   networking.firewall.allowedUDPPorts = [
     5353 # mDNS for Home Assistant discovery
   ];
-
-  services.n8n = {
-    enable = true;
-    openFirewall = false;
-  };
-
-  systemd.services.n8n.serviceConfig.EnvironmentFile = [ "${secretsDir}/n8n.env" ];
-
-  services.openclaw-gateway = {
-    enable = true;
-    port = 18789;
-    stateDir = "${dataRoot}/openclaw";
-    environmentFiles = [ "${secretsDir}/openclaw.env" ];
-  };
 
   systemd.services.docker-network-adguard = {
     description = "Create Docker macvlan network for AdGuard Home";
@@ -162,6 +153,33 @@ in
       extraOptions = [ "--network=host" ];
     };
 
+    n8n = {
+      image = "docker.n8n.io/n8nio/n8n:latest";
+      volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
+      ports = [ "5678:5678" ];
+      environment = {
+        GENERIC_TIMEZONE = config.time.timeZone;
+      };
+      environmentFiles = [ "${secretsDir}/n8n.env" ];
+    };
+
+    openclaw = {
+      image = "ghcr.io/openclaw/openclaw:latest";
+      volumes = [
+        "${dataRoot}/openclaw:/home/node/.openclaw"
+        "${dataRoot}/openclaw-auth:/home/node/.config/openclaw"
+        "/:/host"
+        "/var/run/docker.sock:/var/run/docker.sock"
+      ];
+      environment = {
+        OPENCLAW_DISABLE_BONJOUR = "1";
+      };
+      environmentFiles = [ "${secretsDir}/openclaw.env" ];
+      extraOptions = [
+        "--network=host"
+        "--add-host=host.docker.internal:host-gateway"
+      ];
+    };
   };
 
   services.snapper = {

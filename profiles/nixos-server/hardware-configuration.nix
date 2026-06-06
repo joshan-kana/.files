@@ -26,7 +26,7 @@
       ];
     };
 
-    "/boot" = {
+    "/boot/firmware" = {
       device = "/dev/disk/by-label/FIRMWARE";
       fsType = "vfat";
     };
@@ -44,5 +44,10 @@
 
   swapDevices = [ ];
 
+  boot.supportedFilesystems = [ "btrfs" ];
+  boot.growPartition = true;
+
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
+
+  fileSystems."/".autoResize = true;
 }

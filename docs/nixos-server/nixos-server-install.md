@@ -1,33 +1,37 @@
 # NixOS Server Install Guide
 
-This guide is the install path for this server:
+This guide installs the full `nixos-server` image onto a Raspberry Pi 4.
+It does not use the generic installer image. The SD card is built from this
+repo, flashed once, then booted directly into the final server layout.
 
-- Raspberry Pi 4 8 GB
-- booting from a microSD card
-- Ethernet during install
-- headless access over SSH
-- Home Assistant data restored from your exported backup
+## Final Layout
 
-References:
-
-- `https://wiki.nixos.org/wiki/NixOS_on_ARM/Raspberry_Pi_4`
-- `https://nix.dev/tutorials/nixos/installing-nixos-on-a-raspberry-pi`
-- `https://nixos.org/manual/nixos/stable/`
-
-The 4 GB and 8 GB Raspberry Pi 4 models use the same installation method here.
-The install flow, image type, boot process, and NixOS hardware support are the
-same. The 8 GB model just has more RAM available after boot.
-
-## Final Result
-
-After the install is finished, this machine should look like this:
-
-- NixOS host IP: `192.168.1.3`
+- NixOS host: `192.168.1.3`
+- AdGuard: `192.168.1.2`
+- Router: `192.168.1.1`
 - Home Assistant: `http://192.168.1.3:8123`
-- AdGuard DNS IP: `192.168.1.2`
-- repo path on the Pi: `/home/joshan/.files`
-- app data root: `/var/lib`
-- runtime secrets: `/root/secrets`
+- Repo on the Pi: `/home/joshan/.files`
+- App data root: `/var/lib`
+- Runtime secrets: `/root/secrets`
+- Boot firmware mount: `/boot/firmware`
+- Root filesystem: Btrfs label `NIXOS`
+- Btrfs subvolumes: `root`, `var-lib`
+
+## What This Image Contains
+
+The built image already includes:
+
+- the Raspberry Pi 4 boot firmware layout
+- the static network configuration for `192.168.1.3`
+- the `joshan` user
+- the GitHub SSH public key declared in the NixOS config
+- the hosted app stack definition
+- a 12 GiB seed disk layout that grows to the full SD card on first boot
+
+The image does not include:
+
+- `/root/secrets`
+- restored Home Assistant or app data under `/var/lib`
 
 ## Before You Start
 
@@ -35,89 +39,34 @@ You need:
 
 - a Raspberry Pi 4
 - a microSD card
-- wired Ethernet to your LAN
-- an SSH public key on the user's machine, usually `~/.ssh/id_ed25519.pub`
-- your private repo or a local copy of the repo
-- your exported Home Assistant backup in Downloads
-- the bootstrap secrets you want to place in `/root/secrets`
+- Power and Ethernet to the Pi
+- the Home Assistant backup archive on the user's machine
+- a local checkout of this repo
+- an `aarch64-linux` builder
 
-Set these variables once at the start of the install session on the user's
-machine and reuse them throughout the guide:
+This repo already has an OrbStack NixOS machine named `nixos`, so this guide
+uses that as the builder.
+
+Set these variables on the user's machine:
 
 ```sh
 export REPO_DIR="$HOME/.files"
-export HA_BACKUP_ARCHIVE="PATH_TO_HOME_ASSISTANT_BACKUP.tar"
+export BUILD_HOST="orb"
+export HA_BACKUP_ARCHIVE="$HOME/Downloads/home_assistant_main_backup.tar"
 export HA_BACKUP_DIR="$(dirname "$HA_BACKUP_ARCHIVE")/extracted-home-assistant-backup"
-export SECRETS_DIR="PATH_TO_SECRETS_DIRECTORY"
+export SECRETS_DIR="$HOME/.secrets"
 ```
 
-Keep that terminal open while running the user's-machine commands. If you open
-a new terminal later, re-run the variable block before using the copy or SSH
-commands.
-
-What they mean:
-
-- `REPO_DIR`: the local checkout of this repo on the user's machine
-- `HA_BACKUP_ARCHIVE`: the Home Assistant backup file downloaded from Home
-  Assistant
-- `HA_BACKUP_DIR`: the extracted contents of that backup file, next to the
-  archive by default
-- `SECRETS_DIR`: the local directory containing bootstrap secret files
-
-`HA_BACKUP_ARCHIVE` is the path to the backup file itself. `HA_BACKUP_DIR` is
-the extracted directory used by the restore commands in this guide. By default,
-the extracted directory is created beside the archive as
-`extracted-home-assistant-backup`.
-
-Home Assistant's current official backup docs describe backups as encrypted,
-compressed archive files stored locally in `/backup` by default. For this
-migration flow, you should download the backup to the user's machine and
-extract it before copying the contents to the Pi.
-
-## What The Home Assistant Backup Must Contain
-
-For this migration, create a manual backup in Home Assistant and include:
-
-- Home Assistant settings
-- the add-on or app data you want to migrate
-
-For this stack, that means you should include at least:
-
-- Home Assistant settings
-- AdGuard Home data
-- Matter Server data
-- n8n data
-
-Optional:
-
-- OpenClaw data, only if you later decide to salvage anything from it
-- `media` and `share`, if you want them preserved
-
-The current Home Assistant docs recommend disabling `media` and `share` if you
-want a smaller backup. That advice also fits this migration, because this repo
-does not depend on those directories for the main restore path.
-
-If you want the safest capture for a one-time migration, create a manual backup
-and select everything. That gives you the most recovery options later, even if
-this NixOS migration only restores a subset of it.
-
-## Extract The Home Assistant Backup
-
-Run this on the user's machine before the restore steps.
-
-Create the extraction directory:
+Extract the Home Assistant backup:
 
 ```sh
 mkdir -p "$HA_BACKUP_DIR" &&
   tar -xf "$HA_BACKUP_ARCHIVE" -C "$HA_BACKUP_DIR"
 ```
 
-This guide assumes the extracted backup directory is what gets copied to the
-Pi.
+## Secrets Bundle
 
-## Bootstrap Secrets
-
-The completed directory should contain:
+The bootstrap bundle should contain:
 
 ```text
 $SECRETS_DIR/
@@ -131,7 +80,7 @@ $SECRETS_DIR/
 ```
 
 Run this on the user's machine before copying files to the Pi.
-# If secrets do not exist (first run only)
+### If secrets do not exist (first run only)
 Run this only on the first install if the secrets bundle does not already
 exist:
 
@@ -141,30 +90,17 @@ mkdir -p "$SECRETS_DIR" &&
   cp "$HOME/.ssh/id_ed25519" "$SECRETS_DIR/" &&
   cp "$HOME/.ssh/id_ed25519.pub" "$SECRETS_DIR/" &&
   openssl rand -base64 32 > "$SECRETS_DIR/restic-password" &&
-  chmod 600 "$SECRETS_DIR/"* &&
-  touch "$SECRETS_DIR/n8n.env" &&
-  touch "$SECRETS_DIR/openclaw.env"
+  touch "$SECRETS_DIR/n8n.env" "$SECRETS_DIR/openclaw.env" &&
+  chmod 600 "$SECRETS_DIR/"*
 ```
 
-File contents:
+Required contents:
 
-- `restic-password`: one strong password used to unlock the restic repository
-- `rclone.conf`: rclone config containing a Dropbox remote named `dropbox`
-- `tailscale-authkey`: a Tailscale auth key for first boot
-- `n8n.env`: runtime environment for n8n secrets such as the encryption key
-- `openclaw.env`: optional OpenClaw gateway environment variables
-  `NAME=value` format
-- `id_ed25519`: the GitHub SSH private key copied from the user's machine
-- `id_ed25519.pub`: the matching GitHub SSH public key
-
-Useful creation notes:
-
-- `rclone.conf` should come from `rclone config` after creating a Dropbox
-  remote named `dropbox`
-- `n8n.env` can start as an empty file, but durable n8n deployments should set
-  the encryption key there before relying on stored credentials
-- `openclaw.env` can be an empty file until OpenClaw needs environment
-  variables
+- `restic-password`: restic repository password
+- `rclone.conf`: rclone config with a Dropbox remote named `dropbox`
+- `tailscale-authkey`: reusable Tailscale auth key
+- `n8n.env`: runtime environment for the `n8n` container
+- `openclaw.env`: runtime environment for the OpenClaw container
 
 Create the Tailscale auth key on the user's machine:
 
@@ -180,15 +116,7 @@ printf '%s\n' 'paste-the-tailscale-auth-key-here' > "$SECRETS_DIR/tailscale-auth
   chmod 600 "$SECRETS_DIR/tailscale-authkey"
 ```
 
-The file should contain only the auth key value.
-
-Create and authorize the Dropbox rclone remote on the user's machine:
-
-```sh
-nix shell nixpkgs#rclone
-rclone config
-```
-
+Authorize Dropbox with rclone on the user's machine:
 In the rclone prompts:
 
 1. choose `n` for a new remote
@@ -200,6 +128,7 @@ In the rclone prompts:
 Copy the finished rclone config into the secrets directory:
 
 ```sh
+nix shell nixpkgs#rclone -c rclone config
 cp "$HOME/.config/rclone/rclone.conf" "$SECRETS_DIR/rclone.conf" &&
   chmod 600 "$SECRETS_DIR/rclone.conf"
 ```
@@ -220,453 +149,178 @@ rclone authorize dropbox
 Paste the returned token into `rclone config` when it asks for remote
 authorization, then copy the resulting `rclone.conf` into `SECRETS_DIR`.
 
-The NixOS config passes `n8n.env` and `openclaw.env` directly to the
-corresponding services as environment files. Leave them empty until the
-service needs runtime secrets. Add one variable per line when needed:
+`n8n.env` should at least contain a durable encryption key:
 
 ```text
-NAME=value
-ANOTHER_NAME=another-value
+N8N_ENCRYPTION_KEY=replace-this-with-a-long-random-value
 ```
 
-Before copying secrets to the Pi, verify the expected filenames exist:
+## Build The SD Card Image
+
+Build the image on a a nix linux machine (Orbstack compatible):
 
 ```sh
-ls -l "$SECRETS_DIR" &&
-  test -f "$SECRETS_DIR/restic-password" &&
-  test -f "$SECRETS_DIR/rclone.conf" &&
-  test -f "$SECRETS_DIR/tailscale-authkey" &&
-  test -f "$SECRETS_DIR/n8n.env" &&
-  test -f "$SECRETS_DIR/openclaw.env" &&
-  test -f "$SECRETS_DIR/id_ed25519" &&
-  test -f "$SECRETS_DIR/id_ed25519.pub"
+  syscd
+  nix build .#nixosConfigurations.nixos-server.config.system.build.image -L
 ```
 
-Keep this directory outside Git. It is bootstrap material for the server, not
-repo state.
+Pull the finished image back to the user's machine (run on orbstack):
 
-## Fast Path
+```sh
+mkdir -p /mnt/mac/Users/joshan/Downloads/nixos-server-image &&
+  syscd &&
+  IMAGE="$(find -L result -maxdepth 1 -type f -name '*.raw.zst' -print -quit)" &&
+  test -n "$IMAGE" &&
+  cp -v "$IMAGE" /mnt/mac/Users/joshan/Downloads/nixos-server-image/
+```
 
-Because the user's machine already has Nix installed, use it as the control
-machine for the whole install.
+The output is the full server image, not an installer image.
 
-That means:
-
-- download and unpack the SD image from the user's machine
-- run the repo preflight checks from the user's machine
-- flash the SD card from the user's machine
-- copy the repo, backup data, and secrets from the user's machine
-- keep the Pi work limited to partitioning, mounting, `nixos-install`, and the
-  first reboot
-
-The user's machine is faster and more ergonomic than typing everything directly
-on the Pi, so this guide assumes that pattern.
-
-If you want evaluation and cache checks, use the companion test guide instead:
-[`docs/nixos-server/testing.md`](./testing.md).
-
-## Step 1: Download The NixOS SD Image
+## Flash The SD Card
 
 Run this on the user's machine.
 
-Download the latest generic AArch64 NixOS SD image from Hydra.
-Then download and unpack the latest successful image:
-
-```sh
-nix shell nixpkgs#curl nixpkgs#zstd
-curl -fL \
-  -o nixos-aarch64-sd-image.img.zst \
-  https://hydra.nixos.org/job/nixos/unstable/nixos.sd_image.aarch64-linux/latest/download-by-type/file/sd-image &&
-  unzstd -f nixos-aarch64-sd-image.img.zst
-```
-
-## Step 2: Flash The SD Card
-
-Run this on the user's machine.
-
-Choose one flashing method.
-
-### CLI (fastest and automated)
-
-List disks before inserting the SD card and note the devices that are already
-present:
+List disks before inserting the SD card:
 
 ```sh
 diskutil list
 ```
 
-Insert the SD card, then list disks again and identify the new `diskN` device:
+Insert the SD card, list disks again, and set the new disk number:
 
 ```sh
 diskutil list
 export DISK_N="N"
 ```
 
-Use the script that matches the user's machine.
-
-macOS:
+Flash the compressed image directly:
 
 ```sh
-export INSTALLER_PUBKEY="$HOME/.ssh/id_ed25519.pub"
-
+export IMAGE_ZST="$(find "$HOME/Downloads/nixos-server-image" -name '*.raw.zst' | head -n1)"
 test -n "${DISK_N:?DISK_N is not set}"
-test -f ./nixos-aarch64-sd-image.img
-test -f "$INSTALLER_PUBKEY"
-
-docker run --rm --privileged \
-  -v "$PWD:/work" \
-  -v "$INSTALLER_PUBKEY:/tmp/id_ed25519.pub:ro" \
-  ubuntu:24.04 \
-  bash -euxc '
-    apt-get update
-    apt-get install -y e2fsprogs mount util-linux parted
-    mkdir -p /mnt/nixos-sd
-    root_offset="$(parted -sm /work/nixos-aarch64-sd-image.img unit B print | awk -F: '"'"'$1=="2"{gsub(/B/, "", $2); print $2}'"'"')"
-    test -n "$root_offset"
-    loop="$(losetup --find --show -o "$root_offset" /work/nixos-aarch64-sd-image.img)"
-    cleanup() {
-      umount /mnt/nixos-sd 2>/dev/null || true
-      losetup -d "$loop" 2>/dev/null || true
-    }
-    trap cleanup EXIT
-
-    mount "$loop" /mnt/nixos-sd
-
-    install -d -m 700 -o 1000 -g 100 /mnt/nixos-sd/home/nixos/.ssh
-    install -m 600 -o 1000 -g 100 /tmp/id_ed25519.pub /mnt/nixos-sd/home/nixos/.ssh/authorized_keys
-
-    install -d -m 755 -o 0 -g 0 /mnt/nixos-sd/etc/ssh/authorized_keys.d
-    install -m 644 -o 0 -g 0 /tmp/id_ed25519.pub /mnt/nixos-sd/etc/ssh/authorized_keys.d/nixos
-
-    test -f /mnt/nixos-sd/home/nixos/.ssh/authorized_keys
-    test -f /mnt/nixos-sd/etc/ssh/authorized_keys.d/nixos
-
-    cmp -s /tmp/id_ed25519.pub /mnt/nixos-sd/home/nixos/.ssh/authorized_keys
-    cmp -s /tmp/id_ed25519.pub /mnt/nixos-sd/etc/ssh/authorized_keys.d/nixos
-
-    stat -c "%u:%g %a %n" /mnt/nixos-sd/home/nixos/.ssh
-    stat -c "%u:%g %a %n" /mnt/nixos-sd/home/nixos/.ssh/authorized_keys
-    stat -c "%u:%g %a %n" /mnt/nixos-sd/etc/ssh/authorized_keys.d
-    stat -c "%u:%g %a %n" /mnt/nixos-sd/etc/ssh/authorized_keys.d/nixos
-
-    echo "OK: installer public key is in both SSH key locations"
-
-    sync
-  ' &&
-  diskutil unmountDisk "/dev/disk${DISK_N}" &&
-  sudo dd if=./nixos-aarch64-sd-image.img of="/dev/rdisk${DISK_N}" bs=4m status=progress conv=sync &&
+test -f "$IMAGE_ZST"
+diskutil unmountDisk "/dev/disk${DISK_N}" &&
+  zstd -d --stdout "$IMAGE_ZST" | sudo dd of="/dev/rdisk${DISK_N}" bs=4m status=progress conv=sync &&
   sync &&
   diskutil eject "/dev/disk${DISK_N}"
 ```
 
-Linux desktop:
+## First Boot
+
+1. Power off the old Home Assistant machine if it is still using `192.168.1.3`
+   or conflicting with the new plan.
+2. Insert the microSD card into the Pi.
+3. Connect Ethernet.
+4. Connect power.
+5. Wait a minute for first boot.
+
+The server should come up directly on `192.168.1.3`.
+
+Test SSH from the user's machine:
 
 ```sh
-export SD_DEV="/dev/sdX"
-export INSTALLER_PUBKEY="$HOME/.ssh/id_ed25519.pub"
-export ROOT_OFFSET="$(parted -sm nixos-aarch64-sd-image.img unit B print | awk -F: '$1=="2"{gsub(/B/, "", $2); print $2}')"
-test -n "$ROOT_OFFSET" &&
-LOOP_DEV="$(sudo losetup --find --show -o "$ROOT_OFFSET" nixos-aarch64-sd-image.img)" &&
-sudo mount "$LOOP_DEV" /mnt &&
-  sudo install -d -m 700 -o 1000 -g 100 /mnt/home/nixos/.ssh &&
-  sudo install -m 600 -o 1000 -g 100 "$INSTALLER_PUBKEY" /mnt/home/nixos/.ssh/authorized_keys &&
-  sudo umount /mnt &&
-  sudo losetup -d "$LOOP_DEV" &&
-  sudo dd if=./nixos-aarch64-sd-image.img of="$SD_DEV" bs=4M conv=fsync status=progress
+ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
+ssh joshan@192.168.1.3 true
 ```
 
-The installer key must end up at `/home/nixos/.ssh/authorized_keys`.
-On macOS, the `FIRMWARE` partition is not that location.
+## Copy Repo, Secrets, And Backup Data
 
-### Raspberry Pi Imager
-
-Choose `Use custom`, select `nixos-aarch64-sd-image.img`, choose the SD card,
-and write the image.
-
-### Balena Etcher
-
-Select `nixos-aarch64-sd-image.img`, select the SD card, and flash it.
-
-Do not choose a Raspberry Pi OS image. The Pi 4 wiki explicitly says the Pi 4B
-works with the generic NixOS SD image.
-
-With the image pre-seeded, the installer should accept the same public key on
-first boot.
-
-## Step 3: Boot The Pi
-
-Do this on the Pi.
-
-1. Insert the SD card.
-2. Connect Ethernet.
-3. Connect power.
-4. Wait for the board to boot.
-
-If you use a temporary screen, the Raspberry Pi 4 wiki notes that the login
-prompt may appear on the second HDMI port even if boot logs appeared on the
-first.
-
-## Step 4: Find The Pi On The Network
-
-Run this on the user's machine.
-
-On first boot, the installer image should come up on a temporary DHCP address,
-not yet on the final static address from this repo.
-
-Find it using one of these methods:
-
-1. your router's DHCP lease table
-2. `nmap` from the user's machine
-3. `arp` from the user's machine
-
-Router method:
-
-Open the router admin page and look for a new DHCP lease on the wired LAN. The
-device name may appear as `nixos`, `nixos-installer`, or an unnamed Ethernet
-client.
-
-Network scan method:
+Copy the repo, secrets bundle, and extracted backup to the Pi:
 
 ```sh
-export PI_INSTALL_IP="$(
-  nix shell nixpkgs#nmap -c sh -c '
-    nmap -p 22 --open 192.168.1.0/24
-  ' | awk '
-    /Nmap scan report for/ {
-      host = $NF
-      gsub(/[()]/, "", host)
-    }
-
-    /22\/tcp open/ {
-      print host
-    }
-  ' | while read -r host; do
-    ssh-keygen -R "$host" >/dev/null 2>&1 || true
-
-    if ssh \
-      -i "$HOME/.ssh/id_ed25519" \
-      -o IdentitiesOnly=yes \
-      -o PreferredAuthentications=publickey \
-      -o BatchMode=yes \
-      -o ConnectTimeout=5 \
-      -o StrictHostKeyChecking=accept-new \
-      nixos@"$host" true 2>/dev/null; then
-        printf "%s\n" "$host"
-        exit 0
-    fi
-  done
-)"
-
-printf 'PI_INSTALL_IP=%s\n' "$PI_INSTALL_IP"
-test -n "$PI_INSTALL_IP"
-
-ssh \
-  -i "$HOME/.ssh/id_ed25519" \
-  -o IdentitiesOnly=yes \
-  -o PreferredAuthentications=publickey \
-  nixos@"$PI_INSTALL_IP" true
+tar --exclude .git -C "$REPO_DIR" -cf - . |
+  ssh joshan@192.168.1.3 '
+    rm -rf /home/joshan/.files &&
+    mkdir -p /home/joshan/.files &&
+    cd /home/joshan/.files &&
+    tar xf -
+  ' &&
+  ssh joshan@192.168.1.3 '
+    rm -rf /tmp/nixos-server-secrets /tmp/ha-backup &&
+    mkdir -p /tmp/nixos-server-secrets /tmp/ha-backup
+  ' &&
+  tar -C "$SECRETS_DIR" -cf - . |
+  ssh joshan@192.168.1.3 'cd /tmp/nixos-server-secrets && tar xf -' &&
+  tar -C "$HA_BACKUP_DIR" -cf - . |
+  ssh joshan@192.168.1.3 'cd /tmp/ha-backup && tar xf -'
 ```
 
-If that command does not return an address, check the router lease table or run
-`arp -a` and set `PI_INSTALL_IP` manually.
-
-If the SSH command exits successfully, key-based installer access is working.
-If it prints `Permission denied` or falls back to a password prompt, re-run the
-image key-seeding block in Step 2, re-flash the SD card, and boot again.
-
-After a successful key-based SSH test, the wait loop is safe to use:
+Install the secrets into place:
 
 ```sh
-until ssh -o BatchMode=yes -o ConnectTimeout=5 nixos@"$PI_INSTALL_IP" true; do
-  sleep 10
-done
+ssh -t joshan@192.168.1.3 '
+  sudo install -d -m 700 /root/secrets &&
+  sudo cp -a /tmp/nixos-server-secrets/. /root/secrets/ &&
+  sudo chown -R root:root /root/secrets &&
+  sudo chmod 600 /root/secrets/*
+'
 ```
 
-If `ssh-keygen -R` reports that `~/.ssh/known_hosts` is invalid, clean the bad
-lines first or move the broken file aside before retrying.
+## Restore Mutable App Data
 
-Keep `PI_INSTALL_IP` in the same terminal used for the later `rsync` and `scp`
-commands. If the terminal closes, re-export it before continuing.
-
-## Step 5: Copy The Repo And Home Assistant Backup To The Installer
-
-Run this on the user's machine.
-
-Only copy what the installer needs to build the target system:
+Stop the hosted apps, restore the data directories, then rebuild:
 
 ```sh
-rsync -a --exclude .git "$REPO_DIR"/ nixos@"$PI_INSTALL_IP":/home/nixos/nixos-server/
-rsync -a "$HA_BACKUP_DIR"/ nixos@"$PI_INSTALL_IP":/home/nixos/ha-backup/
-ssh -t nixos@"$PI_INSTALL_IP" 'sudo -i'
+ssh -t joshan@192.168.1.3 '
+  sudo systemctl stop \
+    docker-home-assistant.service \
+    docker-adguard.service \
+    docker-matter-server.service \
+    docker-n8n.service \
+    docker-openclaw.service 2>/dev/null || true &&
+  sudo cp -a /tmp/ha-backup/homeassistant/data/. /var/lib/home-assistant/ &&
+  sudo cp -a /tmp/ha-backup/a0d7b954_adguard/data/adguard/. /var/lib/adguard/conf/ &&
+  sudo cp -a /tmp/ha-backup/core_matter_server/data/. /var/lib/matter-server/ &&
+  sudo cp -a /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/. /var/lib/n8n/ &&
+  sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+'
 ```
 
-## Step 6: Partition The Target Disk And Install NixOS
+`/var/lib/adguard/work` is not restored from the Home Assistant backup.
+AdGuard recreates it.
 
-Run this in the installer shell on the Pi.
+OpenClaw starts fresh unless you deliberately restore old state later.
+
+## Verify The System
+
+Run these checks on the Pi:
 
 ```sh
-# Detect the SD card and set install variables.
-export DISK_DEV="$(
-  lsblk -dpno NAME,TRAN,TYPE | awk '$2 == "mmc" && $3 == "disk" { print $1; exit }'
-)"
-test -n "$DISK_DEV"
-export INSTALL_DOTFILES=/mnt/home/joshan/.files
-export FLK_PROFILE=nixos-server
-
-# Inspect the target disk.
-lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL
-printf 'Using SD disk: %s\n' "$DISK_DEV"
-
-# Partition and format the SD card.
-parted "$DISK_DEV" -- mklabel gpt
-parted "$DISK_DEV" -- mkpart primary fat32 1MiB 512MiB
-parted "$DISK_DEV" -- set 1 esp on
-parted "$DISK_DEV" -- name 1 FIRMWARE
-parted "$DISK_DEV" -- mkpart primary btrfs 512MiB 100%
-parted "$DISK_DEV" -- name 2 NIXOS
-mkfs.fat -F 32 -n FIRMWARE "${DISK_DEV}p1"
-mkfs.btrfs -f -L NIXOS "${DISK_DEV}p2"
-
-# Create and mount the target layout.
-mount /dev/disk/by-label/NIXOS /mnt
-btrfs subvolume create /mnt/root
-btrfs subvolume create /mnt/var-lib
-umount /mnt
-mount -o compress=zstd,subvol=root /dev/disk/by-label/NIXOS /mnt
-mkdir -p /mnt/boot /mnt/var/lib /mnt/home/joshan
-mount /dev/disk/by-label/FIRMWARE /mnt/boot
-mount -o compress=zstd,subvol=var-lib /dev/disk/by-label/NIXOS /mnt/var/lib
-
-# Generate the base hardware config and stage the repo.
-nixos-generate-config --root /mnt
-cp -a /home/nixos/nixos-server/. /mnt/home/joshan/.files
-
-# Install the system and reboot into the final host.
-nixos-install --flake "$INSTALL_DOTFILES#$FLK_PROFILE"
-reboot
+sudo systemctl --no-pager --full status \
+  docker-home-assistant.service \
+  docker-adguard.service \
+  docker-matter-server.service \
+  docker-n8n.service \
+  docker-openclaw.service \
+  tailscaled.service \
+  restic-backups-home-assistant.timer
 ```
 
-## Step 7: Reconnect To The Final System
-
-After reboot, connect from the user's machine:
+Check the main endpoints from the user's machine:
 
 ```sh
-ssh joshan@192.168.1.3
+curl -I http://192.168.1.3:8123
+curl -I http://192.168.1.2:3000
+curl -I http://192.168.1.3:5678
 ```
 
-This host now uses the final static address from the repo. If SSH fails, check
-the router lease or static table and inspect `systemctl status sshd.service`
-from a local console once.
+## Updating Later
 
-## Step 8: Copy Secrets And Mutable App Data
-
-Run this on the user's machine after the final system is up.
+For normal system updates on the Pi:
 
 ```sh
-rsync -a "$SECRETS_DIR"/ joshan@192.168.1.3:/tmp/nixos-server-secrets/
-rsync -a "$HA_BACKUP_DIR"/ joshan@192.168.1.3:/tmp/ha-backup/
-ssh -t joshan@192.168.1.3 'sudo -i'
+cd /home/joshan/.files &&
+  git pull --recurse-submodules &&
+  sudo nixos-rebuild switch --flake .#nixos-server
 ```
 
-Then run this on the Pi:
+For app config changes managed outside Nix:
 
-```sh
-install -d -m 700 /root/secrets
-install -m 400 /tmp/nixos-server-secrets/restic-password /root/secrets/restic-password
-install -m 400 /tmp/nixos-server-secrets/rclone.conf /root/secrets/rclone.conf
-install -m 400 /tmp/nixos-server-secrets/tailscale-authkey /root/secrets/tailscale-authkey
-install -m 400 /tmp/nixos-server-secrets/n8n.env /root/secrets/n8n.env
-install -m 400 /tmp/nixos-server-secrets/openclaw.env /root/secrets/openclaw.env
+- Home Assistant config lives in `/var/lib/home-assistant`
+- AdGuard config lives in `/var/lib/adguard/conf`
+- Matter Server data lives in `/var/lib/matter-server`
+- `n8n` data lives in `/var/lib/n8n`
+- OpenClaw state lives in `/var/lib/openclaw`
+- OpenClaw auth profile state lives in `/var/lib/openclaw-auth`
 
-install -d -m 700 /home/joshan/.ssh
-install -m 600 /tmp/nixos-server-secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
-install -m 644 /tmp/nixos-server-secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
-cat > /home/joshan/.ssh/config <<'EOF'
-Host github.com
-  HostName ssh.github.com
-  Port 443
-  User git
-  IdentityFile ~/.ssh/id_ed25519
-  IdentitiesOnly yes
-EOF
-chmod 600 /home/joshan/.ssh/config
-chown -R joshan:users /home/joshan/.ssh
-
-install -d -m 750 /var/lib/home-assistant
-rsync -a /tmp/ha-backup/data/homeassistant/ /var/lib/home-assistant/
-```
-
-If you are restoring more add-on data from the backup, copy only the service
-directories you intend to keep into the matching `/var/lib/...` locations.
-Leave services you want to rebuild from scratch alone.
-
-## Step 9: Re-apply The Current Config
-
-Run this on the Pi.
-
-```sh
-export DOTFILES=/home/joshan/.files
-export FLK_PROFILE=nixos-server
-export NIXOS_REBUILD_FLAGS=
-cd "$DOTFILES"
-git submodule update --init --recursive
-sudo nixos-rebuild $NIXOS_REBUILD_FLAGS switch --flake .#$FLK_PROFILE
-```
-
-## Step 10: Verify Services
-
-Run this on the Pi.
-
-```sh
-systemctl status docker-home-assistant.service
-systemctl status docker-adguard.service
-systemctl status docker-matter-server.service
-systemctl status n8n.service
-systemctl status tailscaled.service
-systemctl list-timers 'restic*'
-sudo ls -l /root/secrets
-```
-
-Then verify from the user's machine:
-
-1. open `http://192.168.1.3:8123`
-2. verify AdGuard responds on `192.168.1.2`
-3. confirm a client can use `192.168.1.2` as DNS
-
-## Step 11: What Lives Where
-
-System configuration:
-
-- `/home/joshan/.files`
-
-Mutable app data:
-
-- `/var/lib/home-assistant`
-- `/var/lib/adguard`
-- `/var/lib/matter-server`
-- `/var/lib/n8n`
-- `/var/lib/openclaw`
-- `/var/lib/tailscale`
-
-Runtime secrets:
-
-- `/root/secrets/restic-password`
-- `/root/secrets/rclone.conf`
-- `/root/secrets/tailscale-authkey`
-- `/root/secrets/n8n.env`
-- `/root/secrets/openclaw.env`
-
-## Step 12: Update Later
-
-Use Git for NixOS config updates:
-
-```sh
-cd /home/joshan/.files
-git pull
-git submodule update --init --recursive
-sudo nixos-rebuild switch --flake .#nixos-server
-```
-
-Edit mutable app data directly under `/var/lib/...` when the app owns the
-state. Restic and Snapper cover that data, while Nix and Git cover the system
-configuration.
+Those paths are covered by Snapper snapshots and the restic Dropbox backup.

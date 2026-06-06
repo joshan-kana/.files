@@ -34,6 +34,7 @@ Each app gets a plain directory:
 - Matter Server: `/var/lib/matter-server`
 - n8n: `/var/lib/n8n`
 - OpenClaw: `/var/lib/openclaw`
+- OpenClaw auth profile: `/var/lib/openclaw-auth`
 - Tailscale: `/var/lib/tailscale`
 - Future MQTT/Zigbee/Z-Wave/ESPHome data:
   - `/var/lib/mosquitto`
@@ -53,7 +54,8 @@ Secrets are split into two buckets:
 | AdGuard admin hash/config secrets | `/var/lib/adguard/conf` | Snapper and restic |
 | n8n credentials database | `/var/lib/n8n` | Snapper and restic |
 | n8n runtime secrets | `/root/secrets/n8n.env` | Separate encrypted copy |
-| OpenClaw app config/passwords | `/var/lib/openclaw` if app-owned | Snapper and restic |
+| OpenClaw app config/passwords | `/var/lib/openclaw` | Snapper and restic |
+| OpenClaw auth profile secrets | `/var/lib/openclaw-auth` | Snapper and restic |
 | Tailscale machine state | `/var/lib/tailscale` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
 | Tailscale first-boot auth key | `/root/secrets/tailscale-authkey` | Separate encrypted copy |
@@ -121,3 +123,6 @@ Assistant backup size. SQLite files such as Home Assistant and n8n databases are
 included because they are app state. If the printer media matters, back it up
 separately or remove that exclude from
 `profiles/nixos-server/hosted-stack.nix`.
+
+For n8n restores, stop `docker-n8n.service`, replace `/var/lib/n8n`, then
+start the container again.

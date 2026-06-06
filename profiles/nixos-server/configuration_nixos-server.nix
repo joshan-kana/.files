@@ -97,6 +97,7 @@
     jq
     htop
     lshw
+    rsync
   ];
 
   virtualisation.vmVariant = {
