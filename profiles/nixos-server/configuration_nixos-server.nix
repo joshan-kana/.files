@@ -11,11 +11,10 @@
 {
   networking.hostName = "nixos-server";
   networking.networkmanager.enable = true;
-  networking.networkmanager.ensureProfiles.profiles."end0-static" = {
+  networking.networkmanager.ensureProfiles.profiles."wired-static" = {
     connection = {
-      id = "end0-static";
+      id = "wired-static";
       type = "ethernet";
-      interface-name = "end0";
       autoconnect = true;
     };
     ipv4 = {
