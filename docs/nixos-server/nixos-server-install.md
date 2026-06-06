@@ -662,3 +662,5 @@ sudo nixos-rebuild $NIXOS_REBUILD_FLAGS switch --flake .#$FLK_PROFILE
 Edit mutable app data directly under `/var/lib/...` when the app owns the
 state. Restic and Snapper cover that data, while Nix/Git cover the system
 configuration.
+If you cloned the repo without submodules, run `git submodule update --init --recursive`
+before using links into `docs/infrastructure-docs`.
