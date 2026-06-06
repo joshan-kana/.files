@@ -96,6 +96,7 @@ routes.
    - `restic-password`
    - `rclone.conf`
    - `tailscale-authkey`
+   - `n8n.env`
    - `openclaw.env`
 5. Restore app data into `/var/lib/...` using the mapping below.
 6. Apply the system:

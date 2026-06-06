@@ -52,6 +52,7 @@ Secrets are split into two buckets:
 | Home Assistant `secrets.yaml` | `/var/lib/home-assistant/secrets.yaml` | Snapper and restic |
 | AdGuard admin hash/config secrets | `/var/lib/adguard/conf` | Snapper and restic |
 | n8n credentials database | `/var/lib/n8n` | Snapper and restic |
+| n8n runtime secrets | `/root/secrets/n8n.env` | Separate encrypted copy |
 | OpenClaw app config/passwords | `/var/lib/openclaw` if app-owned | Snapper and restic |
 | Tailscale machine state | `/var/lib/tailscale` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |

@@ -124,6 +124,7 @@ $SECRETS_DIR/
   restic-password
   rclone.conf
   tailscale-authkey
+  n8n.env
   openclaw.env
   id_ed25519
   id_ed25519.pub
@@ -141,6 +142,7 @@ mkdir -p "$SECRETS_DIR" &&
   cp "$HOME/.ssh/id_ed25519.pub" "$SECRETS_DIR/" &&
   openssl rand -base64 32 > "$SECRETS_DIR/restic-password" &&
   chmod 600 "$SECRETS_DIR/"* &&
+  touch "$SECRETS_DIR/n8n.env" &&
   touch "$SECRETS_DIR/openclaw.env"
 ```
 
@@ -149,6 +151,7 @@ File contents:
 - `restic-password`: one strong password used to unlock the restic repository
 - `rclone.conf`: rclone config containing a Dropbox remote named `dropbox`
 - `tailscale-authkey`: a Tailscale auth key for first boot
+- `n8n.env`: runtime environment for n8n secrets such as the encryption key
 - `openclaw.env`: optional OpenClaw environment variables in Docker
   `NAME=value` format
 - `id_ed25519`: the GitHub SSH private key copied from the user's machine
@@ -160,6 +163,8 @@ Useful creation notes:
   remote named `dropbox`
 - `tailscale-authkey` should contain a real auth key from the Tailscale admin
   console
+- `n8n.env` can start as an empty file, but durable n8n deployments should set
+  the encryption key there before relying on stored credentials
 - `openclaw.env` can be an empty file until OpenClaw needs environment
   variables
 
@@ -201,10 +206,9 @@ rclone authorize dropbox
 Paste the returned token into `rclone config` when it asks for remote
 authorization, then copy the resulting `rclone.conf` into `SECRETS_DIR`.
 
-The NixOS config passes `openclaw.env` directly to the OpenClaw container as an
-environment file. Leave it empty if there are no OpenClaw environment variables
-to pass yet. Add one variable per line if OpenClaw later needs tokens or
-passwords:
+The NixOS config passes `n8n.env` and `openclaw.env` directly to their
+containers as environment files. Leave them empty until the service needs
+runtime secrets. Add one variable per line when needed:
 
 ```text
 NAME=value
@@ -218,6 +222,7 @@ ls -l "$SECRETS_DIR" &&
   test -f "$SECRETS_DIR/restic-password" &&
   test -f "$SECRETS_DIR/rclone.conf" &&
   test -f "$SECRETS_DIR/tailscale-authkey" &&
+  test -f "$SECRETS_DIR/n8n.env" &&
   test -f "$SECRETS_DIR/openclaw.env" &&
   test -f "$SECRETS_DIR/id_ed25519" &&
   test -f "$SECRETS_DIR/id_ed25519.pub"
@@ -425,6 +430,7 @@ install -d -m 700 /mnt/root/secrets
 install -m 400 /home/nixos/nixos-server-secrets/restic-password /mnt/root/secrets/restic-password
 install -m 400 /home/nixos/nixos-server-secrets/rclone.conf /mnt/root/secrets/rclone.conf
 install -m 400 /home/nixos/nixos-server-secrets/tailscale-authkey /mnt/root/secrets/tailscale-authkey
+install -m 400 /home/nixos/nixos-server-secrets/n8n.env /mnt/root/secrets/n8n.env
 install -m 400 /home/nixos/nixos-server-secrets/openclaw.env /mnt/root/secrets/openclaw.env
 
 # Install the GitHub SSH key pair for Pi access and repo pulls.
@@ -551,6 +557,7 @@ install -d -m 700 /mnt/root/secrets
 install -m 400 /home/nixos/nixos-server-secrets/restic-password /mnt/root/secrets/restic-password
 install -m 400 /home/nixos/nixos-server-secrets/rclone.conf /mnt/root/secrets/rclone.conf
 install -m 400 /home/nixos/nixos-server-secrets/tailscale-authkey /mnt/root/secrets/tailscale-authkey
+install -m 400 /home/nixos/nixos-server-secrets/n8n.env /mnt/root/secrets/n8n.env
 install -m 400 /home/nixos/nixos-server-secrets/openclaw.env /mnt/root/secrets/openclaw.env
 install -d -m 700 /mnt/home/joshan/.ssh
 install -m 600 /home/nixos/nixos-server-secrets/id_ed25519 /mnt/home/joshan/.ssh/id_ed25519
@@ -647,6 +654,7 @@ Bootstrap secrets:
 - `/root/secrets/restic-password`
 - `/root/secrets/rclone.conf`
 - `/root/secrets/tailscale-authkey`
+- `/root/secrets/n8n.env`
 - `/root/secrets/openclaw.env`
 
 ## Step 17: Update Later

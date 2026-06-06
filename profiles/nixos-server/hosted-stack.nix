@@ -156,6 +156,7 @@ in
       image = "docker.n8n.io/n8nio/n8n:latest";
       ports = [ "5678:5678/tcp" ];
       volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
+      environmentFiles = [ "${secretsDir}/n8n.env" ];
     };
 
     openclaw = {
