@@ -55,6 +55,7 @@ in
           Format = "vfat";
           Label = "FIRMWARE";
           SizeMinBytes = "96M";
+          SizeMaxBytes = "512M";
         };
       };
 
@@ -68,7 +69,6 @@ in
           Type = "root";
           Format = "btrfs";
           Label = "NIXOS";
-          Minimize = "guess";
           Subvolumes = [
             "/root"
             "/var-lib"
