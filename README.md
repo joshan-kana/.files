@@ -16,6 +16,7 @@ This flake has three profiles for different environments:
 - **nixos**: Full desktop config on x86_64 arch
 - **nixos-arm-parallels**: Full desktop config on aarch64 arch (Parallels VM on macOS)
 - **nixos-orbstack**: Minimal config for OrbStack (Linux containers on macOS, similar to WSL)
+- **nixos-server**: server config
 
 ## Submodules
 
