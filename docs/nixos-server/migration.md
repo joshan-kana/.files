@@ -17,7 +17,7 @@ keeping one-off parser scripts in this repo.
 | Home Assistant | `home-assistant` OCI container | Config/data lives in `/var/lib/home-assistant`. |
 | AdGuard Home | `adguard` OCI container | Config/data lives in `/var/lib/adguard`. DNS/admin are served from the dedicated AdGuard LAN IP. |
 | Matter Server | `matter-server` OCI container | Uses host networking for discovery. |
-| n8n | `n8n` OCI container | Data lives in `/var/lib/n8n`. |
+| n8n | native `n8n` service | Data lives in `/var/lib/n8n`. |
 | Twingate Connector | Replaced by Tailscale | Tailscale is managed by the NixOS service and stores state in `/var/lib/tailscale`. |
 | Studio Code Server | Not migrated as an add-on | Use SSH/editor tooling on the NixOS host instead. |
 | Get HACS | Not a runtime service | HACS/custom components are part of the HA config restore. |
