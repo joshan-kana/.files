@@ -5,6 +5,8 @@ Raspberry Pi Home Assistant server documentation.
 ## Files
 
 - `flake.nix`: declares the `nixos-server` host.
+- `docs/nixos-server/nixos-server-install.md`: end-to-end install, restore,
+  and day-two operations guide.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and bare-metal services.
 - `profiles/nixos-server/hosted-stack.nix`: Home Assistant and app containers,
