@@ -296,7 +296,8 @@ diskutil list
 export DISK_N="$(diskutil list | sed -n 's#^/dev/disk\([0-9][0-9]*\).*$#\1#p' | fzf)"
 diskutil unmountDisk "/dev/disk${DISK_N}"
 sudo dd if=./nixos-aarch64-sd-image.img of="/dev/rdisk${DISK_N}" bs=4m status=progress conv=sync
-export NIXOS_SD_VOL="$(diskutil info "/dev/disk${DISK_N}" | awk -F': *' '/Volume Name/ {print $2; exit}')"
+diskutil mountDisk "/dev/disk${DISK_N}"
+export NIXOS_SD_VOL="$(diskutil info "/dev/disk${DISK_N}s1" | awk -F': *' '/Volume Name/ {print $2; exit}')"
 install -d -m 700 "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh"
 cat ~/.ssh/id_ed25519.pub > "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
 chmod 600 "/Volumes/$NIXOS_SD_VOL/home/nixos/.ssh/authorized_keys"
