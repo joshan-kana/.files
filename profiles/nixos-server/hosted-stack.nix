@@ -58,8 +58,6 @@ in
     "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
     "d ${dataRoot}/zwave-js-ui 0750 root root - -"
     "d ${dataRoot}/esphome 0750 root root - -"
-    "d ${dataRoot}/openclaw/config 0750 root root - -"
-    "d ${dataRoot}/openclaw/data 0750 root root - -"
     "d ${secretsDir} 0700 root root - -"
   ];
 
@@ -73,7 +71,6 @@ in
     8123 # Home Assistant
     5678 # n8n
     5580 # Matter Server
-    7681 # OpenClaw terminal
     18789 # OpenClaw gateway
   ];
   networking.firewall.allowedUDPPorts = [
@@ -86,6 +83,13 @@ in
   };
 
   systemd.services.n8n.serviceConfig.EnvironmentFile = [ "${secretsDir}/n8n.env" ];
+
+  services.openclaw-gateway = {
+    enable = true;
+    port = 18789;
+    stateDir = "${dataRoot}/openclaw";
+    environmentFiles = [ "${secretsDir}/openclaw.env" ];
+  };
 
   systemd.services.docker-network-adguard = {
     description = "Create Docker macvlan network for AdGuard Home";
@@ -158,18 +162,6 @@ in
       extraOptions = [ "--network=host" ];
     };
 
-    openclaw = {
-      image = "docker.io/17e0cc66/aarch64-addon-openclaw_assistant:0.5.77";
-      ports = [
-        "7681:7681/tcp"
-        "18789:18789/tcp"
-      ];
-      volumes = [
-        "${dataRoot}/openclaw/config:/config"
-        "${dataRoot}/openclaw/data:/data"
-      ];
-      environmentFiles = [ "${secretsDir}/openclaw.env" ];
-    };
   };
 
   services.snapper = {
