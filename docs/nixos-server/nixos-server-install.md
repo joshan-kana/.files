@@ -623,7 +623,7 @@ Run this on the Pi.
 systemctl status docker-home-assistant.service
 systemctl status docker-adguard.service
 systemctl status docker-matter-server.service
-systemctl status docker-n8n.service
+systemctl status n8n.service
 systemctl status tailscaled.service
 systemctl list-timers 'restic*'
 ```

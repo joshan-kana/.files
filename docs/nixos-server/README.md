@@ -9,8 +9,8 @@ Raspberry Pi home server documentation.
   and day-two operations guide.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and bare-metal services.
-- `profiles/nixos-server/hosted-stack.nix`: Home Assistant and app containers,
-  backups, Snapper, and the AdGuard macvlan network.
+- `profiles/nixos-server/hosted-stack.nix`: Home Assistant, AdGuard, Matter,
+  OpenClaw, n8n, backups, Snapper, and the AdGuard macvlan network.
 - `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
   filesystem layout.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
@@ -129,7 +129,7 @@ Special cases:
 Restore flow:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service docker-n8n.service 2>/dev/null || true
+sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service n8n.service 2>/dev/null || true
 sudo rsync -a /path/to/extracted/homeassistant/data/ /var/lib/home-assistant/
 sudo rsync -a /path/to/extracted/a0d7b954_adguard/data/adguard/ /var/lib/adguard/conf/
 sudo rsync -a /path/to/extracted/core_matter_server/data/ /var/lib/matter-server/
@@ -155,9 +155,10 @@ sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 
 This updates NixOS itself plus bare-metal services such as Tailscale.
 
-3. Container app version updates:
-   Change the image tag or digest in `profiles/nixos-server/hosted-stack.nix`,
-   commit it, and rebuild.
+3. Hosted app version updates:
+   Change the image tag or digest in `profiles/nixos-server/hosted-stack.nix`
+   for containerized services, or update the server package set for native
+   services such as `n8n`, then commit and rebuild.
 
 Floating tags like `stable` and `latest` still exist in the stack. Pinned
 versions or digests are better for reproducible rollbacks.
