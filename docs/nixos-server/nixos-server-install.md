@@ -161,12 +161,26 @@ Useful creation notes:
 
 - `rclone.conf` should come from `rclone config` after creating a Dropbox
   remote named `dropbox`
-- `tailscale-authkey` should contain a real auth key from the Tailscale admin
-  console
 - `n8n.env` can start as an empty file, but durable n8n deployments should set
   the encryption key there before relying on stored credentials
 - `openclaw.env` can be an empty file until OpenClaw needs environment
   variables
+
+Create the Tailscale auth key on the user's machine:
+
+1. Open the Tailscale admin console.
+2. Go to `Settings` -> `Keys`.
+3. Create an auth key for the server bootstrap.
+4. Use a reusable key so the first install does not depend on a one-time token.
+5. Leave it non-ephemeral so the server keeps a normal machine identity.
+6. Copy the key into the secrets directory:
+
+```sh
+printf '%s\n' 'paste-the-tailscale-auth-key-here' > "$SECRETS_DIR/tailscale-authkey" &&
+  chmod 600 "$SECRETS_DIR/tailscale-authkey"
+```
+
+The file should contain only the auth key value.
 
 Create and authorize the Dropbox rclone remote on the user's machine:
 
