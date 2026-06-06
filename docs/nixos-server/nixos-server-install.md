@@ -288,12 +288,24 @@ Choose one flashing method.
 
 ### CLI (fastest and automated)
 
-Pick the SD card device, write the image, put your SSH public key onto the
-installer volume, and eject the card:
+List disks before inserting the SD card and note the devices that are already
+present:
 
 ```sh
 diskutil list
-export DISK_N="$(diskutil list | sed -n 's#^/dev/disk\([0-9][0-9]*\).*$#\1#p' | fzf)"
+```
+
+Insert the SD card, then list disks again and identify the new `diskN` device:
+
+```sh
+diskutil list
+export DISK_N="N"
+```
+
+After `DISK_N` is set, write the image, put your SSH public key onto the
+installer volume, and eject the card:
+
+```sh
 diskutil unmountDisk "/dev/disk${DISK_N}"
 sudo dd if=./nixos-aarch64-sd-image.img of="/dev/rdisk${DISK_N}" bs=4m status=progress conv=sync
 diskutil mountDisk "/dev/disk${DISK_N}"
