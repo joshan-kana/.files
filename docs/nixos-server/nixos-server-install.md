@@ -604,6 +604,7 @@ Run this on the Pi.
 ```sh
 cd "$DOTFILES"
 git pull
+git submodule update --init --recursive
 sudo nixos-rebuild $NIXOS_REBUILD_FLAGS switch --flake .#$FLK_PROFILE
 ```
 
