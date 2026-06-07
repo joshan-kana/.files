@@ -13,20 +13,22 @@ repo, flashed once, then booted directly into the final server layout.
 - Repo on the Pi: `/home/joshan/.files`
 - App data root: `/var/lib`
 - Runtime secrets: `/root/secrets`
-- Boot firmware mount: `/boot/firmware`
-- Root filesystem: Btrfs label `NIXOS`
-- Btrfs subvolumes: `root`, `var-lib`
+- Boot firmware mount: `/boot`
+- Root filesystem: Btrfs label `NIXOS` mounted as the Btrfs top-level
+- Btrfs subvolumes: `var-lib`
+- Nix store path: `/nix/store`
 
 ## What This Image Contains
 
 The built image already includes:
 
-- the Raspberry Pi 4 boot firmware layout
+- the Raspberry Pi 4 boot firmware layout on the FAT `FIRMWARE` partition
 - the static network configuration for `192.168.1.3`
 - the `joshan` user
 - the GitHub SSH public key declared in the NixOS config
 - the hosted app stack definition
 - a 12 GiB seed disk layout that grows to the full SD card on first boot
+- `/boot/extlinux` and `/boot/nixos` copied onto the FAT boot partition for U-Boot
 
 The image does not include:
 
@@ -176,6 +178,24 @@ mkdir -p /mnt/mac/Users/joshan/Downloads/nixos-server-image &&
 
 The output is the full server image, not an installer image.
 
+Optional image sanity check on OrbStack before flashing:
+
+```sh
+CHECK_DIR=/mnt/mac/Users/joshan/Downloads/nixos-server-image-check
+rm -rf "$CHECK_DIR" && mkdir -p "$CHECK_DIR" &&
+  zstd -d -c result/nixos-server.raw.zst > "$CHECK_DIR/nixos-server.raw" &&
+  LOOP="$(sudo losetup --find --show --partscan "$CHECK_DIR/nixos-server.raw")" &&
+  sudo mkdir -p "$CHECK_DIR/fw" "$CHECK_DIR/root" &&
+  sudo mount "${LOOP}p1" "$CHECK_DIR/fw" &&
+  sudo mount "${LOOP}p2" "$CHECK_DIR/root" &&
+  INIT="$(grep -o 'init=/nix/store/[^ ]*' "$CHECK_DIR/fw/extlinux/extlinux.conf" | cut -d= -f2)" &&
+  test -d "$CHECK_DIR/root/nix/store" &&
+  test -e "$CHECK_DIR/root$INIT" &&
+  echo "image layout OK" &&
+  sudo umount "$CHECK_DIR/root" "$CHECK_DIR/fw" &&
+  sudo losetup -d "$LOOP"
+```
+
 ## Flash The SD Card
 
 Run this on the user's machine.
@@ -219,11 +239,11 @@ The server should come up directly on `192.168.1.3`.
 Test SSH from the user's machine:
 
 ```sh
-ssh-keygen -R 192.168.1.3
+ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
 ssh joshan@192.168.1.3
 ```
 
-if successful, immediately change default password:
+Immediately change the temporary first-boot password:
 
 ```sh
 passwd
@@ -231,10 +251,10 @@ passwd
 
 ## Copy Repo, Secrets, And Backup Data
 
-Copy the repo, secrets bundle, and extracted backup to the Pi:
+Copy the repo, secrets bundle, and extracted backup to the Pi. Keep the Git metadata so later `git pull` updates work on the server:
 
 ```sh
-tar --exclude .git -C "$REPO_DIR" -cf - . |
+tar --exclude result --exclude .direnv --exclude ha-migration-input --exclude ha-migration-work -C "$REPO_DIR" -cf - . |
   ssh joshan@192.168.1.3 '
     rm -rf /home/joshan/.files &&
     mkdir -p /home/joshan/.files &&
@@ -262,6 +282,18 @@ ssh -t joshan@192.168.1.3 '
 '
 ```
 
+Install the GitHub SSH key for the `joshan` user so the Pi can pull the private repo later:
+
+```sh
+ssh -t joshan@192.168.1.3 '
+  sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh &&
+  sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519 &&
+  sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub &&
+  sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts &&
+  sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
+'
+```
+
 ## Restore Mutable App Data
 
 Stop the hosted apps, restore the data directories, then rebuild:
@@ -283,7 +315,7 @@ ssh -t joshan@192.168.1.3 '
 ```
 
 `/var/lib/adguard/work` is not restored from the Home Assistant backup.
-AdGuard recreates it.
+AdGuard recreates it. The AdGuard macvlan parent interface is detected from the default IPv4 route at runtime, so the install does not depend on the Ethernet interface being named `end0`.
 
 OpenClaw starts fresh unless you deliberately restore old state later.
 
