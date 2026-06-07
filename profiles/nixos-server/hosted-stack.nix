@@ -1,4 +1,5 @@
 {
+  appDataRoot,
   config,
   lib,
   pkgs,
@@ -6,7 +7,7 @@
 }:
 
 let
-  dataRoot = "/var/lib/apps";
+  dataRoot = appDataRoot;
   secretsDir = "/root/secrets";
 
   # Floating container tags are refreshed as part of the normal flake update
@@ -209,8 +210,8 @@ in
   services.snapper = {
     snapshotInterval = "15min";
     cleanupInterval = "1h";
-    configs.var-lib = {
-      SUBVOLUME = "/var/lib";
+    configs.apps = {
+      SUBVOLUME = dataRoot;
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
       TIMELINE_LIMIT_HOURLY = 48;
@@ -220,7 +221,7 @@ in
     };
   };
 
-  services.restic.backups.home-assistant = {
+  services.restic.backups.apps = {
     initialize = true;
     repository = resticRepository;
     passwordFile = resticPasswordFile;

@@ -105,6 +105,7 @@
         nixos-server = {
           dotfilesPath = "/home/joshan/.files";
           profileName = "nixos-server";
+          appDataRoot = "/var/lib/apps";
           ollamaUrl = "http://localhost:11434/v1";
           nixosRebuildFlags = "";
         };
@@ -174,6 +175,7 @@
               inherit (profiles.nixos)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -223,6 +225,7 @@
               inherit (profiles.nixos-arm-parallels)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -269,6 +272,7 @@
               inherit (profiles.nixos-orbstack)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -305,6 +309,7 @@
               inherit (profiles.nixos-server)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;

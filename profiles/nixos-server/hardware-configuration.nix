@@ -36,15 +36,6 @@
       fsType = "vfat";
     };
 
-    "/var/lib" = {
-      device = "/dev/disk/by-label/NIXOS";
-      fsType = "btrfs";
-      options = [
-        "subvol=var-lib"
-        "compress=zstd"
-        "noatime"
-      ];
-    };
   };
 
   swapDevices = [ ];

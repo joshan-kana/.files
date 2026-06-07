@@ -15,7 +15,7 @@ repo, flashed once, then booted directly into the final server layout.
 - Runtime secrets: `/root/secrets`
 - Boot firmware mount: `/boot`
 - Root filesystem: Btrfs label `NIXOS` mounted as the Btrfs top-level
-- Btrfs subvolumes: `var-lib`
+- Btrfs subvolumes: `/var/lib/apps`
 - Nix store path: `/nix/store`
 
 ## What This Image Contains
