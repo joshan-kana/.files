@@ -53,7 +53,9 @@ it runs on.
 
 Docker macvlan networks isolate the parent host from the container. The second
 macvlan address on the host lets the Pi itself and host-networked Home
-Assistant reach AdGuard.
+Assistant reach AdGuard. The macvlan parent interface is detected at runtime
+from the default IPv4 route, so the config does not depend on whether the Pi
+Ethernet interface is named `end0`, `eth0`, or something else.
 
 That is why `hosted-stack.nix` creates:
 
@@ -69,17 +71,19 @@ routes.
 1. Build the `nixos-server` SD image from this repo on an `aarch64-linux`
    machine.
 2. Flash the resulting image to the microSD card.
-3. Boot the Pi and clone this repo to `/home/joshan/.files`.
+3. Boot the Pi, SSH in, and immediately change the temporary first-boot password.
+4. Copy or clone this repo to `/home/joshan/.files`, keeping Git metadata so
+   later `git pull` updates work on the server.
    Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
-   after cloning so `docs/infrastructure-docs` is present.
-4. Create `/root/secrets` files:
+   after copying/cloning so `docs/infrastructure-docs` is present.
+5. Create `/root/secrets` files:
    - `restic-password`
    - `rclone.conf`
    - `tailscale-authkey`
    - `n8n.env`
    - `openclaw.env`
-5. Restore app data into `/var/lib/...` using the mapping below.
-6. Apply the system:
+6. Restore app data into `/var/lib/...` using the mapping below.
+7. Apply the system:
 
 ```sh
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
@@ -167,8 +171,8 @@ The overrides exist because the real Pi assumptions do not fit a VM:
 
 - Snapper and restic are disabled because the VM is just for build/testing and
   should not try to snapshot or back up fake data.
-- The AdGuard macvlan unit is disabled because a QEMU VM does not have your
-  real `end0` LAN interface.
+- The AdGuard macvlan unit is disabled because a QEMU VM does not have the
+  real LAN interface used by the Pi deployment.
 - AdGuard falls back from a dedicated macvlan IP to normal published ports so
   the service can still start inside the VM.
 
