@@ -116,11 +116,6 @@ in
         exit 1
       fi
 
-      existingParent="$(docker network inspect -f '{{ index .Options "parent" }}' ${adguardNetwork.name} 2>/dev/null || true)"
-      if [ -n "$existingParent" ] && [ "$existingParent" != "$parentInterface" ]; then
-        docker network rm ${adguardNetwork.name}
-      fi
-
       if ! docker network inspect ${adguardNetwork.name} >/dev/null 2>&1; then
         docker network create \
           --driver macvlan \
