@@ -47,7 +47,7 @@ You need:
 - an `aarch64-linux` builder
 
 This repo already has an OrbStack NixOS machine named `nixos`, so this guide
-uses that as the builder.
+uses that as the builder through the `orb` SSH alias.
 
 Set these variables on the user's machine:
 
@@ -159,41 +159,43 @@ N8N_ENCRYPTION_KEY=replace-this-with-a-long-random-value
 
 ## Build The SD Card Image
 
-Build the image on a a nix linux machine (Orbstack compatible):
+Build the image from macOS while executing the build inside the OrbStack NixOS
+machine. The command points Nix at the repo path through OrbStack's macOS mount
+and writes the `result` symlink back into the local checkout:
 
 ```sh
-  syscd
-  nix build .#nixosConfigurations.nixos-server.config.system.build.image -L
+ssh "$BUILD_HOST" "nix build '/mnt/mac${REPO_DIR}#nixosConfigurations.nixos-server.config.system.build.image' -L --out-link '/mnt/mac${REPO_DIR}/result'"
 ```
 
-Pull the finished image back to the user's machine (run on orbstack):
+The output is the full server image, not an installer image. The compressed
+image can be used from the repo `result` symlink or copied to Downloads:
 
 ```sh
-mkdir -p /mnt/mac/Users/joshan/Downloads/nixos-server-image &&
-  syscd &&
-  IMAGE="$(find -L result -maxdepth 1 -type f -name '*.raw.zst' -print -quit)" &&
-  test -n "$IMAGE" &&
-  cp -v "$IMAGE" /mnt/mac/Users/joshan/Downloads/nixos-server-image/
+mkdir -p "$HOME/Downloads/nixos-server-image" &&
+  cp -v "$(find -L "$REPO_DIR/result" -maxdepth 1 -type f -name '*.raw.zst' -print -quit)" \
+    "$HOME/Downloads/nixos-server-image/"
 ```
-
-The output is the full server image, not an installer image.
 
 Optional image sanity check on OrbStack before flashing:
 
 ```sh
-CHECK_DIR=/mnt/mac/Users/joshan/Downloads/nixos-server-image-check
-rm -rf "$CHECK_DIR" && mkdir -p "$CHECK_DIR" &&
-  zstd -d -c result/nixos-server.raw.zst > "$CHECK_DIR/nixos-server.raw" &&
-  LOOP="$(sudo losetup --find --show --partscan "$CHECK_DIR/nixos-server.raw")" &&
-  sudo mkdir -p "$CHECK_DIR/fw" "$CHECK_DIR/root" &&
-  sudo mount "${LOOP}p1" "$CHECK_DIR/fw" &&
-  sudo mount "${LOOP}p2" "$CHECK_DIR/root" &&
-  INIT="$(grep -o 'init=/nix/store/[^ ]*' "$CHECK_DIR/fw/extlinux/extlinux.conf" | cut -d= -f2)" &&
-  test -d "$CHECK_DIR/root/nix/store" &&
-  test -e "$CHECK_DIR/root$INIT" &&
-  echo "image layout OK" &&
-  sudo umount "$CHECK_DIR/root" "$CHECK_DIR/fw" &&
+ssh "$BUILD_HOST" '
+  set -eu
+  CHECK_DIR=/mnt/mac/Users/joshan/Downloads/nixos-server-image-check
+  IMAGE_ZST="$(find -L /mnt/mac/Users/joshan/.files/result -maxdepth 1 -type f -name "*.raw.zst" -print -quit)"
+  rm -rf "$CHECK_DIR" && mkdir -p "$CHECK_DIR"
+  zstd -d -c "$IMAGE_ZST" > "$CHECK_DIR/nixos-server.raw"
+  LOOP="$(sudo losetup --find --show --partscan "$CHECK_DIR/nixos-server.raw")"
+  sudo mkdir -p "$CHECK_DIR/fw" "$CHECK_DIR/root"
+  sudo mount "${LOOP}p1" "$CHECK_DIR/fw"
+  sudo mount "${LOOP}p2" "$CHECK_DIR/root"
+  INIT="$(grep -o "init=/nix/store/[^ ]*" "$CHECK_DIR/fw/extlinux/extlinux.conf" | cut -d= -f2)"
+  test -d "$CHECK_DIR/root/nix/store"
+  test -e "$CHECK_DIR/root$INIT"
+  echo "image layout OK"
+  sudo umount "$CHECK_DIR/root" "$CHECK_DIR/fw"
   sudo losetup -d "$LOOP"
+'
 ```
 
 ## Flash The SD Card
@@ -213,12 +215,22 @@ diskutil list
 export DISK_N="N"
 ```
 
-Flash the compressed image directly:
+Flash the compressed image directly. This block accepts either the repo `result`
+symlink or a copied image in `~/Downloads/nixos-server-image`:
 
 ```sh
-export IMAGE_ZST="$(find "$HOME/Downloads/nixos-server-image" -name '*.raw.zst' | head -n1)"
+export IMAGE_ZST="$(
+  find -L "$REPO_DIR/result" "$HOME/Downloads/nixos-server-image" \
+    -type f -name '*.raw.zst' -print 2>/dev/null | head -n1
+)"
+
 test -n "${DISK_N:?DISK_N is not set}"
+test -n "$IMAGE_ZST" || { echo "No .raw.zst image found; build the image first or set IMAGE_ZST manually." >&2; exit 1; }
 test -f "$IMAGE_ZST"
+
+echo "Image: $IMAGE_ZST"
+diskutil info "/dev/disk${DISK_N}" | grep -E 'Device / Media Name|Disk Size|Total Size' || true
+
 diskutil unmountDisk "/dev/disk${DISK_N}" &&
   zstd -d --stdout "$IMAGE_ZST" | sudo dd of="/dev/rdisk${DISK_N}" bs=4m status=progress &&
   sync &&
@@ -251,20 +263,17 @@ passwd
 
 ## Copy Repo, Secrets, And Backup Data
 
-Copy the repo, secrets bundle, and extracted backup to the Pi. Keep the Git metadata so later `git pull` updates work on the server:
+Copy the local repo to the Pi, including `.git`. This preserves unpushed local
+commits and uncommitted working-tree changes for emergency bootstrap work:
 
 ```sh
-tar --exclude result --exclude .direnv --exclude ha-migration-input --exclude ha-migration-work -C "$REPO_DIR" -cf - . |
-  ssh joshan@192.168.1.3 '
-    rm -rf /home/joshan/.files &&
-    mkdir -p /home/joshan/.files &&
-    cd /home/joshan/.files &&
-    tar xf -
-  ' &&
-  ssh joshan@192.168.1.3 '
-    rm -rf /tmp/nixos-server-secrets /tmp/ha-backup &&
-    mkdir -p /tmp/nixos-server-secrets /tmp/ha-backup
-  ' &&
+tar --exclude result --exclude .direnv -C "$REPO_DIR" -cf - . | ssh joshan@192.168.1.3 'rm -rf /home/joshan/.files && mkdir -p /home/joshan/.files && tar -C /home/joshan/.files -xf -'
+```
+
+Copy the secrets bundle and extracted Home Assistant backup to the Pi:
+
+```sh
+ssh joshan@192.168.1.3 'rm -rf /tmp/nixos-server-secrets /tmp/ha-backup && mkdir -p /tmp/nixos-server-secrets /tmp/ha-backup' &&
   tar -C "$SECRETS_DIR" -cf - . |
   ssh joshan@192.168.1.3 'cd /tmp/nixos-server-secrets && tar xf -' &&
   tar -C "$HA_BACKUP_DIR" -cf - . |
@@ -321,20 +330,18 @@ OpenClaw starts fresh unless you deliberately restore old state later.
 
 ## Verify The System
 
-Run these checks on the Pi:
+Run a short base-system check on the Pi:
 
 ```sh
-sudo systemctl --no-pager --full status \
-  docker-home-assistant.service \
-  docker-adguard.service \
-  docker-matter-server.service \
-  docker-n8n.service \
-  docker-openclaw.service \
-  tailscaled.service \
-  restic-backups-home-assistant.timer
+ssh joshan@192.168.1.3 '
+  hostname
+  findmnt / /boot /var/lib
+  systemctl is-system-running || true
+  systemctl --failed --no-pager
+'
 ```
 
-Check the main endpoints from the user's machine:
+Check the main endpoints from the user's machine after restore and rebuild:
 
 ```sh
 curl -I http://192.168.1.3:8123
