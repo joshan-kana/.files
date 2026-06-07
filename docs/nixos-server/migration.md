@@ -30,7 +30,7 @@ keeping one-off parser scripts in this repo.
 1. Install NixOS with the server image.
 2. Copy the local repo to `/home/joshan/.files`.
 3. Install `/root/secrets`.
-4. Extract and copy the Home Assistant backup to `/tmp/ha-backup`.
+4. Extract and stage the Home Assistant backup at `/var/lib/restore/ha-backup`.
 5. Restore app data into `/var/lib/apps/...`.
 6. Switch the profile.
 
@@ -44,6 +44,8 @@ export REPO_DIR="$HOME/.files"
 export SECRETS_DIR="$HOME/.secrets"
 export HA_BACKUP_ARCHIVE="$HOME/Downloads/home_assistant_main_backup.tar"
 export HA_BACKUP_DIR="$(dirname "$HA_BACKUP_ARCHIVE")/extracted-home-assistant-backup"
+export STAGE_DIR="/var/lib/restore/ha-backup"
+export APP_DATA_ROOT="/var/lib/apps"
 
 rm -rf "$HA_BACKUP_DIR" &&
   mkdir -p "$HA_BACKUP_DIR" &&
@@ -55,10 +57,11 @@ rm -rf "$HA_BACKUP_DIR" &&
       tar -xzf "$archive" -C "$dir"
     done
   ' sh {} + &&
-  ssh "joshan@$SERVER" '
-    rm -rf /tmp/.secrets /tmp/ha-backup &&
-    mkdir -p /tmp/.secrets /tmp/ha-backup /home/joshan/.files
-  ' &&
+  ssh -t "joshan@$SERVER" "
+    sudo rm -rf '$STAGE_DIR' /tmp/.secrets &&
+    sudo install -d -m 0750 -o joshan -g users '$STAGE_DIR' &&
+    mkdir -p /tmp/.secrets /home/joshan/.files
+  " &&
   nix shell nixpkgs#rsync -c sh -eu -c '
     rsync -ah --delete --info=progress2 \
       --exclude /result \
@@ -70,12 +73,27 @@ rm -rf "$HA_BACKUP_DIR" &&
       "$SECRETS_DIR"/ \
       "joshan@$SERVER:/tmp/.secrets/"
 
-    rsync -ah --delete --info=progress2 \
+    rsync -ah --delete --partial --append-verify --info=progress2 \
+      -e "ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=60" \
       "$HA_BACKUP_DIR"/ \
-      "joshan@$SERVER:/tmp/ha-backup/"
+      "joshan@$SERVER:$STAGE_DIR/"
   ' &&
   ssh -t "joshan@$SERVER" '
     set -e
+
+    STAGE_DIR=/var/lib/restore/ha-backup
+    APP_DATA_ROOT=/var/lib/apps
+
+    sudo test -f "$STAGE_DIR/homeassistant/data/configuration.yaml"
+    sudo test -d "$STAGE_DIR/homeassistant/data/.storage"
+
+    sudo systemctl stop \
+      docker-home-assistant.service \
+      docker-adguard.service \
+      docker-matter-server.service \
+      docker-n8n.service \
+      docker-openclaw.service \
+      2>/dev/null || true
 
     sudo install -d -m 700 /root/secrets
     sudo cp -a /tmp/.secrets/. /root/secrets/
@@ -90,28 +108,32 @@ rm -rf "$HA_BACKUP_DIR" &&
     sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
 
     sudo install -d -m 0750 \
-      /var/lib/apps/home-assistant \
-      /var/lib/apps/adguard/conf \
-      /var/lib/apps/adguard/work \
-      /var/lib/apps/matter-server \
-      /var/lib/apps/n8n \
-      /var/lib/apps/openclaw \
-      /var/lib/apps/openclaw-auth
+      "$APP_DATA_ROOT/home-assistant" \
+      "$APP_DATA_ROOT/adguard/conf" \
+      "$APP_DATA_ROOT/adguard/work" \
+      "$APP_DATA_ROOT/matter-server" \
+      "$APP_DATA_ROOT/n8n" \
+      "$APP_DATA_ROOT/openclaw" \
+      "$APP_DATA_ROOT/openclaw-auth"
 
-    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/ /var/lib/apps/home-assistant/
-    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/a0d7b954_adguard/data/adguard/ /var/lib/apps/adguard/conf/
-    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/core_matter_server/data/ /var/lib/apps/matter-server/
-    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/apps/n8n/
+    restore_dir() {
+      src="$1"
+      dest="$2"
+      if [ -d "$src" ]; then
+        sudo rsync -ah --delete --info=progress2 "$src"/ "$dest"/
+      else
+        echo "WARN: missing backup path: $src" >&2
+      fi
+    }
 
-    if [ -d /tmp/ha-backup/homeassistant/data/.openclaw ]; then
-      sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/.openclaw/ /var/lib/apps/openclaw/
-    fi
+    restore_dir "$STAGE_DIR/homeassistant/data" "$APP_DATA_ROOT/home-assistant"
+    restore_dir "$STAGE_DIR/a0d7b954_adguard/data/adguard" "$APP_DATA_ROOT/adguard/conf"
+    restore_dir "$STAGE_DIR/core_matter_server/data" "$APP_DATA_ROOT/matter-server"
+    restore_dir "$STAGE_DIR/3cfc8f0f_hass-n8n/data/n8n/.n8n" "$APP_DATA_ROOT/n8n"
+    restore_dir "$STAGE_DIR/homeassistant/data/.openclaw" "$APP_DATA_ROOT/openclaw"
+    restore_dir "$STAGE_DIR/homeassistant/data/.config/openclaw" "$APP_DATA_ROOT/openclaw-auth"
 
-    if [ -d /tmp/ha-backup/homeassistant/data/.config/openclaw ]; then
-      sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/.config/openclaw/ /var/lib/apps/openclaw-auth/
-    fi
-
-    sudo chown -R root:root /var/lib/apps
+    sudo chown -R root:root "$APP_DATA_ROOT"
     rm -rf /tmp/.secrets /tmp/github-known-hosts
     sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
   '
@@ -121,12 +143,12 @@ rm -rf "$HA_BACKUP_DIR" &&
 
 | HAOS backup path | NixOS target |
 | --- | --- |
-| `/tmp/ha-backup/homeassistant/data/` | `/var/lib/apps/home-assistant/` |
-| `/tmp/ha-backup/a0d7b954_adguard/data/adguard/` | `/var/lib/apps/adguard/conf/` |
-| `/tmp/ha-backup/core_matter_server/data/` | `/var/lib/apps/matter-server/` |
-| `/tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/` | `/var/lib/apps/n8n/` |
-| `/tmp/ha-backup/homeassistant/data/.openclaw/` | `/var/lib/apps/openclaw/` |
-| `/tmp/ha-backup/homeassistant/data/.config/openclaw/` | `/var/lib/apps/openclaw-auth/` |
+| `/var/lib/restore/ha-backup/homeassistant/data/` | `/var/lib/apps/home-assistant/` |
+| `/var/lib/restore/ha-backup/a0d7b954_adguard/data/adguard/` | `/var/lib/apps/adguard/conf/` |
+| `/var/lib/restore/ha-backup/core_matter_server/data/` | `/var/lib/apps/matter-server/` |
+| `/var/lib/restore/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/` | `/var/lib/apps/n8n/` |
+| `/var/lib/restore/ha-backup/homeassistant/data/.openclaw/` | `/var/lib/apps/openclaw/` |
+| `/var/lib/restore/ha-backup/homeassistant/data/.config/openclaw/` | `/var/lib/apps/openclaw-auth/` |
 
 `/var/lib/apps/adguard/work` is not restored from the Home Assistant backup.
 AdGuard recreates it.
