@@ -129,19 +129,23 @@ There are three update paths:
    Edit the live files under `/var/lib/...`, such as Home Assistant YAML,
    AdGuard config, or the n8n database.
 
-2. NixOS and bare-metal service updates:
-   Edit the repo, update the submodule, commit the change, then run:
+2. NixOS, bare-metal service, and hosted container image updates:
+   Update the flake inputs, commit the lock file, then rebuild:
 
 ```sh
-git submodule update --init --recursive
+nix flake update
+git add flake.lock
+git commit -m "chore: update flake inputs"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-This updates NixOS itself plus bare-metal services such as Tailscale.
+This updates NixOS itself plus bare-metal services such as Tailscale. The hosted
+container units also restart when `flake.lock` changes. Because their OCI pull
+policy is `always`, Docker pulls the current registry image for tags such as
+`latest` or `stable` during that restart.
 
-3. Hosted app version updates:
-   Change the image tag or digest in `profiles/nixos-server/hosted-stack.nix`
-   for containerized services, then commit and rebuild.
+3. Explicit app config or image policy changes:
+   Edit `profiles/nixos-server/hosted-stack.nix`, then commit and rebuild.
 
 ## OCI Container Model
 
@@ -151,20 +155,15 @@ files, networking, and systemd ordering. The application data remains in
 `/var/lib/...` so it can be snapshotted, backed up, and restored separately from
 the container image.
 
-An OCI `image = "..."` value is only the image reference passed to Docker. It is
-not locked by `nix flake update`, and tags like `latest` or `stable` remain
-floating registry references. The module's default pull policy is `missing`, so
-Docker pulls the image only when it is absent locally unless `pull` is changed.
+The stack intentionally uses floating tags during migration and sets the OCI
+pull policy to `always`. This makes the normal `nix flake update` +
+`nixos-rebuild switch` workflow refresh the hosted app images too, because the
+container units restart when `flake.lock` changes.
 
-Practical policy:
-
-- Keep the current floating tags during migration while the stack is still being
-  proven.
-- For normal use, prefer explicit version tags where available.
-- For reproducible rollbacks, pin by digest, for example
-  `image = "example/app@sha256:..."`.
-- For fully Nix-managed images, use `imageFile` or `imageStream` later so the
-  image is loaded from the Nix store instead of pulled directly by Docker.
+This is convenient, but it is not fully reproducible: the exact container image
+digest is registry state, not data stored in `flake.lock`. For stricter rollback
+later, pin by digest or move selected images to `imageFile` or `imageStream` so
+they are loaded from the Nix store instead of pulled directly by Docker.
 
 ## Rollback And Backup
 
