@@ -163,7 +163,11 @@ in
         "${dataRoot}/home-assistant:/config"
         "/run/dbus:/run/dbus:ro"
       ];
-      extraOptions = [ "--network=host" ];
+      extraOptions = [
+        "--network=host"
+        "--cap-add=NET_ADMIN"
+        "--cap-add=NET_RAW"
+      ];
     };
 
     adguard = {
@@ -183,7 +187,11 @@ in
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
       pull = containerPullPolicy;
       volumes = [ "${dataRoot}/matter-server:/data" ];
-      extraOptions = [ "--network=host" ];
+      extraOptions = [
+        "--network=host"
+        "--cap-add=NET_ADMIN"
+        "--cap-add=NET_RAW"
+      ];
     };
 
     n8n = {
