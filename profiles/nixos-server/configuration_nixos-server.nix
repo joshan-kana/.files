@@ -76,7 +76,13 @@
   };
 
   security.sudo.wheelNeedsPassword = true;
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+    };
+  };
   services.tailscale = {
     useRoutingFeatures = "server";
     extraUpFlags = [ "--advertise-routes=192.168.1.0/24" ];
