@@ -88,24 +88,44 @@ whose password is stored somewhere you can reach after the Pi dies.
 
 ## Fast Local Restore
 
-Use this when you made a bad config change and want to go back quickly.
+Use this when a bad app config change needs to be rolled back quickly from a
+local Snapper snapshot.
 
-1. Stop the affected app if it is running.
-2. Pick a snapshot.
-3. Restore only the relevant files.
-4. Start the app again.
-
-Example for Home Assistant:
+List snapshots:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service
 sudo snapper -c var-lib list
-sudo snapper -c var-lib undochange <old>..<new>
-sudo systemctl start docker-home-assistant.service
 ```
 
-`<old>..<new>` is the snapshot range Snapper shows from `snapper list`. Think of
-this as “make `/var/lib` look like it did before the bad edit.”
+Preview the changes between two snapshots:
+
+```sh
+sudo snapper -c var-lib status <old>..<new>
+```
+
+Restore one app directory. Stop the affected app first, restore its app-data
+directory, then start it again. This example restores n8n:
+
+```sh
+sudo systemctl stop docker-n8n.service
+sudo snapper -c var-lib undochange <old>..<new> /var/lib/apps/n8n
+sudo systemctl start docker-n8n.service
+```
+
+Restore the whole hosted app-data directory. Stop affected containers first,
+restore `/var/lib/apps`, then switch the NixOS profile so systemd reconciles the
+container units:
+
+```sh
+sudo snapper -c var-lib undochange <old>..<new> /var/lib/apps
+sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+```
+
+`<old>..<new>` is the snapshot range Snapper shows from `snapper list`.
+
+Use the single-app restore when only one app is broken. Use the whole
+`/var/lib/apps` restore when the full hosted app state needs to go back to the
+same point in time.
 
 ## Offsite Restore From Dropbox
 
