@@ -143,16 +143,28 @@ This updates NixOS itself plus bare-metal services such as Tailscale.
    Change the image tag or digest in `profiles/nixos-server/hosted-stack.nix`
    for containerized services, then commit and rebuild.
 
-Floating tags like `stable` and `latest` still exist in the stack. Pinned
-versions or digests are better for reproducible rollbacks.
+## OCI Container Model
 
-To move the server to a newer stable NixOS package set:
+The server uses the NixOS `virtualisation.oci-containers` module with the Docker
+backend. Nix declares the container service boundary, volumes, environment
+files, networking, and systemd ordering. The application data remains in
+`/var/lib/...` so it can be snapshotted, backed up, and restored separately from
+the container image.
 
-```sh
-nix flake lock --update-input nixpkgs-stable --update-input nixos-hardware
-git commit -am "Update server nixpkgs"
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
-```
+An OCI `image = "..."` value is only the image reference passed to Docker. It is
+not locked by `nix flake update`, and tags like `latest` or `stable` remain
+floating registry references. The module's default pull policy is `missing`, so
+Docker pulls the image only when it is absent locally unless `pull` is changed.
+
+Practical policy:
+
+- Keep the current floating tags during migration while the stack is still being
+  proven.
+- For normal use, prefer explicit version tags where available.
+- For reproducible rollbacks, pin by digest, for example
+  `image = "example/app@sha256:..."`.
+- For fully Nix-managed images, use `imageFile` or `imageStream` later so the
+  image is loaded from the Nix store instead of pulled directly by Docker.
 
 ## Rollback And Backup
 
