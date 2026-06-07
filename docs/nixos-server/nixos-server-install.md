@@ -42,7 +42,6 @@ You need:
 - a Raspberry Pi 4
 - a microSD card
 - Power and Ethernet to the Pi
-- the Home Assistant backup archive on the user's machine
 - a local checkout of this repo
 - an `aarch64-linux` builder
 
@@ -54,16 +53,7 @@ Set these variables on the user's machine:
 ```sh
 export REPO_DIR="$HOME/.files"
 export BUILD_HOST="orb"
-export HA_BACKUP_ARCHIVE="$HOME/Downloads/home_assistant_main_backup.tar"
-export HA_BACKUP_DIR="$(dirname "$HA_BACKUP_ARCHIVE")/extracted-home-assistant-backup"
 export SECRETS_DIR="$HOME/.secrets"
-```
-
-Extract the Home Assistant backup:
-
-```sh
-mkdir -p "$HA_BACKUP_DIR" &&
-  tar -xf "$HA_BACKUP_ARCHIVE" -C "$HA_BACKUP_DIR"
 ```
 
 ## Secrets Bundle
@@ -270,17 +260,17 @@ Immediately change the temporary first-boot password:
 passwd
 ```
 
-## Copy Repo, Secrets, And Backup Data
+## Copy Repo And Secrets
 
-Copy the local repo to the server, copy the secrets bundle and the extracted
-Home Assistant backup, then install the GitHub SSH key for authentication:
+Copy the local repo and secrets bundle to the server, then install the GitHub SSH
+key for authentication:
 
 ```sh
 export SERVER="192.168.1.3"
 
 ssh "joshan@$SERVER" '
-  rm -rf /tmp/.secrets /tmp/ha-backup &&
-  mkdir -p /tmp/.secrets /tmp/ha-backup /home/joshan/.files
+  rm -rf /tmp/.secrets &&
+  mkdir -p /tmp/.secrets /home/joshan/.files
 ' &&
   nix shell nixpkgs#rsync -c sh -eu -c '
     rsync -a --delete \
@@ -292,10 +282,6 @@ ssh "joshan@$SERVER" '
     rsync -a --delete \
       "$SECRETS_DIR"/ \
       "joshan@$SERVER:/tmp/.secrets/"
-
-    rsync -a --delete \
-      "$HA_BACKUP_DIR"/ \
-      "joshan@$SERVER:/tmp/ha-backup/"
   ' &&
   ssh -t "joshan@$SERVER" '
     set -e
@@ -335,8 +321,7 @@ ssh -t "joshan@$SERVER" '
 '
 ```
 
-For a one-time HAOS backup migration, use `docs/nixos-server/migration.md` after
-copying the extracted backup to `/tmp/ha-backup`.
+For a one-time HAOS backup migration, use `docs/nixos-server/migration.md`.
 
 ## Verify The System
 
