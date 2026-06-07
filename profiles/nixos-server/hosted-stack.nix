@@ -31,7 +31,7 @@ let
     hostShimIp = "192.168.1.5";
   };
 
-  resticRepository = "rclone:dropbox:Backups/nixos-home-assistant/restic";
+  resticRepository = "rclone:dropbox:Archives/Backups/nixos-server";
   resticPasswordFile = "${secretsDir}/restic-password";
   rcloneConfigFile = "${secretsDir}/rclone.conf";
 
