@@ -60,17 +60,17 @@ rm -rf "$HA_BACKUP_DIR" &&
     mkdir -p /tmp/.secrets /tmp/ha-backup /home/joshan/.files
   ' &&
   nix shell nixpkgs#rsync -c sh -eu -c '
-    rsync -a --delete \
+    rsync -ah --delete --info=progress2 \
       --exclude /result \
       --exclude /.direnv \
       "$REPO_DIR"/ \
       "joshan@$SERVER:/home/joshan/.files/"
 
-    rsync -a --delete \
+    rsync -ah --delete --info=progress2 \
       "$SECRETS_DIR"/ \
       "joshan@$SERVER:/tmp/.secrets/"
 
-    rsync -a --delete \
+    rsync -ah --delete --info=progress2 \
       "$HA_BACKUP_DIR"/ \
       "joshan@$SERVER:/tmp/ha-backup/"
   ' &&
@@ -98,17 +98,17 @@ rm -rf "$HA_BACKUP_DIR" &&
       /var/lib/apps/openclaw \
       /var/lib/apps/openclaw-auth
 
-    sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/ /var/lib/apps/home-assistant/
-    sudo rsync -a --delete /tmp/ha-backup/a0d7b954_adguard/data/adguard/ /var/lib/apps/adguard/conf/
-    sudo rsync -a --delete /tmp/ha-backup/core_matter_server/data/ /var/lib/apps/matter-server/
-    sudo rsync -a --delete /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/apps/n8n/
+    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/ /var/lib/apps/home-assistant/
+    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/a0d7b954_adguard/data/adguard/ /var/lib/apps/adguard/conf/
+    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/core_matter_server/data/ /var/lib/apps/matter-server/
+    sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/apps/n8n/
 
     if [ -d /tmp/ha-backup/homeassistant/data/.openclaw ]; then
-      sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/.openclaw/ /var/lib/apps/openclaw/
+      sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/.openclaw/ /var/lib/apps/openclaw/
     fi
 
     if [ -d /tmp/ha-backup/homeassistant/data/.config/openclaw ]; then
-      sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/.config/openclaw/ /var/lib/apps/openclaw-auth/
+      sudo rsync -ah --delete --info=progress2 /tmp/ha-backup/homeassistant/data/.config/openclaw/ /var/lib/apps/openclaw-auth/
     fi
 
     sudo chown -R root:root /var/lib/apps
