@@ -219,8 +219,8 @@ The server should come up directly on `192.168.1.3`.
 Test SSH from the user's machine:
 
 ```sh
-ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
-ssh joshan@192.168.1.3 true
+ssh-keygen -R 192.168.1.3
+ssh joshan@192.168.1.3
 ```
 
 ## Copy Repo, Secrets, And Backup Data
