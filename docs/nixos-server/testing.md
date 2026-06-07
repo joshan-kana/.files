@@ -72,3 +72,29 @@ orb sh -lc 'cd /Users/joshan/.files-nixos-server && nix build .#nixosConfigurati
 
 This completed successfully and built the production system closure, including
 the Snapper and restic units.
+
+## Real Pi Boot Validation
+
+The flashed image has been tested on the Raspberry Pi 4. UART output confirmed
+that U-Boot loaded `extlinux`, the generic cached kernel, the initrd, and the
+board device tree from the FAT `FIRMWARE` partition.
+
+The final boot fix was to keep boot files on `/boot`, mount the Btrfs top-level
+as `/`, and let the repart image module use its default `/nix/store` prefix.
+Setting a custom store prefix placed store paths in the wrong location and made
+`initrd-find-nixos-closure.service` fail.
+
+Successful first-boot signs:
+
+```sh
+ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
+ssh joshan@192.168.1.3 true
+```
+
+Useful post-boot checks:
+
+```sh
+findmnt / /boot /var/lib
+lsblk -f
+systemctl is-system-running || true
+```
