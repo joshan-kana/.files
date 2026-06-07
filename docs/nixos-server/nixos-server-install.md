@@ -223,6 +223,12 @@ ssh-keygen -R 192.168.1.3
 ssh joshan@192.168.1.3
 ```
 
+if successful, immediately change default password:
+
+```sh
+passwd
+```
+
 ## Copy Repo, Secrets, And Backup Data
 
 Copy the repo, secrets bundle, and extracted backup to the Pi:
