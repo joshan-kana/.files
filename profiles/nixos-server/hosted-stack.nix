@@ -6,7 +6,7 @@
 }:
 
 let
-  dataRoot = "/var/lib";
+  dataRoot = "/var/lib/apps";
   secretsDir = "/root/secrets";
 
   # Floating container tags are refreshed as part of the normal flake update
@@ -35,19 +35,7 @@ let
   resticPasswordFile = "${secretsDir}/restic-password";
   rcloneConfigFile = "${secretsDir}/rclone.conf";
 
-  backupPaths = [
-    "${dataRoot}/home-assistant"
-    "${dataRoot}/adguard"
-    "${dataRoot}/matter-server"
-    "${dataRoot}/n8n"
-    "${dataRoot}/mosquitto"
-    "${dataRoot}/zigbee2mqtt"
-    "${dataRoot}/zwave-js-ui"
-    "${dataRoot}/esphome"
-    "${dataRoot}/openclaw"
-    "${dataRoot}/openclaw-auth"
-    "${dataRoot}/tailscale"
-  ];
+  backupPaths = [ dataRoot ];
 in
 {
   environment.systemPackages = with pkgs; [
@@ -62,6 +50,7 @@ in
   virtualisation.oci-containers.backend = "docker";
 
   systemd.tmpfiles.rules = [
+    "d ${dataRoot} 0750 root root - -"
     "d ${dataRoot}/home-assistant 0750 root root - -"
     "d ${dataRoot}/adguard/work 0750 root root - -"
     "d ${dataRoot}/adguard/conf 0750 root root - -"
