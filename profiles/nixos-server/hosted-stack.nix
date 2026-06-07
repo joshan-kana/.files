@@ -226,7 +226,7 @@ in
   };
 
   services.snapper = {
-    snapshotInterval = "15min";
+    snapshotInterval = "*:0/15";
     cleanupInterval = "1h";
     configs.apps = {
       SUBVOLUME = dataRoot;
