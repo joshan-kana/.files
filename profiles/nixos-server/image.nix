@@ -49,6 +49,8 @@ in
       esp = {
         contents = {
           "/".source = firmwareTree;
+          "/extlinux".source = "${bootTree}/boot/extlinux";
+          "/nixos".source = "${bootTree}/boot/nixos";
         };
         repartConfig = {
           Type = "esp";
@@ -61,20 +63,14 @@ in
 
       root = {
         storePaths = [ config.system.build.toplevel ];
-        nixStorePrefix = "/root";
-        contents = {
-          "/root/boot".source = "${bootTree}/boot";
-        };
         repartConfig = {
           Type = "root";
           Format = "btrfs";
           Label = "NIXOS";
           Subvolumes = [
-            "/root"
             "/var-lib"
           ];
           MakeDirectories = [
-            "/root"
             "/var-lib"
           ];
         };

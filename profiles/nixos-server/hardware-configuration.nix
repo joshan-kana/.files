@@ -13,6 +13,12 @@
     "usb_storage"
     "uas"
     "sd_mod"
+    "sdhci"
+    "sdhci_pci"
+    "sdhci_iproc"
+    "sdhci_brcmstb"
+    "mmc_block"
+    "bcm2835_dma"
   ];
 
   fileSystems = {
@@ -20,13 +26,12 @@
       device = "/dev/disk/by-label/NIXOS";
       fsType = "btrfs";
       options = [
-        "subvol=root"
         "compress=zstd"
         "noatime"
       ];
     };
 
-    "/boot/firmware" = {
+    "/boot" = {
       device = "/dev/disk/by-label/FIRMWARE";
       fsType = "vfat";
     };
