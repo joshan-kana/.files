@@ -11,7 +11,7 @@ repo, flashed once, then booted directly into the final server layout.
 - Router: `192.168.1.1`
 - Home Assistant: `http://192.168.1.3:8123`
 - Repo on the Pi: `/home/joshan/.files`
-- App data root: `/var/lib`
+- App data root: `/var/lib/apps`
 - Runtime secrets: `/root/secrets`
 - Boot firmware mount: `/boot`
 - Root filesystem: Btrfs label `NIXOS` mounted as the Btrfs top-level
@@ -33,7 +33,7 @@ The built image already includes:
 The image does not include:
 
 - `/root/secrets`
-- restored Home Assistant or app data under `/var/lib`
+- restored application data under `/var/lib/apps`
 
 ## Before You Start
 
@@ -82,7 +82,9 @@ $SECRETS_DIR/
 ```
 
 Run this on the user's machine before copying files to the Pi.
+
 ### If secrets do not exist (first run only)
+
 Run this only on the first install if the secrets bundle does not already
 exist:
 
@@ -118,7 +120,8 @@ printf '%s\n' 'paste-the-tailscale-auth-key-here' > "$SECRETS_DIR/tailscale-auth
   chmod 600 "$SECRETS_DIR/tailscale-authkey"
 ```
 
-Authorize Dropbox with rclone on the user's machine:
+Authorize Dropbox with rclone on the user's machine.
+
 In the rclone prompts:
 
 1. choose `n` for a new remote
@@ -135,17 +138,23 @@ cp "$HOME/.config/rclone/rclone.conf" "$SECRETS_DIR/rclone.conf" &&
   chmod 600 "$SECRETS_DIR/rclone.conf"
 ```
 
+Create the Dropbox folder used by restic:
+
+```sh
+nix shell nixpkgs#rclone -c rclone mkdir dropbox:Archives/Backups/nixos-server
+```
+
 Test the remote:
 
 ```sh
-rclone lsd dropbox:
+nix shell nixpkgs#rclone -c rclone lsd dropbox:Archives/Backups
 ```
 
 If the authorization has to be done for a headless machine, use rclone's remote
 authorization flow from a machine with a browser:
 
 ```sh
-rclone authorize dropbox
+nix shell nixpkgs#rclone -c rclone authorize dropbox
 ```
 
 Paste the returned token into `rclone config` when it asks for remote
@@ -263,70 +272,69 @@ passwd
 
 ## Copy Repo, Secrets, And Backup Data
 
-Copy the local repo to the Pi, including `.git`. This preserves unpushed local
-commits and uncommitted working-tree changes for emergency bootstrap work:
+Copy the local repo to the server, copy the secrets bundle and the extracted
+Home Assistant backup, then install the GitHub SSH key for authentication:
 
 ```sh
-tar --exclude result --exclude .direnv -C "$REPO_DIR" -cf - . | ssh joshan@192.168.1.3 'rm -rf /home/joshan/.files && mkdir -p /home/joshan/.files && tar -C /home/joshan/.files -xf -'
+export SERVER="192.168.1.3"
+
+ssh "joshan@$SERVER" '
+  rm -rf /tmp/.secrets /tmp/ha-backup &&
+  mkdir -p /tmp/.secrets /tmp/ha-backup /home/joshan/.files
+' &&
+  nix shell nixpkgs#rsync -c sh -eu -c '
+    rsync -a --delete \
+      --exclude /result \
+      --exclude /.direnv \
+      "$REPO_DIR"/ \
+      "joshan@$SERVER:/home/joshan/.files/"
+
+    rsync -a --delete \
+      "$SECRETS_DIR"/ \
+      "joshan@$SERVER:/tmp/.secrets/"
+
+    rsync -a --delete \
+      "$HA_BACKUP_DIR"/ \
+      "joshan@$SERVER:/tmp/ha-backup/"
+  ' &&
+  ssh -t "joshan@$SERVER" '
+    set -e
+
+    sudo install -d -m 700 /root/secrets
+    sudo cp -a /tmp/.secrets/. /root/secrets/
+    sudo chown -R root:root /root/secrets
+    sudo chmod 700 /root/secrets
+    sudo find /root/secrets -type f -exec chmod 600 {} +
+
+    sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh
+    sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
+    sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
+    sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts
+    sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
+
+    rm -rf /tmp/.secrets /tmp/github-known-hosts
+  '
 ```
 
-Copy the secrets bundle and extracted Home Assistant backup to the Pi:
+## Restore App Data From Restic
+
+Use this when replacing an existing NixOS server that already has a restic
+backup. This restores the app data tree managed by the hosted containers:
 
 ```sh
-ssh joshan@192.168.1.3 'rm -rf /tmp/nixos-server-secrets /tmp/ha-backup && mkdir -p /tmp/nixos-server-secrets /tmp/ha-backup' &&
-  tar -C "$SECRETS_DIR" -cf - . |
-  ssh joshan@192.168.1.3 'cd /tmp/nixos-server-secrets && tar xf -' &&
-  tar -C "$HA_BACKUP_DIR" -cf - . |
-  ssh joshan@192.168.1.3 'cd /tmp/ha-backup && tar xf -'
-```
+ssh -t "joshan@$SERVER" '
+  sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
+    restic -r rclone:dropbox:Archives/Backups/nixos-server \
+    --password-file /root/secrets/restic-password \
+    restore latest \
+    --target / \
+    --include /var/lib/apps
 
-Install the secrets into place:
-
-```sh
-ssh -t joshan@192.168.1.3 '
-  sudo install -d -m 700 /root/secrets &&
-  sudo cp -a /tmp/nixos-server-secrets/. /root/secrets/ &&
-  sudo chown -R root:root /root/secrets &&
-  sudo chmod 600 /root/secrets/*
-'
-```
-
-Install the GitHub SSH key for the `joshan` user so the Pi can pull the private repo later:
-
-```sh
-ssh -t joshan@192.168.1.3 '
-  sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh &&
-  sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519 &&
-  sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub &&
-  sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts &&
-  sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
-'
-```
-
-## Restore Mutable App Data
-
-Stop the hosted apps, restore the data directories, then rebuild:
-
-```sh
-ssh -t joshan@192.168.1.3 '
-  sudo systemctl stop \
-    docker-home-assistant.service \
-    docker-adguard.service \
-    docker-matter-server.service \
-    docker-n8n.service \
-    docker-openclaw.service 2>/dev/null || true &&
-  sudo cp -a /tmp/ha-backup/homeassistant/data/. /var/lib/home-assistant/ &&
-  sudo cp -a /tmp/ha-backup/a0d7b954_adguard/data/adguard/. /var/lib/adguard/conf/ &&
-  sudo cp -a /tmp/ha-backup/core_matter_server/data/. /var/lib/matter-server/ &&
-  sudo cp -a /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/. /var/lib/n8n/ &&
   sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 '
 ```
 
-`/var/lib/adguard/work` is not restored from the Home Assistant backup.
-AdGuard recreates it. The AdGuard macvlan parent interface is detected from the default IPv4 route at runtime, so the install does not depend on the Ethernet interface being named `end0`.
-
-OpenClaw starts fresh unless you deliberately restore old state later.
+For the first HAOS to NixOS migration, use `migration.md` after the copy step.
 
 ## Verify The System
 
@@ -364,13 +372,10 @@ cd /home/joshan/.files &&
   sudo nixos-rebuild switch --flake .#nixos-server
 ```
 
-For app config changes managed outside Nix:
+For app config changes managed outside Nix, container app data lives under:
 
-- Home Assistant config lives in `/var/lib/home-assistant`
-- AdGuard config lives in `/var/lib/adguard/conf`
-- Matter Server data lives in `/var/lib/matter-server`
-- `n8n` data lives in `/var/lib/n8n`
-- OpenClaw state lives in `/var/lib/openclaw`
-- OpenClaw auth profile state lives in `/var/lib/openclaw-auth`
+```text
+/var/lib/apps/<app-name>
+```
 
 Those paths are covered by Snapper snapshots and the restic Dropbox backup.
