@@ -9,6 +9,14 @@ let
   dataRoot = "/var/lib";
   secretsDir = "/root/secrets";
 
+  # Floating container tags are refreshed as part of the normal flake update
+  # workflow: `nix flake update`, then `nixos-rebuild switch`.
+  containerPullPolicy = "always";
+  containerUpdateTrigger = builtins.path {
+    path = ../../flake.lock;
+    name = "nixos-server-flake-lock";
+  };
+
   # Change these to match the LAN before deploying. The AdGuard IP should be
   # outside the DHCP pool, or reserved so another device cannot claim it.
   adguardNetwork = {
@@ -136,14 +144,21 @@ in
     '';
   };
 
+  systemd.services.docker-home-assistant.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.docker-matter-server.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.docker-n8n.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.docker-openclaw.restartTriggers = [ containerUpdateTrigger ];
+
   systemd.services.docker-adguard = {
     after = [ "docker-network-adguard.service" ];
     requires = [ "docker-network-adguard.service" ];
+    restartTriggers = [ containerUpdateTrigger ];
   };
 
   virtualisation.oci-containers.containers = {
     home-assistant = {
       image = "ghcr.io/home-assistant/home-assistant:stable";
+      pull = containerPullPolicy;
       volumes = [
         "${dataRoot}/home-assistant:/config"
         "/run/dbus:/run/dbus:ro"
@@ -153,6 +168,7 @@ in
 
     adguard = {
       image = "adguard/adguardhome:latest";
+      pull = containerPullPolicy;
       volumes = [
         "${dataRoot}/adguard/work:/opt/adguardhome/work"
         "${dataRoot}/adguard/conf:/opt/adguardhome/conf"
@@ -165,12 +181,14 @@ in
 
     matter-server = {
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
+      pull = containerPullPolicy;
       volumes = [ "${dataRoot}/matter-server:/data" ];
       extraOptions = [ "--network=host" ];
     };
 
     n8n = {
       image = "docker.n8n.io/n8nio/n8n:latest";
+      pull = containerPullPolicy;
       volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
       ports = [ "5678:5678" ];
       environment = {
@@ -181,6 +199,7 @@ in
 
     openclaw = {
       image = "ghcr.io/openclaw/openclaw:latest";
+      pull = containerPullPolicy;
       volumes = [
         "${dataRoot}/openclaw:/home/node/.openclaw"
         "${dataRoot}/openclaw-auth:/home/node/.config/openclaw"
