@@ -8,7 +8,7 @@ NixOS manages the normal backup/rollback machinery:
 - `services.restic.backups.home-assistant`: backs up app data to Dropbox every
   30 minutes.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
-  explicit `/var/lib/...` storage.
+  explicit persistent storage.
 
 You should not normally run backup commands by hand. The manual commands below
 are for setup checks, “did it work?” verification, and emergency restore.
@@ -20,29 +20,36 @@ There are two kinds of state:
 | Thing | Where it lives | How to roll back |
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
-| Home Assistant/app data | `/var/lib/...` | Restore a Snapper snapshot or restic backup |
+| Container app data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup |
 
-That split is intentional. If a Home Assistant edit breaks something, you can
-roll back `/var/lib/home-assistant` without rolling back the whole NixOS system.
+That split is intentional. If an app edit breaks something, restore app data
+without rolling back the whole NixOS system.
 
 ## App Data Locations
 
-Each app gets a plain directory:
+Container app data lives under one parent directory:
 
-- Home Assistant: `/var/lib/home-assistant`
-- AdGuard Home: `/var/lib/adguard`
-- Matter Server: `/var/lib/matter-server`
-- n8n: `/var/lib/n8n`
-- OpenClaw: `/var/lib/openclaw`
-- OpenClaw auth profile: `/var/lib/openclaw-auth`
-- Tailscale: `/var/lib/tailscale`
-- Future MQTT/Zigbee/Z-Wave/ESPHome data:
-  - `/var/lib/mosquitto`
-  - `/var/lib/zigbee2mqtt`
-  - `/var/lib/zwave-js-ui`
-  - `/var/lib/esphome`
+```text
+/var/lib/apps
+```
 
-These directories are what Snapper snapshots and restic backs up.
+Each app gets a plain child directory, for example:
+
+```text
+/var/lib/apps/home-assistant
+/var/lib/apps/adguard
+/var/lib/apps/matter-server
+/var/lib/apps/n8n
+/var/lib/apps/openclaw
+/var/lib/apps/openclaw-auth
+```
+
+Future container apps should store mutable data under `/var/lib/apps` so the
+normal backup and restore flow includes them automatically.
+
+Tailscale is a native service and uses its own state outside `/var/lib/apps`.
+Normal replacement installs enrol with `/root/secrets/tailscale-authkey` instead
+of restoring an old Tailscale machine identity.
 
 ## Restic Repository
 
@@ -64,13 +71,12 @@ Secrets are split into two buckets:
 
 | Secret | Where it lives | Backed up how |
 | --- | --- | --- |
-| Home Assistant `secrets.yaml` | `/var/lib/home-assistant/secrets.yaml` | Snapper and restic |
-| AdGuard admin hash/config secrets | `/var/lib/adguard/conf` | Snapper and restic |
-| n8n credentials database | `/var/lib/n8n` | Snapper and restic |
+| Home Assistant `secrets.yaml` | `/var/lib/apps/home-assistant/secrets.yaml` | Snapper and restic |
+| AdGuard admin hash/config secrets | `/var/lib/apps/adguard/conf` | Snapper and restic |
+| n8n credentials database | `/var/lib/apps/n8n` | Snapper and restic |
 | n8n runtime secrets | `/root/secrets/n8n.env` | Separate encrypted copy |
-| OpenClaw app config/passwords | `/var/lib/openclaw` | Snapper and restic |
-| OpenClaw auth profile secrets | `/var/lib/openclaw-auth` | Snapper and restic |
-| Tailscale machine state | `/var/lib/tailscale` | Snapper and restic |
+| OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
+| OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
 | Tailscale first-boot auth key | `/root/secrets/tailscale-authkey` | Separate encrypted copy |
 | Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
@@ -84,7 +90,7 @@ whose password is stored somewhere you can reach after the Pi dies.
 
 Use this when you made a bad config change and want to go back quickly.
 
-1. Stop the affected app.
+1. Stop the affected app if it is running.
 2. Pick a snapshot.
 3. Restore only the relevant files.
 4. Start the app again.
@@ -108,28 +114,37 @@ Use this if the local disk is lost or the local snapshots are not enough.
 List encrypted backup points:
 
 ```sh
-sudo restic -r rclone:dropbox:Archives/Backups/nixos-server \
+sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
+  restic -r rclone:dropbox:Archives/Backups/nixos-server \
   --password-file /root/secrets/restic-password snapshots
 ```
 
-Restore Home Assistant into a temporary directory first:
+Restore all container app data on a replacement server:
 
 ```sh
-sudo restic -r rclone:dropbox:Archives/Backups/nixos-server \
+sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
+  restic -r rclone:dropbox:Archives/Backups/nixos-server \
   --password-file /root/secrets/restic-password restore latest \
-  --target /tmp/ha-restore \
-  --include /var/lib/home-assistant
+  --target / \
+  --include /var/lib/apps
 ```
 
-Inspect `/tmp/ha-restore` before replacing live files. This avoids turning one
-mistake into two mistakes with a tiny hat.
+Restore one app if only that app is broken:
+
+```sh
+sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
+  restic -r rclone:dropbox:Archives/Backups/nixos-server \
+  --password-file /root/secrets/restic-password restore latest \
+  --target / \
+  --include /var/lib/apps/n8n
+```
 
 ## Media Policy
 
 The only default restic exclusion is:
 
 ```text
-/var/lib/home-assistant/www/media/ha-bambulab
+/var/lib/apps/home-assistant/www/media/ha-bambulab
 ```
 
 The raw HAOS backup showed that Bambu Lab printer media dominates the Home
@@ -137,6 +152,3 @@ Assistant backup size. SQLite files such as Home Assistant and n8n databases are
 included because they are app state. If the printer media matters, back it up
 separately or remove that exclude from
 `profiles/nixos-server/hosted-stack.nix`.
-
-For n8n restores, stop `docker-n8n.service`, replace `/var/lib/n8n`, then
-start the container again.
