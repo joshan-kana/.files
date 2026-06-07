@@ -32,10 +32,42 @@ keeping one-off parser scripts in this repo.
 3. Install `/root/secrets`.
 4. Copy the extracted Home Assistant backup to `/tmp/ha-backup`.
 5. Restore app data into `/var/lib/apps/...`.
-6. Switch the profile:
+6. Switch the profile.
+
+## Restore App Data
+
+Run this after the install guide has copied the extracted Home Assistant backup
+to `/tmp/ha-backup` on the server:
 
 ```sh
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+ssh -t joshan@192.168.1.3 '
+  set -e
+
+  sudo install -d -m 0750 \
+    /var/lib/apps/home-assistant \
+    /var/lib/apps/adguard/conf \
+    /var/lib/apps/adguard/work \
+    /var/lib/apps/matter-server \
+    /var/lib/apps/n8n \
+    /var/lib/apps/openclaw \
+    /var/lib/apps/openclaw-auth
+
+  sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/ /var/lib/apps/home-assistant/
+  sudo rsync -a --delete /tmp/ha-backup/a0d7b954_adguard/data/adguard/ /var/lib/apps/adguard/conf/
+  sudo rsync -a --delete /tmp/ha-backup/core_matter_server/data/ /var/lib/apps/matter-server/
+  sudo rsync -a --delete /tmp/ha-backup/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/apps/n8n/
+
+  if [ -d /tmp/ha-backup/homeassistant/data/.openclaw ]; then
+    sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/.openclaw/ /var/lib/apps/openclaw/
+  fi
+
+  if [ -d /tmp/ha-backup/homeassistant/data/.config/openclaw ]; then
+    sudo rsync -a --delete /tmp/ha-backup/homeassistant/data/.config/openclaw/ /var/lib/apps/openclaw-auth/
+  fi
+
+  sudo chown -R root:root /var/lib/apps
+  sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+'
 ```
 
 ## Restore Paths
