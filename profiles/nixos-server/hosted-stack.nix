@@ -13,7 +13,9 @@ let
   # outside the DHCP pool, or reserved so another device cannot claim it.
   adguardNetwork = {
     name = "adguard_lan";
-    parentInterface = "end0";
+    # null means: use the interface that owns the default IPv4 route at runtime.
+    # This avoids hard-coding Pi Ethernet names such as end0/eth0.
+    parentInterface = null;
     subnet = "192.168.1.0/24";
     gateway = "192.168.1.1";
     containerIp = "192.168.1.2";
@@ -93,6 +95,7 @@ in
     wantedBy = [ "multi-user.target" ];
     path = with pkgs; [
       docker
+      gawk
       iproute2
     ];
     serviceConfig = {
@@ -100,17 +103,35 @@ in
       RemainAfterExit = true;
     };
     script = ''
+      parentInterface=""
+      ${lib.optionalString (adguardNetwork.parentInterface != null) ''
+        parentInterface="${adguardNetwork.parentInterface}"
+      ''}
+      ${lib.optionalString (adguardNetwork.parentInterface == null) ''
+        parentInterface="$(ip -o -4 route show to default | awk '{ print $5; exit }')"
+      ''}
+
+      if [ -z "$parentInterface" ]; then
+        echo "Could not determine AdGuard macvlan parent interface" >&2
+        exit 1
+      fi
+
+      existingParent="$(docker network inspect -f '{{ index .Options "parent" }}' ${adguardNetwork.name} 2>/dev/null || true)"
+      if [ -n "$existingParent" ] && [ "$existingParent" != "$parentInterface" ]; then
+        docker network rm ${adguardNetwork.name}
+      fi
+
       if ! docker network inspect ${adguardNetwork.name} >/dev/null 2>&1; then
         docker network create \
           --driver macvlan \
           --subnet ${adguardNetwork.subnet} \
           --gateway ${adguardNetwork.gateway} \
-          --opt parent=${adguardNetwork.parentInterface} \
+          --opt parent="$parentInterface" \
           ${adguardNetwork.name}
       fi
 
       if ! ip link show adguard-shim >/dev/null 2>&1; then
-        ip link add adguard-shim link ${adguardNetwork.parentInterface} type macvlan mode bridge
+        ip link add adguard-shim link "$parentInterface" type macvlan mode bridge
       fi
 
       ip addr replace ${adguardNetwork.hostShimIp}/32 dev adguard-shim
