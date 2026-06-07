@@ -4,8 +4,8 @@
 
 NixOS manages the normal backup/rollback machinery:
 
-- `services.snapper`: creates local `/var/lib` snapshots every 15 minutes.
-- `services.restic.backups.home-assistant`: backs up app data to Dropbox every
+- `services.snapper`: creates local `/var/lib/apps` snapshots every 15 minutes.
+- `services.restic.backups.apps`: backs up app data to Dropbox every
   30 minutes.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
   explicit persistent storage.
@@ -94,7 +94,7 @@ local Snapper snapshot.
 List snapshots:
 
 ```sh
-sudo snapper -c var-lib list
+sudo snapper -c apps list
 ```
 
 Preview the changes between two snapshots:
@@ -108,7 +108,7 @@ directory, then start it again. This example restores n8n:
 
 ```sh
 sudo systemctl stop docker-n8n.service
-sudo snapper -c var-lib undochange <old>..<new> /var/lib/apps/n8n
+sudo snapper -c apps undochange <old>..<new> /var/lib/apps/home-assistant /var/lib/apps/n8n
 sudo systemctl start docker-n8n.service
 ```
 
@@ -117,7 +117,7 @@ restore `/var/lib/apps`, then switch the NixOS profile so systemd reconciles the
 container units:
 
 ```sh
-sudo snapper -c var-lib undochange <old>..<new> /var/lib/apps
+sudo snapper -c apps undochange <old>..<new> /var/lib/apps/home-assistant /var/lib/apps
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
