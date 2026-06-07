@@ -273,13 +273,13 @@ ssh "joshan@$SERVER" '
   mkdir -p /tmp/.secrets /home/joshan/.files
 ' &&
   nix shell nixpkgs#rsync -c sh -eu -c '
-    rsync -a --delete \
+    rsync -ah --delete --info=progress2 \
       --exclude /result \
       --exclude /.direnv \
       "$REPO_DIR"/ \
       "joshan@$SERVER:/home/joshan/.files/"
 
-    rsync -a --delete \
+    rsync -ah --delete --info=progress2 \
       "$SECRETS_DIR"/ \
       "joshan@$SERVER:/tmp/.secrets/"
   ' &&
