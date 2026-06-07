@@ -48,6 +48,13 @@ export HA_BACKUP_DIR="$(dirname "$HA_BACKUP_ARCHIVE")/extracted-home-assistant-b
 rm -rf "$HA_BACKUP_DIR" &&
   mkdir -p "$HA_BACKUP_DIR" &&
   tar -xf "$HA_BACKUP_ARCHIVE" -C "$HA_BACKUP_DIR" &&
+  find "$HA_BACKUP_DIR" -maxdepth 1 -type f -name "*.tar.gz" -exec sh -eu -c '
+    for archive do
+      dir="${archive%.tar.gz}"
+      mkdir -p "$dir"
+      tar -xzf "$archive" -C "$dir"
+    done
+  ' sh {} + &&
   ssh "joshan@$SERVER" '
     rm -rf /tmp/.secrets /tmp/ha-backup &&
     mkdir -p /tmp/.secrets /tmp/ha-backup /home/joshan/.files
