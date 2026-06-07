@@ -64,6 +64,7 @@ in
     "d ${dataRoot}/openclaw 0750 root root - -"
     "d ${dataRoot}/openclaw-auth 0750 root root - -"
     "d ${secretsDir} 0700 root root - -"
+    "d ${dataRoot}/.snapshots 0750 root root - -"
   ];
 
   services.tailscale = {
@@ -225,10 +226,6 @@ in
     };
   };
 
-  systemd.tmpfiles.rules = [
-    "d ${dataRoot}/.snapshots 0750 root root -"
-  ];
-
   services.snapper = {
     snapshotInterval = "*:0/15";
     cleanupInterval = "1h";
@@ -250,6 +247,7 @@ in
     rcloneConfigFile = rcloneConfigFile;
     paths = backupPaths;
     exclude = [
+      "${dataRoot}/.snapshots"
       "${dataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
