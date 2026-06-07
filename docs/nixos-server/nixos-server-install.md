@@ -316,10 +316,11 @@ ssh "joshan@$SERVER" '
   '
 ```
 
-## Restore App Data From Restic
+## Restore Mutable App Data
 
-Use this when replacing an existing NixOS server that already has a restic
-backup. This restores the app data tree managed by the hosted containers:
+For a replacement NixOS server with an existing restic backup, restore the app
+data root directly. The restic repository contains `/var/lib/apps`, so no app
+names need to be listed here:
 
 ```sh
 ssh -t "joshan@$SERVER" '
@@ -334,7 +335,8 @@ ssh -t "joshan@$SERVER" '
 '
 ```
 
-For the first HAOS to NixOS migration, use `migration.md` after the copy step.
+For a one-time HAOS backup migration, use `docs/nixos-server/migration.md` after
+copying the extracted backup to `/tmp/ha-backup`.
 
 ## Verify The System
 
