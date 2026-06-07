@@ -134,7 +134,17 @@ in
     '';
   };
 
-  systemd.services.docker-home-assistant.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.docker-home-assistant = {
+    after = [
+      "bluetooth.service"
+      "dbus.service"
+    ];
+    wants = [
+      "bluetooth.service"
+      "dbus.service"
+    ];
+    restartTriggers = [ containerUpdateTrigger ];
+  };
   systemd.services.docker-matter-server.restartTriggers = [ containerUpdateTrigger ];
   systemd.services.docker-n8n.restartTriggers = [ containerUpdateTrigger ];
   systemd.services.docker-openclaw.restartTriggers = [ containerUpdateTrigger ];

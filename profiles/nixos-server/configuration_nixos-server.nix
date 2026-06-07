@@ -28,6 +28,11 @@
 
   nixpkgs.config.allowUnfree = true;
 
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+
   nix.settings = {
     experimental-features = [
       "nix-command"
@@ -96,6 +101,7 @@
   };
 
   environment.systemPackages = with pkgs; [
+    bluez
     git
     vim
     wget
