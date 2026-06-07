@@ -225,6 +225,10 @@ in
     };
   };
 
+  systemd.tmpfiles.rules = [
+    "d ${dataRoot}/.snapshots 0750 root root -"
+  ];
+
   services.snapper = {
     snapshotInterval = "*:0/15";
     cleanupInterval = "1h";
