@@ -351,11 +351,16 @@ curl -I http://192.168.1.3:5678
 
 ## Updating Later
 
-For normal system updates on the Pi:
+For normal updates on the Pi, update flake inputs, commit the lock file, then
+rebuild. The hosted containers are configured to restart when `flake.lock`
+changes and to pull the current registry image for their configured tags:
 
 ```sh
 cd /home/joshan/.files &&
   git pull --recurse-submodules &&
+  nix flake update &&
+  git add flake.lock &&
+  git commit -m "chore: update flake inputs" &&
   sudo nixos-rebuild switch --flake .#nixos-server
 ```
 
