@@ -44,6 +44,20 @@ Each app gets a plain directory:
 
 These directories are what Snapper snapshots and restic backs up.
 
+## Restic Repository
+
+The offsite restic repository is stored through the `dropbox` rclone remote at:
+
+```text
+Archives/Backups/nixos-server
+```
+
+The full repository URI used by NixOS is:
+
+```text
+rclone:dropbox:Archives/Backups/nixos-server
+```
+
 ## What About Secrets?
 
 Secrets are split into two buckets:
@@ -94,14 +108,14 @@ Use this if the local disk is lost or the local snapshots are not enough.
 List encrypted backup points:
 
 ```sh
-sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic \
+sudo restic -r rclone:dropbox:Archives/Backups/nixos-server \
   --password-file /root/secrets/restic-password snapshots
 ```
 
 Restore Home Assistant into a temporary directory first:
 
 ```sh
-sudo restic -r rclone:dropbox:Backups/nixos-home-assistant/restic \
+sudo restic -r rclone:dropbox:Archives/Backups/nixos-server \
   --password-file /root/secrets/restic-password restore latest \
   --target /tmp/ha-restore \
   --include /var/lib/home-assistant
