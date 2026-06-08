@@ -377,11 +377,6 @@ function walk(value) {
 
 walk(cfg);
 
-cfg.models = cfg.models || {};
-if (cfg.models.ollamaServerUrl !== url) changed = true;
-cfg.models.ollamaServerUrl = url;
-count++;
-
 if (changed) {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "Z");
   const backupPath = configPath + ".bak-ollama-url-sync-" + stamp;
