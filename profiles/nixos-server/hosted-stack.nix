@@ -9,6 +9,21 @@
 let
   dataRoot = appDataRoot;
   secretsDir = "/root/secrets";
+
+  appDataEditor = {
+    group = "appdata-editors";
+    gid = 1500;
+  };
+
+  openclawHostAdmin = {
+    user = "openclaw-admin";
+    privateKeyPath = "${secretsDir}/openclaw-host-admin-id_ed25519";
+    privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
+  };
+
+  appDataMode = "2770";
+  snapshotMode = "0750";
+
   lanInterface =
     config.networking.networkmanager.ensureProfiles.profiles."wired-static".connection."interface-name";
 
@@ -39,7 +54,46 @@ let
   backupPaths = [ dataRoot ];
 in
 {
+  users.groups.${appDataEditor.group}.gid = appDataEditor.gid;
+
+  users.users.joshan.extraGroups = [ appDataEditor.group ];
+
+  users.users.${openclawHostAdmin.user} = {
+    isNormalUser = true;
+    createHome = true;
+    hashedPassword = "!";
+    extraGroups = [ appDataEditor.group ];
+  };
+
+  security.sudo.extraRules = [
+    {
+      users = [ openclawHostAdmin.user ];
+      commands = [
+        {
+          command = "ALL";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
+
+  system.activationScripts.openclawHostAdminAuthorizedKeys = {
+    deps = [ "users" ];
+    text = ''
+      keyFile="${openclawHostAdmin.privateKeyPath}.pub"
+      home="/home/${openclawHostAdmin.user}"
+
+      if [ -f "$keyFile" ]; then
+        ${pkgs.coreutils}/bin/install -d -m 0700 -o ${openclawHostAdmin.user} -g users "$home/.ssh"
+        ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " openclaw-host-admin@nixos-server" }' "$keyFile" > "$home/.ssh/authorized_keys"
+        ${pkgs.coreutils}/bin/chown ${openclawHostAdmin.user}:users "$home/.ssh/authorized_keys"
+        ${pkgs.coreutils}/bin/chmod 0600 "$home/.ssh/authorized_keys"
+      fi
+    '';
+  };
+
   environment.systemPackages = with pkgs; [
+    acl
     docker
     iproute2
     restic
@@ -51,20 +105,15 @@ in
   virtualisation.oci-containers.backend = "docker";
 
   systemd.tmpfiles.rules = [
-    "d ${dataRoot} 0750 root root - -"
-    "d ${dataRoot}/home-assistant 0750 root root - -"
-    "d ${dataRoot}/adguard/work 0750 root root - -"
-    "d ${dataRoot}/adguard/conf 0750 root root - -"
-    "d ${dataRoot}/matter-server 0750 root root - -"
-    "d ${dataRoot}/n8n 0750 1000 1000 - -"
-    "d ${dataRoot}/mosquitto 0750 root root - -"
-    "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
-    "d ${dataRoot}/zwave-js-ui 0750 root root - -"
-    "d ${dataRoot}/esphome 0750 root root - -"
-    "d ${dataRoot}/openclaw 0750 1000 1000 - -"
-    "d ${dataRoot}/openclaw-auth 0750 1000 1000 - -"
+    "d ${dataRoot} ${appDataMode} root ${appDataEditor.group} - -"
+    "a+ ${dataRoot} - - - - u:1000:rwx,g:${appDataEditor.group}:rwx,d:u:1000:rwx,d:g:${appDataEditor.group}:rwx"
+
     "d ${secretsDir} 0700 root root - -"
-    "v ${dataRoot}/.snapshots 0750 root root - -"
+    "z ${openclawHostAdmin.privateKeyPath} 0400 1000 root - -"
+    "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
+
+    "v ${dataRoot}/.snapshots ${snapshotMode} root root - -"
+    "a ${dataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
   ];
 
   networking.macvlans.adguard-shim = {
@@ -219,6 +268,7 @@ in
   };
 
   systemd.services.docker-openclaw = {
+    unitConfig.AssertPathIsRegular = openclawHostAdmin.privateKeyPath;
     restartTriggers = [ containerUpdateTrigger ];
     after = [
       "configure-openclaw-gateway.service"
@@ -290,15 +340,18 @@ in
       volumes = [
         "${dataRoot}/openclaw:/home/node/.openclaw"
         "${dataRoot}/openclaw-auth:/home/node/.config/openclaw"
+        "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "/:/host"
-        "/var/run/docker.sock:/var/run/docker.sock"
+        "/nix/store:/nix/store:ro"
       ];
       environment = {
         OPENCLAW_DISABLE_BONJOUR = "1";
+        OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
       environmentFiles = [ "${secretsDir}/openclaw.env" ];
       extraOptions = [
         "--network=host"
+        "--group-add=${toString appDataEditor.gid}"
         "--add-host=host.docker.internal:host-gateway"
       ];
     };
