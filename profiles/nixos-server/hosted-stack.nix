@@ -7,7 +7,6 @@
 }:
 
 let
-  dataRoot = appDataRoot;
   secretsDir = "/root/secrets";
 
   appDataEditor = {
@@ -51,7 +50,7 @@ let
   resticPasswordFile = "${secretsDir}/restic-password";
   rcloneConfigFile = "${secretsDir}/rclone.conf";
 
-  backupPaths = [ dataRoot ];
+  backupPaths = [ appDataRoot ];
 in
 {
   users.groups.${appDataEditor.group}.gid = appDataEditor.gid;
@@ -105,15 +104,15 @@ in
   virtualisation.oci-containers.backend = "docker";
 
   systemd.tmpfiles.rules = [
-    "d ${dataRoot} ${appDataMode} root ${appDataEditor.group} - -"
-    "a+ ${dataRoot} - - - - u:1000:rwx,g:${appDataEditor.group}:rwx,d:u:1000:rwx,d:g:${appDataEditor.group}:rwx"
+    "d ${appDataRoot} ${appDataMode} root ${appDataEditor.group} - -"
+    "a+ ${appDataRoot} - - - - u:1000:rwx,g:${appDataEditor.group}:rwx,d:u:1000:rwx,d:g:${appDataEditor.group}:rwx"
 
     "d ${secretsDir} 0700 root root - -"
     "z ${openclawHostAdmin.privateKeyPath} 0400 1000 root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
 
-    "v ${dataRoot}/.snapshots ${snapshotMode} root root - -"
-    "a ${dataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
+    "v ${appDataRoot}/.snapshots ${snapshotMode} root root - -"
+    "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
   ];
 
   networking.macvlans.adguard-shim = {
@@ -231,7 +230,7 @@ in
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      configFile="${dataRoot}/openclaw/openclaw.json"
+      configFile="${appDataRoot}/openclaw/openclaw.json"
 
       if [ ! -f "$configFile" ]; then
         echo "OpenClaw config does not exist yet: $configFile" >&2
@@ -289,7 +288,7 @@ in
       image = "ghcr.io/home-assistant/home-assistant:stable";
       pull = containerPullPolicy;
       volumes = [
-        "${dataRoot}/home-assistant:/config"
+        "${appDataRoot}/home-assistant:/config"
         "/run/dbus:/run/dbus:ro"
       ];
       extraOptions = [
@@ -303,8 +302,8 @@ in
       image = "adguard/adguardhome:latest";
       pull = containerPullPolicy;
       volumes = [
-        "${dataRoot}/adguard/work:/opt/adguardhome/work"
-        "${dataRoot}/adguard/conf:/opt/adguardhome/conf"
+        "${appDataRoot}/adguard/work:/opt/adguardhome/work"
+        "${appDataRoot}/adguard/conf:/opt/adguardhome/conf"
       ];
       extraOptions = [
         "--network=${adguardNetwork.name}"
@@ -315,7 +314,7 @@ in
     matter-server = {
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
       pull = containerPullPolicy;
-      volumes = [ "${dataRoot}/matter-server:/data" ];
+      volumes = [ "${appDataRoot}/matter-server:/data" ];
       extraOptions = [
         "--network=host"
         "--cap-add=NET_ADMIN"
@@ -326,7 +325,7 @@ in
     n8n = {
       image = "docker.n8n.io/n8nio/n8n:latest";
       pull = containerPullPolicy;
-      volumes = [ "${dataRoot}/n8n:/home/node/.n8n" ];
+      volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
       ports = [ "5678:5678" ];
       environment = {
         GENERIC_TIMEZONE = config.time.timeZone;
@@ -338,8 +337,8 @@ in
       image = "ghcr.io/openclaw/openclaw:latest";
       pull = containerPullPolicy;
       volumes = [
-        "${dataRoot}/openclaw:/home/node/.openclaw"
-        "${dataRoot}/openclaw-auth:/home/node/.config/openclaw"
+        "${appDataRoot}/openclaw:/home/node/.openclaw"
+        "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
         "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "/:/host"
         "/nix/store:/nix/store:ro"
@@ -362,7 +361,7 @@ in
     cleanupInterval = "1h";
     persistentTimer = true;
     configs.apps = {
-      SUBVOLUME = dataRoot;
+      SUBVOLUME = appDataRoot;
       FSTYPE = "btrfs";
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
@@ -380,8 +379,8 @@ in
     rcloneConfigFile = rcloneConfigFile;
     paths = backupPaths;
     exclude = [
-      "${dataRoot}/.snapshots"
-      "${dataRoot}/home-assistant/www/media/ha-bambulab"
+      "${appDataRoot}/.snapshots"
+      "${appDataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
       "--keep-hourly 48"
