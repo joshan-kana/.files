@@ -64,7 +64,7 @@ in
     "d ${dataRoot}/openclaw 0750 root root - -"
     "d ${dataRoot}/openclaw-auth 0750 root root - -"
     "d ${secretsDir} 0700 root root - -"
-    "d ${dataRoot}/.snapshots 0750 root root - -"
+    "v ${dataRoot}/.snapshots 0750 root root - -"
   ];
 
   services.tailscale = {
@@ -229,8 +229,10 @@ in
   services.snapper = {
     snapshotInterval = "*:0/15";
     cleanupInterval = "1h";
+    persistentTimer = true;
     configs.apps = {
       SUBVOLUME = dataRoot;
+      FSTYPE = "btrfs";
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
       TIMELINE_LIMIT_HOURLY = 48;
