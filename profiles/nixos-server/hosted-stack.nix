@@ -9,6 +9,8 @@
 let
   dataRoot = appDataRoot;
   secretsDir = "/root/secrets";
+  lanInterface =
+    config.networking.networkmanager.ensureProfiles.profiles."wired-static".connection."interface-name";
 
   # Floating container tags are refreshed as part of the normal flake update
   # workflow: `nix flake update`, then `nixos-rebuild switch`.
@@ -22,9 +24,7 @@ let
   # outside the DHCP pool, or reserved so another device cannot claim it.
   adguardNetwork = {
     name = "adguard_lan";
-    # null means: use the interface that owns the default IPv4 route at runtime.
-    # This avoids hard-coding Pi Ethernet names such as end0/eth0.
-    parentInterface = null;
+    parentInterface = lanInterface;
     subnet = "192.168.1.0/24";
     gateway = "192.168.1.1";
     containerIp = "192.168.1.2";
@@ -67,6 +67,25 @@ in
     "v ${dataRoot}/.snapshots 0750 root root - -"
   ];
 
+  networking.macvlans.adguard-shim = {
+    interface = lanInterface;
+    mode = "bridge";
+  };
+
+  networking.interfaces.adguard-shim.ipv4.addresses = [
+    {
+      address = adguardNetwork.hostShimIp;
+      prefixLength = 32;
+    }
+  ];
+
+  networking.interfaces.adguard-shim.ipv4.routes = [
+    {
+      address = adguardNetwork.containerIp;
+      prefixLength = 32;
+    }
+  ];
+
   services.tailscale = {
     enable = true;
     openFirewall = true;
@@ -94,7 +113,6 @@ in
     wantedBy = [ "multi-user.target" ];
     path = with pkgs; [
       docker
-      gawk
       iproute2
     ];
     serviceConfig = {
@@ -102,18 +120,7 @@ in
       RemainAfterExit = true;
     };
     script = ''
-      parentInterface=""
-      ${lib.optionalString (adguardNetwork.parentInterface != null) ''
-        parentInterface="${adguardNetwork.parentInterface}"
-      ''}
-      ${lib.optionalString (adguardNetwork.parentInterface == null) ''
-        parentInterface="$(ip -o -4 route show to default | awk '{ print $5; exit }')"
-      ''}
-
-      if [ -z "$parentInterface" ]; then
-        echo "Could not determine AdGuard macvlan parent interface" >&2
-        exit 1
-      fi
+      parentInterface="${adguardNetwork.parentInterface}"
 
       if ! docker network inspect ${adguardNetwork.name} >/dev/null 2>&1; then
         docker network create \
@@ -123,15 +130,6 @@ in
           --opt parent="$parentInterface" \
           ${adguardNetwork.name}
       fi
-
-      if ! ip link show adguard-shim >/dev/null 2>&1; then
-        ip link add adguard-shim link "$parentInterface" type macvlan mode bridge
-      fi
-
-      ip addr replace ${adguardNetwork.hostShimIp}/32 dev adguard-shim
-      ip link set adguard-shim up
-      # Route only the AdGuard container IP through the host shim.
-      ip route replace ${adguardNetwork.containerIp}/32 dev adguard-shim
     '';
   };
 
