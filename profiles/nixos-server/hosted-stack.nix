@@ -207,7 +207,6 @@ in
             }
           }
         | del(.gateway.auth.token)
-        | del(.gateway.auth.password)
         | .gateway.controlUi.allowInsecureAuth = true
         | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
         | .gateway.controlUi.allowedOrigins =
