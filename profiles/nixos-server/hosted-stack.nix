@@ -56,7 +56,7 @@ in
     "d ${dataRoot}/adguard/work 0750 root root - -"
     "d ${dataRoot}/adguard/conf 0750 root root - -"
     "d ${dataRoot}/matter-server 0750 root root - -"
-    "d ${dataRoot}/n8n 0750 root root - -"
+    "d ${dataRoot}/n8n 0750 1000 1000 - -"
     "d ${dataRoot}/mosquitto 0750 root root - -"
     "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
     "d ${dataRoot}/zwave-js-ui 0750 root root - -"
@@ -90,6 +90,7 @@ in
     enable = true;
     openFirewall = true;
     authKeyFile = "${secretsDir}/tailscale-authkey";
+    extraSetFlags = [ "--accept-dns=false" ];
   };
 
   networking.firewall.allowedTCPPorts = [

@@ -31,8 +31,12 @@ in
       method = "manual";
       address1 = "192.168.1.3/24,192.168.1.1";
       dns = "192.168.1.2;192.168.1.1;1.1.1.1;";
+      "ignore-auto-dns" = true;
     };
-    ipv6.method = "auto";
+    ipv6 = {
+      method = "auto";
+      "ignore-auto-dns" = true;
+    };
   };
   time.timeZone = "Australia/Perth";
 
