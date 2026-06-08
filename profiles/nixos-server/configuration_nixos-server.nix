@@ -8,6 +8,11 @@
   ...
 }:
 
+let
+  cleanupRetentionDays = 7;
+  cleanupSchedule = "weekly";
+  minFree = "2G";
+in
 {
   networking.hostName = "nixos-server";
   networking.networkmanager.enable = true;
@@ -33,11 +38,42 @@
     powerOnBoot = true;
   };
 
+  nix.gc = {
+    automatic = true;
+    dates = cleanupSchedule;
+    options = "--delete-older-than ${toString cleanupRetentionDays}d";
+  };
+
+  nix.optimise = {
+    automatic = true;
+    dates = [ cleanupSchedule ];
+  };
+
+  services.journald.extraConfig = ''
+    SystemMaxUse=1G
+    SystemKeepFree=${minFree}
+    MaxRetentionSec=${toString cleanupRetentionDays}day
+  '';
+
+  virtualisation.docker.autoPrune = {
+    enable = true;
+    dates = cleanupSchedule;
+    flags = [
+      "--all"
+      "--filter=until=${toString (cleanupRetentionDays * 24)}h"
+    ];
+  };
+
+  services.snapper.configs.apps = {
+    FREE_LIMIT = minFree;
+  };
+
   nix.settings = {
     experimental-features = [
       "nix-command"
       "flakes"
     ];
+    min-free = minFree;
     warn-dirty = false;
     trusted-users = [
       "root"
