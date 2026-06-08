@@ -16,11 +16,16 @@ in
 {
   networking.hostName = "nixos-server";
   networking.networkmanager.enable = true;
+  networking.networkmanager.unmanaged = [
+    "interface-name:adguard-shim"
+  ];
   networking.networkmanager.ensureProfiles.profiles."wired-static" = {
     connection = {
       id = "wired-static";
       type = "ethernet";
+      "interface-name" = "end0";
       autoconnect = true;
+      "autoconnect-priority" = 100;
     };
     ipv4 = {
       method = "manual";
