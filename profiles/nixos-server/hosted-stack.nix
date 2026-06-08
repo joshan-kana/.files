@@ -97,11 +97,37 @@ in
     8123 # Home Assistant
     5678 # n8n
     5580 # Matter Server
-    18789 # OpenClaw gateway
+    18789 # OpenClaw gateway reverse proxy
   ];
   networking.firewall.allowedUDPPorts = [
     5353 # mDNS for Home Assistant discovery
   ];
+
+  services.nginx = {
+    enable = true;
+    recommendedProxySettings = true;
+    virtualHosts.openclaw = {
+      listen = [
+        {
+          addr = "192.168.1.3";
+          port = 18789;
+        }
+      ];
+
+      locations."/" = {
+        proxyPass = "http://127.0.0.1:18789";
+        proxyWebsockets = true;
+        extraConfig = ''
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_set_header X-Forwarded-Host $host;
+          proxy_set_header X-Forwarded-User joshan;
+        '';
+      };
+    };
+  };
 
   systemd.services.docker-network-adguard = {
     description = "Create Docker macvlan network for AdGuard Home";
@@ -147,7 +173,61 @@ in
   };
   systemd.services.docker-matter-server.restartTriggers = [ containerUpdateTrigger ];
   systemd.services.docker-n8n.restartTriggers = [ containerUpdateTrigger ];
-  systemd.services.docker-openclaw.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.configure-openclaw-gateway = {
+    description = "Modify OpenClaw mutable gateway config for trusted-proxy access";
+    before = [ "docker-openclaw.service" ];
+    path = with pkgs; [
+      coreutils
+      jq
+    ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      configFile="${dataRoot}/openclaw/openclaw.json"
+
+      if [ ! -f "$configFile" ]; then
+        echo "OpenClaw config does not exist yet: $configFile" >&2
+        exit 1
+      fi
+
+      tmp="$(mktemp)"
+      jq '
+        .gateway.mode = "local"
+        | .gateway.bind = "loopback"
+        | .gateway.port = 18789
+        | .gateway.trustedProxies = ["127.0.0.1", "::1"]
+        | .gateway.auth = {
+            "mode": "trusted-proxy",
+            "trustedProxy": {
+              "userHeader": "x-forwarded-user",
+              "requiredHeaders": [
+                "x-forwarded-proto",
+                "x-forwarded-host"
+              ],
+              "allowLoopback": true
+            }
+          }
+        | del(.gateway.auth.token)
+        | del(.gateway.auth.password)
+        | .gateway.controlUi.allowInsecureAuth = true
+        | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
+        | .gateway.controlUi.allowedOrigins =
+            ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
+      ' "$configFile" > "$tmp"
+
+      install -m 0600 -o 1000 -g 1000 "$tmp" "$configFile"
+      rm -f "$tmp"
+    '';
+  };
+
+  systemd.services.docker-openclaw = {
+    restartTriggers = [ containerUpdateTrigger ];
+    after = [
+      "configure-openclaw-gateway.service"
+      "nginx.service"
+    ];
+    requires = [ "configure-openclaw-gateway.service" ];
+    wants = [ "nginx.service" ];
+  };
 
   systemd.services.docker-adguard = {
     after = [ "docker-network-adguard.service" ];
