@@ -61,8 +61,8 @@ in
     "d ${dataRoot}/zigbee2mqtt 0750 root root - -"
     "d ${dataRoot}/zwave-js-ui 0750 root root - -"
     "d ${dataRoot}/esphome 0750 root root - -"
-    "d ${dataRoot}/openclaw 0750 root root - -"
-    "d ${dataRoot}/openclaw-auth 0750 root root - -"
+    "d ${dataRoot}/openclaw 0750 1000 1000 - -"
+    "d ${dataRoot}/openclaw-auth 0750 1000 1000 - -"
     "d ${secretsDir} 0700 root root - -"
     "v ${dataRoot}/.snapshots 0750 root root - -"
   ];
