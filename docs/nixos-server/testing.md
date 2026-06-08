@@ -21,7 +21,7 @@ Expected results:
 "26.05"
 "6.18.34"
 "aarch64-linux"
-"rclone:dropbox:Backups/nixos-home-assistant/restic"
+"rclone:dropbox:Archives/Backups/nixos-server"
 ```
 
 The configured substituters were also evaluated:
