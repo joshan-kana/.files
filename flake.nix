@@ -182,7 +182,6 @@
               inherit (profiles.nixos)
                 dotfilesPath
                 profileName
-                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -232,7 +231,6 @@
               inherit (profiles.nixos-arm-parallels)
                 dotfilesPath
                 profileName
-                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -279,7 +277,6 @@
               inherit (profiles.nixos-orbstack)
                 dotfilesPath
                 profileName
-                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
