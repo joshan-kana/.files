@@ -79,6 +79,11 @@
           '';
         };
 
+      gitHookSetup = ''
+        git config --local core.hooksPath .githooks
+        chmod +x .githooks/pre-commit
+      '';
+
       # Centralised profile-specific variables
       profiles = {
         nixos = {
@@ -139,10 +144,12 @@
         {
           default = pkgs.mkShell {
             packages = commonTools;
+            shellHook = gitHookSetup;
           };
 
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
+            shellHook = gitHookSetup;
           };
         }
       );
