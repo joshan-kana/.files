@@ -40,6 +40,12 @@ in
   };
   time.timeZone = "Australia/Perth";
 
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
+
   nixpkgs.config.allowUnfree = true;
 
   hardware.bluetooth = {
