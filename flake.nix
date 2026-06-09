@@ -5,6 +5,15 @@
     # Nixpkgs: a collection of packages for the Nix package manager
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
+    # Stable Nixpkgs for server hosts where predictable updates matter more.
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
+
+    # NixOS hardware profiles, including Raspberry Pi 4 defaults.
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";
@@ -35,6 +44,8 @@
     {
       self,
       nixpkgs,
+      nixpkgs-stable,
+      nixos-hardware,
       home-manager,
       stylix,
       spicetify-nix,
@@ -90,6 +101,15 @@
           ollamaUrl = "http://host.orb.internal:11434/v1";
           nixosRebuildFlags = "--impure";
         };
+
+        nixos-server = {
+          dotfilesPath = "/home/joshan/.files";
+          profileName = "nixos-server";
+          appDataRoot = "/var/lib/apps";
+          ollamaUrl = "http://localhost:11434/v1";
+          nixosRebuildFlags = "";
+        };
+
       };
     in
     {
@@ -155,6 +175,7 @@
               inherit (profiles.nixos)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -204,6 +225,7 @@
               inherit (profiles.nixos-arm-parallels)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -250,6 +272,7 @@
               inherit (profiles.nixos-orbstack)
                 dotfilesPath
                 profileName
+                appDataRoot
                 ollamaUrl
                 nixosRebuildFlags
                 ;
@@ -278,6 +301,32 @@
               ./orbstack.nix
             ];
           };
+
+        nixos-server =
+          let
+            specialArgs = {
+              inherit inputs;
+              inherit (profiles.nixos-server)
+                dotfilesPath
+                profileName
+                appDataRoot
+                ollamaUrl
+                nixosRebuildFlags
+                ;
+            };
+          in
+          nixpkgs-stable.lib.nixosSystem {
+            inherit specialArgs;
+            system = "aarch64-linux";
+            modules = [
+              nixos-hardware.nixosModules.raspberry-pi-4
+              ./profiles/nixos-server/configuration_nixos-server.nix
+              ./profiles/nixos-server/hosted-stack.nix
+              ./profiles/nixos-server/hardware-configuration.nix
+              ./profiles/nixos-server/image.nix
+            ];
+          };
+
       };
     };
 }

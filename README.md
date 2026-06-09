@@ -16,6 +16,32 @@ This flake has three profiles for different environments:
 - **nixos**: Full desktop config on x86_64 arch
 - **nixos-arm-parallels**: Full desktop config on aarch64 arch (Parallels VM on macOS)
 - **nixos-orbstack**: Minimal config for OrbStack (Linux containers on macOS, similar to WSL)
+- **nixos-server**: server config
+
+## Submodules
+
+This repo uses a Git submodule for the shared infrastructure docs under
+`docs/infrastructure-docs`.
+
+When cloning this repo, either use:
+
+```sh
+git clone --recurse-submodules <repo-url>
+```
+
+or, after a normal clone, run:
+
+```sh
+git submodule update --init --recursive
+```
+
+When updating this repo later, refresh the submodule after pulling so the docs
+links stay valid:
+
+```sh
+git pull
+git submodule update --init --recursive
+```
 
 ## Profile-specific variables
 

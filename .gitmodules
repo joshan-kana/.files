@@ -1,0 +1,3 @@
+[submodule "docs/infrastructure-docs"]
+	path = docs/infrastructure-docs
+	url = git@github.com:joshan-kana/infrastructure-docs.git
