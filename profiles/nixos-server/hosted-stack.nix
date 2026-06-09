@@ -410,7 +410,6 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
-
   systemd.services.docker-adguard = {
     after = [ "docker-network-adguard.service" ];
     requires = [ "docker-network-adguard.service" ];
