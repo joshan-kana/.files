@@ -162,6 +162,24 @@ in
   services.nginx = {
     enable = true;
     recommendedProxySettings = true;
+
+    appendHttpConfig = ''
+      server {
+        listen 127.0.0.1:11434;
+        server_name ollama-proxy;
+
+        location / {
+          include /run/openclaw-ollama-proxy.conf;
+          proxy_connect_timeout 2s;
+          proxy_read_timeout 300s;
+          proxy_send_timeout 300s;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_set_header Host $host;
+        }
+      }
+    '';
+
     virtualHosts.openclaw = {
       listen = [
         {
@@ -247,7 +265,15 @@ in
 
       tmp="$(mktemp)"
       jq '
-        .gateway.mode = "local"
+        .models = (.models // {})
+        | .models.providers = (.models.providers // {})
+        | .models.providers.ollama = ((.models.providers.ollama // {}) + {
+            "api": "ollama",
+            "baseUrl": "http://127.0.0.1:11434",
+            "apiKey": "ollama-local",
+            "timeoutSeconds": 300
+          })
+        | .gateway.mode = "local"
         | .gateway.bind = "loopback"
         | .gateway.port = 18789
         | .gateway.trustedProxies = ["127.0.0.1", "::1"]
@@ -285,130 +311,64 @@ in
     wants = [ "nginx.service" ];
   };
 
-  systemd.services.openclaw-ollama-url-sync = {
-    description = "Select reachable Mac Ollama endpoint for OpenClaw";
+  systemd.services.openclaw-ollama-proxy = {
+    description = "Write nginx upstream for the local OpenClaw Ollama proxy";
     after = [
       "network-online.target"
-      "docker-openclaw.service"
+      "avahi-daemon.service"
     ];
-    wants = [ "network-online.target" ];
+    wants = [
+      "network-online.target"
+      "avahi-daemon.service"
+    ];
+    before = [ "nginx.service" ];
     path = with pkgs; [
       coreutils
       curl
-      docker
       systemd
     ];
-    serviceConfig.Type = "oneshot";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
     script = ''
+      conf=/run/openclaw-ollama-proxy.conf
       candidates=(
         ${lib.concatMapStringsSep "\n        " (url: ''"${url}"'') macOllamaCandidates}
       )
 
-      mutableEnv="${appDataRoot}/admin-tools/openclaw-ollama-url-sync.env"
-      if [ -f "$mutableEnv" ]; then
-        # shellcheck disable=SC1090
-        . "$mutableEnv"
-
-        if [ -n "''${LAN_MDNS_URL:-}" ]; then
-          candidates=("''${LAN_MDNS_URL}" "''${candidates[@]}")
-        fi
-
-        if [ -n "''${LAN_IP_URL:-}" ]; then
-          candidates=("''${LAN_IP_URL}" "''${candidates[@]}")
-        fi
-
-        if [ -n "''${TS_URL:-}" ]; then
-          candidates=("''${TS_URL}" "''${candidates[@]}")
-        fi
-      fi
-
-      if ! docker inspect openclaw >/dev/null 2>&1; then
-        echo "OpenClaw container is not running; skipping Ollama URL sync."
-        exit 0
-      fi
-
       selected=""
-      for url in "''${candidates[@]}"; do
-        if [ -z "$url" ]; then
-          continue
-        fi
-
-        if curl -fsS --max-time 5 "''${url}/api/tags" >/tmp/openclaw-ollama-url-sync-tags.json 2>/dev/null; then
-          selected="$url"
+      for upstream in "''${candidates[@]}"; do
+        if curl -fsS --max-time 5 "$upstream/api/tags" >/dev/null 2>&1; then
+          selected="$upstream"
           break
         fi
       done
 
-      if [ -z "$selected" ]; then
-        echo "No reachable Ollama endpoint. Candidates were:"
-        printf '  %s\n' "''${candidates[@]}"
+      if [ -z "$selected" ] && [ -s "$conf" ]; then
+        echo "No reachable Ollama endpoint; keeping existing proxy config:"
+        cat "$conf"
         exit 0
       fi
 
-      echo "Selected Ollama endpoint: $selected"
-
-      result="$(
-        docker exec \
-          -e SELECTED_OLLAMA_URL="$selected" \
-          --user 1000:1000 \
-          openclaw node -e '
-const fs = require("fs");
-
-const url = process.env.SELECTED_OLLAMA_URL;
-const configPath = "/home/node/.openclaw/openclaw.json";
-const cfg = JSON.parse(fs.readFileSync(configPath, "utf8"));
-
-let changed = false;
-let count = 0;
-
-function walk(value) {
-  if (!value || typeof value !== "object") return;
-
-  for (const key of Object.keys(value)) {
-    if (key === "ollamaServerUrl") {
-      if (value[key] !== url) changed = true;
-      value[key] = url;
-      count++;
-    }
-
-    walk(value[key]);
-  }
-}
-
-walk(cfg);
-
-if (changed) {
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "Z");
-  const backupPath = configPath + ".bak-ollama-url-sync-" + stamp;
-  fs.copyFileSync(configPath, backupPath);
-  fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2) + "\n", { mode: 0o600 });
-}
-
-console.log(changed ? "changed" : "unchanged");
-console.error("ollamaServerUrl entries managed: " + count);
-'
-      )"
-
-      echo "$result"
-
-      if [ "$result" = "changed" ]; then
-        echo "OpenClaw config changed; restarting docker-openclaw.service."
-        systemctl restart docker-openclaw.service
+      if [ -z "$selected" ]; then
+        selected="${builtins.head macOllamaCandidates}"
+        echo "No reachable Ollama endpoint yet; writing default upstream: $selected"
       else
-        echo "OpenClaw config already points at selected endpoint."
+        echo "Using Ollama upstream: $selected"
       fi
+
+      cat > "$conf" <<EOF
+proxy_pass $selected;
+EOF
     '';
   };
 
-  systemd.timers.openclaw-ollama-url-sync = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "1min";
-      OnUnitActiveSec = "2min";
-      AccuracySec = "30s";
-      Persistent = true;
-    };
+  systemd.services.nginx = {
+    requires = [ "openclaw-ollama-proxy.service" ];
+    after = [ "openclaw-ollama-proxy.service" ];
   };
+
 
   systemd.services.docker-adguard = {
     after = [ "docker-network-adguard.service" ];
@@ -478,6 +438,7 @@ console.error("ollamaServerUrl entries managed: " + count);
       ];
       environment = {
         OPENCLAW_DISABLE_BONJOUR = "1";
+        OLLAMA_API_KEY = "ollama-local";
         OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
       environmentFiles = [ "${secretsDir}/openclaw.env" ];
