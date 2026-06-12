@@ -317,8 +317,8 @@ hosts/my-host/
 └── hardware.nix
 ```
 
-Import the common option and base modules from `default.nix`, then add only the
-host-specific pieces:
+Import the common option and base modules from `default.nix`, then set the
+minimum host-specific value:
 
 ```nix
 { ... }:
@@ -330,21 +330,21 @@ host-specific pieces:
     ./hardware.nix
   ];
 
-  dotfiles = {
-    profile.name = "my-host";
-    users.primary.homeRoot = "/home";
-    paths.repoName = ".files";
-    services.ollama.url = "http://localhost:11434/v1";
-  };
+  dotfiles.profile.name = "my-host";
 }
 ```
+
+The common defaults already cover the `joshan` user under `/home`, the `.files`
+repo name, and the local Ollama URL. Set `dotfiles.users.primary.*`,
+`dotfiles.paths.*`, `dotfiles.rebuild.flags`, or `dotfiles.services.ollama.url`
+only when a host differs from those defaults.
 
 Add it to `flake.nix`:
 
 ```nix
-my-host = mkSystem {
+my-host = nixosHost {
   system = "x86_64-linux";
-  modules = [ ./hosts/my-host ];
+  hostModule = ./hosts/my-host;
 };
 ```
 
