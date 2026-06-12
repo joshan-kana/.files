@@ -395,6 +395,8 @@
           direnv_hook_enable
         fi
       }
+
+      direnv_hook_enable
     '';
   };
 
