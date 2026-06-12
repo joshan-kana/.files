@@ -1,5 +1,4 @@
 {
-  appDataRoot,
   config,
   lib,
   pkgs,
@@ -7,7 +6,10 @@
 }:
 
 let
-  secretsDir = "/root/secrets";
+  primaryUser = config.dotfiles.users.primary.name;
+  serverCfg = config.dotfiles.server;
+  appDataRoot = serverCfg.appDataRoot;
+  secretsDir = serverCfg.secretsDir;
 
   appDataEditor = {
     group = "appdata-editors";
@@ -18,6 +20,13 @@ let
     user = "openclaw-admin";
     privateKeyPath = "${secretsDir}/openclaw-host-admin-id_ed25519";
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
+  };
+
+  openclawContainerUser = {
+    # UID/GID used by the OpenClaw image's internal node user.
+    # This is not the host primary user.
+    uid = 1000;
+    gid = 1000;
   };
 
   appDataMode = "2770";
@@ -60,7 +69,10 @@ in
 {
   users.groups.${appDataEditor.group}.gid = appDataEditor.gid;
 
-  users.users.joshan.extraGroups = [ appDataEditor.group ];
+  users.users.${primaryUser}.extraGroups = [
+    "docker"
+    appDataEditor.group
+  ];
 
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;
@@ -111,12 +123,12 @@ in
 
   systemd.tmpfiles.rules = [
     "d ${appDataRoot} ${appDataMode} root ${appDataEditor.group} - -"
-    "a+ ${appDataRoot} - - - - u:1000:rwx,g:${appDataEditor.group}:rwx,d:u:1000:rwx,d:g:${appDataEditor.group}:rwx"
+    "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
 
     "d ${secretsDir} 0700 root root - -"
-    "z ${openclawHostAdmin.privateKeyPath} 0400 1000 root - -"
+    "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
 
     "v ${appDataRoot}/.snapshots ${snapshotMode} root root - -"
@@ -197,7 +209,7 @@ in
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
           proxy_set_header X-Forwarded-Host $host;
-          proxy_set_header X-Forwarded-User joshan;
+          proxy_set_header X-Forwarded-User ${primaryUser};
         '';
       };
     };
@@ -295,7 +307,7 @@ in
             ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
       ' "$configFile" > "$tmp"
 
-      install -m 0600 -o 1000 -g 1000 "$tmp" "$configFile"
+      install -m 0600 -o ${toString openclawContainerUser.uid} -g ${toString openclawContainerUser.gid} "$tmp" "$configFile"
       rm -f "$tmp"
     '';
   };

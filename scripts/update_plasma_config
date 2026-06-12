@@ -2,12 +2,12 @@
 
 # Script to update Plasma configuration using plasma-manager's rc2nix exporter.
 # This script runs rc2nix directly from the upstream repo and replaces the
-# content in plasma_hm.nix from line 3 onwards.
+# content in plasma-hm.nix from line 3 onwards.
 
 set -euo pipefail
 
 # Define paths
-PLASMA_CONFIG_FILE="$DOTFILES/desktop/plasma/plasma_hm.nix"
+PLASMA_CONFIG_FILE="$DOTFILES/desktop/plasma/plasma-hm.nix"
 TEMP_FILE=$(mktemp)
 ERR_FILE=$(mktemp)
 

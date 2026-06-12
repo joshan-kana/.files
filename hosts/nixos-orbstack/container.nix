@@ -7,7 +7,6 @@
 {
   imports = [
     "${modulesPath}/virtualisation/lxc-container.nix"
-    /etc/nixos/orbstack.nix
   ];
 
   # In LXC containers we don't have Wi‑Fi, and `/etc` may be read-only.
