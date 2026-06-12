@@ -9,6 +9,12 @@
       "options": {
         "nixos": {
           "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options"
+        },
+        "nixos-server": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options"
+        },
+        "home-manager": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
         }
       }
     }
