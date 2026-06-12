@@ -19,8 +19,5 @@
   dotfiles = {
     profile.name = "nixos-arm-parallels";
     features.desktop.enable = true;
-    users.primary.homeRoot = "/home";
-    paths.repoName = ".files";
-    services.ollama.url = "http://localhost:11434/v1";
   };
 }

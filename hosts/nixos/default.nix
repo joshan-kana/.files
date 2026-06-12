@@ -22,9 +22,6 @@
   dotfiles = {
     profile.name = "nixos";
     features.desktop.enable = true;
-    users.primary.homeRoot = "/home";
-    paths.repoName = ".files";
-    services.ollama.url = "http://localhost:11434/v1";
     rebuild.flags = "--impure";
   };
 }

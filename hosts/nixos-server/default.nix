@@ -26,9 +26,6 @@ in
 
   dotfiles = {
     profile.name = "nixos-server";
-    users.primary.homeRoot = "/home";
-    paths.repoName = ".files";
-    services.ollama.url = "http://localhost:11434/v1";
     server.appDataRoot = "/var/lib/apps";
     server.secretsDir = "/root/secrets";
     cli = {
