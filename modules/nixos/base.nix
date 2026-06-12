@@ -18,7 +18,6 @@ in
   home-manager.useUserPackages = true;
   home-manager.users.${cfg.users.primary.name}.imports = [
     ../home/base.nix
-    ../home/theme.nix
     ../home/cli.nix
   ];
 

@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -31,4 +32,31 @@
       size = 30;
     };
   };
+
+  home-manager.users.${config.dotfiles.users.primary.name}.imports = [
+    (
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+
+      {
+        # Shared Home Manager theme defaults moved here so all theme policy lives
+        # in one module.
+        stylix.targets.qt.platform = "kde";
+        stylix.targets.vscode.enable = false;
+
+        gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+          gtk4.theme = config.gtk.theme;
+
+          iconTheme = {
+            package = pkgs.gruvbox-dark-icons-gtk;
+            name = "oomox-gruvbox-dark";
+          };
+        };
+      }
+    )
+  ];
 }
