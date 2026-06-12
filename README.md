@@ -1,4 +1,4 @@
-# .files - my *personalised* NixOS config
+# .files - my NixOS flake
 
 This repo contains my entire NixOS system configuration managed as a flake.
 
@@ -43,19 +43,21 @@ git pull
 git submodule update --init --recursive
 ```
 
-## Profile-specific variables
+## Modular layout
 
-Each profile defines centralized variables in [`flake.nix`](flake.nix):
-- `dotfilesPath`: Location of this repository
-- `profileName`: Profile identifier for the flake
-- `ollamaUrl`: Ollama API endpoint URL
-- `nixosRebuildFlags`: Build flags passed to `nixos-rebuild` (e.g., `--impure`)
+The flake is organised around host entrypoints and coarse reusable modules:
 
-These are exposed as environment variables via the profile configuration files ([`profile_nixos.nix`](profile_nixos.nix), etc.).
+- [`hosts/`](hosts/) contains real machines and host-specific topic files.
+- [`modules/nixos/`](modules/nixos/) contains shared NixOS modules and typed
+  `dotfiles.*` options.
+- [`modules/home/`](modules/home/) contains shared Home Manager modules.
+
+See [`docs/modular-nix-flake.md`](docs/modular-nix-flake.md) for the module
+boundaries, option namespace, Home Manager integration, and validation commands.
 
 ## Quick commands
 
-Shell aliases are defined in [`home.nix`](home.nix):
+Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 
 ### System management
 - `sysup` - Rebuild and switch to new system configuration
