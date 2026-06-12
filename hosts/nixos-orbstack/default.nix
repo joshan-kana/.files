@@ -11,7 +11,6 @@
 
   dotfiles = {
     profile.name = "nixos-orbstack";
-    users.primary.homeRoot = "/home";
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     rebuild.flags = "--impure";
