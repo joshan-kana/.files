@@ -175,6 +175,92 @@ Use the current location of the program:
 If a program is used by only one host, keep it under that host. Promote it into
 `modules/` only when another host needs the same behavior.
 
+## Programs With System And Home Config
+
+Some tools have both a NixOS side and a home side. Treat those as two halves of
+one feature:
+
+- NixOS side: install system packages, enable system services, open firewall
+  ports, configure drivers, desktop sessions, PAM, udev, Docker, PipeWire, and
+  other machine-level behavior.
+- Home side: configure dotfiles, user services, shell integration, themes,
+  keybindings, browser profiles, editor settings, and per-user program options.
+
+Keep the two halves in the layer they belong to. Import both halves only on hosts
+that need the feature.
+
+Current examples:
+
+- Hyprland system config: `desktop/hyprland/hyprland_nixos.nix`
+- Hyprland home config: `desktop/hyprland/hyprland.nix`
+- Plasma system config: `desktop/plasma/plasma.nix`
+- Plasma home config: `desktop/plasma/plasma_hm.nix`
+- Desktop system baseline: `modules/nixos/desktop-linux.nix`
+- Desktop home baseline: `modules/home/desktop-linux.nix`
+
+For a new reusable feature with both halves, use matching modules:
+
+```text
+modules/nixos/my-feature.nix
+modules/home/my-feature.nix
+```
+
+Import the system half from a host entrypoint:
+
+```nix
+# hosts/nixos/default.nix
+imports = [
+  ../../modules/nixos/my-feature.nix
+];
+```
+
+Import the home half from that host's `home.nix`:
+
+```nix
+# hosts/nixos/home.nix
+home-manager.users.${config.dotfiles.users.primary.name}.imports = [
+  ../../modules/home/my-feature.nix
+];
+```
+
+If the feature should be toggled as a unit, add an option in
+`modules/nixos/options/common.nix`:
+
+```nix
+dotfiles.features.myFeature.enable = lib.mkEnableOption "my feature";
+```
+
+Then guard both halves with the same option:
+
+```nix
+# modules/nixos/my-feature.nix
+{ config, lib, ... }:
+
+lib.mkIf config.dotfiles.features.myFeature.enable {
+  services.my-feature.enable = true;
+}
+```
+
+```nix
+# modules/home/my-feature.nix
+{ lib, osConfig, ... }:
+
+lib.mkIf osConfig.dotfiles.features.myFeature.enable {
+  programs.my-feature.enable = true;
+}
+```
+
+Enable it per host:
+
+```nix
+# hosts/nixos/default.nix
+dotfiles.features.myFeature.enable = true;
+```
+
+For one-host features, skip the reusable module until another host needs it.
+Place the NixOS half in `hosts/<host>/` and the home half in
+`hosts/<host>/home.nix` or a host-local home topic file.
+
 ## Adding A Program To Specific Hosts
 
 For one host, add the configuration directly to that host folder.
