@@ -6,14 +6,16 @@
     ../../modules/nixos/base.nix
     ../../modules/nixos/desktop-linux.nix
     ../../overlays/nvtop-overlay.nix
-    ./desktop.nix
     ./home.nix
     ./x86.nix
     ./hardware.nix
   ];
 
+  networking.hostName = "nixos";
+
   dotfiles = {
     profile.name = "nixos";
+    features.desktop.enable = true;
     users.primary.homeRoot = "/home";
     paths.repoName = ".files";
     services.ollama.url = "http://localhost:11434/v1";
