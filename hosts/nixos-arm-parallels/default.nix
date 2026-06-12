@@ -10,7 +10,6 @@
 
   home-manager.users.${config.dotfiles.users.primary.name}.imports = [
     inputs.plasma-manager.homeModules.plasma-manager
-    inputs.spicetify-nix.homeManagerModules.default
     ../../modules/home/desktop-linux.nix
     ../../desktop/plasma/plasma-hm.nix
     ../../desktop/hyprland/hyprland.nix
