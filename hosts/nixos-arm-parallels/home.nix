@@ -7,6 +7,7 @@
     inputs.plasma-manager.homeModules.plasma-manager
     inputs.spicetify-nix.homeManagerModules.default
     ../../modules/home/base.nix
+    ../../modules/home/theme.nix
     ../../modules/home/cli.nix
     ../../modules/home/desktop-linux.nix
     ../../desktop/plasma/plasma_hm.nix

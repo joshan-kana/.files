@@ -6,7 +6,6 @@
     ../../modules/nixos/base.nix
     ../../modules/nixos/desktop-linux.nix
     ../../overlays/nvtop-overlay.nix
-    ../../overlays/monaspace-liga-overlay.nix
     ./desktop.nix
     ./home.nix
     ./x86.nix

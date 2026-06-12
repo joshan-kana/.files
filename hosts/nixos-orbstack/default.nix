@@ -4,7 +4,6 @@
   imports = [
     ../../modules/nixos/options/common.nix
     ../../modules/nixos/base.nix
-    ../../overlays/monaspace-liga-overlay.nix
     ./orbstack-generated.nix
     ./container.nix
     ./host-env.nix

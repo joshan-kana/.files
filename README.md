@@ -230,6 +230,21 @@ If the feature should be toggled as a unit, add an option in
 dotfiles.features.myFeature.enable = lib.mkEnableOption "my feature";
 ```
 
+### Themes
+
+Stylix is enabled for every NixOS configuration through `modules/nixos/theme.nix`.
+
+The theme is intentionally shared across all hosts. Do not add per-host theme
+overrides unless the repo policy changes.
+
+The shared theme matches the old main-branch Stylix configuration: Framer from
+`pkgs.base16-schemes`, `wallpaper.png`, Monaspace Neon, Noto Color Emoji, dark
+polarity, and the GoogleDot-Black cursor.
+
+Shared Home Manager Stylix target defaults live in `modules/home/theme.nix`.
+Desktop app-specific target settings stay in `modules/home/desktop-linux.nix`
+or the relevant `desktop/*` module.
+
 Then guard both halves with the same option:
 
 ```nix
