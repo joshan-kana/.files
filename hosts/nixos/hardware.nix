@@ -1,14 +1,17 @@
 { lib, ... }:
 
 {
+  warnings = [
+    "hosts/nixos/hardware.nix is a placeholder for pure evaluation only. Do not deploy the nixos x86 host until the real generated hardware config is restored."
+  ];
+
   # Replace this with the real desktop hardware config before rebuilding the
   # `nixos` host:
   #
   #   sudo nixos-generate-config --show-hardware-config > hosts/nixos/hardware.nix
   #
-  # Pure eval needs a root filesystem, so this disk-label default is only a
-  # merge-readiness placeholder. Real rebuilds need the generated host hardware
-  # settings from the desktop.
+  # The original x86 machine is currently unavailable, so this file is only an
+  # eval placeholder.
   fileSystems."/" = lib.mkDefault {
     device = "/dev/disk/by-label/NIXOS";
     fsType = "btrfs";
