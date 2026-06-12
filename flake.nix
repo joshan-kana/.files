@@ -220,7 +220,7 @@
               ./desktop/display-manager.nix
               ./desktop/hyprland/hyprland_nixos.nix
               ./desktop/plasma/plasma.nix
-              /etc/nixos/hardware-configuration.nix
+              ./hosts/nixos/hardware.nix
             ];
           };
 
@@ -302,7 +302,7 @@
               ./overlays/monaspace-liga-overlay.nix
               ./configuration.nix
               ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
-              ./orbstack.nix
+              ./hosts/nixos-orbstack/container.nix
             ];
           };
 
