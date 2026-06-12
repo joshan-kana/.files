@@ -1,4 +1,25 @@
 {
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nixd",
+  "nix.serverSettings": {
+    "nixd": {
+      "formatting": {
+        "command": ["nixfmt"]
+      },
+      "options": {
+        "nixos": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options"
+        },
+        "nixos-server": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options"
+        },
+        "home-manager": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+        }
+      }
+    }
+  },
+
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide",
     "editor.formatOnSave": false,
@@ -8,30 +29,5 @@
   "editor.autoClosingBrackets": "always",
   "editor.autoClosingQuotes": "always",
   "editor.snippetSuggestions": "top",
-  "editor.suggest.snippetsPreventQuickSuggestions": false,
-
-  "nix.enableLanguageServer": true,
-  "nixEnvSelector.useFlakes": true,
-  "nixEnvSelector.flakeShell": "vscode",
-  "nix.serverPath": "nixd",
-  "nix.serverSettings": {
-    "nixd": {
-      "formatting": {
-        "command": [
-          "nixfmt"
-        ]
-      },
-      "options": {
-        "nixos": {
-          "expr": "(builtins.getFlake \"git+file://${workspaceFolder}\").nixosConfigurations.nixos.options"
-        },
-        "nixos-server": {
-          "expr": "(builtins.getFlake \"git+file://${workspaceFolder}\").nixosConfigurations.nixos-server.options"
-        },
-        "home-manager": {
-          "expr": "(builtins.getFlake \"git+file://${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
-        }
-      }
-    }
-  }
+  "editor.suggest.snippetsPreventQuickSuggestions": false
 }
