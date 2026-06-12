@@ -60,7 +60,10 @@
     };
 
     virtualisation.docker.enable = true;
-    users.users.${config.dotfiles.users.primary.name}.extraGroups = [ "docker" ];
+    users.users.${config.dotfiles.users.primary.name}.extraGroups = [
+      "docker"
+      "libvirtd"
+    ];
     virtualisation.libvirtd = {
       enable = true;
       qemu.swtpm.enable = true;
