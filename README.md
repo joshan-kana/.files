@@ -214,10 +214,10 @@ imports = [
 ];
 ```
 
-Import the home half from that host's `home.nix`:
+Import the home half from that host's `default.nix`, next to the system half:
 
 ```nix
-# hosts/nixos/home.nix
+# hosts/nixos/default.nix
 home-manager.users.${config.dotfiles.users.primary.name}.imports = [
   ../../modules/home/my-feature.nix
 ];
@@ -273,8 +273,9 @@ dotfiles.features.myFeature.enable = true;
 ```
 
 For one-host features, skip the reusable module until another host needs it.
-Place the NixOS half in `hosts/<host>/` and the home half in
-`hosts/<host>/home.nix` or a host-local home topic file.
+Place host-specific NixOS config and Home Manager imports in
+`hosts/<host>/default.nix`. Split into host-local topic files only when the
+host entrypoint gets too large.
 
 ## Adding A Program To Specific Hosts
 
@@ -292,10 +293,10 @@ imports = [
 ];
 ```
 
-For a home module, import it from the host's `home.nix`:
+For a home module, add it to that host's `default.nix` Home Manager import list:
 
 ```nix
-# hosts/nixos/home.nix
+# hosts/nixos/default.nix
 home-manager.users.${config.dotfiles.users.primary.name}.imports = [
   ../../modules/home/base.nix
   ../../modules/home/cli.nix
@@ -313,8 +314,7 @@ Create a new folder under `hosts/`:
 ```text
 hosts/my-host/
 ├── default.nix
-├── hardware.nix
-└── home.nix
+└── hardware.nix
 ```
 
 Import the common option and base modules from `default.nix`, then add only the
@@ -328,10 +328,7 @@ host-specific pieces:
     ../../modules/nixos/options/common.nix
     ../../modules/nixos/base.nix
     ./hardware.nix
-    ./home.nix
   ];
-
-  networking.hostName = "my-host";
 
   dotfiles = {
     profile.name = "my-host";
