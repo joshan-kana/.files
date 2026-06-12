@@ -1,7 +1,6 @@
 { config, ... }:
 
 {
-  networking.hostName = "nixos-server";
   networking.networkmanager.enable = true;
   networking.networkmanager.unmanaged = [
     "interface-name:adguard-shim"
