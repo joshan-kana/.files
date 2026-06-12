@@ -5,6 +5,7 @@
     ../../modules/nixos/options/common.nix
     ../../modules/nixos/base.nix
     ../../overlays/monaspace-liga-overlay.nix
+    ./orbstack-generated.nix
     ./container.nix
     ./host-env.nix
     ./home.nix
@@ -14,8 +15,8 @@
 
   dotfiles = {
     profile.name = "nixos-orbstack";
-    users.primary.homeRoot = "/Users";
-    paths.repoName = ".files";
+    users.primary.homeRoot = "/home";
+    paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     rebuild.flags = "--impure";
     cli = {
