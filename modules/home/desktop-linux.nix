@@ -154,6 +154,19 @@ lib.mkIf cfg.features.desktop.enable {
   stylix.targets.floorp.colorTheme.enable = true;
   programs.floorp.profiles.themed.extensions.force = true;
 
+  services.mopidy = {
+    enable = false;
+    extensionPackages = with pkgs; [
+      mopidy-mpd
+      mopidy-mpris
+    ];
+    settings.mpd = {
+      enabled = true;
+      hostname = "127.0.0.1";
+      port = "6600";
+    };
+  };
+
   programs.ncmpcpp = {
     enable = true;
     package = pkgs.ncmpcpp.override { visualizerSupport = true; };
