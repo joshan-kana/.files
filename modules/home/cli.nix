@@ -11,7 +11,7 @@ let
   primaryHome = "${cfg.users.primary.homeRoot}/${cfg.users.primary.name}";
   repoPath = "${primaryHome}/${cfg.paths.repoName}";
   enabled = name: !(builtins.elem name cfg.cli.disabledPrograms);
-  aliases = lib.filterAttrs (name: _: !(builtins.elem name cfg.cli.disabledAliases)) {
+  baseAliases = {
     bk = "cd ..";
     edit = "zellij attach config";
     syscd = "cd $DOTFILES";
@@ -46,6 +46,9 @@ let
     da = "direnv allow";
     dt = "direnv_hook_toggle";
   };
+  aliases = lib.filterAttrs (name: _: !(builtins.elem name cfg.cli.disabledAliases)) (
+    baseAliases // cfg.cli.aliasOverrides
+  );
 in
 lib.mkIf cfg.features.cli.enable {
   programs.git = lib.mkIf (enabled "git") {

@@ -12,6 +12,9 @@
         "nixos": {
           "expr": "(builtins.getFlake (builtins.toString ./.)).nixosConfigurations.nixos.options"
         },
+        "nixos-server": {
+          "expr": "(builtins.getFlake (builtins.toString ./.)).nixosConfigurations.nixos-server.options"
+        },
         "home-manager": {
           "expr": "(builtins.getFlake (builtins.toString ./.)).nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
         }
