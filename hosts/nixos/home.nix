@@ -11,7 +11,7 @@
     ../../modules/home/cli.nix
     ../../modules/home/desktop-linux.nix
     ../../modules/home/x86-desktop.nix
-    ../../desktop/plasma/plasma_hm.nix
+    ../../desktop/plasma/plasma-hm.nix
     ../../desktop/hyprland/hyprland.nix
   ];
 }

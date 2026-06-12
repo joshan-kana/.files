@@ -163,10 +163,10 @@ Use the current location of the program:
 - Desktop system services, fonts, Stylix, PipeWire, Docker, libvirt, desktop
   packages, firewall ports, boot, SSH, and VPN modules:
   `modules/nixos/desktop-linux.nix`
-- Plasma home config: `desktop/plasma/plasma_hm.nix`
+- Plasma home config: `desktop/plasma/plasma-hm.nix`
 - Plasma NixOS config: `desktop/plasma/plasma.nix`
 - Hyprland home config: `desktop/hyprland/hyprland.nix`
-- Hyprland NixOS config: `desktop/hyprland/hyprland_nixos.nix`
+- Hyprland NixOS config: `desktop/hyprland/hyprland-nixos.nix`
 - Server containers and hosted stack: `hosts/nixos-server/apps.nix`
 - Server networking: `hosts/nixos-server/networking.nix`
 - Server image build: `hosts/nixos-server/image.nix`
@@ -191,10 +191,10 @@ that need the feature.
 
 Current examples:
 
-- Hyprland system config: `desktop/hyprland/hyprland_nixos.nix`
+- Hyprland system config: `desktop/hyprland/hyprland-nixos.nix`
 - Hyprland home config: `desktop/hyprland/hyprland.nix`
 - Plasma system config: `desktop/plasma/plasma.nix`
-- Plasma home config: `desktop/plasma/plasma_hm.nix`
+- Plasma home config: `desktop/plasma/plasma-hm.nix`
 - Desktop system baseline: `modules/nixos/desktop-linux.nix`
 - Desktop home baseline: `modules/home/desktop-linux.nix`
 
