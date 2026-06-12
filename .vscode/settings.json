@@ -1,4 +1,15 @@
 {
+  "[nix]": {
+    "editor.defaultFormatter": "jnoortheen.nix-ide",
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false
+  },
+
+  "editor.autoClosingBrackets": "always",
+  "editor.autoClosingQuotes": "always",
+  "editor.snippetSuggestions": "top",
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+
   "nix.enableLanguageServer": true,
   "nixEnvSelector.useFlakes": true,
   "nixEnvSelector.flakeShell": "vscode",
