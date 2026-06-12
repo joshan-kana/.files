@@ -182,11 +182,4 @@ lib.mkIf cfg.features.desktop.enable {
     };
   };
 
-  gtk = {
-    iconTheme = {
-      package = pkgs.gruvbox-dark-icons-gtk;
-      name = "oomox-gruvbox-dark";
-    };
-  };
-
 }

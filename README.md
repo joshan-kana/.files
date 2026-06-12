@@ -241,7 +241,7 @@ The shared theme matches the old main-branch Stylix configuration: Framer from
 `pkgs.base16-schemes`, `wallpaper.png`, Monaspace Neon, Noto Color Emoji, dark
 polarity, and the GoogleDot-Black cursor.
 
-Shared Home Manager Stylix target defaults live in `modules/home/theme.nix`.
+Shared NixOS and Home Manager theme defaults live in `modules/nixos/theme.nix`.
 Desktop app-specific target settings stay in `modules/home/desktop-linux.nix`
 or the relevant `desktop/*` module.
 
