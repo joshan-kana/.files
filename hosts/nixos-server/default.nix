@@ -24,14 +24,6 @@ in
     ./hardware.nix
   ];
 
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
-  home-manager.users.${config.dotfiles.users.primary.name}.imports = [
-    ../../modules/home/base.nix
-    ../../modules/home/theme.nix
-    ../../modules/home/cli.nix
-  ];
-
   dotfiles = {
     profile.name = "nixos-server";
     users.primary.homeRoot = "/home";
