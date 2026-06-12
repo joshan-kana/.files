@@ -9,7 +9,8 @@
 let
   cfg = osConfig.dotfiles;
   primaryHome = "${cfg.users.primary.homeRoot}/${cfg.users.primary.name}";
-  repoPath = "${primaryHome}/${cfg.paths.repoName}";
+  repoPath =
+    if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
   enabled = name: !(builtins.elem name cfg.cli.disabledPrograms);
   baseAliases = {
     bk = "cd ..";

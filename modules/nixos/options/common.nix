@@ -36,10 +36,18 @@ in
       };
     };
 
-    paths.repoName = mkOption {
-      type = types.str;
-      default = ".files";
-      description = "Repository directory name under the primary user's home.";
+    paths = {
+      repoName = mkOption {
+        type = types.str;
+        default = ".files";
+        description = "Repository directory name under the primary user's home.";
+      };
+
+      repoPath = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Absolute path to the repository. Defaults to repoName under the primary user's home.";
+      };
     };
 
     rebuild.flags = mkOption {
