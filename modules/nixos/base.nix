@@ -82,15 +82,11 @@ in
   environment.systemPackages = with pkgs; [
     vim
     wget
-    git
-    lf
     lshw
     fastfetch
-    home-manager
     tree
     glow
     htop
-    nixfmt
   ];
 
   virtualisation.vmVariant.virtualisation = {
