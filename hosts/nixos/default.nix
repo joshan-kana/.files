@@ -11,8 +11,6 @@
     ./hardware.nix
   ];
 
-  networking.hostName = "nixos";
-
   dotfiles = {
     profile.name = "nixos";
     features.desktop.enable = true;

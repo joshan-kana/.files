@@ -10,8 +10,6 @@
     ./home.nix
   ];
 
-  networking.hostName = "nixos";
-
   dotfiles = {
     profile.name = "nixos-orbstack";
     users.primary.homeRoot = "/home";

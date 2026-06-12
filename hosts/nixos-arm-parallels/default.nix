@@ -9,8 +9,6 @@
     ./hardware.nix
   ];
 
-  networking.hostName = "nixos";
-
   dotfiles = {
     profile.name = "nixos-arm-parallels";
     features.desktop.enable = true;

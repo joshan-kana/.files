@@ -12,6 +12,8 @@ let
     if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
 in
 {
+  networking.hostName = lib.mkDefault cfg.profile.name;
+
   programs.nh = {
     enable = true;
     flake = repoPath;
