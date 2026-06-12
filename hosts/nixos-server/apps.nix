@@ -22,7 +22,9 @@ let
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
-  openclawContainer = {
+  openclawContainerUser = {
+    # UID/GID used by the OpenClaw image's internal node user.
+    # This is not the host primary user.
     uid = 1000;
     gid = 1000;
   };
@@ -121,12 +123,12 @@ in
 
   systemd.tmpfiles.rules = [
     "d ${appDataRoot} ${appDataMode} root ${appDataEditor.group} - -"
-    "a+ ${appDataRoot} - - - - u:${toString openclawContainer.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainer.uid}:rwx,d:g:${appDataEditor.group}:rwx"
+    "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
 
     "d ${secretsDir} 0700 root root - -"
-    "z ${openclawHostAdmin.privateKeyPath} 0400 1000 root - -"
+    "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
 
     "v ${appDataRoot}/.snapshots ${snapshotMode} root root - -"
@@ -305,7 +307,7 @@ in
             ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
       ' "$configFile" > "$tmp"
 
-      install -m 0600 -o ${toString openclawContainer.uid} -g ${toString openclawContainer.gid} "$tmp" "$configFile"
+      install -m 0600 -o ${toString openclawContainerUser.uid} -g ${toString openclawContainerUser.gid} "$tmp" "$configFile"
       rm -f "$tmp"
     '';
   };
