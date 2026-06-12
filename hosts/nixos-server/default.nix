@@ -41,8 +41,8 @@ in
         "k"
         "cpd"
         "p"
-        "sysedit"
         "sysvm"
+        "svm"
         "ollama"
       ];
     };

@@ -12,17 +12,34 @@ let
   repoPath =
     if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
   enabled = name: !(builtins.elem name cfg.cli.disabledPrograms);
-  baseAliases = {
+  systemCommands = {
+    cd = "cd $DOTFILES";
+    edit = "if command -v code >/dev/null 2>&1; then code \"$DOTFILES/edit_config.code-workspace\"; else \${EDITOR:-nvim} \"$DOTFILES\"; fi";
+    flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${cfg.profile.name}";
+    rebuild =
+      action: "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS ${action}";
+  };
+  systemAliases = {
+    syscd = systemCommands.cd;
+    scd = systemCommands.cd;
+    sysedit = systemCommands.edit;
+    sedit = systemCommands.edit;
+    sysfu = systemCommands.flakeUpdate;
+    sfu = systemCommands.flakeUpdate;
+    sysbld = systemCommands.rebuild "build";
+    sbld = systemCommands.rebuild "build";
+    sysboot = systemCommands.rebuild "boot";
+    sboot = systemCommands.rebuild "boot";
+    sysup = systemCommands.rebuild "switch";
+    sup = systemCommands.rebuild "switch";
+    systest = systemCommands.rebuild "test";
+    stest = systemCommands.rebuild "test";
+    sysvm = systemCommands.rebuild "build-vm";
+    svm = systemCommands.rebuild "build-vm";
+  };
+  baseAliases = systemAliases // {
     bk = "cd ..";
-    edit = "zellij attach config";
-    syscd = "cd $DOTFILES";
-    sysedit = "code $DOTFILES/edit_config.code-workspace";
-    sysfu = "${repoPath}/scripts/nix-flake-update ${repoPath} ${cfg.profile.name}";
-    sysbld = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS build";
-    sysboot = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS boot";
-    sysup = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS switch";
-    systest = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS test";
-    sysvm = "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS build-vm";
+    edit = systemCommands.edit;
     h = "start-hyprland";
     HI = "${repoPath}/scripts/hyprland_intel";
     HN = "${repoPath}/scripts/hyprland_nvidia";
