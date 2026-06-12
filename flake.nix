@@ -84,38 +84,22 @@
         chmod +x .githooks/pre-commit
       '';
 
-      # Centralised profile-specific variables
-      profiles = {
-        nixos = {
-          dotfilesPath = "/home/joshan/.files";
-          profileName = "nixos";
-          ollamaUrl = "http://localhost:11434/v1";
-          nixosRebuildFlags = "--impure";
+      nixosHost =
+        {
+          system,
+          hostModule,
+          nixpkgsInput ? nixpkgs,
+          extraModules ? [ ],
+        }:
+        nixpkgsInput.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = [
+            home-manager.nixosModules.home-manager
+            hostModule
+          ]
+          ++ extraModules;
         };
-
-        nixos-arm-parallels = {
-          dotfilesPath = "/home/joshan/.files";
-          profileName = "nixos-arm-parallels";
-          ollamaUrl = "http://localhost:11434/v1";
-          nixosRebuildFlags = "";
-        };
-
-        nixos-orbstack = {
-          dotfilesPath = "/Users/joshan/.files";
-          profileName = "nixos-orbstack";
-          ollamaUrl = "http://host.orb.internal:11434/v1";
-          nixosRebuildFlags = "--impure";
-        };
-
-        nixos-server = {
-          dotfilesPath = "/home/joshan/.files";
-          profileName = "nixos-server";
-          appDataRoot = "/var/lib/apps";
-          ollamaUrl = "http://localhost:11434/v1";
-          nixosRebuildFlags = "";
-        };
-
-      };
     in
     {
       formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
@@ -175,162 +159,28 @@
       );
 
       nixosConfigurations = {
-        nixos =
-          let
-            specialArgs = {
-              inherit inputs;
-              inherit (profiles.nixos)
-                dotfilesPath
-                profileName
-                ollamaUrl
-                nixosRebuildFlags
-                ;
-            };
-          in
-          lib.nixosSystem {
-            inherit specialArgs;
-            system = "x86_64-linux";
-            modules = [
-              stylix.nixosModules.stylix
-              home-manager.nixosModules.home-manager
-              {
-                home-manager.useGlobalPkgs = true;
-                home-manager.useUserPackages = true;
-                home-manager.users.joshan.imports = [
-                  plasma-manager.homeModules.plasma-manager
-                  spicetify-nix.homeManagerModules.default
-                  ./home.nix
-                  ./profiles/nixos/home_x86.nix
-                  ./desktop/plasma/plasma_hm.nix
-                  ./desktop/hyprland/hyprland.nix
-                ];
+        nixos = nixosHost {
+          system = "x86_64-linux";
+          hostModule = ./hosts/nixos;
+          extraModules = [ stylix.nixosModules.stylix ];
+        };
 
-                home-manager.extraSpecialArgs = specialArgs // {
-                  inherit spicetify-nix;
-                };
-              }
-              ./overlays/nvtop-overlay.nix
-              ./overlays/monaspace-liga-overlay.nix
-              ./configuration.nix
-              ./profiles/nixos/profile_nixos.nix
-              ./profiles/nixos/configuration_x86.nix
-              ./ssh.nix
-              ./vpn.nix
-              ./boot.nix
-              ./desktop/display-manager.nix
-              ./desktop/hyprland/hyprland_nixos.nix
-              ./desktop/plasma/plasma.nix
-              ./hosts/nixos/hardware.nix
-            ];
-          };
+        nixos-arm-parallels = nixosHost {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-arm-parallels;
+          extraModules = [ stylix.nixosModules.stylix ];
+        };
 
-        nixos-arm-parallels =
-          let
-            specialArgs = {
-              inherit inputs;
-              inherit (profiles.nixos-arm-parallels)
-                dotfilesPath
-                profileName
-                ollamaUrl
-                nixosRebuildFlags
-                ;
-            };
-          in
-          lib.nixosSystem {
-            inherit specialArgs;
-            system = "aarch64-linux";
-            modules = [
-              stylix.nixosModules.stylix
-              home-manager.nixosModules.home-manager
-              {
-                home-manager.useGlobalPkgs = true;
-                home-manager.useUserPackages = true;
-                home-manager.users.joshan.imports = [
-                  plasma-manager.homeModules.plasma-manager
-                  spicetify-nix.homeManagerModules.default
-                  ./home.nix
-                  ./desktop/plasma/plasma_hm.nix
-                  ./desktop/hyprland/hyprland.nix
-                ];
+        nixos-orbstack = nixosHost {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-orbstack;
+        };
 
-                home-manager.extraSpecialArgs = specialArgs // {
-                  inherit spicetify-nix;
-                };
-              }
-              ./overlays/monaspace-liga-overlay.nix
-              ./configuration.nix
-              ./profiles/nixos-arm-parallels/profile_nixos-arm-parallels.nix
-              ./ssh.nix
-              ./vpn.nix
-              ./boot.nix
-              ./desktop/display-manager.nix
-              ./desktop/hyprland/hyprland_nixos.nix
-              ./desktop/plasma/plasma.nix
-              ./profiles/nixos-arm-parallels/hardware-configuration.nix
-            ];
-          };
-
-        nixos-orbstack =
-          let
-            specialArgs = {
-              inherit inputs;
-              inherit (profiles.nixos-orbstack)
-                dotfilesPath
-                profileName
-                ollamaUrl
-                nixosRebuildFlags
-                ;
-            };
-          in
-          lib.nixosSystem {
-            inherit specialArgs;
-            system = "aarch64-linux";
-            modules = [
-              stylix.nixosModules.stylix
-              home-manager.nixosModules.home-manager
-              {
-                home-manager.useGlobalPkgs = true;
-                home-manager.useUserPackages = true;
-                home-manager.users.joshan.imports = [
-                  ./home.nix
-                ];
-
-                home-manager.extraSpecialArgs = specialArgs // {
-                  inherit spicetify-nix;
-                };
-              }
-              ./overlays/monaspace-liga-overlay.nix
-              ./configuration.nix
-              ./profiles/nixos-orbstack/profile_nixos-orbstack.nix
-              ./hosts/nixos-orbstack/container.nix
-            ];
-          };
-
-        nixos-server =
-          let
-            specialArgs = {
-              inherit inputs;
-              inherit (profiles.nixos-server)
-                dotfilesPath
-                profileName
-                appDataRoot
-                ollamaUrl
-                nixosRebuildFlags
-                ;
-            };
-          in
-          nixpkgs-stable.lib.nixosSystem {
-            inherit specialArgs;
-            system = "aarch64-linux";
-            modules = [
-              nixos-hardware.nixosModules.raspberry-pi-4
-              ./profiles/nixos-server/configuration_nixos-server.nix
-              ./profiles/nixos-server/hosted-stack.nix
-              ./profiles/nixos-server/hardware-configuration.nix
-              ./profiles/nixos-server/image.nix
-            ];
-          };
-
+        nixos-server = nixosHost {
+          nixpkgsInput = nixpkgs-stable;
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-server;
+        };
       };
     };
 }
