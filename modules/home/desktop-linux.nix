@@ -130,8 +130,6 @@ lib.mkIf cfg.features.desktop.enable {
   };
   services.easyeffects.enable = true;
 
-  stylix.targets.qt.platform = "kde";
-
   programs.kitty = {
     enable = true;
     extraConfig = ''
@@ -144,7 +142,6 @@ lib.mkIf cfg.features.desktop.enable {
   programs.alacritty.enable = true;
 
   programs.vscode.enable = true;
-  stylix.targets.vscode.enable = false;
 
   programs.firefox.enable = true;
   stylix.targets.firefox.profileNames = [ "themed" ];
@@ -190,7 +187,6 @@ lib.mkIf cfg.features.desktop.enable {
       package = pkgs.gruvbox-dark-icons-gtk;
       name = "oomox-gruvbox-dark";
     };
-    gtk4.theme = config.gtk.theme;
   };
 
 }

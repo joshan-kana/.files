@@ -95,7 +95,10 @@
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
+            stylix.nixosModules.stylix
             home-manager.nixosModules.home-manager
+            ./overlays/monaspace-liga-overlay.nix
+            ./modules/nixos/theme.nix
             hostModule
           ]
           ++ extraModules;
@@ -162,13 +165,11 @@
         nixos = nixosHost {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
-          extraModules = [ stylix.nixosModules.stylix ];
         };
 
         nixos-arm-parallels = nixosHost {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-arm-parallels;
-          extraModules = [ stylix.nixosModules.stylix ];
         };
 
         nixos-orbstack = nixosHost {
