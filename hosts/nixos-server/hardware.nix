@@ -5,6 +5,10 @@
 
   boot.loader.grub.enable = false;
   boot.loader.generic-extlinux-compatible.enable = true;
+  boot.loader.generic-extlinux-compatible.configurationLimit = lib.mkDefault 10;
+  # Headless Pi server: keep a tiny serial-console rescue window without
+  # slowing normal unattended boots.
+  boot.loader.timeout = lib.mkDefault 1;
   boot.kernelPackages = lib.mkForce pkgs.linuxPackages;
 
   boot.initrd.availableKernelModules = [
