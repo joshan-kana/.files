@@ -18,5 +18,14 @@
     paths.repoName = ".files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     rebuild.flags = "--impure";
+    cli = {
+      aliasOverrides.cpd = ''printf "%s" "$(pwd | tr -d "\n")" | pbcopy && echo "Copied path to macOS clipboard"'';
+      disabledAliases = [
+        "h"
+        "HI"
+        "HN"
+        "k"
+      ];
+    };
   };
 }

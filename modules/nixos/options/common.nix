@@ -74,6 +74,12 @@ in
         default = [ ];
         description = "Names of shared shell aliases to disable for this host.";
       };
+
+      aliasOverrides = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = "Host-specific shell aliases that override shared aliases.";
+      };
     };
   };
 }

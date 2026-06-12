@@ -1,4 +1,5 @@
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -6,6 +7,7 @@
 }:
 
 let
+  primaryUser = config.dotfiles.users.primary.name;
   cleanupRetentionDays = 7;
   cleanupSchedule = "weekly";
   minFree = "2G";
@@ -17,10 +19,7 @@ in
     ../../modules/nixos/options/server.nix
     ../../modules/nixos/base.nix
     ./networking.nix
-    ./appdata.nix
     ./apps.nix
-    ./backups.nix
-    ./openclaw.nix
     ./image.nix
     ./hardware.nix
     ./home.nix
@@ -33,6 +32,24 @@ in
     services.ollama.url = "http://localhost:11434/v1";
     server.appDataRoot = "/var/lib/apps";
     server.secretsDir = "/root/secrets";
+    cli = {
+      disabledPrograms = [
+        "mpv"
+        "zellij"
+        "tmuxai"
+      ];
+      disabledAliases = [
+        "h"
+        "HI"
+        "HN"
+        "k"
+        "cpd"
+        "p"
+        "sysedit"
+        "sysvm"
+        "ollama"
+      ];
+    };
   };
 
   hardware.bluetooth = {
@@ -82,7 +99,7 @@ in
     ];
   };
 
-  users.users.joshan.openssh.authorizedKeys.keys = [
+  users.users.${primaryUser}.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
   ];
 
