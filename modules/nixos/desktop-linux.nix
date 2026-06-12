@@ -11,7 +11,7 @@
     ./ssh.nix
     ./vpn.nix
     ../../desktop/display-manager.nix
-    ../../desktop/hyprland/hyprland_nixos.nix
+    ../../desktop/hyprland/hyprland-nixos.nix
     ../../desktop/plasma/plasma.nix
   ];
 

@@ -10,7 +10,7 @@
     ../../modules/home/theme.nix
     ../../modules/home/cli.nix
     ../../modules/home/desktop-linux.nix
-    ../../desktop/plasma/plasma_hm.nix
+    ../../desktop/plasma/plasma-hm.nix
     ../../desktop/hyprland/hyprland.nix
   ];
 }
