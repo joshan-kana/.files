@@ -403,7 +403,7 @@ in
       cat "$conf"
 
       if systemctl is-active --quiet nginx.service; then
-        systemctl reload nginx.service
+        systemctl --no-block reload nginx.service
       fi
     '';
   };
