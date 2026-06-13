@@ -1,6 +1,16 @@
 { config, ... }:
 
 {
+  # Prevent ARP flux between the physical Ethernet interface and the
+  # AdGuard macvlan shim. Each interface must answer ARP only for the
+  # IPv4 addresses actually assigned to that interface.
+  boot.kernel.sysctl = {
+    "net.ipv4.conf.all.arp_ignore" = 1;
+    "net.ipv4.conf.default.arp_ignore" = 1;
+    "net.ipv4.conf.all.arp_announce" = 2;
+    "net.ipv4.conf.default.arp_announce" = 2;
+  };
+
   networking.networkmanager.enable = true;
   networking.networkmanager.unmanaged = [
     "interface-name:adguard-shim"
