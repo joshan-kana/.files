@@ -22,8 +22,8 @@
 
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide",
-    "editor.formatOnSave": false,
-    "editor.formatOnPaste": false
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
   },
 
   "editor.autoClosingBrackets": "always",
