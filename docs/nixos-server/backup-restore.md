@@ -48,7 +48,7 @@ Future container apps should store mutable data under `/var/lib/apps` so the
 normal backup and restore flow includes them automatically.
 
 Tailscale is a native service and uses its own state outside `/var/lib/apps`.
-Normal replacement installs enrol with `/root/secrets/tailscale-authkey` instead
+Normal replacement installs enrol with `/root/secrets/tailscale-oauth-client-secret` instead
 of restoring an old Tailscale machine identity.
 
 ## Restic Repository
@@ -78,7 +78,7 @@ Secrets are split into two buckets:
 | OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
 | OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
-| Tailscale first-boot auth key | `/root/secrets/tailscale-authkey` | Separate encrypted copy |
+| Tailscale first-boot auth key | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
 | Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
 | Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
 

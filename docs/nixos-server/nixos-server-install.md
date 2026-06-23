@@ -64,7 +64,7 @@ The bootstrap bundle should contain:
 $SECRETS_DIR/
   restic-password
   rclone.conf
-  tailscale-authkey
+  tailscale-oauth-client-secret
   n8n.env
   openclaw.env
   id_ed25519
@@ -92,23 +92,48 @@ Required contents:
 
 - `restic-password`: restic repository password
 - `rclone.conf`: rclone config with a Dropbox remote named `dropbox`
-- `tailscale-authkey`: reusable Tailscale auth key
+- `tailscale-oauth-client-secret`: Tailscale OAuth client secret used by the
+  NixOS Tailscale service to join as an ephemeral tagged subnet router
 - `n8n.env`: runtime environment for the `n8n` container
 - `openclaw.env`: runtime environment for the OpenClaw container
 
-Create the Tailscale auth key on the user's machine:
+Create the Tailscale OAuth client on the user's machine:
 
 1. Open the Tailscale admin console.
-2. Go to `Settings` -> `Keys`.
-3. Create an auth key for the server bootstrap.
-4. Use a reusable key so the first install does not depend on a one-time token.
-5. Leave it non-ephemeral so the server keeps a normal machine identity.
-6. Copy the key into the secrets directory:
+2. Configure the tailnet policy before creating the OAuth client:
+
+```json
+{
+  "tagOwners": {
+    "tag:nixos-server": [
+      "autogroup:admin"
+    ]
+  },
+  "autoApprovers": {
+    "routes": {
+      "192.168.1.0/24": [
+        "tag:nixos-server"
+      ]
+    }
+  }
+}
+```
+
+3. Go to `Settings` -> `Trust credentials` / `OAuth clients`.
+4. Create an OAuth client with `auth_keys` write scope.
+5. Restrict the OAuth client to `tag:nixos-server`.
+6. Copy the OAuth client secret into the secrets directory:
 
 ```sh
-printf '%s\n' 'paste-the-tailscale-auth-key-here' > "$SECRETS_DIR/tailscale-authkey" &&
-  chmod 600 "$SECRETS_DIR/tailscale-authkey"
+printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tailscale-oauth-client-secret" &&
+  chmod 600 "$SECRETS_DIR/tailscale-oauth-client-secret"
 ```
+
+The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
+`192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
+The Tailscale `100.x` address is disposable and may change after a reboot,
+maintenance window, or rebuild. Use the LAN address through the approved subnet
+route for stable service access, for example `http://192.168.1.3:8123`.
 
 Authorize Dropbox with rclone on the user's machine.
 
@@ -254,6 +279,23 @@ ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
 ssh joshan@192.168.1.3
 ```
 
+Verify Tailscale after the first rebuild or restore:
+
+```sh
+ssh joshan@192.168.1.3 '
+  tailscale status --json --peers=false | jq "{
+    host: .Self.HostName,
+    dns: .Self.DNSName,
+    ips: .Self.TailscaleIPs,
+    online: .Self.Online
+  }"
+  tailscale debug prefs | grep -E "Hostname|AdvertiseRoutes|192\\.168\\.1\\.0" || true
+'
+```
+
+If a previous `nixos-server` node is still visible in the Tailscale admin console
+after a replacement, remove it manually from the web UI, then reboot the server.
+
 Immediately change the temporary first-boot password:
 
 ```sh
@@ -343,6 +385,10 @@ curl -I http://192.168.1.3:8123
 curl -I http://192.168.1.2:3000
 curl -I http://192.168.1.3:5678
 ```
+
+From outside the LAN, keep Tailscale connected and use the same LAN URL
+`http://192.168.1.3:8123`; access is provided by the approved subnet route.
+
 
 ## Updating Later
 
