@@ -1,7 +1,7 @@
 {
   "recommendations": [
     "jnoortheen.nix-ide",
-    "christiankohler.path-intellisense",
+    "christian-kohler.path-intellisense",
     "mkhl.direnv"
   ]
 }
