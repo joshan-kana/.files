@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }:
@@ -10,6 +9,7 @@ let
   serverCfg = config.dotfiles.server;
   appDataRoot = serverCfg.appDataRoot;
   secretsDir = serverCfg.secretsDir;
+  containerCfg = serverCfg.containers;
 
   appDataEditor = {
     group = "appdata-editors";
@@ -37,29 +37,10 @@ let
     "http://100.87.66.20:11434"
   ];
 
-  lanInterface =
-    config.networking.networkmanager.ensureProfiles.profiles."wired-static".connection."interface-name";
-
   # Floating container tags are refreshed as part of the normal flake update
   # workflow: `nix flake update`, then `nixos-rebuild switch`.
-  containerPullPolicy = "always";
-  containerUpdateTrigger = builtins.path {
-    path = ../../flake.lock;
-    name = "nixos-server-flake-lock";
-  };
-
   # Change these to match the LAN before deploying. The AdGuard IP should be
   # outside the DHCP pool, or reserved so another device cannot claim it.
-  adguardNetwork = {
-    name = "adguard_lan";
-    parentInterface = lanInterface;
-    subnet = "192.168.1.0/24";
-    gateway = "192.168.1.1";
-    containerIp = "192.168.1.2";
-    # Host-side macvlan address for reaching the AdGuard container.
-    hostShimIp = "192.168.1.5";
-  };
-
   resticRepository = "rclone:dropbox:Archives/Backups/nixos-server";
   resticPasswordFile = "${secretsDir}/restic-password";
   rcloneConfigFile = "${secretsDir}/rclone.conf";
@@ -112,14 +93,10 @@ in
     acl
     curl
     docker
-    iproute2
     restic
     rclone
     snapper
   ];
-
-  virtualisation.docker.enable = true;
-  virtualisation.oci-containers.backend = "docker";
 
   systemd.tmpfiles.rules = [
     "d ${appDataRoot} ${appDataMode} root ${appDataEditor.group} - -"
@@ -133,52 +110,6 @@ in
 
     "v ${appDataRoot}/.snapshots ${snapshotMode} root root - -"
     "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
-  ];
-
-  networking.macvlans.adguard-shim = {
-    interface = lanInterface;
-    mode = "bridge";
-  };
-
-  networking.interfaces.adguard-shim.ipv4.addresses = [
-    {
-      address = adguardNetwork.hostShimIp;
-      prefixLength = 32;
-    }
-  ];
-
-  networking.interfaces.adguard-shim.ipv4.routes = [
-    {
-      address = adguardNetwork.containerIp;
-      prefixLength = 32;
-    }
-  ];
-
-  services.tailscale = {
-    enable = true;
-    openFirewall = true;
-    authKeyFile = "${secretsDir}/tailscale-oauth-client-secret";
-    authKeyParameters = {
-      ephemeral = true;
-      preauthorized = true;
-    };
-    extraDaemonFlags = [
-      "--state=mem:"
-    ];
-    extraUpFlags = [
-      "--advertise-tags=tag:nixos-server"
-    ];
-    extraSetFlags = [ "--accept-dns=false" ];
-  };
-
-  networking.firewall.allowedTCPPorts = [
-    8123 # Home Assistant
-    5678 # n8n
-    5580 # Matter Server
-    18789 # OpenClaw gateway reverse proxy
-  ];
-  networking.firewall.allowedUDPPorts = [
-    5353 # mDNS for Home Assistant discovery
   ];
 
   services.nginx = {
@@ -225,37 +156,6 @@ in
     };
   };
 
-  systemd.services.docker-network-adguard = {
-    description = "Create Docker macvlan network for AdGuard Home";
-    after = [
-      "docker.service"
-      "network-online.target"
-    ];
-    wants = [ "network-online.target" ];
-    requires = [ "docker.service" ];
-    wantedBy = [ "multi-user.target" ];
-    path = with pkgs; [
-      docker
-      iproute2
-    ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      parentInterface="${adguardNetwork.parentInterface}"
-
-      if ! docker network inspect ${adguardNetwork.name} >/dev/null 2>&1; then
-        docker network create \
-          --driver macvlan \
-          --subnet ${adguardNetwork.subnet} \
-          --gateway ${adguardNetwork.gateway} \
-          --opt parent="$parentInterface" \
-          ${adguardNetwork.name}
-      fi
-    '';
-  };
-
   systemd.services.docker-home-assistant = {
     after = [
       "bluetooth.service"
@@ -265,10 +165,10 @@ in
       "bluetooth.service"
       "dbus.service"
     ];
-    restartTriggers = [ containerUpdateTrigger ];
+    restartTriggers = [ containerCfg.restartTrigger ];
   };
-  systemd.services.docker-matter-server.restartTriggers = [ containerUpdateTrigger ];
-  systemd.services.docker-n8n.restartTriggers = [ containerUpdateTrigger ];
+  systemd.services.docker-matter-server.restartTriggers = [ containerCfg.restartTrigger ];
+  systemd.services.docker-n8n.restartTriggers = [ containerCfg.restartTrigger ];
   systemd.services.configure-openclaw-gateway = {
     description = "Modify OpenClaw mutable gateway config for trusted-proxy access";
     before = [ "docker-openclaw.service" ];
@@ -324,7 +224,7 @@ in
 
   systemd.services.docker-openclaw = {
     unitConfig.AssertPathIsRegular = openclawHostAdmin.privateKeyPath;
-    restartTriggers = [ containerUpdateTrigger ];
+    restartTriggers = [ containerCfg.restartTrigger ];
     after = [
       "configure-openclaw-gateway.service"
       "nginx.service"
@@ -432,16 +332,10 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
-  systemd.services.docker-adguard = {
-    after = [ "docker-network-adguard.service" ];
-    requires = [ "docker-network-adguard.service" ];
-    restartTriggers = [ containerUpdateTrigger ];
-  };
-
   virtualisation.oci-containers.containers = {
     home-assistant = {
       image = "ghcr.io/home-assistant/home-assistant:stable";
-      pull = containerPullPolicy;
+      pull = containerCfg.pullPolicy;
       volumes = [
         "${appDataRoot}/home-assistant:/config"
         "/run/dbus:/run/dbus:ro"
@@ -453,22 +347,9 @@ in
       ];
     };
 
-    adguard = {
-      image = "adguard/adguardhome:latest";
-      pull = containerPullPolicy;
-      volumes = [
-        "${appDataRoot}/adguard/work:/opt/adguardhome/work"
-        "${appDataRoot}/adguard/conf:/opt/adguardhome/conf"
-      ];
-      extraOptions = [
-        "--network=${adguardNetwork.name}"
-        "--ip=${adguardNetwork.containerIp}"
-      ];
-    };
-
     matter-server = {
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
-      pull = containerPullPolicy;
+      pull = containerCfg.pullPolicy;
       volumes = [ "${appDataRoot}/matter-server:/data" ];
       extraOptions = [
         "--network=host"
@@ -479,7 +360,7 @@ in
 
     n8n = {
       image = "docker.n8n.io/n8nio/n8n:latest";
-      pull = containerPullPolicy;
+      pull = containerCfg.pullPolicy;
       volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
       ports = [ "5678:5678" ];
       environment = {
@@ -490,7 +371,7 @@ in
 
     openclaw = {
       image = "ghcr.io/openclaw/openclaw:latest";
-      pull = containerPullPolicy;
+      pull = containerCfg.pullPolicy;
       volumes = [
         "${appDataRoot}/openclaw:/home/node/.openclaw"
         "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
@@ -552,16 +433,4 @@ in
     checkOpts = [ "--read-data-subset=1G" ];
   };
 
-  virtualisation.vmVariant = {
-    services.restic.backups = lib.mkForce { };
-    services.snapper.configs = lib.mkForce { };
-    # VM builds do not have the real LAN interface used by the macvlan network.
-    systemd.services.docker-network-adguard = lib.mkForce { };
-    virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
-    virtualisation.oci-containers.containers.adguard.ports = [
-      "53:53/tcp"
-      "53:53/udp"
-      "3000:3000/tcp"
-    ];
-  };
 }
