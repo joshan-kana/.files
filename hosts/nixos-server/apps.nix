@@ -157,7 +157,17 @@ in
   services.tailscale = {
     enable = true;
     openFirewall = true;
-    authKeyFile = "${secretsDir}/tailscale-authkey";
+    authKeyFile = "${secretsDir}/tailscale-oauth-client-secret";
+    authKeyParameters = {
+      ephemeral = true;
+      preauthorized = true;
+    };
+    extraDaemonFlags = [
+      "--state=mem:"
+    ];
+    extraUpFlags = [
+      "--advertise-tags=tag:nixos-server"
+    ];
     extraSetFlags = [ "--accept-dns=false" ];
   };
 

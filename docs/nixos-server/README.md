@@ -66,6 +66,18 @@ That is why `hosted-stack.nix` creates:
 If more macvlan services are added later, widen the route or add more `/32`
 routes.
 
+## Tailscale Model
+
+The server joins Tailscale as an ephemeral tagged subnet router:
+
+```text
+tag:nixos-server
+```
+
+It advertises `192.168.1.0/24`. Tailnet policy should auto-approve that route
+for `tag:nixos-server`. The Tailscale `100.x` address is disposable; use LAN
+URLs such as `http://192.168.1.3:8123` through the subnet route for stable access.
+
 ## Install
 
 1. Build the `nixos-server` SD image from this repo on an `aarch64-linux`
@@ -79,7 +91,7 @@ routes.
 5. Create `/root/secrets` files:
    - `restic-password`
    - `rclone.conf`
-   - `tailscale-authkey`
+   - `tailscale-oauth-client-secret`
    - `n8n.env`
    - `openclaw.env`
 6. Restore app data into `/var/lib/...` using the mapping below.
@@ -105,8 +117,9 @@ Special cases:
 - OpenClaw old state is not migrated by default. Start fresh in
   `/var/lib/openclaw` and `/var/lib/openclaw-auth` unless you later choose to
   restore pieces of `17e0cc66_openclaw_assistant/`.
-- Twingate is not restored. Tailscale replaces it, advertises the LAN route,
-  and stores live state in `/var/lib/tailscale`.
+- Twingate is not restored. Tailscale replaces it. The server joins as an
+  ephemeral tagged subnet router, advertises the LAN route, and uses the
+  OAuth client secret in `/root/secrets/tailscale-oauth-client-secret`.
 - Home Assistant's `secrets.yaml` is restored as part of
   `/var/lib/home-assistant/`.
 
