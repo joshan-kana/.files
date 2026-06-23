@@ -129,6 +129,7 @@ printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tai
   chmod 600 "$SECRETS_DIR/tailscale-oauth-client-secret"
 ```
 
+The OAuth client ID is not needed for direct node registration with `tailscale up`.
 The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
 `192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
 The Tailscale `100.x` address is disposable and may change after a reboot,
