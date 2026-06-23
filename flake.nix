@@ -111,14 +111,31 @@
         system:
         let
           pkgs = pkgsFor system;
-          commonTools = with pkgs; [
-            nixfmt
-            treefmt
-            nixd
-            nil
-            statix
-            deadnix
-          ];
+          repoOptionsFzf = pkgs.writeShellApplication {
+            name = "no";
+            runtimeInputs = with pkgs; [
+              fzf
+              git
+              jq
+              nix
+            ];
+            text = ''
+              repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+              exec "$repo/scripts/nix-options-fzf" "$@"
+            '';
+          };
+
+          commonTools =
+            with pkgs;
+            [
+              nixfmt
+              treefmt
+              nixd
+              nil
+              statix
+              deadnix
+            ]
+            ++ [ repoOptionsFzf ];
 
           vscodePkg =
             if pkgs ? vscodium then

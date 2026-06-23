@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  no [host] [prefix] [--refresh]
+
+Examples:
+  no
+  no dotfiles
+  no server
+  no server dotfiles
+  no server dotfiles --refresh
+
+Hosts:
+  d, desktop, nixos              -> nixos
+  s, server, nixos-server        -> nixos-server
+  o, orb, orbstack               -> nixos-orbstack
+  a, arm, parallels              -> nixos-arm-parallels
+
+Keys:
+  Enter                          print selected option
+  Esc / Ctrl-C                   quit
+EOF
+}
+
+host="nixos"
+prefix=""
+refresh=0
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -r|--refresh)
+      refresh=1
+      ;;
+    d|desktop|nixos)
+      host="nixos"
+      ;;
+    s|server|nixos-server)
+      host="nixos-server"
+      ;;
+    o|orb|orbstack|nixos-orbstack)
+      host="nixos-orbstack"
+      ;;
+    a|arm|parallels|nixos-arm-parallels)
+      host="nixos-arm-parallels"
+      ;;
+    *)
+      if [ -z "$prefix" ]; then
+        prefix="$1"
+      else
+        echo "ERROR: unexpected argument: $1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+  shift
+done
+
+repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+flake="git+file://$repo"
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options"
+cache="$cache_dir/$host.json"
+tmp="$cache.tmp"
+preview_script="$cache_dir/preview-option"
+mkdir -p "$cache_dir"
+
+cat > "$preview_script" <<'PREVIEW'
+#!/usr/bin/env bash
+set -euo pipefail
+
+name="$1"
+
+jq -r --arg name "$name" '
+  .[] | select(.name == $name) |
+  "# " + .name,
+  "",
+  "type:",
+  "  " + ((.type // "unknown") | tostring),
+  "",
+  "description:",
+  ((.description // "") | tostring),
+  "",
+  "declarations:",
+  ((.declarations // []) | map("  " + tostring) | join("\n"))
+' "$DOTFILES_OPTIONS_CACHE"
+PREVIEW
+
+chmod +x "$preview_script"
+
+if [ "$refresh" -eq 1 ] || [ ! -s "$cache" ]; then
+  echo "Building option cache for $host..." >&2
+
+  nix eval --impure --json --expr "
+let
+  flake = builtins.getFlake \"$flake\";
+  lib = flake.inputs.nixpkgs.lib;
+  opts = flake.nixosConfigurations.$host.options;
+
+  optionDoc = path: opt: {
+    name = lib.concatStringsSep \".\" path;
+    type = opt.type.description or \"unknown\";
+    description = opt.description or \"\";
+    declarations = builtins.map toString (opt.declarations or []);
+  };
+
+  collect = prefix: set:
+    builtins.concatLists (
+      builtins.map
+        (name:
+          let
+            v = set.\${name};
+            path = prefix ++ [ name ];
+          in
+            if builtins.isAttrs v && v ? _type && v._type == \"option\" then
+              [ (optionDoc path v) ]
+            else if builtins.isAttrs v then
+              collect path v
+            else
+              [ ]
+        )
+        (builtins.attrNames set)
+    );
+in
+  collect [] opts
+" > "$tmp"
+
+  mv "$tmp" "$cache"
+fi
+
+export DOTFILES_OPTIONS_CACHE="$cache"
+
+selected="$(
+  jq -r --arg prefix "$prefix" '
+    .[]
+    | select($prefix == "" or (.name | startswith($prefix)))
+    | .name
+  ' "$cache" |
+    sort |
+    fzf \
+      --prompt="$host options> " \
+      --preview-window=right:70%:wrap \
+      --preview="$preview_script {}"
+)" || exit 0
+
+printf '%s\n' "$selected"
