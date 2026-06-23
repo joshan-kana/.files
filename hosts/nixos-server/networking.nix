@@ -51,7 +51,9 @@
 
   services.tailscale = {
     useRoutingFeatures = "server";
-    extraUpFlags = [ "--advertise-routes=192.168.1.0/24" ];
-    extraSetFlags = [ "--hostname=${config.networking.hostName}" ];
+    extraSetFlags = [
+      "--hostname=${config.networking.hostName}"
+      "--advertise-routes=192.168.1.0/24"
+    ];
   };
 }
