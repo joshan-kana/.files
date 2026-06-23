@@ -1,0 +1,24 @@
+{ lib, ... }:
+
+{
+  virtualisation.vmVariant = {
+    services.restic.backups = lib.mkForce { };
+    services.snapper.configs = lib.mkForce { };
+
+    # VM builds do not have the real LAN interface used by the AdGuard
+    # macvlan network.
+    systemd.services.docker-network-adguard = lib.mkForce { };
+
+    systemd.services.docker-adguard = {
+      after = lib.mkForce [ "docker.service" ];
+      requires = lib.mkForce [ "docker.service" ];
+    };
+
+    virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
+    virtualisation.oci-containers.containers.adguard.ports = [
+      "53:53/tcp"
+      "53:53/udp"
+      "3000:3000/tcp"
+    ];
+  };
+}
