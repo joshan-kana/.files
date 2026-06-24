@@ -121,7 +121,7 @@
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-              exec "$repo/scripts/nix-options-fzf" "$@"
+              NO_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf" "$@"
             '';
           };
 
