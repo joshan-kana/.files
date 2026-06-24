@@ -27,7 +27,7 @@ in
       restartTrigger = mkOption {
         type = types.path;
         default = builtins.path {
-          path = ../../../flake.lock;
+          path = ../../flake.lock;
           name = "nixos-server-flake-lock";
         };
         description = "Path used to restart server containers when container inputs change.";

@@ -68,7 +68,7 @@ Common options include:
 - `dotfiles.cli.disabledPrograms`
 - `dotfiles.cli.disabledAliases`
 
-Server-only options live in `modules/nixos/options/server.nix` and are imported
+Server-only options live in `hosts/nixos-server/options.nix` and are imported
 only by `hosts/nixos-server/default.nix`.
 
 Set host values in the host entrypoint. For example:

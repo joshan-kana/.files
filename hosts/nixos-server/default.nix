@@ -16,7 +16,7 @@ in
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
     ../../modules/nixos/options/common.nix
-    ../../modules/nixos/options/server.nix
+    ./options.nix
     ../../modules/nixos/base.nix
     ./networking.nix
     ./apps.nix
