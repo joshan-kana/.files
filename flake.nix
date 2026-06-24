@@ -112,7 +112,7 @@
         let
           pkgs = pkgsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
-            name = "no";
+            name = "nf";
             runtimeInputs = with pkgs; [
               fzf
               git
@@ -121,7 +121,7 @@
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-              NO_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf" "$@"
+              NIX_OPTIONS_FZF_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf" "$@"
             '';
           };
 
