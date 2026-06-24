@@ -23,6 +23,7 @@ Interactive fzf keys:
   Enter      zoom into the selected option area; never exits
   Ctrl-P     print selected option immediately and exit
   Ctrl-B     go back one level
+  Ctrl-O     toggle flat/all-options mode and grouped/module mode
   Ctrl-J/K   move selection down/up one line
   Ctrl-U/D   move selection up/down half page
   Ctrl-V     show normal effective value in the right pane
@@ -37,6 +38,12 @@ Interactive fzf keys:
 Default preview:
   Full effective value preview is enabled by default for testing.
   Override with NIX_OPTIONS_FZF_DEFAULT_PREVIEW=docs, value, or full.
+
+List modes:
+  Flat mode shows all concrete options under the current prefix.
+  Grouped mode shows module/group entries like services/ and programs/.
+  Toggle during fzf with Ctrl-O.
+  Override startup mode with NIX_OPTIONS_FZF_LIST_MODE=flat or grouped.
 
 Hosts:
   Hosts are discovered from flake.nixosConfigurations.
@@ -419,6 +426,7 @@ print_browser_keys() {
   printf '  %bEnter%b    zoom into selected option area; never exits\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-P%b   print selected option and exit\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-B%b   go back one level\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-O%b   toggle flat/grouped list mode\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-J/K%b move selection lines\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-U/D%b move selection half pages\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-V%b   show normal effective value\n' "$YELLOW" "$RESET"
@@ -439,6 +447,16 @@ if [ "$name" = ".." ]; then
   printf '  %bCtrl-J/K%b move selection lines\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-U/D%b move selection half pages\n' "$YELLOW" "$RESET"
   printf '  %bEsc%b      close browser\n' "$YELLOW" "$RESET"
+  exit 0
+fi
+
+if [[ "$name" == */ ]]; then
+  group="${name%/}"
+  count="$(jq -r --arg p "$group" '[.[].name | select(. == $p or startswith($p + "."))] | length' "$DOTFILES_OPTIONS_CACHE")"
+  printf '%b# %s/%b\n\n' "$BOLD$CYAN" "$group" "$RESET"
+  label "group/module"
+  printf '  %s concrete options below this prefix\n\n' "$count"
+  print_browser_keys
   exit 0
 fi
 
@@ -496,13 +514,11 @@ case "$mode" in
 
     echo
     hr
+    print_browser_keys
+    echo
+    hr
     printf '%b%s%b\n' "$BOLD$MAGENTA" "$value_label" "$RESET"
-    printf '  %bevaluating or reading cache%b %s for %s...\n' "$YELLOW" "$RESET" "$name" "$host"
-    printf '  %bCtrl-S%b search evaluated values\n' "$YELLOW" "$RESET"
-    printf '  %bCtrl-R%b return this pane to docs\n' "$YELLOW" "$RESET"
-    printf '  %bAlt-J/K%b scroll preview lines\n' "$YELLOW" "$RESET"
-    printf '  %bAlt-D/U%b scroll preview pages\n' "$YELLOW" "$RESET"
-    printf '  %bAlt-T/B%b jump preview top/bottom\n\n' "$YELLOW" "$RESET"
+    printf '  %bevaluating or reading cache%b %s for %s...\n\n' "$YELLOW" "$RESET" "$name" "$host"
 
     start="$(date +%s 2>/dev/null || printf 0)"
 
@@ -934,6 +950,11 @@ search_value_items() {
   local option="$1"
   local selected
 
+  if [ "$option" = ".." ] || [[ "$option" == */ ]]; then
+    echo "Select a concrete option first, not a group."
+    exit 0
+  fi
+
   selected="$(
     print_value_items "$option" |
       fzf \
@@ -985,17 +1006,40 @@ export DOTFILES_OPTIONS_REPO="$repo"
 
 list_entries() {
   local current_prefix="$1"
+  local mode="${2:-flat}"
 
   {
     if [ -n "$current_prefix" ]; then
       printf '%s\n' ".."
     fi
 
-    jq -r --arg prefix "$current_prefix" '
-      .[]
-      | select($prefix == "" or (.name | startswith($prefix + ".")) or .name == $prefix)
-      | .name
-    ' "$cache"
+    if [ "$mode" = "grouped" ]; then
+      jq -r --arg prefix "$current_prefix" '
+        [
+          .[].name
+          | select($prefix == "" or . == $prefix or startswith($prefix + "."))
+          | if $prefix != "" and . == $prefix then
+              .
+            else
+              . as $full
+              | (if $prefix == "" then $full else ($full | ltrimstr($prefix + ".")) end) as $rest
+              | if ($rest | contains(".")) then
+                  ((if $prefix == "" then "" else $prefix + "." end) + ($rest | split(".")[0]) + "/")
+                else
+                  $full
+                end
+            end
+        ]
+        | unique
+        | .[]
+      ' "$cache"
+    else
+      jq -r --arg prefix "$current_prefix" '
+        .[]
+        | select($prefix == "" or (.name | startswith($prefix + ".")) or .name == $prefix)
+        | .name
+      ' "$cache"
+    fi
   }
 }
 
@@ -1061,8 +1105,20 @@ if [ "$list_only" -eq 1 ]; then
 fi
 
 current_prefix="$prefix"
+browser_mode="${NIX_OPTIONS_FZF_LIST_MODE:-flat}"
 
 while true; do
+  case "$browser_mode" in
+    flat|grouped)
+      ;;
+    *)
+      echo "ERROR: invalid NIX_OPTIONS_FZF_LIST_MODE: $browser_mode" >&2
+      echo "Use one of: flat, grouped" >&2
+      exit 2
+      ;;
+  esac
+
+  export NIX_OPTIONS_FZF_LIST_MODE="$browser_mode"
   preview_docs="'$preview_script' docs '$host' {}"
   preview_value="'$preview_script' value '$host' {}"
   preview_full="'$preview_script' full '$host' {}"
@@ -1090,13 +1146,21 @@ while true; do
     prompt_prefix="<root>"
   fi
 
+  if [ "$browser_mode" = "grouped" ]; then
+    mode_label="grouped"
+  else
+    mode_label="flat"
+  fi
+
+  header="Mode: $mode_label | Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-O toggle grouped | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit"
+
   fzf_output="$(
-    list_entries "$current_prefix" |
+    list_entries "$current_prefix" "$browser_mode" |
       fzf \
         --ansi \
-        --expect=ctrl-b,ctrl-p \
-        --header="Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit" \
-        --prompt="$host $prompt_prefix> " \
+        --expect=ctrl-b,ctrl-p,ctrl-o \
+        --header="$header" \
+        --prompt="$host [$mode_label] $prompt_prefix> " \
         --preview-window=right:70%:wrap,border-left \
         --preview="$default_preview" \
         --bind="ctrl-v:change-preview($preview_value)" \
@@ -1130,12 +1194,26 @@ while true; do
     continue
   fi
 
+  if [ "$key" = "ctrl-o" ]; then
+    if [ "$browser_mode" = "grouped" ]; then
+      browser_mode="flat"
+    else
+      browser_mode="grouped"
+    fi
+    continue
+  fi
+
   if [ -z "$selected" ]; then
     exit 0
   fi
 
   if [ "$selected" = ".." ]; then
     current_prefix="$(prefix_parent "$current_prefix")"
+    continue
+  fi
+
+  if [[ "$selected" == */ ]]; then
+    current_prefix="${selected%/}"
     continue
   fi
 
