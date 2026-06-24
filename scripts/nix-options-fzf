@@ -1,33 +1,178 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage() {
-  cat <<'EOF'
-Usage:
-  no [host] [prefix] [--refresh]
+cmd_name="${NO_CMD_NAME:-${0##*/}}"
 
-Examples:
-  no
-  no dotfiles
-  no server
-  no server dotfiles
-  no server dotfiles --refresh
+usage() {
+  cat <<EOF
+Usage:
+  ${cmd_name} [host] [prefix] [--refresh]
+  ${cmd_name} [host] [prefix] --list
+  ${cmd_name} [host] --preview <option>
+  ${cmd_name} [host] --value <option>
+  ${cmd_name} [host] --value-full <option>
+  ${cmd_name} [host] --value-items <option>
+  ${cmd_name} [host] --value-search <option>
+  ${cmd_name} --hosts
+  ${cmd_name} --refresh-all
+  ${cmd_name} --default-host
+  ${cmd_name} --clear-default-host
+  ${cmd_name} --clear-value-cache
+
+Interactive fzf keys:
+  Enter      zoom into the selected option area; never exits
+  Ctrl-P     print selected option immediately and exit
+  Ctrl-B     go back one level
+  Ctrl-J/K   move selection down/up one line
+  Ctrl-U/D   move selection up/down half page
+  Ctrl-V     show normal effective value in the right pane
+  Ctrl-F     show full effective value in the right pane
+  Ctrl-S     search evaluated values for the selected option
+  Ctrl-R     return right pane to docs only
+  Alt-J/K    scroll preview down/up one line
+  Alt-D/U    page preview down/up
+  Alt-T/B    jump preview top/bottom
+  Esc        quit/cancel current fzf
+
+Default preview:
+  Full effective value preview is enabled by default for testing.
+  Override with NO_DEFAULT_PREVIEW=docs, value, or full.
 
 Hosts:
-  d, desktop, nixos              -> nixos
-  s, server, nixos-server        -> nixos-server
-  o, orb, orbstack               -> nixos-orbstack
-  a, arm, parallels              -> nixos-arm-parallels
+  Hosts are discovered from flake.nixosConfigurations.
+  Aliases are derived from host names. Run:
+    ${cmd_name} --hosts
 
-Keys:
-  Enter                          print selected option
-  Esc / Ctrl-C                   quit
+Remembered host:
+  First interactive/value/list run requires a host.
+  Running an explicit host remembers it for this repo.
+  Running another explicit host switches the remembered host.
+
+Caches:
+  Option docs are cached per host.
+  Evaluated values are cached per host + option + repo state.
 EOF
 }
 
-host="nixos"
+repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+flake="path:$repo"
+nix_bin="${NIX_BIN:-nix}"
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options"
+preview_script="$cache_dir/preview-option"
+hosts_cache="$cache_dir/hosts.json"
+value_cache_dir="$cache_dir/values"
+mkdir -p "$cache_dir" "$value_cache_dir"
+
+default_host_file="$(git rev-parse --git-path dotfiles-options-default-host 2>/dev/null || printf '%s/default-host\n' "$cache_dir")"
+mkdir -p "$(dirname "$default_host_file")"
+
+host=""
+host_explicit=0
 prefix=""
 refresh=0
+list_only=0
+refresh_all=0
+print_cache=0
+show_hosts=0
+show_default_host=0
+clear_default_host=0
+clear_value_cache=0
+preview_name=""
+value_name=""
+value_full=0
+value_items_name=""
+value_search_name=""
+
+list_hosts() {
+  local tmp
+
+  if [ ! -s "$hosts_cache" ]; then
+    tmp="$hosts_cache.tmp.$$"
+    if "$nix_bin" eval --impure --json "$flake#nixosConfigurations" --apply builtins.attrNames > "$tmp"; then
+      mv "$tmp" "$hosts_cache"
+    else
+      rm -f "$tmp"
+      return 1
+    fi
+  fi
+
+  jq -r '.[]' "$hosts_cache"
+}
+
+host_aliases() {
+  local h="$1"
+  local stripped="$h"
+  local part
+  local initials=""
+
+  printf '%s\n' "$h"
+
+  case "$stripped" in
+    nixos-*)
+      stripped="${stripped#nixos-}"
+      printf '%s\n' "$stripped"
+      ;;
+  esac
+
+  IFS='-' read -r -a parts <<< "$stripped"
+  for part in "${parts[@]}"; do
+    [ -n "$part" ] || continue
+    printf '%s\n' "$part"
+    initials="${initials}${part:0:1}"
+  done
+
+  if [ -n "$initials" ]; then
+    printf '%s\n' "$initials"
+  fi
+}
+
+resolve_host_arg() {
+  local arg="$1"
+  local h
+  local alias
+  local matches=""
+  local count=0
+
+  while IFS= read -r h; do
+    while IFS= read -r alias; do
+      if [ "$alias" = "$arg" ]; then
+        case "$matches" in
+          *"
+$h
+"*)
+            ;;
+          *)
+            matches="${matches}${h}
+"
+            count=$((count + 1))
+            ;;
+        esac
+      fi
+    done < <(host_aliases "$h")
+  done < <(list_hosts)
+
+  if [ "$count" -eq 1 ]; then
+    printf '%s' "$matches" | sed '/^$/d'
+    return 0
+  fi
+
+  if [ "$count" -gt 1 ]; then
+    echo "ERROR: host alias is ambiguous: $arg" >&2
+    printf '%s' "$matches" | sed '/^$/d' >&2
+    return 2
+  fi
+
+  return 1
+}
+
+show_host_table() {
+  local h
+  while IFS= read -r h; do
+    printf '%s\taliases: ' "$h"
+    host_aliases "$h" | awk '!seen[$0]++ { if (out != "") out = out ", " $0; else out = $0 } END { print out }'
+  done < <(list_hosts)
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -35,119 +180,982 @@ while [ "$#" -gt 0 ]; do
       usage
       exit 0
       ;;
+    --hosts)
+      show_hosts=1
+      ;;
     -r|--refresh)
       refresh=1
       ;;
-    d|desktop|nixos)
-      host="nixos"
+    --list)
+      list_only=1
       ;;
-    s|server|nixos-server)
-      host="nixos-server"
+    --refresh-all)
+      refresh=1
+      refresh_all=1
       ;;
-    o|orb|orbstack|nixos-orbstack)
-      host="nixos-orbstack"
+    --cache-path)
+      print_cache=1
       ;;
-    a|arm|parallels|nixos-arm-parallels)
-      host="nixos-arm-parallels"
+    --default-host)
+      show_default_host=1
+      ;;
+    --clear-default-host)
+      clear_default_host=1
+      ;;
+    --clear-value-cache)
+      clear_value_cache=1
+      ;;
+    --preview)
+      shift
+      preview_name="${1:-}"
+      [ -n "$preview_name" ] || { echo "ERROR: --preview requires an option name." >&2; exit 2; }
+      ;;
+    --value)
+      shift
+      value_name="${1:-}"
+      [ -n "$value_name" ] || { echo "ERROR: --value requires an option name." >&2; exit 2; }
+      ;;
+    --value-full)
+      shift
+      value_name="${1:-}"
+      value_full=1
+      [ -n "$value_name" ] || { echo "ERROR: --value-full requires an option name." >&2; exit 2; }
+      ;;
+    --value-items)
+      shift
+      value_items_name="${1:-}"
+      [ -n "$value_items_name" ] || { echo "ERROR: --value-items requires an option name." >&2; exit 2; }
+      ;;
+    --value-search)
+      shift
+      value_search_name="${1:-}"
+      [ -n "$value_search_name" ] || { echo "ERROR: --value-search requires an option name." >&2; exit 2; }
       ;;
     *)
-      if [ -z "$prefix" ]; then
-        prefix="$1"
+      if resolved_host="$(resolve_host_arg "$1" 2>/tmp/no-host-resolve.err)"; then
+        host="$resolved_host"
+        host_explicit=1
       else
-        echo "ERROR: unexpected argument: $1" >&2
-        usage >&2
-        exit 2
+        status=$?
+        if [ "$status" -eq 2 ]; then
+          cat /tmp/no-host-resolve.err >&2
+          exit 2
+        fi
+
+        if [ -z "$prefix" ]; then
+          prefix="${1%/}"
+        else
+          echo "ERROR: unexpected argument: $1" >&2
+          usage >&2
+          exit 2
+        fi
       fi
       ;;
   esac
   shift
 done
 
-repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-flake="path:$repo"
+if [ "$show_hosts" -eq 1 ]; then
+  show_host_table
+  exit 0
+fi
 
-cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options"
-cache="$cache_dir/$host.json"
-tmp="$cache.tmp"
-preview_script="$cache_dir/preview-option"
-mkdir -p "$cache_dir"
+if [ "$clear_default_host" -eq 1 ]; then
+  rm -f "$default_host_file"
+  echo "Cleared remembered host for this repo."
+  exit 0
+fi
+
+if [ "$clear_value_cache" -eq 1 ]; then
+  rm -rf "$value_cache_dir"
+  mkdir -p "$value_cache_dir"
+  echo "Cleared evaluated value cache."
+  exit 0
+fi
+
+if [ "$show_default_host" -eq 1 ]; then
+  if [ -s "$default_host_file" ]; then
+    cat "$default_host_file"
+  else
+    echo "<unset>"
+  fi
+  exit 0
+fi
+
+if [ "$refresh_all" -eq 0 ]; then
+  if [ "$host_explicit" -eq 1 ]; then
+    if [ "$print_cache" -eq 0 ]; then
+      printf '%s\n' "$host" > "$default_host_file"
+    fi
+  elif [ -n "${NO_DEFAULT_HOST:-}" ]; then
+    if ! host="$(resolve_host_arg "$NO_DEFAULT_HOST")"; then
+      echo "ERROR: invalid NO_DEFAULT_HOST: $NO_DEFAULT_HOST" >&2
+      exit 2
+    fi
+  elif [ -s "$default_host_file" ]; then
+    host="$(cat "$default_host_file")"
+  else
+    cat >&2 <<EOF
+ERROR: no default host remembered for this repo yet.
+
+Choose a host once:
+  ${cmd_name} <host-or-derived-alias>
+
+Examples from discovered hosts:
+$(show_host_table 2>/dev/null | sed 's/^/  /')
+
+After that, bare "${cmd_name}" reuses the remembered host.
+EOF
+    exit 2
+  fi
+else
+  host="${host:-$(list_hosts | head -n 1)}"
+fi
+
+cache="$cache_dir/nixosConfigurations-$host.json"
+
+nix_string() {
+  jq -Rn --arg s "$1" '$s'
+}
+
+path_to_nix_list() {
+  local dotted="$1"
+  jq -Rrn --arg s "$dotted" '$s | split(".") | map(@json) | "[ " + join(" ") + " ]"'
+}
+
+repo_state_hash() {
+  {
+    git -C "$repo" rev-parse HEAD 2>/dev/null || true
+    git -C "$repo" status --porcelain=v1 -z --untracked-files=normal 2>/dev/null || true
+
+    while IFS= read -r -d '' f; do
+      [ -e "$repo/$f" ] || continue
+      printf 'DIRTY:%s\n' "$f"
+      stat -f '%m %z %N' "$repo/$f" 2>/dev/null || stat -c '%Y %s %n' "$repo/$f" 2>/dev/null || true
+    done < <(
+      {
+        git -C "$repo" diff --name-only -z 2>/dev/null || true
+        git -C "$repo" diff --cached --name-only -z 2>/dev/null || true
+        git -C "$repo" ls-files --others --exclude-standard -z 2>/dev/null || true
+      }
+    )
+  } | shasum -a 256 | awk '{print $1}'
+}
+
+value_cache_file() {
+  local kind="$1"
+  local option="$2"
+  local extra="$3"
+  local state
+  local key
+
+  state="$(repo_state_hash)"
+  key="$(printf '%s\0%s\0%s\0%s\0%s\0%s' "$host" "$kind" "$option" "$extra" "$state" "$nix_bin" | shasum -a 256 | awk '{print $1}')"
+
+  mkdir -p "$value_cache_dir/$host/$kind"
+  printf '%s/%s/%s/%s.json\n' "$value_cache_dir" "$host" "$kind" "$key"
+}
+
+option_note() {
+  local option="$1"
+
+  if [ ! -s "$cache" ]; then
+    return 0
+  fi
+
+  jq -r --arg name "$option" '
+    .[] | select(.name == $name) |
+    if ((.declarations // []) | map(tostring | contains("/rename.nix")) | any) then
+      "note: this option is declared by rename.nix, so it is likely a renamed/deprecated compatibility option. It may exist in system.options but not have a normal value in system.config."
+    elif ((.type // "") == "unspecified value") then
+      "note: this option has type \"unspecified value\". It may be a placeholder or compatibility option rather than a normal configured value."
+    else
+      empty
+    end
+  ' "$cache" 2>/dev/null || true
+}
 
 cat > "$preview_script" <<'PREVIEW'
 #!/usr/bin/env bash
 set -euo pipefail
 
-name="$1"
+mode="${1:-docs}"
+host="${2:-}"
+name="${3:-}"
 
-jq -r --arg name "$name" '
-  .[] | select(.name == $name) |
-  "# " + .name,
-  "",
-  "type:",
-  "  " + ((.type // "unknown") | tostring),
-  "",
-  "description:",
-  ((.description // "") | tostring),
-  "",
-  "declarations:",
-  ((.declarations // []) | map("  " + tostring) | join("\n"))
-' "$DOTFILES_OPTIONS_CACHE"
+esc="$(printf '\033')"
+if [ -z "${NO_COLOR:-}" ]; then
+  BOLD="${esc}[1m"
+  DIM="${esc}[2m"
+  RESET="${esc}[0m"
+  CYAN="${esc}[36m"
+  GREEN="${esc}[32m"
+  YELLOW="${esc}[33m"
+  MAGENTA="${esc}[35m"
+  BLUE="${esc}[34m"
+  RED="${esc}[31m"
+else
+  BOLD=""
+  DIM=""
+  RESET=""
+  CYAN=""
+  GREEN=""
+  YELLOW=""
+  MAGENTA=""
+  BLUE=""
+  RED=""
+fi
+
+hr() {
+  printf '%b%s%b\n' "$DIM" "────────────────────────────────────────────────────────────────" "$RESET"
+}
+
+label() {
+  printf '%b%s%b\n' "$BOLD$BLUE" "$1" "$RESET"
+}
+
+print_browser_keys() {
+  printf '%bkeys%b\n' "$BOLD$MAGENTA" "$RESET"
+  printf '  %bEnter%b    zoom into selected option area; never exits\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-P%b   print selected option and exit\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-B%b   go back one level\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-J/K%b move selection lines\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-U/D%b move selection half pages\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-V%b   show normal effective value\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-F%b   show full effective value\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-S%b   search evaluated values\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-R%b   return this pane to docs\n' "$YELLOW" "$RESET"
+  printf '  %bAlt-J/K%b  scroll preview lines\n' "$YELLOW" "$RESET"
+  printf '  %bAlt-D/U%b  scroll preview pages\n' "$YELLOW" "$RESET"
+  printf '  %bAlt-T/B%b  jump preview top/bottom\n' "$YELLOW" "$RESET"
+  printf '  %bEsc%b      close browser\n' "$YELLOW" "$RESET"
+}
+
+if [ "$name" = ".." ]; then
+  printf '%b..%b\n\n' "$BOLD$CYAN" "$RESET"
+  label "keys"
+  printf '  %bEnter%b    go back one level\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-B%b   go back one level\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-J/K%b move selection lines\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-U/D%b move selection half pages\n' "$YELLOW" "$RESET"
+  printf '  %bEsc%b      close browser\n' "$YELLOW" "$RESET"
+  exit 0
+fi
+
+doc_json="$(
+  jq -c --arg name "$name" '.[] | select(.name == $name) | {
+    name,
+    type: (.type // "unknown"),
+    description: (.description // ""),
+    declarations: (.declarations // [])
+  }' "$DOTFILES_OPTIONS_CACHE"
+)"
+
+if [ -z "$doc_json" ]; then
+  printf '%bERROR%b: option not found: %s\n' "$RED" "$RESET" "$name"
+  exit 0
+fi
+
+doc_name="$(printf '%s\n' "$doc_json" | jq -r '.name')"
+doc_type="$(printf '%s\n' "$doc_json" | jq -r '.type')"
+doc_description="$(printf '%s\n' "$doc_json" | jq -r '.description')"
+doc_declarations="$(printf '%s\n' "$doc_json" | jq -r '.declarations[]?')"
+
+printf '%b# %s%b\n\n' "$BOLD$CYAN" "$doc_name" "$RESET"
+
+label "type"
+printf '  %b%s%b\n\n' "$GREEN" "$doc_type" "$RESET"
+
+if [ -n "$doc_description" ]; then
+  label "description"
+  printf '%s\n\n' "$doc_description"
+fi
+
+label "declarations"
+if [ -n "$doc_declarations" ]; then
+  printf '%s\n' "$doc_declarations" | sed 's/^/  /'
+else
+  printf '  %b<none>%b\n' "$DIM" "$RESET"
+fi
+
+case "$mode" in
+  docs)
+    echo
+    hr
+    print_browser_keys
+    ;;
+
+  value|full)
+    if [ "$mode" = "full" ]; then
+      flag="--value-full"
+      value_label="full effective value"
+    else
+      flag="--value"
+      value_label="normal effective value"
+    fi
+
+    echo
+    hr
+    printf '%b%s%b\n' "$BOLD$MAGENTA" "$value_label" "$RESET"
+    printf '  %bevaluating or reading cache%b %s for %s...\n' "$YELLOW" "$RESET" "$name" "$host"
+    printf '  %bCtrl-S%b search evaluated values\n' "$YELLOW" "$RESET"
+    printf '  %bCtrl-R%b return this pane to docs\n' "$YELLOW" "$RESET"
+    printf '  %bAlt-J/K%b scroll preview lines\n' "$YELLOW" "$RESET"
+    printf '  %bAlt-D/U%b scroll preview pages\n' "$YELLOW" "$RESET"
+    printf '  %bAlt-T/B%b jump preview top/bottom\n\n' "$YELLOW" "$RESET"
+
+    start="$(date +%s 2>/dev/null || printf 0)"
+
+    if output="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" "$flag" "$name" 2>&1)"; then
+      end="$(date +%s 2>/dev/null || printf "$start")"
+      elapsed=$((end - start))
+      printf '%belapsed%b: %ss\n\n' "$DIM" "$RESET" "$elapsed"
+      printf '%s\n' "$output" | awk '
+        /^current\/effective value:/ { show = 1; next }
+        show { print }
+      '
+    else
+      printf '%bERROR%b: value evaluation failed\n\n' "$RED" "$RESET"
+      printf '%s\n' "$output"
+    fi
+    ;;
+
+  *)
+    echo "ERROR: unknown preview mode: $mode" >&2
+    exit 2
+    ;;
+esac
 PREVIEW
 
 chmod +x "$preview_script"
 
-if [ "$refresh" -eq 1 ] || [ ! -s "$cache" ]; then
-  echo "Building option cache for $host..." >&2
+write_docs_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
 
-  nix eval --impure --json --expr "
+  cat > "$expr_file" <<NIX
 let
-  flake = builtins.getFlake \"$flake\";
-  lib = flake.inputs.nixpkgs.lib;
-  opts = flake.nixosConfigurations.$host.options;
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+
+  flake = builtins.getFlake flakeRef;
+  system = builtins.getAttr host flake.nixosConfigurations;
+  lib =
+    if system ? pkgs && system.pkgs ? lib then
+      system.pkgs.lib
+    else
+      flake.inputs.nixpkgs.lib;
+
+  cleanString = x:
+    let forced = builtins.tryEval x;
+    in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "";
 
   optionDoc = path: opt: {
-    name = lib.concatStringsSep \".\" path;
-    type = opt.type.description or \"unknown\";
-    description = opt.description or \"\";
-    declarations = builtins.map toString (opt.declarations or []);
+    name = lib.concatStringsSep "." path;
+    type = opt.type.description or "unknown";
+    description = cleanString (opt.description or "");
+    declarations = builtins.map toString (opt.declarations or [ ]);
+    readOnly = opt.readOnly or false;
   };
 
-  collect = prefix: set:
+  collect =
+    prefix: set:
     builtins.concatLists (
       builtins.map
-        (name:
+        (
+          name:
           let
-            v = set.\${name};
+            v = builtins.getAttr name set;
             path = prefix ++ [ name ];
           in
-            if builtins.isAttrs v && v ? _type && v._type == \"option\" then
-              [ (optionDoc path v) ]
-            else if builtins.isAttrs v then
-              collect path v
-            else
-              [ ]
+          if builtins.isAttrs v && v ? _type && v._type == "option" then
+            [ (optionDoc path v) ]
+          else if builtins.isAttrs v then
+            collect path v
+          else
+            [ ]
         )
         (builtins.attrNames set)
     );
 in
-  collect [] opts
-" > "$tmp"
+builtins.sort (a: b: a.name < b.name) (collect [ ] system.options)
+NIX
+}
 
-  mv "$tmp" "$cache"
+write_value_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
+  local path_literal="$4"
+  local max_items="$5"
+  local max_keys="$6"
+  local max_chars="$7"
+
+  cat > "$expr_file" <<NIX
+let
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+  optionPath = $path_literal;
+
+  flake = builtins.getFlake flakeRef;
+  system = builtins.getAttr host flake.nixosConfigurations;
+  lib =
+    if system ? pkgs && system.pkgs ? lib then
+      system.pkgs.lib
+    else
+      flake.inputs.nixpkgs.lib;
+
+  value = lib.attrByPath optionPath "<missing>" system.config;
+
+  truncate =
+    text:
+    if builtins.stringLength text > $max_chars then
+      (builtins.substring 0 $max_chars text) + "\\n... <truncated>"
+    else
+      text;
+
+  plainString = s: builtins.unsafeDiscardStringContext (builtins.toString s);
+
+  render =
+    v:
+    if builtins.isNull v then
+      "null"
+    else if builtins.isBool v then
+      if v then "true" else "false"
+    else if builtins.isInt v then
+      builtins.toString v
+    else if (builtins ? isFloat) && builtins.isFloat v then
+      builtins.toJSON v
+    else if builtins.isString v then
+      truncate (builtins.unsafeDiscardStringContext v)
+    else if builtins.isPath v then
+      plainString v
+    else if builtins.isFunction v then
+      "<function>"
+    else if builtins.isList v then
+      let
+        lenEval = builtins.tryEval (builtins.length v);
+        len = if lenEval.success then lenEval.value else 0;
+        shown = lib.take $max_items v;
+        sampleRaw = builtins.map (x: "  - " + render x) shown;
+        sampleEval = builtins.tryEval (builtins.deepSeq sampleRaw sampleRaw);
+        sample = if sampleEval.success then sampleEval.value else [ "  <unable to render list items>" ];
+        suffix =
+          if lenEval.success && len > $max_items then
+            "\\n... " + builtins.toString (len - $max_items) + " more"
+          else
+            "";
+      in
+      "<list: "
+      + (if lenEval.success then builtins.toString len else "unknown")
+      + " items>"
+      + (if sample == [ ] then "" else "\\n" + lib.concatStringsSep "\\n" sample)
+      + suffix
+    else if builtins.isAttrs v then
+      let drvEval = builtins.tryEval (v ? type && v.type == "derivation" && v ? name);
+      in
+      if drvEval.success && drvEval.value then
+        let nameEval = builtins.tryEval (plainString v.name);
+        in if nameEval.success then nameEval.value else "<derivation: unknown>"
+      else
+        let
+          namesEval = builtins.tryEval (builtins.attrNames v);
+          names = if namesEval.success then namesEval.value else [ ];
+          count = builtins.length names;
+          shown = lib.take $max_keys names;
+          suffix =
+            if count > $max_keys then
+              "\\n... " + builtins.toString (count - $max_keys) + " more"
+            else
+              "";
+        in
+        if namesEval.success then
+          "<attrset: "
+          + builtins.toString count
+          + " keys>"
+          + (if shown == [ ] then "" else "\\nkeys:\\n  " + lib.concatStringsSep "\\n  " shown)
+          + suffix
+        else
+          "<attrset: unable to list keys>"
+    else
+      "<unsupported value type>";
+
+  forced = builtins.tryEval value;
+  renderedRaw = if forced.success then render forced.value else "<unavailable>";
+  rendered = builtins.tryEval (builtins.deepSeq renderedRaw renderedRaw);
+  available = forced.success && rendered.success;
+in
+{
+  option = builtins.concatStringsSep "." optionPath;
+  available = available;
+  value = if available then rendered.value else "<unavailable>";
+}
+NIX
+}
+
+write_items_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
+  local path_literal="$4"
+
+  cat > "$expr_file" <<NIX
+let
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+  optionPath = $path_literal;
+
+  flake = builtins.getFlake flakeRef;
+  system = builtins.getAttr host flake.nixosConfigurations;
+  lib =
+    if system ? pkgs && system.pkgs ? lib then
+      system.pkgs.lib
+    else
+      flake.inputs.nixpkgs.lib;
+
+  value = lib.attrByPath optionPath "<missing>" system.config;
+  plainString = s: builtins.unsafeDiscardStringContext (builtins.toString s);
+
+  renderOne =
+    v:
+    if builtins.isNull v then
+      "null"
+    else if builtins.isBool v then
+      if v then "true" else "false"
+    else if builtins.isInt v then
+      builtins.toString v
+    else if (builtins ? isFloat) && builtins.isFloat v then
+      builtins.toJSON v
+    else if builtins.isString v then
+      builtins.unsafeDiscardStringContext v
+    else if builtins.isPath v then
+      plainString v
+    else if builtins.isFunction v then
+      "<function>"
+    else if builtins.isAttrs v then
+      let drvEval = builtins.tryEval (v ? type && v.type == "derivation" && v ? name);
+      in
+      if drvEval.success && drvEval.value then
+        let nameEval = builtins.tryEval (plainString v.name);
+        in if nameEval.success then nameEval.value else "<derivation: unknown>"
+      else
+        let namesEval = builtins.tryEval (builtins.attrNames v);
+        in if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>"
+    else if builtins.isList v then
+      let lenEval = builtins.tryEval (builtins.length v);
+      in "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>"
+    else
+      "<unsupported>";
+
+  forced = builtins.tryEval value;
+
+  renderedRaw =
+    if ! forced.success then
+      [ "<unavailable>" ]
+    else if builtins.isList forced.value then
+      builtins.map renderOne forced.value
+    else if builtins.isAttrs forced.value then
+      let
+        namesEval = builtins.tryEval (builtins.attrNames forced.value);
+        names = if namesEval.success then namesEval.value else [ ];
+      in
+      builtins.map (n: n + " = " + renderOne (builtins.getAttr n forced.value)) names
+    else
+      [ (renderOne forced.value) ];
+
+  rendered = builtins.tryEval (builtins.deepSeq renderedRaw renderedRaw);
+  available = forced.success && rendered.success;
+in
+{
+  option = builtins.concatStringsSep "." optionPath;
+  available = available;
+  items = if available then rendered.value else [ "<unavailable>" ];
+}
+NIX
+}
+
+build_cache() {
+  local build_host="$1"
+  local build_cache="$cache_dir/nixosConfigurations-$build_host.json"
+  local tmp="$build_cache.tmp.$$"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+
+  expr_file="$(mktemp "${TMPDIR:-/tmp}/no-options-docs.XXXXXX.nix")"
+  flake_ref_literal="$(nix_string "$flake")"
+  host_literal="$(nix_string "$build_host")"
+
+  echo "Building option docs cache for nixosConfigurations.$build_host using $nix_bin..." >&2
+  write_docs_expr "$expr_file" "$flake_ref_literal" "$host_literal"
+
+  if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    rm -f "$expr_file"
+    mv "$tmp" "$build_cache"
+  else
+    local status=$?
+    rm -f "$expr_file" "$tmp"
+    return "$status"
+  fi
+}
+
+ensure_docs_cache() {
+  if [ "$refresh" -eq 1 ] || [ ! -s "$cache" ]; then
+    rm -rf "$value_cache_dir/$host" 2>/dev/null || true
+    build_cache "$host"
+  fi
+}
+
+print_value() {
+  local option="$1"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+  local path_literal
+  local max_items
+  local max_keys
+  local max_chars
+  local kind
+  local cache_file
+  local tmp
+  local note
+
+  ensure_docs_cache
+
+  if [ "$value_full" -eq 1 ]; then
+    kind="value-full"
+    max_items="${NO_VALUE_MAX_ITEMS:-10000}"
+    max_keys="${NO_VALUE_MAX_KEYS:-10000}"
+    max_chars="${NO_VALUE_MAX_CHARS:-200000}"
+  else
+    kind="value"
+    max_items="${NO_VALUE_MAX_ITEMS:-80}"
+    max_keys="${NO_VALUE_MAX_KEYS:-80}"
+    max_chars="${NO_VALUE_MAX_CHARS:-20000}"
+  fi
+
+  cache_file="$(value_cache_file "$kind" "$option" "$max_items:$max_keys:$max_chars")"
+
+  if [ -s "$cache_file" ]; then
+    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+  else
+    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-value.XXXXXX.nix")"
+    tmp="$cache_file.tmp.$$"
+    flake_ref_literal="$(nix_string "$flake")"
+    host_literal="$(nix_string "$host")"
+    path_literal="$(path_to_nix_list "$option")"
+
+    write_value_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal" "$max_items" "$max_keys" "$max_chars"
+
+    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+      if jq -e . "$tmp" >/dev/null; then
+        rm -f "$expr_file"
+        mv "$tmp" "$cache_file"
+      else
+        rm -f "$expr_file" "$tmp"
+        echo "ERROR: value eval produced invalid JSON for $option" >&2
+        return 1
+      fi
+    else
+      local status=$?
+      rm -f "$expr_file" "$tmp"
+      return "$status"
+    fi
+  fi
+
+  jq -r '"# " + .option, "", "current/effective value:", (.value | tostring)' "$cache_file"
+
+  if [ "$(jq -r '.available // false' "$cache_file")" != "true" ]; then
+    note="$(option_note "$option")"
+    if [ -n "$note" ]; then
+      echo
+      printf '%s\n' "$note"
+    fi
+  fi
+}
+
+print_value_items() {
+  local option="$1"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+  local path_literal
+  local cache_file
+  local tmp
+  local note
+
+  ensure_docs_cache
+
+  cache_file="$(value_cache_file "items" "$option" "items")"
+
+  if [ -s "$cache_file" ]; then
+    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+  else
+    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-items.XXXXXX.nix")"
+    tmp="$cache_file.tmp.$$"
+    flake_ref_literal="$(nix_string "$flake")"
+    host_literal="$(nix_string "$host")"
+    path_literal="$(path_to_nix_list "$option")"
+
+    write_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+
+    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+      if jq -e . "$tmp" >/dev/null; then
+        rm -f "$expr_file"
+        mv "$tmp" "$cache_file"
+      else
+        rm -f "$expr_file" "$tmp"
+        echo "ERROR: item eval produced invalid JSON for $option" >&2
+        return 1
+      fi
+    else
+      local status=$?
+      rm -f "$expr_file" "$tmp"
+      return "$status"
+    fi
+  fi
+
+  jq -r '.items[]' "$cache_file"
+
+  if [ "$(jq -r '.available // false' "$cache_file")" != "true" ]; then
+    note="$(option_note "$option")"
+    if [ -n "$note" ]; then
+      printf '%s\n' "$note" >&2
+    fi
+  fi
+}
+
+search_value_items() {
+  local option="$1"
+  local selected
+
+  selected="$(
+    print_value_items "$option" |
+      fzf \
+        --ansi \
+        --prompt="$host $option values> " \
+        --header="Search evaluated values for this option | Enter: print value | Esc: return to options browser" \
+        --preview='printf "%s\n" {}' \
+        --preview-window=right:50%:wrap,border-left \
+        --query="${NO_VALUE_SEARCH_QUERY:-}"
+  )" || exit 0
+
+  printf '%s\n' "$selected"
+}
+
+if [ "$refresh_all" -eq 1 ]; then
+  rm -rf "$value_cache_dir" 2>/dev/null || true
+  mkdir -p "$value_cache_dir"
+
+  while IFS= read -r h; do
+    build_cache "$h"
+  done < <(list_hosts)
+  exit 0
 fi
 
-export DOTFILES_OPTIONS_CACHE="$cache"
+if [ "$print_cache" -eq 1 ]; then
+  printf '%s\n' "$cache"
+  exit 0
+fi
 
-selected="$(
+if [ -n "$value_name" ]; then
+  print_value "$value_name"
+  exit 0
+fi
+
+if [ -n "$value_items_name" ]; then
+  print_value_items "$value_items_name"
+  exit 0
+fi
+
+if [ -n "$value_search_name" ]; then
+  search_value_items "$value_search_name"
+  exit 0
+fi
+
+ensure_docs_cache
+
+export DOTFILES_OPTIONS_CACHE="$cache"
+export DOTFILES_OPTIONS_REPO="$repo"
+
+list_entries() {
+  local current_prefix="$1"
+
+  {
+    if [ -n "$current_prefix" ]; then
+      printf '%s\n' ".."
+    fi
+
+    jq -r --arg prefix "$current_prefix" '
+      .[]
+      | select($prefix == "" or (.name | startswith($prefix + ".")) or .name == $prefix)
+      | .name
+    ' "$cache"
+  }
+}
+
+prefix_parent() {
+  local p="$1"
+  if [[ "$p" == *.* ]]; then
+    printf '%s\n' "${p%.*}"
+  else
+    printf '%s\n' ""
+  fi
+}
+
+parent_prefix() {
+  local item="$1"
+
+  if [[ "$item" == *.* ]]; then
+    printf '%s\n' "${item%.*}"
+  else
+    printf '%s\n' ""
+  fi
+}
+
+zoom_prefix() {
+  local current="$1"
+  local selected="$2"
+  local rest
+  local first
+
+  if [ -n "$current" ]; then
+    rest="${selected#"$current."}"
+  else
+    rest="$selected"
+  fi
+
+  if [[ "$rest" == *.* ]]; then
+    first="${rest%%.*}"
+    if [ -n "$current" ]; then
+      printf '%s\n' "$current.$first"
+    else
+      printf '%s\n' "$first"
+    fi
+  else
+    printf '%s\n' "$selected"
+  fi
+}
+
+list_options() {
   jq -r --arg prefix "$prefix" '
     .[]
     | select($prefix == "" or (.name | startswith($prefix)))
     | .name
-  ' "$cache" |
-    sort |
-    fzf \
-      --prompt="$host options> " \
-      --preview-window=right:70%:wrap \
-      --preview="$preview_script {}"
-)" || exit 0
+  ' "$cache"
+}
 
-printf '%s\n' "$selected"
+if [ -n "$preview_name" ]; then
+  "$preview_script" docs "$host" "$preview_name"
+  exit 0
+fi
+
+if [ "$list_only" -eq 1 ]; then
+  list_options
+  exit 0
+fi
+
+current_prefix="$prefix"
+
+while true; do
+  preview_docs="'$preview_script' docs '$host' {}"
+  preview_value="'$preview_script' value '$host' {}"
+  preview_full="'$preview_script' full '$host' {}"
+  value_search="'$repo/scripts/nix-options-fzf' '$host' --value-search {}"
+
+  case "${NO_DEFAULT_PREVIEW:-full}" in
+    docs)
+      default_preview="$preview_docs"
+      ;;
+    value)
+      default_preview="$preview_value"
+      ;;
+    full)
+      default_preview="$preview_full"
+      ;;
+    *)
+      echo "ERROR: invalid NO_DEFAULT_PREVIEW: ${NO_DEFAULT_PREVIEW:-}" >&2
+      echo "Use one of: docs, value, full" >&2
+      exit 2
+      ;;
+  esac
+
+  prompt_prefix="$current_prefix"
+  if [ -z "$prompt_prefix" ]; then
+    prompt_prefix="<root>"
+  fi
+
+  fzf_output="$(
+    list_entries "$current_prefix" |
+      fzf \
+        --ansi \
+        --expect=ctrl-b,ctrl-p \
+        --header="Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit" \
+        --prompt="$host $prompt_prefix> " \
+        --preview-window=right:70%:wrap,border-left \
+        --preview="$default_preview" \
+        --bind="ctrl-v:change-preview($preview_value)" \
+        --bind="ctrl-f:change-preview($preview_full)" \
+        --bind="ctrl-s:execute($value_search)" \
+        --bind="ctrl-r:change-preview($preview_docs)" \
+        --bind="ctrl-j:down" \
+        --bind="ctrl-k:up" \
+        --bind="ctrl-u:half-page-up" \
+        --bind="ctrl-d:half-page-down" \
+        --bind="alt-j:preview-down" \
+        --bind="alt-k:preview-up" \
+        --bind="alt-d:preview-page-down" \
+        --bind="alt-u:preview-page-up" \
+        --bind="alt-t:preview-top" \
+        --bind="alt-b:preview-bottom"
+  )" || exit 0
+
+  mapfile -t fzf_lines <<< "$fzf_output"
+
+  if [ "${#fzf_lines[@]}" -eq 1 ]; then
+    key="enter"
+    selected="${fzf_lines[0]:-}"
+  else
+    key="${fzf_lines[0]:-}"
+    selected="${fzf_lines[1]:-}"
+  fi
+
+  if [ "$key" = "ctrl-b" ]; then
+    current_prefix="$(prefix_parent "$current_prefix")"
+    continue
+  fi
+
+  if [ -z "$selected" ]; then
+    exit 0
+  fi
+
+  if [ "$selected" = ".." ]; then
+    current_prefix="$(prefix_parent "$current_prefix")"
+    continue
+  fi
+
+  if [ "$key" = "ctrl-p" ]; then
+    printf '%s\n' "$selected"
+    exit 0
+  fi
+
+  target_prefix="$(zoom_prefix "$current_prefix" "$selected")"
+
+  if [ "$target_prefix" != "$selected" ] && [ "$target_prefix" != "$current_prefix" ]; then
+    current_prefix="$target_prefix"
+    continue
+  fi
+
+  selected_parent="$(parent_prefix "$selected")"
+  if [ -n "$selected_parent" ] && [ "$selected_parent" != "$current_prefix" ] && [ "$selected" != "$current_prefix" ]; then
+    current_prefix="$selected_parent"
+    continue
+  fi
+
+  continue
+done
