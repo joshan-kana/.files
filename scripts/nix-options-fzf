@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cmd_name="${NO_CMD_NAME:-${0##*/}}"
+cmd_name="${NIX_OPTIONS_FZF_CMD_NAME:-${0##*/}}"
 
 usage() {
   cat <<EOF
@@ -36,7 +36,7 @@ Interactive fzf keys:
 
 Default preview:
   Full effective value preview is enabled by default for testing.
-  Override with NO_DEFAULT_PREVIEW=docs, value, or full.
+  Override with NIX_OPTIONS_FZF_DEFAULT_PREVIEW=docs, value, or full.
 
 Hosts:
   Hosts are discovered from flake.nixosConfigurations.
@@ -287,9 +287,9 @@ if [ "$refresh_all" -eq 0 ]; then
     if [ "$print_cache" -eq 0 ]; then
       printf '%s\n' "$host" > "$default_host_file"
     fi
-  elif [ -n "${NO_DEFAULT_HOST:-}" ]; then
-    if ! host="$(resolve_host_arg "$NO_DEFAULT_HOST")"; then
-      echo "ERROR: invalid NO_DEFAULT_HOST: $NO_DEFAULT_HOST" >&2
+  elif [ -n "${NIX_OPTIONS_FZF_DEFAULT_HOST:-}" ]; then
+    if ! host="$(resolve_host_arg "$NIX_OPTIONS_FZF_DEFAULT_HOST")"; then
+      echo "ERROR: invalid NIX_OPTIONS_FZF_DEFAULT_HOST: $NIX_OPTIONS_FZF_DEFAULT_HOST" >&2
       exit 2
     fi
   elif [ -s "$default_host_file" ]; then
@@ -825,22 +825,22 @@ print_value() {
 
   if [ "$value_full" -eq 1 ]; then
     kind="value-full"
-    max_items="${NO_VALUE_MAX_ITEMS:-10000}"
-    max_keys="${NO_VALUE_MAX_KEYS:-10000}"
-    max_chars="${NO_VALUE_MAX_CHARS:-200000}"
+    max_items="${NIX_OPTIONS_FZF_VALUE_MAX_ITEMS:-10000}"
+    max_keys="${NIX_OPTIONS_FZF_VALUE_MAX_KEYS:-10000}"
+    max_chars="${NIX_OPTIONS_FZF_VALUE_MAX_CHARS:-200000}"
   else
     kind="value"
-    max_items="${NO_VALUE_MAX_ITEMS:-80}"
-    max_keys="${NO_VALUE_MAX_KEYS:-80}"
-    max_chars="${NO_VALUE_MAX_CHARS:-20000}"
+    max_items="${NIX_OPTIONS_FZF_VALUE_MAX_ITEMS:-80}"
+    max_keys="${NIX_OPTIONS_FZF_VALUE_MAX_KEYS:-80}"
+    max_chars="${NIX_OPTIONS_FZF_VALUE_MAX_CHARS:-20000}"
   fi
 
   cache_file="$(value_cache_file "$kind" "$option" "$max_items:$max_keys:$max_chars")"
 
   if [ -s "$cache_file" ]; then
-    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
-    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
     expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-value.XXXXXX.nix")"
     tmp="$cache_file.tmp.$$"
@@ -892,9 +892,9 @@ print_value_items() {
   cache_file="$(value_cache_file "items" "$option" "items")"
 
   if [ -s "$cache_file" ]; then
-    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
-    [ "${NO_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
     expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-items.XXXXXX.nix")"
     tmp="$cache_file.tmp.$$"
@@ -942,7 +942,7 @@ search_value_items() {
         --header="Search evaluated values for this option | Enter: print value | Esc: return to options browser" \
         --preview='printf "%s\n" {}' \
         --preview-window=right:50%:wrap,border-left \
-        --query="${NO_VALUE_SEARCH_QUERY:-}"
+        --query="${NIX_OPTIONS_FZF_VALUE_SEARCH_QUERY:-}"
   )" || exit 0
 
   printf '%s\n' "$selected"
@@ -1068,7 +1068,7 @@ while true; do
   preview_full="'$preview_script' full '$host' {}"
   value_search="'$repo/scripts/nix-options-fzf' '$host' --value-search {}"
 
-  case "${NO_DEFAULT_PREVIEW:-full}" in
+  case "${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-full}" in
     docs)
       default_preview="$preview_docs"
       ;;
@@ -1079,7 +1079,7 @@ while true; do
       default_preview="$preview_full"
       ;;
     *)
-      echo "ERROR: invalid NO_DEFAULT_PREVIEW: ${NO_DEFAULT_PREVIEW:-}" >&2
+      echo "ERROR: invalid NIX_OPTIONS_FZF_DEFAULT_PREVIEW: ${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-}" >&2
       echo "Use one of: docs, value, full" >&2
       exit 2
       ;;
