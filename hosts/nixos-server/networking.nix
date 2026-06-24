@@ -1,24 +1,30 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   serverCfg = config.dotfiles.server;
   appDataRoot = serverCfg.appDataRoot;
   secretsDir = serverCfg.secretsDir;
   containerCfg = serverCfg.containers;
+  lan = serverCfg.lan;
 
-  lanInterface =
-    config.networking.networkmanager.ensureProfiles.profiles."wired-static".connection."interface-name";
+  lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
+  hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
-  # Change these to match the LAN before deploying. The AdGuard IP should be
-  # outside the DHCP pool, or reserved so another device cannot claim it.
+  # The LAN DNS service IP should be outside the DHCP pool, or reserved so
+  # another device cannot claim it.
   adguardNetwork = {
     name = "adguard_lan";
-    parentInterface = lanInterface;
-    subnet = "192.168.1.0/24";
-    gateway = "192.168.1.1";
-    containerIp = "192.168.1.2";
+    parentInterface = lan.interface;
+    subnet = lan.subnet;
+    gateway = lan.gateway;
+    containerIp = lan.dns.serviceIp;
     # Host-side macvlan address for reaching the AdGuard container.
-    hostShimIp = "192.168.1.5";
+    hostShimIp = lan.dns.macvlanHostShimIp;
   };
 in
 {
@@ -46,14 +52,14 @@ in
     connection = {
       id = "wired-static";
       type = "ethernet";
-      "interface-name" = "end0";
+      "interface-name" = lan.interface;
       autoconnect = true;
       "autoconnect-priority" = 100;
     };
     ipv4 = {
       method = "manual";
-      address1 = "192.168.1.3/24,192.168.1.1";
-      dns = "192.168.1.2;192.168.1.1;1.1.1.1;";
+      address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+      dns = hostDns;
       "ignore-auto-dns" = true;
     };
     ipv6 = {
@@ -93,7 +99,7 @@ in
     ];
     extraSetFlags = [
       "--hostname=${config.networking.hostName}"
-      "--advertise-routes=192.168.1.0/24"
+      "--advertise-routes=${lan.subnet}"
       "--accept-dns=false"
     ];
   };
@@ -106,7 +112,7 @@ in
   ];
 
   networking.macvlans.adguard-shim = {
-    interface = lanInterface;
+    interface = lan.interface;
     mode = "bridge";
   };
 

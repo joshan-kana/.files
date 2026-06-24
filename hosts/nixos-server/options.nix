@@ -17,6 +17,55 @@ in
       description = "Root directory for server secret files.";
     };
 
+    lan = {
+      interface = mkOption {
+        type = types.str;
+        default = "end0";
+        description = "Primary wired LAN interface for the server.";
+      };
+
+      subnet = mkOption {
+        type = types.str;
+        default = "192.168.1.0/24";
+        description = "Primary home LAN subnet.";
+      };
+
+      gateway = mkOption {
+        type = types.str;
+        default = "192.168.1.1";
+        description = "Default IPv4 gateway for the home LAN.";
+      };
+
+      serverIp = mkOption {
+        type = types.str;
+        default = "192.168.1.3";
+        description = "Primary LAN IPv4 address for the NixOS server.";
+      };
+
+      dns = {
+        serviceIp = mkOption {
+          type = types.str;
+          default = "192.168.1.2";
+          description = "Dedicated LAN IPv4 address for the local DNS service.";
+        };
+
+        fallbackServers = mkOption {
+          type = types.listOf types.str;
+          default = [
+            "192.168.1.1"
+            "1.1.1.1"
+          ];
+          description = "Fallback DNS servers for the NixOS host when the local DNS service is unavailable.";
+        };
+
+        macvlanHostShimIp = mkOption {
+          type = types.str;
+          default = "192.168.1.5";
+          description = "Host-side macvlan shim address used while the LAN DNS service runs in Docker.";
+        };
+      };
+    };
+
     containers = {
       pullPolicy = mkOption {
         type = types.str;
