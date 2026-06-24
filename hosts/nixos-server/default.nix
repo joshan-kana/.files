@@ -27,8 +27,6 @@ in
 
   dotfiles = {
     profile.name = "nixos-server";
-    server.appDataRoot = "/var/lib/apps";
-    server.secretsDir = "/root/secrets";
     cli = {
       disabledPrograms = [
         "mpv"
