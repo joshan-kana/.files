@@ -9,22 +9,19 @@ let
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) appDataRoot;
   inherit (serverCfg) secretsDir;
-  containerCfg = serverCfg.containers;
   inherit (serverCfg) lan;
 
   lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
   hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
-  # The LAN DNS service IP should be outside the DHCP pool, or reserved so
-  # another device cannot claim it.
-  adguardNetwork = {
-    name = "adguard_lan";
-    parentInterface = lan.interface;
-    inherit (lan) subnet;
-    inherit (lan) gateway;
-    containerIp = lan.dns.serviceIp;
-    # Host-side macvlan address for reaching the AdGuard container.
-    hostShimIp = lan.dns.macvlanHostShimIp;
+  dnsService = {
+    user = "adguardhome";
+    group = "appdata-editors";
+    ip = lan.dns.serviceIp;
+    dataDir = "${appDataRoot}/adguard";
+    workDir = "${appDataRoot}/adguard/work";
+    confDir = "${appDataRoot}/adguard/conf";
+    configFile = "${appDataRoot}/adguard/conf/AdGuardHome.yaml";
   };
 in
 {
@@ -45,9 +42,6 @@ in
   virtualisation.oci-containers.backend = "docker";
 
   networking.networkmanager.enable = true;
-  networking.networkmanager.unmanaged = [
-    "interface-name:adguard-shim"
-  ];
   networking.networkmanager.ensureProfiles.profiles."wired-static" = {
     connection = {
       id = "wired-static";
@@ -59,6 +53,7 @@ in
     ipv4 = {
       method = "manual";
       address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+      address2 = "${dnsService.ip}/${lanPrefixLength}";
       dns = hostDns;
       "ignore-auto-dns" = true;
     };
@@ -118,78 +113,78 @@ in
   };
 
   networking.firewall.allowedTCPPorts = [
+    53 # Local DNS service over TCP
     8123 # Home Assistant
     5678 # n8n
     5580 # Matter Server
     18789 # OpenClaw gateway reverse proxy
   ];
 
-  networking.macvlans.adguard-shim = {
-    inherit (lan) interface;
-    mode = "bridge";
+  networking.firewall.allowedUDPPorts = [
+    53 # Local DNS service
+  ];
+
+  users.users.${dnsService.user} = {
+    isSystemUser = true;
+    inherit (dnsService) group;
   };
 
-  networking.interfaces.adguard-shim.ipv4.addresses = [
-    {
-      address = adguardNetwork.hostShimIp;
-      prefixLength = 32;
-    }
+  systemd.tmpfiles.rules = [
+    "d ${dnsService.dataDir} 2750 ${dnsService.user} ${dnsService.group} - -"
+    "d ${dnsService.workDir} 2750 ${dnsService.user} ${dnsService.group} - -"
+    "d ${dnsService.confDir} 2750 ${dnsService.user} ${dnsService.group} - -"
+    "Z ${dnsService.dataDir} - ${dnsService.user} ${dnsService.group} - -"
+    "z ${dnsService.configFile} 0660 ${dnsService.user} ${dnsService.group} - -"
   ];
 
-  networking.interfaces.adguard-shim.ipv4.routes = [
-    {
-      address = adguardNetwork.containerIp;
-      prefixLength = 32;
-    }
-  ];
+  services.adguardhome = {
+    enable = true;
 
-  systemd.services.docker-network-adguard = {
-    description = "Create Docker macvlan network for AdGuard Home";
+    # Opens the AdGuard Home web UI port only.
+    # DNS port 53 is still opened manually above.
+    openFirewall = true;
+
+    # Keep UI-edited settings, but force the critical bind settings from Nix.
+    mutableSettings = true;
+
+    # Web UI only on the dedicated LAN DNS service IP.
+    # Port is intentionally omitted because the module default is 3000.
+    host = dnsService.ip;
+
+    extraArgs = [
+      "--work-dir ${dnsService.workDir}"
+      "--config ${dnsService.configFile}"
+    ];
+
+    settings = {
+      dns = {
+        # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
+        bind_hosts = [
+          dnsService.ip
+          "127.0.0.1"
+        ];
+        port = 53;
+      };
+    };
+  };
+
+  systemd.services.adguardhome = {
     after = [
-      "docker.service"
       "network-online.target"
     ];
     wants = [ "network-online.target" ];
-    requires = [ "docker.service" ];
-    wantedBy = [ "multi-user.target" ];
-    path = with pkgs; [
-      docker
-      iproute2
-    ];
+
     serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
+      DynamicUser = lib.mkForce false;
+      User = dnsService.user;
+      Group = dnsService.group;
+
+      StateDirectory = lib.mkForce "apps/adguard/conf";
+      StateDirectoryMode = "2750";
+      UMask = lib.mkForce "0007";
+
+      # AdGuard writes runtime databases such as work/data/sessions.db here.
+      ReadWritePaths = [ dnsService.workDir ];
     };
-    script = ''
-      parentInterface="${adguardNetwork.parentInterface}"
-
-      if ! docker network inspect ${adguardNetwork.name} >/dev/null 2>&1; then
-        docker network create \
-          --driver macvlan \
-          --subnet ${adguardNetwork.subnet} \
-          --gateway ${adguardNetwork.gateway} \
-          --opt parent="$parentInterface" \
-          ${adguardNetwork.name}
-      fi
-    '';
-  };
-
-  systemd.services.docker-adguard = {
-    after = [ "docker-network-adguard.service" ];
-    requires = [ "docker-network-adguard.service" ];
-    restartTriggers = [ containerCfg.restartTrigger ];
-  };
-
-  virtualisation.oci-containers.containers.adguard = {
-    image = "adguard/adguardhome:latest";
-    pull = containerCfg.pullPolicy;
-    volumes = [
-      "${appDataRoot}/adguard/work:/opt/adguardhome/work"
-      "${appDataRoot}/adguard/conf:/opt/adguardhome/conf"
-    ];
-    extraOptions = [
-      "--network=${adguardNetwork.name}"
-      "--ip=${adguardNetwork.containerIp}"
-    ];
   };
 }
