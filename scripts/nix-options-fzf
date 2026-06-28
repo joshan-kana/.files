@@ -66,7 +66,11 @@ Remembered host:
 
 Caches:
   Option docs are cached per host.
-  Evaluated values are cached per host + option + repo state.
+  --refresh rebuilds option docs for one host.
+  --refresh-all rebuilds option docs for all hosts.
+  Evaluated values, definitions, and item origins are cached per host + option + repo state.
+  Refreshing docs does not clear evaluated caches.
+  Use --clear-value-cache when you intentionally want cold value/definition/item-origin caches.
 EOF
 }
 
@@ -1310,7 +1314,6 @@ build_cache() {
 
 ensure_docs_cache() {
   if [ "$refresh" -eq 1 ] || [ ! -s "$cache" ]; then
-    clear_host_value_cache
     build_cache "$host"
   fi
 }
@@ -1468,8 +1471,6 @@ search_value_items() {
 }
 
 if [ "$refresh_all" -eq 1 ]; then
-  clear_all_value_cache
-
   while IFS= read -r h; do
     build_cache "$h"
   done < <(list_hosts)
