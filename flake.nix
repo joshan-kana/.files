@@ -79,6 +79,18 @@
           '';
         };
 
+      systemUpgradeChecksFor =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "system-upgrade-checks";
+          runtimeInputs = [ pkgs.nix-fast-build ];
+          text = ''
+            exec nix-fast-build --flake ".#checks" --no-link "$@"
+          '';
+        };
+
+      nixosToplevelCheck = profile: self.nixosConfigurations.${profile}.config.system.build.toplevel;
+
       gitHookSetup = ''
         git config --local core.hooksPath .githooks
         chmod +x .githooks/pre-commit
@@ -170,13 +182,31 @@
             else
               null;
         in
-        lib.optionalAttrs (vscodePkg != null) {
+        {
+          system-upgrade-checks = {
+            type = "app";
+            program = lib.getExe (systemUpgradeChecksFor pkgs);
+          };
+        }
+        // lib.optionalAttrs (vscodePkg != null) {
           code = {
             type = "app";
             program = lib.getExe vscodePkg;
           };
         }
       );
+
+      checks = {
+        x86_64-linux = {
+          nixos = nixosToplevelCheck "nixos";
+        };
+
+        aarch64-linux = {
+          nixos-arm-parallels = nixosToplevelCheck "nixos-arm-parallels";
+          nixos-orbstack = nixosToplevelCheck "nixos-orbstack";
+          nixos-server = nixosToplevelCheck "nixos-server";
+        };
+      };
 
       nixosConfigurations = {
         nixos = nixosHost {

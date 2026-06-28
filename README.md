@@ -411,6 +411,12 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - Use `--input-ref <input>=<flake-ref>` to pin another input explicitly, for example `scripts/flake-update nixos --input-ref home-manager=github:nix-community/home-manager/release-25.05`
 - Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
+### System upgrade checks
+- `nix flake check` - Evaluate and build checks for the current system
+- `nix run .#system-upgrade-checks -- --skip-cached` - Build the current system's host checks with `nix-fast-build`
+- `nix run .#system-upgrade-checks -- --systems "aarch64-linux x86_64-linux"` - Build checks for multiple systems when compatible builders are configured
+- Current checks: `checks.x86_64-linux.nixos`, `checks.aarch64-linux.nixos-arm-parallels`, `checks.aarch64-linux.nixos-orbstack`, and `checks.aarch64-linux.nixos-server`
+
 ### Formatting
 - `nix fmt` - Format all `.nix` files in this repo with treefmt
 - `git config core.hooksPath .githooks` - Configure Git to run repo hooks from `.githooks/`
