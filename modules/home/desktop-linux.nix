@@ -14,7 +14,8 @@ lib.mkIf cfg.features.desktop.enable {
   programs.eww = {
     enable = true;
     package = pkgs.eww;
-    configDir = ../../desktop/eww;
+    yuckConfig = builtins.readFile ../../desktop/eww/eww.yuck;
+    scssConfig = builtins.readFile ../../desktop/eww/eww.scss;
   };
 
   programs.wofi = {

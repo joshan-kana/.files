@@ -49,7 +49,7 @@
         stylix.targets.vscode.enable = false;
 
         gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
-          gtk4.theme = config.gtk.theme;
+          gtk4.theme = lib.mkDefault config.gtk.theme;
 
           iconTheme = {
             package = pkgs.gruvbox-dark-icons-gtk;
