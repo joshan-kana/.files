@@ -14,6 +14,8 @@ Usage:
   ${cmd_name} [host] --value-items <option>
   ${cmd_name} [host] --value-search <option>
   ${cmd_name} [host] --definitions <option>
+  ${cmd_name} [host] --definition-items <option>
+  ${cmd_name} [host] --definition-item <option> <item>
   ${cmd_name} --hosts
   ${cmd_name} --refresh-all
   ${cmd_name} --default-host
@@ -30,6 +32,7 @@ Interactive fzf keys:
   Ctrl-V     show normal effective value in the right pane
   Ctrl-F     show full effective value in the right pane
   Ctrl-S     search evaluated values for the selected option
+  Ctrl-I     show item-level definition origins for the selected option
   Ctrl-R     return right pane to docs only
   Alt-J/K    scroll preview down/up one line
   Alt-D/U    page preview down/up
@@ -149,6 +152,9 @@ value_full=0
 value_items_name=""
 value_search_name=""
 definition_name=""
+definition_items_name=""
+definition_item_name=""
+definition_item_value=""
 
 list_hosts() {
   local tmp
@@ -301,6 +307,19 @@ while [ "$#" -gt 0 ]; do
       shift
       definition_name="${1:-}"
       [ -n "$definition_name" ] || { echo "ERROR: --definitions requires an option name." >&2; exit 2; }
+      ;;
+    --definition-items)
+      shift
+      definition_items_name="${1:-}"
+      [ -n "$definition_items_name" ] || { echo "ERROR: --definition-items requires an option name." >&2; exit 2; }
+      ;;
+    --definition-item)
+      shift
+      definition_item_name="${1:-}"
+      shift || true
+      definition_item_value="${1:-}"
+      [ -n "$definition_item_name" ] || { echo "ERROR: --definition-item requires an option name." >&2; exit 2; }
+      [ -n "$definition_item_value" ] || { echo "ERROR: --definition-item requires an item value." >&2; exit 2; }
       ;;
     *)
       if resolved_host="$(resolve_host_arg "$1" 2>/tmp/no-host-resolve.err)"; then
@@ -496,6 +515,7 @@ print_browser_keys() {
   printf '  %bCtrl-V%b   show normal effective value\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-F%b   show full effective value\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-S%b   search evaluated values\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-I%b   show item-level origins\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-R%b   return this pane to docs\n' "$YELLOW" "$RESET"
   printf '  %bAlt-J/K%b  scroll preview lines\n' "$YELLOW" "$RESET"
   printf '  %bAlt-D/U%b  scroll preview pages\n' "$YELLOW" "$RESET"
@@ -560,20 +580,23 @@ else
   printf '  %b<none>%b\n' "$DIM" "$RESET"
 fi
 
-echo
-label "defined by"
-if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --definitions "$name" 2>/dev/null)"; then
-  if [ -n "$definitions" ]; then
-    printf '%s\n' "$definitions" | sed 's/^/  /'
+print_defined_by() {
+  echo
+  label "defined by"
+  if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --definitions "$name" 2>/dev/null)"; then
+    if [ -n "$definitions" ]; then
+      printf '%s\n' "$definitions" | sed 's/^/  /'
+    else
+      printf '  %b<none>%b\n' "$DIM" "$RESET"
+    fi
   else
-    printf '  %b<none>%b\n' "$DIM" "$RESET"
+    printf '  %b<unavailable>%b\n' "$DIM" "$RESET"
   fi
-else
-  printf '  %b<unavailable>%b\n' "$DIM" "$RESET"
-fi
+}
 
 case "$mode" in
   docs)
+    print_defined_by
     echo
     hr
     print_browser_keys
@@ -607,6 +630,11 @@ case "$mode" in
     if [ "$preview_delay_ms" -gt 0 ]; then
       sleep "$(awk -v ms="$preview_delay_ms" 'BEGIN { printf "%.3f", ms / 1000 }')"
     fi
+
+    print_defined_by
+    echo
+    hr
+    printf '%b%s%b\n' "$BOLD$MAGENTA" "$value_label" "$RESET"
 
     start="$(date +%s 2>/dev/null || printf 0)"
 
@@ -923,48 +951,337 @@ if filesEval.success then filesEval.value else [ ]
 NIX
 }
 
+
 print_definitions() {
   local option="$1"
   local expr_file
   local flake_ref_literal
   local host_literal
   local path_literal
+  local cache_file
+  local tmp
 
-  expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definitions.XXXXXX.nix")"
-  flake_ref_literal="$(nix_string "$flake")"
-  host_literal="$(nix_string "$host")"
-  path_literal="$(path_to_nix_list "$option")"
+  cache_file="$(value_cache_file "definitions" "$option" "definitions-v1")"
 
-  write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
-
-  if "$nix_bin" eval --impure --json --file "$expr_file" |
-    jq -r --arg repo "$repo" '
-      def pretty:
-        if $repo != "" and startswith($repo + "/") then
-          ltrimstr($repo + "/")
-        elif test("^/nix/store/[a-z0-9]+-source/") then
-          sub("^/nix/store/[a-z0-9]+-source/"; "")
-        else
-          .
-        end;
-
-      group_by(.)
-      | map({ path: (.[0] | pretty), count: length })
-      | sort_by(.path)
-      | .[]
-      | if .count > 1 then
-          .path + " ×" + (.count | tostring)
-        else
-          .path
-        end
-    '; then
-    rm -f "$expr_file"
+  if [ -s "$cache_file" ]; then
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
-    local status=$?
-    rm -f "$expr_file"
-    return "$status"
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definitions.XXXXXX.nix")"
+    tmp="$cache_file.tmp.$$"
+    flake_ref_literal="$(nix_string "$flake")"
+    host_literal="$(nix_string "$host")"
+    path_literal="$(path_to_nix_list "$option")"
+
+    write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+
+    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+      if jq -e . "$tmp" >/dev/null; then
+        rm -f "$expr_file"
+        mv "$tmp" "$cache_file"
+      else
+        rm -f "$expr_file" "$tmp"
+        echo "ERROR: definition eval produced invalid JSON for $option" >&2
+        return 1
+      fi
+    else
+      local status=$?
+      rm -f "$expr_file" "$tmp"
+      return "$status"
+    fi
   fi
+
+  jq -r --arg repo "$repo" '
+    def pretty:
+      if $repo != "" and startswith($repo + "/") then
+        ltrimstr($repo + "/")
+      elif test("^/nix/store/[a-z0-9]+-source/") then
+        sub("^/nix/store/[a-z0-9]+-source/"; "")
+      else
+        .
+      end;
+
+    group_by(.)
+    | map({ path: (.[0] | pretty), count: length })
+    | sort_by(.path)
+    | .[]
+    | if .count > 1 then
+        .path + " ×" + (.count | tostring)
+      else
+        .path
+      end
+  ' "$cache_file"
 }
+
+
+
+write_definition_items_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
+  local path_literal="$4"
+
+  cat > "$expr_file" <<NIX
+let
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+  optionPath = $path_literal;
+
+  flake = builtins.getFlake flakeRef;
+  system = builtins.getAttr host flake.nixosConfigurations;
+  lib =
+    if system ? pkgs && system.pkgs ? lib then
+      system.pkgs.lib
+    else
+      flake.inputs.nixpkgs.lib;
+
+  opt = lib.attrByPath optionPath null system.options;
+
+  cleanString = x:
+    let forced = builtins.tryEval x;
+    in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "<unknown>";
+
+  plainString = s: builtins.unsafeDiscardStringContext (builtins.toString s);
+
+  renderOne =
+    v:
+    if builtins.isNull v then
+      "null"
+    else if builtins.isBool v then
+      if v then "true" else "false"
+    else if builtins.isInt v then
+      builtins.toString v
+    else if (builtins ? isFloat) && builtins.isFloat v then
+      builtins.toJSON v
+    else if builtins.isString v then
+      builtins.unsafeDiscardStringContext v
+    else if builtins.isPath v then
+      plainString v
+    else if builtins.isFunction v then
+      "<function>"
+    else if builtins.isAttrs v then
+      let drvEval = builtins.tryEval (v ? type && v.type == "derivation" && v ? name);
+      in
+      if drvEval.success && drvEval.value then
+        let nameEval = builtins.tryEval (plainString v.name);
+        in if nameEval.success then nameEval.value else "<derivation: unknown>"
+      else
+        let namesEval = builtins.tryEval (builtins.attrNames v);
+        in if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>"
+    else if builtins.isList v then
+      let lenEval = builtins.tryEval (builtins.length v);
+      in "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>"
+    else
+      "<unsupported>";
+
+  renderDefinition =
+    def:
+    let
+      file = cleanString (def.file or "<unknown>");
+      valueEval = builtins.tryEval (def.value or "<missing>");
+
+      raw =
+        if ! valueEval.success then
+          [ { inherit file; item = "<unavailable>"; } ]
+        else if builtins.isList valueEval.value then
+          builtins.map (item: { inherit file; item = renderOne item; }) valueEval.value
+        else if builtins.isAttrs valueEval.value then
+          let
+            namesEval = builtins.tryEval (builtins.attrNames valueEval.value);
+            names = if namesEval.success then namesEval.value else [ ];
+          in
+          builtins.map (name: {
+            inherit file;
+            item = name + " = " + renderOne (builtins.getAttr name valueEval.value);
+          }) names
+        else
+          [ { inherit file; item = renderOne valueEval.value; } ];
+
+      rendered = builtins.tryEval (builtins.deepSeq raw raw);
+    in
+    if rendered.success then rendered.value else [ { inherit file; item = "<unavailable>"; } ];
+
+  defsRaw =
+    if opt == null then
+      [ ]
+    else
+      let defsEval = builtins.tryEval (opt.definitionsWithLocations or [ ]);
+      in
+      if defsEval.success then
+        builtins.concatLists (builtins.map renderDefinition defsEval.value)
+      else
+        [ ];
+
+  defsEval = builtins.tryEval (builtins.deepSeq defsRaw defsRaw);
+in
+{
+  option = builtins.concatStringsSep "." optionPath;
+  items = if defsEval.success then defsEval.value else [ ];
+}
+NIX
+}
+
+
+print_origin_keys() {
+  cat <<EOF
+keys
+  Ctrl-I  show all item-level origins for this option
+  Ctrl-S  search evaluated values; preview shows origins for the highlighted value
+  Ctrl-R  return this pane to docs
+  Ctrl-V  show normal effective value
+  Ctrl-F  show full effective value
+  Alt-J/K scroll preview lines
+  Alt-D/U scroll preview pages
+  Alt-T/B jump preview top/bottom
+EOF
+}
+
+print_definition_items() {
+  local option="$1"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+  local path_literal
+  local cache_file
+  local tmp
+
+  cache_file="$(value_cache_file "definition-items" "$option" "definition-items-v1")"
+
+  if [ -s "$cache_file" ]; then
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+  else
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definition-items.XXXXXX.nix")"
+    tmp="$cache_file.tmp.$$"
+    flake_ref_literal="$(nix_string "$flake")"
+    host_literal="$(nix_string "$host")"
+    path_literal="$(path_to_nix_list "$option")"
+
+    write_definition_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+
+    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+      if jq -e . "$tmp" >/dev/null; then
+        rm -f "$expr_file"
+        mv "$tmp" "$cache_file"
+      else
+        rm -f "$expr_file" "$tmp"
+        echo "ERROR: definition item eval produced invalid JSON for $option" >&2
+        return 1
+      fi
+    else
+      local status=$?
+      rm -f "$expr_file" "$tmp"
+      return "$status"
+    fi
+  fi
+
+  printf '# %s\n\n' "$option"
+  printf 'item-level origins\n\n'
+
+  jq -r --arg repo "$repo" '
+    def pretty:
+      if $repo != "" and startswith($repo + "/") then
+        ltrimstr($repo + "/")
+      elif test("^/nix/store/[a-z0-9]+-source/") then
+        sub("^/nix/store/[a-z0-9]+-source/"; "")
+      else
+        .
+      end;
+
+    .items
+    | if length == 0 then
+        [ "<none>" ]
+      else
+        group_by(.item)
+        | map({
+            item: .[0].item,
+            count: length,
+            sources: (
+              group_by(.file)
+              | map({
+                  path: (.[0].file | pretty),
+                  count: length
+                })
+              | sort_by(.path)
+            )
+          })
+        | sort_by(-.count, .item)
+        | map(
+            [
+              (.item + if .count > 1 then " ×" + (.count | tostring) else "" end),
+              (
+                .sources[]
+                | "  " + .path + if .count > 1 then " ×" + (.count | tostring) else "" end
+              ),
+              ""
+            ]
+          )
+        | flatten
+      end
+    | .[]
+  ' "$cache_file"
+
+  echo
+  print_origin_keys
+}
+
+print_definition_item() {
+  local option="$1"
+  local item="$2"
+  local cache_file
+
+  cache_file="$(value_cache_file "definition-items" "$option" "definition-items-v1")"
+
+  if [ ! -s "$cache_file" ]; then
+    print_definition_items "$option" >/dev/null
+  fi
+
+  jq -r --arg repo "$repo" --arg option "$option" --arg item "$item" '
+    def pretty:
+      if $repo != "" and startswith($repo + "/") then
+        ltrimstr($repo + "/")
+      elif test("^/nix/store/[a-z0-9]+-source/") then
+        sub("^/nix/store/[a-z0-9]+-source/"; "")
+      else
+        .
+      end;
+
+    (.items | map(select(.item == $item))) as $matches
+    | [
+        "# " + $option,
+        "",
+        "item",
+        "  " + $item,
+        "",
+        "defined by"
+      ]
+      + (
+        if ($matches | length) == 0 then
+          [ "  <none>" ]
+        else
+          (
+            $matches
+            | group_by(.file)
+            | map({
+                path: (.[0].file | pretty),
+                count: length
+              })
+            | sort_by(.path)
+            | map(
+                "  " + .path + if .count > 1 then " ×" + (.count | tostring) else "" end
+              )
+          )
+        end
+      )
+      | .[]
+  ' "$cache_file"
+
+  echo
+  print_origin_keys
+}
+
 
 build_cache() {
   local build_host="$1"
@@ -1121,27 +1438,33 @@ print_value_items() {
   fi
 }
 
+
 search_value_items() {
   local option="$1"
   local selected
+  local item_origin_preview
 
   if [ "$option" = ".." ] || [[ "$option" == */ ]]; then
     echo "Select a concrete option first, not a group."
     exit 0
   fi
 
+  item_origin_preview="'$repo/scripts/nix-options-fzf' '$host' --definition-item '$option' {}"
+
   selected="$(
     print_value_items "$option" |
       fzf \
         --ansi \
         --prompt="$host $option values> " \
-        --header="Search evaluated values for this option | Enter: print value | Esc: return to options browser" \
-        --preview='printf "%s\n" {}' \
-        --preview-window=right:50%:wrap,border-left \
+        --header="Search evaluated values | preview shows origins for highlighted value | Enter/Esc: return to options browser" \
+        --preview="$item_origin_preview" \
+        --preview-window=right:60%:wrap,border-left \
         --query="${NIX_OPTIONS_FZF_VALUE_SEARCH_QUERY:-}"
   )" || exit 0
 
-  printf '%s\n' "$selected"
+  # Enter accepts the highlighted value and closes this nested search.
+  # The selected value is intentionally not printed/copied; the preview is for inspection.
+  : "${selected:-}"
 }
 
 if [ "$refresh_all" -eq 1 ]; then
@@ -1175,6 +1498,16 @@ fi
 
 if [ -n "$definition_name" ]; then
   print_definitions "$definition_name"
+  exit 0
+fi
+
+if [ -n "$definition_items_name" ]; then
+  print_definition_items "$definition_items_name"
+  exit 0
+fi
+
+if [ -n "$definition_item_name" ]; then
+  print_definition_item "$definition_item_name" "$definition_item_value"
   exit 0
 fi
 
@@ -1302,6 +1635,7 @@ while true; do
   preview_value="'$preview_script' value '$host' {}"
   preview_full="'$preview_script' full '$host' {}"
   value_search="'$repo/scripts/nix-options-fzf' '$host' --value-search {}"
+  definition_items="'$repo/scripts/nix-options-fzf' '$host' --definition-items {}"
 
   case "${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-full}" in
     docs)
@@ -1331,7 +1665,7 @@ while true; do
     mode_label="flat"
   fi
 
-  header="Mode: $mode_label | Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-O toggle grouped | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit"
+  header="Mode: $mode_label | Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-O toggle grouped | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-I item origins | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit"
 
   fzf_output="$(
     list_entries "$current_prefix" "$browser_mode" |
@@ -1345,6 +1679,7 @@ while true; do
         --bind="ctrl-v:change-preview($preview_value)" \
         --bind="ctrl-f:change-preview($preview_full)" \
         --bind="ctrl-s:execute($value_search)" \
+        --bind="ctrl-i:change-preview($definition_items)" \
         --bind="ctrl-r:change-preview($preview_docs)" \
         --bind="ctrl-j:down" \
         --bind="ctrl-k:up" \
