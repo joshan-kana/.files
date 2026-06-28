@@ -417,6 +417,12 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - `nix run .#system-upgrade-checks -- --systems "aarch64-linux x86_64-linux"` - Build checks for multiple systems when compatible builders are configured
 - Current checks: `checks.x86_64-linux.nixos`, `checks.aarch64-linux.nixos-arm-parallels`, `checks.aarch64-linux.nixos-orbstack`, and `checks.aarch64-linux.nixos-server`
 
+### System upgrade CI
+- `.github/workflows/system-upgrade.yml` builds the same checks on GitHub Actions, using native Linux runners for `aarch64-linux` and `x86_64-linux`
+- Set repository variable `CACHIX_CACHE_NAME` and secret `CACHIX_AUTH_TOKEN` to publish successful builds to Cachix
+- Add the cache URL and public key to each machine's `nix.settings.substituters` and `nix.settings.trusted-public-keys` before expecting local machines to download CI-built paths
+- Run the workflow manually from GitHub Actions, or push a `system-upgrade*` branch / pull request that changes flake, host, module, overlay, package, or update-script files
+
 ### Formatting
 - `nix fmt` - Format all `.nix` files in this repo with treefmt
 - `git config core.hooksPath .githooks` - Configure Git to run repo hooks from `.githooks/`

@@ -1,0 +1,107 @@
+name: System upgrade
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/system-upgrade.yml"
+      - "desktop/**"
+      - "flake.lock"
+      - "flake.nix"
+      - "hosts/**"
+      - "modules/**"
+      - "overlays/**"
+      - "pkgs/**"
+      - "scripts/**"
+  push:
+    branches:
+      - main
+      - "upgrade-validation*"
+      - "system-upgrade*"
+    paths:
+      - ".github/workflows/system-upgrade.yml"
+      - "desktop/**"
+      - "flake.lock"
+      - "flake.nix"
+      - "hosts/**"
+      - "modules/**"
+      - "overlays/**"
+      - "pkgs/**"
+      - "scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-upgrade-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: aarch64-linux NixOS systems
+            runner: ubuntu-24.04-arm
+            systems: aarch64-linux
+          - name: x86_64-linux NixOS systems
+            runner: ubuntu-24.04
+            systems: x86_64-linux
+
+    env:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      CACHIX_CACHE_NAME: ${{ vars.CACHIX_CACHE_NAME }}
+      NIX_CONFIG: |
+        accept-flake-config = true
+        experimental-features = nix-command flakes
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Detect Cachix publishing
+        id: cachix
+        run: |
+          if [[ -n "$CACHIX_CACHE_NAME" && -n "$CACHIX_AUTH_TOKEN" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Cachix
+        if: steps.cachix.outputs.enabled == 'true'
+        uses: cachix/cachix-action@v17
+        with:
+          name: ${{ vars.CACHIX_CACHE_NAME }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build system checks
+        run: |
+          args=(
+            --systems "${{ matrix.systems }}"
+            --skip-cached
+            --result-file "$RUNNER_TEMP/nix-fast-build.json"
+            --result-format json
+          )
+
+          if [[ "${{ steps.cachix.outputs.enabled }}" == "true" ]]; then
+            args+=(--cachix-cache "$CACHIX_CACHE_NAME")
+          fi
+
+          nix run .#system-upgrade-checks -- "${args[@]}"
+
+      - name: Upload build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nix-fast-build-${{ matrix.systems }}
+          path: ${{ runner.temp }}/nix-fast-build.json
+          if-no-files-found: ignore
