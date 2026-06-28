@@ -8,6 +8,8 @@ usage() {
 Usage:
   ${cmd_name} [host] [prefix] [--refresh]
   ${cmd_name} [host] [prefix] --list
+  ${cmd_name} [host] --refresh --list
+  ${cmd_name} [host] [prefix] --refresh --list
   ${cmd_name} [host] --preview <option>
   ${cmd_name} [host] --value <option>
   ${cmd_name} [host] --value-full <option>
@@ -44,9 +46,16 @@ Default preview:
   Override with NIX_OPTIONS_FZF_DEFAULT_PREVIEW=docs, value, or full.
 
 Preview debounce:
-  Full/value previews wait briefly before starting expensive evaluation.
-  This lets fast scrolling cancel previews before nix eval starts.
-  Override with NIX_OPTIONS_FZF_PREVIEW_DELAY_MS=0, 150, 250, etc.
+  Full/value previews can wait briefly before starting expensive evaluation.
+  Default: 0 ms (disabled).
+  Set NIX_OPTIONS_FZF_PREVIEW_DELAY_MS=150 or 250 to let fast scrolling cancel previews before nix eval starts.
+  Set NIX_OPTIONS_FZF_PREVIEW_DELAY_MS=0 to disable the wait.
+
+Prefixes:
+  [prefix] is an option path prefix, not a file path.
+  Examples: environment, environment.systemPackages, services, services.openssh, programs.zsh.
+  Omit [prefix] to start at the root option list.
+  Use a concrete option as [prefix] to jump near that option.
 
 List modes:
   Flat mode shows all concrete options under the current prefix.
@@ -66,8 +75,12 @@ Remembered host:
 
 Caches:
   Option docs are cached per host.
-  --refresh rebuilds option docs for one host.
-  --refresh-all rebuilds option docs for all hosts.
+  Rebuild docs for one host:
+    ${cmd_name} <host-or-alias> --refresh --list
+  Rebuild docs for one host and prefix:
+    ${cmd_name} <host-or-alias> <prefix> --refresh --list
+  Rebuild docs for all hosts:
+    ${cmd_name} --refresh-all
   Evaluated values, definitions, and item origins are cached per host + option + repo state.
   Refreshing docs does not clear evaluated caches.
   Use --clear-value-cache when you intentionally want cold value/definition/item-origin caches.
