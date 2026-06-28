@@ -13,6 +13,7 @@ Usage:
   ${cmd_name} [host] --value-full <option>
   ${cmd_name} [host] --value-items <option>
   ${cmd_name} [host] --value-search <option>
+  ${cmd_name} [host] --definitions <option>
   ${cmd_name} --hosts
   ${cmd_name} --refresh-all
   ${cmd_name} --default-host
@@ -147,6 +148,7 @@ value_name=""
 value_full=0
 value_items_name=""
 value_search_name=""
+definition_name=""
 
 list_hosts() {
   local tmp
@@ -294,6 +296,11 @@ while [ "$#" -gt 0 ]; do
       shift
       value_search_name="${1:-}"
       [ -n "$value_search_name" ] || { echo "ERROR: --value-search requires an option name." >&2; exit 2; }
+      ;;
+    --definitions)
+      shift
+      definition_name="${1:-}"
+      [ -n "$definition_name" ] || { echo "ERROR: --definitions requires an option name." >&2; exit 2; }
       ;;
     *)
       if resolved_host="$(resolve_host_arg "$1" 2>/tmp/no-host-resolve.err)"; then
@@ -551,6 +558,18 @@ if [ -n "$doc_declarations" ]; then
   printf '%s\n' "$doc_declarations" | sed 's/^/  /'
 else
   printf '  %b<none>%b\n' "$DIM" "$RESET"
+fi
+
+echo
+label "defined by"
+if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --definitions "$name" 2>/dev/null)"; then
+  if [ -n "$definitions" ]; then
+    printf '%s\n' "$definitions" | sed 's/^/  /'
+  else
+    printf '  %b<none>%b\n' "$DIM" "$RESET"
+  fi
+else
+  printf '  %b<unavailable>%b\n' "$DIM" "$RESET"
 fi
 
 case "$mode" in
@@ -860,6 +879,93 @@ in
 NIX
 }
 
+
+write_definitions_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
+  local path_literal="$4"
+
+  cat > "$expr_file" <<NIX
+let
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+  optionPath = $path_literal;
+
+  flake = builtins.getFlake flakeRef;
+  system = builtins.getAttr host flake.nixosConfigurations;
+  lib =
+    if system ? pkgs && system.pkgs ? lib then
+      system.pkgs.lib
+    else
+      flake.inputs.nixpkgs.lib;
+
+  opt = lib.attrByPath optionPath null system.options;
+
+  cleanString = x:
+    let forced = builtins.tryEval x;
+    in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "<unknown>";
+
+  filesRaw =
+    if opt == null then
+      [ ]
+    else
+      let defsEval = builtins.tryEval (opt.definitionsWithLocations or [ ]);
+      in
+      if defsEval.success then
+        builtins.map (def: cleanString (def.file or "<unknown>")) defsEval.value
+      else
+        [ ];
+
+  filesEval = builtins.tryEval (builtins.deepSeq filesRaw filesRaw);
+in
+if filesEval.success then filesEval.value else [ ]
+NIX
+}
+
+print_definitions() {
+  local option="$1"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+  local path_literal
+
+  expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definitions.XXXXXX.nix")"
+  flake_ref_literal="$(nix_string "$flake")"
+  host_literal="$(nix_string "$host")"
+  path_literal="$(path_to_nix_list "$option")"
+
+  write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+
+  if "$nix_bin" eval --impure --json --file "$expr_file" |
+    jq -r --arg repo "$repo" '
+      def pretty:
+        if $repo != "" and startswith($repo + "/") then
+          ltrimstr($repo + "/")
+        elif test("^/nix/store/[a-z0-9]+-source/") then
+          sub("^/nix/store/[a-z0-9]+-source/"; "")
+        else
+          .
+        end;
+
+      group_by(.)
+      | map({ path: (.[0] | pretty), count: length })
+      | sort_by(.path)
+      | .[]
+      | if .count > 1 then
+          .path + " ×" + (.count | tostring)
+        else
+          .path
+        end
+    '; then
+    rm -f "$expr_file"
+  else
+    local status=$?
+    rm -f "$expr_file"
+    return "$status"
+  fi
+}
+
 build_cache() {
   local build_host="$1"
   local build_cache="$cache_dir/nixosConfigurations-$build_host.json"
@@ -1064,6 +1170,11 @@ fi
 
 if [ -n "$value_search_name" ]; then
   search_value_items "$value_search_name"
+  exit 0
+fi
+
+if [ -n "$definition_name" ]; then
+  print_definitions "$definition_name"
   exit 0
 fi
 
