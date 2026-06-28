@@ -96,12 +96,25 @@ in
     ];
     extraUpFlags = [
       "--advertise-tags=tag:nixos-server"
-    ];
-    extraSetFlags = [
       "--hostname=${config.networking.hostName}"
       "--advertise-routes=${lan.subnet}"
       "--accept-dns=false"
     ];
+    extraSetFlags = [ ];
+  };
+
+  # Keep the server's ephemeral Tailscale behaviour, but do not make
+  # fresh Tailscale authentication block multi-user boot.
+  #
+  # The daemon still starts during boot. The auth/connect step still runs
+  # automatically, but after multi-user.target so LAN boot is not held up by
+  # Tailscale control-plane/auth latency.
+  systemd.services.tailscaled-autoconnect = {
+    after = lib.mkForce [
+      "tailscaled.service"
+      "multi-user.target"
+    ];
+    before = lib.mkForce [ "shutdown.target" ];
   };
 
   networking.firewall.allowedTCPPorts = [
