@@ -7,7 +7,7 @@ set -euo pipefail
 MAIN_BRANCH=${MAIN_BRANCH:-main}
 UPDATE_BRANCH=${UPDATE_BRANCH:-system-upgrade}
 if [[ -v NIXOS_REBUILD_FLAGS ]]; then
-  read -r -a nix_flags <<< "$NIXOS_REBUILD_FLAGS"
+  read -r -a nix_flags <<<"$NIXOS_REBUILD_FLAGS"
 else
   nix_flags=()
 fi
@@ -17,8 +17,12 @@ usage() {
 Usage: scripts/flake-update <target> [options] [inputs...]
 
 Targets:
+  desktop             Alias for nixos
   linux-desktop       Alias for nixos
   nixos               Full x86_64 Linux desktop
+  server              Alias for nixos-server
+  nixos-server        AArch64 NixOS home server
+  orbstack            Alias for nixos-orbstack
   nixos-arm-parallels ARM Linux desktop VM
   nixos-orbstack      OrbStack Linux container
   all                 All current NixOS configurations
@@ -57,6 +61,7 @@ Environment:
   MAIN_BRANCH          Branch to compare against. Defaults to main.
   UPDATE_BRANCH        Branch used for update work. Defaults to system-upgrade.
   NIXOS_REBUILD_FLAGS  Extra nix eval/build flags. Defaults to none.
+  ALLOW_DIRTY_LOCK     Set to 1 to allow pre-existing flake.lock worktree edits.
 EOF
 }
 
@@ -110,7 +115,7 @@ fetch_nixpkgs_commits() {
   if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     echo "Fetching the latest ${depth} nixpkgs commits from ${branch}..." >&2
     if curl -fsSL "$api_url" |
-      jq -r '.[] | "\(.sha) \(.sha[0:9]) \(.commit.author.date[0:10]) \(.commit.message | split("\n")[0])"' > "$commit_file" &&
+      jq -r '.[] | "\(.sha) \(.sha[0:9]) \(.commit.author.date[0:10]) \(.commit.message | split("\n")[0])"' >"$commit_file" &&
       [[ -s "$commit_file" ]]; then
       echo "$commit_file"
       return
@@ -124,7 +129,7 @@ fetch_nixpkgs_commits() {
     git -C "$chooser_dir" remote add origin "$repo_url"
   fi
   git -C "$chooser_dir" fetch --quiet --depth "$depth" origin "$branch"
-  git -C "$chooser_dir" log --format='%H %h %cs %s' FETCH_HEAD > "$commit_file"
+  git -C "$chooser_dir" log --format='%H %h %cs %s' FETCH_HEAD >"$commit_file"
   echo "$commit_file"
 }
 
@@ -187,21 +192,22 @@ choose_nixpkgs_ref() {
 select_menu_item() {
   local prompt=$1
   shift
+  local items=("$@")
 
   if command -v fzf >/dev/null 2>&1; then
-    printf '%s\n' "$@" | fzf --height=40% --reverse --prompt="$prompt" || true
+    printf '%s\n' "${items[@]}" | fzf --height=40% --reverse --prompt="$prompt" || true
     return
   fi
 
   local item index=1 selected
-  for item in "$@"; do
+  for item in "${items[@]}"; do
     printf '%2d. %s\n' "$index" "$item" >&2
     index=$((index + 1))
   done
   echo >&2
   read -r -p "$prompt" selected </dev/tty
   [[ "$selected" =~ ^[0-9]+$ ]] || die "selection must be a number"
-  item=${@:$selected:1}
+  item=${items[selected - 1]:-}
   [[ -n "$item" ]] || die "selection is outside the menu"
   echo "$item"
 }
@@ -230,7 +236,18 @@ map_target() {
   local config
 
   case "$1" in
-    linux-desktop) echo "nixos"; return 0 ;;
+    desktop | linux-desktop)
+      echo "nixos"
+      return 0
+      ;;
+    server)
+      echo "nixos-server"
+      return 0
+      ;;
+    orbstack)
+      echo "nixos-orbstack"
+      return 0
+      ;;
   esac
 
   for config in "${all_profiles[@]}"; do
@@ -315,18 +332,20 @@ run_interactive_menu() {
       "Update selected inputs")
         if command -v fzf >/dev/null 2>&1; then
           selected=$(
-            printf '%s\n' "__BACK__ Back" nixpkgs home-manager stylix spicetify-nix plasma-manager |
+            printf '%s\n' "__BACK__ Back" nixpkgs nixpkgs-stable nixos-hardware home-manager stylix spicetify-nix plasma-manager |
               fzf --multi --height=40% --reverse --prompt="inputs> " || true
           )
           [[ -n "$selected" ]] || continue
           [[ "$selected" == *"__BACK__ Back"* ]] && continue
           while IFS= read -r selected_input; do
             inputs+=("$selected_input")
-          done <<< "$selected"
+          done <<<"$selected"
         else
           selected=$(
             select_menu_item "input> " \
               "nixpkgs" \
+              "nixpkgs-stable" \
+              "nixos-hardware" \
               "home-manager" \
               "stylix" \
               "spicetify-nix" \
@@ -430,18 +449,6 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-all_profiles=()
-while IFS= read -r profile; do
-  all_profiles+=("$profile")
-done < <(discover_nixos_configurations)
-[[ "${#all_profiles[@]}" -gt 0 ]] || die "flake does not expose any nixosConfigurations"
-
-set_target_profiles
-
-if [[ "$interactive_menu" == true ]]; then
-  run_interactive_menu
-fi
-
 if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
   if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
     echo "Switching to existing update branch ${UPDATE_BRANCH}..."
@@ -460,6 +467,24 @@ if [[ "$undo_lock" == true ]]; then
   fi
   echo "Undo cancelled."
   exit 0
+fi
+
+if [[ "${ALLOW_DIRTY_LOCK:-0}" != 1 ]]; then
+  if ! git diff --quiet -- flake.lock || ! git diff --cached --quiet -- flake.lock; then
+    die "flake.lock already has uncommitted changes. Commit/stash them, restore flake.lock, or set ALLOW_DIRTY_LOCK=1 if you intentionally want to build on them."
+  fi
+fi
+
+all_profiles=()
+while IFS= read -r profile; do
+  all_profiles+=("$profile")
+done < <(discover_nixos_configurations)
+[[ "${#all_profiles[@]}" -gt 0 ]] || die "flake does not expose any nixosConfigurations"
+
+set_target_profiles
+
+if [[ "$interactive_menu" == true ]]; then
+  run_interactive_menu
 fi
 
 main_flake="git+file://${repo_root}?ref=${MAIN_BRANCH}"
