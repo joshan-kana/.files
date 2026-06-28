@@ -20,10 +20,20 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    stylix-stable = {
+      url = "github:nix-community/stylix/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+
     # Home Manager: a tool for managing dotfiles using Nix
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    home-manager-stable = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
     # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
@@ -47,7 +57,9 @@
       nixpkgs-stable,
       nixos-hardware,
       home-manager,
+      home-manager-stable,
       stylix,
+      stylix-stable,
       spicetify-nix,
       plasma-manager,
       ...
@@ -89,14 +101,16 @@
           system,
           hostModule,
           nixpkgsInput ? nixpkgs,
+          homeManagerInput ? home-manager,
+          stylixInput ? stylix,
           extraModules ? [ ],
         }:
         nixpkgsInput.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
-            stylix.nixosModules.stylix
-            home-manager.nixosModules.home-manager
+            stylixInput.nixosModules.stylix
+            homeManagerInput.nixosModules.home-manager
             ./overlays/monaspace-liga-overlay.nix
             ./modules/nixos/theme.nix
             hostModule
@@ -196,6 +210,8 @@
 
         nixos-server = nixosHost {
           nixpkgsInput = nixpkgs-stable;
+          homeManagerInput = home-manager-stable;
+          stylixInput = stylix-stable;
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-server;
         };

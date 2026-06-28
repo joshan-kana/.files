@@ -16,6 +16,10 @@
   ];
 
   config = lib.mkIf config.dotfiles.features.desktop.enable {
+    nixpkgs.config.permittedInsecurePackages = [
+      "electron-39.8.10"
+    ];
+
     services.xserver = {
       enable = true;
       displayManager.lightdm.enable = false;
