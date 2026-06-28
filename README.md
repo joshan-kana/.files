@@ -397,9 +397,11 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - `sysedit` - Edit configuration in VSCode
 
 ### Flake updates
-- `scripts/flake-update <target> [options] [inputs...]` - Update flake inputs on the `system-upgrade` branch, compare the selected target, and evaluate the rest of the fleet
-- Targets: `linux-desktop`, `nixos`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
-- The script creates or switches to `system-upgrade`; it does not require your working tree or index to be clean
+- `scripts/flake-update <target> [options] [inputs...]` - Update flake inputs on a dedicated branch, compare the selected target against `main`, and evaluate the rest of the fleet
+- Targets: `desktop`, `linux-desktop`, `nixos`, `server`, `nixos-server`, `orbstack`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
+- Darwin targets are not currently supported because this flake does not expose `darwinConfigurations`
+- The script creates or switches to `system-upgrade` unless `UPDATE_BRANCH` is set
+- The script refuses to continue when `flake.lock` already has uncommitted worktree or index changes, unless `ALLOW_DIRTY_LOCK=1` is set intentionally
 - Run this on a machine or remote builder that can build the selected target
 - Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
 - Run `sysfu` with no arguments to open the interactive selector; the first menu item chooses which `nixosConfiguration` to upgrade
