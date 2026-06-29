@@ -401,7 +401,7 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 - Targets: `desktop`, `linux-desktop`, `nixos`, `server`, `nixos-server`, `orbstack`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
 - Darwin targets are not currently supported because this flake does not expose `darwinConfigurations`
 - The script creates or switches to `system-upgrade` unless `UPDATE_BRANCH` is set
-- The script refuses to continue when `flake.lock` already has uncommitted worktree or index changes, unless `ALLOW_DIRTY_LOCK=1` is set intentionally
+- The script allows pre-existing `flake.lock` worktree or index changes by default, so iterative update/fix/rerun cycles work; set `ALLOW_DIRTY_LOCK=0` to reject them
 - Run this on a machine or remote builder that can build the selected target
 - Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
 - Run `sysfu` with no arguments to open the interactive selector; the first menu item chooses which `nixosConfiguration` to upgrade
