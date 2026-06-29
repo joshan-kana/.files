@@ -61,7 +61,7 @@ Environment:
   MAIN_BRANCH          Branch to compare against. Defaults to main.
   UPDATE_BRANCH        Branch used for update work. Defaults to system-upgrade.
   NIXOS_REBUILD_FLAGS  Extra nix eval/build flags. Defaults to none.
-  ALLOW_DIRTY_LOCK     Set to 1 to allow pre-existing flake.lock worktree edits.
+  ALLOW_DIRTY_LOCK     Set to 0 to reject pre-existing flake.lock worktree edits. Defaults to 1.
 EOF
 }
 
@@ -469,9 +469,9 @@ if [[ "$undo_lock" == true ]]; then
   exit 0
 fi
 
-if [[ "${ALLOW_DIRTY_LOCK:-0}" != 1 ]]; then
+if [[ "${ALLOW_DIRTY_LOCK:-1}" != 1 ]]; then
   if ! git diff --quiet -- flake.lock || ! git diff --cached --quiet -- flake.lock; then
-    die "flake.lock already has uncommitted changes. Commit/stash them, restore flake.lock, or set ALLOW_DIRTY_LOCK=1 if you intentionally want to build on them."
+    die "flake.lock already has uncommitted changes and ALLOW_DIRTY_LOCK=0 is set. Commit/stash them, restore flake.lock, or unset ALLOW_DIRTY_LOCK to build on them."
   fi
 fi
 
