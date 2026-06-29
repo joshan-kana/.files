@@ -17,7 +17,8 @@ let
     edit = "if command -v code >/dev/null 2>&1; then code \"$DOTFILES/edit_config.code-workspace\"; else \${EDITOR:-nvim} \"$DOTFILES\"; fi";
     flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${cfg.profile.name}";
     rebuild =
-      action: "sudo nixos-rebuild --flake $DOTFILES#$FLK_PROFILE $NIXOS_REBUILD_FLAGS ${action}";
+      action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+    rebuildVm = "sudo nixos-rebuild --flake \"$DOTFILES#$FLK_PROFILE\" $NIXOS_REBUILD_FLAGS build-vm";
   };
   systemAliases = {
     syscd = systemCommands.cd;
@@ -34,8 +35,8 @@ let
     sup = systemCommands.rebuild "switch";
     systest = systemCommands.rebuild "test";
     stest = systemCommands.rebuild "test";
-    sysvm = systemCommands.rebuild "build-vm";
-    svm = systemCommands.rebuild "build-vm";
+    sysvm = systemCommands.rebuildVm;
+    svm = systemCommands.rebuildVm;
   };
   baseAliases = systemAliases // {
     bk = "cd ..";
