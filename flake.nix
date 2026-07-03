@@ -173,10 +173,46 @@
         }
       );
 
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = pkgsFor system;
+          repoFormatter = repoFormatterFor pkgs;
+        in
+        {
+          "quality-warnings" = pkgs.runCommand "check-nix-quality-warnings" { } ''
+            cd ${self}
+
+            ${lib.getExe pkgs.statix} check . || echo "WARNING: statix problems found. Run: nix run .#fix"
+
+            ${lib.getExe pkgs.deadnix} --fail . || echo "WARNING: deadnix problems found. Run: nix run .#fix"
+
+            ${lib.getExe repoFormatter} --fail-on-change --no-cache || echo "WARNING: formatting problems found. Run: nix fmt"
+
+            touch $out
+          '';
+        }
+      );
+
       apps = forAllSystems (
         system:
         let
           pkgs = pkgsFor system;
+          fixNix = pkgs.writeShellApplication {
+            name = "fix-nix";
+            runtimeInputs = [
+              pkgs.deadnix
+              pkgs.nixfmt
+              pkgs.statix
+              pkgs.treefmt
+            ];
+            text = ''
+              statix fix .
+              deadnix --edit .
+              treefmt
+            '';
+          };
+
           vscodePkg =
             if pkgs ? vscodium then
               pkgs.vscodium
@@ -185,7 +221,14 @@
             else
               null;
         in
-        lib.optionalAttrs (vscodePkg != null) {
+        {
+          fix = {
+            type = "app";
+            program = lib.getExe fixNix;
+            meta.description = "Apply statix fixes, deadnix edits, and treefmt formatting";
+          };
+        }
+        // lib.optionalAttrs (vscodePkg != null) {
           code = {
             type = "app";
             program = lib.getExe vscodePkg;
