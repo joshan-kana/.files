@@ -220,5 +220,30 @@
           };
         }
       );
+
+      nixosConfigurations = {
+        nixos = nixosHost {
+          system = "x86_64-linux";
+          hostModule = ./hosts/nixos;
+        };
+
+        nixos-arm-parallels = nixosHost {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-arm-parallels;
+        };
+
+        nixos-orbstack = nixosHost {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-orbstack;
+        };
+
+        nixos-server = nixosHost {
+          nixpkgsInput = nixpkgs-stable;
+          homeManagerInput = home-manager-stable;
+          stylixInput = stylix-stable;
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-server;
+        };
+      };
     };
 }
