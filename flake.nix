@@ -113,6 +113,7 @@
             homeManagerInput.nixosModules.home-manager
             ./overlays/monaspace-liga-overlay.nix
             ./modules/nixos/theme.nix
+            ./modules/nixos/restic-completions.nix
             hostModule
           ]
           ++ extraModules;
