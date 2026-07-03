@@ -433,4 +433,29 @@ in
     checkOpts = [ "--read-data-subset=1G" ];
   };
 
+  # fix breville fan 3-speed patch in home assistant
+  systemd.services.breville-airactive3d-3speed = {
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      file=/var/lib/apps/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+      [ -f "$file" ] || exit 0
+
+      ${pkgs.gnused}/bin/sed -n \
+        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
+        | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
+        && exit 0
+
+      ${pkgs.gnused}/bin/sed -i -E \
+        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
+
+      ${pkgs.docker}/bin/docker restart home-assistant >/dev/null || true
+    '';
+  };
+
+  systemd.paths.breville-airactive3d-3speed = {
+    wantedBy = [ "paths.target" ];
+    pathConfig.PathChanged = "/var/lib/apps/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+  };
+
 }
