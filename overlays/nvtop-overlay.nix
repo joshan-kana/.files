@@ -1,7 +1,6 @@
-{ config, pkgs, ... }:
-{
+_: {
   nixpkgs.overlays = [
-    (final: prev: {
+    (_final: prev: {
       nvtopPackages = prev.nvtopPackages // {
         full = prev.nvtopPackages.nvidia; # or whichever variant you need
       };

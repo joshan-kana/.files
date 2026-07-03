@@ -1,7 +1,6 @@
-{ config, pkgs, ... }:
-{
+_: {
   nixpkgs.overlays = [
-    (final: prev: {
+    (_final: prev: {
       floorp-bin-unwrapped = prev.floorp-bin-unwrapped.overrideAttrs (
         old:
         let
@@ -23,7 +22,7 @@
         {
           src = prev.fetchurl {
             url = "https://github.com/Floorp-Projects/Floorp/releases/download/v${old.version}/floorp-linux-${archInfo.arch}.tar.xz";
-            hash = archInfo.hash;
+            inherit (archInfo) hash;
           };
         }
       );

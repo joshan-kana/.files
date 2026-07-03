@@ -7,8 +7,8 @@
 let
   primaryUser = config.dotfiles.users.primary.name;
   serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.appDataRoot;
-  secretsDir = serverCfg.secretsDir;
+  inherit (serverCfg) appDataRoot;
+  inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
 
   appDataEditor = {
@@ -31,11 +31,6 @@ let
 
   appDataMode = "2770";
   snapshotMode = "0750";
-
-  macOllamaCandidates = [
-    "http://Joshans-MacBook-Pro.local:11434"
-    "http://100.87.66.20:11434"
-  ];
 
   # Floating container tags are refreshed as part of the normal flake update
   # workflow: `nix flake update`, then `nixos-rebuild switch`.
@@ -413,7 +408,7 @@ in
     initialize = true;
     repository = resticRepository;
     passwordFile = resticPasswordFile;
-    rcloneConfigFile = rcloneConfigFile;
+    inherit rcloneConfigFile;
     paths = backupPaths;
     exclude = [
       "${appDataRoot}/.snapshots"
