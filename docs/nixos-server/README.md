@@ -7,27 +7,27 @@ Raspberry Pi home server documentation.
 - `flake.nix`: declares the `nixos-server` host target.
 - `docs/nixos-server/nixos-server-install.md`: end-to-end install, restore,
   and day-two operations guide.
-- `hosts/nixos-server/default.nix`: host imports, SSH keys, caches, cleanup,
-  and top-level server settings.
-- `hosts/nixos-server/apps.nix`: hosted applications and their supporting
-  runtime wiring, including app containers, backups, Snapper, and OpenClaw.
-- `hosts/nixos-server/pi-agent.nix`: declarative AI agent CLI tooling sourced
-  from `numtide/llm-agents.nix`.
-- `hosts/nixos-server/hardware.nix`: this server's disk and filesystem layout.
-- `hosts/nixos-server/image.nix`: the Raspberry Pi SD card image definition
-  with the `FIRMWARE` boot partition, a 12 GiB seed image, and a Btrfs root
-  layout that grows to the full card on first boot.
+- `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
+  users, SSH, caches, and host-level services.
+- `profiles/nixos-server/hosted-stack.nix`: hosted applications and their
+  supporting runtime wiring, including app containers, backups,
+  Snapper, and the AdGuard macvlan network.
+- `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
+  filesystem layout.
+- `profiles/nixos-server/image.nix`: the Raspberry Pi SD card image
+  definition with the `FIRMWARE` boot partition, a 12 GiB seed image, and a
+  Btrfs root layout that grows to the full card on first boot.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
 
 ## Hardware Sources
 
 `nixos-hardware.nixosModules.raspberry-pi-4` and
-`hosts/nixos-server/hardware.nix` serve different purposes:
+`profiles/nixos-server/hardware-configuration.nix` serve different purposes:
 
 - `nixos-hardware.nixosModules.raspberry-pi-4`: Raspberry Pi 4 defaults shared
   by many machines, such as board-specific firmware and platform behavior.
-- `hosts/nixos-server/hardware.nix`: this server's own disk labels, Btrfs
-  subvolumes, boot layout, and kernel choice.
+- `profiles/nixos-server/hardware-configuration.nix`: this server's own disk
+  labels, Btrfs subvolumes, boot layout, and kernel choice.
 
 The split keeps board defaults separate from machine-specific storage
 assumptions.
@@ -94,7 +94,6 @@ URLs such as `http://192.168.1.3:8123` through the subnet route for stable acces
    - `tailscale-oauth-client-secret`
    - `n8n.env`
    - `openclaw.env`
-   - `pi-agent.env` if the selected agent needs environment secrets
 6. Restore app data into `/var/lib/...` using the mapping below.
 7. Apply the system:
 
@@ -135,23 +134,6 @@ sudo rsync -a /path/to/extracted/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/n8n/
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-## Pi Agent Tooling
-
-`hosts/nixos-server/pi-agent.nix` installs AI coding agent packages from
-`numtide/llm-agents.nix`. The first declared package is `codex`, plus a wrapper:
-
-```sh
-pi-agent --help
-```
-
-The wrapper starts in `/home/joshan/.files` and loads
-`/root/secrets/pi-agent.env` when that file exists. Keep API keys or static auth
-environment variables there, not in Git.
-
-This is intentionally only CLI tooling for now. Do not turn it into a systemd
-agent daemon until the exact OpenAI OAuth/Hermes/OpenClaw auth store behaviour
-has been tested interactively.
-
 ## Updates
 
 There are three update paths:
@@ -176,7 +158,7 @@ policy is `always`, Docker pulls the current registry image for tags such as
 `latest` or `stable` during that restart.
 
 3. Explicit app config or image policy changes:
-   Edit `hosts/nixos-server/apps.nix`, then commit and rebuild.
+   Edit `profiles/nixos-server/hosted-stack.nix`, then commit and rebuild.
 
 ## OCI Container Model
 
