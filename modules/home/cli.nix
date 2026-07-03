@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   osConfig,
   pkgs,
@@ -40,7 +39,7 @@ let
   };
   baseAliases = systemAliases // {
     bk = "cd ..";
-    edit = systemCommands.edit;
+    inherit (systemCommands) edit;
     h = "start-hyprland";
     HI = "${repoPath}/scripts/hyprland_intel";
     HN = "${repoPath}/scripts/hyprland_nvidia";

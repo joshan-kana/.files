@@ -7,10 +7,10 @@
 
 let
   serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.appDataRoot;
-  secretsDir = serverCfg.secretsDir;
+  inherit (serverCfg) appDataRoot;
+  inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
-  lan = serverCfg.lan;
+  inherit (serverCfg) lan;
 
   lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
   hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
@@ -20,8 +20,8 @@ let
   adguardNetwork = {
     name = "adguard_lan";
     parentInterface = lan.interface;
-    subnet = lan.subnet;
-    gateway = lan.gateway;
+    inherit (lan) subnet;
+    inherit (lan) gateway;
     containerIp = lan.dns.serviceIp;
     # Host-side macvlan address for reaching the AdGuard container.
     hostShimIp = lan.dns.macvlanHostShimIp;
@@ -125,7 +125,7 @@ in
   ];
 
   networking.macvlans.adguard-shim = {
-    interface = lan.interface;
+    inherit (lan) interface;
     mode = "bridge";
   };
 

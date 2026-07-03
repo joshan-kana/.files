@@ -55,17 +55,14 @@
       self,
       nixpkgs,
       nixpkgs-stable,
-      nixos-hardware,
       home-manager,
       home-manager-stable,
       stylix,
       stylix-stable,
-      spicetify-nix,
-      plasma-manager,
       ...
     }@inputs:
     let
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
 
       systems = [
         "x86_64-linux"
@@ -74,7 +71,7 @@
         "aarch64-darwin"
       ];
 
-      forAllSystems = f: lib.genAttrs systems (system: f system);
+      forAllSystems = f: lib.genAttrs systems f;
 
       pkgsFor = system: import nixpkgs { inherit system; };
 
@@ -152,13 +149,7 @@
             ]
             ++ [ repoOptionsFzf ];
 
-          vscodePkg =
-            if pkgs ? vscodium then
-              pkgs.vscodium
-            else if pkgs ? vscode then
-              pkgs.vscode
-            else
-              null;
+          vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
           default = pkgs.mkShell {
@@ -213,13 +204,7 @@
             '';
           };
 
-          vscodePkg =
-            if pkgs ? vscodium then
-              pkgs.vscodium
-            else if pkgs ? vscode then
-              pkgs.vscode
-            else
-              null;
+          vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
           fix = {

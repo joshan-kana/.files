@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+_:
 # KDE Plasma
 {
   programs.plasma = {

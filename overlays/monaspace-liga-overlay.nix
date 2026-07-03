@@ -1,8 +1,7 @@
-{ config, pkgs, ... }:
-{
+_: {
   nixpkgs.overlays = [
     (
-      final: prev:
+      _final: prev:
       let
         python = prev.python3.withPackages (ps: [ ps.fonttools ]);
         patchScript = prev.writeText "monaspace-promote-all-gsub-to-liga.py" ''
