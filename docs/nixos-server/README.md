@@ -17,6 +17,8 @@ Raspberry Pi home server documentation.
 - `profiles/nixos-server/image.nix`: the Raspberry Pi SD card image
   definition with the `FIRMWARE` boot partition, a 12 GiB seed image, and a
   Btrfs root layout that grows to the full card on first boot.
+- `docs/nixos-server/native-openclaw.md`: native OpenClaw gateway investigation
+  notes and current blockers.
 - [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
 
 ## Hardware Sources
