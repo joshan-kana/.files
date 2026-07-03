@@ -12,15 +12,20 @@ That flake is not currently a safe drop-in for the Raspberry Pi server because:
 - its advertised binary cache is `https://cache.garnix.io`, which should not be relied on for new Pi deployments;
 - building the whole Node/OpenClaw package graph locally on the Pi may be slow and brittle.
 
+`numtide/llm-agents.nix` has the better cache story for this repo, but it does not currently package OpenClaw. Adding `https://cache.numtide.com` to this repo would not make a locally written OpenClaw derivation cached unless the same derivation is also built and published by that cache.
+
 ## Direction
 
 Do not add `openclaw/nix-openclaw` to the server flake yet.
 
+Do not port the gateway through `numtide/llm-agents.nix` until OpenClaw is packaged there, or until this repo has another maintained `aarch64-linux` binary cache for the OpenClaw derivation.
+
 A native service should wait until one of these is true:
 
 1. upstream `nix-openclaw` supports and caches `aarch64-linux`, preferably through a maintained cache such as Cachix or GitHub Actions-backed Nix cache;
-2. this repo vendors a small OpenClaw package expression that builds only the needed gateway package for `aarch64-linux`;
-3. the server is moved from the Raspberry Pi to stronger hardware where local builds are acceptable.
+2. `numtide/llm-agents.nix` packages OpenClaw and publishes `aarch64-linux` substitutes through `cache.numtide.com`;
+3. this repo vendors a small OpenClaw package expression and publishes it to a maintained cache;
+4. the server is moved from the Raspberry Pi to stronger hardware where local builds are acceptable.
 
 ## Future service shape
 
