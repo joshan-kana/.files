@@ -411,6 +411,7 @@ in
     inherit rcloneConfigFile;
     paths = backupPaths;
     exclude = [
+      "${appDataRoot}/.snapshots"
       "${appDataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
