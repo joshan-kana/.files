@@ -1,20 +1,22 @@
 {
   description = "My first flake!";
 
-  inputs = {
-    # Nixpkgs: a collection of packages for the Nix package manager
-    nixpkgs.url = "nixpkgs/nixos-unstable";
+  nixConfig = {
+    extra-substituters = [ "https://cache.numtide.com" ];
+    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
+  };
 
-    # Stable Nixpkgs for server hosts where predictable updates matter more.
+  inputs = {
+    nixpkgs.url = "nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # NixOS hardware profiles, including Raspberry Pi 4 defaults.
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    # Stylix: systemwide theming and typography for NixOS
+    llm-agents.url = "github:numtide/llm-agents.nix";
+
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -25,7 +27,6 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    # Home Manager: a tool for managing dotfiles using Nix
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -36,13 +37,11 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
     spicetify-nix = {
       url = "github:Gerg-L/spicetify-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Plasma-manager: a nix flake for managing KDE Plasma
     plasma-manager = {
       url = "github:nix-community/plasma-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -72,7 +71,6 @@
       ];
 
       forAllSystems = f: lib.genAttrs systems f;
-
       pkgsFor = system: import nixpkgs { inherit system; };
 
       repoFormatterFor =
@@ -243,6 +241,7 @@
           stylixInput = stylix-stable;
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-server;
+          extraModules = [ ./hosts/nixos-server/openclaw-native.nix ];
         };
       };
     };
