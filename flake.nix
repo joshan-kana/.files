@@ -1,11 +1,6 @@
 {
   description = "My first flake!";
 
-  nixConfig = {
-    extra-substituters = [ "https://cache.numtide.com" ];
-    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
-  };
-
   inputs = {
     # Nixpkgs: a collection of packages for the Nix package manager
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -18,10 +13,6 @@
       url = "github:NixOS/nixos-hardware";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
-
-    # Nix-packaged AI coding agents. Keep its own nixpkgs input so upstream
-    # cache hits stay more likely for large agent packages on the Pi.
-    llm-agents.url = "github:numtide/llm-agents.nix";
 
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
