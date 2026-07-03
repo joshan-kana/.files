@@ -7,16 +7,22 @@
   };
 
   inputs = {
+    # Nixpkgs: a collection of packages for the Nix package manager
     nixpkgs.url = "nixpkgs/nixos-unstable";
+
+    # Stable Nixpkgs for server hosts where predictable updates matter more.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
+    # NixOS hardware profiles, including Raspberry Pi 4 defaults.
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    # Cached OpenClaw package. Keep its own inputs so the Numtide cache stays useful.
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -27,6 +33,7 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    # Home Manager: a tool for managing dotfiles using Nix
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,11 +44,13 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
     spicetify-nix = {
       url = "github:Gerg-L/spicetify-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Plasma-manager: a nix flake for managing KDE Plasma
     plasma-manager = {
       url = "github:nix-community/plasma-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -71,6 +80,7 @@
       ];
 
       forAllSystems = f: lib.genAttrs systems f;
+
       pkgsFor = system: import nixpkgs { inherit system; };
 
       repoFormatterFor =
