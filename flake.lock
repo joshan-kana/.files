@@ -450,7 +450,8 @@
         "plasma-manager": "plasma-manager",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix",
-        "stylix-stable": "stylix-stable"
+        "stylix-stable": "stylix-stable",
+        "zen-browser": "zen-browser"
       }
     },
     "spicetify-nix": {
@@ -711,6 +712,29 @@
       "original": {
         "owner": "tinted-theming",
         "repo": "base16-zed",
+        "type": "github"
+      }
+    },
+    "zen-browser": {
+      "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783947494,
+        "narHash": "sha256-EFEMX489JMEMFAMZSvOzSPEd5RhoFGtuXsBko4+042o=",
+        "owner": "0xc000022070",
+        "repo": "zen-browser-flake",
+        "rev": "f7cad3bbd7a036433ce25a71cb49d18aaa198102",
+        "type": "github"
+      },
+      "original": {
+        "owner": "0xc000022070",
+        "repo": "zen-browser-flake",
         "type": "github"
       }
     }

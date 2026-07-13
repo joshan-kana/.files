@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -92,6 +93,7 @@
 
     environment.systemPackages = with pkgs; [
       chromium
+      inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
       waypipe
       sunshine
       mpv
