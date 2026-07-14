@@ -186,6 +186,7 @@ lib.mkIf cfg.features.cli.enable {
   programs.fzf = lib.mkIf (enabled "fzf") {
     enable = true;
     enableZshIntegration = true;
+    defaultOptions = [ "--walker-skip=.git,.direnv,.Trash,Library,OrbStack" ];
   };
   programs.ripgrep.enable = enabled "ripgrep";
   programs.lf.enable = enabled "lf";
