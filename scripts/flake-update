@@ -332,7 +332,7 @@ run_interactive_menu() {
       "Update selected inputs")
         if command -v fzf >/dev/null 2>&1; then
           selected=$(
-            printf '%s\n' "__BACK__ Back" nixpkgs nixpkgs-stable nixos-hardware home-manager stylix spicetify-nix plasma-manager |
+            printf '%s\n' "__BACK__ Back" nixpkgs nixpkgs-stable nixos-hardware home-manager hunk stylix spicetify-nix plasma-manager |
               fzf --multi --height=40% --reverse --prompt="inputs> " || true
           )
           [[ -n "$selected" ]] || continue
@@ -347,6 +347,7 @@ run_interactive_menu() {
               "nixpkgs-stable" \
               "nixos-hardware" \
               "home-manager" \
+              "hunk" \
               "stylix" \
               "spicetify-nix" \
               "plasma-manager" \

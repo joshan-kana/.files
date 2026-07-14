@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   osConfig,
   pkgs,
@@ -83,6 +84,22 @@ lib.mkIf cfg.features.cli.enable {
     signing.format = "openpgp";
   };
 
+  programs.hunk = {
+    enable = enabled "hunk";
+    package = pkgs.hunk;
+    enableGitIntegration = config.programs.git.enable;
+    settings = {
+      mode = "auto";
+      watch = false;
+      exclude_untracked = false;
+      line_numbers = true;
+      wrap_lines = false;
+      menu_bar = true;
+      agent_notes = true;
+      transparent_background = false;
+    };
+  };
+
   programs.zsh = {
     enable = enabled "zsh";
     autosuggestion.enable = true;
@@ -112,7 +129,7 @@ lib.mkIf cfg.features.cli.enable {
           '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
           '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
           '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
-          '*:flake input:(nixpkgs nixpkgs-stable nixos-hardware home-manager stylix spicetify-nix plasma-manager)'
+          '*:flake input:(nixpkgs nixpkgs-stable nixos-hardware home-manager hunk stylix spicetify-nix plasma-manager)'
       }
       compdef _sysfu sysfu
 

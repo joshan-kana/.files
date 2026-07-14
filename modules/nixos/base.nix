@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -17,6 +18,7 @@ in
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
   home-manager.users.${cfg.users.primary.name}.imports = [
+    inputs.hunk.homeManagerModules.hunk
     ../home/base.nix
     ../home/cli.nix
   ];
@@ -71,6 +73,12 @@ in
   };
 
   nixpkgs.config.allowUnfree = true;
+
+  nixpkgs.overlays = [
+    (_final: prev: {
+      hunk = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.hunk;
+    })
+  ];
 
   environment.sessionVariables = {
     DOTFILES = repoPath;

@@ -36,6 +36,11 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    hunk = {
+      url = "github:modem-dev/hunk";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
     spicetify-nix = {
       url = "github:Gerg-L/spicetify-nix";
