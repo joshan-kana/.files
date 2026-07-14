@@ -110,7 +110,7 @@
       gparted
       moonlight-qt
       distrobox
-      bottles
+      inputs.nixpkgs-stable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.bottles
       mullvad-vpn
       github-desktop
       nautilus
