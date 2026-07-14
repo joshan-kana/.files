@@ -69,8 +69,8 @@ let
   );
 in
 lib.mkIf cfg.features.cli.enable {
-  programs.git = lib.mkIf (enabled "git") {
-    enable = true;
+  programs.git = {
+    enable = enabled "git";
     settings = {
       user = {
         name = cfg.users.primary.fullName;
@@ -83,8 +83,8 @@ lib.mkIf cfg.features.cli.enable {
     signing.format = "openpgp";
   };
 
-  programs.zsh = lib.mkIf (enabled "zsh") {
-    enable = true;
+  programs.zsh = {
+    enable = enabled "zsh";
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     plugins = [
@@ -159,8 +159,8 @@ lib.mkIf cfg.features.cli.enable {
     '';
   };
 
-  programs.starship = lib.mkIf (enabled "starship") {
-    enable = true;
+  programs.starship = {
+    enable = enabled "starship";
     enableZshIntegration = true;
     settings = {
       character.success_symbol = "[➜](bold green) ";
@@ -183,8 +183,8 @@ lib.mkIf cfg.features.cli.enable {
   };
 
   programs.zellij.enable = enabled "zellij";
-  programs.fzf = lib.mkIf (enabled "fzf") {
-    enable = true;
+  programs.fzf = {
+    enable = enabled "fzf";
     enableZshIntegration = true;
     defaultOptions = [ "--walker-skip=.git,.direnv,.Trash,Library,OrbStack" ];
   };
@@ -193,16 +193,16 @@ lib.mkIf cfg.features.cli.enable {
   programs.bat.enable = enabled "bat";
   programs.eza.enable = enabled "eza";
   programs.htop.enable = enabled "htop";
-  programs.btop = lib.mkIf (enabled "btop") {
-    enable = true;
+  programs.btop = {
+    enable = enabled "btop";
     settings.update_ms = 100;
   };
-  programs.yazi = lib.mkIf (enabled "yazi") {
-    enable = true;
+  programs.yazi = {
+    enable = enabled "yazi";
     shellWrapperName = "y";
   };
-  programs.neovim = lib.mkIf (enabled "neovim") {
-    enable = true;
+  programs.neovim = {
+    enable = enabled "neovim";
     withRuby = false;
     withPython3 = false;
     extraConfig = ''
@@ -210,8 +210,8 @@ lib.mkIf cfg.features.cli.enable {
       \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
     '';
   };
-  programs.mpv = lib.mkIf (enabled "mpv") {
-    enable = true;
+  programs.mpv = {
+    enable = enabled "mpv";
     scripts = with pkgs; [ mpvScripts.mpris ];
   };
 }
