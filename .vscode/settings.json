@@ -13,8 +13,11 @@
         "nixos-server": {
           "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options"
         },
-        "home-manager": {
+        "home-manager-unstable": {
           "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+        },
+        "home-manager-stable": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options.home-manager.users.type.getSubOptions []"
         }
       }
     }
