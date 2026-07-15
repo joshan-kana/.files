@@ -193,6 +193,27 @@ in
         | .gateway.mode = "local"
         | .gateway.bind = "loopback"
         | .gateway.port = 18789
+        | .gateway.nodes = (.gateway.nodes // {})
+        | .gateway.nodes.allowCommands =
+            ((.gateway.nodes.allowCommands // []) + [
+              "camera.snap",
+              "camera.clip",
+              "screen.record",
+              "contacts.add",
+              "calendar.add",
+              "reminders.add",
+              "health.summary"
+            ] | unique)
+        | .gateway.nodes.denyCommands =
+            ((.gateway.nodes.denyCommands // []) - [
+              "camera.snap",
+              "camera.clip",
+              "screen.record",
+              "contacts.add",
+              "calendar.add",
+              "reminders.add",
+              "health.summary"
+            ])
         | .gateway.trustedProxies = ["127.0.0.1", "::1"]
         | .gateway.auth = {
             "mode": "trusted-proxy",
