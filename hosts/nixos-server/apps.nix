@@ -195,7 +195,7 @@ in
         | .gateway.port = 18789
         | .gateway.nodes = (.gateway.nodes // {})
         | .gateway.nodes.allowCommands =
-            ((.gateway.nodes.allowCommands // []) + [
+            (((.gateway.nodes.allowCommands // []) - ["computer.act"]) + [
               "camera.snap",
               "camera.clip",
               "screen.record",
@@ -212,8 +212,23 @@ in
               "contacts.add",
               "calendar.add",
               "reminders.add",
-              "health.summary"
+              "health.summary",
+              "computer.act"
             ])
+        | .tools = (.tools // {})
+        | .tools.alsoAllow =
+            ((.tools.alsoAllow // []) - ["computer"])
+        | .tools.sandbox = (.tools.sandbox // {})
+        | .tools.sandbox.tools = (.tools.sandbox.tools // {})
+        | .tools.sandbox.tools.alsoAllow =
+            ((.tools.sandbox.tools.alsoAllow // []) - ["computer"])
+        | .tools.exec = (.tools.exec // {})
+        | del(.tools.exec.askFallback)
+        | del(.tools.exec.security)
+        | del(.tools.exec.ask)
+        | .tools.exec.host = "node"
+        | .tools.exec.node = "08afea100c9a0c29419893929dc89145d0d91e0638e4d008f146313da38f9966"
+        | .tools.exec.mode = "full"
         | .gateway.trustedProxies = ["127.0.0.1", "::1"]
         | .gateway.auth = {
             "mode": "trusted-proxy",
