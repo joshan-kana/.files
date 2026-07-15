@@ -210,6 +210,18 @@ in
         | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
         | .gateway.controlUi.allowedOrigins =
             ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
+        | .plugins = (.plugins // {})
+        | .plugins.allow =
+            ((.plugins.allow // []) | if index("device-pair") then . else . + ["device-pair"] end)
+        | .plugins.deny =
+            ((.plugins.deny // []) | map(select(. != "device-pair")))
+        | .plugins.entries = (.plugins.entries // {})
+        | .plugins.entries."device-pair" = (.plugins.entries."device-pair" // {})
+        | .plugins.entries."device-pair".enabled = true
+        | .plugins.entries."device-pair".config =
+            ((.plugins.entries."device-pair".config // {}) + {
+              "publicUrl": "ws://192.168.1.3:18789"
+            })
       ' "$configFile" > "$tmp"
 
       install -m 0600 -o ${toString openclawContainerUser.uid} -g ${toString openclawContainerUser.gid} "$tmp" "$configFile"
