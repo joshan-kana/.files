@@ -118,6 +118,8 @@ in
     5678 # n8n
     5580 # Matter Server
     18789 # OpenClaw gateway reverse proxy
+    21064 # HomeKit main bridge
+    21065 # HomeKit Bambu camera bridge
   ];
 
   networking.firewall.allowedUDPPorts = [
