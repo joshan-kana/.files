@@ -21,33 +21,39 @@ in
     }
   ];
 
-  users.groups = {
-    ${cfg.appData.group.name}.gid = cfg.appData.group.id;
-    ${cfg.dataRoot.group.name} = { };
+  users = {
+    groups = {
+      ${cfg.appData.group.name}.gid = cfg.appData.group.id;
+      ${cfg.dataRoot.group.name} = { };
+    };
+    users.${config.dotfiles.users.primary.name}.extraGroups = [
+      cfg.appData.group.name
+      cfg.dataRoot.group.name
+    ];
   };
-  users.users.${config.dotfiles.users.primary.name}.extraGroups = [
-    cfg.appData.group.name
-    cfg.dataRoot.group.name
-  ];
 
   environment.systemPackages = with pkgs; [
     restic
     rclone
   ];
 
-  boot.supportedFilesystems = [
-    "btrfs"
-    "zfs"
-  ];
-  boot.zfs.extraPools = [ pool ];
-  boot.zfs.forceImportRoot = false;
-
-  services.zfs.autoScrub = {
-    enable = true;
-    pools = [ pool ];
-    interval = cfg.dataRoot.scrubInterval;
+  boot = {
+    supportedFilesystems = [
+      "btrfs"
+      "zfs"
+    ];
+    zfs.extraPools = [ pool ];
+    zfs.forceImportRoot = false;
   };
-  services.zfs.trim.enable = false;
+
+  services.zfs = {
+    autoScrub = {
+      enable = true;
+      pools = [ pool ];
+      interval = cfg.dataRoot.scrubInterval;
+    };
+    trim.enable = false;
+  };
 
   services.sanoid = {
     enable = true;
