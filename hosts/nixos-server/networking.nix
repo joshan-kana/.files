@@ -25,6 +25,9 @@ let
   };
 in
 {
+  # Stable machine identifier required for safe ZFS pool imports.
+  networking.hostId = "f6998ba1";
+
   # Prevent ARP flux when multiple interfaces participate in the same LAN.
   # Each interface should answer ARP only for addresses assigned to itself.
   boot.kernel.sysctl = {

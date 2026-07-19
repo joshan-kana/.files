@@ -17,6 +17,7 @@ repo, flashed once, then booted directly into the final server layout.
 - Root filesystem: Btrfs label `NIXOS` mounted as the Btrfs top-level
 - Btrfs subvolumes: `/var/lib/apps`
 - Nix store path: `/nix/store`
+- External Vault: ZFS mirror mounted at `/srv/vault` when the LaCie drives are connected
 
 ## What This Image Contains
 
@@ -413,3 +414,8 @@ For app config changes managed outside Nix, container app data lives under:
 ```
 
 Those paths are covered by Snapper snapshots and the restic Dropbox backup.
+
+The external Vault pool is restored separately after a full SD-card rebuild.
+Follow [Vault ZFS Storage](vault-storage.md) to import and verify it; do not run
+the destructive pool-creation step again. Vault data is locally snapshotted but
+is not included in the app-data restic backup.

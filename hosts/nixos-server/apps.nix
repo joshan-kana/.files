@@ -10,6 +10,7 @@ let
   inherit (serverCfg) appDataRoot;
   inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
+  retention = serverCfg.snapshots.retention;
 
   appDataEditor = {
     group = "appdata-editors";
@@ -445,10 +446,10 @@ in
       FSTYPE = "btrfs";
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
-      TIMELINE_LIMIT_HOURLY = 48;
-      TIMELINE_LIMIT_DAILY = 14;
-      TIMELINE_LIMIT_WEEKLY = 8;
-      TIMELINE_LIMIT_MONTHLY = 12;
+      TIMELINE_LIMIT_HOURLY = retention.hourly;
+      TIMELINE_LIMIT_DAILY = retention.daily;
+      TIMELINE_LIMIT_WEEKLY = retention.weekly;
+      TIMELINE_LIMIT_MONTHLY = retention.monthly;
     };
   };
 
@@ -463,10 +464,10 @@ in
       "${appDataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
-      "--keep-hourly 48"
-      "--keep-daily 14"
-      "--keep-weekly 8"
-      "--keep-monthly 12"
+      "--keep-hourly ${toString retention.hourly}"
+      "--keep-daily ${toString retention.daily}"
+      "--keep-weekly ${toString retention.weekly}"
+      "--keep-monthly ${toString retention.monthly}"
     ];
     timerConfig = {
       OnCalendar = "*:0/30";
