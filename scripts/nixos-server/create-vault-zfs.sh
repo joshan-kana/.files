@@ -65,6 +65,16 @@ if [ "$real_a" = "$real_b" ]; then
   exit 1
 fi
 
+if ! modprobe zfs; then
+  echo "ERROR: the ZFS kernel module is unavailable; reboot into the latest NixOS configuration before continuing." >&2
+  exit 1
+fi
+
+if [ ! -c /dev/zfs ]; then
+  echo "ERROR: /dev/zfs is unavailable after loading the ZFS kernel module." >&2
+  exit 1
+fi
+
 if zpool list vault >/dev/null 2>&1; then
   echo "ERROR: zpool 'vault' already exists." >&2
   zpool status vault || true
