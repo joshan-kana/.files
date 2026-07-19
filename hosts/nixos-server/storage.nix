@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 
@@ -28,15 +27,6 @@ in
   ];
   boot.zfs.extraPools = [ pool ];
   boot.zfs.forceImportRoot = false;
-
-  # The first switch happens before the one-time pool creation. Skip the
-  # generated import unit only while the named pool is neither imported nor
-  # available for import; once created, the normal NixOS import command runs.
-  systemd.services."zfs-import-${pool}".serviceConfig.ExecCondition =
-    let
-      poolPattern = "^[[:space:]]*pool:[[:space:]]+${pool}$";
-    in
-    "${pkgs.runtimeShell} -c '${pkgs.zfs}/bin/zpool list -H -o name ${pool} >/dev/null 2>&1 || ${pkgs.zfs}/bin/zpool import 2>/dev/null | ${pkgs.gnugrep}/bin/grep -Eq \"${poolPattern}\"'";
 
   services.zfs.autoScrub = {
     enable = true;
@@ -81,11 +71,5 @@ in
     "${dataRoot}/documents"
     "${dataRoot}/shares"
     "${dataRoot}/backups"
-  ];
-
-  environment.systemPackages = with pkgs; [
-    sanoid
-    smartmontools
-    zfs
   ];
 }
