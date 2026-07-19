@@ -1,17 +1,65 @@
 # OpenClaw
 
-This page documents the OpenClaw runtime wiring on the NixOS server.
+OpenClaw's Gateway remains in Docker on the NixOS server. nginx exposes the
+loopback-bound Gateway to the LAN, while mutable app and auth state remain under
+`/var/lib/apps/openclaw` and `/var/lib/apps/openclaw-auth`. The NixOS wiring is
+in `hosts/nixos-server/apps.nix`; the mutable Gateway config is
+`/var/lib/apps/openclaw/openclaw.json`.
 
-## Local Gateway
+## Execution and repository access
 
-OpenClaw runs on the NixOS server and is exposed through nginx. The server keeps
-OpenClaw's app state under `/var/lib/apps/openclaw` and its auth/profile state
-under `/var/lib/apps/openclaw-auth`.
+Gateway exec is the resilient default. The bundled `repository-access` skill
+applies this policy for repository work:
 
-The OpenClaw container is configured from
-`profiles/nixos-server/hosted-stack.nix`. OpenClaw's mutable config is written to
-`/var/lib/apps/openclaw/openclaw.json` on the host and mounted into the
-container.
+1. Prefer a connected app-backed macOS node that advertises `system.run` and
+   `system.which`, and work in `/Users/joshan/.files`.
+2. Ignore disconnected or commandless headless nodes. Selection is based on
+   live capabilities; no node ID is persisted.
+3. If no suitable Mac node is connected, continue through Gateway exec and the
+   existing server checkout at `/home/joshan/.files` (visible inside the
+   container as `/host/home/joshan/.files`).
+
+Use one checkout per task and never create an additional clone. On the server,
+the `openclaw-repository` command runs Git as `joshan`, preserving checkout
+ownership:
+
+```sh
+openclaw-repository git files status --short --branch
+openclaw-repository git infrastructure-docs status --short --branch
+openclaw-repository gh issue list --repo joshan-kana/.files --limit 5
+```
+
+The server installs `gh` declaratively. Git and GitHub API authentication remain
+separate:
+
+- Git uses `/root/secrets/id_ed25519` through an ephemeral root-owned SSH agent,
+  strict host-key checking, GitHub's pinned Ed25519 host key,
+  `IdentitiesOnly=yes`, and disabled interactive prompting. Git itself runs as
+  `joshan`.
+- `gh` reads `GH_TOKEN` only from `/root/secrets/openclaw-github.env` while the
+  root-only host wrapper runs. The value is not copied into a home directory,
+  command argument, container environment, Git, or the Nix store.
+- `/root/secrets/openclaw-host-admin-id_ed25519` remains the separate,
+  loopback-only container-to-host administration key. The GitHub key is not
+  copied into `openclaw-admin/.ssh` because repository transport and localhost
+  administration are different trust boundaries.
+
+If the API token is not provisioned, create it without displaying the value:
+
+```sh
+read -rsp 'GitHub token: ' OPENCLAW_GITHUB_TOKEN && printf '\n' && \
+  printf 'GH_TOKEN=%s\n' "$OPENCLAW_GITHUB_TOKEN" | \
+  sudo install -m 0400 -o root -g root /dev/stdin /root/secrets/openclaw-github.env; \
+unset OPENCLAW_GITHUB_TOKEN
+```
+
+The token must have access to both private repositories and the issue, pull
+request, and Project mutations OpenClaw is expected to perform.
+
+`docs/infrastructure-docs` is a separate Git repository and submodule. For a
+documentation change, create a branch inside the submodule, commit and push it,
+open a draft `infrastructure-docs` PR, then update the parent pointer in a
+separate `.files` commit. Never point `.files` at an unpushed submodule commit.
 
 ## Ollama Proxy
 
@@ -80,11 +128,20 @@ Run this on the NixOS server:
 
 ```sh
 systemctl --failed
-systemctl status openclaw-ollama-proxy.timer openclaw-ollama-proxy.service nginx.service --no-pager -l
+systemctl status docker-openclaw.service configure-openclaw-gateway.service openclaw-ollama-proxy.timer openclaw-ollama-proxy.service nginx.service --no-pager -l
 systemctl list-timers openclaw-ollama-proxy.timer --all --no-pager
 cat /run/openclaw-ollama-proxy.conf
 curl -sS -i --max-time 8 http://127.0.0.1:11434/api/tags | sed -n '1,20p'
 sudo docker exec openclaw openclaw models list --provider ollama
+sudo docker exec openclaw openclaw config get tools.exec
+sudo docker exec openclaw openclaw nodes status --json
+gh --version
+sudo /run/current-system/sw/bin/openclaw-repository-host gh auth status --hostname github.com
+sudo /run/current-system/sw/bin/openclaw-repository-host gh issue list --repo joshan-kana/.files --limit 5
+sudo /run/current-system/sw/bin/openclaw-repository-host gh pr list --repo joshan-kana/.files --limit 5
+sudo /run/current-system/sw/bin/openclaw-repository-host gh repo view joshan-kana/infrastructure-docs
+sudo /run/current-system/sw/bin/openclaw-repository-host git files ls-remote git@github.com:joshan-kana/.files.git HEAD
+sudo /run/current-system/sw/bin/openclaw-repository-host git infrastructure-docs ls-remote git@github.com:joshan-kana/infrastructure-docs.git HEAD
 ```
 
 Expected healthy state:
@@ -96,6 +153,15 @@ Expected healthy state:
 - `http://127.0.0.1:11434/api/tags` returns the Mac Ollama models when the Mac
   and Ollama are reachable.
 - OpenClaw lists the Ollama models through the `ollama` provider.
+- `tools.exec.host` is `gateway` and has no fixed `node` value.
+- The connected app-backed Mac node reports `system.run`; a harmless node exec
+  starts in `/Users/joshan/.files`.
+- The wrapper's Git and `gh` reads succeed for both repositories.
+
+Mac-offline fallback can be verified safely without disconnecting the Mac: use
+Gateway exec explicitly and run
+`openclaw-repository git files status --short --branch`. This simulates the same
+path the skill selects when no suitable Mac node is connected.
 
 ## Operational Notes
 
@@ -105,6 +171,7 @@ can return a backend error. That is expected. The important property is that
 nginx and OpenClaw remain healthy and the polling timer picks up the Mac again
 when Ollama becomes reachable.
 
+<<<<<<< HEAD
 ## OpenRouter Model Lanes
 
 OpenClaw is configured with three scoped OpenRouter API keys, each presented as a
@@ -185,3 +252,13 @@ OR DeepSeek V4 Pro (non-ZDR)
 
 Ollama, Together AI, and direct DeepSeek remain configured and available as
 explicit legacy/credit-balance options alongside the three OpenRouter lanes.
+=======
+## Rollback
+
+Roll back the NixOS generation with `sudo nixos-rebuild switch --rollback`, or
+boot the previous generation. This restores the prior container definition and
+Gateway config on the next OpenClaw restart. Existing OpenClaw app/auth data and
+both repository checkouts are retained. If only repository access must be
+disabled, remove `/root/secrets/openclaw-github.env`; API calls then fail closed
+without affecting the Gateway or Git checkout.
+>>>>>>> 2e6056f (docs: document OpenClaw repository workflow)
