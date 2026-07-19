@@ -7,7 +7,7 @@
 
 let
   cfg = config.dotfiles.server.storage;
-  inherit (cfg) appDataRoot dataRoot snapshots;
+  inherit (cfg) appDataRoot snapshots;
   pool = cfg.poolName;
   secretsDir = config.dotfiles.server.secretsDir;
   snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
@@ -113,21 +113,5 @@ in
     "d ${appDataRoot} 2770 root ${cfg.appDataGroup} - -"
     "v ${appDataRoot}/.snapshots 0750 root root - -"
     "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
-  ]
-  ++ map (path: "d ${path} 2775 root ${cfg.group} - -") [
-    dataRoot
-    "${dataRoot}/archive"
-    "${dataRoot}/archive/lacie-rescue"
-    "${dataRoot}/imports"
-    "${dataRoot}/imports/dropbox-test"
-    "${dataRoot}/photos"
-    "${dataRoot}/media"
-    "${dataRoot}/media/library"
-    "${dataRoot}/media/downloads"
-    "${dataRoot}/media/transcode"
-    "${dataRoot}/nextcloud"
-    "${dataRoot}/documents"
-    "${dataRoot}/shares"
-    "${dataRoot}/backups"
   ];
 }

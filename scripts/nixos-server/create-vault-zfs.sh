@@ -177,13 +177,7 @@ zfs create vault/data/shares
 zfs create vault/data/backups
 
 echo
-echo "━━━ Creating expected folders"
-mkdir -p \
-  /srv/vault/archive/lacie-rescue \
-  /srv/vault/imports/dropbox-test \
-  /srv/vault/media/library \
-  /srv/vault/media/downloads \
-  /srv/vault/media/transcode
+echo "━━━ Setting dataset permissions"
 chgrp -R server-data /srv/vault
 find /srv/vault -type d -exec chmod 2775 {} +
 
