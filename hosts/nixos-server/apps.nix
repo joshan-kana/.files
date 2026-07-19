@@ -10,7 +10,7 @@ let
   inherit (serverCfg) appDataRoot;
   inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
-  retention = serverCfg.snapshots.retention;
+  snapshots = serverCfg.storage.snapshots;
 
   appDataEditor = {
     group = "appdata-editors";
@@ -438,7 +438,7 @@ in
   };
 
   services.snapper = {
-    snapshotInterval = "*:0/15";
+    snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
     cleanupInterval = "1h";
     persistentTimer = true;
     configs.apps = {
@@ -446,10 +446,10 @@ in
       FSTYPE = "btrfs";
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
-      TIMELINE_LIMIT_HOURLY = retention.hourly;
-      TIMELINE_LIMIT_DAILY = retention.daily;
-      TIMELINE_LIMIT_WEEKLY = retention.weekly;
-      TIMELINE_LIMIT_MONTHLY = retention.monthly;
+      TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
+      TIMELINE_LIMIT_DAILY = snapshots.retention.daily;
+      TIMELINE_LIMIT_WEEKLY = snapshots.retention.weekly;
+      TIMELINE_LIMIT_MONTHLY = snapshots.retention.monthly;
     };
   };
 
@@ -464,10 +464,10 @@ in
       "${appDataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
-      "--keep-hourly ${toString retention.hourly}"
-      "--keep-daily ${toString retention.daily}"
-      "--keep-weekly ${toString retention.weekly}"
-      "--keep-monthly ${toString retention.monthly}"
+      "--keep-hourly ${toString snapshots.retention.hourly}"
+      "--keep-daily ${toString snapshots.retention.daily}"
+      "--keep-weekly ${toString snapshots.retention.weekly}"
+      "--keep-monthly ${toString snapshots.retention.monthly}"
     ];
     timerConfig = {
       OnCalendar = "*:0/30";
