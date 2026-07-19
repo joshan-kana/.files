@@ -90,9 +90,11 @@ systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 journalctl -u sanoid.service -u zfs-scrub.service --since '7 days ago'
 ```
 
-Sanoid snapshots `vault/data` and all child datasets hourly, retaining 48
-hourly, 14 daily, 8 weekly, and 12 monthly snapshots. The same shared retention
-settings continue to protect `/var/lib/apps` through Snapper and restic pruning.
+Sanoid checks `vault/data` and all child datasets every 15 minutes, retaining
+four frequent snapshots plus 48 hourly, 14 daily, 8 weekly, and 12 monthly
+snapshots. The shared interval and retention settings also protect
+`/var/lib/apps` through Snapper, while restic uses the shared retention settings
+for offsite pruning.
 
 ## Full Rebuild And Pool Import
 
