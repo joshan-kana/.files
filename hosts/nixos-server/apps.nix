@@ -9,11 +9,11 @@ let
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
-  inherit (serverCfg.storage) appDataRoot;
+  appDataRoot = serverCfg.storage.appData.root;
 
   appDataEditor = {
-    group = serverCfg.storage.appDataGroup;
-    gid = serverCfg.storage.appDataGroupId;
+    group = serverCfg.storage.appData.group.name;
+    gid = serverCfg.storage.appData.group.id;
   };
 
   openclawHostAdmin = {

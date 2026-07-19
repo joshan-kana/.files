@@ -12,40 +12,52 @@ in
     };
 
     storage = {
-      appDataRoot = mkOption {
-        type = types.str;
-        default = "/var/lib/apps";
-        description = "Root directory for server application data.";
+      appData = {
+        root = mkOption {
+          type = types.str;
+          default = "/var/lib/apps";
+          description = "Root directory for server application data.";
+        };
+
+        group = {
+          name = mkOption {
+            type = types.str;
+            default = "appdata-editors";
+            description = "Group allowed to edit server application data.";
+          };
+
+          id = mkOption {
+            type = types.ints.positive;
+            default = 1500;
+            description = "Fixed numeric ID for the application data editor group.";
+          };
+        };
       };
 
-      appDataGroup = mkOption {
-        type = types.str;
-        default = "appdata-editors";
-        description = "Group allowed to edit server application data.";
-      };
+      dataRoot = {
+        path = mkOption {
+          type = types.str;
+          default = "/srv/vault";
+          description = "Mountpoint for bulk server data.";
+        };
 
-      appDataGroupId = mkOption {
-        type = types.ints.positive;
-        default = 1500;
-        description = "Fixed numeric ID for the application data editor group.";
-      };
+        poolName = mkOption {
+          type = types.str;
+          default = "vault";
+          description = "Name of the ZFS pool used for bulk server storage.";
+        };
 
-      poolName = mkOption {
-        type = types.str;
-        default = "vault";
-        description = "Name of the ZFS pool used for bulk server storage.";
-      };
+        group.name = mkOption {
+          type = types.str;
+          default = "server-data";
+          description = "Group allowed to collaborate on bulk server data.";
+        };
 
-      group = mkOption {
-        type = types.str;
-        default = "server-data";
-        description = "Group allowed to collaborate on Vault data.";
-      };
-
-      scrubInterval = mkOption {
-        type = types.str;
-        default = "weekly";
-        description = "Systemd calendar interval for ZFS pool scrubs.";
+        scrubInterval = mkOption {
+          type = types.str;
+          default = "weekly";
+          description = "Systemd calendar interval for ZFS pool scrubs.";
+        };
       };
 
       snapshots = {

@@ -7,8 +7,9 @@
 
 let
   cfg = config.dotfiles.server.storage;
-  inherit (cfg) appDataRoot snapshots;
-  pool = cfg.poolName;
+  inherit (cfg) snapshots;
+  appDataRoot = cfg.appData.root;
+  pool = cfg.dataRoot.poolName;
   secretsDir = config.dotfiles.server.secretsDir;
   snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
 in
@@ -21,12 +22,12 @@ in
   ];
 
   users.groups = {
-    ${cfg.appDataGroup}.gid = cfg.appDataGroupId;
-    ${cfg.group} = { };
+    ${cfg.appData.group.name}.gid = cfg.appData.group.id;
+    ${cfg.dataRoot.group.name} = { };
   };
   users.users.${config.dotfiles.users.primary.name}.extraGroups = [
-    cfg.appDataGroup
-    cfg.group
+    cfg.appData.group.name
+    cfg.dataRoot.group.name
   ];
 
   environment.systemPackages = with pkgs; [
@@ -44,7 +45,7 @@ in
   services.zfs.autoScrub = {
     enable = true;
     pools = [ pool ];
-    interval = cfg.scrubInterval;
+    interval = cfg.dataRoot.scrubInterval;
   };
   services.zfs.trim.enable = false;
 
@@ -110,7 +111,7 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    "d ${appDataRoot} 2770 root ${cfg.appDataGroup} - -"
+    "d ${appDataRoot} 2770 root ${cfg.appData.group.name} - -"
     "v ${appDataRoot}/.snapshots 0750 root root - -"
     "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
   ];
