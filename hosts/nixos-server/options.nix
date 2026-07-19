@@ -5,12 +5,6 @@ let
 in
 {
   options.dotfiles.server = {
-    appDataRoot = mkOption {
-      type = types.str;
-      default = "/var/lib/apps";
-      description = "Root directory for server application data.";
-    };
-
     secretsDir = mkOption {
       type = types.str;
       default = "/root/secrets";
@@ -18,6 +12,12 @@ in
     };
 
     storage = {
+      appDataRoot = mkOption {
+        type = types.str;
+        default = "/var/lib/apps";
+        description = "Root directory for server application data.";
+      };
+
       poolName = mkOption {
         type = types.str;
         default = "vault";
