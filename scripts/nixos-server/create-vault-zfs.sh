@@ -7,7 +7,7 @@ Usage:
   create-vault-zfs.sh --dry-run /dev/disk/by-id/DISK_A /dev/disk/by-id/DISK_B
   create-vault-zfs.sh --apply   /dev/disk/by-id/DISK_A /dev/disk/by-id/DISK_B
 
-Creates the mirrored ZFS pool "vault" and datasets mounted under /srv/vault.
+Creates the mirrored ZFS pool "vault" and its data dataset at /srv/vault.
 Apply mode destroys filesystem signatures on both disks. Use whole-disk
 /dev/disk/by-id paths only; never use /dev/sdX paths.
 EOF
@@ -118,14 +118,6 @@ zpool create \\
   "$disk_b"
 
 zfs create -o mountpoint=/srv/vault vault/data
-zfs create -o recordsize=1M vault/data/media
-zfs create -o recordsize=1M vault/data/photos
-zfs create vault/data/imports
-zfs create vault/data/archive
-zfs create vault/data/nextcloud
-zfs create vault/data/documents
-zfs create vault/data/shares
-zfs create vault/data/backups
 EOF
 
 if [ "$mode" = "--dry-run" ]; then
@@ -165,16 +157,8 @@ zpool create \
   "$disk_b"
 
 echo
-echo "━━━ Creating datasets"
+echo "━━━ Creating data dataset"
 zfs create -o mountpoint=/srv/vault vault/data
-zfs create -o recordsize=1M vault/data/media
-zfs create -o recordsize=1M vault/data/photos
-zfs create vault/data/imports
-zfs create vault/data/archive
-zfs create vault/data/nextcloud
-zfs create vault/data/documents
-zfs create vault/data/shares
-zfs create vault/data/backups
 
 echo
 echo "━━━ Setting dataset permissions"

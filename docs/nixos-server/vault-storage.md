@@ -59,22 +59,16 @@ sudo snapper list-configs || true
 sudo snapper -c apps list || true
 ```
 
-The dataset layout is:
+The initial dataset layout is:
 
 ```text
 vault/data                 /srv/vault
-vault/data/media           recordsize=1M
-vault/data/photos          recordsize=1M
-vault/data/imports
-vault/data/archive
-vault/data/nextcloud
-vault/data/documents
-vault/data/shares
-vault/data/backups
 ```
 
-Expected working directories include `archive/lacie-rescue`,
-`imports/dropbox-test`, and `media/{library,downloads,transcode}`.
+Child datasets and working directories are added alongside the applications
+that consume them instead of being created speculatively. Servers provisioned
+with an earlier version of the script may retain the previous empty child
+datasets until they are explicitly removed.
 
 ## Routine Health Checks
 

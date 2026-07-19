@@ -36,12 +36,6 @@ in
         description = "Name of the ZFS pool used for bulk server storage.";
       };
 
-      dataRoot = mkOption {
-        type = types.str;
-        default = "/srv/vault";
-        description = "Mountpoint for the Vault data dataset.";
-      };
-
       group = mkOption {
         type = types.str;
         default = "server-data";
