@@ -9,11 +9,11 @@ let
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
-  inherit (serverCfg.storage) appDataRoot snapshots;
+  inherit (serverCfg.storage) appDataRoot;
 
   appDataEditor = {
-    group = "appdata-editors";
-    gid = 1500;
+    group = serverCfg.storage.appDataGroup;
+    gid = serverCfg.storage.appDataGroupId;
   };
 
   openclawHostAdmin = {
@@ -29,26 +29,9 @@ let
     gid = 1000;
   };
 
-  appDataMode = "2770";
-  snapshotMode = "0750";
-
-  # Floating container tags are refreshed as part of the normal flake update
-  # workflow: `nix flake update`, then `nixos-rebuild switch`.
-  # Change these to match the LAN before deploying. The AdGuard IP should be
-  # outside the DHCP pool, or reserved so another device cannot claim it.
-  resticRepository = "rclone:dropbox:Archives/Backups/nixos-server";
-  resticPasswordFile = "${secretsDir}/restic-password";
-  rcloneConfigFile = "${secretsDir}/rclone.conf";
-
-  backupPaths = [ appDataRoot ];
 in
 {
-  users.groups.${appDataEditor.group}.gid = appDataEditor.gid;
-
-  users.users.${primaryUser}.extraGroups = [
-    "docker"
-    appDataEditor.group
-  ];
+  users.users.${primaryUser}.extraGroups = [ "docker" ];
 
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;
@@ -88,13 +71,9 @@ in
     acl
     curl
     docker
-    restic
-    rclone
-    snapper
   ];
 
   systemd.tmpfiles.rules = [
-    "d ${appDataRoot} ${appDataMode} root ${appDataEditor.group} - -"
     "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
@@ -102,9 +81,6 @@ in
     "d ${secretsDir} 0700 root root - -"
     "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
-
-    "v ${appDataRoot}/.snapshots ${snapshotMode} root root - -"
-    "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
   ];
 
   services.nginx = {
@@ -375,6 +351,8 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
+  # Floating container tags are refreshed as part of the normal flake update
+  # workflow: `nix flake update`, then `nixos-rebuild switch`.
   virtualisation.oci-containers.containers = {
     home-assistant = {
       image = "ghcr.io/home-assistant/home-assistant:stable";
@@ -434,46 +412,6 @@ in
         "--add-host=host.docker.internal:host-gateway"
       ];
     };
-  };
-
-  services.snapper = {
-    snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
-    cleanupInterval = "1h";
-    persistentTimer = true;
-    configs.apps = {
-      SUBVOLUME = appDataRoot;
-      FSTYPE = "btrfs";
-      TIMELINE_CREATE = true;
-      TIMELINE_CLEANUP = true;
-      TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
-      TIMELINE_LIMIT_DAILY = snapshots.retention.daily;
-      TIMELINE_LIMIT_WEEKLY = snapshots.retention.weekly;
-      TIMELINE_LIMIT_MONTHLY = snapshots.retention.monthly;
-    };
-  };
-
-  services.restic.backups.apps = {
-    initialize = true;
-    repository = resticRepository;
-    passwordFile = resticPasswordFile;
-    inherit rcloneConfigFile;
-    paths = backupPaths;
-    exclude = [
-      "${appDataRoot}/.snapshots"
-      "${appDataRoot}/home-assistant/www/media/ha-bambulab"
-    ];
-    pruneOpts = [
-      "--keep-hourly ${toString snapshots.retention.hourly}"
-      "--keep-daily ${toString snapshots.retention.daily}"
-      "--keep-weekly ${toString snapshots.retention.weekly}"
-      "--keep-monthly ${toString snapshots.retention.monthly}"
-    ];
-    timerConfig = {
-      OnCalendar = "*:0/30";
-      Persistent = true;
-      RandomizedDelaySec = "5m";
-    };
-    checkOpts = [ "--read-data-subset=1G" ];
   };
 
   # fix breville fan 3-speed patch in home assistant

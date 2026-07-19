@@ -1,13 +1,15 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
 let
   cfg = config.dotfiles.server.storage;
-  inherit (cfg) dataRoot snapshots;
+  inherit (cfg) appDataRoot dataRoot snapshots;
   pool = cfg.poolName;
+  secretsDir = config.dotfiles.server.secretsDir;
   snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
 in
 {
@@ -18,8 +20,19 @@ in
     }
   ];
 
-  users.groups.${cfg.group} = { };
-  users.users.${config.dotfiles.users.primary.name}.extraGroups = [ cfg.group ];
+  users.groups = {
+    ${cfg.appDataGroup}.gid = cfg.appDataGroupId;
+    ${cfg.group} = { };
+  };
+  users.users.${config.dotfiles.users.primary.name}.extraGroups = [
+    cfg.appDataGroup
+    cfg.group
+  ];
+
+  environment.systemPackages = with pkgs; [
+    restic
+    rclone
+  ];
 
   boot.supportedFilesystems = [
     "btrfs"
@@ -56,7 +69,52 @@ in
     };
   };
 
-  systemd.tmpfiles.rules = map (path: "d ${path} 2775 root ${cfg.group} - -") [
+  services.snapper = {
+    inherit snapshotInterval;
+    cleanupInterval = "1h";
+    persistentTimer = true;
+    configs.apps = {
+      SUBVOLUME = appDataRoot;
+      FSTYPE = "btrfs";
+      TIMELINE_CREATE = true;
+      TIMELINE_CLEANUP = true;
+      TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
+      TIMELINE_LIMIT_DAILY = snapshots.retention.daily;
+      TIMELINE_LIMIT_WEEKLY = snapshots.retention.weekly;
+      TIMELINE_LIMIT_MONTHLY = snapshots.retention.monthly;
+    };
+  };
+
+  services.restic.backups.apps = {
+    initialize = true;
+    repository = "rclone:dropbox:Archives/Backups/nixos-server";
+    passwordFile = "${secretsDir}/restic-password";
+    rcloneConfigFile = "${secretsDir}/rclone.conf";
+    paths = [ appDataRoot ];
+    exclude = [
+      "${appDataRoot}/.snapshots"
+      "${appDataRoot}/home-assistant/www/media/ha-bambulab"
+    ];
+    pruneOpts = [
+      "--keep-hourly ${toString snapshots.retention.hourly}"
+      "--keep-daily ${toString snapshots.retention.daily}"
+      "--keep-weekly ${toString snapshots.retention.weekly}"
+      "--keep-monthly ${toString snapshots.retention.monthly}"
+    ];
+    timerConfig = {
+      OnCalendar = "*:0/30";
+      Persistent = true;
+      RandomizedDelaySec = "5m";
+    };
+    checkOpts = [ "--read-data-subset=1G" ];
+  };
+
+  systemd.tmpfiles.rules = [
+    "d ${appDataRoot} 2770 root ${cfg.appDataGroup} - -"
+    "v ${appDataRoot}/.snapshots 0750 root root - -"
+    "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
+  ]
+  ++ map (path: "d ${path} 2775 root ${cfg.group} - -") [
     dataRoot
     "${dataRoot}/archive"
     "${dataRoot}/archive/lacie-rescue"

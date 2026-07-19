@@ -18,6 +18,18 @@ in
         description = "Root directory for server application data.";
       };
 
+      appDataGroup = mkOption {
+        type = types.str;
+        default = "appdata-editors";
+        description = "Group allowed to edit server application data.";
+      };
+
+      appDataGroupId = mkOption {
+        type = types.ints.positive;
+        default = 1500;
+        description = "Fixed numeric ID for the application data editor group.";
+      };
+
       poolName = mkOption {
         type = types.str;
         default = "vault";
