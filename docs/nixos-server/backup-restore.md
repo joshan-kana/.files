@@ -21,6 +21,7 @@ There are two kinds of state:
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
 | Container app data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup |
+| Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
 without rolling back the whole NixOS system.
@@ -46,6 +47,10 @@ Each app gets a plain child directory, for example:
 
 Future container apps should store mutable data under `/var/lib/apps` so the
 normal backup and restore flow includes them automatically.
+
+Large files stored under `/srv/vault` use local recursive ZFS snapshots and are
+not included in this restic repository. See [Vault ZFS Storage](vault-storage.md)
+for health checks, snapshot verification, and full-rebuild import instructions.
 
 Tailscale is a native service and uses its own state outside `/var/lib/apps`.
 Normal replacement installs enrol with `/root/secrets/tailscale-oauth-client-secret` instead

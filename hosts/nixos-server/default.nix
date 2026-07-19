@@ -20,6 +20,7 @@ in
     ../../modules/nixos/base.nix
     ./networking.nix
     ./apps.nix
+    ./storage.nix
     ./vm.nix
     ./image.nix
     ./hardware.nix
