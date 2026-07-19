@@ -9,7 +9,7 @@ let
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) secretsDir;
   inherit (serverCfg) lan;
-  inherit (serverCfg.storage) appDataRoot;
+  appDataRoot = serverCfg.storage.appData.root;
 
   lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
   hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
