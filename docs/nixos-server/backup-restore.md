@@ -13,6 +13,21 @@ NixOS manages the normal backup/rollback machinery:
 You should not normally run backup commands by hand. The manual commands below
 are for setup checks, “did it work?” verification, and emergency restore.
 
+## Restore Order
+
+Use the least destructive option that solves the problem:
+
+1. Identify whether the affected path is under `/var/lib/apps` or `/srv/vault`.
+2. Stop the service or container that writes to it.
+3. List the available snapshots and inspect the intended snapshot.
+4. Copy the affected files to a temporary location and compare them.
+5. Restore only the affected files or directory.
+6. Start the service and verify it.
+
+Do not begin with `snapper undochange`, `rsync --delete`, `zfs rollback`, or
+`zfs destroy`. Those commands can replace or delete current state. The sections
+below put preview and copy-based recovery before whole-filesystem rollback.
+
 ## Two Different Rollbacks
 
 There are two kinds of state:
@@ -21,6 +36,7 @@ There are two kinds of state:
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
 | Container app data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup |
+| Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
 without rolling back the whole NixOS system.
@@ -46,6 +62,10 @@ Each app gets a plain child directory, for example:
 
 Future container apps should store mutable data under `/var/lib/apps` so the
 normal backup and restore flow includes them automatically.
+
+Large files stored under `/srv/vault` use local recursive ZFS snapshots and are
+not included in this restic repository. See [Vault ZFS Storage](vault-storage.md)
+for health checks, snapshot verification, and full-rebuild import instructions.
 
 Tailscale is a native service and uses its own state outside `/var/lib/apps`.
 Normal replacement installs enrol with `/root/secrets/tailscale-oauth-client-secret` instead
@@ -86,7 +106,7 @@ The `/root/secrets` files are the keys needed before restic can restore
 anything. Keep copies in a password manager, `sops-nix`, or an encrypted archive
 whose password is stored somewhere you can reach after the Pi dies.
 
-## Fast Local Restore
+## Fast Local App-Data Restore
 
 Use this when a bad app config change needs to be rolled back quickly from a
 local Snapper snapshot.
@@ -100,7 +120,7 @@ sudo snapper -c apps list
 Preview the changes between two snapshots:
 
 ```sh
-sudo snapper -c var-lib status <old>..<new>
+sudo snapper -c apps status <old>..<new>
 ```
 
 Restore one app directory. Stop the affected app first, restore its app-data
@@ -108,7 +128,7 @@ directory, then start it again. This example restores n8n:
 
 ```sh
 sudo systemctl stop docker-n8n.service
-sudo snapper -c apps undochange <old>..<new> /var/lib/apps/home-assistant /var/lib/apps/n8n
+sudo snapper -c apps undochange <old>..<new> /var/lib/apps/n8n
 sudo systemctl start docker-n8n.service
 ```
 
@@ -117,7 +137,7 @@ restore `/var/lib/apps`, then switch the NixOS profile so systemd reconciles the
 container units:
 
 ```sh
-sudo snapper -c apps undochange <old>..<new> /var/lib/apps/home-assistant /var/lib/apps
+sudo snapper -c apps undochange <old>..<new> /var/lib/apps
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
@@ -126,6 +146,110 @@ sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 Use the single-app restore when only one app is broken. Use the whole
 `/var/lib/apps` restore when the full hosted app state needs to go back to the
 same point in time.
+
+## Vault ZFS Snapshot Restore
+
+Use ZFS snapshots for data under `/srv/vault`. These snapshots are local to the
+Vault mirror: they protect against accidental changes and deletions, but not the
+loss of both drives.
+
+Choose the operation by scope:
+
+| Situation | Use |
+| --- | --- |
+| One deleted or damaged file | Copy it from `.zfs/snapshot` |
+| Several files or a directory | Preview and apply an `rsync` restore |
+| Unsure what the old state contains | Create a temporary ZFS clone |
+| Entire dataset must return to an earlier state | `zfs rollback` as a last resort |
+
+List snapshots from oldest to newest:
+
+```sh
+zfs list \
+  -t snapshot \
+  -r vault/data \
+  -s creation \
+  -o name,creation,used,refer
+```
+
+Snapshot names look like:
+
+```text
+vault/data@autosnap_2026-07-19_16:35:41_frequently
+```
+
+The part after `@` is available as a read-only directory under
+`.zfs/snapshot`. Browse a snapshot without changing the live data:
+
+```sh
+snapshot='autosnap_2026-07-19_16:35:41_frequently'
+
+ls -la "/srv/vault/.zfs/snapshot/$snapshot"
+```
+
+Restore one file or directory by copying it from the snapshot. Copy it to a
+temporary path first when the live version still exists, so it can be compared
+before replacement:
+
+```sh
+snapshot='autosnap_2026-07-19_16:35:41_frequently'
+relative_path='path/to/file-or-directory'
+recovery_path='/tmp/vault-recovery'
+
+sudo mkdir -p "$recovery_path"
+sudo cp -a \
+  "/srv/vault/.zfs/snapshot/$snapshot/$relative_path" \
+  "$recovery_path/"
+```
+
+For a larger restore, preview the changes with `rsync` before applying them:
+
+```sh
+snapshot='autosnap_2026-07-19_16:35:41_frequently'
+
+sudo rsync -aHAXn --delete \
+  "/srv/vault/.zfs/snapshot/$snapshot/" \
+  /srv/vault/
+```
+
+Remove `-n` only after reviewing the dry-run output. Be especially careful
+with `--delete`: it makes the live dataset match the snapshot by deleting files
+that did not exist at that time.
+
+To inspect a snapshot as an independent writable dataset, clone it temporarily:
+
+```sh
+snapshot='autosnap_2026-07-19_16:35:41_frequently'
+
+sudo zfs clone \
+  -o mountpoint=/mnt/vault-recovery \
+  "vault/data@$snapshot" \
+  vault/recovery
+
+findmnt /mnt/vault-recovery
+```
+
+After copying out anything needed, remove the temporary clone:
+
+```sh
+sudo zfs destroy vault/recovery
+```
+
+If future child datasets exist, each child has its own snapshot and must be
+restored or cloned separately.
+
+Whole-dataset rollback is a last resort:
+
+```sh
+sudo zfs rollback -r \
+  vault/data@autosnap_2026-07-19_16:35:41_frequently
+```
+
+Before running it, stop every service that writes to the dataset and preserve
+the current state somewhere outside `vault/data`. The `-r` flag permanently
+destroys every snapshot newer than the selected snapshot, and the rollback
+discards all live changes made since that snapshot. Prefer copying individual
+files or using a temporary clone whenever possible.
 
 ## Offsite Restore From Dropbox
 

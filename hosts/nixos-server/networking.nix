@@ -7,7 +7,7 @@
 
 let
   serverCfg = config.dotfiles.server;
-  inherit (serverCfg) appDataRoot;
+  appDataRoot = serverCfg.storage.appData.root;
   inherit (serverCfg) secretsDir;
   inherit (serverCfg) lan;
 
@@ -25,6 +25,9 @@ let
   };
 in
 {
+  # Stable machine identifier required for safe ZFS pool imports.
+  networking.hostId = "fa3f98bb";
+
   # Prevent ARP flux when multiple interfaces participate in the same LAN.
   # Each interface should answer ARP only for addresses assigned to itself.
   boot.kernel.sysctl = {
