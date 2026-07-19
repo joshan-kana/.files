@@ -34,6 +34,11 @@ if [ -z "$disk_a" ] || [ -z "$disk_b" ] || [ -n "${4:-}" ]; then
   exit 2
 fi
 
+if [ "$EUID" -ne 0 ]; then
+  echo "ERROR: run this script with sudo so it can inspect disk signatures." >&2
+  exit 1
+fi
+
 case "$disk_a:$disk_b" in
   /dev/disk/by-id/*:/dev/disk/by-id/*) ;;
   *)
@@ -71,8 +76,8 @@ lsblk -o NAME,PATH,SIZE,FSTYPE,FSVER,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS "$disk_
 
 echo
 echo "━━━ Existing filesystem signatures"
-wipefs -n "$disk_a" || true
-wipefs -n "$disk_b" || true
+wipefs -n "$disk_a"
+wipefs -n "$disk_b"
 
 echo
 echo "━━━ Mount checks"
