@@ -7,10 +7,9 @@
 let
   primaryUser = config.dotfiles.users.primary.name;
   serverCfg = config.dotfiles.server;
-  inherit (serverCfg) appDataRoot;
   inherit (serverCfg) secretsDir;
   containerCfg = serverCfg.containers;
-  snapshots = serverCfg.storage.snapshots;
+  inherit (serverCfg.storage) appDataRoot snapshots;
 
   appDataEditor = {
     group = "appdata-editors";
