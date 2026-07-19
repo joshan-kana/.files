@@ -1,17 +1,24 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
 
 let
-  serverCfg = config.dotfiles.server;
-  cfg = serverCfg.storage;
-  retention = serverCfg.snapshots.retention;
+  cfg = config.dotfiles.server.storage;
+  inherit (cfg) dataRoot snapshots;
   pool = cfg.poolName;
-  inherit (cfg) dataRoot;
+  snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
 in
 {
+  assertions = [
+    {
+      assertion = snapshots.intervalMinutes <= 60 && lib.mod 60 snapshots.intervalMinutes == 0;
+      message = "dotfiles.server.storage.snapshots.intervalMinutes must divide one hour evenly.";
+    }
+  ];
+
   users.groups.${cfg.group} = { };
   users.users.${config.dotfiles.users.primary.name}.extraGroups = [ cfg.group ];
 
@@ -40,9 +47,11 @@ in
 
   services.sanoid = {
     enable = true;
-    interval = "hourly";
+    interval = snapshotInterval;
     templates.vault = {
-      inherit (retention)
+      frequent_period = snapshots.intervalMinutes;
+      frequently = 60 / snapshots.intervalMinutes;
+      inherit (snapshots.retention)
         hourly
         daily
         weekly
