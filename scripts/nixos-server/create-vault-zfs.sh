@@ -7,7 +7,7 @@ Usage:
   create-vault-zfs.sh --dry-run /dev/disk/by-id/DISK_A /dev/disk/by-id/DISK_B
   create-vault-zfs.sh --apply   /dev/disk/by-id/DISK_A /dev/disk/by-id/DISK_B
 
-Creates the mirrored ZFS pool "vault" and its data dataset at /srv/vault.
+Creates the configured mirrored ZFS pool and its data dataset.
 Apply mode destroys filesystem signatures on both disks. Use whole-disk
 /dev/disk/by-id paths only; never use /dev/sdX paths.
 EOF
@@ -38,6 +38,53 @@ if [ "$EUID" -ne 0 ]; then
   echo "ERROR: run this script with sudo so it can inspect disk signatures." >&2
   exit 1
 fi
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+repo_root="$(cd -- "$script_dir/../.." && pwd -P)"
+flake_ref="path:${repo_root}"
+nixos_config="nixosConfigurations.nixos-server.config"
+
+if [ ! -f "$repo_root/flake.nix" ]; then
+  echo "ERROR: could not find flake.nix at the expected repository root: $repo_root" >&2
+  exit 1
+fi
+
+nix_value() {
+  local option="$1"
+
+  nix eval --raw "${flake_ref}#${nixos_config}.${option}"
+}
+
+pool_name="$(nix_value dotfiles.server.storage.dataRoot.poolName)"
+data_root="$(nix_value dotfiles.server.storage.dataRoot.path)"
+data_group="$(nix_value dotfiles.server.storage.dataRoot.group.name)"
+
+if [ -z "$pool_name" ]; then
+  echo "ERROR: Nix evaluated an empty ZFS pool name." >&2
+  exit 1
+fi
+
+if [[ "$data_root" != /* ]] || [ "$data_root" = "/" ]; then
+  echo "ERROR: unsafe data-root path evaluated from Nix: $data_root" >&2
+  exit 1
+fi
+
+if [ -z "$data_group" ]; then
+  echo "ERROR: Nix evaluated an empty data group." >&2
+  exit 1
+fi
+
+if ! getent group "$data_group" >/dev/null; then
+  echo "ERROR: configured data group does not exist: $data_group" >&2
+  echo "Run the current NixOS configuration before creating the pool." >&2
+  exit 1
+fi
+
+echo "━━━ Nix storage configuration"
+printf 'Pool name:  %s\n' "$pool_name"
+printf 'Mountpoint: %s\n' "$data_root"
+printf 'Data group: %s\n' "$data_group"
+echo
 
 case "$disk_a:$disk_b" in
   /dev/disk/by-id/*:/dev/disk/by-id/*) ;;
@@ -75,9 +122,26 @@ if [ ! -c /dev/zfs ]; then
   exit 1
 fi
 
-if zpool list vault >/dev/null 2>&1; then
-  echo "ERROR: zpool 'vault' already exists." >&2
-  zpool status vault || true
+if zpool list "$pool_name" >/dev/null 2>&1; then
+  echo "ERROR: zpool '$pool_name' is already imported." >&2
+  zpool status "$pool_name" || true
+  exit 1
+fi
+
+import_output="$(zpool import -d /dev/disk/by-id 2>/dev/null || true)"
+if printf '%s\n' "$import_output" |
+  awk -v pool="$pool_name" '
+    $1 == "pool:" && $2 == pool {
+      found = 1
+    }
+
+    END {
+      exit found ? 0 : 1
+    }
+  '
+then
+  echo "ERROR: an existing importable pool named '$pool_name' was detected." >&2
+  echo "Import the existing pool instead of running first-time setup." >&2
   exit 1
 fi
 
@@ -86,8 +150,18 @@ lsblk -o NAME,PATH,SIZE,FSTYPE,FSVER,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS "$disk_
 
 echo
 echo "━━━ Existing filesystem signatures"
-wipefs -n "$disk_a"
-wipefs -n "$disk_b"
+for disk in "$disk_a" "$disk_b"; do
+  while IFS= read -r device; do
+    signatures="$(wipefs -n "$device")"
+    printf '%s\n' "$signatures"
+
+    if printf '%s\n' "$signatures" | grep -q 'zfs_member'; then
+      echo "ERROR: existing ZFS metadata detected on $device (selected disk: $disk)." >&2
+      echo "Refusing to overwrite a potentially recoverable pool member." >&2
+      exit 1
+    fi
+  done < <(lsblk -nrpo PATH "$disk")
+done
 
 echo
 echo "━━━ Mount checks"
@@ -113,11 +187,13 @@ zpool create \\
   -O atime=off \\
   -O xattr=sa \\
   -O acltype=posixacl \\
-  vault mirror \\
+  "$pool_name" mirror \\
   "$disk_a" \\
   "$disk_b"
 
-zfs create -o mountpoint=/srv/vault vault/data
+zfs create -o "mountpoint=$data_root" "${pool_name}/data"
+chgrp -R "$data_group" "$data_root"
+find "$data_root" -type d -exec chmod 2775 {} +
 EOF
 
 if [ "$mode" = "--dry-run" ]; then
@@ -132,8 +208,8 @@ echo "This will erase filesystem signatures from:"
 echo "  $disk_a"
 echo "  $disk_b"
 echo
-read -r -p 'Type CREATE VAULT to continue: ' confirm
-if [ "$confirm" != "CREATE VAULT" ]; then
+read -r -p "Type CREATE ${pool_name^^} to continue: " confirm
+if [ "$confirm" != "CREATE ${pool_name^^}" ]; then
   echo "Cancelled."
   exit 1
 fi
@@ -152,20 +228,21 @@ zpool create \
   -O atime=off \
   -O xattr=sa \
   -O acltype=posixacl \
-  vault mirror \
+  "$pool_name" mirror \
   "$disk_a" \
   "$disk_b"
 
 echo
 echo "━━━ Creating data dataset"
-zfs create -o mountpoint=/srv/vault vault/data
+zfs create -o "mountpoint=$data_root" "${pool_name}/data"
 
 echo
 echo "━━━ Setting dataset permissions"
-chgrp -R server-data /srv/vault
-find /srv/vault -type d -exec chmod 2775 {} +
+chgrp -R "$data_group" "$data_root"
+find "$data_root" -type d -exec chmod 2775 {} +
 
 echo
 echo "━━━ Result"
-zpool status vault
-zfs list -r vault
+zpool status "$pool_name"
+zfs list -r "$pool_name"
+findmnt "$data_root"

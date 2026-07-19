@@ -31,6 +31,18 @@ Run this after the storage configuration has been built and switched. Replace
 `DISK_A` and `DISK_B` with the two unambiguous LaCie whole-disk IDs. The dry run
 should show two roughly 2 TB USB disks, expected NTFS signatures, and no mounts.
 
+The setup script evaluates the effective `nixos-server` configuration before
+making changes. Its pool name, dataset mountpoint, and collaboration group come
+from:
+
+- `dotfiles.server.storage.dataRoot.poolName`
+- `dotfiles.server.storage.dataRoot.path`
+- `dotfiles.server.storage.dataRoot.group.name`
+
+Do not duplicate those values inside the script. Change them in Nix and rebuild
+the server before running first-time setup. The script refuses to overwrite an
+imported or importable pool and rejects disks containing ZFS member metadata.
+
 ```bash
 cd /home/joshan/.files
 
