@@ -32,12 +32,150 @@ let
     '';
   };
 
+  openclawGitHub = {
+    apiEnvPath = "${secretsDir}/openclaw-github.env";
+    privateKeyPath = "${secretsDir}/id_ed25519";
+    knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    '';
+  };
+
   openclawContainerUser = {
     # UID/GID used by the OpenClaw image's internal node user.
     # This is not the host primary user.
     uid = 1000;
     gid = 1000;
   };
+
+  openclawRepositoryHost = pkgs.writeShellApplication {
+    name = "openclaw-repository-host";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gh
+      git
+      openssh
+      util-linux
+    ];
+    text = ''
+      if [ "$(${pkgs.coreutils}/bin/id -u)" -ne 0 ]; then
+        echo "openclaw-repository-host must run as root" >&2
+        exit 1
+      fi
+
+      operation="''${1:-}"
+      [ "$#" -gt 0 ] && shift
+
+      case "$operation" in
+        gh)
+          if [ ! -r ${openclawGitHub.apiEnvPath} ]; then
+            echo "GitHub API credentials are not provisioned: ${openclawGitHub.apiEnvPath}" >&2
+            exit 1
+          fi
+
+          set -a
+          # shellcheck disable=SC1091
+          source ${openclawGitHub.apiEnvPath}
+          set +a
+          : "''${GH_TOKEN:?${openclawGitHub.apiEnvPath} must define GH_TOKEN}"
+
+          export GH_CONFIG_DIR=/run/openclaw-github-cli
+          install -d -m 0700 "$GH_CONFIG_DIR"
+          exec gh "$@"
+          ;;
+        git)
+          repository="''${1:-}"
+          [ "$#" -gt 0 ] && shift
+
+          case "$repository" in
+            files) checkout=/home/${primaryUser}/.files ;;
+            infrastructure-docs) checkout=/home/${primaryUser}/.files/docs/infrastructure-docs ;;
+            *)
+              echo "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>" >&2
+              exit 2
+              ;;
+          esac
+
+          if [ ! -r ${openclawGitHub.privateKeyPath} ]; then
+            echo "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
+            exit 1
+          fi
+
+          agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
+          trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
+          chmod 0711 "$agentDir"
+          eval "$(ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
+          ssh-add ${openclawGitHub.privateKeyPath} >/dev/null
+          chown ${primaryUser} "$SSH_AUTH_SOCK"
+          chmod 0600 "$SSH_AUTH_SOCK"
+
+          gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
+          runuser -u ${primaryUser} -- env \
+            GIT_SSH_COMMAND="$gitSshCommand" \
+            SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
+            GIT_TERMINAL_PROMPT=0 \
+            git -C "$checkout" "$@"
+          ;;
+        *)
+          echo "usage: openclaw-repository-host {gh|git} ..." >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
+
+  openclawRepositoryCommand = pkgs.writeShellApplication {
+    name = "openclaw-repository";
+    runtimeInputs = with pkgs; [ bash ];
+    text = ''
+      : "''${OPENCLAW_HOST_ADMIN_SSH:?OPENCLAW_HOST_ADMIN_SSH is not set}"
+      read -r -a hostSsh <<< "$OPENCLAW_HOST_ADMIN_SSH"
+
+      remoteCommand="sudo ${openclawRepositoryHost}/bin/openclaw-repository-host"
+      for argument in "$@"; do
+        remoteCommand+=" $(printf '%q' "$argument")"
+      done
+
+      exec "''${hostSsh[@]}" "$remoteCommand"
+    '';
+  };
+
+  openclawRepositorySkill = pkgs.writeText "openclaw-repository-access-skill" ''
+    ---
+    name: repository-access
+    description: Manage the NixOS server repositories and GitHub issues, pull requests, and infrastructure project.
+    metadata: { "openclaw": { "requires": { "bins": ["openclaw-repository"] } } }
+    ---
+
+    # Repository access
+
+    Prefer the connected app-backed macOS node for repository work. Before using
+    it, inspect the available nodes and select a connected macOS node that reports
+    `system.run` and `system.which`; never select a commandless or disconnected
+    headless node and never persist a node ID. Run Mac repository commands in
+    `/Users/joshan/.files` with `exec host=node node=<selected-id>`.
+
+    When no suitable Mac node is connected, use Gateway exec and the existing
+    server checkout. Run Git as its owner through:
+
+    ```sh
+    openclaw-repository git files <git arguments...>
+    openclaw-repository git infrastructure-docs <git arguments...>
+    ```
+
+    Run GitHub API operations through the root-only runtime-token wrapper:
+
+    ```sh
+    openclaw-repository gh <gh arguments...>
+    ```
+
+    The two existing checkouts are `/Users/joshan/.files` on the Mac and
+    `/home/joshan/.files` on the server (`/host/home/joshan/.files` from the
+    container). Use only one checkout per task. Do not create another clone,
+    expose credentials, disable SSH host verification, or change the server
+    checkout branch merely to deploy another revision. Inspect status first,
+    preserve unrelated work, use a feature branch for writes, and ask before
+    deployment or destructive operations.
+  '';
 
 in
 {
@@ -81,15 +219,22 @@ in
     acl
     curl
     docker
+    gh
+    openclawRepositoryHost
   ];
 
   systemd.tmpfiles.rules = [
     "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
+    "d ${appDataRoot}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${appDataRoot}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
 
     "d ${secretsDir} 0700 root root - -"
     "Z ${secretsDir} ~0700 root root - -"
+    "z ${openclawGitHub.apiEnvPath} 0400 root root - -"
+    "z ${openclawGitHub.privateKeyPath} 0400 root root - -"
+    "z ${openclawGitHub.privateKeyPath}.pub 0644 root root - -"
     "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
   ];
@@ -413,8 +558,8 @@ in
         | del(.tools.exec.askFallback)
         | del(.tools.exec.security)
         | del(.tools.exec.ask)
-        | .tools.exec.host = "node"
-        | .tools.exec.node = "08afea100c9a0c29419893929dc89145d0d91e0638e4d008f146313da38f9966"
+        | .tools.exec.host = "gateway"
+        | del(.tools.exec.node)
         | .tools.exec.mode = "full"
         | .gateway.trustedProxies = ["127.0.0.1", "::1"]
         | .gateway.auth = {
@@ -614,6 +759,8 @@ in
         "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
         "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
+        "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
+        "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
         "/:/host"
         "/nix/store:/nix/store:ro"
       ];
