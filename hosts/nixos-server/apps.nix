@@ -752,7 +752,9 @@ in
     };
 
     openclaw = {
-      image = "ghcr.io/openclaw/openclaw:2026.7.1";
+      # Pin the image because the upstream `latest` tag has moved backwards
+      # across state-schema versions and OpenClaw rejects unsafe downgrades.
+      image = "ghcr.io/openclaw/openclaw@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c";
       pull = containerCfg.pullPolicy;
       volumes = [
         "${appDataRoot}/openclaw:/home/node/.openclaw"

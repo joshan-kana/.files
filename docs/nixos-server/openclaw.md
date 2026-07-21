@@ -4,7 +4,9 @@ OpenClaw's Gateway remains in Docker on the NixOS server. nginx exposes the
 loopback-bound Gateway to the LAN, while mutable app and auth state remain under
 `/var/lib/apps/openclaw` and `/var/lib/apps/openclaw-auth`. The NixOS wiring is
 in `hosts/nixos-server/apps.nix`; the mutable Gateway config is
-`/var/lib/apps/openclaw/openclaw.json`.
+`/var/lib/apps/openclaw/openclaw.json`. The container image is pinned by digest
+so an upstream `latest` tag rollback cannot run an older binary against newer
+state.
 
 ## Execution and repository access
 
@@ -171,7 +173,6 @@ can return a backend error. That is expected. The important property is that
 nginx and OpenClaw remain healthy and the polling timer picks up the Mac again
 when Ollama becomes reachable.
 
-<<<<<<< HEAD
 ## OpenRouter Model Lanes
 
 OpenClaw is configured with three scoped OpenRouter API keys, each presented as a
@@ -252,7 +253,6 @@ OR DeepSeek V4 Pro (non-ZDR)
 
 Ollama, Together AI, and direct DeepSeek remain configured and available as
 explicit legacy/credit-balance options alongside the three OpenRouter lanes.
-=======
 ## Rollback
 
 Roll back the NixOS generation with `sudo nixos-rebuild switch --rollback`, or
@@ -261,4 +261,3 @@ Gateway config on the next OpenClaw restart. Existing OpenClaw app/auth data and
 both repository checkouts are retained. If only repository access must be
 disabled, remove `/root/secrets/openclaw-github.env`; API calls then fail closed
 without affecting the Gateway or Git checkout.
->>>>>>> 2e6056f (docs: document OpenClaw repository workflow)
