@@ -79,6 +79,7 @@ in
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
 
     "d ${secretsDir} 0700 root root - -"
+    "Z ${secretsDir} ~0700 root root - -"
     "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
     "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
   ];
