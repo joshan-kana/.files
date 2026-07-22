@@ -191,7 +191,9 @@ in
                     "id": "MiniMaxAI/MiniMax-M3",
                     "name": "MiniMax M3",
                     "reasoning": true,
-                    "input": ["text", "image"]
+                    "input": ["text", "image"],
+                    "contextWindow": 1000000,
+                    "maxTokens": 8192
                   }]
               )
           )
