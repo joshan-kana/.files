@@ -157,6 +157,16 @@ in
       jq
     ];
     serviceConfig.Type = "oneshot";
+    # NOTE on agents.defaults.* vs models.providers.*.models[]:
+    #   The runtime hot-reloads agents.defaults.* changes (allowlist,
+    #   primary, etc.) without bouncing the container.
+    #   It does NOT hot-reload models.providers.*.models[].contextWindow
+    #   / maxTokens changes because resolveContextTokensForModel uses
+    #   skipRuntimeConfigLoad=Boolean(cfg), and cfg is the runtime cache
+    #   populated at boot.
+    #   After editing contextWindow / maxTokens / or adding new fields
+    #   under providers.*.models[], run:
+    #     sudo systemctl restart docker-openclaw.service
     script = ''
       configFile="${appDataRoot}/openclaw/openclaw.json"
 
@@ -196,11 +206,6 @@ in
                     "maxTokens": 8192
                   }]
               )
-        # NOTE: changes to contextWindow/maxTokens only take effect after a
-        # docker-openclaw container restart. The runtime caches 'cfg' at boot
-        # and skips re-reading models.providers.* on agents.defaults hot
-        # reloads (see resolveContextTokensForModel's skipRuntimeConfigLoad
-        # path). bounce: sudo systemctl restart docker-openclaw.service
         | .agents = (.agents // {})
         | .agents.defaults = (.agents.defaults // {})
         | .agents.defaults.model = (
