@@ -123,6 +123,14 @@ in
           proxy_set_header X-Forwarded-Proto $scheme;
           proxy_set_header X-Forwarded-Host $host;
           proxy_set_header X-Forwarded-User ${primaryUser};
+
+          # OpenClaw 2026.7.1 ships script-src 'self' only, which blocks the
+          # Vite/rolldown bundle's runtime eval()-based dynamic imports and
+          # prevents <openclaw-app> from registering ("Control UI did not
+          # start" modal). Re-emit the upstream CSP with 'unsafe-eval' added
+          # to script-src; all other directives are preserved verbatim.
+          proxy_hide_header Content-Security-Policy;
+          add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; worker-src 'self'; connect-src 'self' ws: wss: https://api.openai.com https://tweakcn.com" always;
         '';
       };
     };
