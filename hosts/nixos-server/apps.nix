@@ -197,6 +197,16 @@ in
                   }]
               )
           )
+        | .models.providers.deepseek = (
+            (.models.providers.deepseek // {})
+            | .baseUrl = "https://api.deepseek.com"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "DEEPSEEK_API_KEY"
+              }
+          )
         | .agents = (.agents // {})
         | .agents.defaults = (.agents.defaults // {})
         | .agents.defaults.model = (
