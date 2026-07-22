@@ -392,7 +392,7 @@ in
     };
 
     openclaw = {
-      image = "ghcr.io/openclaw/openclaw:latest";
+      image = "ghcr.io/openclaw/openclaw:2026.7.1";
       pull = containerCfg.pullPolicy;
       volumes = [
         "${appDataRoot}/openclaw:/home/node/.openclaw"
