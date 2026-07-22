@@ -213,7 +213,8 @@ in
         | .agents.defaults.models = (
             (.agents.defaults.models // {})
             + {
-              "together/*": {}
+              "together/*": {},
+              "deepseek/*": {}
             }
           )
         | .gateway.mode = "local"
