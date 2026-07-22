@@ -196,7 +196,11 @@ in
                     "maxTokens": 8192
                   }]
               )
-          )
+        # NOTE: changes to contextWindow/maxTokens only take effect after a
+        # docker-openclaw container restart. The runtime caches 'cfg' at boot
+        # and skips re-reading models.providers.* on agents.defaults hot
+        # reloads (see resolveContextTokensForModel's skipRuntimeConfigLoad
+        # path). bounce: sudo systemctl restart docker-openclaw.service
         | .agents = (.agents // {})
         | .agents.defaults = (.agents.defaults // {})
         | .agents.defaults.model = (
