@@ -167,6 +167,39 @@ in
             "apiKey": "ollama-local",
             "timeoutSeconds": 300
           })
+        | .models.providers.together = (
+            (.models.providers.together // {})
+            | .baseUrl = "https://api.together.xyz/v1"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "TOGETHER_API_KEY"
+              }
+            | .models = (
+                (((.models // [])
+                  | map(select(.id != "MiniMaxAI/MiniMax-M3"))))
+                + [{
+                    "id": "MiniMaxAI/MiniMax-M3",
+                    "name": "MiniMax M3",
+                    "reasoning": true,
+                    "input": ["text", "image"]
+                  }]
+              )
+          )
+        | .agents = (.agents // {})
+        | .agents.defaults = (.agents.defaults // {})
+        | .agents.defaults.model = (
+            if ((.agents.defaults.model // null) | type) == "object" then
+              (.agents.defaults.model + {
+                "primary": "together/MiniMaxAI/MiniMax-M3"
+              })
+            else
+              {
+                "primary": "together/MiniMaxAI/MiniMax-M3"
+              }
+            end
+          )
         | .gateway.mode = "local"
         | .gateway.bind = "loopback"
         | .gateway.port = 18789
@@ -406,7 +439,10 @@ in
         OLLAMA_API_KEY = "ollama-local";
         OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
-      environmentFiles = [ "${secretsDir}/openclaw.env" ];
+      environmentFiles = [
+        "${secretsDir}/openclaw.env"
+        "${secretsDir}/server-ai.env"
+      ];
       extraOptions = [
         "--network=host"
         "--group-add=${toString appDataEditor.gid}"
