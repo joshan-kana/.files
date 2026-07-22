@@ -100,7 +100,18 @@ in
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
   ];
 
+  security.pam.sshAgentAuth = {
+    enable = true;
+    authorizedKeysFiles = [
+      "/etc/sudo-authorized-key"
+    ];
+  };
+
   security.sudo.wheelNeedsPassword = true;
+
+  systemd.tmpfiles.rules = [
+    ''f+ /etc/sudo-authorized-key 0444 root root - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO1FIHID7W0tiEdDK3ualnSEhk+B7elWYU0vs4bFPsAB joshan@nixos-server-sudo\n''
+  ];
 
   environment.systemPackages = with pkgs; [
     bluez
