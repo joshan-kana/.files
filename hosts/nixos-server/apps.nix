@@ -208,6 +208,12 @@ in
               }
             end
           )
+        | .agents.defaults.models = (
+            (.agents.defaults.models // {})
+            + {
+              "together/*": {}
+            }
+          )
         | .gateway.mode = "local"
         | .gateway.bind = "loopback"
         | .gateway.port = 18789
