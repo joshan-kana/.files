@@ -31,7 +31,6 @@ in
     cli = {
       disabledPrograms = [
         "mpv"
-        "zellij"
         "tmuxai"
       ];
       disabledAliases = [
