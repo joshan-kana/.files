@@ -1,0 +1,21 @@
+system: "base16"
+name: "Carbon"
+author: "Framer (darkened bg + saturated by Josh)"
+variant: "dark"
+palette:
+  base00: "111111"  # Default Background (darkened from #181818)
+  base01: "1a1a1a"  # Alternate Background (darkened from #151515)
+  base02: "3a3a3a"  # Selection Background (darkened from #464646)
+  base03: "505050"  # Comments / Invisibles (darkened from #747474)
+  base04: "D0D0D0"  # Dark Foreground (brighter than original #B9B9B9)
+  base05: "F0F0F0"  # Default Foreground (brighter than original #D0D0D0)
+  base06: "FFFFFF"  # Light Foreground (brighter than original #E8E8E8)
+  base07: "FFFFFF"  # Light Background (brighter than original #EEEEEE)
+  base08: "FF7A5C"  # Orange (slightly more saturated than #FD886B)
+  base09: "FF3366"  # Red (slightly more saturated than #FC4769)
+  base0A: "FFD24A"  # Yellow (slightly more saturated than #FECB6E)
+  base0B: "3DE5F0"  # Green (slightly more saturated than #32CCDC)
+  base0C: "BDE6FF"  # Cyan (slightly more saturated than #ACDDFD)
+  base0D: "33A8FF"  # Blue (slightly more saturated than #20BCFC)
+  base0E: "C79CFF"  # Purple (slightly more saturated than #BA8CFC)
+  base0F: "C9664A"  # Brown (slightly more saturated than #B15F4A)

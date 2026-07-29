@@ -8,7 +8,7 @@
   stylix = {
     enable = true;
     image = ../../wallpaper.png;
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/framer.yaml";
+    base16Scheme = ../../themes/carbon.yaml;
 
     fonts = {
       serif = config.stylix.fonts.monospace;
