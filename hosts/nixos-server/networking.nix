@@ -12,7 +12,6 @@ let
   inherit (serverCfg) lan;
 
   lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
-  hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
   dnsService = {
     user = "adguardhome";
@@ -44,26 +43,22 @@ in
   virtualisation.docker.enable = true;
   virtualisation.oci-containers.backend = "docker";
 
-  networking.networkmanager.enable = true;
-  networking.networkmanager.ensureProfiles.profiles."wired-static" = {
-    connection = {
-      id = "wired-static";
-      type = "ethernet";
-      "interface-name" = lan.interface;
-      autoconnect = true;
-      "autoconnect-priority" = 100;
+  networking.networkmanager.enable = lib.mkForce false;
+  systemd.network.enable = true;
+  networking.useNetworkd = true;
+  networking.useDHCP = false;
+  systemd.network.networks."10-end0" = {
+    matchConfig.Name = lan.interface;
+    networkConfig = {
+      Address = [
+        "${lan.serverIp}/${lanPrefixLength}"
+        "${dnsService.ip}/${lanPrefixLength}"
+      ];
+      Gateway = lan.gateway;
+      DNS = [ dnsService.ip ] ++ lan.dns.fallbackServers;
+      IPv6AcceptRA = true;
     };
-    ipv4 = {
-      method = "manual";
-      address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
-      address2 = "${dnsService.ip}/${lanPrefixLength}";
-      dns = hostDns;
-      "ignore-auto-dns" = true;
-    };
-    ipv6 = {
-      method = "auto";
-      "ignore-auto-dns" = true;
-    };
+    linkConfig.RequiredForOnline = "routable";
   };
 
   services.avahi = {
