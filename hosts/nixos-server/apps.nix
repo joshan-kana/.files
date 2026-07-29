@@ -207,16 +207,129 @@ in
                 "id": "DEEPSEEK_API_KEY"
               }
           )
+        | .models.providers."openrouter-zdr" = (
+            (.models.providers."openrouter-zdr" // {})
+            | .baseUrl = "https://openrouter.ai/api/v1"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "OPENROUTER_ZDR_API_KEY"
+              }
+            | .timeoutSeconds = 300
+            | .models = [
+                {
+                  "id": "minimax/minimax-m3",
+                  "name": "MiniMax M3 — OpenRouter ZDR",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                },
+                {
+                  "id": "z-ai/glm-5.2",
+                  "name": "GLM 5.2 — OpenRouter ZDR",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                }
+              ]
+          )
+        | .models.providers."openrouter-deepseek" = (
+            (.models.providers."openrouter-deepseek" // {})
+            | .baseUrl = "https://openrouter.ai/api/v1"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "OPENROUTER_DEEPSEEK_API_KEY"
+              }
+            | .timeoutSeconds = 300
+            | .models = [
+                {
+                  "id": "deepseek/deepseek-v4-flash",
+                  "name": "DeepSeek V4 Flash — OpenRouter non-ZDR",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 65536
+                },
+                {
+                  "id": "deepseek/deepseek-v4-pro",
+                  "name": "DeepSeek V4 Pro — OpenRouter non-ZDR",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 393216
+                }
+              ]
+          )
+        | .models.providers."openrouter-free" = (
+            (.models.providers."openrouter-free" // {})
+            | .baseUrl = "https://openrouter.ai/api/v1"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "OPENROUTER_FREE_API_KEY"
+              }
+            | .timeoutSeconds = 300
+            | .models = [
+                {
+                  "id": "google/gemma-4-31b-it:free",
+                  "name": "Gemma 4 31B (free) — FREE / NON-SENSITIVE",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 262144,
+                  "maxTokens": 16384
+                },
+                {
+                  "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                  "name": "Nemotron 3 Nano Omni (free) — FREE / NON-SENSITIVE",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 256000,
+                  "maxTokens": 65536
+                },
+                {
+                  "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+                  "name": "Nemotron 3 Ultra (free) — FREE / NON-SENSITIVE",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 1000000,
+                  "maxTokens": 65536
+                },
+                {
+                  "id": "nvidia/nemotron-3-super-120b-a12b:free",
+                  "name": "Nemotron 3 Super (free) — FREE / NON-SENSITIVE",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 262144,
+                  "maxTokens": 65536
+                },
+                {
+                  "id": "openai/gpt-oss-20b:free",
+                  "name": "GPT-OSS 20B (free) — FREE / NON-SENSITIVE",
+                  "reasoning": true,
+                  "input": ["text"],
+                  "contextWindow": 131072,
+                  "maxTokens": 16384
+                }
+              ]
+          )
         | .agents = (.agents // {})
         | .agents.defaults = (.agents.defaults // {})
         | .agents.defaults.model = (
             if ((.agents.defaults.model // null) | type) == "object" then
               (.agents.defaults.model + {
-                "primary": "together/MiniMaxAI/MiniMax-M3"
+                "primary": "openrouter-zdr/minimax/minimax-m3",
+                "fallbacks": []
               })
             else
               {
-                "primary": "together/MiniMaxAI/MiniMax-M3"
+                "primary": "openrouter-zdr/minimax/minimax-m3",
+                "fallbacks": []
               }
             end
           )
@@ -224,7 +337,34 @@ in
             (.agents.defaults.models // {})
             + {
               "together/*": {},
-              "deepseek/*": {}
+              "deepseek/*": {},
+              "openrouter-zdr/minimax/minimax-m3": {
+                "alias": "OR ZDR MiniMax M3"
+              },
+              "openrouter-zdr/z-ai/glm-5.2": {
+                "alias": "OR ZDR GLM 5.2"
+              },
+              "openrouter-deepseek/deepseek/deepseek-v4-flash": {
+                "alias": "OR DeepSeek V4 Flash (non-ZDR)"
+              },
+              "openrouter-deepseek/deepseek/deepseek-v4-pro": {
+                "alias": "OR DeepSeek V4 Pro (non-ZDR)"
+              },
+              "openrouter-free/google/gemma-4-31b-it:free": {
+                "alias": "OR Free Gemma 4 31B (FREE / NON-SENSITIVE)"
+              },
+              "openrouter-free/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+                "alias": "OR Free Nemotron 3 Nano Omni (FREE / NON-SENSITIVE)"
+              },
+              "openrouter-free/nvidia/nemotron-3-ultra-550b-a55b:free": {
+                "alias": "OR Free Nemotron 3 Ultra (FREE / NON-SENSITIVE)"
+              },
+              "openrouter-free/nvidia/nemotron-3-super-120b-a12b:free": {
+                "alias": "OR Free Nemotron 3 Super (FREE / NON-SENSITIVE)"
+              },
+              "openrouter-free/openai/gpt-oss-20b:free": {
+                "alias": "OR Free GPT-OSS 20B (FREE / NON-SENSITIVE)"
+              }
             }
           )
         | .gateway.mode = "local"
@@ -303,7 +443,12 @@ in
   };
 
   systemd.services.docker-openclaw = {
-    unitConfig.AssertPathIsRegular = openclawHostAdmin.privateKeyPath;
+    unitConfig.AssertPathIsRegular = [
+      openclawHostAdmin.privateKeyPath
+      "${secretsDir}/server-zdr-openrouter.env"
+      "${secretsDir}/server-deepseek-openrouter.env"
+      "${secretsDir}/server-free-openrouter.env"
+    ];
     restartTriggers = [ containerCfg.restartTrigger ];
     after = [
       "configure-openclaw-gateway.service"
@@ -469,6 +614,9 @@ in
       environmentFiles = [
         "${secretsDir}/openclaw.env"
         "${secretsDir}/server-ai.env"
+        "${secretsDir}/server-zdr-openrouter.env"
+        "${secretsDir}/server-deepseek-openrouter.env"
+        "${secretsDir}/server-free-openrouter.env"
       ];
       extraOptions = [
         "--network=host"
