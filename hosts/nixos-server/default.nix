@@ -107,6 +107,12 @@ in
     ];
   };
 
+  security.sudo = {
+    extraConfig = ''
+      Defaults:joshan noninteractive_auth
+    '';
+  };
+
   security.sudo.wheelNeedsPassword = true;
 
   systemd.tmpfiles.rules = [
