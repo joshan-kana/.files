@@ -425,7 +425,7 @@ in
             ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
         | .plugins = (.plugins // {})
         | .plugins.allow =
-            ((.plugins.allow // []) | if index("device-pair") then . else . + ["device-pair"] end)
+            ((.plugins.allow // []) + ["codex", "openai", "ollama", "matrix", "device-pair", "deepseek"] | unique)
         | .plugins.deny =
             ((.plugins.deny // []) | map(select(. != "device-pair")))
         | .plugins.entries = (.plugins.entries // {})
