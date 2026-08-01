@@ -22,6 +22,16 @@ let
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
+  openclawHostCommand = pkgs.writeShellApplication {
+    name = "openclaw-host";
+    runtimeInputs = with pkgs; [ bash ];
+    text = ''
+      : "''${OPENCLAW_HOST_ADMIN_SSH:?OPENCLAW_HOST_ADMIN_SSH is not set}"
+      read -r -a hostSsh <<< "$OPENCLAW_HOST_ADMIN_SSH"
+      exec "''${hostSsh[@]}" "$@"
+    '';
+  };
+
   openclawContainerUser = {
     # UID/GID used by the OpenClaw image's internal node user.
     # This is not the host primary user.
@@ -603,6 +613,7 @@ in
         "${appDataRoot}/openclaw:/home/node/.openclaw"
         "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
         "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+        "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
         "/:/host"
         "/nix/store:/nix/store:ro"
       ];
