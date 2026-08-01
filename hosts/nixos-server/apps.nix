@@ -609,6 +609,7 @@ in
       environment = {
         OPENCLAW_DISABLE_BONJOUR = "1";
         OLLAMA_API_KEY = "ollama-local";
+        NODE_OPTIONS = "--dns-result-order=ipv4first";
         OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
       environmentFiles = [
