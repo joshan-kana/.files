@@ -26,6 +26,21 @@ openclaw-repository git infrastructure-docs <git arguments...>
 openclaw-repository gh <gh arguments...>
 ```
 
+Git uses `/root/secrets/openclaw-github-id_ed25519`; GitHub API operations use
+`/root/secrets/openclaw-github.env` and appear as `joshan-kana`.
+
+OpenClaw is intentionally host-root-equivalent. These wrappers preserve checkout
+ownership and provide a consistent interface; they are not security boundaries
+against OpenClaw.
+
+## Repository verification
+
+```sh
+sudo docker exec openclaw openclaw-repository gh api user --jq .login
+sudo docker exec openclaw openclaw-repository git files status --short --branch
+sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
+```
+
 ## Ollama Proxy
 
 OpenClaw should always talk to Ollama through the local server endpoint:
