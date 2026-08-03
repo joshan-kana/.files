@@ -46,6 +46,16 @@ Options:
   --choose-nixpkgs-ref [branch]
       Choose from recent nixpkgs commits on a branch. Defaults to nixos-unstable.
 
+  --containers-only
+      Update only server container image digests; skip the flake input update.
+
+  --no-containers
+      Run the normal flake update but leave server container images untouched.
+
+  --container <name>
+      Refresh only the named server container(s). May be repeated. Implies the
+      container update runs for the server target.
+
 Examples:
   scripts/flake-update linux-desktop nixpkgs
   scripts/flake-update nixos home-manager stylix
@@ -55,6 +65,10 @@ Examples:
   scripts/flake-update nixos --choose-nixpkgs-ref
   scripts/flake-update nixos --choose-nixpkgs-ref nixos-25.05
   scripts/flake-update nixos --input-ref nixpkgs=github:NixOS/nixpkgs/nixos-unstable
+  scripts/flake-update server
+  scripts/flake-update server --containers-only
+  scripts/flake-update server --container n8n
+  scripts/flake-update server --no-containers
   scripts/flake-update all
 
 Environment:
@@ -376,6 +390,10 @@ input_refs=()
 inputs=()
 undo_lock=false
 interactive_menu=false
+update_containers=false
+containers_only=false
+no_containers=false
+container_select=()
 
 if [[ "$#" -eq 0 && -t 0 && -t 1 ]]; then
   interactive_menu=true
@@ -433,6 +451,26 @@ while [[ "$#" -gt 0 ]]; do
     --choose-nixpkgs-ref=*)
       chosen_ref=$(choose_nixpkgs_ref "${1#--choose-nixpkgs-ref=}")
       input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "$chosen_ref")")
+      shift
+      ;;
+    --containers-only)
+      containers_only=true
+      update_containers=true
+      shift
+      ;;
+    --no-containers)
+      no_containers=true
+      shift
+      ;;
+    --container)
+      [[ "$#" -ge 2 ]] || die "--container requires a container name"
+      container_select+=("$2")
+      update_containers=true
+      shift 2
+      ;;
+    --container=*)
+      container_select+=("${1#--container=}")
+      update_containers=true
       shift
       ;;
     --)
@@ -542,6 +580,26 @@ diff_closures() {
   fi
 }
 
+# True if the selected target set includes the nixos-server host.
+target_includes_server() {
+  local profile
+  for profile in "${target_profiles[@]}"; do
+    [[ "$profile" == "nixos-server" ]] && return 0
+  done
+  return 1
+}
+
+# Refresh server container image digests via scripts/update-container-images.
+update_server_containers() {
+  local args=()
+  if [[ "${#container_select[@]}" -gt 0 ]]; then
+    # Selected-container updates are applied via an env var the updater honors.
+    CONTAINER_SELECT="${container_select[*]}" "$repo_root/scripts/update-container-images" "${args[@]}"
+  else
+    "$repo_root/scripts/update-container-images" "${args[@]}"
+  fi
+}
+
 echo "Target profiles: ${target_profiles[*]}"
 
 echo "Checking current ${MAIN_BRANCH} evaluations before updating..."
@@ -558,23 +616,34 @@ for profile in "${target_profiles[@]}"; do
   build_profile "$main_flake" "$profile" "$tmpdir/${profile}-old"
 done
 
-if [[ "${#inputs[@]}" -gt 0 ]]; then
-  echo "Updating selected flake inputs: ${inputs[*]}"
-  nix flake update "${inputs[@]}"
-elif [[ "${#input_refs[@]}" -eq 0 ]]; then
-  echo "Updating all flake inputs..."
-  nix flake update
+if [[ "$containers_only" != true ]]; then
+  if [[ "${#inputs[@]}" -gt 0 ]]; then
+    echo "Updating selected flake inputs: ${inputs[*]}"
+    nix flake update "${inputs[@]}"
+  elif [[ "${#input_refs[@]}" -eq 0 ]]; then
+    echo "Updating all flake inputs..."
+    nix flake update
+  fi
+
+  for input_ref in "${input_refs[@]}"; do
+    input_name=${input_ref%%=*}
+    flake_ref=${input_ref#*=}
+    echo "Pinning ${input_name} to ${flake_ref}..."
+    nix flake lock --override-input "$input_name" "$flake_ref"
+  done
+
+  if [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -gt 0 ]]; then
+    echo "Only pinned inputs were changed; no full flake update was run."
+  fi
+else
+  echo "Skipping flake input update (--containers-only)."
 fi
 
-for input_ref in "${input_refs[@]}"; do
-  input_name=${input_ref%%=*}
-  flake_ref=${input_ref#*=}
-  echo "Pinning ${input_name} to ${flake_ref}..."
-  nix flake lock --override-input "$input_name" "$flake_ref"
-done
-
-if [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -gt 0 ]]; then
-  echo "Only pinned inputs were changed; no full flake update was run."
+# Refresh container image digests when the target set includes the server, unless
+# explicitly disabled with --no-containers.
+if target_includes_server && [[ "$no_containers" != true ]]; then
+  echo "Refreshing server container image digests..."
+  update_server_containers
 fi
 
 echo "Checking updated branch evaluations..."
@@ -600,6 +669,7 @@ Update branch is ready for review.
 
 Useful inspection commands:
   git diff ${MAIN_BRANCH} -- flake.lock
+  git diff ${MAIN_BRANCH} -- hosts/nixos-server/container-images.lock
   git diff ${MAIN_BRANCH}
   nix-tree result
   nix why-depends result /nix/store/...-package

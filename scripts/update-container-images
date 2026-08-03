@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# Refresh container image digests in hosts/nixos-server/container-images.lock.
+#
+# Reads the tracked repository:tag for each server container from the evaluated
+# NixOS config (`dotfiles.server.containerImageSources`, declared inline next to
+# each container definition in apps.nix), resolves the current manifest digest
+# from each registry, verifies a linux/arm64 image exists, and atomically rewrites
+# the lock file. The lock is left unchanged when every digest is already current.
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  echo "error: not inside a Git repository" >&2
+  exit 1
+}
+cd "$repo_root"
+
+LOCK_FILE=hosts/nixos-server/container-images.lock
+FLAKE_REF=${FLAKE_REF:-.}
+
+dry_run=false
+verbose=false
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/update-container-images [options]
+
+Options:
+  --dry-run   Resolve and report digests without writing the lock file.
+  -v          Print per-image resolution details.
+  -h, --help  Show this help.
+
+Environment:
+  FLAKE_REF   Flake ref to read containerImageSources from. Defaults to "."
+EOF
+}
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --dry-run)
+      dry_run=true
+      ;;
+    -v)
+      verbose=true
+      ;;
+    *)
+      die "unknown option '$1'"
+      ;;
+  esac
+  shift
+done
+
+[[ -f "$LOCK_FILE" ]] || die "lock file not found: $LOCK_FILE"
+
+# Read the configured sources from the evaluated NixOS config. The repository and
+# tracked tag are declared inline next to each container definition in apps.nix
+# (dotfiles.server.containerImageSources), which avoids fragile parsing of the Nix
+# source text while keeping the tag beside the container it belongs to.
+sources_json=$(
+  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.dotfiles.server.containerImageSources" 2>/dev/null
+) || die "failed to evaluate dotfiles.server.containerImageSources for nixos-server"
+
+[[ -n "$sources_json" ]] || die "containerImageSources evaluated to empty output"
+
+# Optionally restrict which containers are refreshed via CONTAINER_SELECT
+# (space-separated names). Non-selected entries are preserved from the lock.
+if [[ -n "${CONTAINER_SELECT:-}" ]]; then
+  selected=$(printf '%s\n' ${CONTAINER_SELECT} | jq -Rrs 'split("\n") | map(select(length > 0))')
+  unknown=$(printf '%s' "$sources_json" | jq -r --argjson sel "$selected" '
+    $sel[] as $k | select(has($k) | not) | $k
+  ')
+  if [[ -n "$unknown" ]]; then
+    die "unknown container(s) in CONTAINER_SELECT: $(printf '%s\n' "$unknown" | tr '\n' ' ')"
+  fi
+fi
+
+current_locks=$(cat "$LOCK_FILE")
+
+# Prefer skopeo when available; fall back to the docker CLI (docker manifest
+# inspect needs a reachable Docker daemon). Both return the index digest.
+resolve_manifest_verbose() {
+  if command -v skopeo >/dev/null 2>&1; then
+    skopeo inspect --raw "docker://$1" 2>/dev/null
+  else
+    docker manifest inspect --verbose "$1" 2>/dev/null
+  fi
+}
+
+inspect_manifest() {
+  if command -v skopeo >/dev/null 2>&1; then
+    skopeo inspect --raw "docker://$1" 2>/dev/null
+  else
+    docker manifest inspect "$1" 2>/dev/null
+  fi
+}
+
+# Resolve the OCI index digest and confirm a linux/arm64 manifest is present.
+resolve_image() {
+  local name=$1 source=$2
+  local raw digest media_type has_arm
+
+  raw=$(resolve_manifest_verbose "$source") || die "${name}: failed to resolve manifest for ${source}"
+  digest=$(printf '%s' "$raw" | jq -r 'if type == "array" then .[0].Descriptor.digest else .Descriptor.digest end')
+  [[ "$digest" == sha256:* ]] || die "${name}: no digest found for ${source}"
+
+  media_type=$(printf '%s' "$raw" | jq -r 'if type == "array" then .[0].Descriptor.mediaType else .Descriptor.mediaType end')
+
+  # For a multi-arch index, check the platform list for arm64.
+  if [[ "$media_type" == *"image.index"* || "$media_type" == *"manifest.list"* ]]; then
+    local index_json
+    index_json=$(inspect_manifest "$source") || die "${name}: failed to read index for ${source}"
+    has_arm=$(printf '%s' "$index_json" | jq -r '
+      if (.manifests | type) == "array" then
+        ([.manifests[].platform.architecture] | any(. == "arm64"))
+      else
+        false
+      end')
+    if [[ "$has_arm" != "true" ]]; then
+      die "${name}: ${source} does not provide a linux/arm64 manifest; refusing to update"
+    fi
+  fi
+
+  printf '%s\n' "$digest"
+}
+
+# Resolve digests. When CONTAINER_SELECT is active, only resolve those containers;
+# the merge step below preserves every other entry from the current lock.
+resolve_json=$(
+  printf '%s' "$sources_json" | jq -r --argjson sel "${selected:-null}" '
+    to_entries[] as $e
+    | select($sel == null or ($sel | index($e.key)))
+    | $e.key + "\t" + $e.value.repository + ":" + $e.value.tag
+  '
+)
+
+new_locks=$(
+  printf '%s\n' "$resolve_json" |
+    while IFS=$'\t' read -r name source; do
+      digest=$(resolve_image "$name" "$source")
+      printf '%s\t%s\t%s\n' "$name" "$source" "$digest"
+    done
+)
+
+# Validate the resolved set before writing anything.
+[[ -n "$new_locks" ]] || die "no container sources resolved; refusing to rewrite lock"
+
+# Every source must have produced a non-empty digest. The previous step already
+# exits on the first resolution failure, but double-check for malformed output.
+if printf '%s\n' "$new_locks" | awk -F '\t' 'NF != 3 || $3 == "" { exit 1 }'; then
+  :
+else
+  die "incomplete container resolution output; refusing to rewrite lock"
+fi
+
+# Merge the freshly resolved digests into the existing lock so non-selected
+# entries (or entries whose source was unchanged) are preserved. The resolved
+# object is printed last so it wins over the current lock for updated keys.
+new_lock_json=$(
+  {
+    printf '%s' "$current_locks"
+    printf '%s\n' "$new_locks" |
+      jq -Rrs '
+        split("\n") | map(select(length > 0)) |
+        map(split("\t") | {name: .[0], source: .[1], digest: .[2]}) |
+        reduce .[] as $e ({}; .[$e.name] = {source: $e.source, digest: $e.digest})
+      '
+  } |
+    jq -s 'add'
+)
+
+# Detect whether anything actually changed.
+if [[ "$(printf '%s' "$new_lock_json" | jq -S .)" == "$(printf '%s' "$current_locks" | jq -S .)" ]]; then
+  echo "All container images are up to date; ${LOCK_FILE} unchanged."
+  exit 0
+fi
+
+if [[ "$dry_run" == true ]]; then
+  echo "Dry run: the following changes would be written to ${LOCK_FILE}:"
+  diff -u <(printf '%s\n' "$current_locks" | jq -S .) <(printf '%s\n' "$new_lock_json" | jq -S .) || true
+  exit 0
+fi
+
+# Write atomically only after every image resolved successfully.
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+printf '%s\n' "$new_lock_json" >"$tmp"
+install -m 0644 "$tmp" "$LOCK_FILE"
+
+echo "Updated ${LOCK_FILE}:"
+diff -u <(printf '%s\n' "$current_locks" | jq -S .) <(printf '%s\n' "$new_lock_json" | jq -S .) || true
