@@ -106,23 +106,36 @@ let
               ;;
           esac
 
-          if [ ! -r ${openclawGitHub.privateKeyPath} ]; then
-            echo "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
+          if [ ! -r ${openclawGitHub.privateKeyPath} ] || [ ! -r ${openclawGitHub.privateKeyPath}.pub ]; then
+            echo "GitHub SSH keypair is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
             exit 1
           fi
 
           agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
-          chmod 0711 "$agentDir"
-          eval "$(ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
+          chown ${primaryUser}:users "$agentDir"
+          chmod 0700 "$agentDir"
+
+          publicIdentity="$agentDir/id_ed25519.pub"
+          install -m 0644 \
+            -o ${primaryUser} \
+            -g users \
+            ${openclawGitHub.privateKeyPath}.pub \
+            "$publicIdentity"
+
+          eval "$(runuser -u ${primaryUser} -- env -i \
+            HOME=/home/${primaryUser} \
+            USER=${primaryUser} \
+            LOGNAME=${primaryUser} \
+            PATH="$PATH" \
+            ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
+
           if ! ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1; then
             echo "Failed to load the OpenClaw GitHub SSH key" >&2
             exit 1
           fi
-          chown ${primaryUser} "$SSH_AUTH_SOCK"
-          chmod 0600 "$SSH_AUTH_SOCK"
 
-          gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
+          gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
           runuser -u ${primaryUser} -- env -i \
             HOME=/home/${primaryUser} \
             USER=${primaryUser} \

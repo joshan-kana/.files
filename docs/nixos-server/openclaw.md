@@ -67,9 +67,11 @@ credentials:
   Joshan's existing personal key remains untouched.
 - `/root/secrets/openclaw-github.env` contains the GitHub API token.
 
-For Git, root loads the dedicated key into a temporary SSH agent. Git then runs
-as `joshan` with Joshan's home and existing commit identity, strict GitHub
-host-key checking, `IdentitiesOnly=yes`, and interactive prompting disabled.
+For Git, root starts a temporary SSH agent as `joshan`, then loads the dedicated
+root-owned key into it. Git runs as `joshan` with Joshan's home and existing
+commit identity. `IdentitiesOnly=yes` and a temporary copy of the dedicated
+public key ensure SSH selects only the matching agent identity; strict GitHub
+host-key checking remains enabled and interactive prompting is disabled.
 
 For GitHub API work, root reads the token file and passes only `GH_TOKEN` to the
 invoked `gh` child. `gh` runs as `joshan`, stores no token in Joshan's home, and
