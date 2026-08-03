@@ -57,74 +57,56 @@ let
       util-linux
     ];
     text = ''
-      if [ "$(${pkgs.coreutils}/bin/id -u)" -ne 0 ]; then
-        echo "openclaw-repository-host must run as root" >&2
-        exit 1
-      fi
+      die() { echo "$*" >&2; exit 1; }
+      [ "$(${pkgs.coreutils}/bin/id -u)" -eq 0 ] ||
+        die "openclaw-repository-host must run as root"
 
-      primaryEnv=(
-        runuser -u ${primaryUser} -- env -i
-        HOME=/home/${primaryUser}
-        USER=${primaryUser}
-        LOGNAME=${primaryUser}
-        PATH="$PATH"
-      )
+      primaryEnv=(runuser -u ${primaryUser} -- env -i HOME=/home/${primaryUser}
+        USER=${primaryUser} LOGNAME=${primaryUser} PATH="$PATH")
 
-      operation="''${1:-}"
-      [ "$#" -gt 0 ] && shift
+      operation="''${1:-}"; [ "$#" -eq 0 ] || shift
 
       case "$operation" in
         gh)
-          if [ ! -r ${openclawGitHub.apiEnvPath} ]; then
-            echo "GitHub API credentials are not provisioned: ${openclawGitHub.apiEnvPath}" >&2
-            exit 1
-          fi
+          [ -r ${openclawGitHub.apiEnvPath} ] ||
+            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiEnvPath}"
 
           unset GH_TOKEN
           # shellcheck disable=SC1091
           source ${openclawGitHub.apiEnvPath}
           : "''${GH_TOKEN:?${openclawGitHub.apiEnvPath} must define GH_TOKEN}"
 
-          ghConfigDir=/run/openclaw-github-cli
           exec "''${primaryEnv[@]}" \
             GH_TOKEN="$GH_TOKEN" \
-            GH_CONFIG_DIR="$ghConfigDir" \
+            GH_CONFIG_DIR=/run/openclaw-github-cli \
             gh "$@"
           ;;
         git)
-          repository="''${1:-}"
-          [ "$#" -gt 0 ] && shift
+          repository="''${1:-}"; [ "$#" -eq 0 ] || shift
 
           case "$repository" in
             files) checkout=/home/${primaryUser}/.files ;;
             infrastructure-docs) checkout=/home/${primaryUser}/.files/docs/infrastructure-docs ;;
             *)
-              echo "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>" >&2
-              exit 2
+              die "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>"
               ;;
           esac
 
-          if [ ! -r ${openclawGitHub.privateKeyPath} ]; then
-            echo "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
-            exit 1
-          fi
+          [ -r ${openclawGitHub.privateKeyPath} ] ||
+            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}"
 
           agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
-          chown ${primaryUser}:users "$agentDir"
-          chmod 0700 "$agentDir"
+          install -d -m 0700 -o ${primaryUser} -g users "$agentDir"
 
           eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
 
-          if ! ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1; then
-            echo "Failed to load the OpenClaw GitHub SSH key" >&2
-            exit 1
-          fi
+          ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1 ||
+            die "Failed to load the OpenClaw GitHub SSH key"
 
           publicIdentity="$agentDir/id_ed25519.pub"
-          ssh-add -L >"$publicIdentity"
-          chown ${primaryUser}:users "$publicIdentity"
-          chmod 0644 "$publicIdentity"
+          ssh-add -L | install -m 0644 -o ${primaryUser} -g users /dev/stdin "$publicIdentity" ||
+            die "Failed to write the OpenClaw GitHub public identity"
 
           gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
           "''${primaryEnv[@]}" \
@@ -146,11 +128,10 @@ let
     runtimeInputs = with pkgs; [ bash ];
     text = ''
       remoteCommand="sudo ${openclawRepositoryHost}/bin/openclaw-repository-host"
-      for argument in "$@"; do
-        remoteCommand+=" $(printf '%q' "$argument")"
-      done
+      remoteArgs=
+      [ "$#" -eq 0 ] || printf -v remoteArgs ' %q' "$@"
 
-      exec ${openclawHostCommand}/bin/openclaw-host "$remoteCommand"
+      exec ${openclawHostCommand}/bin/openclaw-host "$remoteCommand$remoteArgs"
     '';
   };
 
@@ -161,8 +142,8 @@ let
     metadata: { "openclaw": { "requires": { "bins": ["openclaw-repository"] } } }
     ---
 
-    Prefer a connected macOS app node with `system.run` and `system.which`, using
-    `/Users/joshan/.files`. Otherwise use the server wrappers:
+    Prefer a connected macOS app node with `system.run` and `system.which` in
+    `/Users/joshan/.files`; otherwise use the server wrappers:
 
     ```sh
     openclaw-repository git files <git arguments...>
@@ -170,10 +151,10 @@ let
     openclaw-repository gh <gh arguments...>
     ```
 
-    Use one checkout per task. Inspect status first, preserve unrelated work, use
-    feature branches for writes, and never expose credentials, disable SSH host
-    verification, create another clone, or reference an unpushed submodule commit.
-    Ask before deployment or destructive operations.
+    Use one checkout per task; inspect status first and preserve unrelated work.
+    For writes, use feature branches. Never expose credentials, add a clone,
+    disable host verification, or reference an unpushed submodule commit. Confirm
+    before deployment or destructive operations.
   '';
 
 in
