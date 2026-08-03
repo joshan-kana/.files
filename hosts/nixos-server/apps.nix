@@ -62,6 +62,14 @@ let
         exit 1
       fi
 
+      primaryEnv=(
+        runuser -u ${primaryUser} -- env -i
+        HOME=/home/${primaryUser}
+        USER=${primaryUser}
+        LOGNAME=${primaryUser}
+        PATH="$PATH"
+      )
+
       operation="''${1:-}"
       [ "$#" -gt 0 ] && shift
 
@@ -78,17 +86,7 @@ let
           : "''${GH_TOKEN:?${openclawGitHub.apiEnvPath} must define GH_TOKEN}"
 
           ghConfigDir=/run/openclaw-github-cli
-          install -d \
-            -m 0700 \
-            -o ${primaryUser} \
-            -g users \
-            "$ghConfigDir"
-
-          exec runuser -u ${primaryUser} -- env -i \
-            HOME=/home/${primaryUser} \
-            USER=${primaryUser} \
-            LOGNAME=${primaryUser} \
-            PATH="$PATH" \
+          exec "''${primaryEnv[@]}" \
             GH_TOKEN="$GH_TOKEN" \
             GH_CONFIG_DIR="$ghConfigDir" \
             gh "$@"
@@ -106,8 +104,8 @@ let
               ;;
           esac
 
-          if [ ! -r ${openclawGitHub.privateKeyPath} ] || [ ! -r ${openclawGitHub.privateKeyPath}.pub ]; then
-            echo "GitHub SSH keypair is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
+          if [ ! -r ${openclawGitHub.privateKeyPath} ]; then
+            echo "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}" >&2
             exit 1
           fi
 
@@ -116,31 +114,20 @@ let
           chown ${primaryUser}:users "$agentDir"
           chmod 0700 "$agentDir"
 
-          publicIdentity="$agentDir/id_ed25519.pub"
-          install -m 0644 \
-            -o ${primaryUser} \
-            -g users \
-            ${openclawGitHub.privateKeyPath}.pub \
-            "$publicIdentity"
-
-          eval "$(runuser -u ${primaryUser} -- env -i \
-            HOME=/home/${primaryUser} \
-            USER=${primaryUser} \
-            LOGNAME=${primaryUser} \
-            PATH="$PATH" \
-            ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
+          eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
 
           if ! ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1; then
             echo "Failed to load the OpenClaw GitHub SSH key" >&2
             exit 1
           fi
 
+          publicIdentity="$agentDir/id_ed25519.pub"
+          ssh-add -L >"$publicIdentity"
+          chown ${primaryUser}:users "$publicIdentity"
+          chmod 0644 "$publicIdentity"
+
           gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
-          runuser -u ${primaryUser} -- env -i \
-            HOME=/home/${primaryUser} \
-            USER=${primaryUser} \
-            LOGNAME=${primaryUser} \
-            PATH="$PATH" \
+          "''${primaryEnv[@]}" \
             GIT_SSH_COMMAND="$gitSshCommand" \
             SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
             GIT_TERMINAL_PROMPT=0 \
@@ -170,22 +157,12 @@ let
   openclawRepositorySkill = pkgs.writeText "openclaw-repository-access-skill" ''
     ---
     name: repository-access
-    description: Manage the NixOS server repositories and GitHub issues, pull requests, and infrastructure project.
+    description: Manage the server repositories and their GitHub resources.
     metadata: { "openclaw": { "requires": { "bins": ["openclaw-repository"] } } }
     ---
 
-    # Repository access
-
-    Prefer the connected app-backed macOS node for repository work. Before using
-    it, inspect the available nodes and select a connected macOS node that reports
-    `system.run` and `system.which`; never select a commandless or disconnected
-    headless node and never persist a node ID. Run Mac repository commands in
-    `/Users/joshan/.files` with `exec host=node node=<selected-id>`.
-
-    When a suitable connected macOS node is unavailable, use the existing Docker
-    Gateway host bridge.
-
-    Use `openclaw-repository` for repository and GitHub work:
+    Prefer a connected macOS app node with `system.run` and `system.which`, using
+    `/Users/joshan/.files`. Otherwise use the server wrappers:
 
     ```sh
     openclaw-repository git files <git arguments...>
@@ -193,25 +170,10 @@ let
     openclaw-repository gh <gh arguments...>
     ```
 
-    The command reuses `openclaw-host` for the loopback SSH transport. The
-    host-side wrapper loads root-owned credentials only as needed and runs both
-    Git and `gh` as `joshan`. Git uses the dedicated OpenClaw GitHub SSH key.
-    GitHub API activity uses Joshan's token and therefore appears on GitHub as
-    `joshan-kana`.
-
-    OpenClaw is intentionally host-root-equivalent. These wrappers preserve
-    ownership and provide a consistent operational path; they are not security
-    boundaries against OpenClaw.
-
-    The two existing checkouts are `/Users/joshan/.files` on the Mac and
-    `/home/joshan/.files` on the server (`/host/home/joshan/.files` from the
-    container). Use only one checkout per task. Never display tokens, private
-    keys, secret-file contents, or complete process environments. Do not create
-    another clone, disable SSH host verification, or change the server checkout
-    branch merely to deploy another revision. Inspect status first, preserve
-    unrelated work, use a feature branch for writes, never point `.files` at an
-    unpushed submodule commit, and ask before deployment or destructive
-    operations.
+    Use one checkout per task. Inspect status first, preserve unrelated work, use
+    feature branches for writes, and never expose credentials, disable SSH host
+    verification, create another clone, or reference an unpushed submodule commit.
+    Ask before deployment or destructive operations.
   '';
 
 in
@@ -266,6 +228,7 @@ in
     "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
     "d ${appDataRoot}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
     "d ${appDataRoot}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d /run/openclaw-github-cli 0700 ${primaryUser} users - -"
 
     "d ${secretsDir} 0700 root root - -"
     "Z ${secretsDir} ~0700 root root - -"
@@ -515,12 +478,12 @@ in
         | .agents.defaults.model = (
             if ((.agents.defaults.model // null) | type) == "object" then
               (.agents.defaults.model + {
-                "primary": "openrouter-zdr/minimax/minimax-m3",
+                "primary": "openrouter-deepseek/deepseek/deepseek-v4-flash",
                 "fallbacks": []
               })
             else
               {
-                "primary": "openrouter-zdr/minimax/minimax-m3",
+                "primary": "openrouter-deepseek/deepseek/deepseek-v4-flash",
                 "fallbacks": []
               }
             end

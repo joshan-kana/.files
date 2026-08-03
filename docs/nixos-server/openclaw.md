@@ -1,105 +1,37 @@
 # OpenClaw
 
-OpenClaw's Gateway remains in Docker on the NixOS server. nginx exposes the
-loopback-bound Gateway to the LAN, while mutable app and auth state remain under
-`/var/lib/apps/openclaw` and `/var/lib/apps/openclaw-auth`. The NixOS wiring is
-in `hosts/nixos-server/apps.nix`; the mutable Gateway config is
-`/var/lib/apps/openclaw/openclaw.json`. The container image is pinned by digest
-so an upstream `latest` tag rollback cannot run an older binary against newer
-state.
+This page documents the OpenClaw runtime wiring on the NixOS server.
 
-## Execution and repository access
+## Local Gateway
 
-OpenClaw is intentionally host-root-equivalent through the loopback
-`openclaw-host` administration path. The repository wrapper is an operational
-convenience rather than a sandbox: it reuses the host bridge, preserves checkout
-ownership, avoids running GitHub CLI as root, and selects dedicated GitHub
-credentials for repository work.
+OpenClaw runs on the NixOS server and is exposed through nginx. The server keeps
+OpenClaw's app state under `/var/lib/apps/openclaw` and its auth/profile state
+under `/var/lib/apps/openclaw-auth`.
 
-General host administration follows this path:
+The OpenClaw container is configured from
+`profiles/nixos-server/hosted-stack.nix`. OpenClaw's mutable config is written to
+`/var/lib/apps/openclaw/openclaw.json` on the host and mounted into the
+container.
 
-```text
-OpenClaw Docker Gateway
-  → openclaw-host
-  → loopback SSH as openclaw-admin
-  → optional sudo
-  → host command
-```
+## Host and repository access
 
-Repository operations follow this path:
-
-```text
-OpenClaw Docker Gateway
-  → openclaw-repository
-  → openclaw-host
-  → loopback SSH as openclaw-admin
-  → sudo openclaw-repository-host
-  → git or gh as joshan
-```
-
-Gateway exec is the resilient default. The bundled `repository-access` skill
-uses this policy:
-
-1. Prefer a connected app-backed macOS node that advertises `system.run` and
-   `system.which`, and work in `/Users/joshan/.files`.
-2. Ignore disconnected or commandless headless nodes. Selection is based on
-   live capabilities; no node ID is persisted.
-3. If no suitable Mac node is connected, use the existing Docker Gateway host
-   bridge and the server checkout at `/home/joshan/.files`.
-
-Use one checkout per task and never create an additional clone. The server
-wrapper provides these entry points:
+The Docker Gateway accesses the host through `openclaw-host`, which connects over
+loopback SSH as `openclaw-admin`. Repository operations use
+`openclaw-repository`, which reuses that transport and runs Git and GitHub CLI as
+`joshan`.
 
 ```sh
-openclaw-repository git files status --short --branch
-openclaw-repository git infrastructure-docs status --short --branch
-openclaw-repository gh issue list --repo joshan-kana/.files --limit 5
+openclaw-repository git files <git arguments...>
+openclaw-repository git infrastructure-docs <git arguments...>
+openclaw-repository gh <gh arguments...>
 ```
 
-Host administration, Git transport, and GitHub API access use separate
-credentials:
+Git uses `/root/secrets/openclaw-github-id_ed25519`; GitHub API operations use
+`/root/secrets/openclaw-github.env`. API activity appears as `joshan-kana`.
 
-- `/root/secrets/openclaw-host-admin-id_ed25519` is the loopback-only host
-  administration key. It remains separate from the GitHub Git key.
-- `/root/secrets/openclaw-github-id_ed25519` is the dedicated OpenClaw Git key.
-  Its public key is an account authentication key attached to `joshan-kana`.
-  The repository wrapper uses it instead of Joshan's broader personal key;
-  Joshan's existing personal key remains untouched.
-- `/root/secrets/openclaw-github.env` contains the GitHub API token.
-
-For Git, root starts a temporary SSH agent as `joshan`, then loads the dedicated
-root-owned key into it. Git runs as `joshan` with Joshan's home and existing
-commit identity. `IdentitiesOnly=yes` and a temporary copy of the dedicated
-public key ensure SSH selects only the matching agent identity; strict GitHub
-host-key checking remains enabled and interactive prompting is disabled.
-
-For GitHub API work, root reads the token file and passes only `GH_TOKEN` to the
-invoked `gh` child. `gh` runs as `joshan`, stores no token in Joshan's home, and
-uses an ephemeral configuration directory under `/run`. Issues, comments, pull
-requests, reviews, and project mutations appear on GitHub as `joshan-kana`, the
-account represented by the token.
-
-Because `openclaw-admin` has unrestricted sudo, OpenClaw can access these
-root-owned credentials through the intended administration path. File ownership
-keeps ordinary host processes separated; it is not a security boundary against
-OpenClaw.
-
-If the API token is not provisioned, create it without displaying the value:
-
-```sh
-read -rsp 'GitHub token: ' OPENCLAW_GITHUB_TOKEN && printf '\n' && \
-  printf 'GH_TOKEN=%s\n' "$OPENCLAW_GITHUB_TOKEN" | \
-  sudo install -m 0400 -o root -g root /dev/stdin /root/secrets/openclaw-github.env; \
-unset OPENCLAW_GITHUB_TOKEN
-```
-
-The token must have access to both private repositories and the issue, pull
-request, Project, and account SSH-key mutations OpenClaw is expected to perform.
-
-`docs/infrastructure-docs` is a separate Git repository and submodule. For a
-documentation change, create a branch inside the submodule, commit and push it,
-open a draft `infrastructure-docs` PR, then update the parent pointer in a
-separate `.files` commit. Never point `.files` at an unpushed submodule commit.
+OpenClaw is intentionally host-root-equivalent. The wrappers preserve checkout
+ownership and provide a consistent operational interface; they are not security
+boundaries against OpenClaw.
 
 ## Ollama Proxy
 
@@ -182,6 +114,9 @@ sudo /run/current-system/sw/bin/openclaw-repository-host gh pr list --repo josha
 sudo /run/current-system/sw/bin/openclaw-repository-host gh repo view joshan-kana/infrastructure-docs
 sudo /run/current-system/sw/bin/openclaw-repository-host git files ls-remote git@github.com:joshan-kana/.files.git HEAD
 sudo /run/current-system/sw/bin/openclaw-repository-host git infrastructure-docs ls-remote git@github.com:joshan-kana/infrastructure-docs.git HEAD
+sudo docker exec openclaw openclaw-repository gh api user --jq .login
+sudo docker exec openclaw openclaw-repository git files status --short --branch
+sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
 ```
 
 Expected healthy state:
@@ -222,7 +157,7 @@ custom OpenAI-compatible provider:
 | `openrouter-deepseek`  | non-ZDR    | DeepSeek V4 Flash, DeepSeek V4 Pro               |
 | `openrouter-free`      | FREE       | Free models (non-sensitive prompts only)         |
 
-The default model is `openrouter-zdr/minimax/minimax-m3`.
+OpenClaw agents default to `openrouter-deepseek/deepseek/deepseek-v4-flash`.
 
 All three lanes are independent. Each key has a guardrail enforced by OpenRouter
 (server-side), and the keys are independently scoped — they cannot overwrite
@@ -242,8 +177,8 @@ environment-backed SecretRef in `openclaw.json`.
 
 ### Privacy Boundaries
 
-- ZDR is the default lane for all agents.
-- DeepSeek is an explicit non-ZDR lane.
+- DeepSeek V4 Flash is the default non-ZDR lane for all agents.
+- ZDR is an explicit alternative lane.
 - Free is an explicit non-sensitive lane.
 - There is **no automatic fallback** between any of the three OpenRouter lanes.
   The default fallback list is empty.
@@ -294,42 +229,12 @@ explicit legacy/credit-balance options alongside the three OpenRouter lanes.
 
 ## Rollback
 
-Repository and host access have four independent rollback controls.
+| Access | Disable |
+| --- | --- |
+| GitHub API | Move or remove `/root/secrets/openclaw-github.env`. |
+| Git over SSH | Revoke `OpenClaw nixos-server Git`, then move or remove the dedicated keypair. |
+| Host administration | Remove or restrict the host-admin key or `openclaw-admin` sudo access. |
+| Complete deployment | Run `sudo nixos-rebuild switch --rollback` or boot the previous generation. |
 
-### Disable GitHub API access
-
-Move or remove `/root/secrets/openclaw-github.env`. Authenticated `gh`
-operations then fail closed. Git-over-SSH remains available.
-
-### Disable OpenClaw Git transport
-
-Revoke the account authentication key titled `OpenClaw nixos-server Git`, then
-move or remove:
-
-```text
-/root/secrets/openclaw-github-id_ed25519
-/root/secrets/openclaw-github-id_ed25519.pub
-```
-
-This disables the wrapper's Git transport without affecting Joshan's original
-personal key.
-
-### Emergency return to the previous Git key
-
-Temporarily restore this setting in `hosts/nixos-server/apps.nix`, then rebuild:
-
-```nix
-privateKeyPath = "${secretsDir}/id_ed25519";
-```
-
-This reuses the broader personal credential and is only an emergency fallback.
-
-### Disable host administration
-
-Separately remove or restrict the mounted host-admin private key, the loopback
-authorized key, or the `openclaw-admin` sudo rule. This changes the intended
-OpenClaw operating model and is not part of normal repository-access rollback.
-
-To roll back the complete NixOS deployment, run
-`sudo nixos-rebuild switch --rollback` or boot the previous generation. Existing
-OpenClaw app/auth data and both repository checkouts are retained.
+Repository-access rollback does not modify Joshan's existing
+`/root/secrets/id_ed25519` key.
