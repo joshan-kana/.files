@@ -41,6 +41,19 @@ sudo docker exec openclaw openclaw-repository git files status --short --branch
 sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
 ```
 
+## Repository-access rollback
+
+- GitHub API: move or remove `/root/secrets/openclaw-github.env`.
+- Git over SSH: revoke `OpenClaw nixos-server Git`, then move or remove its
+  dedicated keypair.
+- Host administration: remove or restrict the host-admin key or
+  `openclaw-admin` sudo access.
+- Complete deployment: run `sudo nixos-rebuild switch --rollback` or boot the
+  previous generation.
+
+This rollback does not modify Joshan's existing
+`/root/secrets/id_ed25519` key.
+
 ## Ollama Proxy
 
 OpenClaw should always talk to Ollama through the local server endpoint:
