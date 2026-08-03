@@ -13,6 +13,47 @@ The OpenClaw container is configured from
 `/var/lib/apps/openclaw/openclaw.json` on the host and mounted into the
 container.
 
+## Host and repository access
+
+The Docker Gateway reaches the host through `openclaw-host`, which connects over
+loopback SSH as `openclaw-admin`. Repository operations use
+`openclaw-repository`, which reuses that transport and runs Git and GitHub CLI as
+`joshan`.
+
+```sh
+openclaw-repository git files <git arguments...>
+openclaw-repository git infrastructure-docs <git arguments...>
+openclaw-repository gh <gh arguments...>
+```
+
+Git uses `/root/secrets/openclaw-github-id_ed25519`; GitHub API operations use
+`/root/secrets/openclaw-github.env` and appear as `joshan-kana`.
+
+OpenClaw is intentionally host-root-equivalent. These wrappers preserve checkout
+ownership and provide a consistent interface; they are not security boundaries
+against OpenClaw.
+
+## Repository verification
+
+```sh
+sudo docker exec openclaw openclaw-repository gh api user --jq .login
+sudo docker exec openclaw openclaw-repository git files status --short --branch
+sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
+```
+
+## Repository-access rollback
+
+- GitHub API: move or remove `/root/secrets/openclaw-github.env`.
+- Git over SSH: revoke `OpenClaw nixos-server Git`, then move or remove its
+  dedicated keypair.
+- Host administration: remove or restrict the host-admin key or
+  `openclaw-admin` sudo access.
+- Complete deployment: run `sudo nixos-rebuild switch --rollback` or boot the
+  previous generation.
+
+This rollback does not modify Joshan's existing
+`/root/secrets/id_ed25519` key.
+
 ## Ollama Proxy
 
 OpenClaw should always talk to Ollama through the local server endpoint:
