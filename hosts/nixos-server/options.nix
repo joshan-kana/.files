@@ -2,6 +2,19 @@
 
 let
   inherit (lib) mkOption types;
+  containerSourceType = types.submodule {
+    options = {
+      repository = mkOption {
+        type = types.str;
+        description = "Container image repository (without tag or digest).";
+      };
+
+      tag = mkOption {
+        type = types.str;
+        description = "Upstream tag/channel this container tracks, e.g. stable or latest.";
+      };
+    };
+  };
 in
 {
   options.dotfiles.server = {
@@ -9,6 +22,15 @@ in
       type = types.str;
       default = "/root/secrets";
       description = "Root directory for server secret files.";
+    };
+
+    # Declared beside each container definition in apps.nix. This is the single
+    # human-maintained statement of the upstream repository:tag a container
+    # follows. The generated immutable digest lives in container-images.lock.
+    containerImageSources = mkOption {
+      type = types.attrsOf containerSourceType;
+      default = { };
+      description = "Upstream repository and tracked tag for each server container.";
     };
 
     storage = {
@@ -141,23 +163,6 @@ in
           default = "192.168.1.5";
           description = "Host-side macvlan shim address used while the LAN DNS service runs in Docker.";
         };
-      };
-    };
-
-    containers = {
-      pullPolicy = mkOption {
-        type = types.str;
-        default = "always";
-        description = "Default pull policy for server OCI containers.";
-      };
-
-      restartTrigger = mkOption {
-        type = types.path;
-        default = builtins.path {
-          path = ../../flake.lock;
-          name = "nixos-server-flake-lock";
-        };
-        description = "Path used to restart server containers when container inputs change.";
       };
     };
   };

@@ -1,0 +1,18 @@
+{
+  "home-assistant": {
+    "source": "ghcr.io/home-assistant/home-assistant:stable",
+    "digest": "sha256:ebf493bf78f416cf5ab5686935630db49aeade2567e5165e1bbfcaf78faec718"
+  },
+  "matter-server": {
+    "source": "ghcr.io/home-assistant-libs/python-matter-server:stable",
+    "digest": "sha256:0260bc346afb2873829c386d36a93b1975a25e1594e30d990431592a1f6d99de"
+  },
+  "n8n": {
+    "source": "docker.n8n.io/n8nio/n8n:latest",
+    "digest": "sha256:60dac72c8a23a3ad0921fb9e8e4cd8a67981b4377ea2caca7c672bed6c0c6886"
+  },
+  "openclaw": {
+    "source": "ghcr.io/openclaw/openclaw:latest",
+    "digest": "sha256:165b4992f1b4b74ffdd7a02c887ba006f9f5dc951eca420eef573a8b233b543f"
+  }
+}

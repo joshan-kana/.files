@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -8,8 +9,26 @@ let
   primaryUser = config.dotfiles.users.primary.name;
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) secretsDir;
-  containerCfg = serverCfg.containers;
   appDataRoot = serverCfg.storage.appData.root;
+
+  # Generated immutable digests refreshed by `scripts/update-container-images`.
+  containerLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
+
+  # Build the runtime image reference for a container from its declared source
+  # (repository:tag, set inline next to the container definition) and the locked
+  # digest. `repository:tag@sha256:<digest>` is immutable: the digest controls
+  # the actual image while the tag documents which channel `sysfu` follows.
+  lockedImage =
+    name: source:
+    let
+      lock = containerLocks.${name};
+    in
+    assert lib.assertMsg (lock.source == source)
+      "container-images.lock source for '${name}' (${lock.source}) does not match the declared container source (${source}); refresh with scripts/update-container-images";
+    assert lib.assertMsg (
+      builtins.match "sha256:[0-9a-f]{64}" lock.digest != null
+    ) "container-images.lock digest for '${name}' is malformed";
+    "${source}@${lock.digest}";
 
   appDataEditor = {
     group = serverCfg.storage.appData.group.name;
@@ -264,11 +283,11 @@ in
           proxy_set_header X-Forwarded-Host $host;
           proxy_set_header X-Forwarded-User ${primaryUser};
 
-          # OpenClaw 2026.7.1 ships script-src 'self' only, which blocks the
-          # Vite/rolldown bundle's runtime eval()-based dynamic imports and
-          # prevents <openclaw-app> from registering ("Control UI did not
-          # start" modal). Re-emit the upstream CSP with 'unsafe-eval' added
-          # to script-src; all other directives are preserved verbatim.
+          # OpenClaw ships script-src 'self' only, which blocks the Vite/rolldown
+          # bundle's runtime eval()-based dynamic imports and prevents
+          # <openclaw-app> from registering ("Control UI did not start" modal).
+          # Re-emit the upstream CSP with 'unsafe-eval' added to script-src; all
+          # other directives are preserved verbatim.
           proxy_hide_header Content-Security-Policy;
           add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; worker-src 'self'; connect-src 'self' ws: wss: https://api.openai.com https://tweakcn.com" always;
         '';
@@ -285,10 +304,7 @@ in
       "bluetooth.service"
       "dbus.service"
     ];
-    restartTriggers = [ containerCfg.restartTrigger ];
   };
-  systemd.services.docker-matter-server.restartTriggers = [ containerCfg.restartTrigger ];
-  systemd.services.docker-n8n.restartTriggers = [ containerCfg.restartTrigger ];
   systemd.services.configure-openclaw-gateway = {
     description = "Modify OpenClaw mutable gateway config for trusted-proxy access";
     before = [ "docker-openclaw.service" ];
@@ -643,7 +659,6 @@ in
       "${secretsDir}/server-free-openrouter.env"
       "${secretsDir}/server-openai-openrouter.env"
     ];
-    restartTriggers = [ containerCfg.restartTrigger ];
     after = [
       "configure-openclaw-gateway.service"
       "nginx.service"
@@ -751,77 +766,118 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
-  # Floating container tags are refreshed as part of the normal flake update
-  # workflow: `nix flake update`, then `nixos-rebuild switch`.
+  # Container images are pinned by digest via container-images.lock. Runtime uses
+  # `repository:tag@sha256:digest` (immutable) with `pull = "missing"`; the lock is
+  # refreshed by `scripts/update-container-images` as part of the server update flow.
+  # Each container's tracked upstream tag/channel is declared inline here and also
+  # exposed through dotfiles.server.containerImageSources for the updater script.
   virtualisation.oci-containers.containers = {
+    home-assistant =
+      let
+        source = "ghcr.io/home-assistant/home-assistant:stable";
+      in
+      {
+        image = lockedImage "home-assistant" source;
+        pull = "missing";
+        volumes = [
+          "${appDataRoot}/home-assistant:/config"
+          "/run/dbus:/run/dbus:ro"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+
+    matter-server =
+      let
+        source = "ghcr.io/home-assistant-libs/python-matter-server:stable";
+      in
+      {
+        image = lockedImage "matter-server" source;
+        pull = "missing";
+        volumes = [ "${appDataRoot}/matter-server:/data" ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+
+    n8n =
+      let
+        source = "docker.n8n.io/n8nio/n8n:latest";
+      in
+      {
+        image = lockedImage "n8n" source;
+        pull = "missing";
+        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
+        ports = [ "5678:5678" ];
+        environment = {
+          GENERIC_TIMEZONE = config.time.timeZone;
+        };
+        environmentFiles = [ "${secretsDir}/n8n.env" ];
+      };
+
+    openclaw =
+      let
+        source = "ghcr.io/openclaw/openclaw:latest";
+      in
+      {
+        image = lockedImage "openclaw" source;
+        pull = "missing";
+        volumes = [
+          "${appDataRoot}/openclaw:/home/node/.openclaw"
+          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
+          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
+          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
+          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
+          "/:/host"
+          "/nix/store:/nix/store:ro"
+        ];
+        environment = {
+          OPENCLAW_DISABLE_BONJOUR = "1";
+          OLLAMA_API_KEY = "ollama-local";
+          NODE_OPTIONS = "--dns-result-order=ipv4first";
+          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
+        };
+        environmentFiles = [
+          "${secretsDir}/openclaw.env"
+          "${secretsDir}/server-ai.env"
+          "${secretsDir}/server-zdr-openrouter.env"
+          "${secretsDir}/server-deepseek-openrouter.env"
+          "${secretsDir}/server-free-openrouter.env"
+          "${secretsDir}/server-openai-openrouter.env"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--group-add=${toString appDataEditor.gid}"
+          "--add-host=host.docker.internal:host-gateway"
+        ];
+      };
+  };
+
+  dotfiles.server.containerImageSources = {
     home-assistant = {
-      image = "ghcr.io/home-assistant/home-assistant:stable";
-      pull = containerCfg.pullPolicy;
-      volumes = [
-        "${appDataRoot}/home-assistant:/config"
-        "/run/dbus:/run/dbus:ro"
-      ];
-      extraOptions = [
-        "--network=host"
-        "--cap-add=NET_ADMIN"
-        "--cap-add=NET_RAW"
-      ];
+      repository = "ghcr.io/home-assistant/home-assistant";
+      tag = "stable";
     };
 
     matter-server = {
-      image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
-      pull = containerCfg.pullPolicy;
-      volumes = [ "${appDataRoot}/matter-server:/data" ];
-      extraOptions = [
-        "--network=host"
-        "--cap-add=NET_ADMIN"
-        "--cap-add=NET_RAW"
-      ];
+      repository = "ghcr.io/home-assistant-libs/python-matter-server";
+      tag = "stable";
     };
 
     n8n = {
-      image = "docker.n8n.io/n8nio/n8n:latest";
-      pull = containerCfg.pullPolicy;
-      volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
-      ports = [ "5678:5678" ];
-      environment = {
-        GENERIC_TIMEZONE = config.time.timeZone;
-      };
-      environmentFiles = [ "${secretsDir}/n8n.env" ];
+      repository = "docker.n8n.io/n8nio/n8n";
+      tag = "latest";
     };
 
     openclaw = {
-      image = "ghcr.io/openclaw/openclaw:2026.7.1";
-      pull = containerCfg.pullPolicy;
-      volumes = [
-        "${appDataRoot}/openclaw:/home/node/.openclaw"
-        "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
-        "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
-        "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
-        "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
-        "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
-        "/:/host"
-        "/nix/store:/nix/store:ro"
-      ];
-      environment = {
-        OPENCLAW_DISABLE_BONJOUR = "1";
-        OLLAMA_API_KEY = "ollama-local";
-        NODE_OPTIONS = "--dns-result-order=ipv4first";
-        OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
-      };
-      environmentFiles = [
-        "${secretsDir}/openclaw.env"
-        "${secretsDir}/server-ai.env"
-        "${secretsDir}/server-zdr-openrouter.env"
-        "${secretsDir}/server-deepseek-openrouter.env"
-        "${secretsDir}/server-free-openrouter.env"
-        "${secretsDir}/server-openai-openrouter.env"
-      ];
-      extraOptions = [
-        "--network=host"
-        "--group-add=${toString appDataEditor.gid}"
-        "--add-host=host.docker.internal:host-gateway"
-      ];
+      repository = "ghcr.io/openclaw/openclaw";
+      tag = "latest";
     };
   };
 
