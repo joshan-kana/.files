@@ -454,6 +454,59 @@ in
                 }
               ]
           )
+        | .models.providers."openrouter-openai" = (
+            (.models.providers."openrouter-openai" // {})
+            | .baseUrl = "https://openrouter.ai/api/v1"
+            | .api = "openai-completions"
+            | .apiKey = {
+                "source": "env",
+                "provider": "default",
+                "id": "OPENROUTER_OPENAI_API_KEY"
+              }
+            | .timeoutSeconds = 300
+            | .models = [
+                {
+                  "id": "openai/gpt-5.5",
+                  "name": "GPT-5.5 — OpenRouter OpenAI",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                },
+                {
+                  "id": "openai/gpt-5.6-luna",
+                  "name": "GPT-5.6 Luna — OpenRouter OpenAI",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                },
+                {
+                  "id": "openai/gpt-5.6-luna-pro",
+                  "name": "GPT-5.6 Luna Pro — OpenRouter OpenAI",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                },
+                {
+                  "id": "openai/gpt-5.6-sol",
+                  "name": "GPT-5.6 Sol — OpenRouter OpenAI",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                },
+                {
+                  "id": "openai/gpt-5.6-sol-pro",
+                  "name": "GPT-5.6 Sol Pro — OpenRouter OpenAI",
+                  "reasoning": true,
+                  "input": ["text", "image"],
+                  "contextWindow": 1048576,
+                  "maxTokens": 131072
+                }
+              ]
+          )
         | .agents = (.agents // {})
         | .agents.defaults = (.agents.defaults // {})
         | .agents.defaults.model = (
@@ -584,6 +637,7 @@ in
       "${secretsDir}/server-zdr-openrouter.env"
       "${secretsDir}/server-deepseek-openrouter.env"
       "${secretsDir}/server-free-openrouter.env"
+      "${secretsDir}/server-openai-openrouter.env"
     ];
     restartTriggers = [ containerCfg.restartTrigger ];
     after = [
@@ -757,6 +811,7 @@ in
         "${secretsDir}/server-zdr-openrouter.env"
         "${secretsDir}/server-deepseek-openrouter.env"
         "${secretsDir}/server-free-openrouter.env"
+        "${secretsDir}/server-openai-openrouter.env"
       ];
       extraOptions = [
         "--network=host"
