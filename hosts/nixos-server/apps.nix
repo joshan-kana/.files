@@ -384,8 +384,8 @@ in
             | .timeoutSeconds = 300
             | .models = [
                 {
-                  "id": "deepseek/deepseek-v4-flash",
-                  "name": "DeepSeek V4 Flash — OpenRouter non-ZDR",
+                  "id": "deepseek/deepseek-v4-flash-latest",
+                  "name": "DeepSeek V4 Flash (latest) — OpenRouter non-ZDR",
                   "reasoning": true,
                   "input": ["text"],
                   "contextWindow": 1048576,
@@ -480,8 +480,8 @@ in
               "openrouter-zdr/z-ai/glm-5.2": {
                 "alias": "OR ZDR GLM 5.2"
               },
-              "openrouter-deepseek/deepseek/deepseek-v4-flash": {
-                "alias": "OR DeepSeek V4 Flash (non-ZDR)"
+              "openrouter-deepseek/deepseek/deepseek-v4-flash-latest": {
+                "alias": "OR DeepSeek V4 Flash (latest, non-ZDR)"
               },
               "openrouter-deepseek/deepseek/deepseek-v4-pro": {
                 "alias": "OR DeepSeek V4 Pro (non-ZDR)"
