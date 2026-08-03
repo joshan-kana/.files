@@ -34,7 +34,7 @@ let
 
   openclawGitHub = {
     apiEnvPath = "${secretsDir}/openclaw-github.env";
-    privateKeyPath = "${secretsDir}/id_ed25519";
+    privateKeyPath = "${secretsDir}/openclaw-github-id_ed25519";
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
@@ -72,15 +72,26 @@ let
             exit 1
           fi
 
-          set -a
+          unset GH_TOKEN
           # shellcheck disable=SC1091
           source ${openclawGitHub.apiEnvPath}
-          set +a
           : "''${GH_TOKEN:?${openclawGitHub.apiEnvPath} must define GH_TOKEN}"
 
-          export GH_CONFIG_DIR=/run/openclaw-github-cli
-          install -d -m 0700 "$GH_CONFIG_DIR"
-          exec gh "$@"
+          ghConfigDir=/run/openclaw-github-cli
+          install -d \
+            -m 0700 \
+            -o ${primaryUser} \
+            -g users \
+            "$ghConfigDir"
+
+          exec runuser -u ${primaryUser} -- env -i \
+            HOME=/home/${primaryUser} \
+            USER=${primaryUser} \
+            LOGNAME=${primaryUser} \
+            PATH="$PATH" \
+            GH_TOKEN="$GH_TOKEN" \
+            GH_CONFIG_DIR="$ghConfigDir" \
+            gh "$@"
           ;;
         git)
           repository="''${1:-}"
@@ -104,12 +115,19 @@ let
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
           chmod 0711 "$agentDir"
           eval "$(ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
-          ssh-add ${openclawGitHub.privateKeyPath} >/dev/null
+          if ! ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1; then
+            echo "Failed to load the OpenClaw GitHub SSH key" >&2
+            exit 1
+          fi
           chown ${primaryUser} "$SSH_AUTH_SOCK"
           chmod 0600 "$SSH_AUTH_SOCK"
 
           gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
-          runuser -u ${primaryUser} -- env \
+          runuser -u ${primaryUser} -- env -i \
+            HOME=/home/${primaryUser} \
+            USER=${primaryUser} \
+            LOGNAME=${primaryUser} \
+            PATH="$PATH" \
             GIT_SSH_COMMAND="$gitSshCommand" \
             SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
             GIT_TERMINAL_PROMPT=0 \
@@ -127,15 +145,12 @@ let
     name = "openclaw-repository";
     runtimeInputs = with pkgs; [ bash ];
     text = ''
-      : "''${OPENCLAW_HOST_ADMIN_SSH:?OPENCLAW_HOST_ADMIN_SSH is not set}"
-      read -r -a hostSsh <<< "$OPENCLAW_HOST_ADMIN_SSH"
-
       remoteCommand="sudo ${openclawRepositoryHost}/bin/openclaw-repository-host"
       for argument in "$@"; do
         remoteCommand+=" $(printf '%q' "$argument")"
       done
 
-      exec "''${hostSsh[@]}" "$remoteCommand"
+      exec ${openclawHostCommand}/bin/openclaw-host "$remoteCommand"
     '';
   };
 
@@ -154,27 +169,36 @@ let
     headless node and never persist a node ID. Run Mac repository commands in
     `/Users/joshan/.files` with `exec host=node node=<selected-id>`.
 
-    When no suitable Mac node is connected, use Gateway exec and the existing
-    server checkout. Run Git as its owner through:
+    When a suitable connected macOS node is unavailable, use the existing Docker
+    Gateway host bridge.
+
+    Use `openclaw-repository` for repository and GitHub work:
 
     ```sh
     openclaw-repository git files <git arguments...>
     openclaw-repository git infrastructure-docs <git arguments...>
-    ```
-
-    Run GitHub API operations through the root-only runtime-token wrapper:
-
-    ```sh
     openclaw-repository gh <gh arguments...>
     ```
 
+    The command reuses `openclaw-host` for the loopback SSH transport. The
+    host-side wrapper loads root-owned credentials only as needed and runs both
+    Git and `gh` as `joshan`. Git uses the dedicated OpenClaw GitHub SSH key.
+    GitHub API activity uses Joshan's token and therefore appears on GitHub as
+    `joshan-kana`.
+
+    OpenClaw is intentionally host-root-equivalent. These wrappers preserve
+    ownership and provide a consistent operational path; they are not security
+    boundaries against OpenClaw.
+
     The two existing checkouts are `/Users/joshan/.files` on the Mac and
     `/home/joshan/.files` on the server (`/host/home/joshan/.files` from the
-    container). Use only one checkout per task. Do not create another clone,
-    expose credentials, disable SSH host verification, or change the server
-    checkout branch merely to deploy another revision. Inspect status first,
-    preserve unrelated work, use a feature branch for writes, and ask before
-    deployment or destructive operations.
+    container). Use only one checkout per task. Never display tokens, private
+    keys, secret-file contents, or complete process environments. Do not create
+    another clone, disable SSH host verification, or change the server checkout
+    branch merely to deploy another revision. Inspect status first, preserve
+    unrelated work, use a feature branch for writes, never point `.files` at an
+    unpushed submodule commit, and ask before deployment or destructive
+    operations.
   '';
 
 in
