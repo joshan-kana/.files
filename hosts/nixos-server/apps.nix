@@ -159,6 +159,10 @@ let
 
 in
 {
+  imports = [
+    ./planning-hubs
+  ];
+
   users.users.${primaryUser}.extraGroups = [ "docker" ];
 
   users.users.${openclawHostAdmin.user} = {
