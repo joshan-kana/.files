@@ -108,12 +108,6 @@ sudo docker exec openclaw openclaw models list --provider ollama
 sudo docker exec openclaw openclaw config get tools.exec
 sudo docker exec openclaw openclaw nodes status --json
 gh --version
-sudo /run/current-system/sw/bin/openclaw-repository-host gh auth status --hostname github.com
-sudo /run/current-system/sw/bin/openclaw-repository-host gh issue list --repo joshan-kana/.files --limit 5
-sudo /run/current-system/sw/bin/openclaw-repository-host gh pr list --repo joshan-kana/.files --limit 5
-sudo /run/current-system/sw/bin/openclaw-repository-host gh repo view joshan-kana/infrastructure-docs
-sudo /run/current-system/sw/bin/openclaw-repository-host git files ls-remote git@github.com:joshan-kana/.files.git HEAD
-sudo /run/current-system/sw/bin/openclaw-repository-host git infrastructure-docs ls-remote git@github.com:joshan-kana/infrastructure-docs.git HEAD
 sudo docker exec openclaw openclaw-repository gh api user --jq .login
 sudo docker exec openclaw openclaw-repository git files status --short --branch
 sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
@@ -157,7 +151,7 @@ custom OpenAI-compatible provider:
 | `openrouter-deepseek`  | non-ZDR    | DeepSeek V4 Flash, DeepSeek V4 Pro               |
 | `openrouter-free`      | FREE       | Free models (non-sensitive prompts only)         |
 
-OpenClaw agents default to `openrouter-deepseek/deepseek/deepseek-v4-flash`.
+MiniMax M3 on `openrouter-zdr` is the default model.
 
 All three lanes are independent. Each key has a guardrail enforced by OpenRouter
 (server-side), and the keys are independently scoped — they cannot overwrite
@@ -177,8 +171,8 @@ environment-backed SecretRef in `openclaw.json`.
 
 ### Privacy Boundaries
 
-- DeepSeek V4 Flash is the default non-ZDR lane for all agents.
-- ZDR is an explicit alternative lane.
+- ZDR is the default privacy lane.
+- DeepSeek is an explicit non-ZDR alternative.
 - Free is an explicit non-sensitive lane.
 - There is **no automatic fallback** between any of the three OpenRouter lanes.
   The default fallback list is empty.

@@ -478,12 +478,12 @@ in
         | .agents.defaults.model = (
             if ((.agents.defaults.model // null) | type) == "object" then
               (.agents.defaults.model + {
-                "primary": "openrouter-deepseek/deepseek/deepseek-v4-flash",
+                "primary": "openrouter-zdr/minimax/minimax-m3",
                 "fallbacks": []
               })
             else
               {
-                "primary": "openrouter-deepseek/deepseek/deepseek-v4-flash",
+                "primary": "openrouter-zdr/minimax/minimax-m3",
                 "fallbacks": []
               }
             end
