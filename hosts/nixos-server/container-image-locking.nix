@@ -6,26 +6,27 @@
 
 let
   inherit (lib)
-    filterAttrs
-    mapAttrs
     assertMsg
-    concatStringsSep
     attrNames
+    concatStringsSep
+    filterAttrs
     hasInfix
     hasSuffix
+    mapAttrs
     ;
 
-  locks = builtins.fromJSON (builtins.readFile ./container-images.lock);
+  parsedLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
 
-  # Placeholder used when a container's lock is missing, stale, or malformed. The
-  # updater discovers the new source through this placeholder; a NixOS assertion
-  # below prevents building or deploying with it.
+  # A non-object JSON root is treated as an empty lock so individual container
+  # images remain discoverable through placeholders. Invalid JSON syntax may
+  # still fail parsing, which is appropriate.
+  locks = if builtins.isAttrs parsedLocks then parsedLocks else { };
+
   placeholderDigest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
-  validDigest = digest: builtins.match "sha256:[0-9a-f]{64}" digest != null;
+  validDigest =
+    digest: builtins.isString digest && builtins.match "sha256:[0-9a-f]{64}" digest != null;
 
-  # Transform one registry-backed container's image from `repository:tag` to
-  # `repository:tag@sha256:<digest>`. Locally built/streamed images are untouched.
   pinContainer =
     name: container:
     if container.imageFile != null || container.imageStream != null then
@@ -35,12 +36,18 @@ let
         source = container.image;
         lock = locks.${name} or null;
 
-        lockIsCurrent = lock != null && lock.source == source && validDigest lock.digest;
+        lockIsCurrent =
+          builtins.isAttrs lock
+          && lock ? source
+          && builtins.isString lock.source
+          && lock.source == source
+          && lock ? digest
+          && validDigest lock.digest;
 
         digest = if lockIsCurrent then lock.digest else placeholderDigest;
       in
-      assert assertMsg (!hasInfix "@" source)
-        "Container '${name}' must declare an unpinned repository:tag source; its digest is managed by container-images.lock";
+      assert assertMsg (source != "" && !hasInfix "@" source)
+        "Container '${name}' must declare a non-empty repository:tag source without a digest; its digest is managed by container-images.lock";
       container
       // {
         image = "${source}@${digest}";
@@ -55,12 +62,8 @@ let
   ) registryContainers;
 in
 {
-  # Add only an `apply` transformation to the upstream OCI-container option, so it
-  # runs after every container definition across the whole module graph has merged.
-  # This relies on the upstream option not already defining its own `apply`. If
-  # Nixpkgs later adds one to the same option, module evaluation should fail
-  # clearly rather than silently conflict; `nix flake check` and server evaluation
-  # must catch that during a reviewed Nixpkgs update.
+  # Add only `apply` to the upstream OCI-container option. A future upstream
+  # `apply` on this option should cause a clear module evaluation conflict.
   options.virtualisation.oci-containers.containers = lib.mkOption {
     apply = mapAttrs pinContainer;
   };
@@ -68,6 +71,7 @@ in
   config.assertions = [
     {
       assertion = invalidContainers == { };
+
       message = ''
         Container image locks are missing, stale, or malformed:
 
