@@ -14,10 +14,18 @@ repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
 LOCK_FILE=hosts/nixos-server/container-images.lock
+backup=$(mktemp)
 mock_dir=$(mktemp -d)
-trap 'rm -rf "$mock_dir"' EXIT
 
-backup="$mock_dir/lock.bak"
+cleanup() {
+  # Restore the lock before removing the mock dir / backup, so an interrupted
+  # run never leaves the lock in a mutated state.
+  cp "$backup" "$LOCK_FILE" 2>/dev/null || true
+  rm -rf "$mock_dir"
+  rm -f "$backup"
+}
+trap cleanup EXIT INT TERM
+
 cp "$LOCK_FILE" "$backup"
 
 # Mock skopeo: always reports an amd64-only image index (no linux/arm64).
@@ -51,14 +59,10 @@ chmod +x "$mock_dir/skopeo"
 # Ensure the mock skopeo is preferred over any real skopeo on PATH.
 export PATH="$mock_dir:$PATH"
 
-before=$(cksum "$LOCK_FILE" | awk '{print $1}')
-
 set +e
 out=$(./scripts/update-container-images 2>&1)
 rc=$?
 set -e
-
-after=$(cksum "$LOCK_FILE" | awk '{print $1}')
 
 fail=0
 
@@ -72,13 +76,10 @@ if ! grep -q "linux/arm64" <<<"$out"; then
   echo "$out" >&2
   fail=1
 fi
-if [[ "$before" != "$after" ]]; then
+if ! cmp -s "$LOCK_FILE" "$backup"; then
   echo "FAIL: lock file changed on a failed (no-ARM64) resolution" >&2
   fail=1
 fi
-
-# Restore the lock regardless of outcome.
-cp "$backup" "$LOCK_FILE"
 
 if [[ $fail -eq 0 ]]; then
   echo "PASS: missing-ARM64 index fails cleanly and leaves the lock unchanged"

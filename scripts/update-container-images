@@ -290,12 +290,25 @@ if [[ "${#selected_names[@]}" -eq 0 ]]; then
   if [[ -n "$stale" ]]; then
     die "unexpected stale lock key(s) after full refresh: $(printf '%s' "$stale" | tr '\n' ' ')"
   fi
+else
+  # A selected refresh preserves unselected entries. If the lock holds an entry
+  # for a container that is no longer configured, fail clearly and direct the
+  # user to a full refresh rather than leaving ambiguous stale data.
+  stale_preserved=$(
+    printf '%s' "$new_lock_json" | jq -r --argjson src "$sources_json" '
+      keys[] as $k | select(($src | has($k)) | not) | $k
+    '
+  )
+  if [[ -n "$stale_preserved" ]]; then
+    die "stale lock entries exist (not in containerDefinitions): $(printf '%s' "$stale_preserved" | tr '\n' ' '); run a full container refresh (sysfu server --containers-only)"
+  fi
 fi
 
 # Confirm every lock entry's recorded source matches the configured source.
 source_mismatch=$(
   printf '%s' "$new_lock_json" | jq -r --argjson src "$sources_json" '
     to_entries[] as $e
+    | select($src | has($e.key))
     | ($src[$e.key].repository + ":" + $src[$e.key].tag) as $expected
     | select($e.value.source != $expected)
     | $e.key + " (" + $e.value.source + " != " + $expected + ")"

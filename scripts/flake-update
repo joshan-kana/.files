@@ -491,6 +491,10 @@ fi
 if [[ "${#container_select[@]}" -gt 0 && "$no_containers" == true ]]; then
   die "--container cannot be combined with --no-containers"
 fi
+if [[ "$containers_only" == true ]] \
+  && { [[ "${#inputs[@]}" -gt 0 ]] || [[ "${#input_refs[@]}" -gt 0 ]]; }; then
+  die "--containers-only cannot be combined with flake inputs or input refs"
+fi
 
 if [[ "$undo_lock" == true ]]; then
   if confirm "Restore flake.lock from ${MAIN_BRANCH}?"; then
