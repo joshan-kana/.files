@@ -11,6 +11,9 @@ let
   inherit (serverCfg) secretsDir;
   appDataRoot = serverCfg.storage.appData.root;
 
+  # Merged declarative container definitions from dotfiles.server.containerDefinitions.
+  containerDefinitions = serverCfg.containerDefinitions;
+
   # Generated immutable digests refreshed by `scripts/update-container-images`.
   containerLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
 
@@ -21,7 +24,7 @@ let
   lockedImage =
     name:
     let
-      source = containerSources.${name};
+      source = containerDefinitions.${name};
       lock = containerLocks.${name};
       expectedSource = "${source.repository}:${source.tag}";
     in
@@ -31,96 +34,6 @@ let
       builtins.match "sha256:[0-9a-f]{64}" lock.digest != null
     ) "container-images.lock digest for '${name}' is malformed";
     "${source.repository}@${lock.digest}";
-
-  # Single human-maintained declaration per container: the upstream repository,
-  # the tracked tag/channel, and the container's own configuration (volumes,
-  # environment, ports, etc.). Both the runtime container definition and the
-  # `dotfiles.server.containerImageSources` metadata consumed by the updater are
-  # derived from this, so the source is never declared twice.
-  containerDefinitions = {
-    home-assistant = {
-      repository = "ghcr.io/home-assistant/home-assistant";
-      tag = "stable";
-      container = {
-        volumes = [
-          "${appDataRoot}/home-assistant:/config"
-          "/run/dbus:/run/dbus:ro"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
-    };
-
-    matter-server = {
-      repository = "ghcr.io/home-assistant-libs/python-matter-server";
-      tag = "stable";
-      container = {
-        volumes = [ "${appDataRoot}/matter-server:/data" ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
-    };
-
-    n8n = {
-      repository = "docker.n8n.io/n8nio/n8n";
-      tag = "latest";
-      container = {
-        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
-        ports = [ "5678:5678" ];
-        environment = {
-          GENERIC_TIMEZONE = config.time.timeZone;
-        };
-        environmentFiles = [ "${secretsDir}/n8n.env" ];
-      };
-    };
-
-    openclaw = {
-      repository = "ghcr.io/openclaw/openclaw";
-      tag = "latest";
-      container = {
-        volumes = [
-          "${appDataRoot}/openclaw:/home/node/.openclaw"
-          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
-          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
-          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
-          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
-          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
-          "/:/host"
-          "/nix/store:/nix/store:ro"
-        ];
-        environment = {
-          OPENCLAW_DISABLE_BONJOUR = "1";
-          OLLAMA_API_KEY = "ollama-local";
-          NODE_OPTIONS = "--dns-result-order=ipv4first";
-          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
-        };
-        environmentFiles = [
-          "${secretsDir}/openclaw.env"
-          "${secretsDir}/server-ai.env"
-          "${secretsDir}/server-zdr-openrouter.env"
-          "${secretsDir}/server-deepseek-openrouter.env"
-          "${secretsDir}/server-free-openrouter.env"
-          "${secretsDir}/server-openai-openrouter.env"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--group-add=${toString appDataEditor.gid}"
-          "--add-host=host.docker.internal:host-gateway"
-        ];
-      };
-    };
-  };
-
-  # Derived metadata exposed to the updater: repository + tracked tag per container.
-  containerSources = lib.mapAttrs (name: def: {
-    inherit (def) repository tag;
-  }) containerDefinitions;
 
   appDataEditor = {
     group = serverCfg.storage.appData.group.name;
@@ -861,25 +774,101 @@ in
   # Container images are pinned by digest via container-images.lock. Runtime uses
   # the immutable `repository@sha256:digest` form with `pull = "missing"`; the lock
   # is refreshed by `scripts/update-container-images` as part of the server update
-  # flow. Each container's tracked upstream tag/channel is declared once in
-  # `containerDefinitions` above; both the runtime definition and the updater
-  # metadata are derived from it.
+  # flow. Each container's tracked upstream tag/channel and full OCI configuration
+  # is declared once in `dotfiles.server.containerDefinitions` below; both the
+  # runtime definition and the updater metadata are derived from it.
   virtualisation.oci-containers.containers = lib.mapAttrs (
     name: def:
-    {
+    def.container
+    // {
       image = lockedImage name;
       pull = "missing";
-      inherit (def.container) volumes;
     }
-    // (lib.optionalAttrs (def.container ? ports) { ports = def.container.ports; })
-    // (lib.optionalAttrs (def.container ? environment) { environment = def.container.environment; })
-    // (lib.optionalAttrs (def.container ? environmentFiles) {
-      environmentFiles = def.container.environmentFiles;
-    })
-    // (lib.optionalAttrs (def.container ? extraOptions) { extraOptions = def.container.extraOptions; })
   ) containerDefinitions;
 
-  dotfiles.server.containerImageSources = containerSources;
+  # Declarative container definitions. A central derivation above turns these
+  # into runtime containers and updater metadata, so a container's repository,
+  # tracked channel, and configuration are declared once. Future modules (for
+  # example planning-hubs) can register additional containers here.
+  dotfiles.server.containerDefinitions = {
+    home-assistant = {
+      repository = "ghcr.io/home-assistant/home-assistant";
+      tag = "stable";
+      container = {
+        volumes = [
+          "${appDataRoot}/home-assistant:/config"
+          "/run/dbus:/run/dbus:ro"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+    };
+
+    matter-server = {
+      repository = "ghcr.io/home-assistant-libs/python-matter-server";
+      tag = "stable";
+      container = {
+        volumes = [ "${appDataRoot}/matter-server:/data" ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+    };
+
+    n8n = {
+      repository = "docker.n8n.io/n8nio/n8n";
+      tag = "latest";
+      container = {
+        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
+        ports = [ "5678:5678" ];
+        environment = {
+          GENERIC_TIMEZONE = config.time.timeZone;
+        };
+        environmentFiles = [ "${secretsDir}/n8n.env" ];
+      };
+    };
+
+    openclaw = {
+      repository = "ghcr.io/openclaw/openclaw";
+      tag = "latest";
+      container = {
+        volumes = [
+          "${appDataRoot}/openclaw:/home/node/.openclaw"
+          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
+          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
+          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
+          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
+          "/:/host"
+          "/nix/store:/nix/store:ro"
+        ];
+        environment = {
+          OPENCLAW_DISABLE_BONJOUR = "1";
+          OLLAMA_API_KEY = "ollama-local";
+          NODE_OPTIONS = "--dns-result-order=ipv4first";
+          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
+        };
+        environmentFiles = [
+          "${secretsDir}/openclaw.env"
+          "${secretsDir}/server-ai.env"
+          "${secretsDir}/server-zdr-openrouter.env"
+          "${secretsDir}/server-deepseek-openrouter.env"
+          "${secretsDir}/server-free-openrouter.env"
+          "${secretsDir}/server-openai-openrouter.env"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--group-add=${toString appDataEditor.gid}"
+          "--add-host=host.docker.internal:host-gateway"
+        ];
+      };
+    };
+  };
 
   # fix breville fan 3-speed patch in home assistant
   systemd.services.breville-airactive3d-3speed = {

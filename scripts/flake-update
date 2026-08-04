@@ -626,7 +626,20 @@ for profile in "${target_profiles[@]}"; do
   build_profile "$main_flake" "$profile" "$tmpdir/${profile}-old"
 done
 
-if [[ "$containers_only" != true ]]; then
+# Decide whether to run a flake-input update. It is skipped when the user only
+# asked for a container refresh without also requesting a flake input update
+# (--containers-only, or --container with no explicit inputs/refs). Otherwise the
+# flake update runs (all inputs by default, or only the supplied inputs/refs).
+skip_flake_update=false
+if [[ "$containers_only" == true ]]; then
+  skip_flake_update=true
+elif [[ "${#container_select[@]}" -gt 0 ]] \
+  && [[ "${#inputs[@]}" -eq 0 ]] \
+  && [[ "${#input_refs[@]}" -eq 0 ]]; then
+  skip_flake_update=true
+fi
+
+if [[ "$skip_flake_update" != true ]]; then
   if [[ "${#inputs[@]}" -gt 0 ]]; then
     echo "Updating selected flake inputs: ${inputs[*]}"
     nix flake update "${inputs[@]}"
@@ -646,7 +659,7 @@ if [[ "$containers_only" != true ]]; then
     echo "Only pinned inputs were changed; no full flake update was run."
   fi
 else
-  echo "Skipping flake input update (--containers-only)."
+  echo "Skipping flake input update (container-only request)."
 fi
 
 # Refresh container image digests for the server target. This happens by default

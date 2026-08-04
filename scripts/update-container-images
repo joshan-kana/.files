@@ -93,15 +93,16 @@ fi
 
 [[ -f "$LOCK_FILE" ]] || die "lock file not found: $LOCK_FILE"
 
-# Read the configured sources from the evaluated NixOS config. The repository and
-# tracked tag are declared once next to each container definition in apps.nix
-# (dotfiles.server.containerImageSources), which avoids fragile parsing of the Nix
-# source text while keeping the tag beside the container it belongs to.
+# Read the configured container definitions from the evaluated NixOS config. The
+# repository and tracked tag are declared once in dotfiles.server.containerDefinitions
+# next to each container definition in apps.nix, which avoids fragile parsing of
+# the Nix source text while keeping the tag beside the container it belongs to.
+# We reduce each definition to {repository, tag} for the resolver below.
 sources_json=$(
-  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.dotfiles.server.containerImageSources" 2>/dev/null
-) || die "failed to evaluate dotfiles.server.containerImageSources for nixos-server"
+  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.dotfiles.server.containerDefinitions" --apply 'defs: builtins.mapAttrs (n: d: { repository = d.repository; tag = d.tag; }) defs' 2>/dev/null
+) || die "failed to evaluate dotfiles.server.containerDefinitions for nixos-server"
 
-[[ -n "$sources_json" ]] || die "containerImageSources evaluated to empty output"
+[[ -n "$sources_json" ]] || die "containerDefinitions evaluated to empty output"
 
 # Optional subset: only these containers are refreshed; all others are preserved.
 selected_names=()

@@ -160,14 +160,13 @@ unrelated flake input changes do not restart the hosted containers.
 3. Hosted container image updates:
    The server containers are pinned to immutable digests recorded in the
    generated JSON file `hosts/nixos-server/container-images.lock`. Each
-   container declares its upstream repository and tracked tag/channel once,
-   beside its own configuration in `hosts/nixos-server/apps.nix`
-   (`containerDefinitions`, exposed to the updater via
-   `dotfiles.server.containerImageSources`). `scripts/update-container-images`
-   resolves each configured `repository:tag` to its current manifest index
-   digest, proves a `linux/arm64` image is available, and rewrites the lock
-   atomically. A container restarts only when its own locked digest (or its
-   service definition) changes.
+   container declares its upstream repository, tracked tag/channel, and full
+   OCI configuration once in the mergeable `dotfiles.server.containerDefinitions`
+   option (set in `hosts/nixos-server/apps.nix`, and available to future
+   modules). `scripts/update-container-images` resolves each configured
+   `repository:tag` to its current manifest index digest, proves a `linux/arm64`
+   image is available, and rewrites the lock atomically. A container restarts
+   only when its own locked digest (or its service definition) changes.
 
 ```sh
 scripts/update-container-images
@@ -184,7 +183,8 @@ same workflow. Container-specific options:
 - `sysfu server --containers-only` — refresh only the container lock; skip the
   flake input update.
 - `sysfu server --container <name>` — refresh only the named container(s);
-  repeatable. Unselected entries are preserved.
+  repeatable, and **skips the flake input update** unless flake inputs are also
+  supplied. Unselected entries are preserved.
 - `sysfu server --no-containers` — run the normal flake update but leave
   container images untouched.
 
@@ -206,12 +206,21 @@ files, networking, and systemd ordering. The application data remains in
 `/var/lib/...` so it can be snapshotted, backed up, and restored separately from
 the container image.
 
-Each container is declared once in `containerDefinitions` in
-`hosts/nixos-server/apps.nix` with its upstream `repository` and tracked `tag`.
-Both the runtime container definition and the `containerImageSources` metadata
-consumed by the updater are derived from that single declaration. The generated
+Each container is declared once via the mergeable `dotfiles.server.containerDefinitions`
+option in `hosts/nixos-server/apps.nix` with its upstream `repository`, tracked
+`tag`, and full OCI `container` configuration. A central derivation turns the
+merged definitions into both the runtime containers and the updater metadata, so
+a container's source and configuration are declared exactly once. Future service
+modules (for example `planning-hubs/plane.nix` or `huly.nix`) can register
+additional containers by extending `dotfiles.server.containerDefinitions` without
+duplicating the lock-reading or digest-locking logic. The generated
 `container-images.lock` records the resolved `source` (repository:tag) and the
 immutable index `digest` for each container.
+
+`scripts/update-container-images-test` is a deterministic negative test that
+feeds a synthetic amd64-only image index through a mocked resolver and confirms
+the updater exits non-zero, reports the missing `linux/arm64` manifest, and
+leaves the lock file unchanged.
 
 The runtime image reference is `repository@sha256:<digest>` (the tracked tag is
 update metadata for the updater, not part of the deployed reference) with a

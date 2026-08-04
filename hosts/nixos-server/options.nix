@@ -2,7 +2,7 @@
 
 let
   inherit (lib) mkOption types;
-  containerSourceType = types.submodule {
+  containerDefinitionType = types.submodule {
     options = {
       repository = mkOption {
         type = types.str;
@@ -12,6 +12,11 @@ let
       tag = mkOption {
         type = types.str;
         description = "Upstream tag/channel this container tracks, e.g. stable or latest.";
+      };
+
+      container = mkOption {
+        type = types.attrs;
+        description = "OCI container configuration passed to virtualisation.oci-containers.containers.";
       };
     };
   };
@@ -24,13 +29,17 @@ in
       description = "Root directory for server secret files.";
     };
 
-    # Declared beside each container definition in apps.nix. This is the single
-    # human-maintained statement of the upstream repository:tag a container
-    # follows. The generated immutable digest lives in container-images.lock.
-    containerImageSources = mkOption {
-      type = types.attrsOf containerSourceType;
+    # Mergeable single source of truth for every server container. Each entry
+    # declares the upstream repository and tracked tag/channel plus the full OCI
+    # container configuration. A central derivation (in apps.nix) derives both
+    # the runtime containers and the updater metadata from the merged set, so
+    # future modules (e.g. planning-hubs) can register a container here without
+    # duplicating the locking logic. The generated immutable digest for each
+    # container lives in container-images.lock.
+    containerDefinitions = mkOption {
+      type = types.attrsOf containerDefinitionType;
       default = { };
-      description = "Upstream repository and tracked tag for each server container.";
+      description = "Declarative container definitions for the server.";
     };
 
     storage = {
