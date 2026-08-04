@@ -14,21 +14,113 @@ let
   # Generated immutable digests refreshed by `scripts/update-container-images`.
   containerLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
 
-  # Build the runtime image reference for a container from its declared source
-  # (repository:tag, set inline next to the container definition) and the locked
-  # digest. `repository:tag@sha256:<digest>` is immutable: the digest controls
-  # the actual image while the tag documents which channel `sysfu` follows.
+  # Build the immutable runtime image reference for a container from its
+  # configured source (repository + tracked tag) and the locked digest. The
+  # tracked tag is update metadata for the updater; the deployed image is pinned
+  # by digest, so the runtime form omits the tag: `repository@sha256:<digest>`.
   lockedImage =
-    name: source:
+    name:
     let
+      source = containerSources.${name};
       lock = containerLocks.${name};
+      expectedSource = "${source.repository}:${source.tag}";
     in
-    assert lib.assertMsg (lock.source == source)
-      "container-images.lock source for '${name}' (${lock.source}) does not match the declared container source (${source}); refresh with scripts/update-container-images";
+    assert lib.assertMsg (lock.source == expectedSource)
+      "container-images.lock source for '${name}' (${lock.source}) does not match the declared container source (${expectedSource}); refresh with scripts/update-container-images";
     assert lib.assertMsg (
       builtins.match "sha256:[0-9a-f]{64}" lock.digest != null
     ) "container-images.lock digest for '${name}' is malformed";
-    "${source}@${lock.digest}";
+    "${source.repository}@${lock.digest}";
+
+  # Single human-maintained declaration per container: the upstream repository,
+  # the tracked tag/channel, and the container's own configuration (volumes,
+  # environment, ports, etc.). Both the runtime container definition and the
+  # `dotfiles.server.containerImageSources` metadata consumed by the updater are
+  # derived from this, so the source is never declared twice.
+  containerDefinitions = {
+    home-assistant = {
+      repository = "ghcr.io/home-assistant/home-assistant";
+      tag = "stable";
+      container = {
+        volumes = [
+          "${appDataRoot}/home-assistant:/config"
+          "/run/dbus:/run/dbus:ro"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+    };
+
+    matter-server = {
+      repository = "ghcr.io/home-assistant-libs/python-matter-server";
+      tag = "stable";
+      container = {
+        volumes = [ "${appDataRoot}/matter-server:/data" ];
+        extraOptions = [
+          "--network=host"
+          "--cap-add=NET_ADMIN"
+          "--cap-add=NET_RAW"
+        ];
+      };
+    };
+
+    n8n = {
+      repository = "docker.n8n.io/n8nio/n8n";
+      tag = "latest";
+      container = {
+        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
+        ports = [ "5678:5678" ];
+        environment = {
+          GENERIC_TIMEZONE = config.time.timeZone;
+        };
+        environmentFiles = [ "${secretsDir}/n8n.env" ];
+      };
+    };
+
+    openclaw = {
+      repository = "ghcr.io/openclaw/openclaw";
+      tag = "latest";
+      container = {
+        volumes = [
+          "${appDataRoot}/openclaw:/home/node/.openclaw"
+          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
+          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
+          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
+          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
+          "/:/host"
+          "/nix/store:/nix/store:ro"
+        ];
+        environment = {
+          OPENCLAW_DISABLE_BONJOUR = "1";
+          OLLAMA_API_KEY = "ollama-local";
+          NODE_OPTIONS = "--dns-result-order=ipv4first";
+          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
+        };
+        environmentFiles = [
+          "${secretsDir}/openclaw.env"
+          "${secretsDir}/server-ai.env"
+          "${secretsDir}/server-zdr-openrouter.env"
+          "${secretsDir}/server-deepseek-openrouter.env"
+          "${secretsDir}/server-free-openrouter.env"
+          "${secretsDir}/server-openai-openrouter.env"
+        ];
+        extraOptions = [
+          "--network=host"
+          "--group-add=${toString appDataEditor.gid}"
+          "--add-host=host.docker.internal:host-gateway"
+        ];
+      };
+    };
+  };
+
+  # Derived metadata exposed to the updater: repository + tracked tag per container.
+  containerSources = lib.mapAttrs (name: def: {
+    inherit (def) repository tag;
+  }) containerDefinitions;
 
   appDataEditor = {
     group = serverCfg.storage.appData.group.name;
@@ -767,119 +859,27 @@ in
   };
 
   # Container images are pinned by digest via container-images.lock. Runtime uses
-  # `repository:tag@sha256:digest` (immutable) with `pull = "missing"`; the lock is
-  # refreshed by `scripts/update-container-images` as part of the server update flow.
-  # Each container's tracked upstream tag/channel is declared inline here and also
-  # exposed through dotfiles.server.containerImageSources for the updater script.
-  virtualisation.oci-containers.containers = {
-    home-assistant =
-      let
-        source = "ghcr.io/home-assistant/home-assistant:stable";
-      in
-      {
-        image = lockedImage "home-assistant" source;
-        pull = "missing";
-        volumes = [
-          "${appDataRoot}/home-assistant:/config"
-          "/run/dbus:/run/dbus:ro"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
+  # the immutable `repository@sha256:digest` form with `pull = "missing"`; the lock
+  # is refreshed by `scripts/update-container-images` as part of the server update
+  # flow. Each container's tracked upstream tag/channel is declared once in
+  # `containerDefinitions` above; both the runtime definition and the updater
+  # metadata are derived from it.
+  virtualisation.oci-containers.containers = lib.mapAttrs (
+    name: def:
+    {
+      image = lockedImage name;
+      pull = "missing";
+      inherit (def.container) volumes;
+    }
+    // (lib.optionalAttrs (def.container ? ports) { ports = def.container.ports; })
+    // (lib.optionalAttrs (def.container ? environment) { environment = def.container.environment; })
+    // (lib.optionalAttrs (def.container ? environmentFiles) {
+      environmentFiles = def.container.environmentFiles;
+    })
+    // (lib.optionalAttrs (def.container ? extraOptions) { extraOptions = def.container.extraOptions; })
+  ) containerDefinitions;
 
-    matter-server =
-      let
-        source = "ghcr.io/home-assistant-libs/python-matter-server:stable";
-      in
-      {
-        image = lockedImage "matter-server" source;
-        pull = "missing";
-        volumes = [ "${appDataRoot}/matter-server:/data" ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
-
-    n8n =
-      let
-        source = "docker.n8n.io/n8nio/n8n:latest";
-      in
-      {
-        image = lockedImage "n8n" source;
-        pull = "missing";
-        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
-        ports = [ "5678:5678" ];
-        environment = {
-          GENERIC_TIMEZONE = config.time.timeZone;
-        };
-        environmentFiles = [ "${secretsDir}/n8n.env" ];
-      };
-
-    openclaw =
-      let
-        source = "ghcr.io/openclaw/openclaw:latest";
-      in
-      {
-        image = lockedImage "openclaw" source;
-        pull = "missing";
-        volumes = [
-          "${appDataRoot}/openclaw:/home/node/.openclaw"
-          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
-          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
-          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
-          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
-          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
-          "/:/host"
-          "/nix/store:/nix/store:ro"
-        ];
-        environment = {
-          OPENCLAW_DISABLE_BONJOUR = "1";
-          OLLAMA_API_KEY = "ollama-local";
-          NODE_OPTIONS = "--dns-result-order=ipv4first";
-          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
-        };
-        environmentFiles = [
-          "${secretsDir}/openclaw.env"
-          "${secretsDir}/server-ai.env"
-          "${secretsDir}/server-zdr-openrouter.env"
-          "${secretsDir}/server-deepseek-openrouter.env"
-          "${secretsDir}/server-free-openrouter.env"
-          "${secretsDir}/server-openai-openrouter.env"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--group-add=${toString appDataEditor.gid}"
-          "--add-host=host.docker.internal:host-gateway"
-        ];
-      };
-  };
-
-  dotfiles.server.containerImageSources = {
-    home-assistant = {
-      repository = "ghcr.io/home-assistant/home-assistant";
-      tag = "stable";
-    };
-
-    matter-server = {
-      repository = "ghcr.io/home-assistant-libs/python-matter-server";
-      tag = "stable";
-    };
-
-    n8n = {
-      repository = "docker.n8n.io/n8nio/n8n";
-      tag = "latest";
-    };
-
-    openclaw = {
-      repository = "ghcr.io/openclaw/openclaw";
-      tag = "latest";
-    };
-  };
+  dotfiles.server.containerImageSources = containerSources;
 
   # fix breville fan 3-speed patch in home assistant
   systemd.services.breville-airactive3d-3speed = {

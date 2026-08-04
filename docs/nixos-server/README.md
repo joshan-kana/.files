@@ -152,17 +152,22 @@ git commit -m "chore: update flake inputs"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-This updates NixOS itself plus bare-metal services such as Tailscale. Container
-image digests are handled separately (path 3) so unrelated flake input changes
-do not restart the hosted containers.
+This updates NixOS itself plus bare-metal services such as Tailscale. The exact
+revision of Nixpkgs (and hence the native service versions) is controlled by
+`flake.lock`. Container image digests are handled separately (path 3) so
+unrelated flake input changes do not restart the hosted containers.
 
 3. Hosted container image updates:
-   The server containers are pinned to immutable digests recorded in
-   `hosts/nixos-server/container-images.lock`. `sysfu` (or
-   `scripts/update-container-images`) resolves each configured `repository:tag`
-   to its current manifest digest, verifies a `linux/arm64` image exists, and
-   rewrites the lock. A container restarts only when its own locked digest (or
-   its service definition) changes.
+   The server containers are pinned to immutable digests recorded in the
+   generated JSON file `hosts/nixos-server/container-images.lock`. Each
+   container declares its upstream repository and tracked tag/channel once,
+   beside its own configuration in `hosts/nixos-server/apps.nix`
+   (`containerDefinitions`, exposed to the updater via
+   `dotfiles.server.containerImageSources`). `scripts/update-container-images`
+   resolves each configured `repository:tag` to its current manifest index
+   digest, proves a `linux/arm64` image is available, and rewrites the lock
+   atomically. A container restarts only when its own locked digest (or its
+   service definition) changes.
 
 ```sh
 scripts/update-container-images
@@ -170,6 +175,28 @@ git add hosts/nixos-server/container-images.lock
 git commit -m "chore(server): refresh container image digests"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
+
+`sysfu server` (the interactive `scripts/flake-update` wrapper) updates the flake
+inputs and, for the server target, refreshes the container lock as part of the
+same workflow. Container-specific options:
+
+- `sysfu server` — full flake update and a full container lock refresh.
+- `sysfu server --containers-only` — refresh only the container lock; skip the
+  flake input update.
+- `sysfu server --container <name>` — refresh only the named container(s);
+  repeatable. Unselected entries are preserved.
+- `sysfu server --no-containers` — run the normal flake update but leave
+  container images untouched.
+
+A **full** container refresh rebuilds the lock exactly from the currently
+configured sources: removed containers disappear and stale keys cannot survive.
+A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`) resolves only
+the named containers and preserves every other lock entry unchanged. Container
+options are rejected on non-server targets, and `--no-containers` cannot be
+combined with `--containers-only` or `--container`. A selected flake-input update
+(such as `sysfu server nixpkgs-stable`) refreshes the container lock only if a
+container option is explicitly given, so a narrow flake update does not
+unexpectedly move every container.
 
 ## OCI Container Model
 
@@ -179,20 +206,33 @@ files, networking, and systemd ordering. The application data remains in
 `/var/lib/...` so it can be snapshotted, backed up, and restored separately from
 the container image.
 
-Each container declares the upstream `repository:tag` it tracks inline in
-`hosts/nixos-server/apps.nix` (via `dotfiles.server.containerImageSources`).
-The generated `container-images.lock` records the resolved `source` and immutable
-`digest` for each container. The runtime image reference is
-`repository:tag@sha256:<digest>` with a `pull` policy of `missing`: the digest
-pins the exact image, so a registry change or upstream tag mutation does not
-affect the running server until `scripts/update-container-images` is run and the
-new digest is committed.
+Each container is declared once in `containerDefinitions` in
+`hosts/nixos-server/apps.nix` with its upstream `repository` and tracked `tag`.
+Both the runtime container definition and the `containerImageSources` metadata
+consumed by the updater are derived from that single declaration. The generated
+`container-images.lock` records the resolved `source` (repository:tag) and the
+immutable index `digest` for each container.
+
+The runtime image reference is `repository@sha256:<digest>` (the tracked tag is
+update metadata for the updater, not part of the deployed reference) with a
+`pull` policy of `missing`. The digest pins the exact image, so a registry
+change or upstream tag mutation does not affect the running server until
+`scripts/update-container-images` is run and the new digest is committed.
 
 This is reproducible: the exact container image digest is data stored in
-`container-images.lock`, which is reviewed and committed like `flake.lock`.
-For even stricter rollback, selected images could move to `imageFile` or
+`container-images.lock`, which is reviewed and committed like `flake.lock`. For
+even stricter rollback, selected images could move to `imageFile` or
 `imageStream` so they are loaded from the Nix store instead of pulled directly
 by Docker.
+
+Deployment remains a separate, reviewed step. Before a live `switch`, run
+`sudo nixos-rebuild dry-activate --flake .#nixos-server` to confirm which units
+would restart: a digest change should restart only the affected container
+service, an unrelated `flake.lock` change should not restart every container,
+and unchanged container definitions should not restart. Do not assume container
+image rollback is universally safe: applications such as Home Assistant, n8n,
+or Plane may run database migrations on upgrade, and restoring the previous
+image digest does not necessarily undo a completed migration.
 
 ## Rollback And Backup
 

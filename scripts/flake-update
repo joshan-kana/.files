@@ -390,7 +390,6 @@ input_refs=()
 inputs=()
 undo_lock=false
 interactive_menu=false
-update_containers=false
 containers_only=false
 no_containers=false
 container_select=()
@@ -455,7 +454,6 @@ while [[ "$#" -gt 0 ]]; do
       ;;
     --containers-only)
       containers_only=true
-      update_containers=true
       shift
       ;;
     --no-containers)
@@ -465,12 +463,10 @@ while [[ "$#" -gt 0 ]]; do
     --container)
       [[ "$#" -ge 2 ]] || die "--container requires a container name"
       container_select+=("$2")
-      update_containers=true
       shift 2
       ;;
     --container=*)
       container_select+=("${1#--container=}")
-      update_containers=true
       shift
       ;;
     --)
@@ -488,14 +484,12 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
-  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
-    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
-    git switch "$UPDATE_BRANCH"
-  else
-    echo "Creating update branch ${UPDATE_BRANCH}..."
-    git switch -c "$UPDATE_BRANCH"
-  fi
+# Validate flag combinations early, before switching branches or touching the repo.
+if [[ "$containers_only" == true && "$no_containers" == true ]]; then
+  die "--containers-only and --no-containers are mutually exclusive"
+fi
+if [[ "${#container_select[@]}" -gt 0 && "$no_containers" == true ]]; then
+  die "--container cannot be combined with --no-containers"
 fi
 
 if [[ "$undo_lock" == true ]]; then
@@ -521,6 +515,31 @@ done < <(discover_nixos_configurations)
 [[ "${#all_profiles[@]}" -gt 0 ]] || die "flake does not expose any nixosConfigurations"
 
 set_target_profiles
+
+# True if the selected target set includes the nixos-server host.
+target_includes_server() {
+  local profile
+  for profile in "${target_profiles[@]}"; do
+    [[ "$profile" == "nixos-server" ]] && return 0
+  done
+  return 1
+}
+
+# Container options require the server target; reject them otherwise.
+if { [[ "$containers_only" == true ]] || [[ "${#container_select[@]}" -gt 0 ]]; } && ! target_includes_server; then
+  die "container options (--containers-only, --container) require the nixos-server target"
+fi
+
+# All flag validation has passed; only now switch to the update branch.
+if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
+  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
+    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
+    git switch "$UPDATE_BRANCH"
+  else
+    echo "Creating update branch ${UPDATE_BRANCH}..."
+    git switch -c "$UPDATE_BRANCH"
+  fi
+fi
 
 if [[ "$interactive_menu" == true ]]; then
   run_interactive_menu
@@ -580,15 +599,6 @@ diff_closures() {
   fi
 }
 
-# True if the selected target set includes the nixos-server host.
-target_includes_server() {
-  local profile
-  for profile in "${target_profiles[@]}"; do
-    [[ "$profile" == "nixos-server" ]] && return 0
-  done
-  return 1
-}
-
 # Refresh server container image digests via scripts/update-container-images.
 update_server_containers() {
   local args=()
@@ -639,9 +649,22 @@ else
   echo "Skipping flake input update (--containers-only)."
 fi
 
-# Refresh container image digests when the target set includes the server, unless
-# explicitly disabled with --no-containers.
+# Refresh container image digests for the server target. This happens by default
+# on a full update, and whenever a container refresh is explicitly requested
+# (--containers-only or --container). It is skipped when the user targeted a
+# specific flake input/ref without a container flag, so a narrow flake-input
+# update does not unexpectedly refresh every container.
+explicit_container_request=false
+if [[ "$containers_only" == true ]] || [[ "${#container_select[@]}" -gt 0 ]]; then
+  explicit_container_request=true
+fi
+update_containers_here=false
 if target_includes_server && [[ "$no_containers" != true ]]; then
+  if [[ "$explicit_container_request" == true ]] || [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -eq 0 ]]; then
+    update_containers_here=true
+  fi
+fi
+if [[ "$update_containers_here" == true ]]; then
   echo "Refreshing server container image digests..."
   update_server_containers
 fi
