@@ -1,21 +1,12 @@
 #!/usr/bin/env bash
 # Refresh container image digests in hosts/nixos-server/container-images.lock.
 #
-# Reads the tracked repository:tag for each server container from the evaluated
-# NixOS config (`dotfiles.server.containerImageSources`, declared once beside each
-# container definition in apps.nix), resolves the current immutable digest from
-# each registry, verifies a linux/arm64 image is available, and atomically rewrites
-# the lock file.
+# Reads the final merged OCI container option from the evaluated NixOS config
+# (virtualisation.oci-containers.containers), resolves each registry-backed
+# source to its current immutable index digest with skopeo, verifies a
+# linux/arm64 image is available, and atomically rewrites the lock.
 #
-# Requires skopeo (preferred) or the docker CLI with the buildx plugin.
-# Resolver:
-#   - skopeo: `inspect --no-tags --override-arch arm64 --override-os linux`
-#     returns `.Digest`, the top-level image index digest for multi-platform
-#     images (or the single-manifest digest for a single-platform image).
-#   - docker: `buildx imagetools inspect` reports the same index digest.
-#   - The raw index (`skopeo inspect --raw` / `docker buildx imagetools inspect
-#     --raw`) is checked for a `linux/arm64` child, or the single manifest is
-#     confirmed to be arm64.
+# Requires: skopeo, jq, nix, git.
 
 set -euo pipefail
 
@@ -35,7 +26,7 @@ usage() {
   cat <<'EOF'
 Usage: scripts/update-container-images [options]
 
-Refreshes the immutable digest for every configured server container in
+Refreshes the immutable digest for every registry-backed server container in
 hosts/nixos-server/container-images.lock.
 
 Options:
@@ -44,13 +35,13 @@ Options:
   -h, --help  Show this help.
 
 Environment:
-  FLAKE_REF        Flake ref to read containerImageSources from. Defaults to ".".
+  FLAKE_REF        Flake ref to read container definitions from. Defaults to ".".
   CONTAINER_SELECT Space-separated subset of containers to refresh. When set,
                    only those containers are resolved; all other lock entries are
                    preserved unchanged. A full refresh (no CONTAINER_SELECT)
-                   rebuilds the lock exactly from the configured sources.
+                   rebuilds the lock exactly from the configured containers.
 
-Requires the `skopeo` binary (preferred) or the docker CLI with the buildx plugin.
+Requires the `skopeo` binary.
 EOF
 }
 
@@ -58,6 +49,10 @@ die() {
   echo "error: $*" >&2
   exit 1
 }
+
+for tool in skopeo jq nix git; do
+  command -v "$tool" >/dev/null 2>&1 || die "required tool '$tool' not found on PATH"
+done
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -78,38 +73,49 @@ while [[ "$#" -gt 0 ]]; do
   shift
 done
 
-# Resolver backend: prefer skopeo (deterministic, clean JSON), fall back to the
-# docker CLI + docker buildx when skopeo is unavailable. Each backend is
-# implemented separately; their outputs are not passed through a shared jq
-# expression.
-backend=""
-if command -v skopeo >/dev/null 2>&1; then
-  backend="skopeo"
-elif command -v docker >/dev/null 2>&1; then
-  backend="docker"
-else
-  die "neither skopeo nor docker is available; install skopeo to use this script"
-fi
-
 [[ -f "$LOCK_FILE" ]] || die "lock file not found: $LOCK_FILE"
 
-# Read the configured container definitions from the evaluated NixOS config. The
-# repository and tracked tag are declared once in dotfiles.server.containerDefinitions
-# next to each container definition in apps.nix, which avoids fragile parsing of
-# the Nix source text while keeping the tag beside the container it belongs to.
-# We reduce each definition to {repository, tag} for the resolver below.
-sources_json=$(
-  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.dotfiles.server.containerDefinitions" --apply 'defs: builtins.mapAttrs (n: d: { repository = d.repository; tag = d.tag; }) defs' 2>/dev/null
-) || die "failed to evaluate dotfiles.server.containerDefinitions for nixos-server"
+# Reduce the final merged OCI container option to per-container metadata. The
+# Nix `apply` in container-image-locking.nix has already transformed registry
+# images to `repository:tag@sha256:<digest>`; imageFile/imageStream containers
+# are marked local and left alone. Evaluation is pure (no --impure, no getEnv).
+containers_json=$(
+  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.virtualisation.oci-containers.containers" --apply '
+    c: builtins.mapAttrs (name: container:
+      if container.imageFile != null || container.imageStream != null then
+        { local = true; image = container.image; }
+      else
+        { local = false; image = container.image; }
+    ) c
+  '
+) || die "failed to evaluate virtualisation.oci-containers.containers for nixos-server"
 
-[[ -n "$sources_json" ]] || die "containerDefinitions evaluated to empty output"
+[[ -n "$containers_json" ]] || die "container evaluation returned empty output"
+
+# Parse each registry image `repository:tag@sha256:<digest>` into source and
+# currentDigest, failing clearly on an unexpected shape.
+containers_json=$(
+  printf '%s' "$containers_json" | jq '
+    map_values(. as $v
+      | if $v.local then $v
+        else
+          ($v.image | split("@")) as $parts
+          | if ($parts | length) != 2 then
+              error("unexpected image shape: " + $v.image)
+            else
+              { local: false, source: $parts[0], currentDigest: $parts[1] }
+            end
+        end)
+  '
+) || die "failed to parse container images"
 
 # Optional subset: only these containers are refreshed; all others are preserved.
 selected_names=()
+selected_names_json="null"
 if [[ -n "${CONTAINER_SELECT:-}" ]]; then
   read -r -a selected_names <<<"$CONTAINER_SELECT"
-  sel_json=$(printf '%s\n' "${selected_names[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')
-  unknown=$(printf '%s' "$sources_json" | jq -r --argjson sel "$sel_json" '
+  selected_names_json=$(printf '%s\n' "${selected_names[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')
+  unknown=$(printf '%s' "$containers_json" | jq -r --argjson sel "$selected_names_json" '
     $sel[] as $k | select((has($k) | not)) | $k
   ')
   if [[ -n "$unknown" ]]; then
@@ -119,79 +125,46 @@ fi
 
 current_locks=$(cat "$LOCK_FILE")
 
-# Determine whether a raw blob is a multi-platform index or a single manifest.
-raw_kind() {
-  local raw=$1
-  if printf '%s' "$raw" | jq -e '(.manifests | type) == "array"' >/dev/null 2>&1; then
-    echo "index"
-  else
-    echo "single"
-  fi
-}
+# The Nix apply above already yields `source` (repository:tag). Re-derive the
+# registry-backed source list from the evaluated option.
+registry_entries=$(
+  printf '%s' "$containers_json" | jq -r --argjson sel "$selected_names_json" '
+    to_entries[] as $e
+    | select($e.value.local == false)
+    | select($sel == null or ($sel | index($e.key)))
+    | $e.key + "\t" + $e.value.source
+  '
+)
 
-# Returns the top-level index digest (or single-manifest digest) for a source.
-# skopeo: `inspect --no-tags --override-arch arm64 --override-os linux` returns
-# the index digest in `.Digest`. docker: `buildx imagetools inspect` reports the
-# index digest on the `Digest:` line.
-get_index_digest() {
-  local source=$1
-  if [[ "$backend" == "skopeo" ]]; then
-    skopeo inspect --no-tags --override-arch arm64 --override-os linux "docker://${source}" | jq -r '.Digest'
-  else
-    docker buildx imagetools inspect "${source}" 2>/dev/null | awk '/^Digest:/ { gsub(/^Digest:[[:space:]]+/, ""); print; exit }'
-  fi
-}
-
-# Returns the raw manifest/index JSON for a source. skopeo and docker buildx both
-# emit the OCI index structure with a `.manifests` array.
-get_raw_manifest() {
-  local source=$1
-  if [[ "$backend" == "skopeo" ]]; then
-    skopeo inspect --raw "docker://${source}"
-  else
-    docker buildx imagetools inspect --raw "${source}"
-  fi
-}
-
-# For a single-platform manifest, confirm it is arm64/linux. skopeo reports the
-# overridden arch in metadata; docker buildx reports it in the image title.
-get_single_platform() {
-  local source=$1
-  if [[ "$backend" == "skopeo" ]]; then
-    local m_arch m_os
-    m_arch=$(skopeo inspect --no-tags --override-arch arm64 --override-os linux "docker://${source}" | jq -r '.Architecture')
-    m_os=$(skopeo inspect --no-tags --override-arch arm64 --override-os linux "docker://${source}" | jq -r '.Os')
-    printf '%s/%s\n' "$m_arch" "$m_os"
-  else
-    docker buildx imagetools inspect "${source}" 2>/dev/null | awk -F': ' '/^Platform:/ { gsub(/^ +/, "", $2); print $2; exit }'
-  fi
-}
-
-# Resolve the immutable digest for a source and prove linux/arm64 is available.
-# Prints: <digest>  <kind>  <arm64: yes|no>
+# Resolve the immutable top-level digest for a source and prove linux/arm64 is
+# available. Prints: <digest>  <kind>  <arm64: yes|no>
 resolve_image() {
   local name=$1 source=$2
-  local digest raw kind arm64 platform
+  local metadata raw digest kind arm64 platform m_arch m_os
 
-  digest=$(get_index_digest "$source") || die "${name}: failed to resolve the digest for ${source}"
+  metadata=$(
+    skopeo inspect --no-tags --override-arch arm64 --override-os linux "docker://${source}"
+  ) || die "${name}: failed to inspect ${source} (does it exist and is it reachable?)"
+
+  digest=$(printf '%s' "$metadata" | jq -r '.Digest')
   [[ "$digest" == sha256:* ]] || die "${name}: no digest returned for ${source}"
 
-  raw=$(get_raw_manifest "$source") || die "${name}: failed to read the raw manifest for ${source}"
+  raw=$(skopeo inspect --raw "docker://${source}") || die "${name}: failed to read the raw manifest for ${source}"
 
-  kind=$(raw_kind "$raw")
-  if [[ "$kind" == "index" ]]; then
-    arm64=$(
-      printf '%s' "$raw" | jq -r '
-        if ([.manifests[].platform | select(.os == "linux" and .architecture == "arm64")] | length) > 0
-        then "yes" else "no" end
-      '
-    )
+  if printf '%s' "$raw" | jq -e '(.manifests | type) == "array"' >/dev/null 2>&1; then
+    kind="index"
+    arm64=$(printf '%s' "$raw" | jq -r '
+      if ([.manifests[].platform | select(.os == "linux" and .architecture == "arm64")] | length) > 0
+      then "yes" else "no" end
+    ')
     if [[ "$arm64" != "yes" ]]; then
       die "${name}: ${source} is a multi-platform index but has no linux/arm64 manifest; refusing to update"
     fi
   else
-    # Single-platform manifest: prove it is usable on the Pi.
-    platform=$(get_single_platform "$source")
+    kind="single"
+    m_arch=$(printf '%s' "$metadata" | jq -r '.Architecture')
+    m_os=$(printf '%s' "$metadata" | jq -r '.Os')
+    platform="$m_arch/$m_os"
     if [[ "$platform" == "arm64/linux" || "$platform" == "linux/arm64" ]]; then
       arm64="yes"
     else
@@ -202,46 +175,25 @@ resolve_image() {
   printf '%s\t%s\t%s\n' "$digest" "$kind" "$arm64"
 }
 
-# Build the resolution list. Full refresh resolves every configured container;
-# a selected refresh resolves only the selected subset.
-if [[ "${#selected_names[@]}" -gt 0 ]]; then
-  sel_json=$(printf '%s\n' "${selected_names[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')
-  resolve_json=$(
-    printf '%s' "$sources_json" | jq -r --argjson sel "$sel_json" '
-      to_entries[] as $e | select($sel | index($e.key)) | $e.key + "\t" + $e.value.repository + ":" + $e.value.tag
-    '
-  )
-else
-  resolve_json=$(
-    printf '%s' "$sources_json" | jq -r '
-      to_entries[] as $e | $e.key + "\t" + $e.value.repository + ":" + $e.value.tag
-    '
-  )
-fi
-
 resolved=$(
-  printf '%s\n' "$resolve_json" |
+  printf '%s\n' "$registry_entries" |
     while IFS=$'\t' read -r name source; do
       result=$(resolve_image "$name" "$source")
       printf '%s\t%s\t%s\n' "$name" "$source" "$result"
     done
 )
 
-# Validate the resolved set before writing anything.
-[[ -n "$resolved" ]] || die "no container sources resolved; refusing to rewrite lock"
+[[ -n "$resolved" ]] || die "no registry containers resolved; refusing to rewrite lock"
 
-# Every resolved line must have all fields and a non-empty digest.
 if printf '%s\n' "$resolved" | awk -F '\t' 'NF != 5 || $4 == "" { exit 1 }'; then
   :
 else
   die "incomplete container resolution output; refusing to rewrite lock"
 fi
 
-# Build the lock object.
+# Build the lock object. Full refresh rebuilds from configured containers only;
+# a selected refresh merges into the current lock, preserving unselected entries.
 if [[ "${#selected_names[@]}" -gt 0 ]]; then
-  # Selected refresh: merge the newly resolved entries into the current lock so
-  # non-selected entries are preserved. The resolved object is printed last so it
-  # wins for the refreshed keys.
   new_lock_json=$(
     {
       printf '%s' "$current_locks"
@@ -254,8 +206,6 @@ if [[ "${#selected_names[@]}" -gt 0 ]]; then
     } | jq -s 'add'
   )
 else
-  # Full refresh: rebuild the lock exactly from the configured sources. Removed
-  # containers disappear, and stale keys cannot survive.
   new_lock_json=$(
     printf '%s\n' "$resolved" |
       jq -Rrs '
@@ -266,9 +216,9 @@ else
   )
 fi
 
-# Validate that every configured container has a lock entry.
+# Every configured registry container must have a lock entry.
 configured_names=$(
-  printf '%s' "$sources_json" | jq -r 'keys[]'
+  printf '%s' "$containers_json" | jq -r 'to_entries[] | select(.value.local == false) | .key'
 )
 missing=$(
   while IFS= read -r cname; do
@@ -280,7 +230,6 @@ if [[ -n "$missing" ]]; then
 fi
 
 if [[ "${#selected_names[@]}" -eq 0 ]]; then
-  # Full refresh must not retain stale keys.
   cfg_json=$(printf '%s' "$configured_names" | jq -Rsc 'split("\n") | map(select(length > 0))')
   stale=$(
     printf '%s' "$new_lock_json" | jq -r --argjson cfg "$cfg_json" '
@@ -291,25 +240,24 @@ if [[ "${#selected_names[@]}" -eq 0 ]]; then
     die "unexpected stale lock key(s) after full refresh: $(printf '%s' "$stale" | tr '\n' ' ')"
   fi
 else
-  # A selected refresh preserves unselected entries. If the lock holds an entry
-  # for a container that is no longer configured, fail clearly and direct the
-  # user to a full refresh rather than leaving ambiguous stale data.
+  # A selected refresh preserves unselected entries. Fail clearly if the lock
+  # holds an entry for a container that is no longer configured.
   stale_preserved=$(
-    printf '%s' "$new_lock_json" | jq -r --argjson src "$sources_json" '
+    printf '%s' "$new_lock_json" | jq -r --argjson src "$(printf '%s' "$containers_json" | jq 'with_entries(select(.value.local == false))')" '
       keys[] as $k | select(($src | has($k)) | not) | $k
     '
   )
   if [[ -n "$stale_preserved" ]]; then
-    die "stale lock entries exist (not in containerDefinitions): $(printf '%s' "$stale_preserved" | tr '\n' ' '); run a full container refresh (sysfu server --containers-only)"
+    die "stale lock entries exist (not in configured containers): $(printf '%s' "$stale_preserved" | tr '\n' ' '); run a full container refresh (sysfu server --containers-only)"
   fi
 fi
 
 # Confirm every lock entry's recorded source matches the configured source.
 source_mismatch=$(
-  printf '%s' "$new_lock_json" | jq -r --argjson src "$sources_json" '
+  printf '%s' "$new_lock_json" | jq -r --argjson src "$(printf '%s' "$containers_json" | jq 'with_entries(select(.value.local == false))')" '
     to_entries[] as $e
     | select($src | has($e.key))
-    | ($src[$e.key].repository + ":" + $src[$e.key].tag) as $expected
+    | ($src[$e.key].source) as $expected
     | select($e.value.source != $expected)
     | $e.key + " (" + $e.value.source + " != " + $expected + ")"
   '
@@ -348,8 +296,6 @@ if [[ "$dry_run" == true ]]; then
 fi
 
 # Write atomically only after every image resolved and all validation passed.
-# The temp file lives beside the destination so the rename is on the same
-# filesystem and the lock only changes once, all at once.
 tmp=$(mktemp "${LOCK_FILE}.tmp.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
 printf '%s\n' "$new_lock_json" >"$tmp"

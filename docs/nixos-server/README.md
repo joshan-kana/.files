@@ -142,7 +142,7 @@ There are three update paths:
    Edit the live files under `/var/lib/...`, such as Home Assistant YAML,
    AdGuard config, or the n8n database.
 
-2. NixOS and bare-metal service updates:
+2. NixOS and native service updates:
    Update the flake inputs, commit the lock file, then rebuild:
 
 ```sh
@@ -152,21 +152,18 @@ git commit -m "chore: update flake inputs"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-This updates NixOS itself plus bare-metal services such as Tailscale. The exact
+This updates NixOS itself plus native services such as Tailscale. The exact
 revision of Nixpkgs (and hence the native service versions) is controlled by
 `flake.lock`. Container image digests are handled separately (path 3) so
 unrelated flake input changes do not restart the hosted containers.
 
 3. Hosted container image updates:
    The server containers are pinned to immutable digests recorded in the
-   generated JSON file `hosts/nixos-server/container-images.lock`. Each
-   container declares its upstream repository, tracked tag/channel, and full
-   OCI configuration once in the mergeable `dotfiles.server.containerDefinitions`
-   option (set in `hosts/nixos-server/apps.nix`, and available to future
-   modules). `scripts/update-container-images` resolves each configured
-   `repository:tag` to its current manifest index digest, proves a `linux/arm64`
-   image is available, and rewrites the lock atomically. A container restarts
-   only when its own locked digest (or its service definition) changes.
+   generated JSON file `hosts/nixos-server/container-images.lock`.
+   `scripts/update-container-images` resolves each configured `repository:tag`
+   to its current manifest index digest, proves a `linux/arm64` image is
+   available, and rewrites the lock atomically. A container restarts only when
+   its own locked digest (or its service definition) changes.
 
 ```sh
 scripts/update-container-images
@@ -189,14 +186,14 @@ same workflow. Container-specific options:
   container images untouched.
 
 A **full** container refresh rebuilds the lock exactly from the currently
-configured sources: removed containers disappear and stale keys cannot survive.
-A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`) resolves only
-the named containers and preserves every other lock entry unchanged. Container
-options are rejected on non-server targets, and `--no-containers` cannot be
-combined with `--containers-only` or `--container`. A selected flake-input update
-(such as `sysfu server nixpkgs-stable`) refreshes the container lock only if a
-container option is explicitly given, so a narrow flake update does not
-unexpectedly move every container.
+configured containers: removed containers disappear and stale keys cannot
+survive. A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`)
+resolves only the named containers and preserves every other lock entry
+unchanged. Container options are rejected on non-server targets, and
+`--no-containers` cannot be combined with `--containers-only` or `--container`.
+A selected flake-input update (such as `sysfu server nixpkgs-stable`) refreshes
+the container lock only if a container option is explicitly given, so a narrow
+flake update does not unexpectedly move every container.
 
 ## OCI Container Model
 
@@ -206,27 +203,45 @@ files, networking, and systemd ordering. The application data remains in
 `/var/lib/...` so it can be snapshotted, backed up, and restored separately from
 the container image.
 
-Each container is declared once via the mergeable `dotfiles.server.containerDefinitions`
-option in `hosts/nixos-server/apps.nix` with its upstream `repository`, tracked
-`tag`, and full OCI `container` configuration. A central derivation turns the
-merged definitions into both the runtime containers and the updater metadata, so
-a container's source and configuration are declared exactly once. Future service
-modules (for example `planning-hubs/plane.nix` or `huly.nix`) can register
-additional containers by extending `dotfiles.server.containerDefinitions` without
-duplicating the lock-reading or digest-locking logic. The generated
-`container-images.lock` records the resolved `source` (repository:tag) and the
-immutable index `digest` for each container.
+Containers are declared with normal NixOS OCI-container syntax. Each keeps an
+`image = "repository:tag";` source plus its volumes, ports, environment files,
+and extra options in `hosts/nixos-server/apps.nix` (or any module in the server
+module graph):
 
-`scripts/update-container-images-test` is a deterministic negative test that
-feeds a synthetic amd64-only image index through a mocked resolver and confirms
-the updater exits non-zero, reports the missing `linux/arm64` manifest, and
-leaves the lock file unchanged.
+```nix
+virtualisation.oci-containers.containers.openclaw = {
+  image = "ghcr.io/openclaw/openclaw:latest";
+  environmentFiles = [ "${secretsDir}/openclaw.env" ];
+  volumes = [ "${appDataRoot}/openclaw:/home/node/.openclaw" ];
+};
+```
 
-The runtime image reference is `repository@sha256:<digest>` (the tracked tag is
-update metadata for the updater, not part of the deployed reference) with a
-`pull` policy of `missing`. The digest pins the exact image, so a registry
-change or upstream tag mutation does not affect the running server until
-`scripts/update-container-images` is run and the new digest is committed.
+`hosts/nixos-server/container-image-locking.nix` adds an `apply` transformation
+to the upstream `virtualisation.oci-containers.containers` option. After every
+container definition across the whole module graph has merged, it appends the
+matching locked digest from `container-images.lock`, producing
+`repository:tag@sha256:<digest>` at evaluation time. The container modules may
+live anywhere in the server module graph; the transformation is global and does
+not depend on `apps.nix`.
+
+The lock is keyed by container name. Two containers may intentionally follow the
+same `repository:tag` source and still have independent lock records and
+targeted-update behavior.
+
+If a container's lock entry is missing, stale, or malformed, the module writes a
+placeholder digest (`sha256:0000…`) into the image. That lets the updater
+discover the new source, but a NixOS assertion prevents building or deploying
+the system until the lock is refreshed:
+
+```sh
+sysfu server --containers-only        # refresh everything
+sysfu server --container <name>       # refresh one container
+```
+
+The updater evaluates the final merged container option purely (no `--impure`,
+no environment bypass) and reduces it to small per-container metadata before
+resolving digests with skopeo. Locally built or streamed images (`imageFile` /
+`imageStream`) are left unchanged and need no lock entry.
 
 This is reproducible: the exact container image digest is data stored in
 `container-images.lock`, which is reviewed and committed like `flake.lock`. For

@@ -2,24 +2,6 @@
 
 let
   inherit (lib) mkOption types;
-  containerDefinitionType = types.submodule {
-    options = {
-      repository = mkOption {
-        type = types.str;
-        description = "Container image repository (without tag or digest).";
-      };
-
-      tag = mkOption {
-        type = types.str;
-        description = "Upstream tag/channel this container tracks, e.g. stable or latest.";
-      };
-
-      container = mkOption {
-        type = types.attrs;
-        description = "OCI container configuration passed to virtualisation.oci-containers.containers.";
-      };
-    };
-  };
 in
 {
   options.dotfiles.server = {
@@ -27,19 +9,6 @@ in
       type = types.str;
       default = "/root/secrets";
       description = "Root directory for server secret files.";
-    };
-
-    # Mergeable single source of truth for every server container. Each entry
-    # declares the upstream repository and tracked tag/channel plus the full OCI
-    # container configuration. A central derivation (in apps.nix) derives both
-    # the runtime containers and the updater metadata from the merged set, so
-    # future modules (e.g. planning-hubs) can register a container here without
-    # duplicating the locking logic. The generated immutable digest for each
-    # container lives in container-images.lock.
-    containerDefinitions = mkOption {
-      type = types.attrsOf containerDefinitionType;
-      default = { };
-      description = "Declarative container definitions for the server.";
     };
 
     storage = {

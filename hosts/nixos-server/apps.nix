@@ -11,30 +11,6 @@ let
   inherit (serverCfg) secretsDir;
   appDataRoot = serverCfg.storage.appData.root;
 
-  # Merged declarative container definitions from dotfiles.server.containerDefinitions.
-  containerDefinitions = serverCfg.containerDefinitions;
-
-  # Generated immutable digests refreshed by `scripts/update-container-images`.
-  containerLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
-
-  # Build the immutable runtime image reference for a container from its
-  # configured source (repository + tracked tag) and the locked digest. The
-  # tracked tag is update metadata for the updater; the deployed image is pinned
-  # by digest, so the runtime form omits the tag: `repository@sha256:<digest>`.
-  lockedImage =
-    name:
-    let
-      source = containerDefinitions.${name};
-      lock = containerLocks.${name};
-      expectedSource = "${source.repository}:${source.tag}";
-    in
-    assert lib.assertMsg (lock.source == expectedSource)
-      "container-images.lock source for '${name}' (${lock.source}) does not match the declared container source (${expectedSource}); refresh with scripts/update-container-images";
-    assert lib.assertMsg (
-      builtins.match "sha256:[0-9a-f]{64}" lock.digest != null
-    ) "container-images.lock digest for '${name}' is malformed";
-    "${source.repository}@${lock.digest}";
-
   appDataEditor = {
     group = serverCfg.storage.appData.group.name;
     gid = serverCfg.storage.appData.group.id;
@@ -771,102 +747,84 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
-  # Container images are pinned by digest via container-images.lock. Runtime uses
-  # the immutable `repository@sha256:digest` form with `pull = "missing"`; the lock
-  # is refreshed by `scripts/update-container-images` as part of the server update
-  # flow. Each container's tracked upstream tag/channel and full OCI configuration
-  # is declared once in `dotfiles.server.containerDefinitions` below; both the
-  # runtime definition and the updater metadata are derived from it.
-  virtualisation.oci-containers.containers = lib.mapAttrs (
-    name: def:
-    def.container
-    // {
-      image = lockedImage name;
-      pull = "missing";
-    }
-  ) containerDefinitions;
-
-  # Declarative container definitions. A central derivation above turns these
-  # into runtime containers and updater metadata, so a container's repository,
-  # tracked channel, and configuration are declared once. Future modules (for
-  # example planning-hubs) can register additional containers here.
-  dotfiles.server.containerDefinitions = {
+  # Server OCI containers. Images are declared as plain upstream `repository:tag`
+  # sources; the global `container-image-locking.nix` module appends the matching
+  # locked digest at evaluation time, so these definitions stay in native NixOS
+  # OCI-container syntax.
+  virtualisation.oci-containers.containers = {
     home-assistant = {
-      repository = "ghcr.io/home-assistant/home-assistant";
-      tag = "stable";
-      container = {
-        volumes = [
-          "${appDataRoot}/home-assistant:/config"
-          "/run/dbus:/run/dbus:ro"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
+      image = "ghcr.io/home-assistant/home-assistant:stable";
+
+      volumes = [
+        "${appDataRoot}/home-assistant:/config"
+        "/run/dbus:/run/dbus:ro"
+      ];
+
+      extraOptions = [
+        "--network=host"
+        "--cap-add=NET_ADMIN"
+        "--cap-add=NET_RAW"
+      ];
     };
 
     matter-server = {
-      repository = "ghcr.io/home-assistant-libs/python-matter-server";
-      tag = "stable";
-      container = {
-        volumes = [ "${appDataRoot}/matter-server:/data" ];
-        extraOptions = [
-          "--network=host"
-          "--cap-add=NET_ADMIN"
-          "--cap-add=NET_RAW"
-        ];
-      };
+      image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
+
+      volumes = [ "${appDataRoot}/matter-server:/data" ];
+
+      extraOptions = [
+        "--network=host"
+        "--cap-add=NET_ADMIN"
+        "--cap-add=NET_RAW"
+      ];
     };
 
     n8n = {
-      repository = "docker.n8n.io/n8nio/n8n";
-      tag = "latest";
-      container = {
-        volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
-        ports = [ "5678:5678" ];
-        environment = {
-          GENERIC_TIMEZONE = config.time.timeZone;
-        };
-        environmentFiles = [ "${secretsDir}/n8n.env" ];
+      image = "docker.n8n.io/n8nio/n8n:latest";
+
+      volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
+      ports = [ "5678:5678" ];
+
+      environment = {
+        GENERIC_TIMEZONE = config.time.timeZone;
       };
+      environmentFiles = [ "${secretsDir}/n8n.env" ];
     };
 
     openclaw = {
-      repository = "ghcr.io/openclaw/openclaw";
-      tag = "latest";
-      container = {
-        volumes = [
-          "${appDataRoot}/openclaw:/home/node/.openclaw"
-          "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
-          "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
-          "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
-          "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
-          "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
-          "/:/host"
-          "/nix/store:/nix/store:ro"
-        ];
-        environment = {
-          OPENCLAW_DISABLE_BONJOUR = "1";
-          OLLAMA_API_KEY = "ollama-local";
-          NODE_OPTIONS = "--dns-result-order=ipv4first";
-          OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
-        };
-        environmentFiles = [
-          "${secretsDir}/openclaw.env"
-          "${secretsDir}/server-ai.env"
-          "${secretsDir}/server-zdr-openrouter.env"
-          "${secretsDir}/server-deepseek-openrouter.env"
-          "${secretsDir}/server-free-openrouter.env"
-          "${secretsDir}/server-openai-openrouter.env"
-        ];
-        extraOptions = [
-          "--network=host"
-          "--group-add=${toString appDataEditor.gid}"
-          "--add-host=host.docker.internal:host-gateway"
-        ];
+      image = "ghcr.io/openclaw/openclaw:latest";
+
+      volumes = [
+        "${appDataRoot}/openclaw:/home/node/.openclaw"
+        "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
+        "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+        "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
+        "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
+        "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
+        "/:/host"
+        "/nix/store:/nix/store:ro"
+      ];
+
+      environment = {
+        OPENCLAW_DISABLE_BONJOUR = "1";
+        OLLAMA_API_KEY = "ollama-local";
+        NODE_OPTIONS = "--dns-result-order=ipv4first";
+        OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
+      environmentFiles = [
+        "${secretsDir}/openclaw.env"
+        "${secretsDir}/server-ai.env"
+        "${secretsDir}/server-zdr-openrouter.env"
+        "${secretsDir}/server-deepseek-openrouter.env"
+        "${secretsDir}/server-free-openrouter.env"
+        "${secretsDir}/server-openai-openrouter.env"
+      ];
+
+      extraOptions = [
+        "--network=host"
+        "--group-add=${toString appDataEditor.gid}"
+        "--add-host=host.docker.internal:host-gateway"
+      ];
     };
   };
 
