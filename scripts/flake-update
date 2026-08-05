@@ -46,6 +46,16 @@ Options:
   --choose-nixpkgs-ref [branch]
       Choose from recent nixpkgs commits on a branch. Defaults to nixos-unstable.
 
+  --containers-only
+      Update only server container image digests; skip the flake input update.
+
+  --no-containers
+      Run the normal flake update but leave server container images untouched.
+
+  --container <name>
+      Refresh only the named server container(s). May be repeated. Implies the
+      container update runs for the server target.
+
 Examples:
   scripts/flake-update linux-desktop nixpkgs
   scripts/flake-update nixos home-manager stylix
@@ -55,6 +65,10 @@ Examples:
   scripts/flake-update nixos --choose-nixpkgs-ref
   scripts/flake-update nixos --choose-nixpkgs-ref nixos-25.05
   scripts/flake-update nixos --input-ref nixpkgs=github:NixOS/nixpkgs/nixos-unstable
+  scripts/flake-update server
+  scripts/flake-update server --containers-only
+  scripts/flake-update server --container n8n
+  scripts/flake-update server --no-containers
   scripts/flake-update all
 
 Environment:
@@ -376,6 +390,9 @@ input_refs=()
 inputs=()
 undo_lock=false
 interactive_menu=false
+containers_only=false
+no_containers=false
+container_select=()
 
 if [[ "$#" -eq 0 && -t 0 && -t 1 ]]; then
   interactive_menu=true
@@ -435,6 +452,23 @@ while [[ "$#" -gt 0 ]]; do
       input_refs+=("nixpkgs=$(normalize_nixpkgs_ref "$chosen_ref")")
       shift
       ;;
+    --containers-only)
+      containers_only=true
+      shift
+      ;;
+    --no-containers)
+      no_containers=true
+      shift
+      ;;
+    --container)
+      [[ "$#" -ge 2 ]] || die "--container requires a container name"
+      container_select+=("$2")
+      shift 2
+      ;;
+    --container=*)
+      container_select+=("${1#--container=}")
+      shift
+      ;;
     --)
       shift
       inputs+=("$@")
@@ -450,14 +484,16 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
-  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
-    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
-    git switch "$UPDATE_BRANCH"
-  else
-    echo "Creating update branch ${UPDATE_BRANCH}..."
-    git switch -c "$UPDATE_BRANCH"
-  fi
+# Validate flag combinations early, before switching branches or touching the repo.
+if [[ "$containers_only" == true && "$no_containers" == true ]]; then
+  die "--containers-only and --no-containers are mutually exclusive"
+fi
+if [[ "${#container_select[@]}" -gt 0 && "$no_containers" == true ]]; then
+  die "--container cannot be combined with --no-containers"
+fi
+if [[ "$containers_only" == true ]] \
+  && { [[ "${#inputs[@]}" -gt 0 ]] || [[ "${#input_refs[@]}" -gt 0 ]]; }; then
+  die "--containers-only cannot be combined with flake inputs or input refs"
 fi
 
 if [[ "$undo_lock" == true ]]; then
@@ -483,6 +519,31 @@ done < <(discover_nixos_configurations)
 [[ "${#all_profiles[@]}" -gt 0 ]] || die "flake does not expose any nixosConfigurations"
 
 set_target_profiles
+
+# True if the selected target set includes the nixos-server host.
+target_includes_server() {
+  local profile
+  for profile in "${target_profiles[@]}"; do
+    [[ "$profile" == "nixos-server" ]] && return 0
+  done
+  return 1
+}
+
+# Container options require the server target; reject them otherwise.
+if { [[ "$containers_only" == true ]] || [[ "${#container_select[@]}" -gt 0 ]]; } && ! target_includes_server; then
+  die "container options (--containers-only, --container) require the nixos-server target"
+fi
+
+# All flag validation has passed; only now switch to the update branch.
+if [[ "$current_branch" != "$UPDATE_BRANCH" ]]; then
+  if git show-ref --verify --quiet "refs/heads/${UPDATE_BRANCH}"; then
+    echo "Switching to existing update branch ${UPDATE_BRANCH}..."
+    git switch "$UPDATE_BRANCH"
+  else
+    echo "Creating update branch ${UPDATE_BRANCH}..."
+    git switch -c "$UPDATE_BRANCH"
+  fi
+fi
 
 if [[ "$interactive_menu" == true ]]; then
   run_interactive_menu
@@ -542,6 +603,17 @@ diff_closures() {
   fi
 }
 
+# Refresh server container image digests via scripts/update-container-images.
+update_server_containers() {
+  local args=()
+  if [[ "${#container_select[@]}" -gt 0 ]]; then
+    # Selected-container updates are applied via an env var the updater honors.
+    CONTAINER_SELECT="${container_select[*]}" "$repo_root/scripts/update-container-images" "${args[@]}"
+  else
+    "$repo_root/scripts/update-container-images" "${args[@]}"
+  fi
+}
+
 echo "Target profiles: ${target_profiles[*]}"
 
 echo "Checking current ${MAIN_BRANCH} evaluations before updating..."
@@ -558,23 +630,60 @@ for profile in "${target_profiles[@]}"; do
   build_profile "$main_flake" "$profile" "$tmpdir/${profile}-old"
 done
 
-if [[ "${#inputs[@]}" -gt 0 ]]; then
-  echo "Updating selected flake inputs: ${inputs[*]}"
-  nix flake update "${inputs[@]}"
-elif [[ "${#input_refs[@]}" -eq 0 ]]; then
-  echo "Updating all flake inputs..."
-  nix flake update
+# Decide whether to run a flake-input update. It is skipped when the user only
+# asked for a container refresh without also requesting a flake input update
+# (--containers-only, or --container with no explicit inputs/refs). Otherwise the
+# flake update runs (all inputs by default, or only the supplied inputs/refs).
+skip_flake_update=false
+if [[ "$containers_only" == true ]]; then
+  skip_flake_update=true
+elif [[ "${#container_select[@]}" -gt 0 ]] \
+  && [[ "${#inputs[@]}" -eq 0 ]] \
+  && [[ "${#input_refs[@]}" -eq 0 ]]; then
+  skip_flake_update=true
 fi
 
-for input_ref in "${input_refs[@]}"; do
-  input_name=${input_ref%%=*}
-  flake_ref=${input_ref#*=}
-  echo "Pinning ${input_name} to ${flake_ref}..."
-  nix flake lock --override-input "$input_name" "$flake_ref"
-done
+if [[ "$skip_flake_update" != true ]]; then
+  if [[ "${#inputs[@]}" -gt 0 ]]; then
+    echo "Updating selected flake inputs: ${inputs[*]}"
+    nix flake update "${inputs[@]}"
+  elif [[ "${#input_refs[@]}" -eq 0 ]]; then
+    echo "Updating all flake inputs..."
+    nix flake update
+  fi
 
-if [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -gt 0 ]]; then
-  echo "Only pinned inputs were changed; no full flake update was run."
+  for input_ref in "${input_refs[@]}"; do
+    input_name=${input_ref%%=*}
+    flake_ref=${input_ref#*=}
+    echo "Pinning ${input_name} to ${flake_ref}..."
+    nix flake lock --override-input "$input_name" "$flake_ref"
+  done
+
+  if [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -gt 0 ]]; then
+    echo "Only pinned inputs were changed; no full flake update was run."
+  fi
+else
+  echo "Skipping flake input update (container-only request)."
+fi
+
+# Refresh container image digests for the server target. This happens by default
+# on a full update, and whenever a container refresh is explicitly requested
+# (--containers-only or --container). It is skipped when the user targeted a
+# specific flake input/ref without a container flag, so a narrow flake-input
+# update does not unexpectedly refresh every container.
+explicit_container_request=false
+if [[ "$containers_only" == true ]] || [[ "${#container_select[@]}" -gt 0 ]]; then
+  explicit_container_request=true
+fi
+update_containers_here=false
+if target_includes_server && [[ "$no_containers" != true ]]; then
+  if [[ "$explicit_container_request" == true ]] || [[ "${#inputs[@]}" -eq 0 && "${#input_refs[@]}" -eq 0 ]]; then
+    update_containers_here=true
+  fi
+fi
+if [[ "$update_containers_here" == true ]]; then
+  echo "Refreshing server container image digests..."
+  update_server_containers
 fi
 
 echo "Checking updated branch evaluations..."
@@ -600,6 +709,7 @@ Update branch is ready for review.
 
 Useful inspection commands:
   git diff ${MAIN_BRANCH} -- flake.lock
+  git diff ${MAIN_BRANCH} -- hosts/nixos-server/container-images.lock
   git diff ${MAIN_BRANCH}
   nix-tree result
   nix why-depends result /nix/store/...-package

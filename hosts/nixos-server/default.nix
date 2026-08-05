@@ -19,6 +19,7 @@ in
     ./options.nix
     ../../modules/nixos/base.nix
     ./networking.nix
+    ./container-image-locking.nix
     ./apps.nix
     ./storage.nix
     ./vm.nix
