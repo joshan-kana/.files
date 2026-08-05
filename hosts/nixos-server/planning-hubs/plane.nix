@@ -51,6 +51,7 @@ let
   };
   envFile = [ "${secretsDir}/plane.env" ];
   data = name: "${planeDataRoot}/${name}";
+  planeNetwork = "plane";
   backend = {
     image = "makeplane/plane-backend:${planeTag}";
     environment = planeEnv;
@@ -65,6 +66,7 @@ in
         "api"
         "worker"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       environmentFiles = envFile;
     };
     space = {
@@ -74,6 +76,7 @@ in
         "worker"
         "web"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       environmentFiles = envFile;
     };
     admin = {
@@ -82,6 +85,7 @@ in
         "api"
         "web"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       environmentFiles = envFile;
     };
     live = {
@@ -90,6 +94,7 @@ in
         "api"
         "web"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       environment = planeEnv // {
         API_BASE_URL = "http://api:8000";
       };
@@ -102,6 +107,7 @@ in
         "plane-redis"
         "plane-mq"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "logs-api"}:/code/plane/logs" ];
     };
     worker = backend // {
@@ -112,6 +118,7 @@ in
         "plane-redis"
         "plane-mq"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "logs-worker"}:/code/plane/logs" ];
     };
     "beat-worker" = backend // {
@@ -122,6 +129,7 @@ in
         "plane-redis"
         "plane-mq"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "logs-beat-worker"}:/code/plane/logs" ];
     };
     migrator = backend // {
@@ -130,6 +138,7 @@ in
         "plane-db"
         "plane-redis"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "logs-migrator"}:/code/plane/logs" ];
     };
     "plane-db" = {
@@ -141,18 +150,21 @@ in
       ];
       environment = planeEnv;
       environmentFiles = envFile;
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "postgres"}:/var/lib/postgresql/data" ];
     };
     "plane-redis" = {
       image = "valkey/valkey:7.2.11-alpine";
       environmentFiles = envFile;
       volumes = [ "${data "redis"}:/data" ];
+      extraOptions = [ "--network=${planeNetwork}" ];
     };
     "plane-mq" = {
       image = "rabbitmq:3.13.6-management-alpine";
       environment = planeEnv;
       environmentFiles = envFile;
       volumes = [ "${data "rabbitmq"}:/var/lib/rabbitmq" ];
+      extraOptions = [ "--network=${planeNetwork}" ];
     };
     "plane-minio" = {
       image = "minio/minio:latest";
@@ -164,6 +176,7 @@ in
       ];
       environment = planeEnv;
       environmentFiles = envFile;
+      extraOptions = [ "--network=${planeNetwork}" ];
       volumes = [ "${data "minio"}:/export" ];
     };
     proxy = {
@@ -182,6 +195,7 @@ in
         "${data "proxy-config"}:/config"
         "${data "proxy-data"}:/data"
       ];
+      extraOptions = [ "--network=${planeNetwork}" ];
     };
   };
 
@@ -201,6 +215,20 @@ in
       ];
 
   networking.firewall.allowedTCPPorts = lib.mkAfter [ 8080 ];
+  systemd.services.docker-network-plane = {
+    description = "Create the Plane container network";
+    wantedBy = [ "docker-plane-db.service" ];
+    before = [ "docker-plane-db.service" ];
+    after = [ "docker.service" ];
+    requires = [ "docker.service" ];
+    serviceConfig.Type = "oneshot";
+    serviceConfig.RemainAfterExit = true;
+    path = [ config.virtualisation.docker.package ];
+    script = ''
+      ${config.virtualisation.docker.package}/bin/docker network inspect ${planeNetwork} >/dev/null 2>&1 \
+        || ${config.virtualisation.docker.package}/bin/docker network create ${planeNetwork}
+    '';
+  };
   systemd.services.docker-proxy.unitConfig.AssertPathExists = [
     "${secretsDir}/plane.env"
   ];
