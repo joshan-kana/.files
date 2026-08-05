@@ -23,8 +23,7 @@ in
   # but already hosts Home Assistant, OpenClaw, n8n, AdGuard, etc. Start with
   # Plane alone during the trial and observe memory before stacking services.
   virtualisation.oci-containers.containers.plane = {
-    image = "makeplane/plane-aio-community:latest";
-    pull = serverCfg.containers.pullPolicy;
+    image = "makeplane/plane-aio-community:v1.4.0";
 
     # LAN-only access on a dedicated host port. No public exposure.
     # 8080 is unused by existing server services (53, 8123, 5678, 5580, 18789).
@@ -37,8 +36,6 @@ in
 
     environmentFiles = [ "${secretsDir}/plane.env" ];
   };
-
-  systemd.services.docker-plane.restartTriggers = [ serverCfg.containers.restartTrigger ];
 
   # Persist app data under the existing app data model, owned by the editor group.
   systemd.tmpfiles.rules = [
