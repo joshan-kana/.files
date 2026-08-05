@@ -23,7 +23,7 @@ in
   # but already hosts Home Assistant, OpenClaw, n8n, AdGuard, etc. Start with
   # Plane alone during the trial and observe memory before stacking services.
   virtualisation.oci-containers.containers.plane = {
-    image = "makeplane/plane-aio-community:v1.4.0";
+    image = "makeplane/plane-aio-community:stable";
 
     # LAN-only access on a dedicated host port. No public exposure.
     # 8080 is unused by existing server services (53, 8123, 5678, 5580, 18789).

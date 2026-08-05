@@ -17,6 +17,6 @@
   },
   "plane": {
     "digest": "sha256:18f18711471318767a3138f0f0d195b882b7c746e056825473e7d276ffe30fb0",
-    "source": "makeplane/plane-aio-community:v1.4.0"
+    "source": "makeplane/plane-aio-community:stable"
   }
 }
