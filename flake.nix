@@ -159,6 +159,8 @@
               nil
               statix
               deadnix
+              jq
+              skopeo
             ]
             ++ [ repoOptionsFzf ];
 

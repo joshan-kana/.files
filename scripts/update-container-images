@@ -1,0 +1,445 @@
+#!/usr/bin/env bash
+# Refresh container image digests in hosts/nixos-server/container-images.lock.
+#
+# Reads the final merged OCI container option from the evaluated NixOS config
+# (virtualisation.oci-containers.containers), resolves each registry-backed
+# source to its current immutable index digest with skopeo, verifies a
+# linux/arm64 image is available, and atomically rewrites the lock.
+#
+# Requires: skopeo, jq, nix, git.
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  echo "error: not inside a Git repository" >&2
+  exit 1
+}
+cd "$repo_root"
+
+LOCK_FILE=hosts/nixos-server/container-images.lock
+FLAKE_REF=${FLAKE_REF:-.}
+
+dry_run=false
+verbose=false
+
+work_dir=$(mktemp -d)
+lock_tmp=""
+
+cleanup() {
+  rm -rf "$work_dir"
+
+  if [[ -n "${lock_tmp:-}" ]]; then
+    rm -f "$lock_tmp"
+  fi
+}
+
+trap cleanup EXIT
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/update-container-images [options]
+
+Refreshes the immutable digest for every registry-backed server container in
+hosts/nixos-server/container-images.lock.
+
+Options:
+  --dry-run   Resolve and report digests without writing the lock file.
+  -v          Print per-container resolution details (digest and arm64 status).
+  -h, --help  Show this help.
+
+Environment:
+  FLAKE_REF        Flake ref to read container definitions from. Defaults to ".".
+  CONTAINER_SELECT Space-separated subset of containers to refresh. When set,
+                   only those containers are resolved; all other lock entries are
+                   preserved unchanged. A full refresh (no CONTAINER_SELECT)
+                   rebuilds the lock exactly from the configured containers.
+
+Authentication:
+  Skopeo uses its standard registry authentication configuration. Run
+  `skopeo login <registry>` or set `REGISTRY_AUTH_FILE` when credentials are
+  required.
+
+Requires the `skopeo` binary.
+EOF
+}
+
+die() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+for tool in skopeo jq nix git; do
+  command -v "$tool" >/dev/null 2>&1 || die "required tool '$tool' not found on PATH"
+done
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --dry-run)
+      dry_run=true
+      ;;
+    -v)
+      verbose=true
+      ;;
+    *)
+      die "unknown option '$1'"
+      ;;
+  esac
+  shift
+done
+
+[[ -f "$LOCK_FILE" ]] || die "lock file not found: $LOCK_FILE"
+
+# Require the current lock to be syntactically valid JSON before touching it.
+current_locks=$(
+  jq -c . "$LOCK_FILE"
+) || die "lock file is not valid JSON: $LOCK_FILE"
+
+current_lock_type=$(
+  printf '%s' "$current_locks" |
+    jq -r type
+)
+
+if [[ "$current_lock_type" != "object" && -n "${CONTAINER_SELECT:-}" ]]; then
+  die "container lock root is not an object; run a full refresh with: sysfu server --containers-only"
+fi
+
+# Reduce the final merged OCI container option to per-container metadata. The
+# Nix `apply` in container-image-locking.nix has already transformed registry
+# images to `repository:tag@sha256:<digest>`; imageFile/imageStream containers
+# are marked local and left alone. Evaluation is pure (no --impure, no getEnv).
+containers_json=$(
+  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.virtualisation.oci-containers.containers" --apply '
+    c: builtins.mapAttrs (name: container:
+      if container.imageFile != null || container.imageStream != null then
+        { local = true; image = container.image; }
+      else
+        { local = false; image = container.image; }
+    ) c
+  '
+) || die "failed to evaluate virtualisation.oci-containers.containers for nixos-server"
+
+[[ -n "$containers_json" ]] || die "container evaluation returned empty output"
+
+# Parse each registry image `repository:tag@sha256:<digest>` into source and
+# currentDigest, failing clearly on an unexpected shape.
+containers_json=$(
+  printf '%s' "$containers_json" | jq '
+    map_values(. as $v
+      | if $v.local then $v
+        else
+          ($v.image | split("@")) as $parts
+          | if ($parts | length) != 2 then
+              error("unexpected image shape: " + $v.image)
+            else
+              { local: false, source: $parts[0], currentDigest: $parts[1] }
+            end
+        end)
+  '
+) || die "failed to parse container images"
+
+# The set of registry-backed containers (not imageFile/imageStream).
+configured_registry_json=$(
+  printf '%s' "$containers_json" | jq 'with_entries(select(.value.local == false))'
+)
+
+# Optional subset: only these containers are refreshed; all others are preserved.
+selected_names=()
+selected_names_json="null"
+if [[ -n "${CONTAINER_SELECT:-}" ]]; then
+  read -r -a selected_names <<<"$CONTAINER_SELECT"
+  selected_names_json=$(printf '%s\n' "${selected_names[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')
+  unknown=$(printf '%s' "$containers_json" | jq -r --argjson sel "$selected_names_json" '
+    $sel[] as $k | select((has($k) | not)) | $k
+  ')
+  if [[ -n "$unknown" ]]; then
+    die "unknown container(s) in CONTAINER_SELECT: $(printf '%s' "$unknown" | tr '\n' ' ')"
+  fi
+
+  # Reject local containers explicitly: they have no registry digest to refresh.
+  local_selected=$(
+    printf '%s' "$containers_json" |
+      jq -r --argjson selected "$selected_names_json" '
+        $selected[] as $name
+        | select(.[$name].local == true)
+        | $name
+      '
+  )
+  if [[ -n "$local_selected" ]]; then
+    die "selected container(s) use imageFile/imageStream and have no registry digest to refresh: $(printf '%s' "$local_selected" | tr '\n' ' ')"
+  fi
+fi
+
+# Re-derive the registry-backed source list from the evaluated option.
+registry_entries=$(
+  printf '%s' "$configured_registry_json" | jq -r --argjson sel "$selected_names_json" '
+    to_entries[] as $e
+    | select($sel == null or ($sel | index($e.key)))
+    | $e.key + "\t" + $e.value.source
+  '
+)
+
+if [[ -z "$registry_entries" ]]; then
+  if [[ "${#selected_names[@]}" -gt 0 ]]; then
+    die "no registry-backed containers were selected"
+  else
+    die "no registry-backed containers are configured"
+  fi
+fi
+
+# Resolve the immutable digest for one source and prove linux/arm64 is available.
+# The raw manifest is fetched once and its digest is calculated from that exact
+# file, so the object validated for ARM64 and the digest written to the lock are
+# the same immutable object. Prints: <digest>  <kind>  <arm64: yes|no>
+resolve_image() {
+  local name=$1
+  local source=$2
+
+  local safe_name
+  local manifest_file
+  local raw
+  local digest
+  local kind
+  local arm64
+  local metadata
+  local architecture
+  local os
+  local platform
+  local pinned_source
+
+  safe_name=${name//[^a-zA-Z0-9_.-]/_}
+  manifest_file="$work_dir/${safe_name}.manifest.json"
+
+  # Fetch the mutable source exactly once. The digest is calculated from these
+  # exact raw bytes, eliminating any tag-change race between digest resolution
+  # and architecture validation.
+  skopeo inspect --raw "docker://${source}" >"$manifest_file" ||
+    die "${name}: failed to read the raw manifest for ${source}"
+
+  [[ -s "$manifest_file" ]] ||
+    die "${name}: registry returned an empty manifest for ${source}"
+
+  digest=$(
+    skopeo manifest-digest "$manifest_file"
+  ) || die "${name}: failed to calculate the manifest digest for ${source}"
+
+  [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+    die "${name}: resolver returned malformed digest '${digest}' for ${source}"
+
+  raw=$(cat "$manifest_file")
+  pinned_source="${source}@${digest}"
+
+  if printf '%s' "$raw" |
+    jq -e '(.manifests | type) == "array"' >/dev/null 2>&1; then
+    kind="index"
+
+    arm64=$(
+      printf '%s' "$raw" |
+        jq -r '
+          if (
+            [
+              .manifests[].platform
+              | select(
+                  .os == "linux"
+                  and .architecture == "arm64"
+                )
+            ]
+            | length
+          ) > 0
+          then "yes"
+          else "no"
+          end
+        '
+    )
+
+    if [[ "$arm64" != "yes" ]]; then
+      die "${name}: ${source} is a multi-platform index but has no linux/arm64 manifest; refusing to update"
+    fi
+  else
+    kind="single"
+
+    # The raw single manifest does not reliably contain architecture metadata.
+    # Inspect the immutable digest—not the mutable tag—to prove its platform.
+    metadata=$(
+      skopeo inspect --no-tags "docker://${pinned_source}"
+    ) || die "${name}: failed to inspect immutable image ${pinned_source}"
+
+    architecture=$(printf '%s' "$metadata" | jq -r '.Architecture')
+    os=$(printf '%s' "$metadata" | jq -r '.Os')
+    platform="${os}/${architecture}"
+
+    if [[ "$platform" == "linux/arm64" ]]; then
+      arm64="yes"
+    else
+      die "${name}: ${source} is a single ${platform} manifest; refusing to update (linux/arm64 unavailable)"
+    fi
+  fi
+
+  printf '%s\t%s\t%s\n' "$digest" "$kind" "$arm64"
+}
+
+resolved=$(
+  printf '%s\n' "$registry_entries" |
+    while IFS=$'\t' read -r name source; do
+      result=$(resolve_image "$name" "$source")
+      printf '%s\t%s\t%s\n' "$name" "$source" "$result"
+    done
+)
+
+[[ -n "$resolved" ]] || die "no registry containers resolved; refusing to rewrite lock"
+
+if printf '%s\n' "$resolved" | awk -F '\t' 'NF != 5 || $4 == "" { exit 1 }'; then
+  :
+else
+  die "incomplete container resolution output; refusing to rewrite lock"
+fi
+
+# Build the lock object. Full refresh rebuilds from configured containers only;
+# a selected refresh merges into the current lock, preserving unselected entries.
+if [[ "${#selected_names[@]}" -gt 0 ]]; then
+  new_lock_json=$(
+    {
+      printf '%s' "$current_locks"
+      printf '%s\n' "$resolved" |
+        jq -Rrs '
+          split("\n") | map(select(length > 0)) |
+          map(split("\t") | {name: .[0], source: .[1], digest: .[2]}) |
+          reduce .[] as $e ({}; .[$e.name] = {source: $e.source, digest: $e.digest})
+        '
+    } | jq -s 'add'
+  )
+else
+  new_lock_json=$(
+    printf '%s\n' "$resolved" |
+      jq -Rrs '
+        split("\n") | map(select(length > 0)) |
+        map(split("\t") | {name: .[0], source: .[1], digest: .[2]}) |
+        reduce .[] as $e ({}; .[$e.name] = {source: $e.source, digest: $e.digest})
+      '
+  )
+fi
+
+# Complete prospective-lock validation: applies to newly resolved selected
+# entries, preserved unselected entries, and every entry during a full refresh.
+validate_prospective_lock() {
+  local lock_json=$1
+  local errors
+
+  errors=$(
+    jq -nr \
+      --argjson lock "$lock_json" \
+      --argjson configured "$configured_registry_json" '
+        if ($lock | type) != "object" then
+          "lock root must be an object"
+        else
+          (
+            $configured
+            | to_entries[]
+            | .key as $name
+            | .value.source as $expectedSource
+
+            | if ($lock | has($name) | not) then
+                "\($name): missing lock entry"
+              else
+                $lock[$name] as $entry
+
+                | if ($entry | type) != "object" then
+                    "\($name): lock entry must be an object"
+
+                  elif ($entry.source? | type) != "string" then
+                    "\($name): source must be a string"
+
+                  elif ($entry.source | length) == 0 then
+                    "\($name): source must not be empty"
+
+                  elif $entry.source != $expectedSource then
+                    "\($name): source mismatch (\($entry.source) != \($expectedSource))"
+
+                  elif ($entry.digest? | type) != "string" then
+                    "\($name): digest must be a string"
+
+                  elif (
+                    $entry.digest
+                    | test("^sha256:[0-9a-f]{64}$")
+                    | not
+                  ) then
+                    "\($name): digest must match sha256:<64 lowercase hexadecimal characters>"
+
+                  else
+                    empty
+                  end
+              end
+          ),
+          (
+            $lock
+            | keys[] as $name
+            | select(
+                ($configured | has($name))
+                | not
+              )
+            | "\($name): stale lock entry"
+          )
+        end
+      '
+  )
+
+  if [[ -n "$errors" ]]; then
+    printf 'error: prospective container lock is invalid:\n%s\n' "$errors" >&2
+    exit 1
+  fi
+}
+
+validate_prospective_lock "$new_lock_json"
+
+# Normalize deterministically (sorted keys) for comparison and output.
+new_lock_json=$(
+  printf '%s' "$new_lock_json" | jq -S .
+)
+
+current_locks_sorted=$(
+  printf '%s' "$current_locks" | jq -S .
+)
+
+# Verbose per-container report.
+if [[ "$verbose" == true ]]; then
+  printf '%-16s %-60s %s\n' "container" "source" "digest (kind, arm64)"
+  printf '%s\n' "$resolved" | while IFS=$'\t' read -r name source digest kind arm64; do
+    printf '%-16s %-60s %s (%s, %s)\n' "$name" "$source" "$digest" "$kind" "$arm64"
+  done
+fi
+
+# Detect whether anything actually changed.
+changed=false
+if [[ "$new_lock_json" != "$current_locks_sorted" ]]; then
+  changed=true
+fi
+
+if [[ "$changed" != true ]]; then
+  if [[ "${#selected_names[@]}" -gt 0 ]]; then
+    echo "Selected container images are up to date; ${LOCK_FILE} unchanged."
+  else
+    echo "All container images are up to date; ${LOCK_FILE} unchanged."
+  fi
+  exit 0
+fi
+
+if [[ "$dry_run" == true ]]; then
+  echo "Dry run: the following changes would be written to ${LOCK_FILE}:"
+  diff -u <(printf '%s\n' "$current_locks_sorted") <(printf '%s\n' "$new_lock_json") || true
+  exit 0
+fi
+
+# Write atomically only after every image resolved and all validation passed.
+# The temp file lives beside the destination so the rename is on the same
+# filesystem and the lock only changes once, all at once.
+lock_tmp=$(mktemp "${LOCK_FILE}.tmp.XXXXXX")
+printf '%s\n' "$new_lock_json" >"$lock_tmp"
+chmod 0644 "$lock_tmp"
+mv "$lock_tmp" "$LOCK_FILE"
+lock_tmp=""
+
+echo "Updated ${LOCK_FILE}:"
+diff -u <(printf '%s\n' "$current_locks_sorted") <(printf '%s\n' "$new_lock_json") || true

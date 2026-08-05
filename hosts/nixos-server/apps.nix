@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -8,7 +9,6 @@ let
   primaryUser = config.dotfiles.users.primary.name;
   serverCfg = config.dotfiles.server;
   inherit (serverCfg) secretsDir;
-  containerCfg = serverCfg.containers;
   appDataRoot = serverCfg.storage.appData.root;
 
   appDataEditor = {
@@ -264,11 +264,11 @@ in
           proxy_set_header X-Forwarded-Host $host;
           proxy_set_header X-Forwarded-User ${primaryUser};
 
-          # OpenClaw 2026.7.1 ships script-src 'self' only, which blocks the
-          # Vite/rolldown bundle's runtime eval()-based dynamic imports and
-          # prevents <openclaw-app> from registering ("Control UI did not
-          # start" modal). Re-emit the upstream CSP with 'unsafe-eval' added
-          # to script-src; all other directives are preserved verbatim.
+          # OpenClaw ships script-src 'self' only, which blocks the Vite/rolldown
+          # bundle's runtime eval()-based dynamic imports and prevents
+          # <openclaw-app> from registering ("Control UI did not start" modal).
+          # Re-emit the upstream CSP with 'unsafe-eval' added to script-src; all
+          # other directives are preserved verbatim.
           proxy_hide_header Content-Security-Policy;
           add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; worker-src 'self'; connect-src 'self' ws: wss: https://api.openai.com https://tweakcn.com" always;
         '';
@@ -285,10 +285,7 @@ in
       "bluetooth.service"
       "dbus.service"
     ];
-    restartTriggers = [ containerCfg.restartTrigger ];
   };
-  systemd.services.docker-matter-server.restartTriggers = [ containerCfg.restartTrigger ];
-  systemd.services.docker-n8n.restartTriggers = [ containerCfg.restartTrigger ];
   systemd.services.configure-openclaw-gateway = {
     description = "Modify OpenClaw mutable gateway config for trusted-proxy access";
     before = [ "docker-openclaw.service" ];
@@ -643,7 +640,6 @@ in
       "${secretsDir}/server-free-openrouter.env"
       "${secretsDir}/server-openai-openrouter.env"
     ];
-    restartTriggers = [ containerCfg.restartTrigger ];
     after = [
       "configure-openclaw-gateway.service"
       "nginx.service"
@@ -751,16 +747,19 @@ in
     after = [ "openclaw-ollama-proxy.service" ];
   };
 
-  # Floating container tags are refreshed as part of the normal flake update
-  # workflow: `nix flake update`, then `nixos-rebuild switch`.
+  # Server OCI containers. Images are declared as plain upstream `repository:tag`
+  # sources; the global `container-image-locking.nix` module appends the matching
+  # locked digest at evaluation time, so these definitions stay in native NixOS
+  # OCI-container syntax.
   virtualisation.oci-containers.containers = {
     home-assistant = {
       image = "ghcr.io/home-assistant/home-assistant:stable";
-      pull = containerCfg.pullPolicy;
+
       volumes = [
         "${appDataRoot}/home-assistant:/config"
         "/run/dbus:/run/dbus:ro"
       ];
+
       extraOptions = [
         "--network=host"
         "--cap-add=NET_ADMIN"
@@ -770,8 +769,9 @@ in
 
     matter-server = {
       image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
-      pull = containerCfg.pullPolicy;
+
       volumes = [ "${appDataRoot}/matter-server:/data" ];
+
       extraOptions = [
         "--network=host"
         "--cap-add=NET_ADMIN"
@@ -781,9 +781,10 @@ in
 
     n8n = {
       image = "docker.n8n.io/n8nio/n8n:latest";
-      pull = containerCfg.pullPolicy;
+
       volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
       ports = [ "5678:5678" ];
+
       environment = {
         GENERIC_TIMEZONE = config.time.timeZone;
       };
@@ -791,8 +792,8 @@ in
     };
 
     openclaw = {
-      image = "ghcr.io/openclaw/openclaw:2026.7.1";
-      pull = containerCfg.pullPolicy;
+      image = "ghcr.io/openclaw/openclaw:latest";
+
       volumes = [
         "${appDataRoot}/openclaw:/home/node/.openclaw"
         "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
@@ -803,6 +804,7 @@ in
         "/:/host"
         "/nix/store:/nix/store:ro"
       ];
+
       environment = {
         OPENCLAW_DISABLE_BONJOUR = "1";
         OLLAMA_API_KEY = "ollama-local";
@@ -817,6 +819,7 @@ in
         "${secretsDir}/server-free-openrouter.env"
         "${secretsDir}/server-openai-openrouter.env"
       ];
+
       extraOptions = [
         "--network=host"
         "--group-add=${toString appDataEditor.gid}"

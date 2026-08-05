@@ -142,7 +142,7 @@ There are three update paths:
    Edit the live files under `/var/lib/...`, such as Home Assistant YAML,
    AdGuard config, or the n8n database.
 
-2. NixOS, bare-metal service, and hosted container image updates:
+2. NixOS and native service updates:
    Update the flake inputs, commit the lock file, then rebuild:
 
 ```sh
@@ -152,13 +152,48 @@ git commit -m "chore: update flake inputs"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-This updates NixOS itself plus bare-metal services such as Tailscale. The hosted
-container units also restart when `flake.lock` changes. Because their OCI pull
-policy is `always`, Docker pulls the current registry image for tags such as
-`latest` or `stable` during that restart.
+This updates NixOS itself plus native services such as Tailscale. The exact
+revision of Nixpkgs (and hence the native service versions) is controlled by
+`flake.lock`. Container image digests are handled separately (path 3) so
+unrelated flake input changes do not restart the hosted containers.
 
-3. Explicit app config or image policy changes:
-   Edit `profiles/nixos-server/hosted-stack.nix`, then commit and rebuild.
+3. Hosted container image updates:
+   The server containers are pinned to immutable digests recorded in the
+   generated JSON file `hosts/nixos-server/container-images.lock`.
+   `scripts/update-container-images` resolves each configured `repository:tag`
+   to its current manifest index digest, proves a `linux/arm64` image is
+   available, and rewrites the lock atomically. A container restarts only when
+   its own locked digest (or its service definition) changes.
+
+```sh
+scripts/update-container-images
+git add hosts/nixos-server/container-images.lock
+git commit -m "chore(server): refresh container image digests"
+sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+```
+
+`sysfu server` (the interactive `scripts/flake-update` wrapper) updates the flake
+inputs and, for the server target, refreshes the container lock as part of the
+same workflow. Container-specific options:
+
+- `sysfu server` — full flake update and a full container lock refresh.
+- `sysfu server --containers-only` — refresh only the container lock; skip the
+  flake input update.
+- `sysfu server --container <name>` — refresh only the named container(s);
+  repeatable, and **skips the flake input update** unless flake inputs are also
+  supplied. Unselected entries are preserved.
+- `sysfu server --no-containers` — run the normal flake update but leave
+  container images untouched.
+
+A **full** container refresh rebuilds the lock exactly from the currently
+configured containers: removed containers disappear and stale keys cannot
+survive. A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`)
+resolves only the named containers and preserves every other lock entry
+unchanged. Container options are rejected on non-server targets, and
+`--no-containers` cannot be combined with `--containers-only` or `--container`.
+A selected flake-input update (such as `sysfu server nixpkgs-stable`) refreshes
+the container lock only if a container option is explicitly given, so a narrow
+flake update does not unexpectedly move every container.
 
 ## OCI Container Model
 
@@ -168,15 +203,60 @@ files, networking, and systemd ordering. The application data remains in
 `/var/lib/...` so it can be snapshotted, backed up, and restored separately from
 the container image.
 
-The stack intentionally uses floating tags during migration and sets the OCI
-pull policy to `always`. This makes the normal `nix flake update` +
-`nixos-rebuild switch` workflow refresh the hosted app images too, because the
-container units restart when `flake.lock` changes.
+Containers are declared with normal NixOS OCI-container syntax. Each keeps an
+`image = "repository:tag";` source plus its volumes, ports, environment files,
+and extra options in `hosts/nixos-server/apps.nix` (or any module in the server
+module graph):
 
-This is convenient, but it is not fully reproducible: the exact container image
-digest is registry state, not data stored in `flake.lock`. For stricter rollback
-later, pin by digest or move selected images to `imageFile` or `imageStream` so
-they are loaded from the Nix store instead of pulled directly by Docker.
+```nix
+virtualisation.oci-containers.containers.openclaw = {
+  image = "ghcr.io/openclaw/openclaw:latest";
+  environmentFiles = [ "${secretsDir}/openclaw.env" ];
+  volumes = [ "${appDataRoot}/openclaw:/home/node/.openclaw" ];
+};
+```
+
+`hosts/nixos-server/container-image-locking.nix` adds an `apply` transformation
+to the upstream `virtualisation.oci-containers.containers` option. After every
+container definition across the whole module graph has merged, it appends the
+matching locked digest from `container-images.lock`, producing
+`repository:tag@sha256:<digest>` at evaluation time. The container modules may
+live anywhere in the server module graph; the transformation is global and does
+not depend on `apps.nix`.
+
+The lock is keyed by container name. Two containers may intentionally follow the
+same `repository:tag` source and still have independent lock records and
+targeted-update behavior.
+
+If a container's lock entry is missing, stale, or malformed, the module writes a
+placeholder digest (`sha256:0000…`) into the image. That lets the updater
+discover the new source, but a NixOS assertion prevents building or deploying
+the system until the lock is refreshed:
+
+```sh
+sysfu server --containers-only        # refresh everything
+sysfu server --container <name>       # refresh one container
+```
+
+The updater evaluates the final merged container option purely (no `--impure`,
+no environment bypass) and reduces it to small per-container metadata before
+resolving digests with skopeo. Locally built or streamed images (`imageFile` /
+`imageStream`) are left unchanged and need no lock entry.
+
+This is reproducible: the exact container image digest is data stored in
+`container-images.lock`, which is reviewed and committed like `flake.lock`. For
+even stricter rollback, selected images could move to `imageFile` or
+`imageStream` so they are loaded from the Nix store instead of pulled directly
+by Docker.
+
+Deployment remains a separate, reviewed step. Before a live `switch`, run
+`sudo nixos-rebuild dry-activate --flake .#nixos-server` to confirm which units
+would restart: a digest change should restart only the affected container
+service, an unrelated `flake.lock` change should not restart every container,
+and unchanged container definitions should not restart. Do not assume container
+image rollback is universally safe: applications such as Home Assistant, n8n,
+or Plane may run database migrations on upgrade, and restoring the previous
+image digest does not necessarily undo a completed migration.
 
 ## Rollback And Backup
 
