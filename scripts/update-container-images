@@ -98,6 +98,15 @@ current_locks=$(
   jq -c . "$LOCK_FILE"
 ) || die "lock file is not valid JSON: $LOCK_FILE"
 
+current_lock_type=$(
+  printf '%s' "$current_locks" |
+    jq -r type
+)
+
+if [[ "$current_lock_type" != "object" && -n "${CONTAINER_SELECT:-}" ]]; then
+  die "container lock root is not an object; run a full refresh with: sysfu server --containers-only"
+fi
+
 # Reduce the final merged OCI container option to per-container metadata. The
 # Nix `apply` in container-image-locking.nix has already transformed registry
 # images to `repository:tag@sha256:<digest>`; imageFile/imageStream containers
