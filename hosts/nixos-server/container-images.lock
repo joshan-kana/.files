@@ -1,11 +1,31 @@
 {
+  "admin": {
+    "digest": "sha256:8fd95429127eaaf9feb47f1e25f7db4e29aad1f66109a19bdd86a19bca660482",
+    "source": "makeplane/plane-admin:stable"
+  },
+  "api": {
+    "digest": "sha256:fbd4b3cea455df88e5473d01e56162286d5f61991898903d9142a7f502799481",
+    "source": "makeplane/plane-backend:stable"
+  },
+  "beat-worker": {
+    "digest": "sha256:fbd4b3cea455df88e5473d01e56162286d5f61991898903d9142a7f502799481",
+    "source": "makeplane/plane-backend:stable"
+  },
   "home-assistant": {
     "digest": "sha256:5a531753cea96444200158fc2b0ac7ccd739291ec50414877b396de6e0bb29b3",
     "source": "ghcr.io/home-assistant/home-assistant:stable"
   },
+  "live": {
+    "digest": "sha256:046c38a1c091e6bce9ce79cf89a300bd226bd749f8f62e7ba7871ab853455f16",
+    "source": "makeplane/plane-live:stable"
+  },
   "matter-server": {
     "digest": "sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a",
     "source": "ghcr.io/home-assistant-libs/python-matter-server:stable"
+  },
+  "migrator": {
+    "digest": "sha256:fbd4b3cea455df88e5473d01e56162286d5f61991898903d9142a7f502799481",
+    "source": "makeplane/plane-backend:stable"
   },
   "n8n": {
     "digest": "sha256:f9a15cc65378e4e5b6c3b1445c83985131938db8d8b5b1ab891d7d50196b2162",
@@ -15,8 +35,36 @@
     "digest": "sha256:2f5ce8848a1a69b3c460622e566cb9395da9fd18d7ef7b038cd8e2c4f195decf",
     "source": "ghcr.io/openclaw/openclaw:latest"
   },
-  "plane": {
-    "digest": "sha256:18f18711471318767a3138f0f0d195b882b7c746e056825473e7d276ffe30fb0",
-    "source": "makeplane/plane-aio-community:stable"
+  "plane-db": {
+    "digest": "sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6",
+    "source": "postgres:15.7-alpine"
+  },
+  "plane-minio": {
+    "digest": "sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+    "source": "minio/minio:latest"
+  },
+  "plane-mq": {
+    "digest": "sha256:611107e29cce05c2acd968325d5dcbde7e2fee404970f1ead75fdb22be2821b3",
+    "source": "rabbitmq:3.13.6-management-alpine"
+  },
+  "plane-redis": {
+    "digest": "sha256:10328d00120dc14fbc87b2ed61b7677ddbb0d011e705361b4788329a0ec69a93",
+    "source": "valkey/valkey:7.2.11-alpine"
+  },
+  "proxy": {
+    "digest": "sha256:53393d2ec8c3cf2585473bcc04342c1a3a5525d61d163da13a613c79793fd600",
+    "source": "makeplane/plane-proxy:stable"
+  },
+  "space": {
+    "digest": "sha256:6ef9b14ca5be4f5e09cae2d452478954e18dd5f6f417a655aac13fa3e502e2d9",
+    "source": "makeplane/plane-space:stable"
+  },
+  "web": {
+    "digest": "sha256:8f0f5ee02169c3435fa178aa60707920bfc398bff2ebbe83e72881c029d5fe56",
+    "source": "makeplane/plane-frontend:stable"
+  },
+  "worker": {
+    "digest": "sha256:fbd4b3cea455df88e5473d01e56162286d5f61991898903d9142a7f502799481",
+    "source": "makeplane/plane-backend:stable"
   }
 }
