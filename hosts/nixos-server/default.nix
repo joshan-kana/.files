@@ -21,6 +21,7 @@ in
     ./networking.nix
     ./container-image-locking.nix
     ./apps.nix
+    ./openclaw.nix
     ./storage.nix
     ./vm.nix
     ./image.nix
