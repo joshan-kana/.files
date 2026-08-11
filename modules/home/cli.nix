@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   osConfig,
   pkgs,
@@ -68,6 +67,38 @@ let
   aliases = lib.filterAttrs (name: _: !(builtins.elem name cfg.cli.disabledAliases)) (
     baseAliases // cfg.cli.aliasOverrides
   );
+  toml = pkgs.formats.toml { };
+  tuicrConfig = toml.generate "tuicr-config.toml" {
+    theme = "stylix";
+    diff_view = "side-by-side";
+    show_file_list = true;
+    mouse = true;
+    wrap = false;
+    relative_line_numbers = false;
+    cursor_line = true;
+    transparent_background = false;
+    review_watch_interval_ms = 1000;
+    no_update_check = true;
+    username = cfg.users.primary.fullName;
+    comment_types = [
+      {
+        id = "issue";
+        definition = "problem that should be fixed before merge";
+      }
+      {
+        id = "suggestion";
+        definition = "possible improvement";
+      }
+      {
+        id = "note";
+        definition = "context or clarification";
+      }
+      {
+        id = "praise";
+        definition = "positive observation";
+      }
+    ];
+  };
 in
 lib.mkIf cfg.features.cli.enable {
   programs.git = {
@@ -77,29 +108,29 @@ lib.mkIf cfg.features.cli.enable {
         name = cfg.users.primary.fullName;
         email = cfg.users.primary.email;
       };
-      extraConfig = {
-        init.defaultBranch = "main";
-      };
+      init.defaultBranch = "main";
+    }
+    // lib.optionalAttrs (enabled "tuicr") {
+      alias.review = "!tuicr -w";
     };
     signing.format = "openpgp";
   };
 
   programs.gh.enable = enabled "gh";
 
-  programs.hunk = {
-    enable = enabled "hunk";
-    package = pkgs.hunk;
-    enableGitIntegration = config.programs.git.enable;
-    settings = {
-      mode = "auto";
-      watch = false;
-      exclude_untracked = false;
-      line_numbers = true;
-      wrap_lines = false;
-      menu_bar = true;
-      agent_notes = true;
-      transparent_background = false;
+  programs.delta = {
+    enable = enabled "delta";
+    enableGitIntegration = enabled "git";
+    options = {
+      navigate = true;
+      line-numbers = true;
     };
+  };
+
+  home.packages = lib.optional (enabled "tuicr") pkgs.tuicr;
+
+  xdg.configFile."tuicr/config.toml" = lib.mkIf (enabled "tuicr") {
+    source = tuicrConfig;
   };
 
   programs.zsh = {
@@ -126,8 +157,6 @@ lib.mkIf cfg.features.cli.enable {
       bindkey '^x^e' edit-command-line
 
       _sysfu() {
-        local -a flake_inputs
-        flake_inputs=("''${(@f)$(nix flake metadata --json "$DOTFILES" 2>/dev/null | jq -r '.locks.nodes.root.inputs // {} | keys[]' 2>/dev/null)}")
         _arguments -C \
           '(-h --help)'{-h,--help}'[show help]' \
           '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \

@@ -18,7 +18,6 @@ in
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
   home-manager.users.${cfg.users.primary.name}.imports = [
-    inputs.hunk.homeManagerModules.hunk
     ../home/base.nix
     ../home/cli.nix
   ];
@@ -76,7 +75,7 @@ in
 
   nixpkgs.overlays = [
     (_final: prev: {
-      hunk = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.hunk;
+      tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
     })
   ];
 
