@@ -5,16 +5,36 @@ let
   system = builtins.getAttr host flake.nixosConfigurations;
   lib = if system ? pkgs && system.pkgs ? lib then system.pkgs.lib else flake.inputs.nixpkgs.lib;
 
+  inputRoots =
+    prefix: inputs:
+    lib.concatMap (
+      name:
+      let
+        input = builtins.getAttr name inputs;
+        label = lib.concatStringsSep "/" (prefix ++ [ name ]);
+        root = lib.optional (builtins.isAttrs input && input ? outPath) {
+          inherit label;
+          path = builtins.toString input.outPath;
+        };
+        nested =
+          if builtins.isAttrs input && input ? inputs && builtins.isAttrs input.inputs then
+            inputRoots (prefix ++ [ name ]) input.inputs
+          else
+            [ ];
+      in
+      root ++ nested
+    ) (builtins.attrNames inputs);
+
   sourceRoots = [
     {
       name = "local";
       path = builtins.toString flake.outPath;
     }
   ]
-  ++ lib.mapAttrsToList (name: input: {
-    inherit name;
-    path = builtins.toString input.outPath;
-  }) (lib.filterAttrs (_: input: builtins.isAttrs input && input ? outPath) flake.inputs);
+  ++ builtins.map (root: {
+    name = root.label;
+    inherit (root) path;
+  }) (inputRoots [ ] flake.inputs);
 
   sourcePath =
     rawFile:
