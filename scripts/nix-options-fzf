@@ -6,18 +6,20 @@ cmd_name="${NIX_OPTIONS_FZF_CMD_NAME:-${0##*/}}"
 usage() {
   cat <<EOF
 Usage:
-  ${cmd_name} [host] [prefix] [--refresh]
-  ${cmd_name} [host] [prefix] --list
+  ${cmd_name} [host] [prefix] [--scope <scope>] [--refresh]
+  ${cmd_name} [host] [prefix] [--scope <scope>] --list
   ${cmd_name} [host] --refresh --list
   ${cmd_name} [host] [prefix] --refresh --list
-  ${cmd_name} [host] --preview <option>
-  ${cmd_name} [host] --value <option>
-  ${cmd_name} [host] --value-full <option>
-  ${cmd_name} [host] --value-items <option>
-  ${cmd_name} [host] --value-search <option>
-  ${cmd_name} [host] --definitions <option>
-  ${cmd_name} [host] --definition-items <option>
-  ${cmd_name} [host] --definition-item <option> <item>
+  ${cmd_name} [host] [--scope <scope>] --preview <option>
+  ${cmd_name} [host] [--scope <scope>] --default <option>
+  ${cmd_name} [host] [--scope <scope>] --value <option>
+  ${cmd_name} [host] [--scope <scope>] --value-full <option>
+  ${cmd_name} [host] [--scope <scope>] --value-items <option>
+  ${cmd_name} [host] [--scope <scope>] --value-search <option>
+  ${cmd_name} [host] [--scope <scope>] --definitions <option>
+  ${cmd_name} [host] [--scope <scope>] --definition-items <option>
+  ${cmd_name} [host] [--scope <scope>] --definition-item <option> <item>
+  ${cmd_name} [host] --scopes
   ${cmd_name} --hosts
   ${cmd_name} --refresh-all
   ${cmd_name} --default-host
@@ -26,7 +28,7 @@ Usage:
 
 Interactive fzf keys:
   Enter      zoom into the selected option area; never exits
-  Ctrl-P     print selected option immediately and exit
+  Ctrl-P     print selected option identity immediately and exit
   Ctrl-B     go back one level
   Ctrl-O     toggle flat/all-options mode and grouped/module mode
   Ctrl-J/K   move selection down/up one line
@@ -57,6 +59,12 @@ Prefixes:
   Omit [prefix] to start at the root option list.
   Use a concrete option as [prefix] to jump near that option.
 
+Scopes:
+  NixOS options use scope "nixos". Each configured Home Manager user uses
+  "home-manager:<user>". Omit --scope when an option name is unique; ambiguous
+  names fail and list the available scopes. Interactive selections retain scope.
+  Run "${cmd_name} <host-or-alias> --scopes" to list scopes for a host.
+
 List modes:
   Flat mode shows all concrete options under the current prefix.
   Grouped mode shows module/group entries like services/ and programs/.
@@ -74,14 +82,14 @@ Remembered host:
   Running another explicit host switches the remembered host.
 
 Caches:
-  Option docs are cached per host.
+  Scoped option docs are cached per host.
   Rebuild docs for one host:
     ${cmd_name} <host-or-alias> --refresh --list
   Rebuild docs for one host and prefix:
     ${cmd_name} <host-or-alias> <prefix> --refresh --list
   Rebuild docs for all hosts:
     ${cmd_name} --refresh-all
-  Evaluated values, definitions, and item origins are cached per host + option + repo state.
+  Evaluated values, definitions, and item origins are cached per host + scope + option + repo state.
   Refreshing docs does not clear evaluated caches.
   Use --clear-value-cache when you intentionally want cold value/definition/item-origin caches.
 EOF
@@ -91,13 +99,14 @@ repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 flake="path:$repo"
 nix_bin="${NIX_BIN:-nix}"
 
-cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options"
+repo_cache_key="$(printf '%s\0' "$repo" | sha256sum | awk '{print substr($1, 1, 16)}')"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options/$repo_cache_key"
 preview_script="$cache_dir/preview-option"
 hosts_cache="$cache_dir/hosts.json"
-value_cache_dir="$cache_dir/values"
+value_cache_dir="$cache_dir/values-v3"
 mkdir -p "$cache_dir" "$value_cache_dir"
 
-default_host_file="$(git rev-parse --git-path dotfiles-options-default-host 2>/dev/null || printf '%s/default-host\n' "$cache_dir")"
+default_host_file="${NIX_OPTIONS_FZF_DEFAULT_HOST_FILE:-$(git rev-parse --git-path dotfiles-options-default-host 2>/dev/null || printf '%s/default-host\n' "$cache_dir")}"
 mkdir -p "$(dirname "$default_host_file")"
 
 value_cache_host_dir() {
@@ -140,7 +149,7 @@ clear_all_value_cache() {
   fi
 
   case "$value_cache_dir" in
-    "$cache_dir"/values)
+    "$cache_dir"/values-v3)
       safe_remove_cache_tree "$value_cache_dir" "$cache_dir"
       mkdir -p "$value_cache_dir"
       ;;
@@ -163,7 +172,10 @@ show_hosts=0
 show_default_host=0
 clear_default_host=0
 clear_value_cache=0
+show_scopes=0
+requested_scope=""
 preview_name=""
+default_name=""
 value_name=""
 value_full=0
 value_items_name=""
@@ -223,6 +235,11 @@ resolve_host_arg() {
   local matches=""
   local count=0
 
+  if list_hosts | grep -Fxq -- "$arg"; then
+    printf '%s\n' "$arg"
+    return 0
+  fi
+
   while IFS= read -r h; do
     while IFS= read -r alias; do
       if [ "$alias" = "$arg" ]; then
@@ -278,6 +295,14 @@ while [ "$#" -gt 0 ]; do
     --list)
       list_only=1
       ;;
+    --scope)
+      shift
+      requested_scope="${1:-}"
+      [ -n "$requested_scope" ] || { echo "ERROR: --scope requires a scope." >&2; exit 2; }
+      ;;
+    --scopes)
+      show_scopes=1
+      ;;
     --refresh-all)
       refresh=1
       refresh_all=1
@@ -298,6 +323,11 @@ while [ "$#" -gt 0 ]; do
       shift
       preview_name="${1:-}"
       [ -n "$preview_name" ] || { echo "ERROR: --preview requires an option name." >&2; exit 2; }
+      ;;
+    --default)
+      shift
+      default_name="${1:-}"
+      [ -n "$default_name" ] || { echo "ERROR: --default requires an option name." >&2; exit 2; }
       ;;
     --value)
       shift
@@ -332,20 +362,19 @@ while [ "$#" -gt 0 ]; do
       ;;
     --definition-item)
       shift
-      definition_item_name="${1:-}"
-      shift || true
-      definition_item_value="${1:-}"
-      [ -n "$definition_item_name" ] || { echo "ERROR: --definition-item requires an option name." >&2; exit 2; }
-      [ -n "$definition_item_value" ] || { echo "ERROR: --definition-item requires an item value." >&2; exit 2; }
+      [ "$#" -gt 0 ] || { echo "ERROR: --definition-item requires an option name." >&2; exit 2; }
+      definition_item_name="$1"
+      shift
+      [ "$#" -gt 0 ] || { echo "ERROR: --definition-item requires an item value." >&2; exit 2; }
+      definition_item_value="$1"
       ;;
     *)
-      if resolved_host="$(resolve_host_arg "$1" 2>/tmp/no-host-resolve.err)"; then
+      if resolved_host="$(resolve_host_arg "$1")"; then
         host="$resolved_host"
         host_explicit=1
       else
         status=$?
         if [ "$status" -eq 2 ]; then
-          cat /tmp/no-host-resolve.err >&2
           exit 2
         fi
 
@@ -418,7 +447,8 @@ else
   host="${host:-$(list_hosts | head -n 1)}"
 fi
 
-cache="$cache_dir/nixosConfigurations-$host.json"
+cache="$cache_dir/option-scopes-v3-$host.json"
+scope_lib_path="$repo/scripts/nix-options-scopes.nix"
 
 nix_string() {
   jq -Rn --arg s "$1" '$s'
@@ -444,34 +474,36 @@ repo_state_hash() {
       [ -f "$repo/$f" ] || continue
       printf 'UNTRACKED:%s
 ' "$f"
-      shasum -a 256 "$repo/$f" 2>/dev/null || true
+      sha256sum "$repo/$f" 2>/dev/null || true
     done < <(git -C "$repo" ls-files --others --exclude-standard -z 2>/dev/null || true)
-  } | shasum -a 256 | awk '{print $1}'
+  } | sha256sum | awk '{print $1}'
 }
 
 value_cache_file() {
   local kind="$1"
-  local option="$2"
-  local extra="$3"
+  local scope="$2"
+  local option="$3"
+  local extra="$4"
   local state
   local key
 
   state="$(repo_state_hash)"
-  key="$(printf '%s\0%s\0%s\0%s\0%s\0%s' "$host" "$kind" "$option" "$extra" "$state" "$nix_bin" | shasum -a 256 | awk '{print $1}')"
+  key="$(printf '%s\0%s\0%s\0%s\0%s\0%s\0%s' "$host" "$scope" "$kind" "$option" "$extra" "$state" "$nix_bin" | sha256sum | awk '{print $1}')"
 
   mkdir -p "$value_cache_dir/$host/$kind"
   printf '%s/%s/%s/%s.json\n' "$value_cache_dir" "$host" "$kind" "$key"
 }
 
 option_note() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
 
   if [ ! -s "$cache" ]; then
     return 0
   fi
 
-  jq -r --arg name "$option" '
-    .[] | select(.name == $name) |
+  jq -r --arg scope "$scope" --arg name "$option" '
+    .[] | select(.scope == $scope and .name == $name) |
     if ((.declarations // []) | map(tostring | contains("/rename.nix")) | any) then
       "note: this option is declared by rename.nix, so it is likely a renamed/deprecated compatibility option. It may exist in system.options but not have a normal value in system.config."
     elif ((.type // "") == "unspecified value") then
@@ -488,7 +520,8 @@ set -euo pipefail
 
 mode="${1:-docs}"
 host="${2:-}"
-name="${3:-}"
+scope="${3:-}"
+name="${4:-}"
 
 esc="$(printf '\033')"
 if [ -z "${NO_COLOR:-}" ]; then
@@ -524,7 +557,7 @@ label() {
 print_browser_keys() {
   printf '%bkeys%b\n' "$BOLD$MAGENTA" "$RESET"
   printf '  %bEnter%b    zoom into selected option area; never exits\n' "$YELLOW" "$RESET"
-  printf '  %bCtrl-P%b   print selected option and exit\n' "$YELLOW" "$RESET"
+  printf '  %bCtrl-P%b   print selected option identity and exit\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-B%b   go back one level\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-O%b   toggle flat/grouped list mode\n' "$YELLOW" "$RESET"
   printf '  %bCtrl-J/K%b move selection lines\n' "$YELLOW" "$RESET"
@@ -553,7 +586,13 @@ fi
 
 if [[ "$name" == */ ]]; then
   group="${name%/}"
-  count="$(jq -r --arg p "$group" '[.[].name | select(. == $p or startswith($p + "."))] | length' "$DOTFILES_OPTIONS_CACHE")"
+  count="$(jq -r --arg p "$group" --arg scope "${DOTFILES_OPTIONS_SCOPE_FILTER:-}" '
+    [.[]
+      | select($scope == "" or .scope == $scope)
+      | .name
+      | select(. == $p or startswith($p + "."))
+    ] | length
+  ' "$DOTFILES_OPTIONS_CACHE")"
   printf '%b# %s/%b\n\n' "$BOLD$CYAN" "$group" "$RESET"
   label "group/module"
   printf '  %s concrete options below this prefix\n\n' "$count"
@@ -562,8 +601,10 @@ if [[ "$name" == */ ]]; then
 fi
 
 doc_json="$(
-  jq -c --arg name "$name" '.[] | select(.name == $name) | {
+  jq -c --arg scope "$scope" --arg name "$name" '.[] | select(.scope == $scope and .name == $name) | {
     name,
+    scope,
+    scopeLabel,
     type: (.type // "unknown"),
     description: (.description // ""),
     declarations: (.declarations // [])
@@ -576,11 +617,16 @@ if [ -z "$doc_json" ]; then
 fi
 
 doc_name="$(printf '%s\n' "$doc_json" | jq -r '.name')"
+doc_scope="$(printf '%s\n' "$doc_json" | jq -r '.scope')"
+doc_scope_label="$(printf '%s\n' "$doc_json" | jq -r '.scopeLabel')"
 doc_type="$(printf '%s\n' "$doc_json" | jq -r '.type')"
 doc_description="$(printf '%s\n' "$doc_json" | jq -r '.description')"
 doc_declarations="$(printf '%s\n' "$doc_json" | jq -r '.declarations[]?')"
 
 printf '%b# %s%b\n\n' "$BOLD$CYAN" "$doc_name" "$RESET"
+
+label "scope"
+printf '  %b%s%b (%s)\n\n' "$GREEN" "$doc_scope_label" "$RESET" "$doc_scope"
 
 label "type"
 printf '  %b%s%b\n\n' "$GREEN" "$doc_type" "$RESET"
@@ -597,10 +643,20 @@ else
   printf '  %b<none>%b\n' "$DIM" "$RESET"
 fi
 
+print_declared_default() {
+  echo
+  label "declared default"
+  if declared_default="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" --default "$name" 2>/dev/null)"; then
+    printf '  %b%s%b\n' "$GREEN" "$declared_default" "$RESET"
+  else
+    printf '  %b<unavailable>%b\n' "$DIM" "$RESET"
+  fi
+}
+
 print_defined_by() {
   echo
   label "defined by"
-  if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --definitions "$name" 2>/dev/null)"; then
+  if definitions="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" --definitions "$name" 2>/dev/null)"; then
     if [ -n "$definitions" ]; then
       printf '%s\n' "$definitions" | sed 's/^/  /'
     else
@@ -613,6 +669,7 @@ print_defined_by() {
 
 case "$mode" in
   docs)
+    print_declared_default
     print_defined_by
     echo
     hr
@@ -655,7 +712,7 @@ case "$mode" in
 
     start="$(date +%s 2>/dev/null || printf 0)"
 
-    if output="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" "$flag" "$name" 2>&1)"; then
+    if output="$("$DOTFILES_OPTIONS_REPO/scripts/nix-options-fzf" "$host" --scope "$scope" "$flag" "$name" 2>&1)"; then
       end="$(date +%s 2>/dev/null || printf "$start")"
       elapsed=$((end - start))
       printf '%belapsed%b: %ss\n\n' "$DIM" "$RESET" "$elapsed"
@@ -682,34 +739,50 @@ write_docs_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
   local host_literal="$3"
+  local scope_lib_literal="$4"
 
   cat > "$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
-
-  flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib =
-    if system ? pkgs && system.pkgs ? lib then
-      system.pkgs.lib
-    else
-      flake.inputs.nixpkgs.lib;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
 
   cleanString = x:
     let forced = builtins.tryEval x;
     in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "";
 
-  optionDoc = path: opt: {
+  declaration = position:
+    let
+      source = scopeData.sourcePath position.file;
+      suffix =
+        if position ? line && position.line != null then
+          ":" + builtins.toString position.line
+          + (if position ? column && position.column != null then ":" + builtins.toString position.column else "")
+        else
+          "";
+    in
+    source.label + suffix;
+
+  optionDoc = scope: scopeInfo: path: opt: {
     name = lib.concatStringsSep "." path;
+    inherit scope;
+    scopeLabel = scopeInfo.label;
+    scopeKind = scopeInfo.kind;
+    scopeUser = scopeInfo.user;
     type = opt.type.description or "unknown";
     description = cleanString (opt.description or "");
-    declarations = builtins.map toString (opt.declarations or [ ]);
+    declarations = builtins.map declaration (
+      if opt ? declarationPositions then
+        opt.declarationPositions
+      else
+        builtins.map (file: { inherit file; }) (opt.declarations or [ ])
+    );
     readOnly = opt.readOnly or false;
   };
 
-  collect =
-    prefix: set:
+  collect = scope: scopeInfo: prefix: set:
     builtins.concatLists (
       builtins.map
         (
@@ -719,16 +792,22 @@ let
             path = prefix ++ [ name ];
           in
           if builtins.isAttrs v && v ? _type && v._type == "option" then
-            [ (optionDoc path v) ]
+            if builtins.elem (v.visible or true) [ true "shallow" ] && !(v.internal or false) then
+              [ (optionDoc scope scopeInfo path v) ]
+            else
+              [ ]
           else if builtins.isAttrs v then
-            collect path v
+            collect scope scopeInfo path v
           else
             [ ]
         )
         (builtins.attrNames set)
     );
+  records = builtins.concatLists (
+    lib.mapAttrsToList (scope: scopeInfo: collect scope scopeInfo [ ] scopeInfo.options) scopeData.scopes
+  );
 in
-builtins.sort (a: b: a.name < b.name) (collect [ ] system.options)
+builtins.sort (a: b: a.name < b.name || (a.name == b.name && a.scope < b.scope)) records
 NIX
 }
 
@@ -736,26 +815,26 @@ write_value_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
   local host_literal="$3"
-  local path_literal="$4"
-  local max_items="$5"
-  local max_keys="$6"
-  local max_chars="$7"
+  local scope_literal="$4"
+  local path_literal="$5"
+  local scope_lib_literal="$6"
+  local max_items="$7"
+  local max_keys="$8"
+  local max_chars="$9"
 
   cat > "$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
+  scope = $scope_literal;
   optionPath = $path_literal;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
+  selectedScope = builtins.getAttr scope scopeData.scopes;
 
-  flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib =
-    if system ? pkgs && system.pkgs ? lib then
-      system.pkgs.lib
-    else
-      flake.inputs.nixpkgs.lib;
-
-  value = lib.attrByPath optionPath "<missing>" system.config;
+  found = lib.hasAttrByPath optionPath selectedScope.config;
+  value = lib.attrByPath optionPath null selectedScope.config;
 
   truncate =
     text:
@@ -830,78 +909,207 @@ let
     else
       "<unsupported value type>";
 
-  forced = builtins.tryEval value;
+  forced = if found then builtins.tryEval value else { success = false; value = null; };
   renderedRaw = if forced.success then render forced.value else "<unavailable>";
   rendered = builtins.tryEval (builtins.deepSeq renderedRaw renderedRaw);
-  available = forced.success && rendered.success;
+  available = found && forced.success && rendered.success;
 in
 {
   option = builtins.concatStringsSep "." optionPath;
+  inherit scope;
   available = available;
-  value = if available then rendered.value else "<unavailable>";
+  value = if available then rendered.value else if found then "<unavailable>" else "<missing>";
 }
 NIX
+}
+
+write_default_expr() {
+  local expr_file="$1"
+  local flake_ref_literal="$2"
+  local host_literal="$3"
+  local scope_literal="$4"
+  local path_literal="$5"
+  local scope_lib_literal="$6"
+
+  cat > "$expr_file" <<NIX
+let
+  flakeRef = $flake_ref_literal;
+  host = $host_literal;
+  scope = $scope_literal;
+  optionPath = $path_literal;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
+  selectedScope = builtins.getAttr scope scopeData.scopes;
+  opt = lib.attrByPath optionPath null selectedScope.options;
+
+  candidate =
+    if opt == null then
+      { available = false; value = null; }
+    else if opt ? defaultText then
+      { available = true; value = opt.defaultText; }
+    else if opt ? default then
+      { available = true; value = opt.default; }
+    else if
+      (opt.type.getSubModules or null) == null
+      && opt.type ? emptyValue
+      && opt.type.emptyValue ? value
+    then
+      { available = true; value = opt.type.emptyValue.value; }
+    else
+      { available = false; value = null; };
+
+  plainString = value: builtins.unsafeDiscardStringContext (builtins.toString value);
+  render = value:
+    if builtins.isNull value then
+      "null"
+    else if builtins.isBool value then
+      if value then "true" else "false"
+    else if builtins.isInt value then
+      builtins.toString value
+    else if (builtins ? isFloat) && builtins.isFloat value then
+      builtins.toJSON value
+    else if builtins.isString value || builtins.isPath value then
+      plainString value
+    else if builtins.isFunction value then
+      "<function>"
+    else if builtins.isList value then
+      "<list: " + builtins.toString (builtins.length value) + " items>"
+    else if builtins.isAttrs value && builtins.elem (value._type or null) [ "literalExpression" "literalMD" ] then
+      plainString value.text
+    else if builtins.isAttrs value then
+      "<attrset: " + builtins.toString (builtins.length (builtins.attrNames value)) + " keys>"
+    else
+      "<unsupported>";
+
+  forced = if candidate.available then builtins.tryEval candidate.value else { success = false; value = null; };
+  renderedRaw = if forced.success then render forced.value else "<unavailable>";
+  rendered = builtins.tryEval (builtins.deepSeq renderedRaw renderedRaw);
+  available = candidate.available && forced.success && rendered.success;
+in
+{
+  option = builtins.concatStringsSep "." optionPath;
+  inherit scope available;
+  value = if available then rendered.value else if candidate.available then "<unavailable>" else "<none>";
+}
+NIX
+}
+
+print_default() {
+  local scope="$1"
+  local option="$2"
+  local expr_file
+  local flake_ref_literal
+  local host_literal
+  local scope_literal
+  local scope_lib_literal
+  local path_literal
+  local cache_file
+  local tmp
+
+  cache_file="$(value_cache_file "default" "$scope" "$option" "default-v3")"
+
+  if [ -s "$cache_file" ]; then
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
+  else
+    [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-default.XXXXXX")"
+    tmp="$cache_file.tmp.$$"
+    flake_ref_literal="$(nix_string "$flake")"
+    host_literal="$(nix_string "$host")"
+    scope_literal="$(nix_string "$scope")"
+    path_literal="$(path_to_nix_list "$option")"
+    scope_lib_literal="$(nix_string "$scope_lib_path")"
+    write_default_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
+
+    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+      if jq -e . "$tmp" >/dev/null; then
+        rm -f "$expr_file"
+        mv "$tmp" "$cache_file"
+      else
+        rm -f "$expr_file" "$tmp"
+        echo "ERROR: default eval produced invalid JSON for $option" >&2
+        return 1
+      fi
+    else
+      local status=$?
+      rm -f "$expr_file" "$tmp"
+      return "$status"
+    fi
+  fi
+
+  jq -r '.value' "$cache_file"
 }
 
 write_items_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
   local host_literal="$3"
-  local path_literal="$4"
+  local scope_literal="$4"
+  local path_literal="$5"
+  local scope_lib_literal="$6"
 
   cat > "$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
+  scope = $scope_literal;
   optionPath = $path_literal;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
+  selectedScope = builtins.getAttr scope scopeData.scopes;
 
-  flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib =
-    if system ? pkgs && system.pkgs ? lib then
-      system.pkgs.lib
-    else
-      flake.inputs.nixpkgs.lib;
-
-  value = lib.attrByPath optionPath "<missing>" system.config;
+  found = lib.hasAttrByPath optionPath selectedScope.config;
+  value = lib.attrByPath optionPath null selectedScope.config;
   plainString = s: builtins.unsafeDiscardStringContext (builtins.toString s);
+
+  mkItem = kind: canonical: display: {
+    id = builtins.hashString "sha256" (kind + "\\u0000" + canonical);
+    inherit display kind;
+  };
 
   renderOne =
     v:
     if builtins.isNull v then
-      "null"
+      mkItem "null" "null" "null"
     else if builtins.isBool v then
-      if v then "true" else "false"
+      mkItem "bool" (if v then "true" else "false") (if v then "true" else "false")
     else if builtins.isInt v then
-      builtins.toString v
+      mkItem "int" (builtins.toString v) (builtins.toString v)
     else if (builtins ? isFloat) && builtins.isFloat v then
-      builtins.toJSON v
+      mkItem "float" (builtins.toJSON v) (builtins.toJSON v)
     else if builtins.isString v then
-      builtins.unsafeDiscardStringContext v
+      let text = builtins.unsafeDiscardStringContext v;
+      in mkItem "string" text text
     else if builtins.isPath v then
-      plainString v
+      let text = plainString v;
+      in mkItem "path" text text
     else if builtins.isFunction v then
-      "<function>"
+      mkItem "function" "function" "<function>"
     else if builtins.isAttrs v then
       let drvEval = builtins.tryEval (v ? type && v.type == "derivation" && v ? name);
       in
       if drvEval.success && drvEval.value then
         let nameEval = builtins.tryEval (plainString v.name);
-        in if nameEval.success then nameEval.value else "<derivation: unknown>"
+            text = if nameEval.success then nameEval.value else "<derivation: unknown>";
+        in mkItem "derivation" text text
       else
         let namesEval = builtins.tryEval (builtins.attrNames v);
-        in if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>"
+            text = if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>";
+        in mkItem "attrset" text text
     else if builtins.isList v then
       let lenEval = builtins.tryEval (builtins.length v);
-      in "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>"
+          text = "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>";
+      in mkItem "list" text text
     else
-      "<unsupported>";
+      mkItem "unsupported" "unsupported" "<unsupported>";
 
-  forced = builtins.tryEval value;
+  forced = if found then builtins.tryEval value else { success = false; value = null; };
 
   renderedRaw =
     if ! forced.success then
-      [ "<unavailable>" ]
+      [ (mkItem "unavailable" "unavailable" "<unavailable>") ]
     else if builtins.isList forced.value then
       builtins.map renderOne forced.value
     else if builtins.isAttrs forced.value then
@@ -909,17 +1117,26 @@ let
         namesEval = builtins.tryEval (builtins.attrNames forced.value);
         names = if namesEval.success then namesEval.value else [ ];
       in
-      builtins.map (n: n + " = " + renderOne (builtins.getAttr n forced.value)) names
+      builtins.map (
+        n:
+        let item = renderOne (builtins.getAttr n forced.value);
+        in mkItem "attribute:\${item.kind}" (n + "\\u0000" + item.id) (n + " = " + item.display)
+      ) names
     else
       [ (renderOne forced.value) ];
 
   rendered = builtins.tryEval (builtins.deepSeq renderedRaw renderedRaw);
-  available = forced.success && rendered.success;
+  available = found && forced.success && rendered.success;
 in
 {
   option = builtins.concatStringsSep "." optionPath;
+  inherit scope;
   available = available;
-  items = if available then rendered.value else [ "<unavailable>" ];
+  items =
+    if available then
+      rendered.value
+    else
+      [ (mkItem (if found then "unavailable" else "missing") "" (if found then "<unavailable>" else "<missing>")) ];
 }
 NIX
 }
@@ -929,27 +1146,22 @@ write_definitions_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
   local host_literal="$3"
-  local path_literal="$4"
+  local scope_literal="$4"
+  local path_literal="$5"
+  local scope_lib_literal="$6"
 
   cat > "$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
+  scope = $scope_literal;
   optionPath = $path_literal;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
+  selectedScope = builtins.getAttr scope scopeData.scopes;
 
-  flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib =
-    if system ? pkgs && system.pkgs ? lib then
-      system.pkgs.lib
-    else
-      flake.inputs.nixpkgs.lib;
-
-  opt = lib.attrByPath optionPath null system.options;
-
-  cleanString = x:
-    let forced = builtins.tryEval x;
-    in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "<unknown>";
+  opt = lib.attrByPath optionPath null selectedScope.options;
 
   filesRaw =
     if opt == null then
@@ -958,7 +1170,7 @@ let
       let defsEval = builtins.tryEval (opt.definitionsWithLocations or [ ]);
       in
       if defsEval.success then
-        builtins.map (def: cleanString (def.file or "<unknown>")) defsEval.value
+        builtins.map (def: scopeData.originPath (def.file or "<unknown-file>")) defsEval.value
       else
         [ ];
 
@@ -970,28 +1182,33 @@ NIX
 
 
 print_definitions() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
   local expr_file
   local flake_ref_literal
   local host_literal
+  local scope_literal
+  local scope_lib_literal
   local path_literal
   local cache_file
   local tmp
 
-  cache_file="$(value_cache_file "definitions" "$option" "definitions-v1")"
+  cache_file="$(value_cache_file "definitions" "$scope" "$option" "definitions-v3")"
 
   if [ -s "$cache_file" ]; then
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
-    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definitions.XXXXXX.nix")"
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definitions.XXXXXX")"
     tmp="$cache_file.tmp.$$"
     flake_ref_literal="$(nix_string "$flake")"
     host_literal="$(nix_string "$host")"
+    scope_literal="$(nix_string "$scope")"
     path_literal="$(path_to_nix_list "$option")"
+    scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-    write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+    write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
     if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
@@ -1019,8 +1236,8 @@ print_definitions() {
         .
       end;
 
-    group_by(.)
-    | map({ path: (.[0] | pretty), count: length })
+    group_by(.label)
+    | map({ path: (.[0].label | pretty), count: length })
     | sort_by(.path)
     | .[]
     | if .count > 1 then
@@ -1037,87 +1254,99 @@ write_definition_items_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
   local host_literal="$3"
-  local path_literal="$4"
+  local scope_literal="$4"
+  local path_literal="$5"
+  local scope_lib_literal="$6"
 
   cat > "$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
+  scope = $scope_literal;
   optionPath = $path_literal;
+  scopeLibPath = $scope_lib_literal;
+  scopeData = import (builtins.toPath scopeLibPath) { inherit flakeRef host; };
+  inherit (scopeData) lib;
+  selectedScope = builtins.getAttr scope scopeData.scopes;
 
-  flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib =
-    if system ? pkgs && system.pkgs ? lib then
-      system.pkgs.lib
-    else
-      flake.inputs.nixpkgs.lib;
-
-  opt = lib.attrByPath optionPath null system.options;
-
-  cleanString = x:
-    let forced = builtins.tryEval x;
-    in if forced.success then builtins.unsafeDiscardStringContext (builtins.toString forced.value) else "<unknown>";
+  opt = lib.attrByPath optionPath null selectedScope.options;
 
   plainString = s: builtins.unsafeDiscardStringContext (builtins.toString s);
+
+  mkItem = kind: canonical: display: {
+    id = builtins.hashString "sha256" (kind + "\\u0000" + canonical);
+    inherit display kind;
+  };
 
   renderOne =
     v:
     if builtins.isNull v then
-      "null"
+      mkItem "null" "null" "null"
     else if builtins.isBool v then
-      if v then "true" else "false"
+      mkItem "bool" (if v then "true" else "false") (if v then "true" else "false")
     else if builtins.isInt v then
-      builtins.toString v
+      mkItem "int" (builtins.toString v) (builtins.toString v)
     else if (builtins ? isFloat) && builtins.isFloat v then
-      builtins.toJSON v
+      mkItem "float" (builtins.toJSON v) (builtins.toJSON v)
     else if builtins.isString v then
-      builtins.unsafeDiscardStringContext v
+      let text = builtins.unsafeDiscardStringContext v;
+      in mkItem "string" text text
     else if builtins.isPath v then
-      plainString v
+      let text = plainString v;
+      in mkItem "path" text text
     else if builtins.isFunction v then
-      "<function>"
+      mkItem "function" "function" "<function>"
     else if builtins.isAttrs v then
       let drvEval = builtins.tryEval (v ? type && v.type == "derivation" && v ? name);
       in
       if drvEval.success && drvEval.value then
         let nameEval = builtins.tryEval (plainString v.name);
-        in if nameEval.success then nameEval.value else "<derivation: unknown>"
+            text = if nameEval.success then nameEval.value else "<derivation: unknown>";
+        in mkItem "derivation" text text
       else
         let namesEval = builtins.tryEval (builtins.attrNames v);
-        in if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>"
+            text = if namesEval.success then "<attrset: " + builtins.toString (builtins.length namesEval.value) + " keys>" else "<attrset>";
+        in mkItem "attrset" text text
     else if builtins.isList v then
       let lenEval = builtins.tryEval (builtins.length v);
-      in "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>"
+          text = "<list: " + (if lenEval.success then builtins.toString lenEval.value else "unknown") + " items>";
+      in mkItem "list" text text
     else
-      "<unsupported>";
+      mkItem "unsupported" "unsupported" "<unsupported>";
 
   renderDefinition =
     def:
     let
-      file = cleanString (def.file or "<unknown>");
+      origin = scopeData.originPath (def.file or "<unknown-file>");
       valueEval = builtins.tryEval (def.value or "<missing>");
 
       raw =
         if ! valueEval.success then
-          [ { inherit file; item = "<unavailable>"; } ]
+          [ { inherit origin; item = mkItem "unavailable" "unavailable" "<unavailable>"; } ]
         else if builtins.isList valueEval.value then
-          builtins.map (item: { inherit file; item = renderOne item; }) valueEval.value
+          builtins.map (item: { inherit origin; item = renderOne item; }) valueEval.value
         else if builtins.isAttrs valueEval.value then
           let
             namesEval = builtins.tryEval (builtins.attrNames valueEval.value);
             names = if namesEval.success then namesEval.value else [ ];
           in
-          builtins.map (name: {
-            inherit file;
-            item = name + " = " + renderOne (builtins.getAttr name valueEval.value);
-          }) names
+          builtins.map (
+            name:
+            let item = renderOne (builtins.getAttr name valueEval.value);
+            in {
+              inherit origin;
+              item = mkItem "attribute:\${item.kind}" (name + "\\u0000" + item.id) (name + " = " + item.display);
+            }
+          ) names
         else
-          [ { inherit file; item = renderOne valueEval.value; } ];
+          [ { inherit origin; item = renderOne valueEval.value; } ];
 
       rendered = builtins.tryEval (builtins.deepSeq raw raw);
     in
-    if rendered.success then rendered.value else [ { inherit file; item = "<unavailable>"; } ];
+    if rendered.success then
+      rendered.value
+    else
+      [ { inherit origin; item = mkItem "unavailable" "unavailable" "<unavailable>"; } ];
 
   defsRaw =
     if opt == null then
@@ -1134,6 +1363,7 @@ let
 in
 {
   option = builtins.concatStringsSep "." optionPath;
+  inherit scope;
   items = if defsEval.success then defsEval.value else [ ];
 }
 NIX
@@ -1155,28 +1385,33 @@ EOF
 }
 
 print_definition_items() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
   local expr_file
   local flake_ref_literal
   local host_literal
+  local scope_literal
+  local scope_lib_literal
   local path_literal
   local cache_file
   local tmp
 
-  cache_file="$(value_cache_file "definition-items" "$option" "definition-items-v1")"
+  cache_file="$(value_cache_file "definition-items" "$scope" "$option" "definition-items-v3")"
 
   if [ -s "$cache_file" ]; then
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
-    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definition-items.XXXXXX.nix")"
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-definition-items.XXXXXX")"
     tmp="$cache_file.tmp.$$"
     flake_ref_literal="$(nix_string "$flake")"
     host_literal="$(nix_string "$host")"
+    scope_literal="$(nix_string "$scope")"
     path_literal="$(path_to_nix_list "$option")"
+    scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-    write_definition_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+    write_definition_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
     if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
@@ -1195,6 +1430,7 @@ print_definition_items() {
   fi
 
   printf '# %s\n\n' "$option"
+  printf 'scope\n  %s\n\n' "$scope"
   printf 'item-level origins\n\n'
 
   jq -r --arg repo "$repo" '
@@ -1211,14 +1447,14 @@ print_definition_items() {
     | if length == 0 then
         [ "<none>" ]
       else
-        group_by(.item)
+        group_by(.item.id)
         | map({
-            item: .[0].item,
+            item: (.[0].item.display + " [" + .[0].item.kind + "]"),
             count: length,
             sources: (
-              group_by(.file)
+              group_by(.origin.label)
               | map({
-                  path: (.[0].file | pretty),
+                  path: (.[0].origin.label | pretty),
                   count: length
                 })
               | sort_by(.path)
@@ -1245,17 +1481,23 @@ print_definition_items() {
 }
 
 print_definition_item() {
-  local option="$1"
-  local item="$2"
+  local scope="$1"
+  local option="$2"
+  local item="$3"
   local cache_file
+  local item_cache_file
 
-  cache_file="$(value_cache_file "definition-items" "$option" "definition-items-v1")"
+  cache_file="$(value_cache_file "definition-items" "$scope" "$option" "definition-items-v3")"
+  item_cache_file="$(value_cache_file "items" "$scope" "$option" "items-v3")"
 
   if [ ! -s "$cache_file" ]; then
-    print_definition_items "$option" >/dev/null
+    print_definition_items "$scope" "$option" >/dev/null
+  fi
+  if [ ! -s "$item_cache_file" ]; then
+    print_value_items "$scope" "$option" >/dev/null
   fi
 
-  jq -r --arg repo "$repo" --arg option "$option" --arg item "$item" '
+  jq -r --slurpfile values "$item_cache_file" --arg repo "$repo" --arg scope "$scope" --arg option "$option" --arg item "$item" '
     def pretty:
       if $repo != "" and startswith($repo + "/") then
         ltrimstr($repo + "/")
@@ -1265,12 +1507,19 @@ print_definition_item() {
         .
       end;
 
-    (.items | map(select(.item == $item))) as $matches
+    (.items | map(select(.item.id == $item or .item.display == $item))) as $exact
+    | ($values[0].items | map(select(.id == $item or .display == $item))) as $evaluated
+    | (if ($exact | length) > 0 then $exact elif ($evaluated | length) > 0 then .items else [] end) as $matches
+    | ($exact[0].item.display // $evaluated[0].display // $item) as $display
+    | ($exact[0].item.kind // $evaluated[0].kind // "unknown") as $kind
     | [
         "# " + $option,
         "",
+        "scope",
+        "  " + $scope,
+        "",
         "item",
-        "  " + $item,
+        "  " + $display + " [" + $kind + "]",
         "",
         "defined by"
       ]
@@ -1280,9 +1529,9 @@ print_definition_item() {
         else
           (
             $matches
-            | group_by(.file)
+            | group_by(.origin.label)
             | map({
-                path: (.[0].file | pretty),
+                path: (.[0].origin.label | pretty),
                 count: length
               })
             | sort_by(.path)
@@ -1302,18 +1551,20 @@ print_definition_item() {
 
 build_cache() {
   local build_host="$1"
-  local build_cache="$cache_dir/nixosConfigurations-$build_host.json"
+  local build_cache="$cache_dir/option-scopes-v3-$build_host.json"
   local tmp="$build_cache.tmp.$$"
   local expr_file
   local flake_ref_literal
   local host_literal
+  local scope_lib_literal
 
-  expr_file="$(mktemp "${TMPDIR:-/tmp}/no-options-docs.XXXXXX.nix")"
+  expr_file="$(mktemp "${TMPDIR:-/tmp}/no-options-docs.XXXXXX")"
   flake_ref_literal="$(nix_string "$flake")"
   host_literal="$(nix_string "$build_host")"
+  scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-  echo "Building option docs cache for nixosConfigurations.$build_host using $nix_bin..." >&2
-  write_docs_expr "$expr_file" "$flake_ref_literal" "$host_literal"
+  echo "Building scoped option docs cache for nixosConfigurations.$build_host using $nix_bin..." >&2
+  write_docs_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_lib_literal"
 
   if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
     rm -f "$expr_file"
@@ -1331,11 +1582,71 @@ ensure_docs_cache() {
   fi
 }
 
+list_scopes() {
+  jq -r '
+    map({ scope, label: .scopeLabel })
+    | unique_by(.scope)
+    | sort_by(.scope)
+    | .[]
+    | .scope + "\t" + .label
+  ' "$cache"
+}
+
+validate_scope() {
+  local scope="$1"
+
+  if ! jq -e --arg scope "$scope" 'any(.scope == $scope)' "$cache" >/dev/null; then
+    echo "ERROR: invalid scope for $host: $scope" >&2
+    echo "Available scopes:" >&2
+    list_scopes | sed 's/^/  /' >&2
+    return 2
+  fi
+}
+
+resolve_option_scope() {
+  local requested="$1"
+  local option="$2"
+  local scopes
+  local count
+
+  if [ -n "$requested" ]; then
+    validate_scope "$requested" || return $?
+    if ! jq -e --arg scope "$requested" --arg name "$option" \
+      'any(.scope == $scope and .name == $name)' "$cache" >/dev/null; then
+      echo "ERROR: option not found in scope $requested: $option" >&2
+      return 2
+    fi
+    printf '%s\n' "$requested"
+    return 0
+  fi
+
+  scopes="$(jq -r --arg name "$option" '[.[] | select(.name == $name) | .scope] | unique | .[]' "$cache")"
+  count="$(printf '%s\n' "$scopes" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+  if [ "$count" -eq 1 ]; then
+    printf '%s\n' "$scopes"
+    return 0
+  fi
+
+  if [ "$count" -eq 0 ]; then
+    echo "ERROR: option not found: $option" >&2
+  else
+    echo "ERROR: option is ambiguous across scopes: $option" >&2
+    echo "Available scopes:" >&2
+    printf '%s\n' "$scopes" | sed 's/^/  /' >&2
+    echo "Choose one with --scope <scope>." >&2
+  fi
+  return 2
+}
+
 print_value() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
   local expr_file
   local flake_ref_literal
   local host_literal
+  local scope_literal
+  local scope_lib_literal
   local path_literal
   local max_items
   local max_keys
@@ -1359,20 +1670,22 @@ print_value() {
     max_chars="${NIX_OPTIONS_FZF_VALUE_MAX_CHARS:-20000}"
   fi
 
-  cache_file="$(value_cache_file "$kind" "$option" "$max_items:$max_keys:$max_chars")"
+  cache_file="$(value_cache_file "$kind" "$scope" "$option" "$max_items:$max_keys:$max_chars")"
 
   if [ -s "$cache_file" ]; then
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
-    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-value.XXXXXX.nix")"
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-value.XXXXXX")"
     tmp="$cache_file.tmp.$$"
     flake_ref_literal="$(nix_string "$flake")"
     host_literal="$(nix_string "$host")"
+    scope_literal="$(nix_string "$scope")"
     path_literal="$(path_to_nix_list "$option")"
+    scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-    write_value_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal" "$max_items" "$max_keys" "$max_chars"
+    write_value_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal" "$max_items" "$max_keys" "$max_chars"
 
     if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
@@ -1390,10 +1703,10 @@ print_value() {
     fi
   fi
 
-  jq -r '"# " + .option, "", "current/effective value:", (.value | tostring)' "$cache_file"
+  jq -r '"# " + .option, "", "scope", "  " + .scope, "", "current/effective value:", (.value | tostring)' "$cache_file"
 
   if [ "$(jq -r '.available // false' "$cache_file")" != "true" ]; then
-    note="$(option_note "$option")"
+    note="$(option_note "$scope" "$option")"
     if [ -n "$note" ]; then
       echo
       printf '%s\n' "$note"
@@ -1402,10 +1715,13 @@ print_value() {
 }
 
 print_value_items() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
   local expr_file
   local flake_ref_literal
   local host_literal
+  local scope_literal
+  local scope_lib_literal
   local path_literal
   local cache_file
   local tmp
@@ -1413,20 +1729,22 @@ print_value_items() {
 
   ensure_docs_cache
 
-  cache_file="$(value_cache_file "items" "$option" "items")"
+  cache_file="$(value_cache_file "items" "$scope" "$option" "items-v3")"
 
   if [ -s "$cache_file" ]; then
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache hit: $cache_file" >&2
   else
     [ "${NIX_OPTIONS_FZF_CACHE_DEBUG:-0}" = 1 ] && echo "cache miss: $cache_file" >&2
 
-    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-items.XXXXXX.nix")"
+    expr_file="$(mktemp "${TMPDIR:-/tmp}/no-option-items.XXXXXX")"
     tmp="$cache_file.tmp.$$"
     flake_ref_literal="$(nix_string "$flake")"
     host_literal="$(nix_string "$host")"
+    scope_literal="$(nix_string "$scope")"
     path_literal="$(path_to_nix_list "$option")"
+    scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-    write_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$path_literal"
+    write_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
     if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
@@ -1444,10 +1762,10 @@ print_value_items() {
     fi
   fi
 
-  jq -r '.items[]' "$cache_file"
+  jq -r '.items[].display' "$cache_file"
 
   if [ "$(jq -r '.available // false' "$cache_file")" != "true" ]; then
-    note="$(option_note "$option")"
+    note="$(option_note "$scope" "$option")"
     if [ -n "$note" ]; then
       printf '%s\n' "$note" >&2
     fi
@@ -1456,21 +1774,27 @@ print_value_items() {
 
 
 search_value_items() {
-  local option="$1"
+  local scope="$1"
+  local option="$2"
   local selected
   local item_origin_preview
+  local item_cache_file
 
   if [ "$option" = ".." ] || [[ "$option" == */ ]]; then
     echo "Select a concrete option first, not a group."
     exit 0
   fi
 
-  item_origin_preview="'$repo/scripts/nix-options-fzf' '$host' --definition-item '$option' {}"
+  print_value_items "$scope" "$option" >/dev/null
+  item_cache_file="$(value_cache_file "items" "$scope" "$option" "items-v3")"
+  item_origin_preview="'$repo/scripts/nix-options-fzf' '$host' --scope '$scope' --definition-item '$option' {1}"
 
   selected="$(
-    print_value_items "$option" |
+    jq -r '.items[] | [.id, (.display | gsub("\\n"; "\\\\n")), .kind] | @tsv' "$item_cache_file" |
       fzf \
         --ansi \
+        --delimiter=$'\t' \
+        --with-nth=2,3 \
         --prompt="$host $option values> " \
         --header="Search evaluated values | preview shows origins for highlighted value | Enter/Esc: return to options browser" \
         --preview="$item_origin_preview" \
@@ -1495,40 +1819,62 @@ if [ "$print_cache" -eq 1 ]; then
   exit 0
 fi
 
+ensure_docs_cache
+
+if [ "$show_scopes" -eq 1 ]; then
+  list_scopes
+  exit 0
+fi
+
+if [ -n "$requested_scope" ]; then
+  validate_scope "$requested_scope"
+fi
+
+if [ -n "$default_name" ]; then
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$default_name")"
+  print_default "$resolved_scope" "$default_name"
+  exit 0
+fi
+
 if [ -n "$value_name" ]; then
-  print_value "$value_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$value_name")"
+  print_value "$resolved_scope" "$value_name"
   exit 0
 fi
 
 if [ -n "$value_items_name" ]; then
-  print_value_items "$value_items_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$value_items_name")"
+  print_value_items "$resolved_scope" "$value_items_name"
   exit 0
 fi
 
 if [ -n "$value_search_name" ]; then
-  search_value_items "$value_search_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$value_search_name")"
+  search_value_items "$resolved_scope" "$value_search_name"
   exit 0
 fi
 
 if [ -n "$definition_name" ]; then
-  print_definitions "$definition_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$definition_name")"
+  print_definitions "$resolved_scope" "$definition_name"
   exit 0
 fi
 
 if [ -n "$definition_items_name" ]; then
-  print_definition_items "$definition_items_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$definition_items_name")"
+  print_definition_items "$resolved_scope" "$definition_items_name"
   exit 0
 fi
 
 if [ -n "$definition_item_name" ]; then
-  print_definition_item "$definition_item_name" "$definition_item_value"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$definition_item_name")"
+  print_definition_item "$resolved_scope" "$definition_item_name" "$definition_item_value"
   exit 0
 fi
 
-ensure_docs_cache
-
 export DOTFILES_OPTIONS_CACHE="$cache"
 export DOTFILES_OPTIONS_REPO="$repo"
+export DOTFILES_OPTIONS_SCOPE_FILTER="$requested_scope"
 
 list_entries() {
   local current_prefix="$1"
@@ -1536,34 +1882,42 @@ list_entries() {
 
   {
     if [ -n "$current_prefix" ]; then
-      printf '%s\n' ".."
+      printf '..\t\t-\n'
     fi
 
     if [ "$mode" = "grouped" ]; then
-      jq -r --arg prefix "$current_prefix" '
-        [
-          .[].name
-          | select($prefix == "" or . == $prefix or startswith($prefix + "."))
-          | if $prefix != "" and . == $prefix then
-              .
+      jq -r --arg prefix "$current_prefix" --arg scope "$requested_scope" '
+        reduce (
+          .[]
+          | select(($scope == "" or .scope == $scope)
+              and ($prefix == "" or .name == $prefix or (.name | startswith($prefix + "."))))
+        ) as $record (
+          { groups: {}, records: [] };
+          $record.name as $full
+          | (if $prefix == "" then $full else ($full | ltrimstr($prefix + ".")) end) as $rest
+          | if (($prefix == "" or $full != $prefix) and ($rest | contains("."))) then
+              ((if $prefix == "" then "" else $prefix + "." end) + ($rest | split(".")[0]) + "/") as $group
+              | .groups[$group] = true
             else
-              . as $full
-              | (if $prefix == "" then $full else ($full | ltrimstr($prefix + ".")) end) as $rest
-              | if ($rest | contains(".")) then
-                  ((if $prefix == "" then "" else $prefix + "." end) + ($rest | split(".")[0]) + "/")
-                else
-                  $full
-                end
+              .records += [$record]
             end
-        ]
-        | unique
+        )
+        | ([.groups | keys[] | { name: ., group: true }] + .records)
+        | sort_by(.name, (.scope // ""))
         | .[]
+        | if .group then
+            [.name, "", "-"] | @tsv
+          else
+            [.name, ("[" + .scopeLabel + "]"), .scope] | @tsv
+          end
       ' "$cache"
     else
-      jq -r --arg prefix "$current_prefix" '
+      jq -r --arg prefix "$current_prefix" --arg scope "$requested_scope" '
         .[]
-        | select($prefix == "" or (.name | startswith($prefix + ".")) or .name == $prefix)
-        | .name
+        | select(($scope == "" or .scope == $scope)
+            and ($prefix == "" or (.name | startswith($prefix + ".")) or .name == $prefix))
+        | [.name, ("[" + .scopeLabel + "]"), .scope]
+        | @tsv
       ' "$cache"
     fi
   }
@@ -1613,15 +1967,25 @@ zoom_prefix() {
 }
 
 list_options() {
-  jq -r --arg prefix "$prefix" '
-    .[]
-    | select($prefix == "" or (.name | startswith($prefix)))
-    | .name
+  jq -r --arg prefix "$prefix" --arg scope "$requested_scope" '
+    [
+      .[]
+      | select(($scope == "" or .scope == $scope)
+          and ($prefix == "" or (.name | startswith($prefix))))
+    ]
+    | group_by(.name)
+    | .[]
+    | if length == 1 then
+        .[0].name
+      else
+        .[] | [.name, .scope] | @tsv
+      end
   ' "$cache"
 }
 
 if [ -n "$preview_name" ]; then
-  "$preview_script" docs "$host" "$preview_name"
+  resolved_scope="$(resolve_option_scope "$requested_scope" "$preview_name")"
+  "$preview_script" docs "$host" "$resolved_scope" "$preview_name"
   exit 0
 fi
 
@@ -1645,11 +2009,11 @@ while true; do
   esac
 
   export NIX_OPTIONS_FZF_LIST_MODE="$browser_mode"
-  preview_docs="'$preview_script' docs '$host' {}"
-  preview_value="'$preview_script' value '$host' {}"
-  preview_full="'$preview_script' full '$host' {}"
-  value_search="'$repo/scripts/nix-options-fzf' '$host' --value-search {}"
-  definition_items="'$repo/scripts/nix-options-fzf' '$host' --definition-items {}"
+  preview_docs="'$preview_script' docs '$host' {3} {1}"
+  preview_value="'$preview_script' value '$host' {3} {1}"
+  preview_full="'$preview_script' full '$host' {3} {1}"
+  value_search="'$repo/scripts/nix-options-fzf' '$host' --scope {3} --value-search {1}"
+  definition_items="'$repo/scripts/nix-options-fzf' '$host' --scope {3} --definition-items {1}"
 
   case "${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-full}" in
     docs)
@@ -1679,12 +2043,14 @@ while true; do
     mode_label="flat"
   fi
 
-  header="Mode: $mode_label | Default preview: full value | Enter zoom | Ctrl-P print | Ctrl-B back | Ctrl-O toggle grouped | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-I item origins | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit"
+  header="Mode: $mode_label | Default preview: full value | Enter zoom | Ctrl-P print identity | Ctrl-B back | Ctrl-O toggle grouped | Ctrl-J/K line | Ctrl-U/D half-page | Ctrl-V normal | Ctrl-F full | Ctrl-S search values | Ctrl-I item origins | Ctrl-R docs | Alt-J/K preview line | Alt-D/U preview page | Esc quit"
 
   fzf_output="$(
     list_entries "$current_prefix" "$browser_mode" |
       fzf \
         --ansi \
+        --delimiter=$'\t' \
+        --with-nth=1,2 \
         --expect=ctrl-b,ctrl-p,ctrl-o \
         --header="$header" \
         --prompt="$host [$mode_label] $prompt_prefix> " \
@@ -1711,11 +2077,13 @@ while true; do
 
   if [ "${#fzf_lines[@]}" -eq 1 ]; then
     key="enter"
-    selected="${fzf_lines[0]:-}"
+    selected_record="${fzf_lines[0]:-}"
   else
     key="${fzf_lines[0]:-}"
-    selected="${fzf_lines[1]:-}"
+    selected_record="${fzf_lines[1]:-}"
   fi
+
+  IFS=$'\t' read -r selected _selected_label selected_scope <<< "$selected_record"
 
   if [ "$key" = "ctrl-b" ]; then
     current_prefix="$(prefix_parent "$current_prefix")"
@@ -1745,8 +2113,18 @@ while true; do
     continue
   fi
 
+  if [ -z "$selected_scope" ] || [ "$selected_scope" = "-" ]; then
+    echo "ERROR: selected option lost its scope identity: $selected" >&2
+    exit 2
+  fi
+
   if [ "$key" = "ctrl-p" ]; then
-    printf '%s\n' "$selected"
+    selected_scope_count="$(jq -r --arg name "$selected" '[.[] | select(.name == $name) | .scope] | unique | length' "$cache")"
+    if [ "$selected_scope_count" -gt 1 ]; then
+      printf '%s\t%s\n' "$selected" "$selected_scope"
+    else
+      printf '%s\n' "$selected"
+    fi
     exit 0
   fi
 
