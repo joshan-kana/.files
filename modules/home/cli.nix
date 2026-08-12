@@ -126,12 +126,14 @@ lib.mkIf cfg.features.cli.enable {
       bindkey '^x^e' edit-command-line
 
       _sysfu() {
+        local -a flake_inputs
+        flake_inputs=("''${(@f)$(nix flake metadata --json "$DOTFILES" 2>/dev/null | jq -r '.locks.nodes.root.inputs // {} | keys[]' 2>/dev/null)}")
         _arguments -C \
           '(-h --help)'{-h,--help}'[show help]' \
           '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
           '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
           '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
-          '*:flake input:(nixpkgs nixpkgs-stable nixos-hardware home-manager hunk stylix spicetify-nix plasma-manager)'
+          "*:flake input:(''${(j:|:)flake_inputs})"
       }
       compdef _sysfu sysfu
 
