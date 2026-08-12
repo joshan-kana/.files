@@ -140,6 +140,7 @@
             name = "nf";
             runtimeInputs = with pkgs; [
               fzf
+              coreutils
               git
               jq
               nix
