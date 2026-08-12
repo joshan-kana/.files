@@ -84,6 +84,8 @@ lib.mkIf cfg.features.cli.enable {
     signing.format = "openpgp";
   };
 
+  programs.gh.enable = enabled "gh";
+
   programs.hunk = {
     enable = enabled "hunk";
     package = pkgs.hunk;
