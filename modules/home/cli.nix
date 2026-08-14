@@ -116,7 +116,10 @@ lib.mkIf cfg.features.cli.enable {
     signing.format = "openpgp";
   };
 
-  programs.gh.enable = enabled "gh";
+  programs.gh = {
+    enable = enabled "gh";
+    extensions = [ pkgs.gh-dash ];
+  };
 
   programs.delta = {
     enable = enabled "delta";

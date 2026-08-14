@@ -9,4 +9,6 @@ if ! git diff --cached --quiet -- '*.nix'; then
   git diff --cached --name-only --diff-filter=ACMR -z -- '*.nix' | xargs -0 nix fmt -- --fail-on-change
 fi
 
-git diff --check --cached
+# Generated downstream patches preserve upstream diff whitespace and are
+# validated by their package-specific build/apply checks.
+git diff --check --cached -- . ':(exclude)patches/**'
