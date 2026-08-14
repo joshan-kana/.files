@@ -125,10 +125,39 @@ lib.mkIf cfg.features.cli.enable {
   xdg.configFile."gh-dash/config.yml".source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
     defaults = {
       view = "issues";
-      layout.projects.enabled = true;
+      layout = {
+        issues = {
+          repo.hidden = true;
+          creator.hidden = true;
+          reactions.hidden = true;
+          comments.hidden = true;
+          updatedAt.hidden = true;
+          createdAt.hidden = true;
+        };
+        projects = {
+          enabled = true;
+          fields = [
+            {
+              name = "Status";
+              width = 12;
+            }
+            {
+              name = "Priority";
+              width = 10;
+            }
+            {
+              name = "Area";
+              width = 14;
+            }
+            {
+              name = "Kind";
+              width = 12;
+            }
+          ];
+        };
+      };
     };
   };
-
   programs.delta = {
     enable = enabled "delta";
     enableGitIntegration = enabled "git";
