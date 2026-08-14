@@ -52,6 +52,7 @@ let
     gca = "git commit -a -m";
     gpl = "git pull";
     gph = "git push";
+    dh = "gh dash";
     ollama = "docker exec -it ollama ollama";
     v = "nvim";
     l = "eza -a";
