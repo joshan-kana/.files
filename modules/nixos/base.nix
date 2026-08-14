@@ -13,6 +13,8 @@ let
     if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
 in
 {
+  imports = [ ../../overlays/gh-dash-projects.nix ];
+
   networking.hostName = lib.mkDefault cfg.profile.name;
 
   home-manager.useGlobalPkgs = true;

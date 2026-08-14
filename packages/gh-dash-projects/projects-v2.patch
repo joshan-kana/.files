@@ -1,0 +1,1445 @@
+diff --git a/config/parser.go b/config/parser.go
+index b30b52f..0ae5e64 100644
+--- a/config/parser.go
++++ b/config/parser.go
+@@ -66,6 +66,17 @@ type ColumnConfig struct {
+ 	Hidden *bool `yaml:"hidden,omitempty"`
+ }
+ 
++type ProjectFieldColumnConfig struct {
++	Name    string `yaml:"name" validate:"required"`
++	Project string `yaml:"project,omitempty"`
++	Width   *int   `yaml:"width,omitempty" validate:"omitempty,gt=0"`
++	Hidden  *bool  `yaml:"hidden,omitempty"`
++}
++
++type ProjectLayoutConfig struct {
++	Fields []ProjectFieldColumnConfig `yaml:"fields,omitempty"`
++}
++
+ type PrsLayoutConfig struct {
+ 	UpdatedAt    ColumnConfig `yaml:"updatedAt,omitempty"`
+ 	Repo         ColumnConfig `yaml:"repo,omitempty"`
+@@ -91,8 +102,9 @@ type IssuesLayoutConfig struct {
+ }
+ 
+ type LayoutConfig struct {
+-	Prs    PrsLayoutConfig    `yaml:"prs,omitempty"`
+-	Issues IssuesLayoutConfig `yaml:"issues,omitempty"`
++	Prs      PrsLayoutConfig     `yaml:"prs,omitempty"`
++	Issues   IssuesLayoutConfig  `yaml:"issues,omitempty"`
++	Projects ProjectLayoutConfig `yaml:"projects,omitempty"`
+ }
+ 
+ type Defaults struct {
+diff --git a/config/parser_projects_test.go b/config/parser_projects_test.go
+new file mode 100644
+index 0000000..59fef72
+--- /dev/null
++++ b/config/parser_projects_test.go
+@@ -0,0 +1,39 @@
++package config
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestProjectFieldColumnsParseFromDefaultsLayout(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "config.yml")
++	contents := `
++prSections:
++  - title: Pull requests
++    filters: is:open
++issuesSections:
++  - title: Issues
++    filters: is:open
++defaults:
++  layout:
++    projects:
++      fields:
++        - name: Status
++          project: infrastructure
++          width: 20
++        - name: Priority
++          hidden: true
++`
++	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
++		t.Fatal(err)
++	}
++	config, err := ParseConfig(path, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	fields := config.Defaults.Layout.Projects.Fields
++	if len(fields) != 2 || fields[0].Name != "Status" || fields[0].Project != "infrastructure" || fields[0].Width == nil || *fields[0].Width != 20 || fields[1].Hidden == nil || !*fields[1].Hidden {
++		t.Fatalf("unexpected Project fields: %#v", fields)
++	}
++}
+diff --git a/data/issueapi.go b/data/issueapi.go
+index c722fba..ff5795c 100644
+--- a/data/issueapi.go
++++ b/data/issueapi.go
+@@ -17,13 +17,14 @@ type IssueData struct {
+ 	Author struct {
+ 		Login string
+ 	}
+-	UpdatedAt  time.Time
+-	Url        string
+-	Repository Repository
+-	Assignees  Assignees      `graphql:"assignees(first: 3)"`
+-	Comments   IssueComments  `graphql:"comments(first: 15)"`
+-	Reactions  IssueReactions `graphql:"reactions(first: 1)"`
+-	Labels     IssueLabels    `graphql:"labels(first: 3)"`
++	UpdatedAt    time.Time
++	Url          string
++	Repository   Repository
++	Assignees    Assignees      `graphql:"assignees(first: 3)"`
++	Comments     IssueComments  `graphql:"comments(first: 15)"`
++	Reactions    IssueReactions `graphql:"reactions(first: 1)"`
++	Labels       IssueLabels    `graphql:"labels(first: 3)"`
++	ProjectItems ProjectItems   `graphql:"projectItems(first: 20)"`
+ }
+ 
+ type IssueComments struct {
+diff --git a/data/prapi.go b/data/prapi.go
+index 8fd0daa..0c43e28 100644
+--- a/data/prapi.go
++++ b/data/prapi.go
+@@ -46,6 +46,7 @@ type PullRequestData struct {
+ 	Commits          Commits          `graphql:"commits(last: 1)"`
+ 	Labels           PRLabels         `graphql:"labels(first: 3)"`
+ 	MergeStateStatus MergeStateStatus `graphql:"mergeStateStatus"`
++	ProjectItems     ProjectItems     `graphql:"projectItems(first: 20)"`
+ }
+ 
+ type CheckRun struct {
+diff --git a/data/projects.go b/data/projects.go
+new file mode 100644
+index 0000000..e8dbf31
+--- /dev/null
++++ b/data/projects.go
+@@ -0,0 +1,368 @@
++package data
++
++import (
++	"fmt"
++	"sort"
++	"strconv"
++	"strings"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
++
++// ProjectItems is deliberately modeled as a collection instead of a single
++// project. An issue or pull request can be in more than one ProjectV2.
++type ProjectItems struct {
++	Nodes []ProjectItem
++}
++
++type ProjectItem struct {
++	ID          string
++	Project     Project
++	FieldValues struct {
++		Nodes []ProjectFieldValue
++	} `graphql:"fieldValues(first: 50)"`
++}
++
++type Project struct {
++	ID     string
++	Number int
++	Title  string
++}
++
++type ProjectFieldRef struct {
++	Common struct {
++		ID   string
++		Name string
++	} `graphql:"... on ProjectV2Field"`
++	Iteration struct {
++		ID   string
++		Name string
++	} `graphql:"... on ProjectV2IterationField"`
++	SingleSelect struct {
++		ID   string
++		Name string
++	} `graphql:"... on ProjectV2SingleSelectField"`
++}
++
++func (field ProjectFieldRef) IDName() (string, string) {
++	if field.Common.ID != "" || field.Common.Name != "" {
++		return field.Common.ID, field.Common.Name
++	}
++	if field.Iteration.ID != "" {
++		return field.Iteration.ID, field.Iteration.Name
++	}
++	return field.SingleSelect.ID, field.SingleSelect.Name
++}
++
++type ProjectFieldValue struct {
++	Typename  string `graphql:"__typename"`
++	TextValue struct {
++		Field ProjectFieldRef
++		Text  string
++	} `graphql:"... on ProjectV2ItemFieldTextValue"`
++	NumberValue struct {
++		Field  ProjectFieldRef
++		Number float64
++	} `graphql:"... on ProjectV2ItemFieldNumberValue"`
++	DateValue struct {
++		Field ProjectFieldRef
++		Date  string
++	} `graphql:"... on ProjectV2ItemFieldDateValue"`
++	SingleSelectValue struct {
++		Field    ProjectFieldRef
++		Name     string
++		OptionID string
++	} `graphql:"... on ProjectV2ItemFieldSingleSelectValue"`
++	IterationValue struct {
++		Field       ProjectFieldRef
++		Title       string
++		IterationID string
++	} `graphql:"... on ProjectV2ItemFieldIterationValue"`
++	UserValue struct {
++		Field ProjectFieldRef
++		Users struct {
++			Nodes []struct {
++				Login string
++				Name  string
++			}
++		} `graphql:"users(first: 20)"`
++	} `graphql:"... on ProjectV2ItemFieldUserValue"`
++	LabelValue struct {
++		Field  ProjectFieldRef
++		Labels struct {
++			Nodes []struct{ Name string }
++		} `graphql:"labels(first: 20)"`
++	} `graphql:"... on ProjectV2ItemFieldLabelValue"`
++	RepositoryValue struct {
++		Field      ProjectFieldRef
++		Repository struct{ NameWithOwner string }
++	} `graphql:"... on ProjectV2ItemFieldRepositoryValue"`
++}
++
++type ProjectField struct {
++	ID      string
++	Name    string
++	Type    string
++	Options []ProjectOption
++}
++
++type ProjectOption struct {
++	ID   string
++	Name string
++}
++
++// NormalizedField is the UI-safe representation of a Project field value.
++// RawType is retained so editing can reject unsupported values explicitly.
++type NormalizedField struct {
++	ID       string
++	Name     string
++	RawType  string
++	Value    string
++	OptionID string
++}
++
++func (item ProjectItem) Fields() []NormalizedField {
++	fields := make([]NormalizedField, 0, len(item.FieldValues.Nodes))
++	for _, value := range item.FieldValues.Nodes {
++		field := NormalizedField{RawType: value.Typename}
++		var fieldID, fieldName string
++		switch value.Typename {
++		case "ProjectV2ItemFieldTextValue":
++			fieldID, fieldName = value.TextValue.Field.IDName()
++			field.Value = value.TextValue.Text
++		case "ProjectV2ItemFieldNumberValue":
++			fieldID, fieldName = value.NumberValue.Field.IDName()
++			field.Value = strconv.FormatFloat(value.NumberValue.Number, 'f', -1, 64)
++		case "ProjectV2ItemFieldDateValue":
++			fieldID, fieldName = value.DateValue.Field.IDName()
++			field.Value = value.DateValue.Date
++		case "ProjectV2ItemFieldSingleSelectValue":
++			fieldID, fieldName = value.SingleSelectValue.Field.IDName()
++			field.Value, field.OptionID = value.SingleSelectValue.Name, value.SingleSelectValue.OptionID
++		case "ProjectV2ItemFieldIterationValue":
++			fieldID, fieldName = value.IterationValue.Field.IDName()
++			field.Value = value.IterationValue.Title
++		case "ProjectV2ItemFieldUserValue":
++			fieldID, fieldName = value.UserValue.Field.IDName()
++			users := make([]string, 0, len(value.UserValue.Users.Nodes))
++			for _, user := range value.UserValue.Users.Nodes {
++				if user.Login != "" {
++					users = append(users, "@"+user.Login)
++				} else if user.Name != "" {
++					users = append(users, user.Name)
++				}
++			}
++			field.Value = strings.Join(users, ", ")
++		case "ProjectV2ItemFieldLabelValue":
++			fieldID, fieldName = value.LabelValue.Field.IDName()
++			labels := make([]string, 0, len(value.LabelValue.Labels.Nodes))
++			for _, label := range value.LabelValue.Labels.Nodes {
++				labels = append(labels, label.Name)
++			}
++			field.Value = strings.Join(labels, ", ")
++		case "ProjectV2ItemFieldRepositoryValue":
++			fieldID, fieldName = value.RepositoryValue.Field.IDName()
++			field.Value = value.RepositoryValue.Repository.NameWithOwner
++		default:
++			continue
++		}
++		field.ID, field.Name = fieldID, fieldName
++		if field.Name != "" {
++			fields = append(fields, field)
++		}
++	}
++	return fields
++}
++
++func (item ProjectItem) Field(name string) (NormalizedField, bool) {
++	for _, field := range item.Fields() {
++		if field.Name == name {
++			return field, true
++		}
++	}
++	return NormalizedField{}, false
++}
++
++func ApplyProjectFieldValue(items []ProjectItem, projectID, itemID, fieldID, fieldName, value string) []ProjectItem {
++	for itemIndex := range items {
++		if items[itemIndex].ID != itemID || items[itemIndex].Project.ID != projectID {
++			continue
++		}
++		for valueIndex := range items[itemIndex].FieldValues.Nodes {
++			field := &items[itemIndex].FieldValues.Nodes[valueIndex]
++			switch field.Typename {
++			case "ProjectV2ItemFieldTextValue":
++				currentID, currentName := field.TextValue.Field.IDName()
++				if currentID == fieldID || currentName == fieldName {
++					field.TextValue.Text = value
++				}
++			case "ProjectV2ItemFieldNumberValue":
++				currentID, currentName := field.NumberValue.Field.IDName()
++				if currentID == fieldID || currentName == fieldName {
++					if number, err := strconv.ParseFloat(value, 64); err == nil {
++						field.NumberValue.Number = number
++					}
++				}
++			case "ProjectV2ItemFieldDateValue":
++				currentID, currentName := field.DateValue.Field.IDName()
++				if currentID == fieldID || currentName == fieldName {
++					field.DateValue.Date = value
++				}
++			case "ProjectV2ItemFieldSingleSelectValue":
++				currentID, currentName := field.SingleSelectValue.Field.IDName()
++				if currentID == fieldID || currentName == fieldName {
++					field.SingleSelectValue.Name = value
++				}
++			case "ProjectV2ItemFieldIterationValue":
++				currentID, currentName := field.IterationValue.Field.IDName()
++				if currentID == fieldID || currentName == fieldName {
++					field.IterationValue.Title = value
++				}
++			}
++		}
++	}
++	return items
++}
++
++func (item ProjectItem) String() string {
++	fields := item.Fields()
++	parts := make([]string, 0, len(fields))
++	for _, field := range fields {
++		value := field.Value
++		if value == "" {
++			value = "—"
++		}
++		parts = append(parts, fmt.Sprintf("%s: %s", field.Name, value))
++	}
++	sort.Strings(parts)
++	header := fmt.Sprintf("%s (#%d)", item.Project.Title, item.Project.Number)
++	if len(parts) == 0 {
++		return header
++	}
++	return header + "\n  " + strings.Join(parts, "\n  ")
++}
++
++func RenderProjectItems(items []ProjectItem) string {
++	if len(items) == 0 {
++		return ""
++	}
++	sort.SliceStable(items, func(i, j int) bool {
++		if items[i].Project.Number == items[j].Project.Number {
++			return items[i].Project.Title < items[j].Project.Title
++		}
++		return items[i].Project.Number < items[j].Project.Number
++	})
++	parts := make([]string, 0, len(items))
++	for _, item := range items {
++		parts = append(parts, item.String())
++	}
++	return strings.Join(parts, "\n")
++}
++
++func FormatProjectField(items []ProjectItem, column ProjectColumn) string {
++	values := make([]string, 0)
++	for _, item := range items {
++		if column.Project != "" && !strings.EqualFold(column.Project, item.Project.Title) && column.Project != strconv.Itoa(item.Project.Number) {
++			continue
++		}
++		if field, ok := item.Field(column.Name); ok {
++			value := field.Value
++			if value == "" {
++				value = "—"
++			}
++			if column.Project == "" && len(items) > 1 {
++				value = fmt.Sprintf("%s: %s", item.Project.Title, value)
++			}
++			values = append(values, value)
++		}
++	}
++	sort.Strings(values)
++	return strings.Join(values, ", ")
++}
++
++type ProjectColumn struct {
++	Name    string
++	Project string
++}
++
++func FetchProjectFields(projectID string) ([]ProjectField, error) {
++	client, err := gh.DefaultGraphQLClient()
++	if err != nil {
++		return nil, err
++	}
++	query := `query ProjectFields($id: ID!) {
++  node(id: $id) { ... on ProjectV2 { fields(first: 100) { nodes {
++    __typename
++    ... on ProjectV2Field { id name dataType }
++    ... on ProjectV2IterationField { id name }
++    ... on ProjectV2SingleSelectField { id name options { id name } }
++  } } } }
++}`
++	var response struct {
++		Node struct {
++			Fields struct {
++				Nodes []struct {
++					Typename string          `json:"__typename"`
++					ID       string          `json:"id"`
++					Name     string          `json:"name"`
++					DataType string          `json:"dataType"`
++					Options  []ProjectOption `json:"options"`
++				} `json:"nodes"`
++			} `json:"fields"`
++		} `json:"node"`
++	}
++	err = client.Do(query, map[string]interface{}{"id": projectID}, &response)
++	if err != nil {
++		return nil, err
++	}
++	fields := make([]ProjectField, 0, len(response.Node.Fields.Nodes))
++	for _, field := range response.Node.Fields.Nodes {
++		fieldType := field.Typename
++		if field.DataType != "" {
++			fieldType = field.DataType
++		}
++		fields = append(fields, ProjectField{ID: field.ID, Name: field.Name, Type: fieldType, Options: field.Options})
++	}
++	sort.SliceStable(fields, func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) })
++	return fields, nil
++}
++
++func UpdateProjectField(projectID, itemID, fieldID, fieldType, value string) error {
++	fieldValue := map[string]interface{}{}
++	switch fieldType {
++	case "ProjectV2SingleSelectField", "SINGLE_SELECT":
++		fieldValue["singleSelectOptionId"] = value
++	case "ProjectV2Field", "TEXT":
++		fieldValue["text"] = value
++	case "NUMBER":
++		number, err := strconv.ParseFloat(value, 64)
++		if err != nil {
++			return fmt.Errorf("number field requires a numeric value: %w", err)
++		}
++		fieldValue["number"] = number
++	case "DATE":
++		fieldValue["date"] = value
++	case "ProjectV2IterationField", "ITERATION":
++		fieldValue["iterationId"] = value
++	default:
++		return fmt.Errorf("Project field type %q is not editable", fieldType)
++	}
++	client, err := gh.DefaultGraphQLClient()
++	if err != nil {
++		return err
++	}
++	mutation := `mutation UpdateProjectField($input: UpdateProjectV2ItemFieldValueInput!) {
++  updateProjectV2ItemFieldValue(input: $input) { projectV2Item { id } }
++}`
++	var response struct {
++		UpdateProjectV2ItemFieldValue struct {
++			ProjectV2Item struct {
++				ID string `json:"id"`
++			} `json:"projectV2Item"`
++		} `json:"updateProjectV2ItemFieldValue"`
++	}
++	variables := map[string]interface{}{"input": map[string]interface{}{
++		"projectId": projectID, "itemId": itemID, "fieldId": fieldID, "value": fieldValue,
++	}}
++	return client.Do(mutation, variables, &response)
++}
+diff --git a/data/projects_live_test.go b/data/projects_live_test.go
+new file mode 100644
+index 0000000..7d8ee80
+--- /dev/null
++++ b/data/projects_live_test.go
+@@ -0,0 +1,79 @@
++package data
++
++import (
++	"os"
++	"testing"
++)
++
++func TestAuthenticatedProjectFetchSmoke(t *testing.T) {
++	if os.Getenv("GH_DASH_PROJECTS_LIVE_TEST") == "" {
++		t.Skip("set GH_DASH_PROJECTS_LIVE_TEST=1 for an authenticated GitHub smoke test")
++	}
++	response, err := FetchIssues("repo:joshan-kana/.files is:issue 70", 10, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, issue := range response.Issues {
++		if issue.Number == 70 {
++			if len(issue.ProjectItems.Nodes) == 0 {
++				t.Fatal("issue #70 did not include ProjectV2 memberships")
++			}
++			return
++		}
++	}
++	t.Fatal("issue #70 was not returned by the search")
++}
++
++func TestAuthenticatedProjectFieldMutationSmoke(t *testing.T) {
++	if os.Getenv("GH_DASH_PROJECTS_LIVE_WRITE_TEST") == "" {
++		t.Skip("set GH_DASH_PROJECTS_LIVE_WRITE_TEST=1 for the reversible mutation smoke test")
++	}
++	response, err := FetchIssues("repo:joshan-kana/.files is:issue 70", 10, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var item ProjectItem
++	for _, issue := range response.Issues {
++		if issue.Number == 70 && len(issue.ProjectItems.Nodes) > 0 {
++			item = issue.ProjectItems.Nodes[0]
++			break
++		}
++	}
++	if item.ID == "" {
++		t.Fatal("could not find issue #70 ProjectV2 item")
++	}
++	fields, err := FetchProjectFields(item.Project.ID)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var validation ProjectField
++	for _, field := range fields {
++		if field.Name == "Validation" {
++			validation = field
++			break
++		}
++	}
++	if validation.ID == "" || len(validation.Options) < 2 {
++		t.Fatal("could not discover a selectable Validation field")
++	}
++	original, temporary := "", ""
++	for _, option := range validation.Options {
++		if option.Name == "Not run" {
++			original = option.ID
++		}
++		if option.Name == "Eval only" {
++			temporary = option.ID
++		}
++	}
++	if original == "" || temporary == "" {
++		t.Fatal("expected reversible smoke-test options were not found")
++	}
++	if err := UpdateProjectField(item.Project.ID, item.ID, validation.ID, "ProjectV2SingleSelectField", temporary); err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if restoreErr := UpdateProjectField(item.Project.ID, item.ID, validation.ID, "ProjectV2SingleSelectField", original); restoreErr != nil {
++			t.Errorf("failed to restore Validation field: %v", restoreErr)
++		}
++	})
++}
+diff --git a/data/projects_test.go b/data/projects_test.go
+new file mode 100644
+index 0000000..d45dbda
+--- /dev/null
++++ b/data/projects_test.go
+@@ -0,0 +1,88 @@
++package data
++
++import (
++	"strings"
++	"testing"
++)
++
++func TestProjectFieldsNormalizeAllSupportedDisplayTypes(t *testing.T) {
++	fieldRef := func(id, name string) ProjectFieldRef {
++		var ref ProjectFieldRef
++		ref.Common.ID, ref.Common.Name = id, name
++		return ref
++	}
++	item := ProjectItem{ID: "item-1", Project: Project{ID: "project-1", Number: 3, Title: "Roadmap"}}
++	item.FieldValues.Nodes = []ProjectFieldValue{
++		{Typename: "ProjectV2ItemFieldTextValue", TextValue: struct {
++			Field ProjectFieldRef
++			Text  string
++		}{fieldRef("text-1", "Notes"), "hello"}},
++		{Typename: "ProjectV2ItemFieldNumberValue", NumberValue: struct {
++			Field  ProjectFieldRef
++			Number float64
++		}{fieldRef("number-1", "Score"), 4.5}},
++		{Typename: "ProjectV2ItemFieldSingleSelectValue", SingleSelectValue: struct {
++			Field    ProjectFieldRef
++			Name     string
++			OptionID string
++		}{fieldRef("select-1", "Status"), "In Progress", "option-1"}},
++		{Typename: "ProjectV2ItemFieldRepositoryValue", RepositoryValue: struct {
++			Field      ProjectFieldRef
++			Repository struct{ NameWithOwner string }
++		}{fieldRef("repo-1", "Repository"), struct{ NameWithOwner string }{"owner/repo"}}},
++	}
++	fields := item.Fields()
++	if len(fields) != 4 {
++		t.Fatalf("got %d normalized fields, want 4", len(fields))
++	}
++	if field, ok := item.Field("Status"); !ok || field.Value != "In Progress" || field.OptionID != "option-1" {
++		t.Fatalf("single-select field was not normalized: %#v", field)
++	}
++	if field, ok := item.Field("Repository"); !ok || field.Value != "owner/repo" {
++		t.Fatalf("repository field was not normalized: %#v", field)
++	}
++}
++
++func TestProjectColumnsDisambiguateMultipleProjectsDeterministically(t *testing.T) {
++	items := []ProjectItem{
++		{Project: Project{Number: 9, Title: "Zeta"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Done"))},
++		{Project: Project{Number: 2, Title: "Alpha"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Todo"))},
++	}
++	got := FormatProjectField(items, ProjectColumn{Name: "Status"})
++	if got != "Alpha: Todo, Zeta: Done" {
++		t.Fatalf("got %q", got)
++	}
++	if got := FormatProjectField(items, ProjectColumn{Name: "Status", Project: "2"}); got != "Todo" {
++		t.Fatalf("project-specific value got %q", got)
++	}
++}
++
++func TestApplyProjectFieldValueUpdatesLocalSourceOfTruth(t *testing.T) {
++	item := ProjectItem{ID: "item-1", Project: Project{ID: "project-1"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Todo"))}
++	item.FieldValues.Nodes[0].SingleSelectValue.Field.Common.ID = "field-1"
++	updated := ApplyProjectFieldValue([]ProjectItem{item}, "project-1", "item-1", "field-1", "Status", "Done")
++	field, ok := updated[0].Field("Status")
++	if !ok || field.Value != "Done" {
++		t.Fatalf("updated field = %#v, ok=%v", field, ok)
++	}
++}
++
++func TestUpdateProjectFieldRejectsInvalidNumberBeforeNetwork(t *testing.T) {
++	if err := UpdateProjectField("project", "item", "field", "NUMBER", "not-a-number"); err == nil || !strings.Contains(err.Error(), "numeric") {
++		t.Fatalf("got %v", err)
++	}
++}
++
++func singleSelect(name, value string) ProjectFieldValue {
++	var ref ProjectFieldRef
++	ref.Common.Name = name
++	return ProjectFieldValue{Typename: "ProjectV2ItemFieldSingleSelectValue", SingleSelectValue: struct {
++		Field    ProjectFieldRef
++		Name     string
++		OptionID string
++	}{ref, value, value + "-id"}}
++}
++
++func ProjectFieldValues(values ...ProjectFieldValue) struct{ Nodes []ProjectFieldValue } {
++	return struct{ Nodes []ProjectFieldValue }{values}
++}
+diff --git a/ui/components/issue/issue.go b/ui/components/issue/issue.go
+index 4a05224..871a96f 100644
+--- a/ui/components/issue/issue.go
++++ b/ui/components/issue/issue.go
+@@ -14,12 +14,13 @@ import (
+ )
+ 
+ type Issue struct {
+-	Ctx  *context.ProgramContext
+-	Data data.IssueData
++	Ctx     *context.ProgramContext
++	Data    data.IssueData
++	Columns []table.Column
+ }
+ 
+ func (issue *Issue) ToTableRow() table.Row {
+-	return table.Row{
++	row := table.Row{
+ 		issue.renderStatus(),
+ 		issue.renderRepoName(),
+ 		issue.renderTitle(),
+@@ -29,6 +30,10 @@ func (issue *Issue) ToTableRow() table.Row {
+ 		issue.renderNumReactions(),
+ 		issue.renderUpdateAt(),
+ 	}
++	for _, column := range issue.Ctx.Config.Defaults.Layout.Projects.Fields {
++		row = append(row, issue.getTextStyle().Render(data.FormatProjectField(issue.Data.ProjectItems.Nodes, data.ProjectColumn{Name: column.Name, Project: column.Project})))
++	}
++	return row
+ }
+ 
+ func (issue *Issue) getTextStyle() lipgloss.Style {
+diff --git a/ui/components/issuesidebar/issuesidebar.go b/ui/components/issuesidebar/issuesidebar.go
+index 99e7d66..b25d9ea 100644
+--- a/ui/components/issuesidebar/issuesidebar.go
++++ b/ui/components/issuesidebar/issuesidebar.go
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/ui/common"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/inputbox"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/issue"
++	"github.com/dlvhdr/gh-dash/v4/ui/components/projecteditor"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/context"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/markdown"
+ )
+@@ -27,7 +28,8 @@ type Model struct {
+ 	isAssigning   bool
+ 	isUnassigning bool
+ 
+-	inputBox inputbox.Model
++	inputBox      inputbox.Model
++	projectEditor projecteditor.Model
+ }
+ 
+ func NewModel(ctx context.ProgramContext) Model {
+@@ -51,6 +53,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+ 		cmd   tea.Cmd
+ 		taCmd tea.Cmd
+ 	)
++	if m.projectEditor.Active() {
++		m.projectEditor, cmd = m.projectEditor.Update(msg)
++		return m, cmd
++	}
+ 
+ 	switch msg := msg.(type) {
+ 	case tea.KeyMsg:
+@@ -137,6 +143,11 @@ func (m Model) View() string {
+ 		s.WriteString(labels)
+ 		s.WriteString("\n\n")
+ 	}
++	projects := data.RenderProjectItems(m.issue.Data.ProjectItems.Nodes)
++	if projects != "" {
++		s.WriteString(m.ctx.Styles.Common.MainTextStyle.Render("Projects\n" + projects))
++		s.WriteString("\n\n")
++	}
+ 
+ 	s.WriteString(m.renderBody())
+ 	s.WriteString("\n\n")
+@@ -145,6 +156,10 @@ func (m Model) View() string {
+ 	if m.isCommenting || m.isAssigning || m.isUnassigning {
+ 		s.WriteString(m.inputBox.View())
+ 	}
++	if m.projectEditor.Active() {
++		s.WriteString("\n\n")
++		s.WriteString(m.projectEditor.View())
++	}
+ 
+ 	return s.String()
+ }
+@@ -233,7 +248,15 @@ func (m *Model) SetRow(data *data.IssueData) {
+ }
+ 
+ func (m *Model) IsTextInputBoxFocused() bool {
+-	return m.isCommenting || m.isAssigning || m.isUnassigning
++	return m.isCommenting || m.isAssigning || m.isUnassigning || m.projectEditor.Active()
++}
++
++func (m *Model) StartProjectEdit() {
++	if m.issue == nil || len(m.issue.Data.ProjectItems.Nodes) == 0 {
++		return
++	}
++	m.projectEditor = projecteditor.New(m.ctx, "issue", m.sectionId, m.issue.Data.Number, m.issue.Data.ProjectItems.Nodes)
++	m.projectEditor.SetWidth(m.width)
+ }
+ 
+ func (m *Model) GetIsCommenting() bool {
+@@ -311,4 +334,5 @@ func (m *Model) issueAssignees() []string {
+ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
+ 	m.ctx = ctx
+ 	m.inputBox.UpdateProgramContext(ctx)
++	m.projectEditor.UpdateProgramContext(ctx)
+ }
+diff --git a/ui/components/issuessection/issuessection.go b/ui/components/issuessection/issuessection.go
+index 3138db3..71c70df 100644
+--- a/ui/components/issuessection/issuessection.go
++++ b/ui/components/issuessection/issuessection.go
+@@ -9,6 +9,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/config"
+ 	"github.com/dlvhdr/gh-dash/v4/data"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/issue"
++	"github.com/dlvhdr/gh-dash/v4/ui/components/projecteditor"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/section"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/table"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/constants"
+@@ -127,6 +128,20 @@ func (m Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+ 			}
+ 		}
+ 
++	case projecteditor.ProjectFieldUpdatedMsg:
++		if msg.Err != nil {
++			m.Ctx.Error = msg.Err
++			break
++		}
++		for i, currIssue := range m.Issues {
++			if currIssue.Number == msg.ItemNumber {
++				currIssue.ProjectItems.Nodes = data.ApplyProjectFieldValue(currIssue.ProjectItems.Nodes, msg.ProjectID, msg.ItemID, msg.FieldID, msg.FieldName, msg.Value)
++				m.Issues[i] = currIssue
++				m.Table.SetRows(m.BuildRows())
++				break
++			}
++		}
++
+ 	case SectionIssuesFetchedMsg:
+ 		if m.LastFetchTaskId == msg.TaskId {
+ 			if m.PageInfo != nil {
+@@ -183,7 +198,7 @@ func GetSectionColumns(
+ 		sLayout.Reactions,
+ 	)
+ 
+-	return []table.Column{
++	columns := []table.Column{
+ 		{
+ 			Title:  "",
+ 			Width:  stateLayout.Width,
+@@ -225,6 +240,23 @@ func GetSectionColumns(
+ 			Hidden: updatedAtLayout.Hidden,
+ 		},
+ 	}
++	return append(columns, getProjectColumns(ctx)...)
++}
++
++func getProjectColumns(ctx *context.ProgramContext) []table.Column {
++	columns := make([]table.Column, 0, len(ctx.Config.Defaults.Layout.Projects.Fields))
++	for _, field := range ctx.Config.Defaults.Layout.Projects.Fields {
++		title := field.Name
++		if field.Project != "" {
++			title = field.Project + ": " + field.Name
++		}
++		width := field.Width
++		if width == nil {
++			width = utils.IntPtr(18)
++		}
++		columns = append(columns, table.Column{Title: title, Width: width, Hidden: field.Hidden})
++	}
++	return columns
+ }
+ 
+ func (m Model) BuildRows() []table.Row {
+diff --git a/ui/components/pr/pr.go b/ui/components/pr/pr.go
+index 825a9d3..f9f535b 100644
+--- a/ui/components/pr/pr.go
++++ b/ui/components/pr/pr.go
+@@ -297,8 +297,9 @@ func (pr *PullRequest) RenderMergeStateStatus() string {
+ }
+ 
+ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
++	var row table.Row
+ 	if !pr.Ctx.Config.Theme.Ui.Table.Compact {
+-		return table.Row{
++		row = table.Row{
+ 			pr.renderState(),
+ 			pr.renderExtendedTitle(isSelected),
+ 			pr.renderAssignees(),
+@@ -308,20 +309,24 @@ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
+ 			pr.renderLines(isSelected),
+ 			pr.renderUpdateAt(),
+ 		}
++	} else {
++		row = table.Row{
++			pr.renderState(),
++			pr.renderRepoName(),
++			pr.renderTitle(),
++			pr.renderAuthor(),
++			pr.renderAssignees(),
++			pr.renderBaseName(),
++			pr.renderReviewStatus(),
++			pr.renderCiStatus(),
++			pr.renderLines(isSelected),
++			pr.renderUpdateAt(),
++		}
+ 	}
+-
+-	return table.Row{
+-		pr.renderState(),
+-		pr.renderRepoName(),
+-		pr.renderTitle(),
+-		pr.renderAuthor(),
+-		pr.renderAssignees(),
+-		pr.renderBaseName(),
+-		pr.renderReviewStatus(),
+-		pr.renderCiStatus(),
+-		pr.renderLines(isSelected),
+-		pr.renderUpdateAt(),
++	for _, column := range pr.Ctx.Config.Defaults.Layout.Projects.Fields {
++		row = append(row, pr.getTextStyle().Render(data.FormatProjectField(pr.Data.ProjectItems.Nodes, data.ProjectColumn{Name: column.Name, Project: column.Project})))
+ 	}
++	return row
+ }
+ 
+ func isConclusionAFailure(conclusion string) bool {
+diff --git a/ui/components/projecteditor/editor.go b/ui/components/projecteditor/editor.go
+new file mode 100644
+index 0000000..0a210f6
+--- /dev/null
++++ b/ui/components/projecteditor/editor.go
+@@ -0,0 +1,254 @@
++package projecteditor
++
++import (
++	"fmt"
++	"strings"
++
++	"github.com/charmbracelet/bubbles/textarea"
++	tea "github.com/charmbracelet/bubbletea"
++	"github.com/charmbracelet/lipgloss"
++
++	"github.com/dlvhdr/gh-dash/v4/data"
++	"github.com/dlvhdr/gh-dash/v4/ui/components/inputbox"
++	"github.com/dlvhdr/gh-dash/v4/ui/context"
++)
++
++type mode int
++
++const (
++	modeProjects mode = iota
++	modeLoadingFields
++	modeFields
++	modeOptions
++	modeInput
++)
++
++type FieldsFetchedMsg struct {
++	ProjectID string
++	Fields    []data.ProjectField
++	Err       error
++}
++
++type ProjectFieldUpdatedMsg struct {
++	SectionType string
++	SectionID   int
++	ItemNumber  int
++	ProjectID   string
++	ItemID      string
++	FieldID     string
++	FieldName   string
++	Value       string
++	Err         error
++}
++
++type Model struct {
++	ctx         *context.ProgramContext
++	sectionType string
++	sectionID   int
++	itemNumber  int
++	items       []data.ProjectItem
++	fields      []data.ProjectField
++	project     int
++	field       int
++	option      int
++	mode        mode
++	input       inputbox.Model
++	width       int
++	status      string
++}
++
++func New(ctx *context.ProgramContext, sectionType string, sectionID, number int, items []data.ProjectItem) Model {
++	input := inputbox.NewModel(ctx)
++	input.SetHeight(4)
++	return Model{ctx: ctx, sectionType: sectionType, sectionID: sectionID, itemNumber: number, items: items, mode: modeProjects, input: input}
++}
++
++func (m Model) Active() bool { return m.ctx != nil && m.mode != mode(-1) }
++
++func (m *Model) Close() { m.mode = mode(-1); m.input.Blur() }
++
++func (m *Model) SetWidth(width int) { m.width = width; m.input.SetWidth(width) }
++
++func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
++	m.ctx = ctx
++	m.input.UpdateProgramContext(ctx)
++}
++
++func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
++	var cmd tea.Cmd
++	switch msg := msg.(type) {
++	case FieldsFetchedMsg:
++		if m.mode == modeLoadingFields && m.currentProject().Project.ID == msg.ProjectID {
++			if msg.Err != nil {
++				m.status = msg.Err.Error()
++				m.mode = modeProjects
++			} else {
++				m.fields, m.field, m.mode, m.status = msg.Fields, 0, modeFields, ""
++			}
++		}
++		return m, nil
++	case ProjectFieldUpdatedMsg:
++		if msg.Err != nil {
++			m.status = msg.Err.Error()
++			return m, nil
++		}
++		m.Close()
++		return m, nil
++	case tea.KeyMsg:
++		if m.mode == modeInput {
++			switch msg.Type {
++			case tea.KeyCtrlD:
++				value := strings.TrimSpace(m.input.Value())
++				if value == "" {
++					m.status = "Value cannot be empty"
++					return m, nil
++				}
++				m.input.Blur()
++				m.mode = modeLoadingFields
++				return m, m.update(value, value)
++			case tea.KeyEsc, tea.KeyCtrlC:
++				m.input.Blur()
++				m.mode = modeFields
++				return m, nil
++			}
++			m.input, cmd = m.input.Update(msg)
++			return m, cmd
++		}
++		switch msg.String() {
++		case "up", "k":
++			m.move(-1)
++		case "down", "j":
++			m.move(1)
++		case "esc", "q":
++			m.Close()
++		case "enter":
++			switch m.mode {
++			case modeProjects:
++				m.mode = modeLoadingFields
++				return m, m.fetchFields()
++			case modeFields:
++				field := m.fields[m.field]
++				if field.Type == "ProjectV2SingleSelectField" || field.Type == "SINGLE_SELECT" {
++					if len(field.Options) == 0 {
++						m.status = "This field has no selectable options"
++					} else {
++						m.mode, m.option = modeOptions, 0
++					}
++				} else if isEditable(field.Type) {
++					m.mode = modeInput
++					m.input.Reset()
++					m.input.SetPrompt(fmt.Sprintf("Set %s (Ctrl+d to submit)...", field.Name))
++					return m, tea.Sequence(textarea.Blink, m.input.Focus())
++				} else {
++					m.status = fmt.Sprintf("Field type %s is display-only", field.Type)
++				}
++			case modeOptions:
++				field := m.fields[m.field]
++				option := field.Options[m.option]
++				m.mode = modeLoadingFields
++				return m, m.update(option.ID, option.Name)
++			}
++		}
++	}
++	return m, nil
++}
++
++func (m *Model) move(delta int) {
++	var length int
++	switch m.mode {
++	case modeProjects:
++		length = len(m.items)
++	case modeFields:
++		length = len(m.fields)
++	case modeOptions:
++		length = len(m.fields[m.field].Options)
++	default:
++		return
++	}
++	if length == 0 {
++		return
++	}
++	switch m.mode {
++	case modeProjects:
++		m.project = (m.project + delta + length) % length
++	case modeFields:
++		m.field = (m.field + delta + length) % length
++	case modeOptions:
++		m.option = (m.option + delta + length) % length
++	}
++}
++
++func (m Model) currentProject() data.ProjectItem { return m.items[m.project] }
++
++func (m Model) fetchFields() tea.Cmd {
++	projectID := m.currentProject().Project.ID
++	return func() tea.Msg {
++		fields, err := data.FetchProjectFields(projectID)
++		return FieldsFetchedMsg{ProjectID: projectID, Fields: fields, Err: err}
++	}
++}
++
++func (m Model) update(value, displayValue string) tea.Cmd {
++	project := m.currentProject()
++	field := m.fields[m.field]
++	return func() tea.Msg {
++		err := data.UpdateProjectField(project.Project.ID, project.ID, field.ID, field.Type, value)
++		return ProjectFieldUpdatedMsg{SectionType: m.sectionType, SectionID: m.sectionID, ItemNumber: m.itemNumber, ProjectID: project.Project.ID, ItemID: project.ID, FieldID: field.ID, FieldName: field.Name, Value: displayValue, Err: err}
++	}
++}
++
++func isEditable(fieldType string) bool {
++	switch fieldType {
++	case "ProjectV2Field", "TEXT", "NUMBER", "DATE", "ProjectV2IterationField", "ITERATION":
++		return true
++	default:
++		return false
++	}
++}
++
++func (m Model) View() string {
++	if !m.Active() {
++		return ""
++	}
++	var title string
++	switch m.mode {
++	case modeProjects:
++		title = "Choose a Project"
++	case modeLoadingFields:
++		title = "Loading Project fields…"
++	case modeFields:
++		title = "Choose a Project field"
++	case modeOptions:
++		title = "Choose an option"
++	case modeInput:
++		return m.input.View()
++	}
++	lines := []string{lipgloss.NewStyle().Bold(true).Render("Edit Project field — " + title)}
++	var values []string
++	switch m.mode {
++	case modeProjects:
++		for _, item := range m.items {
++			values = append(values, fmt.Sprintf("%s (#%d)", item.Project.Title, item.Project.Number))
++		}
++	case modeFields:
++		for _, field := range m.fields {
++			values = append(values, fmt.Sprintf("%s [%s]", field.Name, field.Type))
++		}
++	case modeOptions:
++		for _, option := range m.fields[m.field].Options {
++			values = append(values, option.Name)
++		}
++	}
++	for i, value := range values {
++		prefix := "  "
++		if (m.mode == modeProjects && i == m.project) || (m.mode == modeFields && i == m.field) || (m.mode == modeOptions && i == m.option) {
++			prefix = "> "
++		}
++		lines = append(lines, prefix+value)
++	}
++	if m.status != "" {
++		lines = append(lines, lipgloss.NewStyle().Foreground(m.ctx.Theme.ErrorText).Render(m.status))
++	}
++	lines = append(lines, "↑/↓ select · Enter choose · Esc cancel")
++	return strings.Join(lines, "\n")
++}
+diff --git a/ui/components/prsidebar/prsidebar.go b/ui/components/prsidebar/prsidebar.go
+index 30e9984..de6cd2e 100644
+--- a/ui/components/prsidebar/prsidebar.go
++++ b/ui/components/prsidebar/prsidebar.go
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/ui/common"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/inputbox"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/pr"
++	"github.com/dlvhdr/gh-dash/v4/ui/components/projecteditor"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/context"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/markdown"
+ )
+@@ -28,7 +29,8 @@ type Model struct {
+ 	isAssigning   bool
+ 	isUnassigning bool
+ 
+-	inputBox inputbox.Model
++	inputBox      inputbox.Model
++	projectEditor projecteditor.Model
+ }
+ 
+ func NewModel(ctx context.ProgramContext) Model {
+@@ -53,6 +55,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+ 		cmd   tea.Cmd
+ 		taCmd tea.Cmd
+ 	)
++	if m.projectEditor.Active() {
++		m.projectEditor, cmd = m.projectEditor.Update(msg)
++		return m, cmd
++	}
+ 
+ 	switch msg := msg.(type) {
+ 	case tea.KeyMsg:
+@@ -162,6 +168,11 @@ func (m Model) View() string {
+ 		s.WriteString(labels)
+ 		s.WriteString("\n\n")
+ 	}
++	projects := data.RenderProjectItems(m.pr.Data.ProjectItems.Nodes)
++	if projects != "" {
++		s.WriteString(m.ctx.Styles.Common.MainTextStyle.Render("Projects\n" + projects))
++		s.WriteString("\n\n")
++	}
+ 
+ 	s.WriteString(m.renderDescription())
+ 	s.WriteString("\n\n")
+@@ -173,6 +184,10 @@ func (m Model) View() string {
+ 	if m.isCommenting || m.isApproving || m.isAssigning || m.isUnassigning {
+ 		s.WriteString(m.inputBox.View())
+ 	}
++	if m.projectEditor.Active() {
++		s.WriteString("\n\n")
++		s.WriteString(m.projectEditor.View())
++	}
+ 
+ 	return s.String()
+ }
+@@ -332,7 +347,15 @@ func (m *Model) SetWidth(width int) {
+ }
+ 
+ func (m *Model) IsTextInputBoxFocused() bool {
+-	return m.isCommenting || m.isAssigning || m.isApproving || m.isUnassigning
++	return m.isCommenting || m.isAssigning || m.isApproving || m.isUnassigning || m.projectEditor.Active()
++}
++
++func (m *Model) StartProjectEdit() {
++	if m.pr == nil || len(m.pr.Data.ProjectItems.Nodes) == 0 {
++		return
++	}
++	m.projectEditor = projecteditor.New(m.ctx, "pr", m.sectionId, m.pr.Data.Number, m.pr.Data.ProjectItems.Nodes)
++	m.projectEditor.SetWidth(m.width)
+ }
+ 
+ func (m *Model) GetIsCommenting() bool {
+@@ -342,6 +365,7 @@ func (m *Model) GetIsCommenting() bool {
+ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
+ 	m.ctx = ctx
+ 	m.inputBox.UpdateProgramContext(ctx)
++	m.projectEditor.UpdateProgramContext(ctx)
+ }
+ 
+ func (m *Model) SetIsCommenting(isCommenting bool) tea.Cmd {
+diff --git a/ui/components/prssection/prssection.go b/ui/components/prssection/prssection.go
+index 11119fa..75e0e95 100644
+--- a/ui/components/prssection/prssection.go
++++ b/ui/components/prssection/prssection.go
+@@ -10,6 +10,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/config"
+ 	"github.com/dlvhdr/gh-dash/v4/data"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/pr"
++	"github.com/dlvhdr/gh-dash/v4/ui/components/projecteditor"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/section"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/table"
+ 	"github.com/dlvhdr/gh-dash/v4/ui/components/tasks"
+@@ -162,6 +163,20 @@ func (m Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+ 			}
+ 		}
+ 
++	case projecteditor.ProjectFieldUpdatedMsg:
++		if msg.Err != nil {
++			m.Ctx.Error = msg.Err
++			break
++		}
++		for i, currPr := range m.Prs {
++			if currPr.Number == msg.ItemNumber {
++				currPr.ProjectItems.Nodes = data.ApplyProjectFieldValue(currPr.ProjectItems.Nodes, msg.ProjectID, msg.ItemID, msg.FieldID, msg.FieldName, msg.Value)
++				m.Prs[i] = currPr
++				m.Table.SetRows(m.BuildRows())
++				break
++			}
++		}
++
+ 	case SectionPullRequestsFetchedMsg:
+ 		if m.LastFetchTaskId == msg.TaskId {
+ 			if m.PageInfo != nil {
+@@ -220,7 +235,7 @@ func GetSectionColumns(
+ 	linesLayout := config.MergeColumnConfigs(dLayout.Lines, sLayout.Lines)
+ 
+ 	if !ctx.Config.Theme.Ui.Table.Compact {
+-		return []table.Column{
++		return append([]table.Column{
+ 			{
+ 				Title:  "",
+ 				Width:  utils.IntPtr(3),
+@@ -262,10 +277,10 @@ func GetSectionColumns(
+ 				Width:  updatedAtLayout.Width,
+ 				Hidden: updatedAtLayout.Hidden,
+ 			},
+-		}
++		}, getProjectColumns(ctx)...)
+ 	}
+ 
+-	return []table.Column{
++	return append([]table.Column{
+ 		{
+ 			Title:  "",
+ 			Width:  utils.IntPtr(3),
+@@ -317,7 +332,23 @@ func GetSectionColumns(
+ 			Width:  updatedAtLayout.Width,
+ 			Hidden: updatedAtLayout.Hidden,
+ 		},
++	}, getProjectColumns(ctx)...)
++}
++
++func getProjectColumns(ctx *context.ProgramContext) []table.Column {
++	columns := make([]table.Column, 0, len(ctx.Config.Defaults.Layout.Projects.Fields))
++	for _, field := range ctx.Config.Defaults.Layout.Projects.Fields {
++		title := field.Name
++		if field.Project != "" {
++			title = field.Project + ": " + field.Name
++		}
++		width := field.Width
++		if width == nil {
++			width = utils.IntPtr(18)
++		}
++		columns = append(columns, table.Column{Title: title, Width: width, Hidden: field.Hidden})
+ 	}
++	return columns
+ }
+ 
+ func (m Model) BuildRows() []table.Row {
+diff --git a/ui/keys/issueKeys.go b/ui/keys/issueKeys.go
+index c0eb407..034124c 100644
+--- a/ui/keys/issueKeys.go
++++ b/ui/keys/issueKeys.go
+@@ -10,12 +10,13 @@ import (
+ )
+ 
+ type IssueKeyMap struct {
+-	Assign   key.Binding
+-	Unassign key.Binding
+-	Comment  key.Binding
+-	Close    key.Binding
+-	Reopen   key.Binding
+-	ViewPRs  key.Binding
++	Assign      key.Binding
++	Unassign    key.Binding
++	Comment     key.Binding
++	Close       key.Binding
++	Reopen      key.Binding
++	ViewPRs     key.Binding
++	EditProject key.Binding
+ }
+ 
+ var IssueKeys = IssueKeyMap{
+@@ -43,6 +44,10 @@ var IssueKeys = IssueKeyMap{
+ 		key.WithKeys("s"),
+ 		key.WithHelp("s", "switch to PRs"),
+ 	),
++	EditProject: key.NewBinding(
++		key.WithKeys("e"),
++		key.WithHelp("e", "edit Project field"),
++	),
+ }
+ 
+ func IssueFullHelp() []key.Binding {
+@@ -53,6 +58,7 @@ func IssueFullHelp() []key.Binding {
+ 		IssueKeys.Close,
+ 		IssueKeys.Reopen,
+ 		IssueKeys.ViewPRs,
++		IssueKeys.EditProject,
+ 	}
+ }
+ 
+@@ -79,6 +85,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
+ 			key = &IssueKeys.Reopen
+ 		case "viewPrs":
+ 			key = &IssueKeys.ViewPRs
++		case "editProject":
++			key = &IssueKeys.EditProject
+ 		default:
+ 			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
+ 		}
+diff --git a/ui/keys/prKeys.go b/ui/keys/prKeys.go
+index 348fe24..1ac72f8 100644
+--- a/ui/keys/prKeys.go
++++ b/ui/keys/prKeys.go
+@@ -23,6 +23,7 @@ type PRKeyMap struct {
+ 	Update      key.Binding
+ 	WatchChecks key.Binding
+ 	ViewIssues  key.Binding
++	EditProject key.Binding
+ }
+ 
+ var PRKeys = PRKeyMap{
+@@ -78,6 +79,10 @@ var PRKeys = PRKeyMap{
+ 		key.WithKeys("s"),
+ 		key.WithHelp("s", "switch to issues"),
+ 	),
++	EditProject: key.NewBinding(
++		key.WithKeys("e"),
++		key.WithHelp("e", "edit Project field"),
++	),
+ }
+ 
+ func PRFullHelp() []key.Binding {
+@@ -95,6 +100,7 @@ func PRFullHelp() []key.Binding {
+ 		PRKeys.Update,
+ 		PRKeys.WatchChecks,
+ 		PRKeys.ViewIssues,
++		PRKeys.EditProject,
+ 	}
+ }
+ 
+@@ -135,6 +141,8 @@ func rebindPRKeys(keys []config.Keybinding) error {
+ 			key = &PRKeys.WatchChecks
+ 		case "viewIssues":
+ 			key = &PRKeys.ViewIssues
++		case "editProject":
++			key = &PRKeys.EditProject
+ 		default:
+ 			return fmt.Errorf("unknown built-in pr key: '%s'", prKey.Builtin)
+ 		}
+diff --git a/ui/ui.go b/ui/ui.go
+index af4660c..7acb702 100644
+--- a/ui/ui.go
++++ b/ui/ui.go
+@@ -369,6 +369,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 				m.sidebar.ScrollToBottom()
+ 				return m, cmd
+ 
++			case key.Matches(msg, keys.PRKeys.EditProject):
++				m.sidebar.IsOpen = true
++				m.syncMainContentWidth()
++				m.prSidebar.StartProjectEdit()
++				m.syncSidebar()
++				m.sidebar.ScrollToBottom()
++				return m, nil
++
+ 			case key.Matches(msg, keys.PRKeys.Close):
+ 				if currSection != nil {
+ 					currSection.SetPromptConfirmationAction("close")
+@@ -447,6 +455,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 				m.sidebar.ScrollToBottom()
+ 				return m, cmd
+ 
++			case key.Matches(msg, keys.IssueKeys.EditProject):
++				m.sidebar.IsOpen = true
++				m.syncMainContentWidth()
++				m.issueSidebar.StartProjectEdit()
++				m.syncSidebar()
++				m.sidebar.ScrollToBottom()
++				return m, nil
++
+ 			case key.Matches(msg, keys.IssueKeys.Close):
+ 				if currSection != nil {
+ 					currSection.SetPromptConfirmationAction("close")
