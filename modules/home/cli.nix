@@ -127,7 +127,8 @@ lib.mkIf cfg.features.cli.enable {
     };
   };
 
-  home.packages = lib.optional (enabled "tuicr") pkgs.tuicr;
+  home.packages =
+    lib.optional (enabled "gh-dash") pkgs.gh-dash-projects ++ lib.optional (enabled "tuicr") pkgs.tuicr;
 
   xdg.configFile."tuicr/config.toml" = lib.mkIf (enabled "tuicr") {
     source = tuicrConfig;
