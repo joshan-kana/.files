@@ -19,13 +19,13 @@ REPOSITORY = ".files"
 PROJECT_NUMBER = 1
 BRIDGE_ISSUE_NUMBER = 71
 COMMAND_VERSION = 1
-STATE_VERSION = 1
+STATE_VERSION = 2
 REST_API_VERSION = "2026-03-10"
 GRAPHQL_ENDPOINT = "https://api.github.com/graphql"
 REST_ENDPOINT = "https://api.github.com"
 SUPPORTED_VALUE_TYPES = {"TEXT", "NUMBER", "DATE", "SINGLE_SELECT", "ITERATION", "MULTI_SELECT"}
 
-STATE_RE = re.compile(r"<!--\s*infrastructure-sentinel-state:v1\s*\n(.*?)\n\s*-->", re.DOTALL)
+STATE_RE = re.compile(r"<!--\s*infrastructure-sentinel-state:v[12]\s*\n(.*?)\n\s*-->", re.DOTALL)
 COMMAND_RE = re.compile(r"<!--\s*infrastructure-sentinel-command:v1\s*\n(.*?)\n\s*-->", re.DOTALL)
 
 
@@ -50,7 +50,15 @@ class GitHub:
         self.token = token
         self.project = project
 
-    def request(self, method: str, path: str, payload: Any = None, *, dependency: bool = False) -> Any:
+    def request(
+        self,
+        method: str,
+        path: str,
+        payload: Any = None,
+        *,
+        dependency: bool = False,
+        allow_statuses: set[int] | None = None,
+    ) -> Any:
         headers = {
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {self.token}",
@@ -67,6 +75,8 @@ class GitHub:
                 raw = response.read()
         except urllib.error.HTTPError as error:
             raw = error.read()
+            if allow_statuses and error.code in allow_statuses:
+                return None
             try:
                 details = json.loads(raw.decode() or "{}")
             except json.JSONDecodeError:
@@ -315,6 +325,41 @@ def dependencies(client: GitHub, number: int, cache: dict[int, list[dict[str, An
     return cache[number]
 
 
+def parent_issue(client: GitHub, number: int, cache: dict[int, dict[str, Any] | None]) -> dict[str, Any] | None:
+    if number not in cache:
+        cache[number] = client.request(
+            "GET",
+            f"/repos/{OWNER}/{REPOSITORY}/issues/{number}/parent",
+            dependency=True,
+            allow_statuses={404, 410},
+        )
+    return cache[number]
+
+
+def sub_issues(client: GitHub, number: int, cache: dict[int, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    if number not in cache:
+        result: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            batch = client.request(
+                "GET",
+                f"/repos/{OWNER}/{REPOSITORY}/issues/{number}/sub_issues?per_page=100&page={page}",
+                dependency=True,
+            )
+            if not batch:
+                break
+            result.extend(batch)
+            if len(batch) < 100:
+                break
+            page += 1
+        cache[number] = result
+    return cache[number]
+
+
+def relationship_ref(issue: dict[str, Any]) -> dict[str, Any]:
+    return {"number": issue["number"], "state": issue.get("state", "UNKNOWN")}
+
+
 def parse_block(body: str, pattern: re.Pattern[str], label: str) -> dict[str, Any] | None:
     match = pattern.search(body)
     if not match:
@@ -360,7 +405,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
     for index, operation in enumerate(operations):
         if not isinstance(operation, dict):
             fail(f"operation {index} must be an object")
-        allowed = {"issue", "ensure_project", "fields", "blocked_by"}
+        allowed = {"issue", "ensure_project", "fields", "blocked_by", "parent", "relates_to"}
         extras = set(operation) - allowed
         if extras:
             fail(f"operation {index} has unsupported keys: {sorted(extras)}")
@@ -422,7 +467,48 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
                 blocker_issue = issue_metadata(client, blocker, issue_cache)
                 if blocker_issue.get("pull_request"):
                     fail(f"blocker #{blocker} is a pull request, not an issue")
-        normalized.append({"issue": number, "ensure_project": ensure_project, "fields": requested_fields, "blocked_by": blockers})
+
+        parent_requested = "parent" in operation
+        desired_parent = operation.get("parent")
+        if parent_requested:
+            if desired_parent is not None:
+                if isinstance(desired_parent, bool) or not isinstance(desired_parent, int):
+                    fail(f"operation for #{number} parent must be an integer or null")
+                if desired_parent == number:
+                    fail(f"issue #{number} cannot be its own parent")
+                parent = issue_metadata(client, desired_parent, issue_cache)
+                if parent.get("pull_request"):
+                    fail(f"parent #{desired_parent} is a pull request, not an issue")
+
+        relates_to_requested = "relates_to" in operation
+        related = operation.get("relates_to")
+        if relates_to_requested:
+            if not isinstance(related, list) or any(isinstance(item, bool) or not isinstance(item, int) for item in related):
+                fail(f"operation for #{number} relates_to must be an integer array")
+            if len(related) != len(set(related)):
+                fail(f"operation for #{number} relates_to contains duplicates")
+            if number in related:
+                fail(f"issue #{number} cannot relate to itself")
+            for related_number in related:
+                related_issue = issue_metadata(client, related_number, issue_cache)
+                if related_issue.get("pull_request"):
+                    fail(f"related issue #{related_number} is a pull request, not an issue")
+            fail(
+                "UNSUPPORTED_CAPABILITY: native relates-to relationships are not exposed by GitHub's current first-party REST or GraphQL APIs; "
+                "refusing to approximate relates_to with blocked_by"
+            )
+        normalized.append(
+            {
+                "issue": number,
+                "ensure_project": ensure_project,
+                "fields": requested_fields,
+                "blocked_by": blockers,
+                "parent_requested": parent_requested,
+                "parent": desired_parent,
+                "relates_to_requested": relates_to_requested,
+                "relates_to": related,
+            }
+        )
 
     # The operation set is applied as a desired-state overlay on the live graph.
     graph: dict[int, set[int]] = {}
@@ -453,6 +539,32 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
             visited.add(node)
 
         visit(start)
+
+    parent_graph: dict[int, int] = {}
+    parent_cache: dict[int, dict[str, Any] | None] = {}
+    for raw in issue_list(client, "all"):
+        if raw.get("pull_request"):
+            continue
+        current_parent = parent_issue(client, raw["number"], parent_cache)
+        if current_parent:
+            parent_graph[raw["number"]] = current_parent["number"]
+    for operation in normalized:
+        if operation["parent_requested"]:
+            if operation["parent"] is None:
+                parent_graph.pop(operation["issue"], None)
+            else:
+                parent_graph[operation["issue"]] = operation["parent"]
+    for start in parent_graph:
+        chain: list[int] = []
+        seen_parents: set[int] = set()
+        current = start
+        while current in parent_graph:
+            if current in seen_parents:
+                cycle = " -> ".join(map(str, chain + [current]))
+                fail(f"parent cycle would result: {cycle}")
+            seen_parents.add(current)
+            chain.append(current)
+            current = parent_graph[current]
     return normalized
 
 
@@ -496,6 +608,7 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
     unchanged: list[str] = []
     issue_cache: dict[int, dict[str, Any]] = {}
     dependency_cache: dict[int, list[dict[str, Any]]] = {}
+    parent_cache: dict[int, dict[str, Any] | None] = {}
     for operation in operations:
         number = operation["issue"]
         item = project_items.get(number)
@@ -572,6 +685,43 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
                 applied.append(f"issue #{number}: field {name} set to {desired!r}")
                 operation_changed = True
 
+        if operation["parent_requested"]:
+            current_parent = parent_issue(github, number, parent_cache)
+            current_parent_number = current_parent.get("number") if current_parent else None
+            desired_parent = operation["parent"]
+            if current_parent_number == desired_parent:
+                unchanged.append(f"issue #{number}: parent already {desired_parent!r}")
+            else:
+                issue = issue_metadata(github, number, issue_cache)
+                try:
+                    if desired_parent is None:
+                        if current_parent is None:
+                            raise BridgeError(f"issue #{number}: parent disappeared during reconciliation")
+                        github.request(
+                            "DELETE",
+                            f"/repos/{OWNER}/{REPOSITORY}/issues/{current_parent_number}/sub_issue",
+                            {"sub_issue_id": issue["id"]},
+                            dependency=True,
+                        )
+                    else:
+                        github.request(
+                            "POST",
+                            f"/repos/{OWNER}/{REPOSITORY}/issues/{desired_parent}/sub_issues",
+                            {"sub_issue_id": issue["id"], "replace_parent": True},
+                            dependency=True,
+                        )
+                except BridgeError as error:
+                    raise BridgeError(f"issue #{number}: parent mutation failed: {error}", applied=applied) from error
+                actual_parent = parent_issue(github, number, {})
+                actual_parent_number = actual_parent.get("number") if actual_parent else None
+                if actual_parent_number != desired_parent:
+                    raise BridgeError(
+                        f"issue #{number}: parent read-back was {actual_parent_number!r}, expected {desired_parent!r}",
+                        applied=applied,
+                    )
+                applied.append(f"issue #{number}: parent set to {desired_parent!r}")
+                operation_changed = True
+
         if operation["blocked_by"] is not None:
             existing = {dependency["number"]: dependency for dependency in dependencies(github, number, dependency_cache)}
             desired_set = set(operation["blocked_by"])
@@ -611,7 +761,13 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
                 )
             if not stale and not missing:
                 unchanged.append(f"issue #{number}: blocked_by already {sorted(desired_set)}")
-        if not operation_changed and operation["fields"] is None and operation["blocked_by"] is None:
+        if (
+            not operation_changed
+            and operation["fields"] is None
+            and operation["blocked_by"] is None
+            and not operation["parent_requested"]
+            and not operation["relates_to_requested"]
+        ):
             unchanged.append(f"issue #{number}: already in desired state")
     return applied, unchanged
 
@@ -620,6 +776,8 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
     project, project_items = project_data(project_client)
     open_issues = [issue for issue in issue_list(github, "open") if not issue.get("pull_request")]
     dependency_cache: dict[int, list[dict[str, Any]]] = {}
+    parent_cache: dict[int, dict[str, Any] | None] = {}
+    sub_issue_cache: dict[int, list[dict[str, Any]]] = {}
     issues: dict[str, Any] = {}
     for issue in open_issues:
         number = issue["number"]
@@ -627,6 +785,8 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
             {"number": item["number"], "state": item.get("state", "UNKNOWN")}
             for item in dependencies(github, number, dependency_cache)
         ]
+        parent = parent_issue(github, number, parent_cache)
+        children = sub_issues(github, number, sub_issue_cache)
         item = project_items.get(number)
         issues[str(number)] = {
             "title": issue["title"],
@@ -634,6 +794,11 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
             "project_item_id": item["id"] if item else None,
             "fields": item["fields"] if item else {},
             "blocked_by": sorted(blocked, key=lambda value: value["number"]),
+            "parent": relationship_ref(parent) if parent else None,
+            "sub_issues": sorted(
+                [relationship_ref(child) for child in children], key=lambda value: value["number"]
+            ),
+            "relates_to": None,
         }
     schema: dict[str, Any] = {}
     for name, field in project["fields"].items():
@@ -651,13 +816,28 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
         "refreshed_at": now(),
         "project": {"owner": OWNER, "number": PROJECT_NUMBER, "title": project["title"]},
         "fields": schema,
+        "relationship_capabilities": {
+            "blocked_by": {"read": True, "write": True},
+            "parent": {"read": True, "write": True},
+            "sub_issues": {"read": True, "write": True},
+            "relates_to": {
+                "read": False,
+                "write": False,
+                "status": "unsupported",
+                "issues": None,
+                "reason": (
+                    "GitHub's current first-party REST and GraphQL APIs do not expose native relates-to "
+                    "issue relationships"
+                ),
+            },
+        },
         "issues": issues,
         "last_result": last_result,
     }
 
 
 def replace_state(body: str, state: dict[str, Any], *, remove_request_id: str | None = None) -> str:
-    state_block = f"<!-- infrastructure-sentinel-state:v1\n{json.dumps(state, indent=2, sort_keys=True)}\n-->"
+    state_block = f"<!-- infrastructure-sentinel-state:v2\n{json.dumps(state, indent=2, sort_keys=True)}\n-->"
     if STATE_RE.search(body):
         body = STATE_RE.sub(state_block, body, count=1)
     else:
