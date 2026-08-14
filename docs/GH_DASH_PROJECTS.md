@@ -41,8 +41,25 @@ ambiguity message and require an owner-qualified selector. Project node IDs
 are the canonical identity internally, so Projects with the same number under
 different owners remain distinct.
 
+Issue sections follow GitHub search pagination through the actual result total;
+`issuesLimit` controls the request page size, not a hard row cap. This keeps a
+default view with more than one search page complete without choosing an
+arbitrary maximum. Pull-request sections retain gh-dash's existing paging
+behavior.
+
+List enrichment is staged. It first fetches Project membership identity, then
+fetches each unique Project's field schema once per process, and finally asks
+only for configured visible columns using variable-backed
+`fieldValueByName` selections. A zero-column configuration therefore does not
+request field values. Duplicate field names remain ambiguous; a configured
+field ID takes the targeted field-value fallback needed to resolve that
+collision.
+
 When an issue or pull request is selected, every Project membership and its
-available values appear in the preview. Memberships are deterministic; owner
+available values appear in the preview. The preview request is live and fully
+cursor-paginated; a short navigation debounce and generation check avoid
+fetching rows that the user scrolls past and prevent stale responses from
+overwriting the current selection. Memberships are deterministic; owner
 information is shown when titles or numbers collide. Press `E` to choose a
 Project, choose a field, and then choose a single-select option or enter a
 text/number/date/iteration value. `P` retains gh-dash's preview-position
@@ -57,7 +74,9 @@ database, daemon, or sync process is used.
 
 With enrichment disabled, normal gh-dash issue/PR queries remain unchanged.
 When enabled, normal pages are fetched first and then enriched with bounded
-Project-item batches. If Project access is missing or enrichment fails, the
+Project-item batches. Project metadata is cached and coalesced only in the
+running process; there is no disk cache, TTL freshness policy, local database,
+or stale-value fallback. If Project access is missing or enrichment fails, the
 ordinary page remains usable without Project metadata. Editing still requires
 the relevant GitHub permissions.
 
