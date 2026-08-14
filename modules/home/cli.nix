@@ -121,6 +121,13 @@ lib.mkIf cfg.features.cli.enable {
     extensions = [ pkgs.gh-dash ];
   };
 
+  xdg.configFile."gh-dash/config.yml".source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+    defaults = {
+      view = "issues";
+      layout.projects.enabled = true;
+    };
+  };
+
   programs.delta = {
     enable = enabled "delta";
     enableGitIntegration = enabled "git";
