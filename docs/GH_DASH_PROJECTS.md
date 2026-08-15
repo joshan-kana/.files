@@ -87,6 +87,16 @@ stale-value fallback. If Project access is missing or enrichment fails, the
 ordinary issue/PR data remains usable without Project metadata. Editing still
 requires the relevant GitHub permissions.
 
+Every initial section load and native section refetch re-enters the selected
+Project-preview lifecycle. The selected block returns to an explicit loading
+state before its debounced full fetch, so list-only Status/Priority/Area/Kind
+values cannot masquerade as complete preview metadata; success replaces the
+block atomically and failure is shown as unavailable. This lifecycle is
+independent of ordinary PR detail enrichment, so revisiting an already-enriched
+PR still fetches its authoritative Project preview. Configured visible Project
+fields are requested for PR list rows as well as issue rows; repository/branch
+view PR lookups do not spend Project calls when those columns are not rendered.
+
 The downstream patch is stored at
 `patches/gh-dash/projects-v2.patch` and applied by
 `overlays/gh-dash-projects.nix`. Future updates should bump the pinned
