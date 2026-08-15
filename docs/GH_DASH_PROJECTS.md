@@ -48,17 +48,18 @@ arbitrary maximum. Pull-request sections retain gh-dash's existing paging
 behavior.
 
 List enrichment is staged. It first fetches Project membership identity, then
-fetches each unique Project's field schema once per process, and finally asks
-only for configured visible columns using variable-backed
+fetches each unique Project's field schema once per refresh generation, and
+finally asks only for configured visible columns using variable-backed
 `fieldValueByName` selections. A zero-column configuration therefore does not
 request field values. Duplicate field names remain ambiguous; a configured
 field ID takes the targeted field-value fallback needed to resolve that
 collision.
 
-When an issue or pull request is selected, every Project membership and its
-available values appear in the preview. The preview request is live and fully
-cursor-paginated; a short navigation debounce and generation check avoid
-fetching rows that the user scrolls past and prevent stale responses from
+When an issue or pull request is selected, the Project block first shows an
+explicit loading state while the authoritative full membership/value request is
+debounced by 200 ms. It then replaces that block atomically with the complete
+GitHub result, or shows a clear unavailable state while leaving the ordinary
+issue/PR preview usable. A generation check prevents a stale response from
 overwriting the current selection. Memberships are deterministic; owner
 information is shown when titles or numbers collide. Press `E` to choose a
 Project, choose a field, and then choose a single-select option or enter a
@@ -78,10 +79,13 @@ total regardless of whether Project enrichment is enabled; `issuesLimit`
 controls the request page size rather than a hard row cap. Pull-request
 sections retain gh-dash's existing paging behavior. When enabled, the loaded
 rows are then enriched with bounded Project-item batches. Project metadata is
-cached and coalesced only in the running process; there is no disk cache, TTL
-freshness policy, local database, or stale-value fallback. If Project access is
-missing or enrichment fails, the ordinary issue/PR data remains usable without
-Project metadata. Editing still requires the relevant GitHub permissions.
+cached and coalesced only in the running process and only within one refresh
+generation. gh-dash's normal scheduled refetch cadence starts a new generation,
+and `r`/`R` force an immediate authoritative Project refresh alongside ordinary
+issue/PR data. There is no disk cache, TTL freshness policy, local database, or
+stale-value fallback. If Project access is missing or enrichment fails, the
+ordinary issue/PR data remains usable without Project metadata. Editing still
+requires the relevant GitHub permissions.
 
 The downstream patch is stored at
 `patches/gh-dash/projects-v2.patch` and applied by
