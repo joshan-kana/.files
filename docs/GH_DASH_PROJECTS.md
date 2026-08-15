@@ -72,13 +72,16 @@ the authoritative Project item, including fields that were previously unset;
 clearing uses GitHub's `clearProjectV2ItemFieldValue` mutation. No local
 database, daemon, or sync process is used.
 
-With enrichment disabled, normal gh-dash issue/PR queries remain unchanged.
-When enabled, normal pages are fetched first and then enriched with bounded
-Project-item batches. Project metadata is cached and coalesced only in the
-running process; there is no disk cache, TTL freshness policy, local database,
-or stale-value fallback. If Project access is missing or enrichment fails, the
-ordinary page remains usable without Project metadata. Editing still requires
-the relevant GitHub permissions.
+Project enrichment is optional and independent of ordinary issue/PR fetching.
+Issue sections now follow GitHub search pagination through the actual result
+total regardless of whether Project enrichment is enabled; `issuesLimit`
+controls the request page size rather than a hard row cap. Pull-request
+sections retain gh-dash's existing paging behavior. When enabled, the loaded
+rows are then enriched with bounded Project-item batches. Project metadata is
+cached and coalesced only in the running process; there is no disk cache, TTL
+freshness policy, local database, or stale-value fallback. If Project access is
+missing or enrichment fails, the ordinary issue/PR data remains usable without
+Project metadata. Editing still requires the relevant GitHub permissions.
 
 The downstream patch is stored at
 `patches/gh-dash/projects-v2.patch` and applied by

@@ -1,5 +1,5 @@
 diff --git a/internal/config/parser.go b/internal/config/parser.go
-index 96a2283274df241dfcc4609fb53de90d25636ddf..aecb259785ff993ac400b00be3e2935b2e36343b 100644
+index 96a2283..aecb259 100644
 --- a/internal/config/parser.go
 +++ b/internal/config/parser.go
 @@ -148,6 +148,19 @@ type ColumnConfig struct {
@@ -36,7 +36,7 @@ index 96a2283274df241dfcc4609fb53de90d25636ddf..aecb259785ff993ac400b00be3e2935b
  type Defaults struct {
 diff --git a/internal/config/parser_projects_test.go b/internal/config/parser_projects_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..a77f48131bc54c9c4a193e433f59732e2a91b517
+index 0000000..a77f481
 --- /dev/null
 +++ b/internal/config/parser_projects_test.go
 @@ -0,0 +1,44 @@
@@ -85,7 +85,7 @@ index 0000000000000000000000000000000000000000..a77f48131bc54c9c4a193e433f59732e
 +	}
 +}
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index 9fa1763cf9a78a386ce3ed431181ac5664c636a9..7b03af0f5f8467eea4995da965ba8f6a562103ff 100644
+index 9fa1763..7b03af0 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -14,6 +14,7 @@ import (
@@ -279,7 +279,7 @@ index 9fa1763cf9a78a386ce3ed431181ac5664c636a9..7b03af0f5f8467eea4995da965ba8f6a
  }
 diff --git a/internal/data/issueapi_test.go b/internal/data/issueapi_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..38a835ad12718053b88c8391f46abb11f07a1ab4
+index 0000000..38a835a
 --- /dev/null
 +++ b/internal/data/issueapi_test.go
 @@ -0,0 +1,55 @@
@@ -339,7 +339,7 @@ index 0000000000000000000000000000000000000000..38a835ad12718053b88c8391f46abb11
 +	}
 +}
 diff --git a/internal/data/prapi.go b/internal/data/prapi.go
-index 11eecdb58395a316e7e3359197509b644a915471..19b3debd4f1603ff83a66665afe3ac81732b0ebb 100644
+index 11eecdb..19b3deb 100644
 --- a/internal/data/prapi.go
 +++ b/internal/data/prapi.go
 @@ -27,6 +27,7 @@ type SuggestedReviewer struct {
@@ -552,10 +552,10 @@ index 11eecdb58395a316e7e3359197509b644a915471..19b3debd4f1603ff83a66665afe3ac81
  }
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60c1ebd303
+index 0000000..b8369d9
 --- /dev/null
 +++ b/internal/data/projectlist.go
-@@ -0,0 +1,561 @@
+@@ -0,0 +1,676 @@
 +package data
 +
 +import (
@@ -564,6 +564,7 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +	"sort"
 +	"strings"
 +	"sync"
++	"time"
 +
 +	"charm.land/log/v2"
 +	gh "github.com/cli/go-gh/v2/pkg/api"
@@ -571,6 +572,29 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +
 +var projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
 +	return client.Do(query, variables, result)
++}
++
++var projectReadSleep = time.Sleep
++
++func projectGraphQLRead(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++	for attempt := 1; attempt <= 3; attempt++ {
++		generation, err := projectEnrichmentAllowedGeneration()
++		if err != nil {
++			return err
++		}
++		err = projectGraphQLDo(client, query, variables, result)
++		if err == nil {
++			recordProjectNetworkSuccess(generation)
++			return nil
++		}
++		if classifyProjectFailure(err).class == projectTransient && attempt < 3 {
++			projectReadSleep(100 * time.Millisecond)
++			continue
++		}
++		recordProjectEnrichmentFailure(err)
++		return err
++	}
++	return fmt.Errorf("Project read exhausted retry attempts")
 +}
 +
 +// projectColumnsKey identifies the shape of list metadata already held in the
@@ -586,11 +610,18 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +}
 +
 +type projectSchemaCache struct {
-+	mu     sync.Mutex
-+	fields map[string][]ProjectField
++	mu       sync.Mutex
++	fields   map[string][]ProjectField
++	inFlight map[string]*projectSchemaCall
 +}
 +
-+var projectSchemas = projectSchemaCache{fields: make(map[string][]ProjectField)}
++type projectSchemaCall struct {
++	done   chan struct{}
++	fields []ProjectField
++	err    error
++}
++
++var projectSchemas = projectSchemaCache{fields: make(map[string][]ProjectField), inFlight: make(map[string]*projectSchemaCall)}
 +
 +// FetchProjectSchema fetches only stable field identity and type. Options are
 +// deliberately excluded from list enrichment and are fetched live by the
@@ -602,10 +633,18 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +		projectSchemas.mu.Unlock()
 +		return append([]ProjectField(nil), fields...), nil
 +	}
++	if call, ok := projectSchemas.inFlight[projectID]; ok {
++		projectSchemas.mu.Unlock()
++		<-call.done
++		return append([]ProjectField(nil), call.fields...), call.err
++	}
++	call := &projectSchemaCall{done: make(chan struct{})}
++	projectSchemas.inFlight[projectID] = call
 +	projectSchemas.mu.Unlock()
 +
 +	client, err := projectGraphQLClient()
 +	if err != nil {
++		completeProjectSchemaCall(projectID, call, nil, err)
 +		return nil, err
 +	}
 +	var fields []ProjectField
@@ -637,7 +676,8 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +				} `json:"fields"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLDo(client, query, map[string]interface{}{"id": projectID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": projectID, "after": after}, &response); err != nil {
++			completeProjectSchemaCall(projectID, call, nil, err)
 +			return nil, err
 +		}
 +		for _, field := range response.Node.Fields.Nodes {
@@ -656,8 +696,22 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +	sort.SliceStable(fields, func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) })
 +	projectSchemas.mu.Lock()
 +	projectSchemas.fields[projectID] = append([]ProjectField(nil), fields...)
++	delete(projectSchemas.inFlight, projectID)
++	call.fields = append([]ProjectField(nil), fields...)
++	close(call.done)
 +	projectSchemas.mu.Unlock()
 +	return fields, nil
++}
++
++func completeProjectSchemaCall(projectID string, call *projectSchemaCall, fields []ProjectField, err error) {
++	projectSchemas.mu.Lock()
++	if projectSchemas.inFlight[projectID] == call {
++		delete(projectSchemas.inFlight, projectID)
++	}
++	call.fields = append([]ProjectField(nil), fields...)
++	call.err = err
++	close(call.done)
++	projectSchemas.mu.Unlock()
 +}
 +
 +type projectListValueRequest struct {
@@ -817,7 +871,7 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +	var response struct {
 +		Nodes []json.RawMessage `json:"nodes"`
 +	}
-+	if err := projectGraphQLDo(client, query, variables, &response); err != nil {
++	if err := projectGraphQLRead(client, query, variables, &response); err != nil {
 +		return nil, err
 +	}
 +	result := make(map[string][]ProjectFieldValue, len(response.Nodes))
@@ -931,10 +985,15 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +			} `json:"projectItems"`
 +		} `json:"nodes"`
 +	}
-+	if err := projectGraphQLDo(client, query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
++	if err := projectGraphQLRead(client, query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
 +		return nil, err
 +	}
 +	result := make(map[string]ProjectItems, len(response.Nodes))
++	type overflowMembership struct {
++		contentID string
++		after     string
++	}
++	var overflows []overflowMembership
 +	for _, node := range response.Nodes {
 +		for _, rawItem := range node.ProjectItems.Nodes {
 +			result[node.ID] = appendProjectItem(result[node.ID], ProjectItem{
@@ -942,6 +1001,62 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +				Project: Project{ID: rawItem.Project.ID, Number: rawItem.Project.Number, Title: rawItem.Project.Title,
 +					Owner: ProjectOwner{User: struct{ Login string }{Login: rawItem.Project.Owner.Login}}},
 +			})
++		}
++		if node.ProjectItems.PageInfo.HasNextPage {
++			if node.ProjectItems.PageInfo.EndCursor == "" {
++				return nil, fmt.Errorf("Project membership pagination returned an empty cursor for %s", node.ID)
++			}
++			overflows = append(overflows, overflowMembership{contentID: node.ID, after: node.ProjectItems.PageInfo.EndCursor})
++		}
++	}
++	for _, overflow := range overflows {
++		after := overflow.after
++		for {
++			query := `query ProjectMembershipOverflow($id: ID!, $after: String) {
++  node(id: $id) {
++    ... on Issue { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on PullRequest { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++  }
++}`
++			var page struct {
++				Node struct {
++					ProjectItems struct {
++						Nodes []struct {
++							ID      string `json:"id"`
++							Project struct {
++								ID     string `json:"id"`
++								Number int    `json:"number"`
++								Title  string `json:"title"`
++								Owner  struct {
++									Login string `json:"login"`
++								} `json:"owner"`
++							} `json:"project"`
++						} `json:"nodes"`
++						PageInfo struct {
++							HasNextPage bool   `json:"hasNextPage"`
++							EndCursor   string `json:"endCursor"`
++						} `json:"pageInfo"`
++					} `json:"projectItems"`
++				} `json:"node"`
++			}
++			if err := projectGraphQLRead(client, query, map[string]interface{}{"id": overflow.contentID, "after": &after}, &page); err != nil {
++				return nil, err
++			}
++			for _, rawItem := range page.Node.ProjectItems.Nodes {
++				result[overflow.contentID] = appendProjectItem(result[overflow.contentID], ProjectItem{
++					ID: rawItem.ID,
++					Project: Project{ID: rawItem.Project.ID, Number: rawItem.Project.Number, Title: rawItem.Project.Title,
++						Owner: ProjectOwner{User: struct{ Login string }{Login: rawItem.Project.Owner.Login}}},
++				})
++			}
++			if !page.Node.ProjectItems.PageInfo.HasNextPage {
++				break
++			}
++			next := page.Node.ProjectItems.PageInfo.EndCursor
++			if next == "" || next == after {
++				return nil, fmt.Errorf("Project membership pagination returned a repeated cursor for %s", overflow.contentID)
++			}
++			after = next
 +		}
 +	}
 +	if len(columns) == 0 {
@@ -1049,7 +1164,7 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +				} `json:"projectItems"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLDo(client, query, map[string]interface{}{"id": contentID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": contentID, "after": after}, &response); err != nil {
 +			return ProjectItems{}, err
 +		}
 +		for _, rawItem := range response.Node.ProjectItems.Nodes {
@@ -1100,7 +1215,7 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +				} `json:"fieldValues"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLDo(client, query, map[string]interface{}{"id": itemID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": itemID, "after": after}, &response); err != nil {
 +			return nil, err
 +		}
 +		for _, raw := range response.Node.FieldValues.Nodes {
@@ -1119,15 +1234,18 @@ index 0000000000000000000000000000000000000000..6f8215331bcd14a700e992fe65a59e60
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..97fa6a1149425606485ea03cb772e0ff5db938dc
+index 0000000..f83193d
 --- /dev/null
 +++ b/internal/data/projectlist_query_test.go
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,275 @@
 +package data
 +
 +import (
 +	"encoding/json"
++	"errors"
++	"fmt"
 +	"strings"
++	"sync"
 +	"testing"
 +
 +	gh "github.com/cli/go-gh/v2/pkg/api"
@@ -1224,9 +1342,180 @@ index 0000000000000000000000000000000000000000..97fa6a1149425606485ea03cb772e0ff
 +		t.Fatalf("got %q", got)
 +	}
 +}
++
++func TestProjectMembershipOverflowPagesPerContentNode(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++
++	for _, testCase := range []struct {
++		count int
++		calls int
++	}{
++		{count: 20, calls: 1},
++		{count: 21, calls: 2},
++		{count: 41, calls: 3},
++	} {
++		t.Run(fmt.Sprint(testCase.count), func(t *testing.T) {
++			resetProjectItemsState()
++			calls := 0
++			projectGraphQLDo = func(_ *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++				calls++
++				page := 0
++				if strings.Contains(query, "ProjectMembershipOverflow") {
++					after := variables["after"].(*string)
++					if *after == "cursor-20" {
++						page = 1
++					} else {
++						page = 2
++					}
++				}
++				start := page * 20
++				end := start + 20
++				if end > testCase.count {
++					end = testCase.count
++				}
++				if start > testCase.count {
++					start = testCase.count
++				}
++				nodes := make([]map[string]interface{}, 0, end-start)
++				for index := start; index < end; index++ {
++					nodes = append(nodes, map[string]interface{}{
++						"id":      "item-" + fmt.Sprint(index),
++						"project": map[string]interface{}{"id": "project-" + fmt.Sprint(index), "number": index + 1, "title": "Project", "owner": map[string]interface{}{"login": "owner"}},
++					})
++				}
++				pageInfo := map[string]interface{}{"hasNextPage": end < testCase.count, "endCursor": ""}
++				if end < testCase.count {
++					pageInfo["endCursor"] = "cursor-" + fmt.Sprint(end)
++				}
++				if strings.Contains(query, "ProjectMemberships") {
++					return json.Unmarshal(mustJSON(map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "issue-1", "projectItems": map[string]interface{}{"nodes": nodes, "pageInfo": pageInfo}}}}), result)
++				}
++				return json.Unmarshal(mustJSON(map[string]interface{}{"node": map[string]interface{}{"projectItems": map[string]interface{}{"nodes": nodes, "pageInfo": pageInfo}}}), result)
++			}
++			items, err := fetchProjectItemsNetwork([]string{"issue-1"}, nil)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if calls != testCase.calls || len(items["issue-1"].Nodes) != testCase.count {
++				t.Fatalf("calls=%d items=%d, want calls=%d items=%d", calls, len(items["issue-1"].Nodes), testCase.calls, testCase.count)
++			}
++		})
++	}
++}
++
++func TestConfiguredColumnResolvesProjectOnMembershipOverflowPage(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	resetProjectItemsState()
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		switch {
++		case strings.Contains(query, "ProjectMemberships"):
++			return json.Unmarshal(mustJSON(map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "issue-1", "projectItems": map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "item-1", "project": map[string]interface{}{"id": "project-1", "number": 1, "title": "First", "owner": map[string]interface{}{"login": "owner"}}}}, "pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "overflow-1"}}}}}), result)
++		case strings.Contains(query, "ProjectMembershipOverflow"):
++			return json.Unmarshal(mustJSON(map[string]interface{}{"node": map[string]interface{}{"projectItems": map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "item-2", "project": map[string]interface{}{"id": "project-2", "number": 2, "title": "Second", "owner": map[string]interface{}{"login": "owner"}}}}, "pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": ""}}}}), result)
++		case strings.Contains(query, "ProjectSchema"):
++			return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++		case strings.Contains(query, "ProjectColumnValues"):
++			return json.Unmarshal([]byte(`{"nodes":[{"id":"item-2","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"In Progress","optionId":"opt-1","field":{"id":"field-status","name":"Status"}}}]}`), result)
++		default:
++			t.Fatalf("unexpected query %s", query)
++			return nil
++		}
++	}
++	items, err := fetchProjectItemsNetwork([]string{"issue-1"}, []ProjectColumn{{Name: "Status", Project: "owner/2"}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(items["issue-1"].Nodes) != 2 {
++		t.Fatalf("got %d memberships", len(items["issue-1"].Nodes))
++	}
++	field, ok := items["issue-1"].Nodes[1].Field("Status")
++	if !ok || field.Value != "In Progress" {
++		t.Fatalf("overflow Project field = %#v, ok=%v", field, ok)
++	}
++}
++
++func TestProjectSchemaSingleflightCoalescesSuccessAndError(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++
++	resetProjectItemsState()
++	started := make(chan struct{})
++	release := make(chan struct{})
++	var startedOnce sync.Once
++	var mu sync.Mutex
++	calls := 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, _ string, _ map[string]interface{}, result interface{}) error {
++		mu.Lock()
++		calls++
++		mu.Unlock()
++		startedOnce.Do(func() { close(started) })
++		<-release
++		return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2Field","id":"field-1","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++	}
++	results := make(chan []ProjectField, 2)
++	errorsCh := make(chan error, 2)
++	for range 2 {
++		go func() {
++			fields, err := FetchProjectSchema("project-1")
++			results <- fields
++			errorsCh <- err
++		}()
++	}
++	<-started
++	close(release)
++	for range 2 {
++		if err := <-errorsCh; err != nil {
++			t.Fatal(err)
++		}
++		if fields := <-results; len(fields) != 1 || fields[0].ID != "field-1" {
++			t.Fatalf("schema result = %#v", fields)
++		}
++	}
++	if calls != 1 {
++		t.Fatalf("schema network calls = %d, want 1", calls)
++	}
++
++	resetProjectItemsState()
++	projectGraphQLDo = func(_ *gh.GraphQLClient, _ string, _ map[string]interface{}, _ interface{}) error {
++		mu.Lock()
++		calls++
++		mu.Unlock()
++		return errors.New("temporary network failure")
++	}
++	firstErr := make(chan error, 1)
++	secondErr := make(chan error, 1)
++	go func() { _, err := FetchProjectSchema("project-error"); firstErr <- err }()
++	go func() { _, err := FetchProjectSchema("project-error"); secondErr <- err }()
++	if err := <-firstErr; err == nil || err.Error() != "temporary network failure" {
++		t.Fatalf("first schema error = %v", err)
++	}
++	if err := <-secondErr; err == nil || err.Error() != "temporary network failure" {
++		t.Fatalf("second schema error = %v", err)
++	}
++	resetProjectItemsState()
++}
++
++func mustJSON(value interface{}) []byte {
++	data, err := json.Marshal(value)
++	if err != nil {
++		panic(err)
++	}
++	return data
++}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..a3e5df685eaa049f3cf9fcc4eff6cb9f9a185809
+index 0000000..a3e5df6
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
 @@ -0,0 +1,48 @@
@@ -1280,15 +1569,18 @@ index 0000000000000000000000000000000000000000..a3e5df685eaa049f3cf9fcc4eff6cb9f
 +}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd547e7b913e
+index 0000000..1282803
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1060 @@
+@@ -0,0 +1,1274 @@
 +package data
 +
 +import (
++	"context"
 +	"errors"
 +	"fmt"
++	"net"
++	"net/http"
 +	"slices"
 +	"sort"
 +	"strconv"
@@ -1306,8 +1598,11 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +}
 +
 +func queryWithOptionalProjects(client *gh.GraphQLClient, name string, result interface{}, variables map[string]interface{}, enrichProjects bool) error {
++	var generation uint64
 +	if enrichProjects {
-+		if err := projectEnrichmentAllowed(); err != nil {
++		var err error
++		generation, err = projectEnrichmentAllowedGeneration()
++		if err != nil {
 +			variables["includeProjects"] = graphql.Boolean(false)
 +			return queryGraphQL(client, name, result, variables)
 +		}
@@ -1317,6 +1612,8 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +		recordProjectEnrichmentFailure(err)
 +		variables["includeProjects"] = graphql.Boolean(false)
 +		err = queryGraphQL(client, name, result, variables)
++	} else if err == nil && enrichProjects {
++		recordProjectNetworkSuccess(generation)
 +	}
 +	return err
 +}
@@ -1462,8 +1759,11 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +var ErrProjectEnrichmentUnavailable = errors.New("Project enrichment unavailable")
 +
 +const (
-+	projectEnrichmentInitialBackoff = 30 * time.Second
-+	projectEnrichmentMaxBackoff     = 5 * time.Minute
++	projectTransientInitialBackoff = 2 * time.Second
++	projectTransientMaxBackoff     = 30 * time.Second
++	projectSecondaryFallback       = 30 * time.Second
++	projectSecondaryMaxBackoff     = 5 * time.Minute
++	projectPrimaryFallback         = time.Hour
 +)
 +
 +type projectItemsCall struct {
@@ -1490,60 +1790,259 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +type projectEnrichmentBreaker struct {
 +	mu             sync.Mutex
 +	failures       int
++	classification projectFailureClass
++	permanentlyOff bool
 +	unavailableTil time.Time
++	generation     uint64
 +}
++
++type projectFailureClass string
++
++const (
++	projectFailureNone    projectFailureClass = ""
++	projectPermission     projectFailureClass = "permission"
++	projectPrimaryQuota   projectFailureClass = "primary-quota"
++	projectSecondaryLimit projectFailureClass = "secondary-limit"
++	projectTransient      projectFailureClass = "transient"
++)
 +
 +var projectBreaker projectEnrichmentBreaker
 +var projectBreakerNow = time.Now
 +
 +func projectEnrichmentAllowed() error {
++	_, err := projectEnrichmentAllowedGeneration()
++	return err
++}
++
++func projectEnrichmentAllowedGeneration() (uint64, error) {
 +	projectBreaker.mu.Lock()
 +	defer projectBreaker.mu.Unlock()
-+	if projectBreakerNow().Before(projectBreaker.unavailableTil) {
-+		return fmt.Errorf("%w: retry after %s", ErrProjectEnrichmentUnavailable, projectBreaker.unavailableTil.Format(time.RFC3339))
++	if projectBreaker.permanentlyOff {
++		return projectBreaker.generation, fmt.Errorf("%w: Project permission/auth failure disabled Project reads for this process", ErrProjectEnrichmentUnavailable)
 +	}
-+	return nil
++	if projectBreakerNow().Before(projectBreaker.unavailableTil) {
++		return projectBreaker.generation, fmt.Errorf("%w: %s retry after %s", ErrProjectEnrichmentUnavailable, projectBreaker.classification, projectBreaker.unavailableTil.Format(time.RFC3339))
++	}
++	return projectBreaker.generation, nil
 +}
 +
 +func recordProjectEnrichmentFailure(err error) {
-+	if !isProjectAvailabilityFailure(err) {
++	classification := classifyProjectFailure(err)
++	if classification.class == projectFailureNone {
 +		return
 +	}
 +	projectBreaker.mu.Lock()
 +	defer projectBreaker.mu.Unlock()
-+	projectBreaker.failures++
-+	backoff := projectEnrichmentInitialBackoff
-+	for attempt := 1; attempt < projectBreaker.failures; attempt++ {
-+		backoff *= 2
-+		if backoff >= projectEnrichmentMaxBackoff {
-+			backoff = projectEnrichmentMaxBackoff
-+			break
-+		}
++	if classification.class == projectPermission {
++		projectBreaker.generation++
++		projectBreaker.permanentlyOff = true
++		projectBreaker.classification = classification.class
++		projectBreaker.unavailableTil = time.Time{}
++		return
 +	}
-+	projectBreaker.unavailableTil = projectBreakerNow().Add(backoff)
++	projectBreaker.generation++
++	projectBreaker.failures++
++	projectBreaker.classification = classification.class
++	projectBreaker.unavailableTil = classification.retryAt
++	if projectBreaker.unavailableTil.IsZero() {
++		backoff := projectFailureBackoff(classification.class, projectBreaker.failures)
++		projectBreaker.unavailableTil = projectBreakerNow().Add(backoff)
++	}
 +}
 +
-+func isProjectAvailabilityFailure(err error) bool {
++func recordProjectNetworkSuccess(generations ...uint64) {
++	projectBreaker.mu.Lock()
++	defer projectBreaker.mu.Unlock()
++	if projectBreaker.permanentlyOff {
++		return
++	}
++	if len(generations) > 0 && generations[0] != projectBreaker.generation {
++		return
++	}
++	if projectBreakerNow().Before(projectBreaker.unavailableTil) {
++		return
++	}
++	projectBreaker.failures = 0
++	projectBreaker.classification = projectFailureNone
++	projectBreaker.unavailableTil = time.Time{}
++}
++
++type classifiedProjectFailure struct {
++	class   projectFailureClass
++	retryAt time.Time
++}
++
++func classifyProjectFailure(err error) classifiedProjectFailure {
 +	if err == nil {
-+		return false
++		return classifiedProjectFailure{}
 +	}
 +	message := strings.ToLower(err.Error())
-+	for _, marker := range []string{
-+		"rate limit",
-+		"secondary rate limit",
-+		"api rate limit exceeded",
-+		"resource not accessible by personal access token",
-+		"projects scope required",
-+		"projectv2",
-+		"projects permission",
-+		"forbidden",
-+		"status code 403",
-+	} {
-+		if strings.Contains(message, marker) {
-+			return true
++	if strings.Contains(message, "secondary rate limit") || strings.Contains(message, "secondary rate") || strings.Contains(message, "abuse detection") || !projectRetryAfter(err).IsZero() {
++		return classifiedProjectFailure{class: projectSecondaryLimit, retryAt: projectRetryAt(err, true)}
++	}
++	if strings.Contains(message, "resource not accessible by personal access token") || strings.Contains(message, "projects scope required") || strings.Contains(message, "projects permission") {
++		return classifiedProjectFailure{class: projectPermission}
++	}
++	if projectHasPrimaryQuotaMarker(err, message) {
++		return classifiedProjectFailure{class: projectPrimaryQuota, retryAt: projectRetryAt(err, false)}
++	}
++	var httpErr *gh.HTTPError
++	if errors.As(err, &httpErr) && (httpErr.StatusCode == http.StatusUnauthorized || httpErr.StatusCode == http.StatusForbidden) {
++		return classifiedProjectFailure{class: projectPermission}
++	}
++	if strings.Contains(message, "http 403") || strings.Contains(message, "status code 403") || strings.Contains(message, "forbidden") || strings.Contains(message, "unauthorized") {
++		return classifiedProjectFailure{class: projectPermission}
++	}
++	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
++		return classifiedProjectFailure{class: projectTransient}
++	}
++	var networkErr net.Error
++	if errors.As(err, &networkErr) || strings.Contains(message, "status code: 5") || strings.Contains(message, "status 5") || strings.Contains(message, "timeout") || strings.Contains(message, "connection reset") || strings.Contains(message, "temporary network") || strings.Contains(message, "network is unreachable") {
++		return classifiedProjectFailure{class: projectTransient}
++	}
++	if errors.As(err, &httpErr) && httpErr.StatusCode >= 500 && httpErr.StatusCode <= 599 {
++		return classifiedProjectFailure{class: projectTransient}
++	}
++	return classifiedProjectFailure{}
++}
++
++func projectHasPrimaryQuotaMarker(err error, message string) bool {
++	if strings.Contains(message, "api rate limit exceeded") || strings.Contains(message, "rate limit exceeded") || strings.Contains(message, "primary rate limit") {
++		return true
++	}
++	var httpErr *gh.HTTPError
++	if errors.As(err, &httpErr) && httpErr.Headers.Get("X-RateLimit-Remaining") == "0" {
++		return true
++	}
++	var graphQLErr *gh.GraphQLError
++	if errors.As(err, &graphQLErr) {
++		for _, item := range graphQLErr.Errors {
++			if strings.Contains(strings.ToLower(item.Type), "rate") || strings.Contains(strings.ToLower(item.Type), "quota") {
++				return true
++			}
++			for key, value := range item.Extensions {
++				text := strings.ToLower(fmt.Sprintf("%s=%v", key, value))
++				if strings.Contains(text, "rate_limit") || strings.Contains(text, "rate-limited") || strings.Contains(text, "primary") {
++					return true
++				}
++			}
 +		}
 +	}
 +	return false
++}
++
++func projectRetryAt(err error, durationValue bool) time.Time {
++	if durationValue {
++		if retryAfter := projectRetryAfter(err); !retryAfter.IsZero() {
++			return retryAfter
++		}
++	} else if resetAt := projectResetAt(err); !resetAt.IsZero() {
++		return resetAt
++	}
++	return time.Time{}
++}
++
++func projectRetryAfter(err error) time.Time {
++	var httpErr *gh.HTTPError
++	if errors.As(err, &httpErr) {
++		if value := httpErr.Headers.Get("Retry-After"); value != "" {
++			if seconds, parseErr := strconv.ParseFloat(strings.TrimSpace(value), 64); parseErr == nil {
++				return projectBreakerNow().Add(time.Duration(seconds * float64(time.Second)))
++			}
++			if parsed, parseErr := http.ParseTime(value); parseErr == nil {
++				return parsed
++			}
++		}
++	}
++	return projectExtensionTime(err, []string{"retryAfter", "retry_after"}, true)
++}
++
++func projectResetAt(err error) time.Time {
++	var httpErr *gh.HTTPError
++	if errors.As(err, &httpErr) {
++		if value := httpErr.Headers.Get("X-RateLimit-Reset"); value != "" {
++			if seconds, parseErr := strconv.ParseInt(strings.TrimSpace(value), 10, 64); parseErr == nil {
++				return time.Unix(seconds, 0)
++			}
++		}
++	}
++	return projectExtensionTime(err, []string{"resetAt", "reset_at", "reset"}, false)
++}
++
++func projectExtensionTime(err error, keys []string, durationValue bool) time.Time {
++	keySet := make(map[string]struct{}, len(keys))
++	for _, key := range keys {
++		keySet[strings.ToLower(key)] = struct{}{}
++	}
++	var graphQLErr *gh.GraphQLError
++	if errors.As(err, &graphQLErr) {
++		for _, item := range graphQLErr.Errors {
++			for key, value := range item.Extensions {
++				if _, ok := keySet[strings.ToLower(key)]; ok {
++					if parsed := parseProjectTimeValue(value, durationValue); !parsed.IsZero() {
++						return parsed
++					}
++				}
++			}
++		}
++	}
++	return time.Time{}
++}
++
++func parseProjectTimeValue(value interface{}, durationValue bool) time.Time {
++	switch typed := value.(type) {
++	case float64:
++		if durationValue {
++			return projectBreakerNow().Add(time.Duration(typed * float64(time.Second)))
++		}
++		return time.Unix(int64(typed), 0)
++	case int:
++		if durationValue {
++			return projectBreakerNow().Add(time.Duration(typed) * time.Second)
++		}
++		return time.Unix(int64(typed), 0)
++	case string:
++		if durationValue {
++			if seconds, err := strconv.ParseFloat(strings.TrimSpace(typed), 64); err == nil {
++				return projectBreakerNow().Add(time.Duration(seconds * float64(time.Second)))
++			}
++		}
++		if parsed, err := time.Parse(time.RFC3339, typed); err == nil {
++			return parsed
++		}
++		if seconds, err := strconv.ParseInt(strings.TrimSpace(typed), 10, 64); err == nil {
++			return time.Unix(seconds, 0)
++		}
++	}
++	return time.Time{}
++}
++
++func projectFailureBackoff(class projectFailureClass, failures int) time.Duration {
++	if failures < 1 {
++		failures = 1
++	}
++	if class == projectPrimaryQuota {
++		return projectPrimaryFallback
++	}
++	initial, maximum := projectTransientInitialBackoff, projectTransientMaxBackoff
++	if class == projectSecondaryLimit {
++		initial, maximum = projectSecondaryFallback, projectSecondaryMaxBackoff
++	}
++	backoff := initial
++	for attempt := 1; attempt < failures; attempt++ {
++		backoff *= 2
++		if backoff >= maximum {
++			return maximum
++		}
++	}
++	if backoff > maximum {
++		return maximum
++	}
++	return backoff
++}
++
++func isProjectAvailabilityFailure(err error) bool {
++	return classifyProjectFailure(err).class != projectFailureNone
 +}
 +
 +func resetProjectItemsState() {
@@ -1556,10 +2055,14 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +
 +	projectBreaker.mu.Lock()
 +	projectBreaker.failures = 0
++	projectBreaker.classification = projectFailureNone
++	projectBreaker.permanentlyOff = false
 +	projectBreaker.unavailableTil = time.Time{}
++	projectBreaker.generation = 0
 +	projectBreaker.mu.Unlock()
 +	projectSchemas.mu.Lock()
 +	projectSchemas.fields = make(map[string][]ProjectField)
++	projectSchemas.inFlight = make(map[string]*projectSchemaCall)
 +	projectSchemas.mu.Unlock()
 +}
 +
@@ -1907,7 +2410,7 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +	fields := make([]ProjectField, 0)
 +	var after *string
 +	for {
-+		err = client.Do(query, map[string]interface{}{"id": projectID, "after": after}, &response)
++		err = projectGraphQLRead(client, query, map[string]interface{}{"id": projectID, "after": after}, &response)
 +		if err != nil {
 +			return nil, err
 +		}
@@ -2098,7 +2601,7 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +			} `json:"projectItems"`
 +		} `json:"nodes"`
 +	}
-+	if err := projectClient.Do(query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
++	if err := projectGraphQLRead(projectClient, query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
 +		return nil, err
 +	}
 +	result := make(map[string]ProjectItems, len(response.Nodes))
@@ -2346,7 +2849,7 @@ index 0000000000000000000000000000000000000000..45d1cd7ad626f9ebe892e310ee87dd54
 +}
 diff --git a/internal/data/projects_live_test.go b/internal/data/projects_live_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..22a3282c6cac4a7727e0090cefbf8be1c8779a44
+index 0000000..22a3282
 --- /dev/null
 +++ b/internal/data/projects_live_test.go
 @@ -0,0 +1,114 @@
@@ -2466,15 +2969,16 @@ index 0000000000000000000000000000000000000000..22a3282c6cac4a7727e0090cefbf8be1
 +}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..b1db5c3f5bb038066fb49b92cc835cc9f8cb44a4
+index 0000000..6155a69
 --- /dev/null
 +++ b/internal/data/projects_test.go
-@@ -0,0 +1,366 @@
+@@ -0,0 +1,465 @@
 +package data
 +
 +import (
 +	"errors"
 +	"fmt"
++	"net/http"
 +	"strings"
 +	"sync"
 +	"testing"
@@ -2774,6 +3278,104 @@ index 0000000000000000000000000000000000000000..b1db5c3f5bb038066fb49b92cc835cc9
 +	require.Equal(t, 1, calls)
 +}
 +
++func TestProjectFailureClassificationUsesGitHubTimingMetadata(t *testing.T) {
++	now := time.Date(2026, 8, 16, 4, 0, 0, 0, time.UTC)
++	originalNow := projectBreakerNow
++	projectBreakerNow = func() time.Time { return now }
++	defer func() { projectBreakerNow = originalNow }()
++
++	primary := &gh.HTTPError{
++		StatusCode: 403,
++		Headers: http.Header{
++			"X-Ratelimit-Remaining": []string{"0"},
++			"X-Ratelimit-Reset":     []string{fmt.Sprint(now.Add(11 * time.Minute).Unix())},
++		},
++	}
++	secondary := &gh.HTTPError{
++		StatusCode: 403,
++		Message:    "secondary rate limit",
++		Headers:    http.Header{"Retry-After": []string{"17"}},
++	}
++	tests := []struct {
++		name      string
++		err       error
++		class     projectFailureClass
++		retryAt   time.Time
++		wantRetry bool
++	}{
++		{name: "permission", err: errors.New("Resource not accessible by personal access token"), class: projectPermission},
++		{name: "primary quota", err: primary, class: projectPrimaryQuota, retryAt: now.Add(11 * time.Minute), wantRetry: true},
++		{name: "secondary rate limit", err: secondary, class: projectSecondaryLimit, retryAt: now.Add(17 * time.Second), wantRetry: true},
++		{name: "transient network", err: errors.New("temporary network failure"), class: projectTransient},
++	}
++	for _, testCase := range tests {
++		t.Run(testCase.name, func(t *testing.T) {
++			got := classifyProjectFailure(testCase.err)
++			if got.class != testCase.class {
++				t.Fatalf("class = %q, want %q", got.class, testCase.class)
++			}
++			if testCase.wantRetry && !got.retryAt.Equal(testCase.retryAt) {
++				t.Fatalf("retryAt = %s, want %s", got.retryAt, testCase.retryAt)
++			}
++		})
++	}
++}
++
++func TestProjectBreakerDisablesPermissionReadsButAllowsTransientRetry(t *testing.T) {
++	resetProjectItemsState()
++	defer resetProjectItemsState()
++	originalNow := projectBreakerNow
++	now := time.Date(2026, 8, 16, 4, 0, 0, 0, time.UTC)
++	projectBreakerNow = func() time.Time { return now }
++	defer func() { projectBreakerNow = originalNow }()
++
++	recordProjectEnrichmentFailure(errors.New("projects scope required"))
++	if err := projectEnrichmentAllowed(); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
++		t.Fatalf("permission breaker error = %v", err)
++	}
++	projectBreaker.mu.Lock()
++	permanentlyOff := projectBreaker.permanentlyOff
++	projectBreaker.mu.Unlock()
++	if !permanentlyOff {
++		t.Fatal("permission failure did not permanently disable Project reads")
++	}
++
++	resetProjectItemsState()
++	recordProjectEnrichmentFailure(errors.New("temporary network failure"))
++	if err := projectEnrichmentAllowed(); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
++		t.Fatalf("transient breaker error = %v", err)
++	}
++	now = now.Add(time.Minute)
++	if err := projectEnrichmentAllowed(); err != nil {
++		t.Fatalf("transient breaker did not reopen after backoff: %v", err)
++	}
++}
++
++func TestFullPreviewAndEditorReadsHonorProjectBreaker(t *testing.T) {
++	resetProjectItemsState()
++	defer resetProjectItemsState()
++	originalDo := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = originalDo }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	calls := 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, _ string, _ map[string]interface{}, _ interface{}) error {
++		calls++
++		return nil
++	}
++	recordProjectEnrichmentFailure(errors.New("projects scope required"))
++	if _, err := FetchProjectItemsFull("issue-1"); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
++		t.Fatalf("full preview error = %v", err)
++	}
++	if _, err := FetchProjectFields("project-1"); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
++		t.Fatalf("editor field error = %v", err)
++	}
++	if calls != 0 {
++		t.Fatalf("breaker-open Project reads made %d network calls", calls)
++	}
++}
++
 +func TestProjectItemsInvalidationForcesAuthoritativeRefetch(t *testing.T) {
 +	resetProjectItemsState()
 +	defer resetProjectItemsState()
@@ -2837,7 +3439,7 @@ index 0000000000000000000000000000000000000000..b1db5c3f5bb038066fb49b92cc835cc9
 +	return struct{ Nodes []ProjectFieldValue }{values}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index e7cf4eca6280f0be1d5c538267f131594acb9a3c..528c07b494e81d547224f932717157e1d66a93eb 100644
+index e7cf4ec..528c07b 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -20,7 +20,7 @@ type Issue struct {
@@ -2861,7 +3463,7 @@ index e7cf4eca6280f0be1d5c538267f131594acb9a3c..528c07b494e81d547224f932717157e1
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664c50b9fe50ab136653a82c42d26c10f313..46df0fb78258489476408f53287630b86184f5e0 100644
+index f421664..46df0fb 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,7 @@ import (
@@ -2956,7 +3558,7 @@ index f421664c50b9fe50ab136653a82c42d26c10f313..46df0fb78258489476408f53287630b8
  	m.Table.UpdateLastUpdated(t)
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 494ec4c00c573b3be588a901917bbc3daf7bb6e3..91220b792fcbd2331b454df40a7d6a0c7d116b8b 100644
+index 494ec4c..91220b7 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -17,6 +17,7 @@ import (
@@ -3052,30 +3654,94 @@ index 494ec4c00c573b3be588a901917bbc3daf7bb6e3..91220b792fcbd2331b454df40a7d6a0c
  	// TODO: move this to the NewModel func
  	// currently it's not possible since the styles aren't yet instantiated when NewModel is called
 diff --git a/internal/tui/components/notificationssection/notificationssection.go b/internal/tui/components/notificationssection/notificationssection.go
-index e25424c3b698d377059fbf6a914a9bba158152ee..b6e357323977123f528ae8de957d496d31692306 100644
+index e25424c..356e3e4 100644
 --- a/internal/tui/components/notificationssection/notificationssection.go
 +++ b/internal/tui/components/notificationssection/notificationssection.go
-@@ -970,7 +970,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -28,6 +28,9 @@ const SectionType = "notification"
+ // repoFilterRegex matches "repo:owner/name" patterns in search strings
+ var repoFilterRegex = regexp.MustCompile(`repo:([^\s]+)`)
+ 
++var fetchNotificationPullRequest = data.FetchPullRequest
++var fetchNotificationIssue = data.FetchIssue
++
+ // stateFilterRegex matches "is:unread", "is:read", "is:done", "is:all" patterns
+ var stateFilterRegex = regexp.MustCompile(`is:(unread|read|done|all)`)
+ 
+@@ -970,7 +973,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching PR for comment count", "url", url)
 -				pr, err := data.FetchPullRequest(url)
-+				pr, err := data.FetchPullRequest(url, m.Ctx.Config.Defaults.Layout.Projects.Enabled)
++				pr, err := fetchNotificationPullRequest(url, false)
  				if err != nil {
  					log.Error("Failed to fetch PR for comment count", "url", url, "err", err)
  					return nil
-@@ -1004,7 +1004,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -1004,7 +1007,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching Issue for comment count", "url", url)
 -				issue, err := data.FetchIssue(url)
-+				issue, err := data.FetchIssue(url, m.Ctx.Config.Defaults.Layout.Projects.Enabled)
++				issue, err := fetchNotificationIssue(url, false)
  				if err != nil {
  					log.Error("Failed to fetch Issue for comment count", "url", url, "err", err)
  					return nil
+diff --git a/internal/tui/components/notificationssection/notificationssection_test.go b/internal/tui/components/notificationssection/notificationssection_test.go
+new file mode 100644
+index 0000000..b7485a6
+--- /dev/null
++++ b/internal/tui/components/notificationssection/notificationssection_test.go
+@@ -0,0 +1,48 @@
++package notificationssection
++
++import (
++	"testing"
++
++	tea "charm.land/bubbletea/v2"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationrow"
++)
++
++func TestNotificationBackgroundCommentFetchDisablesProjectEnrichment(t *testing.T) {
++	originalPR := fetchNotificationPullRequest
++	originalIssue := fetchNotificationIssue
++	defer func() { fetchNotificationPullRequest = originalPR }()
++	defer func() { fetchNotificationIssue = originalIssue }()
++	var enrichValues []bool
++	fetchNotificationPullRequest = func(_ string, enrich bool) (data.EnrichedPullRequestData, error) {
++		enrichValues = append(enrichValues, enrich)
++		return data.EnrichedPullRequestData{}, nil
++	}
++	fetchNotificationIssue = func(_ string, enrich bool) (data.IssueData, error) {
++		enrichValues = append(enrichValues, enrich)
++		return data.IssueData{}, nil
++	}
++	m := Model{}
++	notifications := []notificationrow.Data{
++		{Notification: data.NotificationData{Id: "pr", Subject: data.NotificationSubject{Type: "PullRequest", Url: "https://github.com/owner/repo/pull/1"}}},
++		{Notification: data.NotificationData{Id: "issue", Subject: data.NotificationSubject{Type: "Issue", Url: "https://github.com/owner/repo/issues/2"}}},
++	}
++	cmds := m.fetchCommentCountsForNotifications(notifications)
++	if len(cmds) != 2 {
++		t.Fatalf("background commands = %d, want 2", len(cmds))
++	}
++	for _, cmd := range cmds {
++		if cmd == nil {
++			t.Fatal("background comment command is nil")
++		}
++		if msg := cmd(); msg == nil {
++			t.Fatal("background comment command returned nil")
++		} else if _, ok := msg.(tea.Msg); !ok {
++			t.Fatalf("background message has type %T", msg)
++		}
++	}
++	if len(enrichValues) != 2 || enrichValues[0] || enrichValues[1] {
++		t.Fatalf("background Project enrichment flags = %#v, want [false false]", enrichValues)
++	}
++}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..da1a811086d612102d8b6c6d1c94fbf31d28dd08
+index 0000000..da1a811
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
 @@ -0,0 +1,283 @@
@@ -3364,7 +4030,7 @@ index 0000000000000000000000000000000000000000..da1a811086d612102d8b6c6d1c94fbf3
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..a0aa6b3f4b51425743d04dd0a2d00a2828f60406
+index 0000000..a0aa6b3
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
 @@ -0,0 +1,57 @@
@@ -3426,7 +4092,7 @@ index 0000000000000000000000000000000000000000..a0aa6b3f4b51425743d04dd0a2d00a28
 +	require.Equal(t, []string{"E"}, keys.IssueKeys.EditProject.Keys())
 +}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
-index 1b2b4933876b8b40bbf681391cc45db07c83b89f..f7ff9788364488edf78921baab74c4e5ccb5a55b 100644
+index 1b2b493..f7ff978 100644
 --- a/internal/tui/components/prrow/prrow.go
 +++ b/internal/tui/components/prrow/prrow.go
 @@ -8,6 +8,7 @@ import (
@@ -3494,7 +4160,7 @@ index 1b2b4933876b8b40bbf681391cc45db07c83b89f..f7ff9788364488edf78921baab74c4e5
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996ba91352b8822bf6cba37d9307bab5571e4..f7b5dbd577a0ff689c3d31a0cdcc99832d78d388 100644
+index 08e996b..f7b5dbd 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,7 @@ import (
@@ -3583,7 +4249,7 @@ index 08e996ba91352b8822bf6cba37d9307bab5571e4..f7b5dbd577a0ff689c3d31a0cdcc9983
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9778b0d736674f442617f28a1af05de30f..84a498d3efade102cf445066b08a74315523a92a 100644
+index 470d9f9..84a498d 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -3747,7 +4413,7 @@ index 470d9f9778b0d736674f442617f28a1af05de30f..84a498d3efade102cf445066b08a7431
  		carousel.Styles{
  			Item:     lipgloss.NewStyle().Padding(0, 1).Foreground(m.ctx.Theme.FaintText),
 diff --git a/internal/tui/components/reposection/commands.go b/internal/tui/components/reposection/commands.go
-index 308b2a5b456daef8d425f8132f36d6250900b55a..8b237c4930bb64fcfc3039543c5d1cd35f233a79 100644
+index 308b2a5..8b237c4 100644
 --- a/internal/tui/components/reposection/commands.go
 +++ b/internal/tui/components/reposection/commands.go
 @@ -255,6 +255,7 @@ func (m *Model) fetchPRsCmd() tea.Cmd {
@@ -3767,7 +4433,7 @@ index 308b2a5b456daef8d425f8132f36d6250900b55a..8b237c4930bb64fcfc3039543c5d1cd3
  		log.Debug("Fetching PRs", "res", res)
  		if err != nil {
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f13b4e224cae358b3363a4ac8b3c738364a533ff..f300a81686ac5fc368dfb197de090de53e60a57e 100644
+index f13b4e2..f300a81 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -19,6 +19,7 @@ type IssueKeyMap struct {
@@ -3807,7 +4473,7 @@ index f13b4e224cae358b3363a4ac8b3c738364a533ff..f300a81686ac5fc368dfb197de090de5
  			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
  		}
 diff --git a/internal/tui/keys/prKeys.go b/internal/tui/keys/prKeys.go
-index 88c244fdb9ac9d48b593be046309fe6ec1a5ca97..ccbfaa0fb01464918160411a1fd3e894634234fa 100644
+index 88c244f..ccbfaa0 100644
 --- a/internal/tui/keys/prKeys.go
 +++ b/internal/tui/keys/prKeys.go
 @@ -29,6 +29,7 @@ type PRKeyMap struct {
@@ -3847,7 +4513,7 @@ index 88c244fdb9ac9d48b593be046309fe6ec1a5ca97..ccbfaa0fb01464918160411a1fd3e894
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73eac64771 100644
+index eb3c714..ff7369a 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -34,6 +34,7 @@ import (
@@ -3939,7 +4605,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
  		}
  
 +	case issueProjectPreviewRequestMsg:
-+		if msg.Generation != m.projectPreviewGeneration || !m.isCurrentIssue(msg.ContentID) {
++		if !acceptsIssueProjectPreview(m.projectPreviewGeneration, m.isCurrentIssue(msg.ContentID), msg.Generation) {
 +			break
 +		}
 +		cmds = append(cmds, func() tea.Msg {
@@ -3948,7 +4614,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
 +		})
 +
 +	case issueProjectPreviewMsg:
-+		if msg.Generation != m.projectPreviewGeneration || msg.Err != nil || !m.isCurrentIssue(msg.ContentID) {
++		if !acceptsIssueProjectPreview(m.projectPreviewGeneration, m.isCurrentIssue(msg.ContentID), msg.Generation) || msg.Err != nil {
 +			break
 +		}
 +		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
@@ -3986,7 +4652,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
  	}
  
  	tm, tabsCmd := m.tabs.Update(msg)
-@@ -1025,6 +1078,18 @@ type notificationIssueFetchedMsg struct {
+@@ -1025,6 +1078,22 @@ type notificationIssueFetchedMsg struct {
  	Err              error
  }
  
@@ -4002,10 +4668,14 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
 +	Err        error
 +}
 +
++func acceptsIssueProjectPreview(currentGeneration uint64, currentIssue bool, messageGeneration uint64) bool {
++	return currentIssue && currentGeneration == messageGeneration
++}
++
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1051,14 +1116,28 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1051,14 +1120,28 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  }
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
@@ -4035,7 +4705,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
  }
  
  func (m *Model) onWindowSizeChanged(msg tea.WindowSizeMsg) {
-@@ -1448,7 +1527,7 @@ func (m *Model) loadNotificationContent() tea.Cmd {
+@@ -1448,7 +1531,7 @@ func (m *Model) loadNotificationContent() tea.Cmd {
  				}
  			},
  			func() tea.Msg {
@@ -4044,7 +4714,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
  				return notificationPRFetchedMsg{
  					NotificationId:   notifId,
  					PR:               pr,
-@@ -1467,7 +1546,7 @@ func (m *Model) loadNotificationContent() tea.Cmd {
+@@ -1467,7 +1550,7 @@ func (m *Model) loadNotificationContent() tea.Cmd {
  				}
  			},
  			func() tea.Msg {
@@ -4054,10 +4724,29 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..87fdbb585c71073bed8f32e548e90a73
  					NotificationId:   notifId,
  					Issue:            issue,
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f33ae5df88245b5e827c7e017453bad69d..2789d7c026ea75f78bf581d2cfb8f150efb6cd32 100644
+index e391c6f..3567da2 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
-@@ -1191,6 +1191,41 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
+@@ -168,6 +168,18 @@ func TestGetCurrentViewSections_RepoViewWithNilRepo(t *testing.T) {
+ 	require.Empty(t, sections, "sections should be empty when repo is nil")
+ }
+ 
++func TestIssueProjectPreviewGenerationGuardRejectsStaleSelection(t *testing.T) {
++	if !acceptsIssueProjectPreview(7, true, 7) {
++		t.Fatal("current issue preview should be accepted")
++	}
++	if acceptsIssueProjectPreview(7, true, 6) {
++		t.Fatal("stale issue preview generation should be rejected")
++	}
++	if acceptsIssueProjectPreview(7, false, 7) {
++		t.Fatal("preview for a no-longer-selected issue should be rejected")
++	}
++}
++
+ func TestPromptConfirmation_NilSection(t *testing.T) {
+ 	// promptConfirmation should return nil when currSection is nil
+ 	m := Model{}
+@@ -1191,6 +1203,41 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
  		"positionOverride should remain empty when sidebar is closed")
  }
  
