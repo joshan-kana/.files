@@ -67,35 +67,53 @@ text/number/date/iteration value. `P` retains gh-dash's preview-position
 binding. The editor can be rebound with the `editProject` issue/PR builtin.
 
 Project values support single-select, text, number, date, iteration, users,
-labels, and repository-related display values. Unsupported or empty values
-degrade to readable empty/display-only output. A successful mutation refetches
-the authoritative Project item, including fields that were previously unset;
-clearing uses GitHub's `clearProjectV2ItemFieldValue` mutation. No local
-database, daemon, or sync process is used.
+labels, repository, multi-select, pull-request, reviewer, milestone, and issue
+field display values. Pull-request links include repository and PR number/title
+when GitHub provides them. Unknown future union members are retained as a
+readable display-only placeholder and do not invalidate the complete preview.
+Display support is broader than edit support: `E` is available only for the
+mutation-supported text, number, date, iteration, and single-select field
+types; linked PR, reviewer, milestone, issue-field, multi-select, user, label,
+and repository values remain read-only. A successful mutation refetches the
+authoritative Project item, including fields that were previously unset;
+clearing uses GitHub's `clearProjectV2ItemFieldValue` mutation.
 
 Project enrichment is optional and independent of ordinary issue/PR fetching.
-Issue sections now follow GitHub search pagination through the actual result
-total regardless of whether Project enrichment is enabled; `issuesLimit`
-controls the request page size rather than a hard row cap. Pull-request
-sections retain gh-dash's existing paging behavior. When enabled, the loaded
-rows are then enriched with bounded Project-item batches. Project metadata is
-cached and coalesced only in the running process and only within one refresh
-generation. gh-dash's normal scheduled refetch cadence starts a new generation,
-and `r`/`R` force an immediate authoritative Project refresh alongside ordinary
-issue/PR data. There is no disk cache, TTL freshness policy, local database, or
-stale-value fallback. If Project access is missing or enrichment fails, the
-ordinary issue/PR data remains usable without Project metadata. Editing still
-requires the relevant GitHub permissions.
+The first ordinary issue/PR page is returned before Project work begins, and
+later pages continue through GitHub's actual result total; `issuesLimit`
+controls request page size rather than a hard row cap. A persistent,
+versioned presentation cache stores Project-only metadata at
+`os.UserCacheDir()/gh-dash/projects/cache-v1.json` (for example,
+`~/Library/Caches/gh-dash/projects/cache-v1.json` on macOS). Entries are
+isolated by GitHub host, authenticated account, content node ID, and configured
+column shape. The cache contains no credentials or tokens, uses atomic
+temporary-file replacement, and may prune entries unused for roughly 30 days.
+Pruning is housekeeping only and never decides freshness.
+
+Every process launch with Projects enabled, every native scheduled refetch, and
+both `r` and `R` performs a live GitHub Project membership/fingerprint read.
+The cache is therefore never authoritative freshness. A matching membership
+set plus `ProjectV2Item.updatedAt` and `ProjectV2.updatedAt` changes cached
+presentation from `cached-unverified` to `live-verified` without schema/value
+refetches. Changed memberships or fingerprints selectively refetch the needed
+schema/values. The UI distinguishes `cached-unverified`, `live-verified`,
+loading, and live-error states; offline or rate-limited Project access leaves
+ordinary issue/PR rows usable and keeps cached values visibly unverified.
+Editing requires live-verified item and schema state. No daemon, launch agent,
+SQLite database, custom sync process, TTL freshness policy, fast poller, or
+stale-as-authoritative fallback is used.
 
 Every initial section load and native section refetch re-enters the selected
-Project-preview lifecycle. The selected block returns to an explicit loading
-state before its debounced full fetch, so list-only Status/Priority/Area/Kind
-values cannot masquerade as complete preview metadata; success replaces the
-block atomically and failure is shown as unavailable. This lifecycle is
-independent of ordinary PR detail enrichment, so revisiting an already-enriched
-PR still fetches its authoritative Project preview. Configured visible Project
-fields are requested for PR list rows as well as issue rows; repository/branch
-view PR lookups do not spend Project calls when those columns are not rendered.
+Project-preview lifecycle. A cached complete preview can appear immediately
+with a verifying marker; the debounced live fingerprint/full fetch then either
+verifies it or atomically replaces it. List-only Status/Priority/Area/Kind
+values cannot masquerade as complete preview metadata. Failure is shown as a
+live error while any retained cache remains visibly unverified. This lifecycle
+is independent of ordinary PR detail enrichment, so revisiting an already
+enriched PR still contacts GitHub for authoritative Project validation.
+Configured visible Project fields are requested for PR list rows as well as
+issue rows; repository/branch view PR lookups do not spend Project calls when
+those columns are not rendered.
 
 The downstream patch is stored at
 `patches/gh-dash/projects-v2.patch` and applied by

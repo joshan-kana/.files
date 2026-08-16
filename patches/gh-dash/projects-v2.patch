@@ -1,5 +1,5 @@
 diff --git a/internal/config/parser.go b/internal/config/parser.go
-index 96a2283..aecb259 100644
+index 96a2283..86397a2 100644
 --- a/internal/config/parser.go
 +++ b/internal/config/parser.go
 @@ -148,6 +148,19 @@ type ColumnConfig struct {
@@ -7,10 +7,10 @@ index 96a2283..aecb259 100644
  }
  
 +type ProjectFieldColumnConfig struct {
-+	Name    string `yaml:"name,omitempty" validate:"required_without=FieldID"`
++	Name    string `yaml:"name,omitempty"    validate:"required_without=FieldID"`
 +	FieldID string `yaml:"fieldId,omitempty"`
 +	Project string `yaml:"project,omitempty"`
-+	Width   *int   `yaml:"width,omitempty" validate:"omitempty,gt=0"`
++	Width   *int   `yaml:"width,omitempty"   validate:"omitempty,gt=0"`
 +	Hidden  *bool  `yaml:"hidden,omitempty"`
 +}
 +
@@ -36,10 +36,10 @@ index 96a2283..aecb259 100644
  type Defaults struct {
 diff --git a/internal/config/parser_projects_test.go b/internal/config/parser_projects_test.go
 new file mode 100644
-index 0000000..a77f481
+index 0000000..0402527
 --- /dev/null
 +++ b/internal/config/parser_projects_test.go
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,49 @@
 +package config
 +
 +import (
@@ -80,12 +80,17 @@ index 0000000..a77f481
 +	if !config.Defaults.Layout.Projects.Enabled {
 +		t.Fatal("Project enrichment should be enabled by config")
 +	}
-+	if len(fields) != 3 || fields[0].Name != "Status" || fields[0].Project != "infrastructure" || fields[0].Width == nil || *fields[0].Width != 20 || fields[1].Hidden == nil || !*fields[1].Hidden || fields[2].FieldID != "PVTF_example" {
++	if len(fields) != 3 || fields[0].Name != "Status" || fields[0].Project != "infrastructure" ||
++		fields[0].Width == nil ||
++		*fields[0].Width != 20 ||
++		fields[1].Hidden == nil ||
++		!*fields[1].Hidden ||
++		fields[2].FieldID != "PVTF_example" {
 +		t.Fatalf("unexpected Project fields: %#v", fields)
 +	}
 +}
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index 9fa1763..0c261f6 100644
+index 9fa1763..f295c37 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -14,6 +14,7 @@ import (
@@ -144,16 +149,24 @@ index 9fa1763..0c261f6 100644
  }
  
  type IssueComments struct {
-@@ -99,7 +141,7 @@ func makeIssuesQuery(query string) string {
+@@ -99,7 +141,15 @@ func makeIssuesQuery(query string) string {
  	return fmt.Sprintf("is:issue archived:false %s sort:updated", query)
  }
  
 -func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, error) {
-+func FetchIssues(query string, limit int, pageInfo *PageInfo, enrichProjects bool, projectColumns ...[]ProjectColumn) (IssuesResponse, error) {
++func FetchIssues(
++	query string,
++	limit int,
++	pageInfo *PageInfo,
++	enrichProjects bool,
++	projectColumns ...[]ProjectColumn,
++) (IssuesResponse, error) {
++	started := time.Now()
++	log.Debug("Issue section fetch started", "query", query, "projects", enrichProjects)
  	var err error
  	if client == nil {
  		client, err = gh.DefaultGraphQLClient()
-@@ -112,7 +154,7 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+@@ -112,7 +162,7 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
  	var queryResult struct {
  		Search struct {
  			Nodes []struct {
@@ -162,7 +175,17 @@ index 9fa1763..0c261f6 100644
  			}
  			IssueCount int
  			PageInfo   PageInfo
-@@ -136,9 +178,17 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+@@ -133,12 +183,32 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+ 		return IssuesResponse{}, err
+ 	}
+ 	log.Info("Successfully fetched issues", "query", query, "count", queryResult.Search.IssueCount)
++	log.Debug(
++		"Ordinary issue rows ready",
++		"count",
++		len(queryResult.Search.Nodes),
++		"duration",
++		time.Since(started),
++	)
  
  	issues := make([]IssueData, 0, len(queryResult.Search.Nodes))
  	for _, node := range queryResult.Search.Nodes {
@@ -174,22 +197,32 @@ index 9fa1763..0c261f6 100644
 +		if len(projectColumns) > 0 {
 +			columns = projectColumns[0]
 +		}
-+		if err := enrichIssueProjects(issues, columns); err != nil {
-+			log.Warn("Project metadata unavailable for issue list; continuing without it", "error", err)
++		cached := HydrateProjectItems(issueIDs(issues), columns)
++		for index := range issues {
++			if items, ok := cached[issues[index].ID]; ok {
++				issues[index].ProjectItems = items
++			} else {
++				issues[index].ProjectItems.State = ProjectStateLoading
++			}
 +		}
  	}
 -
  	return IssuesResponse{
  		Issues:     issues,
  		TotalCount: queryResult.Search.IssueCount,
-@@ -146,12 +196,45 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+@@ -146,12 +216,55 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
  	}, nil
  }
  
 +// FetchAllIssues follows the search connection until GitHub reports that the
 +// actual result set is exhausted. The configured issuesLimit remains the page
 +// size; it is not a cap on the number of rows shown.
-+func FetchAllIssues(query string, pageSize int, enrichProjects bool, projectColumns []ProjectColumn) (IssuesResponse, error) {
++func FetchAllIssues(
++	query string,
++	pageSize int,
++	enrichProjects bool,
++	projectColumns []ProjectColumn,
++) (IssuesResponse, error) {
 +	if pageSize < 1 {
 +		pageSize = 20
 +	}
@@ -205,8 +238,13 @@ index 9fa1763..0c261f6 100644
 +		response.PageInfo = page.PageInfo
 +		if !page.PageInfo.HasNextPage {
 +			if enrichProjects {
-+				if err := enrichIssueProjects(response.Issues, projectColumns); err != nil {
-+					log.Warn("Project metadata unavailable for issue list; continuing without it", "error", err)
++				cached := HydrateProjectItems(issueIDs(response.Issues), projectColumns)
++				for index := range response.Issues {
++					if items, ok := cached[response.Issues[index].ID]; ok {
++						response.Issues[index].ProjectItems = items
++					} else {
++						response.Issues[index].ProjectItems.State = ProjectStateLoading
++					}
 +				}
 +			}
 +			return response, nil
@@ -228,7 +266,7 @@ index 9fa1763..0c261f6 100644
  // FetchIssue fetches a single issue by its GitHub URL
  func FetchIssue(issueUrl string) (IssueData, error) {
  	var err error
-@@ -164,7 +247,7 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -164,7 +277,7 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  
  	var queryResult struct {
  		Resource struct {
@@ -237,7 +275,7 @@ index 9fa1763..0c261f6 100644
  		} `graphql:"resource(url: $url)"`
  	}
  	parsedUrl, err := url.Parse(issueUrl)
-@@ -181,5 +264,21 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -181,5 +294,29 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  	}
  	log.Info("Successfully fetched Issue", "url", issueUrl)
  
@@ -259,13 +297,21 @@ index 9fa1763..0c261f6 100644
 +		issues[index].ProjectItems = projectItems[issues[index].ID]
 +	}
 +	return err
++}
++
++func issueIDs(issues []IssueData) []string {
++	ids := make([]string, 0, len(issues))
++	for _, issue := range issues {
++		ids = append(ids, issue.ID)
++	}
++	return ids
  }
 diff --git a/internal/data/issueapi_test.go b/internal/data/issueapi_test.go
 new file mode 100644
-index 0000000..38a835a
+index 0000000..3179532
 --- /dev/null
 +++ b/internal/data/issueapi_test.go
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,65 @@
 +package data
 +
 +import (
@@ -300,16 +346,26 @@ index 0000000..38a835a
 +					issues[index].Number = start + index + 1
 +				}
 +				return IssuesResponse{
-+					Issues: issues, TotalCount: total,
-+					PageInfo: PageInfo{HasNextPage: end < total, EndCursor: fmt.Sprintf("cursor-%d", end)},
++					Issues:     issues,
++					TotalCount: total,
++					PageInfo: PageInfo{
++						HasNextPage: end < total,
++						EndCursor:   fmt.Sprintf("cursor-%d", end),
++					},
 +				}, nil
 +			}
 +			response, err := FetchAllIssues("is:open", 20, false, nil)
 +			if err != nil {
 +				t.Fatal(err)
 +			}
-+			if len(response.Issues) != total || response.TotalCount != total || response.PageInfo.HasNextPage {
-+				t.Fatalf("got %d issues, total %d, pageInfo %#v", len(response.Issues), response.TotalCount, response.PageInfo)
++			if len(response.Issues) != total || response.TotalCount != total ||
++				response.PageInfo.HasNextPage {
++				t.Fatalf(
++					"got %d issues, total %d, pageInfo %#v",
++					len(response.Issues),
++					response.TotalCount,
++					response.PageInfo,
++				)
 +			}
 +			wantCalls := (total + 19) / 20
 +			if calls != wantCalls {
@@ -322,7 +378,7 @@ index 0000000..38a835a
 +	}
 +}
 diff --git a/internal/data/prapi.go b/internal/data/prapi.go
-index 11eecdb..728dffc 100644
+index 11eecdb..57828ec 100644
 --- a/internal/data/prapi.go
 +++ b/internal/data/prapi.go
 @@ -27,6 +27,7 @@ type SuggestedReviewer struct {
@@ -446,16 +502,24 @@ index 11eecdb..728dffc 100644
  }
  
  // IsEnrichmentCacheCleared returns true if the enrichment cache is cleared.
-@@ -505,7 +584,7 @@ func IsEnrichmentCacheCleared() bool {
+@@ -505,7 +584,15 @@ func IsEnrichmentCacheCleared() bool {
  	return cachedClient == nil
  }
  
 -func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequestsResponse, error) {
-+func FetchPullRequests(query string, limit int, pageInfo *PageInfo, enrichProjects bool, projectColumns ...[]ProjectColumn) (PullRequestsResponse, error) {
++func FetchPullRequests(
++	query string,
++	limit int,
++	pageInfo *PageInfo,
++	enrichProjects bool,
++	projectColumns ...[]ProjectColumn,
++) (PullRequestsResponse, error) {
++	started := time.Now()
++	log.Debug("PR section fetch started", "query", query, "projects", enrichProjects)
  	var err error
  	if client == nil {
  		if config.IsFeatureEnabled(config.FF_MOCK_DATA) {
-@@ -536,7 +615,7 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+@@ -536,7 +623,7 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
  	var queryResult struct {
  		Search struct {
  			Nodes []struct {
@@ -464,7 +528,17 @@ index 11eecdb..728dffc 100644
  			}
  			IssueCount int
  			PageInfo   PageInfo
-@@ -560,9 +639,17 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+@@ -557,12 +644,32 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+ 		return PullRequestsResponse{}, err
+ 	}
+ 	log.Info("Successfully fetched PRs", "count", queryResult.Search.IssueCount)
++	log.Debug(
++		"Ordinary PR rows ready",
++		"count",
++		len(queryResult.Search.Nodes),
++		"duration",
++		time.Since(started),
++	)
  
  	prs := make([]PullRequestData, 0, len(queryResult.Search.Nodes))
  	for _, node := range queryResult.Search.Nodes {
@@ -476,15 +550,20 @@ index 11eecdb..728dffc 100644
 +		if len(projectColumns) > 0 {
 +			columns = projectColumns[0]
 +		}
-+		if err := enrichPullRequestProjects(prs, columns); err != nil {
-+			log.Warn("Project metadata unavailable for PR list; continuing without it", "error", err)
++		cached := HydrateProjectItems(pullRequestIDs(prs), columns)
++		for index := range prs {
++			if items, ok := cached[prs[index].ID]; ok {
++				prs[index].ProjectItems = items
++			} else {
++				prs[index].ProjectItems.State = ProjectStateLoading
++			}
 +		}
  	}
 -
  	return PullRequestsResponse{
  		Prs:        prs,
  		TotalCount: queryResult.Search.IssueCount,
-@@ -570,6 +657,22 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+@@ -570,6 +677,30 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
  	}, nil
  }
  
@@ -504,10 +583,18 @@ index 11eecdb..728dffc 100644
 +	return err
 +}
 +
++func pullRequestIDs(prs []PullRequestData) []string {
++	ids := make([]string, 0, len(prs))
++	for _, pr := range prs {
++		ids = append(ids, pr.ID)
++	}
++	return ids
++}
++
  func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
  	var err error
  	if client == nil {
-@@ -592,7 +695,7 @@ func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
+@@ -592,7 +723,7 @@ func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
  		"url": githubv4.URI{URL: parsedUrl},
  	}
  	log.Debug("Fetching PR", "url", prUrl)
@@ -517,10 +604,10 @@ index 11eecdb..728dffc 100644
  		return EnrichedPullRequestData{}, err
  	}
 diff --git a/internal/data/prapi_test.go b/internal/data/prapi_test.go
-index 79af55c..6eb91d1 100644
+index 79af55c..dab4daf 100644
 --- a/internal/data/prapi_test.go
 +++ b/internal/data/prapi_test.go
-@@ -1,12 +1,80 @@
+@@ -1,12 +1,85 @@
  package data
  
  import (
@@ -547,7 +634,12 @@ index 79af55c..6eb91d1 100644
 +		if hasFieldNamed(typ, "ProjectItems") || hasFieldNamed(typ, "FieldValues") {
 +			t.Fatalf("ordinary PR query shape contains Project fields: %s", typ)
 +		}
-+		return json.Unmarshal([]byte(`{"resource":{"pullRequest":{"id":"pr-1","url":"https://github.com/o/r/pull/1"}}}`), result)
++		return json.Unmarshal(
++			[]byte(
++				`{"resource":{"pullRequest":{"id":"pr-1","url":"https://github.com/o/r/pull/1"}}}`,
++			),
++			result,
++		)
 +	}
 +	pr, err := FetchPullRequest("https://github.com/o/r/pull/1")
 +	require.NoError(t, err)
@@ -601,12 +693,540 @@ index 79af55c..6eb91d1 100644
  func TestClearEnrichmentCache(t *testing.T) {
  	// Save original state
  	originalCachedClient := cachedClient
+diff --git a/internal/data/project_field_types_test.go b/internal/data/project_field_types_test.go
+new file mode 100644
+index 0000000..25433ff
+--- /dev/null
++++ b/internal/data/project_field_types_test.go
+@@ -0,0 +1,48 @@
++package data
++
++import (
++	"testing"
++)
++
++func TestProjectFieldValueVariantsAreReadableAndUnknownIsNonFatal(t *testing.T) {
++	pullRequest, err := projectValueFromJSON(
++		[]byte(
++			`{"__typename":"ProjectV2ItemFieldPullRequestValue","field":{"id":"field-pr","name":"Linked PR"},"pullRequests":{"nodes":[{"number":73,"title":"Projects support","repository":{"nameWithOwner":"owner/repo"}}]}}`,
++		),
++	)
++	if err != nil {
++		t.Fatal(err)
++	}
++	unknown, err := projectValueFromJSON(
++		[]byte(
++			`{"__typename":"ProjectV2ItemFieldFutureValue","field":{"id":"future","name":"Future"}}`,
++		),
++	)
++	if err != nil || unknown.Typename != "ProjectV2ItemFieldFutureValue" {
++		t.Fatalf("unknown value err=%v value=%#v", err, unknown)
++	}
++	item := ProjectItem{}
++	item.FieldValues.Nodes = []ProjectFieldValue{pullRequest, unknown}
++	fields := item.Fields()
++	if len(fields) != 2 || fields[0].Value != "owner/repo #73 Projects support" ||
++		fields[1].Value != "unavailable (ProjectV2ItemFieldFutureValue)" {
++		t.Fatalf("normalized fields = %#v", fields)
++	}
++}
++
++func TestIssueFieldValueUsesCurrentNestedValueShape(t *testing.T) {
++	issueField, err := projectValueFromJSON(
++		[]byte(
++			`{"__typename":"ProjectV2ItemIssueFieldValue","field":{"id":"field-issue","name":"Issue field"},"issueFieldValue":{"__typename":"IssueFieldTextValue","value":"linked issue text"}}`,
++		),
++	)
++	if err != nil {
++		t.Fatal(err)
++	}
++	item := ProjectItem{}
++	item.FieldValues.Nodes = []ProjectFieldValue{issueField}
++	fields := item.Fields()
++	if len(fields) != 1 || fields[0].Value != "linked issue text" {
++		t.Fatalf("issue field normalization = %#v", fields)
++	}
++}
+diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
+new file mode 100644
+index 0000000..e27ff15
+--- /dev/null
++++ b/internal/data/projectcache.go
+@@ -0,0 +1,354 @@
++package data
++
++// Persistent Project cache. This file deliberately contains presentation data
++// only. It is a warm-start aid; every process and every refresh still performs
++// an authoritative GitHub membership/fingerprint read before cached data can
++// be marked verified or used for editing.
++
++import (
++	"bufio"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++	"sync"
++	"time"
++
++	"charm.land/log/v2"
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
++
++const (
++	projectCacheFormatVersion = 1
++	projectCacheRetention     = 30 * 24 * time.Hour
++)
++
++type projectCacheIdentity struct {
++	Host    string
++	Account string
++}
++
++type projectCacheEntry struct {
++	Host         string
++	Account      string
++	ContentID    string
++	ColumnsKey   string
++	Items        ProjectItems
++	FullPreview  bool
++	LastVerified time.Time
++	LastUsed     time.Time
++}
++
++type projectCacheFile struct {
++	Version int                 `json:"version"`
++	Entries []projectCacheEntry `json:"entries"`
++}
++
++var (
++	projectCacheMu             sync.Mutex
++	projectCacheIdentityFunc   = resolveProjectCacheIdentity
++	projectCacheUserCacheDir   = os.UserCacheDir
++	projectCacheNow            = time.Now
++	projectCacheLoadedIdentity *projectCacheIdentity
++	projectCacheLoaded         projectCacheFile
++)
++
++func ProjectCachePath() string {
++	base, err := projectCacheUserCacheDir()
++	if err != nil || base == "" {
++		return ""
++	}
++	return filepath.Join(base, "gh-dash", "projects", "cache-v1.json")
++}
++
++func resolveProjectCacheIdentity() (projectCacheIdentity, error) {
++	host := strings.TrimSpace(os.Getenv("GH_HOST"))
++	if host == "" {
++		host = "github.com"
++	}
++	if account := firstNonEmptyEnv("GH_USER", "GITHUB_USER", "GH_USERNAME"); account != "" {
++		return projectCacheIdentity{Host: host, Account: account}, nil
++	}
++	if account := ghConfigAccount(host); account != "" {
++		return projectCacheIdentity{Host: host, Account: account}, nil
++	}
++	// A token supplied outside gh's hosts.yml has no safe local account
++	// identity. Resolve it once from GitHub rather than mixing accounts.
++	client, err := gh.DefaultRESTClient()
++	if err != nil {
++		return projectCacheIdentity{}, err
++	}
++	var user struct {
++		Login string `json:"login"`
++	}
++	if err := client.Get("user", &user); err != nil {
++		return projectCacheIdentity{}, err
++	}
++	if user.Login == "" {
++		return projectCacheIdentity{}, errors.New("GitHub account identity was empty")
++	}
++	return projectCacheIdentity{Host: host, Account: user.Login}, nil
++}
++
++func firstNonEmptyEnv(names ...string) string {
++	for _, name := range names {
++		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
++			return value
++		}
++	}
++	return ""
++}
++
++func ghConfigAccount(host string) string {
++	configDir, err := os.UserConfigDir()
++	if err != nil {
++		return ""
++	}
++	file, err := os.Open(filepath.Join(configDir, "gh", "hosts.yml"))
++	if err != nil {
++		return ""
++	}
++	defer file.Close()
++
++	currentHost := ""
++	scanner := bufio.NewScanner(file)
++	for scanner.Scan() {
++		line := strings.TrimSpace(scanner.Text())
++		if line == "" || strings.HasPrefix(line, "#") {
++			continue
++		}
++		if !strings.HasPrefix(scanner.Text(), "    ") && strings.HasSuffix(line, ":") {
++			currentHost = strings.TrimSuffix(line, ":")
++			continue
++		}
++		if currentHost == host && strings.HasPrefix(line, "user:") {
++			return strings.TrimSpace(strings.TrimPrefix(line, "user:"))
++		}
++	}
++	return ""
++}
++
++func loadProjectCache() (projectCacheIdentity, *projectCacheFile, error) {
++	identity, err := projectCacheIdentityFunc()
++	if err != nil || identity.Host == "" || identity.Account == "" {
++		return projectCacheIdentity{}, nil, fmt.Errorf(
++			"Project cache identity unavailable: %w",
++			err,
++		)
++	}
++	path := ProjectCachePath()
++	if path == "" {
++		return identity, &projectCacheFile{Version: projectCacheFormatVersion}, nil
++	}
++	projectCacheMu.Lock()
++	defer projectCacheMu.Unlock()
++	if projectCacheLoadedIdentity != nil && *projectCacheLoadedIdentity == identity {
++		copy := projectCacheLoaded
++		return identity, &copy, nil
++	}
++	cache := projectCacheFile{Version: projectCacheFormatVersion}
++	contents, readErr := os.ReadFile(path)
++	if readErr == nil {
++		if err := json.Unmarshal(
++			contents,
++			&cache,
++		); err != nil ||
++			cache.Version != projectCacheFormatVersion {
++			log.Debug("Ignoring corrupt or incompatible Project cache", "path", path)
++			cache = projectCacheFile{Version: projectCacheFormatVersion}
++		}
++	} else if !errors.Is(readErr, os.ErrNotExist) {
++		log.Debug("Ignoring unreadable Project cache", "path", path, "error", readErr)
++	}
++	filtered := cache.Entries[:0]
++	cutoff := projectCacheNow().Add(-projectCacheRetention)
++	for _, entry := range cache.Entries {
++		if entry.Host == identity.Host && entry.Account == identity.Account &&
++			(entry.LastUsed.IsZero() || entry.LastUsed.After(cutoff)) {
++			filtered = append(filtered, entry)
++		}
++	}
++	cache.Entries = filtered
++	projectCacheLoadedIdentity = &identity
++	projectCacheLoaded = cache
++	copy := cache
++	return identity, &copy, nil
++}
++
++func projectCacheEntryKey(contentID, columnsKey string) string {
++	return contentID + "\x00" + columnsKey
++}
++
++func cachedProjectItems(contentIDs []string, columns []ProjectColumn) map[string]ProjectItems {
++	identity, cache, err := loadProjectCache()
++	if err != nil {
++		return map[string]ProjectItems{}
++	}
++	wanted := make(map[string]struct{}, len(contentIDs))
++	for _, id := range uniqueContentIDs(contentIDs) {
++		wanted[id] = struct{}{}
++	}
++	columnsKey := projectColumnsKey(columns)
++	result := make(map[string]ProjectItems)
++	for index := range cache.Entries {
++		entry := &cache.Entries[index]
++		if entry.Host != identity.Host || entry.Account != identity.Account {
++			continue
++		}
++		if _, ok := wanted[entry.ContentID]; !ok ||
++			(entry.ColumnsKey != columnsKey && !entry.FullPreview) {
++			continue
++		}
++		entry.LastUsed = projectCacheNow()
++		entry.Items.State = ProjectStateCachedUnverified
++		result[entry.ContentID] = entry.Items
++	}
++	return result
++}
++
++func HydrateProjectItems(contentIDs []string, columns []ProjectColumn) map[string]ProjectItems {
++	return cachedProjectItems(contentIDs, columns)
++}
++
++func cachedFullProjectItems(contentID string) (ProjectItems, bool) {
++	identity, cache, err := loadProjectCache()
++	if err != nil {
++		return ProjectItems{}, false
++	}
++	for index := range cache.Entries {
++		entry := &cache.Entries[index]
++		if entry.Host == identity.Host && entry.Account == identity.Account &&
++			entry.ContentID == contentID &&
++			entry.FullPreview &&
++			entry.ColumnsKey == "" {
++			entry.LastUsed = projectCacheNow()
++			entry.Items.State = ProjectStateCachedUnverified
++			return entry.Items, true
++		}
++	}
++	return ProjectItems{}, false
++}
++
++// HydrateFullProjectItems returns the last complete selected-item preview, if
++// one exists. The returned presentation is deliberately unverified; callers
++// must start the live fingerprint/full-preview request immediately.
++func HydrateFullProjectItems(contentID string) (ProjectItems, bool) {
++	return cachedFullProjectItems(contentID)
++}
++
++func persistProjectItems(
++	contentID string,
++	columns []ProjectColumn,
++	items ProjectItems,
++	fullPreview bool,
++) {
++	if contentID == "" {
++		return
++	}
++	identity, cache, err := loadProjectCache()
++	if err != nil {
++		return
++	}
++	entry := projectCacheEntry{
++		Host: identity.Host, Account: identity.Account, ContentID: contentID,
++		ColumnsKey: projectColumnsKey(columns), Items: items, FullPreview: fullPreview,
++		LastVerified: projectCacheNow(), LastUsed: projectCacheNow(),
++	}
++	key := projectCacheEntryKey(contentID, entry.ColumnsKey)
++	found := false
++	for index := range cache.Entries {
++		if projectCacheEntryKey(
++			cache.Entries[index].ContentID,
++			cache.Entries[index].ColumnsKey,
++		) == key &&
++			cache.Entries[index].Host == identity.Host &&
++			cache.Entries[index].Account == identity.Account {
++			if cache.Entries[index].FullPreview && !fullPreview &&
++				projectItemsFingerprintEqual(items, cache.Entries[index].Items) {
++				cache.Entries[index].LastVerified = entry.LastVerified
++				cache.Entries[index].LastUsed = entry.LastUsed
++				found = true
++				break
++			}
++			cache.Entries[index] = entry
++			found = true
++			break
++		}
++	}
++	if !found {
++		cache.Entries = append(cache.Entries, entry)
++	}
++	cache.Version = projectCacheFormatVersion
++	writeProjectCache(identity, *cache)
++}
++
++func invalidatePersistentProjectItems(contentID string) {
++	identity, cache, err := loadProjectCache()
++	if err != nil {
++		return
++	}
++	filtered := cache.Entries[:0]
++	for _, entry := range cache.Entries {
++		if entry.Host == identity.Host && entry.Account == identity.Account &&
++			entry.ContentID == contentID {
++			continue
++		}
++		filtered = append(filtered, entry)
++	}
++	cache.Entries = filtered
++	writeProjectCache(identity, *cache)
++}
++
++func writeProjectCache(identity projectCacheIdentity, cache projectCacheFile) {
++	path := ProjectCachePath()
++	if path == "" {
++		return
++	}
++	contents, err := json.MarshalIndent(cache, "", "  ")
++	if err != nil {
++		return
++	}
++	projectCacheMu.Lock()
++	defer projectCacheMu.Unlock()
++	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
++		return
++	}
++	temporary, err := os.CreateTemp(filepath.Dir(path), ".cache-v1-*.tmp")
++	if err != nil {
++		return
++	}
++	temporaryName := temporary.Name()
++	defer os.Remove(temporaryName)
++	if err := temporary.Chmod(0o600); err != nil {
++		_ = temporary.Close()
++		return
++	}
++	if _, err := temporary.Write(contents); err != nil {
++		_ = temporary.Close()
++		return
++	}
++	if err := temporary.Sync(); err != nil {
++		_ = temporary.Close()
++		return
++	}
++	if err := temporary.Close(); err != nil {
++		return
++	}
++	if err := os.Rename(temporaryName, path); err != nil {
++		return
++	}
++	projectCacheLoadedIdentity = &identity
++	projectCacheLoaded = cache
++}
++
++func resetProjectCacheForTest() {
++	projectCacheMu.Lock()
++	projectCacheLoadedIdentity = nil
++	projectCacheLoaded = projectCacheFile{}
++	projectCacheMu.Unlock()
++	if path := ProjectCachePath(); path != "" {
++		_ = os.Remove(path)
++	}
++}
+diff --git a/internal/data/projectcache_test.go b/internal/data/projectcache_test.go
+new file mode 100644
+index 0000000..3d28b0a
+--- /dev/null
++++ b/internal/data/projectcache_test.go
+@@ -0,0 +1,108 @@
++package data
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++	"time"
++)
++
++func configureProjectCacheTest(t *testing.T) *projectCacheIdentity {
++	t.Helper()
++	oldDir, oldIdentity, oldNow := projectCacheUserCacheDir, projectCacheIdentityFunc, projectCacheNow
++	t.Cleanup(func() {
++		projectCacheUserCacheDir, projectCacheIdentityFunc, projectCacheNow = oldDir, oldIdentity, oldNow
++		resetProjectCacheForTest()
++	})
++	directory := t.TempDir()
++	identity := projectCacheIdentity{Host: "github.example", Account: "alice"}
++	projectCacheUserCacheDir = func() (string, error) { return directory, nil }
++	projectCacheIdentityFunc = func() (projectCacheIdentity, error) { return identity, nil }
++	projectCacheNow = func() time.Time { return time.Unix(100, 0) }
++	resetProjectCacheForTest()
++	return &identity
++}
++
++func cachedTestItems() ProjectItems {
++	return ProjectItems{
++		Nodes: []ProjectItem{
++			{
++				ID:        "item-1",
++				UpdatedAt: time.Unix(10, 0),
++				Project:   Project{ID: "project-1", UpdatedAt: time.Unix(11, 0)},
++			},
++		},
++	}
++}
++
++func TestProjectCacheRoundTripIsUnverifiedAndContainsNoSecrets(t *testing.T) {
++	configureProjectCacheTest(t)
++	persistProjectItems("issue-1", []ProjectColumn{{Name: "Status"}}, cachedTestItems(), false)
++
++	items := HydrateProjectItems([]string{"issue-1"}, []ProjectColumn{{Name: "Status"}})["issue-1"]
++	if items.State != ProjectStateCachedUnverified || len(items.Nodes) != 1 {
++		t.Fatalf("cached presentation = %#v", items)
++	}
++	contents, err := os.ReadFile(ProjectCachePath())
++	if err != nil {
++		t.Fatal(err)
++	}
++	if strings.Contains(string(contents), "token") || strings.Contains(string(contents), "secret") {
++		t.Fatalf("cache contains credential-like data: %s", contents)
++	}
++	if _, err := os.Stat(
++		filepath.Join(filepath.Dir(ProjectCachePath()), ".cache-v1-test.tmp"),
++	); !os.IsNotExist(
++		err,
++	) {
++		t.Fatalf("unexpected temporary cache file: %v", err)
++	}
++}
++
++func TestProjectCacheCorruptAndVersionMismatchAreNonFatal(t *testing.T) {
++	configureProjectCacheTest(t)
++	if err := os.MkdirAll(filepath.Dir(ProjectCachePath()), 0o700); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(ProjectCachePath(), []byte("not json"), 0o600); err != nil {
++		t.Fatal(err)
++	}
++	if got := HydrateProjectItems([]string{"issue-1"}, nil); len(got) != 0 {
++		t.Fatalf("corrupt cache returned %#v", got)
++	}
++	if err := os.WriteFile(
++		ProjectCachePath(),
++		[]byte(`{"version":999,"entries":[]}`),
++		0o600,
++	); err != nil {
++		t.Fatal(err)
++	}
++	if got := HydrateProjectItems([]string{"issue-1"}, nil); len(got) != 0 {
++		t.Fatalf("incompatible cache returned %#v", got)
++	}
++}
++
++func TestProjectCacheIsolatedByHostAndAccount(t *testing.T) {
++	identity := configureProjectCacheTest(t)
++	persistProjectItems("issue-1", nil, cachedTestItems(), false)
++
++	identity.Host = "other.example"
++	if got := HydrateProjectItems([]string{"issue-1"}, nil); len(got) != 0 {
++		t.Fatalf("cross-host cache returned %#v", got)
++	}
++	identity.Host = "github.example"
++	identity.Account = "bob"
++	if got := HydrateProjectItems([]string{"issue-1"}, nil); len(got) != 0 {
++		t.Fatalf("cross-account cache returned %#v", got)
++	}
++}
++
++func TestCachedFullProjectPreviewIsUnverifiedUntilLiveValidation(t *testing.T) {
++	configureProjectCacheTest(t)
++	persistProjectItems("issue-1", nil, cachedTestItems(), true)
++	items, ok := HydrateFullProjectItems("issue-1")
++	if !ok || items.State != ProjectStateCachedUnverified {
++		t.Fatalf("full preview = %#v, ok=%v", items, ok)
++	}
++}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000..b9880f3
+index 0000000..075c8ae
 --- /dev/null
 +++ b/internal/data/projectlist.go
-@@ -0,0 +1,683 @@
+@@ -0,0 +1,1050 @@
 +package data
 +
 +import (
@@ -627,13 +1247,30 @@ index 0000000..b9880f3
 +
 +var projectReadSleep = time.Sleep
 +
-+func projectGraphQLRead(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++func projectGraphQLRead(
++	client *gh.GraphQLClient,
++	query string,
++	variables map[string]interface{},
++	result interface{},
++) error {
 +	for attempt := 1; attempt <= 3; attempt++ {
 +		generation, err := projectEnrichmentAllowedGeneration()
 +		if err != nil {
 +			return err
 +		}
++		started := time.Now()
 +		err = projectGraphQLDo(client, query, variables, result)
++		log.Debug(
++			"Project GraphQL query complete",
++			"operation",
++			projectQueryOperation(query),
++			"duration",
++			time.Since(started),
++			"attempt",
++			attempt,
++			"error",
++			err,
++		)
 +		if err == nil {
 +			recordProjectNetworkSuccess(generation)
 +			return nil
@@ -648,9 +1285,21 @@ index 0000000..b9880f3
 +	return fmt.Errorf("Project read exhausted retry attempts")
 +}
 +
-+// projectColumnsKey identifies the shape of list metadata already held in the
-+// process-local cache. It is intentionally not persisted: a new gh-dash
-+// process always asks GitHub for current Project state.
++func projectQueryOperation(query string) string {
++	fields := strings.Fields(query)
++	for index, field := range fields {
++		if field == "query" || field == "mutation" {
++			if index+1 < len(fields) {
++				return strings.TrimSuffix(fields[index+1], "(")
++			}
++		}
++	}
++	return "unknown"
++}
++
++// projectColumnsKey identifies the configured presentation shape. It is part
++// of the persistent cache key, while every process still asks GitHub for
++// current Project state before using cached values as verified.
 +func projectColumnsKey(columns []ProjectColumn) string {
 +	parts := make([]string, 0, len(columns))
 +	for _, column := range columns {
@@ -674,7 +1323,10 @@ index 0000000..b9880f3
 +	generation uint64
 +}
 +
-+var projectSchemas = projectSchemaCache{fields: make(map[string][]ProjectField), inFlight: make(map[string]*projectSchemaCall)}
++var projectSchemas = projectSchemaCache{
++	fields:   make(map[string][]ProjectField),
++	inFlight: make(map[string]*projectSchemaCall),
++}
 +
 +// FetchProjectSchema fetches only stable field identity and type. Options are
 +// deliberately excluded from list enrichment and are fetched live by the
@@ -711,6 +1363,7 @@ index 0000000..b9880f3
 +      ... on ProjectV2Field { id name dataType }
 +      ... on ProjectV2IterationField { id name }
 +      ... on ProjectV2SingleSelectField { id name }
++      ... on ProjectV2MultiSelectField { id name }
 +    } pageInfo { hasNextPage endCursor } }
 +  } }
 +}`
@@ -730,7 +1383,12 @@ index 0000000..b9880f3
 +				} `json:"fields"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": projectID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(
++			client,
++			query,
++			map[string]interface{}{"id": projectID, "after": after},
++			&response,
++		); err != nil {
 +			completeProjectSchemaCall(projectID, call, nil, err)
 +			return nil, err
 +		}
@@ -747,7 +1405,10 @@ index 0000000..b9880f3
 +		cursor := response.Node.Fields.PageInfo.EndCursor
 +		after = &cursor
 +	}
-+	sort.SliceStable(fields, func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) })
++	sort.SliceStable(
++		fields,
++		func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) },
++	)
 +	projectSchemas.mu.Lock()
 +	if projectSchemas.generation == call.generation {
 +		projectSchemas.fields[projectID] = append([]ProjectField(nil), fields...)
@@ -761,7 +1422,12 @@ index 0000000..b9880f3
 +	return fields, nil
 +}
 +
-+func completeProjectSchemaCall(projectID string, call *projectSchemaCall, fields []ProjectField, err error) {
++func completeProjectSchemaCall(
++	projectID string,
++	call *projectSchemaCall,
++	fields []ProjectField,
++	err error,
++) {
 +	projectSchemas.mu.Lock()
 +	if projectSchemas.inFlight[projectID] == call {
 +		delete(projectSchemas.inFlight, projectID)
@@ -797,8 +1463,25 @@ index 0000000..b9880f3
 +		return `... on ProjectV2ItemFieldLabelValue { labels(first: 20) { nodes { name } } field { ... on ProjectV2Field { id name } } }`
 +	case "REPOSITORY":
 +		return `... on ProjectV2ItemFieldRepositoryValue { repository { nameWithOwner } field { ... on ProjectV2Field { id name } } }`
++	case "MULTI_SELECT":
++		return `... on ProjectV2ItemFieldMultiSelectValue { value options { name } field { ... on ProjectV2Field { id name } ... on ProjectV2MultiSelectField { id name } } }`
++	case "REVIEWERS":
++		return `... on ProjectV2ItemFieldReviewerValue { reviewers(first: 20) { nodes { ... on User { login name } ... on Team { name } } } field { ... on ProjectV2Field { id name } } }`
++	case "MILESTONE":
++		return `... on ProjectV2ItemFieldMilestoneValue { milestone { title number url repository { nameWithOwner } } field { ... on ProjectV2Field { id name } } }`
++	case "PULL_REQUEST":
++		return `... on ProjectV2ItemFieldPullRequestValue { pullRequests(first: 20) { nodes { number title url repository { nameWithOwner } } } field { ... on ProjectV2Field { id name } } }`
 +	default:
-+		return `... on ProjectV2ItemFieldTextValue { text field { ... on ProjectV2Field { id name } } }`
++		return `... on ProjectV2ItemFieldTextValue { text field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldNumberValue { number field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldDateValue { date field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldSingleSelectValue { name optionId field { ... on ProjectV2SingleSelectField { id name } } }
++... on ProjectV2ItemFieldIterationValue { title iterationId field { ... on ProjectV2IterationField { id name } } }
++... on ProjectV2ItemFieldMultiSelectValue { value options { name } field { ... on ProjectV2Field { id name } ... on ProjectV2MultiSelectField { id name } } }
++... on ProjectV2ItemFieldPullRequestValue { pullRequests(first: 20) { nodes { number title url repository { nameWithOwner } } } field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldReviewerValue { reviewers(first: 20) { nodes { ... on User { login name } ... on Team { name } } } field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldMilestoneValue { milestone { title number url repository { nameWithOwner } } field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemIssueFieldValue { field { ... on ProjectV2Field { id name } } issueFieldValue { __typename ... on IssueFieldTextValue { value } ... on IssueFieldNumberValue { value } ... on IssueFieldDateValue { value } ... on IssueFieldSingleSelectValue { name optionId value } ... on IssueFieldMultiSelectValue { value options { name } } } }`
 +	}
 +}
 +
@@ -830,6 +1513,53 @@ index 0000000..b9880f3
 +		Repository struct {
 +			NameWithOwner string `json:"nameWithOwner"`
 +		} `json:"repository"`
++		Value   string `json:"value"`
++		Options []struct {
++			Name string `json:"name"`
++		} `json:"options"`
++		PullRequests struct {
++			Nodes []struct {
++				Number     int    `json:"number"`
++				Title      string `json:"title"`
++				Url        string `json:"url"`
++				Repository struct {
++					NameWithOwner string `json:"nameWithOwner"`
++				} `json:"repository"`
++			} `json:"nodes"`
++		} `json:"pullRequests"`
++		Reviewers struct {
++			Nodes []struct {
++				Typename     string `json:"__typename"`
++				Login        string `json:"login"`
++				Name         string `json:"name"`
++				Slug         string `json:"slug"`
++				Organization struct {
++					Login string `json:"login"`
++				} `json:"organization"`
++				Team struct {
++					Name string `json:"name"`
++				} `json:"team"`
++			} `json:"nodes"`
++		} `json:"reviewers"`
++		Milestone struct {
++			Title      string `json:"title"`
++			Number     int    `json:"number"`
++			Url        string `json:"url"`
++			Repository struct {
++				NameWithOwner string `json:"nameWithOwner"`
++			} `json:"repository"`
++		} `json:"milestone"`
++		IssueFieldValue struct {
++			Typename string  `json:"__typename"`
++			Text     string  `json:"text"`
++			Number   float64 `json:"number"`
++			Date     string  `json:"date"`
++			Name     string  `json:"name"`
++			Value    string  `json:"value"`
++			Options  []struct {
++				Name string `json:"name"`
++			} `json:"options"`
++		} `json:"issueFieldValue"`
 +	}
 +	if err := json.Unmarshal(raw, &value); err != nil {
 +		return ProjectFieldValue{}, err
@@ -869,18 +1599,79 @@ index 0000000..b9880f3
 +	case "ProjectV2ItemFieldLabelValue":
 +		result.LabelValue.Field = common
 +		for _, label := range value.Labels.Nodes {
-+			result.LabelValue.Labels.Nodes = append(result.LabelValue.Labels.Nodes, struct{ Name string }{Name: label.Name})
++			result.LabelValue.Labels.Nodes = append(
++				result.LabelValue.Labels.Nodes,
++				struct{ Name string }{Name: label.Name},
++			)
 +		}
 +	case "ProjectV2ItemFieldRepositoryValue":
 +		result.RepositoryValue.Field = common
 +		result.RepositoryValue.Repository.NameWithOwner = value.Repository.NameWithOwner
++	case "ProjectV2ItemFieldMultiSelectValue":
++		result.MultiSelectValue.Field = common
++		result.MultiSelectValue.Value = value.Value
++		for _, option := range value.Options {
++			result.MultiSelectValue.Options = append(
++				result.MultiSelectValue.Options,
++				struct{ Name string }{Name: option.Name},
++			)
++		}
++	case "ProjectV2ItemFieldPullRequestValue":
++		result.PullRequestValue.Field = common
++		for _, pr := range value.PullRequests.Nodes {
++			result.PullRequestValue.PullRequests.Nodes = append(
++				result.PullRequestValue.PullRequests.Nodes,
++				struct {
++					Number     int
++					Title      string
++					Url        string
++					Repository struct{ NameWithOwner string }
++				}{Number: pr.Number, Title: pr.Title, Url: pr.Url, Repository: struct{ NameWithOwner string }{NameWithOwner: pr.Repository.NameWithOwner}},
++			)
++		}
++	case "ProjectV2ItemFieldReviewerValue":
++		result.ReviewerValue.Field = common
++		for _, reviewer := range value.Reviewers.Nodes {
++			result.ReviewerValue.Reviewers.Nodes = append(
++				result.ReviewerValue.Reviewers.Nodes,
++				struct {
++					Typename     string `json:"__typename"`
++					Login        string
++					Name         string
++					Slug         string
++					Organization struct{ Login string }
++					Team         struct{ Name string }
++				}{Typename: reviewer.Typename, Login: reviewer.Login, Name: reviewer.Name, Slug: reviewer.Slug, Organization: struct{ Login string }{Login: reviewer.Organization.Login}, Team: struct{ Name string }{Name: reviewer.Team.Name}},
++			)
++		}
++	case "ProjectV2ItemFieldMilestoneValue":
++		result.MilestoneValue.Field = common
++		result.MilestoneValue.Milestone.Title, result.MilestoneValue.Milestone.Number, result.MilestoneValue.Milestone.Url = value.Milestone.Title, value.Milestone.Number, value.Milestone.Url
++		result.MilestoneValue.Milestone.Repository.NameWithOwner = value.Milestone.Repository.NameWithOwner
++	case "ProjectV2ItemIssueFieldValue":
++		result.IssueFieldValue.Field = common
++		result.IssueFieldValue.IssueFieldValue.Typename = value.IssueFieldValue.Typename
++		result.IssueFieldValue.IssueFieldValue.Text, result.IssueFieldValue.IssueFieldValue.Number, result.IssueFieldValue.IssueFieldValue.Date = value.IssueFieldValue.Text, value.IssueFieldValue.Number, value.IssueFieldValue.Date
++		result.IssueFieldValue.IssueFieldValue.Name, result.IssueFieldValue.IssueFieldValue.Value = value.IssueFieldValue.Name, value.IssueFieldValue.Value
++		for _, option := range value.IssueFieldValue.Options {
++			result.IssueFieldValue.IssueFieldValue.Options = append(
++				result.IssueFieldValue.IssueFieldValue.Options,
++				struct{ Name string }{Name: option.Name},
++			)
++		}
 +	default:
-+		return ProjectFieldValue{}, fmt.Errorf("unsupported Project field value type %q", value.Typename)
++		log.Debug("Skipping unknown Project field value type", "typename", value.Typename)
++		result.Typename = value.Typename
 +	}
 +	return result, nil
 +}
 +
-+func fetchConfiguredProjectValues(itemIDs []string, fields []ProjectField, columns []ProjectColumn, project Project) (map[string][]ProjectFieldValue, error) {
++func fetchConfiguredProjectValues(
++	itemIDs []string,
++	fields []ProjectField,
++	columns []ProjectColumn,
++	project Project,
++) (map[string][]ProjectFieldValue, error) {
 +	requests := make([]projectListValueRequest, 0, len(columns))
 +	for index, column := range columns {
 +		if column.Project != "" && !projectMatchesSelector(project, column.Project) {
@@ -888,7 +1679,8 @@ index 0000000..b9880f3
 +		}
 +		matches := make([]ProjectField, 0, 1)
 +		for _, field := range fields {
-+			if (column.FieldID != "" && field.ID == column.FieldID) || (column.FieldID == "" && field.Name == column.Name) {
++			if (column.FieldID != "" && field.ID == column.FieldID) ||
++				(column.FieldID == "" && field.Name == column.Name) {
 +				matches = append(matches, field)
 +			}
 +		}
@@ -896,8 +1688,11 @@ index 0000000..b9880f3
 +			continue
 +		}
 +		requests = append(requests, projectListValueRequest{
-+			Alias: fmt.Sprintf("value%d", index), Name: matches[0].Name, Field: matches[0],
-+			ByFieldID: column.FieldID != "" && countProjectFieldsByName(fields, matches[0].Name) > 1,
++			Alias: fmt.Sprintf("value%d", index),
++			Name:  matches[0].Name,
++			Field: matches[0],
++			ByFieldID: column.FieldID != "" &&
++				countProjectFieldsByName(fields, matches[0].Name) > 1,
 +		})
 +	}
 +	if len(requests) == 0 || len(itemIDs) == 0 {
@@ -908,24 +1703,51 @@ index 0000000..b9880f3
 +	var selections []string
 +	for index, request := range requests {
 +		if request.ByFieldID {
-+			selections = append(selections, fmt.Sprintf("%s: fieldValues(first: 100) { nodes { __typename %s } }", request.Alias, projectValueFragments(request.Field.Type)))
++			selections = append(
++				selections,
++				fmt.Sprintf(
++					"%s: fieldValues(first: 100) { nodes { __typename %s } }",
++					request.Alias,
++					projectValueFragments(request.Field.Type),
++				),
++			)
 +			continue
 +		}
 +		variable := fmt.Sprintf("name%d", index)
 +		declarations = append(declarations, "$"+variable+": String!")
 +		variables[variable] = request.Name
-+		selections = append(selections, fmt.Sprintf("%s: fieldValueByName(name: $%s) { __typename %s }", request.Alias, variable, projectValueFragments(request.Field.Type)))
++		selections = append(
++			selections,
++			fmt.Sprintf(
++				"%s: fieldValueByName(name: $%s) { __typename %s }",
++				request.Alias,
++				variable,
++				projectValueFragments(request.Field.Type),
++			),
++		)
 +	}
 +	declarationText := ""
 +	if len(declarations) > 0 {
 +		declarationText = ", " + strings.Join(declarations, ", ")
 +	}
-+	query := fmt.Sprintf("query ProjectColumnValues($ids: [ID!]!%s) { nodes(ids: $ids) { __typename ... on ProjectV2Item { id %s } } }", declarationText, strings.Join(selections, " "))
++	query := fmt.Sprintf(
++		"query ProjectColumnValues($ids: [ID!]!%s) { nodes(ids: $ids) { __typename ... on ProjectV2Item { id %s } } }",
++		declarationText,
++		strings.Join(selections, " "),
++	)
 +	client, err := projectGraphQLClient()
 +	if err != nil {
 +		return nil, err
 +	}
-+	log.Debug("Fetching configured Project values", "projectID", project.ID, "items", len(itemIDs), "columns", len(requests))
++	log.Debug(
++		"Fetching configured Project values",
++		"projectID",
++		project.ID,
++		"items",
++		len(itemIDs),
++		"columns",
++		len(requests),
++	)
 +	var response struct {
 +		Nodes []json.RawMessage `json:"nodes"`
 +	}
@@ -990,6 +1812,16 @@ index 0000000..b9880f3
 +		return value.LabelValue.Field.IDNameID()
 +	case "ProjectV2ItemFieldRepositoryValue":
 +		return value.RepositoryValue.Field.IDNameID()
++	case "ProjectV2ItemFieldMultiSelectValue":
++		return value.MultiSelectValue.Field.IDNameID()
++	case "ProjectV2ItemFieldPullRequestValue":
++		return value.PullRequestValue.Field.IDNameID()
++	case "ProjectV2ItemFieldReviewerValue":
++		return value.ReviewerValue.Field.IDNameID()
++	case "ProjectV2ItemFieldMilestoneValue":
++		return value.MilestoneValue.Field.IDNameID()
++	case "ProjectV2ItemIssueFieldValue":
++		return value.IssueFieldValue.Field.IDNameID()
 +	default:
 +		return ""
 +	}
@@ -1005,7 +1837,11 @@ index 0000000..b9880f3
 +	return count
 +}
 +
-+func fetchProjectItemsNetwork(contentIDs []string, columns []ProjectColumn) (map[string]ProjectItems, error) {
++func fetchProjectItemsNetwork(
++	contentIDs []string,
++	columns []ProjectColumn,
++) (map[string]ProjectItems, error) {
++	started := time.Now()
 +	if len(contentIDs) == 0 {
 +		return map[string]ProjectItems{}, nil
 +	}
@@ -1013,12 +1849,18 @@ index 0000000..b9880f3
 +	if err != nil {
 +		return nil, err
 +	}
-+	log.Debug("Fetching Project memberships", "contentIDs", len(contentIDs), "columns", len(columns))
++	log.Debug(
++		"Fetching Project memberships",
++		"contentIDs",
++		len(contentIDs),
++		"columns",
++		len(columns),
++	)
 +	query := `query ProjectMemberships($ids: [ID!]!) {
 +  nodes(ids: $ids) {
 +    __typename id
-+    ... on Issue { projectItems(first: 20) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
-+    ... on PullRequest { projectItems(first: 20) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on Issue { projectItems(first: 20) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on PullRequest { projectItems(first: 20) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
 +  }
 +}`
 +	var response struct {
@@ -1026,12 +1868,14 @@ index 0000000..b9880f3
 +			ID           string `json:"id"`
 +			ProjectItems struct {
 +				Nodes []struct {
-+					ID      string `json:"id"`
-+					Project struct {
-+						ID     string `json:"id"`
-+						Number int    `json:"number"`
-+						Title  string `json:"title"`
-+						Owner  struct {
++					ID        string    `json:"id"`
++					UpdatedAt time.Time `json:"updatedAt"`
++					Project   struct {
++						ID        string    `json:"id"`
++						Number    int       `json:"number"`
++						Title     string    `json:"title"`
++						UpdatedAt time.Time `json:"updatedAt"`
++						Owner     struct {
 +							Login string `json:"login"`
 +						} `json:"owner"`
 +					} `json:"project"`
@@ -1043,9 +1887,21 @@ index 0000000..b9880f3
 +			} `json:"projectItems"`
 +		} `json:"nodes"`
 +	}
-+	if err := projectGraphQLRead(client, query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
++	if err := projectGraphQLRead(
++		client,
++		query,
++		map[string]interface{}{"ids": contentIDs},
++		&response,
++	); err != nil {
 +		return nil, err
 +	}
++	log.Debug(
++		"Project fingerprint validation complete",
++		"contentIDs",
++		len(contentIDs),
++		"duration",
++		time.Since(started),
++	)
 +	result := make(map[string]ProjectItems, len(response.Nodes))
 +	type overflowMembership struct {
 +		contentID string
@@ -1055,16 +1911,29 @@ index 0000000..b9880f3
 +	for _, node := range response.Nodes {
 +		for _, rawItem := range node.ProjectItems.Nodes {
 +			result[node.ID] = appendProjectItem(result[node.ID], ProjectItem{
-+				ID: rawItem.ID,
-+				Project: Project{ID: rawItem.Project.ID, Number: rawItem.Project.Number, Title: rawItem.Project.Title,
-+					Owner: ProjectOwner{User: struct{ Login string }{Login: rawItem.Project.Owner.Login}}},
++				ID: rawItem.ID, UpdatedAt: rawItem.UpdatedAt,
++				Project: Project{
++					ID:        rawItem.Project.ID,
++					Number:    rawItem.Project.Number,
++					Title:     rawItem.Project.Title,
++					UpdatedAt: rawItem.Project.UpdatedAt,
++					Owner: ProjectOwner{
++						User: struct{ Login string }{Login: rawItem.Project.Owner.Login},
++					},
++				},
 +			})
 +		}
 +		if node.ProjectItems.PageInfo.HasNextPage {
 +			if node.ProjectItems.PageInfo.EndCursor == "" {
-+				return nil, fmt.Errorf("Project membership pagination returned an empty cursor for %s", node.ID)
++				return nil, fmt.Errorf(
++					"Project membership pagination returned an empty cursor for %s",
++					node.ID,
++				)
 +			}
-+			overflows = append(overflows, overflowMembership{contentID: node.ID, after: node.ProjectItems.PageInfo.EndCursor})
++			overflows = append(
++				overflows,
++				overflowMembership{contentID: node.ID, after: node.ProjectItems.PageInfo.EndCursor},
++			)
 +		}
 +	}
 +	for _, overflow := range overflows {
@@ -1072,20 +1941,22 @@ index 0000000..b9880f3
 +		for {
 +			query := `query ProjectMembershipOverflow($id: ID!, $after: String) {
 +  node(id: $id) {
-+    ... on Issue { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
-+    ... on PullRequest { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on Issue { projectItems(first: 20, after: $after) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on PullRequest { projectItems(first: 20, after: $after) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
 +  }
 +}`
 +			var page struct {
 +				Node struct {
 +					ProjectItems struct {
 +						Nodes []struct {
-+							ID      string `json:"id"`
-+							Project struct {
-+								ID     string `json:"id"`
-+								Number int    `json:"number"`
-+								Title  string `json:"title"`
-+								Owner  struct {
++							ID        string    `json:"id"`
++							UpdatedAt time.Time `json:"updatedAt"`
++							Project   struct {
++								ID        string    `json:"id"`
++								Number    int       `json:"number"`
++								Title     string    `json:"title"`
++								UpdatedAt time.Time `json:"updatedAt"`
++								Owner     struct {
 +									Login string `json:"login"`
 +								} `json:"owner"`
 +							} `json:"project"`
@@ -1097,27 +1968,62 @@ index 0000000..b9880f3
 +					} `json:"projectItems"`
 +				} `json:"node"`
 +			}
-+			if err := projectGraphQLRead(client, query, map[string]interface{}{"id": overflow.contentID, "after": &after}, &page); err != nil {
++			if err := projectGraphQLRead(
++				client,
++				query,
++				map[string]interface{}{"id": overflow.contentID, "after": &after},
++				&page,
++			); err != nil {
 +				return nil, err
 +			}
 +			for _, rawItem := range page.Node.ProjectItems.Nodes {
-+				result[overflow.contentID] = appendProjectItem(result[overflow.contentID], ProjectItem{
-+					ID: rawItem.ID,
-+					Project: Project{ID: rawItem.Project.ID, Number: rawItem.Project.Number, Title: rawItem.Project.Title,
-+						Owner: ProjectOwner{User: struct{ Login string }{Login: rawItem.Project.Owner.Login}}},
-+				})
++				result[overflow.contentID] = appendProjectItem(
++					result[overflow.contentID],
++					ProjectItem{
++						ID: rawItem.ID, UpdatedAt: rawItem.UpdatedAt,
++						Project: Project{
++							ID:        rawItem.Project.ID,
++							Number:    rawItem.Project.Number,
++							Title:     rawItem.Project.Title,
++							UpdatedAt: rawItem.Project.UpdatedAt,
++							Owner: ProjectOwner{
++								User: struct{ Login string }{Login: rawItem.Project.Owner.Login},
++							},
++						},
++					},
++				)
 +			}
 +			if !page.Node.ProjectItems.PageInfo.HasNextPage {
 +				break
 +			}
 +			next := page.Node.ProjectItems.PageInfo.EndCursor
 +			if next == "" || next == after {
-+				return nil, fmt.Errorf("Project membership pagination returned a repeated cursor for %s", overflow.contentID)
++				return nil, fmt.Errorf(
++					"Project membership pagination returned a repeated cursor for %s",
++					overflow.contentID,
++				)
 +			}
 +			after = next
 +		}
 +	}
++	// Membership and Project updatedAt values are the authoritative cheap
++	// fingerprint. A matching disk entry is still unverified until this live
++	// request succeeds, but it lets warm launches skip schema/value reads.
++	cached := cachedProjectItems(contentIDs, columns)
++	unchanged := make(map[string]bool, len(result))
++	for contentID, live := range result {
++		if warm, ok := cached[contentID]; ok && projectItemsFingerprintEqual(live, warm) {
++			warm.State = ProjectStateLiveVerified
++			result[contentID] = warm
++			unchanged[contentID] = true
++		}
++	}
 +	if len(columns) == 0 {
++		for contentID, items := range result {
++			items.State = ProjectStateLiveVerified
++			result[contentID] = items
++			persistProjectItems(contentID, columns, items, false)
++		}
 +		return result, nil
 +	}
 +	type projectItemRef struct {
@@ -1126,8 +2032,14 @@ index 0000000..b9880f3
 +	}
 +	byProject := make(map[string][]projectItemRef)
 +	for contentID, projectItems := range result {
++		if unchanged[contentID] {
++			continue
++		}
 +		for index := range projectItems.Nodes {
-+			byProject[projectItems.Nodes[index].Project.ID] = append(byProject[projectItems.Nodes[index].Project.ID], projectItemRef{contentID: contentID, index: index})
++			byProject[projectItems.Nodes[index].Project.ID] = append(
++				byProject[projectItems.Nodes[index].Project.ID],
++				projectItemRef{contentID: contentID, index: index},
++			)
 +		}
 +	}
 +	for projectID, refs := range byProject {
@@ -1150,7 +2062,9 @@ index 0000000..b9880f3
 +			projectItems := result[ref.contentID]
 +			item := &projectItems.Nodes[ref.index]
 +			for _, column := range columns {
-+				if column.FieldID == "" && column.Project == "" && countProjectFieldsByName(fields, column.Name) > 1 && !containsString(item.AmbiguousFields, column.Name) {
++				if column.FieldID == "" && column.Project == "" &&
++					countProjectFieldsByName(fields, column.Name) > 1 &&
++					!containsString(item.AmbiguousFields, column.Name) {
 +					item.AmbiguousFields = append(item.AmbiguousFields, column.Name)
 +				}
 +			}
@@ -1158,7 +2072,32 @@ index 0000000..b9880f3
 +			result[ref.contentID] = projectItems
 +		}
 +	}
++	for contentID, items := range result {
++		items.State = ProjectStateLiveVerified
++		result[contentID] = items
++		if !unchanged[contentID] {
++			persistProjectItems(contentID, columns, items, false)
++		}
++	}
 +	return result, nil
++}
++
++func projectItemsFingerprintEqual(live, cached ProjectItems) bool {
++	if len(live.Nodes) != len(cached.Nodes) {
++		return false
++	}
++	byID := make(map[string]ProjectItem, len(cached.Nodes))
++	for _, item := range cached.Nodes {
++		byID[item.ID] = item
++	}
++	for _, item := range live.Nodes {
++		old, ok := byID[item.ID]
++		if !ok || item.Project.ID != old.Project.ID || item.UpdatedAt != old.UpdatedAt ||
++			item.Project.UpdatedAt != old.Project.UpdatedAt {
++			return false
++		}
++	}
++	return true
 +}
 +
 +func containsString(values []string, want string) bool {
@@ -1191,26 +2130,42 @@ index 0000000..b9880f3
 +	if err != nil {
 +		return ProjectItems{}, err
 +	}
++	// Validate the cheap membership fingerprint first. If the cached full
++	// snapshot still matches, this is the only Project query needed for a
++	// revisited item.
++	fingerprint, err := fetchProjectItemsNetwork([]string{contentID}, nil)
++	if err != nil {
++		return ProjectItems{}, err
++	}
++	if full, ok := cachedFullProjectItems(contentID); ok {
++		if live, exists := fingerprint[contentID]; exists &&
++			projectItemsFingerprintEqual(live, full) {
++			full.State = ProjectStateLiveVerified
++			return full, nil
++		}
++	}
 +	log.Debug("Fetching full Project preview", "contentID", contentID)
 +	result := ProjectItems{}
 +	var after *string
 +	for {
 +		query := `query FullProjectMemberships($id: ID!, $after: String) {
 +  node(id: $id) {
-+    ... on Issue { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
-+    ... on PullRequest { projectItems(first: 20, after: $after) { nodes { id project { id number title owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on Issue { projectItems(first: 20, after: $after) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
++    ... on PullRequest { projectItems(first: 20, after: $after) { nodes { id updatedAt project { id number title updatedAt owner { ... on User { login } ... on Organization { login } } } } pageInfo { hasNextPage endCursor } } }
 +  }
 +}`
 +		var response struct {
 +			Node struct {
 +				ProjectItems struct {
 +					Nodes []struct {
-+						ID      string `json:"id"`
-+						Project struct {
-+							ID     string `json:"id"`
-+							Number int    `json:"number"`
-+							Title  string `json:"title"`
-+							Owner  struct {
++						ID        string    `json:"id"`
++						UpdatedAt time.Time `json:"updatedAt"`
++						Project   struct {
++							ID        string    `json:"id"`
++							Number    int       `json:"number"`
++							Title     string    `json:"title"`
++							UpdatedAt time.Time `json:"updatedAt"`
++							Owner     struct {
 +								Login string `json:"login"`
 +							} `json:"owner"`
 +						} `json:"project"`
@@ -1222,11 +2177,28 @@ index 0000000..b9880f3
 +				} `json:"projectItems"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": contentID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(
++			client,
++			query,
++			map[string]interface{}{"id": contentID, "after": after},
++			&response,
++		); err != nil {
 +			return ProjectItems{}, err
 +		}
 +		for _, rawItem := range response.Node.ProjectItems.Nodes {
-+			item := ProjectItem{ID: rawItem.ID, Project: Project{ID: rawItem.Project.ID, Number: rawItem.Project.Number, Title: rawItem.Project.Title, Owner: ProjectOwner{User: struct{ Login string }{Login: rawItem.Project.Owner.Login}}}}
++			item := ProjectItem{
++				ID:        rawItem.ID,
++				UpdatedAt: rawItem.UpdatedAt,
++				Project: Project{
++					ID:        rawItem.Project.ID,
++					Number:    rawItem.Project.Number,
++					Title:     rawItem.Project.Title,
++					UpdatedAt: rawItem.Project.UpdatedAt,
++					Owner: ProjectOwner{
++						User: struct{ Login string }{Login: rawItem.Project.Owner.Login},
++					},
++				},
++			}
 +			values, valuesErr := fetchFullProjectFieldValues(client, rawItem.ID)
 +			if valuesErr != nil {
 +				return ProjectItems{}, valuesErr
@@ -1240,10 +2212,15 @@ index 0000000..b9880f3
 +		cursor := response.Node.ProjectItems.PageInfo.EndCursor
 +		after = &cursor
 +	}
++	result.State = ProjectStateLiveVerified
++	persistProjectItems(contentID, nil, result, true)
 +	return result, nil
 +}
 +
-+func fetchFullProjectFieldValues(client *gh.GraphQLClient, itemID string) ([]ProjectFieldValue, error) {
++func fetchFullProjectFieldValues(
++	client *gh.GraphQLClient,
++	itemID string,
++) ([]ProjectFieldValue, error) {
 +	var values []ProjectFieldValue
 +	var after *string
 +	for {
@@ -1259,6 +2236,11 @@ index 0000000..b9880f3
 +      ... on ProjectV2ItemFieldUserValue { users(first: 20) { nodes { login name } } field { ... on ProjectV2Field { id name } } }
 +      ... on ProjectV2ItemFieldLabelValue { labels(first: 20) { nodes { name } } field { ... on ProjectV2Field { id name } } }
 +      ... on ProjectV2ItemFieldRepositoryValue { repository { nameWithOwner } field { ... on ProjectV2Field { id name } } }
++... on ProjectV2ItemFieldMultiSelectValue { value options { name } field { ... on ProjectV2Field { id name } ... on ProjectV2MultiSelectField { id name } } }
++      ... on ProjectV2ItemFieldPullRequestValue { pullRequests(first: 20) { nodes { number title url repository { nameWithOwner } } } field { ... on ProjectV2Field { id name } } }
++      ... on ProjectV2ItemFieldReviewerValue { reviewers(first: 20) { nodes { ... on User { login name } ... on Team { name } } } field { ... on ProjectV2Field { id name } } }
++      ... on ProjectV2ItemFieldMilestoneValue { milestone { title number url repository { nameWithOwner } } field { ... on ProjectV2Field { id name } } }
++      ... on ProjectV2ItemIssueFieldValue { field { ... on ProjectV2Field { id name } } issueFieldValue { __typename ... on IssueFieldTextValue { value } ... on IssueFieldNumberValue { value } ... on IssueFieldDateValue { value } ... on IssueFieldSingleSelectValue { name optionId value } ... on IssueFieldMultiSelectValue { value options { name } } } }
 +    } pageInfo { hasNextPage endCursor } }
 +  } }
 +}`
@@ -1273,7 +2255,12 @@ index 0000000..b9880f3
 +				} `json:"fieldValues"`
 +			} `json:"node"`
 +		}
-+		if err := projectGraphQLRead(client, query, map[string]interface{}{"id": itemID, "after": after}, &response); err != nil {
++		if err := projectGraphQLRead(
++			client,
++			query,
++			map[string]interface{}{"id": itemID, "after": after},
++			&response,
++		); err != nil {
 +			return nil, err
 +		}
 +		for _, raw := range response.Node.FieldValues.Nodes {
@@ -1292,10 +2279,10 @@ index 0000000..b9880f3
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
 new file mode 100644
-index 0000000..f83193d
+index 0000000..c5c5ade
 --- /dev/null
 +++ b/internal/data/projectlist_query_test.go
-@@ -0,0 +1,275 @@
+@@ -0,0 +1,510 @@
 +package data
 +
 +import (
@@ -1319,7 +2306,12 @@ index 0000000..f83193d
 +	var query string
 +	projectGraphQLDo = func(_ *gh.GraphQLClient, gotQuery string, _ map[string]interface{}, result interface{}) error {
 +		query = gotQuery
-+		return json.Unmarshal([]byte(`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`), result)
++		return json.Unmarshal(
++			[]byte(
++				`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++			),
++			result,
++		)
 +	}
 +	items, err := fetchProjectItemsNetwork([]string{"issue-1"}, nil)
 +	if err != nil {
@@ -1345,14 +2337,31 @@ index 0000000..f83193d
 +		queries = append(queries, query)
 +		switch {
 +		case strings.Contains(query, "ProjectMemberships"):
-+			return json.Unmarshal([]byte(`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectSchema"):
-+			return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectColumnValues"):
-+			if !strings.Contains(query, "fieldValueByName") || !strings.Contains(query, "$name0") || !strings.Contains(query, "ProjectV2ItemFieldSingleSelectValue") || strings.Contains(query, "ProjectV2ItemFieldTextValue") {
++			if !strings.Contains(query, "fieldValueByName") || !strings.Contains(query, "$name0") ||
++				!strings.Contains(query, "ProjectV2ItemFieldSingleSelectValue") ||
++				strings.Contains(query, "ProjectV2ItemFieldTextValue") {
 +				t.Fatalf("unexpected configured-column query:\n%s", query)
 +			}
-+			return json.Unmarshal([]byte(`{"nodes":[{"id":"item-1","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"In Progress","optionId":"opt-1","field":{"id":"field-status","name":"Status"}}}]}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"item-1","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"In Progress","optionId":"opt-1","field":{"id":"field-status","name":"Status"}}}]}`,
++				),
++				result,
++			)
 +		default:
 +			t.Fatalf("unexpected query:\n%s", query)
 +			return nil
@@ -1367,6 +2376,85 @@ index 0000000..f83193d
 +	}
 +}
 +
++func TestWarmFingerprintMatchSkipsSchemaAndConfiguredValueReads(t *testing.T) {
++	configureProjectCacheTest(t)
++	resetProjectItemsState()
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	changed := false
++	var operations []string
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
++		switch {
++		case strings.Contains(query, "ProjectMemberships"):
++			updated := "2026-01-01T00:00:00Z"
++			if changed {
++				updated = "2026-01-01T00:01:00Z"
++			}
++			operations = append(operations, "membership")
++			return json.Unmarshal(
++				[]byte(
++					fmt.Sprintf(
++						`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","updatedAt":"%s","project":{"id":"project-1","number":1,"title":"Roadmap","updatedAt":"2026-01-01T00:00:00Z","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++						updated,
++					),
++				),
++				result,
++			)
++		case strings.Contains(query, "ProjectSchema"):
++			operations = append(operations, "schema")
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
++		case strings.Contains(query, "ProjectColumnValues"):
++			operations = append(operations, "values")
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"item-1","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"Ready","optionId":"option-1","field":{"id":"field-status","name":"Status"}}}]}`,
++				),
++				result,
++			)
++		default:
++			t.Fatalf("unexpected query: %s", query)
++			return nil
++		}
++	}
++	columns := []ProjectColumn{{Name: "Status"}}
++	if _, err := fetchProjectItemsNetwork([]string{"issue-1"}, columns); err != nil {
++		t.Fatal(err)
++	}
++	if got := strings.Join(operations, ","); got != "membership,schema,values" {
++		t.Fatalf("cold operations = %q", got)
++	}
++	operations = nil
++	BeginProjectRefreshGeneration()
++	items, err := fetchProjectItemsNetwork([]string{"issue-1"}, columns)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got := strings.Join(
++		operations,
++		",",
++	); got != "membership" ||
++		items["issue-1"].State != ProjectStateLiveVerified {
++		t.Fatalf("warm operations=%q items=%#v", got, items)
++	}
++	operations = nil
++	changed = true
++	BeginProjectRefreshGeneration()
++	if _, err := fetchProjectItemsNetwork([]string{"issue-1"}, columns); err != nil {
++		t.Fatal(err)
++	}
++	if got := strings.Join(operations, ","); got != "membership,schema,values" {
++		t.Fatalf("changed operations = %q", got)
++	}
++}
++
 +func TestDuplicateProjectFieldNameUsesFieldIDFallback(t *testing.T) {
 +	original := projectGraphQLDo
 +	originalClient := projectGraphQLClient
@@ -1378,25 +2466,47 @@ index 0000000..f83193d
 +	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
 +		switch {
 +		case strings.Contains(query, "ProjectMemberships"):
-+			return json.Unmarshal([]byte(`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectSchema"):
-+			return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-a","name":"Status"},{"__typename":"ProjectV2SingleSelectField","id":"field-b","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-a","name":"Status"},{"__typename":"ProjectV2SingleSelectField","id":"field-b","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectColumnValues"):
 +			valueQuery = query
-+			return json.Unmarshal([]byte(`{"nodes":[{"id":"item-1","value0":{"nodes":[{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"Done","optionId":"done","field":{"id":"field-b","name":"Status"}}]}}]}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"item-1","value0":{"nodes":[{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"Done","optionId":"done","field":{"id":"field-b","name":"Status"}}]}}]}`,
++				),
++				result,
++			)
 +		default:
 +			t.Fatalf("unexpected query:\n%s", query)
 +			return nil
 +		}
 +	}
-+	items, err := fetchProjectItemsNetwork([]string{"issue-1"}, []ProjectColumn{{Name: "Status", FieldID: "field-b"}})
++	items, err := fetchProjectItemsNetwork(
++		[]string{"issue-1"},
++		[]ProjectColumn{{Name: "Status", FieldID: "field-b"}},
++	)
 +	if err != nil {
 +		t.Fatal(err)
 +	}
-+	if strings.Contains(valueQuery, "fieldValueByName") || !strings.Contains(valueQuery, "fieldValues(first: 100)") {
++	if strings.Contains(valueQuery, "fieldValueByName") ||
++		!strings.Contains(valueQuery, "fieldValues(first: 100)") {
 +		t.Fatalf("field-ID fallback query was not targeted:\n%s", valueQuery)
 +	}
-+	if got := FormatProjectField(items["issue-1"].Nodes, ProjectColumn{FieldID: "field-b"}); got != "Done" {
++	if got := FormatProjectField(
++		items["issue-1"].Nodes,
++		ProjectColumn{FieldID: "field-b"},
++	); got != "Done" {
 +		t.Fatalf("got %q", got)
 +	}
 +}
@@ -1441,25 +2551,66 @@ index 0000000..f83193d
 +				nodes := make([]map[string]interface{}, 0, end-start)
 +				for index := start; index < end; index++ {
 +					nodes = append(nodes, map[string]interface{}{
-+						"id":      "item-" + fmt.Sprint(index),
-+						"project": map[string]interface{}{"id": "project-" + fmt.Sprint(index), "number": index + 1, "title": "Project", "owner": map[string]interface{}{"login": "owner"}},
++						"id": "item-" + fmt.Sprint(index),
++						"project": map[string]interface{}{
++							"id":     "project-" + fmt.Sprint(index),
++							"number": index + 1,
++							"title":  "Project",
++							"owner":  map[string]interface{}{"login": "owner"},
++						},
 +					})
 +				}
-+				pageInfo := map[string]interface{}{"hasNextPage": end < testCase.count, "endCursor": ""}
++				pageInfo := map[string]interface{}{
++					"hasNextPage": end < testCase.count,
++					"endCursor":   "",
++				}
 +				if end < testCase.count {
 +					pageInfo["endCursor"] = "cursor-" + fmt.Sprint(end)
 +				}
 +				if strings.Contains(query, "ProjectMemberships") {
-+					return json.Unmarshal(mustJSON(map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "issue-1", "projectItems": map[string]interface{}{"nodes": nodes, "pageInfo": pageInfo}}}}), result)
++					return json.Unmarshal(
++						mustJSON(
++							map[string]interface{}{
++								"nodes": []interface{}{
++									map[string]interface{}{
++										"id": "issue-1",
++										"projectItems": map[string]interface{}{
++											"nodes":    nodes,
++											"pageInfo": pageInfo,
++										},
++									},
++								},
++							},
++						),
++						result,
++					)
 +				}
-+				return json.Unmarshal(mustJSON(map[string]interface{}{"node": map[string]interface{}{"projectItems": map[string]interface{}{"nodes": nodes, "pageInfo": pageInfo}}}), result)
++				return json.Unmarshal(
++					mustJSON(
++						map[string]interface{}{
++							"node": map[string]interface{}{
++								"projectItems": map[string]interface{}{
++									"nodes":    nodes,
++									"pageInfo": pageInfo,
++								},
++							},
++						},
++					),
++					result,
++				)
 +			}
 +			items, err := fetchProjectItemsNetwork([]string{"issue-1"}, nil)
 +			if err != nil {
 +				t.Fatal(err)
 +			}
 +			if calls != testCase.calls || len(items["issue-1"].Nodes) != testCase.count {
-+				t.Fatalf("calls=%d items=%d, want calls=%d items=%d", calls, len(items["issue-1"].Nodes), testCase.calls, testCase.count)
++				t.Fatalf(
++					"calls=%d items=%d, want calls=%d items=%d",
++					calls,
++					len(items["issue-1"].Nodes),
++					testCase.calls,
++					testCase.count,
++				)
 +			}
 +		})
 +	}
@@ -1475,19 +2626,85 @@ index 0000000..f83193d
 +	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
 +		switch {
 +		case strings.Contains(query, "ProjectMemberships"):
-+			return json.Unmarshal(mustJSON(map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "issue-1", "projectItems": map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "item-1", "project": map[string]interface{}{"id": "project-1", "number": 1, "title": "First", "owner": map[string]interface{}{"login": "owner"}}}}, "pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "overflow-1"}}}}}), result)
++			return json.Unmarshal(
++				mustJSON(
++					map[string]interface{}{
++						"nodes": []interface{}{
++							map[string]interface{}{
++								"id": "issue-1",
++								"projectItems": map[string]interface{}{
++									"nodes": []interface{}{
++										map[string]interface{}{
++											"id": "item-1",
++											"project": map[string]interface{}{
++												"id":     "project-1",
++												"number": 1,
++												"title":  "First",
++												"owner":  map[string]interface{}{"login": "owner"},
++											},
++										},
++									},
++									"pageInfo": map[string]interface{}{
++										"hasNextPage": true,
++										"endCursor":   "overflow-1",
++									},
++								},
++							},
++						},
++					},
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectMembershipOverflow"):
-+			return json.Unmarshal(mustJSON(map[string]interface{}{"node": map[string]interface{}{"projectItems": map[string]interface{}{"nodes": []interface{}{map[string]interface{}{"id": "item-2", "project": map[string]interface{}{"id": "project-2", "number": 2, "title": "Second", "owner": map[string]interface{}{"login": "owner"}}}}, "pageInfo": map[string]interface{}{"hasNextPage": false, "endCursor": ""}}}}), result)
++			return json.Unmarshal(
++				mustJSON(
++					map[string]interface{}{
++						"node": map[string]interface{}{
++							"projectItems": map[string]interface{}{
++								"nodes": []interface{}{
++									map[string]interface{}{
++										"id": "item-2",
++										"project": map[string]interface{}{
++											"id":     "project-2",
++											"number": 2,
++											"title":  "Second",
++											"owner":  map[string]interface{}{"login": "owner"},
++										},
++									},
++								},
++								"pageInfo": map[string]interface{}{
++									"hasNextPage": false,
++									"endCursor":   "",
++								},
++							},
++						},
++					},
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectSchema"):
-+			return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2SingleSelectField","id":"field-status","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "ProjectColumnValues"):
-+			return json.Unmarshal([]byte(`{"nodes":[{"id":"item-2","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"In Progress","optionId":"opt-1","field":{"id":"field-status","name":"Status"}}}]}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"item-2","value0":{"__typename":"ProjectV2ItemFieldSingleSelectValue","name":"In Progress","optionId":"opt-1","field":{"id":"field-status","name":"Status"}}}]}`,
++				),
++				result,
++			)
 +		default:
 +			t.Fatalf("unexpected query %s", query)
 +			return nil
 +		}
 +	}
-+	items, err := fetchProjectItemsNetwork([]string{"issue-1"}, []ProjectColumn{{Name: "Status", Project: "owner/2"}})
++	items, err := fetchProjectItemsNetwork(
++		[]string{"issue-1"},
++		[]ProjectColumn{{Name: "Status", Project: "owner/2"}},
++	)
 +	if err != nil {
 +		t.Fatal(err)
 +	}
@@ -1519,7 +2736,12 @@ index 0000000..f83193d
 +		mu.Unlock()
 +		startedOnce.Do(func() { close(started) })
 +		<-release
-+		return json.Unmarshal([]byte(`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2Field","id":"field-1","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++		return json.Unmarshal(
++			[]byte(
++				`{"node":{"fields":{"nodes":[{"__typename":"ProjectV2Field","id":"field-1","name":"Status"}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++			),
++			result,
++		)
 +	}
 +	results := make(chan []ProjectField, 2)
 +	errorsCh := make(chan error, 2)
@@ -1573,10 +2795,10 @@ index 0000000..f83193d
 +}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000..a3e5df6
+index 0000000..1463b9c
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,81 @@
 +package data
 +
 +import (
@@ -1600,18 +2822,50 @@ index 0000000..a3e5df6
 +		case strings.Contains(query, "FullProjectMemberships"):
 +			membershipCalls++
 +			if cursor == nil {
-+				return json.Unmarshal([]byte(`{"node":{"projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":true,"endCursor":"project-cursor"}}}}`), result)
++				return json.Unmarshal(
++					[]byte(
++						`{"node":{"projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":true,"endCursor":"project-cursor"}}}}`,
++					),
++					result,
++				)
 +			}
-+			return json.Unmarshal([]byte(`{"node":{"projectItems":{"nodes":[{"id":"item-2","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"projectItems":{"nodes":[{"id":"item-2","project":{"id":"project-1","number":1,"title":"Roadmap","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
++		case strings.Contains(query, "ProjectMemberships"):
++			return json.Unmarshal(
++				[]byte(
++					`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++				),
++				result,
++			)
 +		case strings.Contains(query, "FullProjectFieldValues"):
 +			valueCalls++
 +			if variables["id"] == "item-1" && cursor == nil {
-+				return json.Unmarshal([]byte(`{"node":{"fieldValues":{"nodes":[{"__typename":"ProjectV2ItemFieldTextValue","text":"first","field":{"id":"field-1","name":"Notes"}}],"pageInfo":{"hasNextPage":true,"endCursor":"field-cursor"}}}}`), result)
++				return json.Unmarshal(
++					[]byte(
++						`{"node":{"fieldValues":{"nodes":[{"__typename":"ProjectV2ItemFieldTextValue","text":"first","field":{"id":"field-1","name":"Notes"}}],"pageInfo":{"hasNextPage":true,"endCursor":"field-cursor"}}}}`,
++					),
++					result,
++				)
 +			}
 +			if variables["id"] == "item-1" {
-+				return json.Unmarshal([]byte(`{"node":{"fieldValues":{"nodes":[{"__typename":"ProjectV2ItemFieldTextValue","text":"second","field":{"id":"field-2","name":"More"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++				return json.Unmarshal(
++					[]byte(
++						`{"node":{"fieldValues":{"nodes":[{"__typename":"ProjectV2ItemFieldTextValue","text":"second","field":{"id":"field-2","name":"More"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++					),
++					result,
++				)
 +			}
-+			return json.Unmarshal([]byte(`{"node":{"fieldValues":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`), result)
++			return json.Unmarshal(
++				[]byte(
++					`{"node":{"fieldValues":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++				),
++				result,
++			)
 +		default:
 +			t.Fatalf("unexpected query %s", query)
 +			return nil
@@ -1621,16 +2875,17 @@ index 0000000..a3e5df6
 +	if err != nil {
 +		t.Fatal(err)
 +	}
-+	if membershipCalls != 2 || valueCalls != 3 || len(items.Nodes) != 2 || len(items.Nodes[0].FieldValues.Nodes) != 2 {
++	if membershipCalls != 2 || valueCalls != 3 || len(items.Nodes) != 2 ||
++		len(items.Nodes[0].FieldValues.Nodes) != 2 {
 +		t.Fatalf("membership calls=%d value calls=%d items=%#v", membershipCalls, valueCalls, items)
 +	}
 +}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000..ff244cf
+index 0000000..e7d4125
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1278 @@
+@@ -0,0 +1,1586 @@
 +package data
 +
 +import (
@@ -1654,10 +2909,21 @@ index 0000000..ff244cf
 +// project. An issue or pull request can be in more than one ProjectV2.
 +type ProjectItems struct {
 +	Nodes []ProjectItem
++	State ProjectPresentationState
 +}
++
++type ProjectPresentationState string
++
++const (
++	ProjectStateLiveVerified     ProjectPresentationState = "live-verified"
++	ProjectStateCachedUnverified ProjectPresentationState = "cached-unverified"
++	ProjectStateLoading          ProjectPresentationState = "loading"
++	ProjectStateError            ProjectPresentationState = "live-error"
++)
 +
 +type ProjectItem struct {
 +	ID              string
++	UpdatedAt       time.Time
 +	Project         Project
 +	AmbiguousFields []string
 +	FieldValues     struct {
@@ -1666,10 +2932,11 @@ index 0000000..ff244cf
 +}
 +
 +type Project struct {
-+	ID     string
-+	Number int
-+	Title  string
-+	Owner  ProjectOwner
++	ID        string
++	Number    int
++	Title     string
++	UpdatedAt time.Time
++	Owner     ProjectOwner
 +}
 +
 +// ProjectOwner is a GraphQL union in GitHub's schema. Both users and
@@ -1730,7 +2997,7 @@ index 0000000..ff244cf
 +}
 +
 +type ProjectFieldValue struct {
-+	Typename  string `graphql:"__typename" json:"__typename"`
++	Typename  string `graphql:"__typename"                                 json:"__typename"`
 +	TextValue struct {
 +		Field ProjectFieldRef
 +		Text  string
@@ -1772,6 +3039,56 @@ index 0000000..ff244cf
 +		Field      ProjectFieldRef
 +		Repository struct{ NameWithOwner string }
 +	} `graphql:"... on ProjectV2ItemFieldRepositoryValue"`
++	MultiSelectValue struct {
++		Field   ProjectFieldRef
++		Value   string
++		Options []struct{ Name string }
++	} `graphql:"... on ProjectV2ItemFieldMultiSelectValue"`
++	PullRequestValue struct {
++		Field        ProjectFieldRef
++		PullRequests struct {
++			Nodes []struct {
++				Number     int
++				Title      string
++				Url        string
++				Repository struct{ NameWithOwner string }
++			}
++		} `graphql:"pullRequests(first: 20)"`
++	} `graphql:"... on ProjectV2ItemFieldPullRequestValue"`
++	ReviewerValue struct {
++		Field     ProjectFieldRef
++		Reviewers struct {
++			Nodes []struct {
++				Typename     string `json:"__typename"`
++				Login        string
++				Name         string
++				Slug         string
++				Organization struct{ Login string }
++				Team         struct{ Name string }
++			}
++		} `graphql:"reviewers(first: 20)"`
++	} `graphql:"... on ProjectV2ItemFieldReviewerValue"`
++	MilestoneValue struct {
++		Field     ProjectFieldRef
++		Milestone struct {
++			Title      string
++			Number     int
++			Url        string
++			Repository struct{ NameWithOwner string }
++		}
++	} `graphql:"... on ProjectV2ItemFieldMilestoneValue"`
++	IssueFieldValue struct {
++		Field           ProjectFieldRef
++		IssueFieldValue struct {
++			Typename string `json:"__typename"`
++			Text     string
++			Number   float64
++			Date     string
++			Name     string
++			Value    string
++			Options  []struct{ Name string }
++		} `json:"issueFieldValue"`
++	} `graphql:"... on ProjectV2ItemIssueFieldValue"`
 +}
 +
 +type ProjectField struct {
@@ -1840,8 +3157,10 @@ index 0000000..ff244cf
 +	projectTransient      projectFailureClass = "transient"
 +)
 +
-+var projectBreaker projectEnrichmentBreaker
-+var projectBreakerNow = time.Now
++var (
++	projectBreaker    projectEnrichmentBreaker
++	projectBreakerNow = time.Now
++)
 +
 +func projectEnrichmentAllowed() error {
 +	_, err := projectEnrichmentAllowedGeneration()
@@ -1852,10 +3171,18 @@ index 0000000..ff244cf
 +	projectBreaker.mu.Lock()
 +	defer projectBreaker.mu.Unlock()
 +	if projectBreaker.permanentlyOff {
-+		return projectBreaker.generation, fmt.Errorf("%w: Project permission/auth failure disabled Project reads for this process", ErrProjectEnrichmentUnavailable)
++		return projectBreaker.generation, fmt.Errorf(
++			"%w: Project permission/auth failure disabled Project reads for this process",
++			ErrProjectEnrichmentUnavailable,
++		)
 +	}
 +	if projectBreakerNow().Before(projectBreaker.unavailableTil) {
-+		return projectBreaker.generation, fmt.Errorf("%w: %s retry after %s", ErrProjectEnrichmentUnavailable, projectBreaker.classification, projectBreaker.unavailableTil.Format(time.RFC3339))
++		return projectBreaker.generation, fmt.Errorf(
++			"%w: %s retry after %s",
++			ErrProjectEnrichmentUnavailable,
++			projectBreaker.classification,
++			projectBreaker.unavailableTil.Format(time.RFC3339),
++		)
 +	}
 +	return projectBreaker.generation, nil
 +}
@@ -1911,27 +3238,46 @@ index 0000000..ff244cf
 +		return classifiedProjectFailure{}
 +	}
 +	message := strings.ToLower(err.Error())
-+	if strings.Contains(message, "secondary rate limit") || strings.Contains(message, "secondary rate") || strings.Contains(message, "abuse detection") || !projectRetryAfter(err).IsZero() {
-+		return classifiedProjectFailure{class: projectSecondaryLimit, retryAt: projectRetryAt(err, true)}
++	if strings.Contains(message, "secondary rate limit") ||
++		strings.Contains(message, "secondary rate") ||
++		strings.Contains(message, "abuse detection") ||
++		!projectRetryAfter(err).IsZero() {
++		return classifiedProjectFailure{
++			class:   projectSecondaryLimit,
++			retryAt: projectRetryAt(err, true),
++		}
 +	}
-+	if strings.Contains(message, "resource not accessible by personal access token") || strings.Contains(message, "projects scope required") || strings.Contains(message, "projects permission") {
++	if strings.Contains(message, "resource not accessible by personal access token") ||
++		strings.Contains(message, "projects scope required") ||
++		strings.Contains(message, "projects permission") {
 +		return classifiedProjectFailure{class: projectPermission}
 +	}
 +	if projectHasPrimaryQuotaMarker(err, message) {
-+		return classifiedProjectFailure{class: projectPrimaryQuota, retryAt: projectRetryAt(err, false)}
++		return classifiedProjectFailure{
++			class:   projectPrimaryQuota,
++			retryAt: projectRetryAt(err, false),
++		}
 +	}
 +	var httpErr *gh.HTTPError
-+	if errors.As(err, &httpErr) && (httpErr.StatusCode == http.StatusUnauthorized || httpErr.StatusCode == http.StatusForbidden) {
++	if errors.As(err, &httpErr) &&
++		(httpErr.StatusCode == http.StatusUnauthorized || httpErr.StatusCode == http.StatusForbidden) {
 +		return classifiedProjectFailure{class: projectPermission}
 +	}
-+	if strings.Contains(message, "http 403") || strings.Contains(message, "status code 403") || strings.Contains(message, "forbidden") || strings.Contains(message, "unauthorized") {
++	if strings.Contains(message, "http 403") || strings.Contains(message, "status code 403") ||
++		strings.Contains(message, "forbidden") ||
++		strings.Contains(message, "unauthorized") {
 +		return classifiedProjectFailure{class: projectPermission}
 +	}
 +	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 +		return classifiedProjectFailure{class: projectTransient}
 +	}
 +	var networkErr net.Error
-+	if errors.As(err, &networkErr) || strings.Contains(message, "status code: 5") || strings.Contains(message, "status 5") || strings.Contains(message, "timeout") || strings.Contains(message, "connection reset") || strings.Contains(message, "temporary network") || strings.Contains(message, "network is unreachable") {
++	if errors.As(err, &networkErr) || strings.Contains(message, "status code: 5") ||
++		strings.Contains(message, "status 5") ||
++		strings.Contains(message, "timeout") ||
++		strings.Contains(message, "connection reset") ||
++		strings.Contains(message, "temporary network") ||
++		strings.Contains(message, "network is unreachable") {
 +		return classifiedProjectFailure{class: projectTransient}
 +	}
 +	if errors.As(err, &httpErr) && httpErr.StatusCode >= 500 && httpErr.StatusCode <= 599 {
@@ -1941,7 +3287,9 @@ index 0000000..ff244cf
 +}
 +
 +func projectHasPrimaryQuotaMarker(err error, message string) bool {
-+	if strings.Contains(message, "api rate limit exceeded") || strings.Contains(message, "rate limit exceeded") || strings.Contains(message, "primary rate limit") {
++	if strings.Contains(message, "api rate limit exceeded") ||
++		strings.Contains(message, "rate limit exceeded") ||
++		strings.Contains(message, "primary rate limit") {
 +		return true
 +	}
 +	var httpErr *gh.HTTPError
@@ -1951,12 +3299,14 @@ index 0000000..ff244cf
 +	var graphQLErr *gh.GraphQLError
 +	if errors.As(err, &graphQLErr) {
 +		for _, item := range graphQLErr.Errors {
-+			if strings.Contains(strings.ToLower(item.Type), "rate") || strings.Contains(strings.ToLower(item.Type), "quota") {
++			if strings.Contains(strings.ToLower(item.Type), "rate") ||
++				strings.Contains(strings.ToLower(item.Type), "quota") {
 +				return true
 +			}
 +			for key, value := range item.Extensions {
 +				text := strings.ToLower(fmt.Sprintf("%s=%v", key, value))
-+				if strings.Contains(text, "rate_limit") || strings.Contains(text, "rate-limited") || strings.Contains(text, "primary") {
++				if strings.Contains(text, "rate_limit") || strings.Contains(text, "rate-limited") ||
++					strings.Contains(text, "primary") {
 +					return true
 +				}
 +			}
@@ -1980,7 +3330,10 @@ index 0000000..ff244cf
 +	var httpErr *gh.HTTPError
 +	if errors.As(err, &httpErr) {
 +		if value := httpErr.Headers.Get("Retry-After"); value != "" {
-+			if seconds, parseErr := strconv.ParseFloat(strings.TrimSpace(value), 64); parseErr == nil {
++			if seconds, parseErr := strconv.ParseFloat(
++				strings.TrimSpace(value),
++				64,
++			); parseErr == nil {
 +				return projectBreakerNow().Add(time.Duration(seconds * float64(time.Second)))
 +			}
 +			if parsed, parseErr := http.ParseTime(value); parseErr == nil {
@@ -1995,7 +3348,11 @@ index 0000000..ff244cf
 +	var httpErr *gh.HTTPError
 +	if errors.As(err, &httpErr) {
 +		if value := httpErr.Headers.Get("X-RateLimit-Reset"); value != "" {
-+			if seconds, parseErr := strconv.ParseInt(strings.TrimSpace(value), 10, 64); parseErr == nil {
++			if seconds, parseErr := strconv.ParseInt(
++				strings.TrimSpace(value),
++				10,
++				64,
++			); parseErr == nil {
 +				return time.Unix(seconds, 0)
 +			}
 +		}
@@ -2080,6 +3437,7 @@ index 0000000..ff244cf
 +}
 +
 +func resetProjectItemsState() {
++	resetProjectCacheForTest()
 +	projectItemsState.mu.Lock()
 +	projectItemsState.items = make(map[string]ProjectItems)
 +	projectItemsState.columns = make(map[string]string)
@@ -2198,8 +3556,86 @@ index 0000000..ff244cf
 +		case "ProjectV2ItemFieldRepositoryValue":
 +			fieldID, fieldName = value.RepositoryValue.Field.IDName()
 +			field.Value = value.RepositoryValue.Repository.NameWithOwner
++		case "ProjectV2ItemFieldMultiSelectValue":
++			fieldID, fieldName = value.MultiSelectValue.Field.IDName()
++			field.Value = value.MultiSelectValue.Value
++			if field.Value == "" {
++				names := make([]string, 0, len(value.MultiSelectValue.Options))
++				for _, option := range value.MultiSelectValue.Options {
++					names = append(names, option.Name)
++				}
++				field.Value = strings.Join(names, ", ")
++			}
++		case "ProjectV2ItemFieldPullRequestValue":
++			fieldID, fieldName = value.PullRequestValue.Field.IDName()
++			parts := make([]string, 0, len(value.PullRequestValue.PullRequests.Nodes))
++			for _, pr := range value.PullRequestValue.PullRequests.Nodes {
++				label := fmt.Sprintf("#%d %s", pr.Number, pr.Title)
++				if pr.Repository.NameWithOwner != "" {
++					label = pr.Repository.NameWithOwner + " " + label
++				}
++				parts = append(parts, label)
++			}
++			field.Value = strings.Join(parts, ", ")
++		case "ProjectV2ItemFieldReviewerValue":
++			fieldID, fieldName = value.ReviewerValue.Field.IDName()
++			parts := make([]string, 0, len(value.ReviewerValue.Reviewers.Nodes))
++			for _, reviewer := range value.ReviewerValue.Reviewers.Nodes {
++				name := reviewer.Login
++				if name == "" {
++					name = reviewer.Name
++				}
++				if name == "" {
++					name = reviewer.Slug
++				}
++				if name == "" {
++					name = reviewer.Organization.Login
++				}
++				if name == "" {
++					name = reviewer.Team.Name
++				}
++				if name != "" {
++					parts = append(parts, "@"+name)
++				}
++			}
++			field.Value = strings.Join(parts, ", ")
++		case "ProjectV2ItemFieldMilestoneValue":
++			fieldID, fieldName = value.MilestoneValue.Field.IDName()
++			field.Value = value.MilestoneValue.Milestone.Title
++			if field.Value == "" && value.MilestoneValue.Milestone.Number > 0 {
++				field.Value = fmt.Sprintf(
++					"%s #%d",
++					value.MilestoneValue.Milestone.Repository.NameWithOwner,
++					value.MilestoneValue.Milestone.Number,
++				)
++			}
++		case "ProjectV2ItemIssueFieldValue":
++			fieldID, fieldName = value.IssueFieldValue.Field.IDName()
++			field.Value = value.IssueFieldValue.IssueFieldValue.Text
++			if field.Value == "" {
++				field.Value = value.IssueFieldValue.IssueFieldValue.Value
++			}
++			if field.Value == "" {
++				field.Value = value.IssueFieldValue.IssueFieldValue.Name
++			}
++			if field.Value == "" && value.IssueFieldValue.IssueFieldValue.Date != "" {
++				field.Value = value.IssueFieldValue.IssueFieldValue.Date
++			}
++			if field.Value == "" && value.IssueFieldValue.IssueFieldValue.Number != 0 {
++				field.Value = strconv.FormatFloat(
++					value.IssueFieldValue.IssueFieldValue.Number,
++					'f',
++					-1,
++					64,
++				)
++			}
++			if field.Value == "" && value.IssueFieldValue.IssueFieldValue.Typename != "" {
++				field.Value = "unavailable (" + value.IssueFieldValue.IssueFieldValue.Typename + ")"
++			}
 +		default:
-+			continue
++			log.Debug("Rendering unknown Project field value type", "typename", value.Typename)
++			fieldID, fieldName = "", "Project field"
++			field.Value = "unavailable (" + value.Typename + ")"
 +		}
 +		field.ID, field.Name = fieldID, fieldName
 +		if field.Name != "" {
@@ -2225,7 +3661,10 @@ index 0000000..ff244cf
 +	return match, count == 1
 +}
 +
-+func ApplyProjectFieldValue(items []ProjectItem, projectID, itemID, fieldID, fieldName, value string) []ProjectItem {
++func ApplyProjectFieldValue(
++	items []ProjectItem,
++	projectID, itemID, fieldID, fieldName, value string,
++) []ProjectItem {
 +	for itemIndex := range items {
 +		if items[itemIndex].ID != itemID || items[itemIndex].Project.ID != projectID {
 +			continue
@@ -2321,10 +3760,25 @@ index 0000000..ff244cf
 +	}
 +	parts := make([]string, 0, len(ordered))
 +	for _, item := range ordered {
-+		qualify := numberCounts[item.Project.Number] > 1 || titleCounts[strings.ToLower(item.Project.Title)] > 1
++		qualify := numberCounts[item.Project.Number] > 1 ||
++			titleCounts[strings.ToLower(item.Project.Title)] > 1
 +		parts = append(parts, item.string(qualify))
 +	}
 +	return strings.Join(parts, "\n")
++}
++
++func RenderProjectPresentation(items ProjectItems) string {
++	if items.State == ProjectStateLoading {
++		return "Projects: loading…"
++	}
++	rendered := RenderProjectItems(items.Nodes)
++	if rendered == "" {
++		rendered = "none"
++	}
++	if items.State == ProjectStateCachedUnverified {
++		return "Projects (cached; verifying…)\n" + rendered
++	}
++	return "Projects\n" + rendered
 +}
 +
 +func ProjectDisplayName(items []ProjectItem, project Project) string {
@@ -2342,6 +3796,17 @@ index 0000000..ff244cf
 +}
 +
 +func FormatProjectField(items []ProjectItem, column ProjectColumn) string {
++	return FormatProjectFieldForItems(
++		ProjectItems{Nodes: items, State: ProjectStateLiveVerified},
++		column,
++	)
++}
++
++func FormatProjectFieldForItems(projectItems ProjectItems, column ProjectColumn) string {
++	items := projectItems.Nodes
++	if projectItems.State == ProjectStateLoading && len(items) == 0 {
++		return "…"
++	}
 +	selected, err := SelectProjectItems(items, column.Project)
 +	if err != nil {
 +		return err.Error()
@@ -2349,12 +3814,20 @@ index 0000000..ff244cf
 +	values := make([]string, 0, len(selected))
 +	for _, item := range selected {
 +		if column.FieldID == "" && slices.Contains(item.AmbiguousFields, column.Name) {
-+			return fmt.Sprintf("ambiguous Project field %q in %s; use fieldId", column.Name, item.Project.DisplayName(true))
++			return fmt.Sprintf(
++				"ambiguous Project field %q in %s; use fieldId",
++				column.Name,
++				item.Project.DisplayName(true),
++			)
 +		}
 +		field, ok := item.FieldBySelector(column.Name, column.FieldID)
 +		if !ok {
 +			if column.FieldID == "" && countFieldsByName(item.Fields(), column.Name) > 1 {
-+				return fmt.Sprintf("ambiguous Project field %q in %s; use fieldId", column.Name, item.Project.DisplayName(true))
++				return fmt.Sprintf(
++					"ambiguous Project field %q in %s; use fieldId",
++					column.Name,
++					item.Project.DisplayName(true),
++				)
 +			}
 +			continue
 +		}
@@ -2368,6 +3841,9 @@ index 0000000..ff244cf
 +		values = append(values, value)
 +	}
 +	sort.Strings(values)
++	if len(values) == 0 && projectItems.State == ProjectStateCachedUnverified {
++		return "…"
++	}
 +	return strings.Join(values, ", ")
 +}
 +
@@ -2415,7 +3891,10 @@ index 0000000..ff244cf
 +		}
 +	}
 +	if len(matches) > 1 {
-+		return nil, fmt.Errorf("ambiguous Project selector %q; use owner/number, owner/title, or the Project node ID", selector)
++		return nil, fmt.Errorf(
++			"ambiguous Project selector %q; use owner/number, owner/title, or the Project node ID",
++			selector,
++		)
 +	}
 +	return matches, nil
 +}
@@ -2452,17 +3931,19 @@ index 0000000..ff244cf
 +    ... on ProjectV2Field { id name dataType }
 +    ... on ProjectV2IterationField { id name }
 +    ... on ProjectV2SingleSelectField { id name options { id name } }
++    ... on ProjectV2MultiSelectField { id name multiSelectOptions { id name } }
 +  } pageInfo { hasNextPage endCursor } } } }
 +}`
 +	var response struct {
 +		Node struct {
 +			Fields struct {
 +				Nodes []struct {
-+					Typename string          `json:"__typename"`
-+					ID       string          `json:"id"`
-+					Name     string          `json:"name"`
-+					DataType string          `json:"dataType"`
-+					Options  []ProjectOption `json:"options"`
++					Typename           string          `json:"__typename"`
++					ID                 string          `json:"id"`
++					Name               string          `json:"name"`
++					DataType           string          `json:"dataType"`
++					Options            []ProjectOption `json:"options"`
++					MultiSelectOptions []ProjectOption `json:"multiSelectOptions"`
 +				} `json:"nodes"`
 +				PageInfo struct {
 +					HasNextPage bool   `json:"hasNextPage"`
@@ -2474,7 +3955,12 @@ index 0000000..ff244cf
 +	fields := make([]ProjectField, 0)
 +	var after *string
 +	for {
-+		err = projectGraphQLRead(client, query, map[string]interface{}{"id": projectID, "after": after}, &response)
++		err = projectGraphQLRead(
++			client,
++			query,
++			map[string]interface{}{"id": projectID, "after": after},
++			&response,
++		)
 +		if err != nil {
 +			return nil, err
 +		}
@@ -2483,7 +3969,14 @@ index 0000000..ff244cf
 +			if field.DataType != "" {
 +				fieldType = field.DataType
 +			}
-+			fields = append(fields, ProjectField{ID: field.ID, Name: field.Name, Type: fieldType, Options: field.Options})
++			options := field.Options
++			if len(options) == 0 {
++				options = field.MultiSelectOptions
++			}
++			fields = append(
++				fields,
++				ProjectField{ID: field.ID, Name: field.Name, Type: fieldType, Options: options},
++			)
 +		}
 +		if !response.Node.Fields.PageInfo.HasNextPage {
 +			break
@@ -2491,7 +3984,10 @@ index 0000000..ff244cf
 +		cursor := response.Node.Fields.PageInfo.EndCursor
 +		after = &cursor
 +	}
-+	sort.SliceStable(fields, func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) })
++	sort.SliceStable(
++		fields,
++		func(i, j int) bool { return strings.ToLower(fields[i].Name) < strings.ToLower(fields[j].Name) },
++	)
 +	return fields, nil
 +}
 +
@@ -2665,7 +4161,12 @@ index 0000000..ff244cf
 +			} `json:"projectItems"`
 +		} `json:"nodes"`
 +	}
-+	if err := projectGraphQLRead(projectClient, query, map[string]interface{}{"ids": contentIDs}, &response); err != nil {
++	if err := projectGraphQLRead(
++		projectClient,
++		query,
++		map[string]interface{}{"ids": contentIDs},
++		&response,
++	); err != nil {
 +		return nil, err
 +	}
 +	result := make(map[string]ProjectItems, len(response.Nodes))
@@ -2722,15 +4223,21 @@ index 0000000..ff244cf
 +					case "ProjectV2ItemFieldUserValue":
 +						value.UserValue.Field = field
 +						for _, user := range rawValue.Users.Nodes {
-+							value.UserValue.Users.Nodes = append(value.UserValue.Users.Nodes, struct {
-+								Login string
-+								Name  string
-+							}{Login: user.Login, Name: user.Name})
++							value.UserValue.Users.Nodes = append(
++								value.UserValue.Users.Nodes,
++								struct {
++									Login string
++									Name  string
++								}{Login: user.Login, Name: user.Name},
++							)
 +						}
 +					case "ProjectV2ItemFieldLabelValue":
 +						value.LabelValue.Field = field
 +						for _, label := range rawValue.Labels.Nodes {
-+							value.LabelValue.Labels.Nodes = append(value.LabelValue.Labels.Nodes, struct{ Name string }{Name: label.Name})
++							value.LabelValue.Labels.Nodes = append(
++								value.LabelValue.Labels.Nodes,
++								struct{ Name string }{Name: label.Name},
++							)
 +						}
 +					case "ProjectV2ItemFieldRepositoryValue":
 +						value.RepositoryValue.Field = field
@@ -2756,7 +4263,10 @@ index 0000000..ff244cf
 +	return fetchProjectItemsNetwork(contentIDs, columns)
 +}
 +
-+func fetchProjectItemsCached(contentIDs []string, projectColumns ...[]ProjectColumn) (map[string]ProjectItems, error) {
++func fetchProjectItemsCached(
++	contentIDs []string,
++	projectColumns ...[]ProjectColumn,
++) (map[string]ProjectItems, error) {
 +	var columns []ProjectColumn
 +	if len(projectColumns) > 0 {
 +		columns = projectColumns[0]
@@ -2773,11 +4283,13 @@ index 0000000..ff244cf
 +	contentGenerations := make(map[string]uint64)
 +	refreshGeneration := projectItemsState.generation
 +	for _, contentID := range contentIDs {
-+		if items, ok := projectItemsState.items[contentID]; ok && projectItemsState.columns[contentID] == projectColumnsKey(columns) {
++		if items, ok := projectItemsState.items[contentID]; ok &&
++			projectItemsState.columns[contentID] == projectColumnsKey(columns) {
 +			result[contentID] = items
 +			continue
 +		}
-+		if call, ok := projectItemsState.inFlight[contentID]; ok && call.generation == refreshGeneration {
++		if call, ok := projectItemsState.inFlight[contentID]; ok &&
++			call.generation == refreshGeneration {
 +			waiters[contentID] = call
 +			continue
 +		}
@@ -2791,7 +4303,15 @@ index 0000000..ff244cf
 +
 +	if len(owners) > 0 {
 +		if err := projectEnrichmentAllowed(); err != nil {
-+			completeProjectItemsCall(owners, waiters, refreshGeneration, contentGenerations, nil, err, columns)
++			completeProjectItemsCall(
++				owners,
++				waiters,
++				refreshGeneration,
++				contentGenerations,
++				nil,
++				err,
++				columns,
++			)
 +		} else {
 +			var items map[string]ProjectItems
 +			var err error
@@ -2800,7 +4320,15 @@ index 0000000..ff244cf
 +			} else {
 +				items, err = fetchProjectItemsBatchWithColumns(owners, columns)
 +			}
-+			completeProjectItemsCall(owners, waiters, refreshGeneration, contentGenerations, items, err, columns)
++			completeProjectItemsCall(
++				owners,
++				waiters,
++				refreshGeneration,
++				contentGenerations,
++				items,
++				err,
++				columns,
++			)
 +		}
 +	}
 +
@@ -2816,7 +4344,15 @@ index 0000000..ff244cf
 +	return result, nil
 +}
 +
-+func completeProjectItemsCall(owners []string, waiters map[string]*projectItemsCall, refreshGeneration uint64, contentGenerations map[string]uint64, items map[string]ProjectItems, err error, columns []ProjectColumn) {
++func completeProjectItemsCall(
++	owners []string,
++	waiters map[string]*projectItemsCall,
++	refreshGeneration uint64,
++	contentGenerations map[string]uint64,
++	items map[string]ProjectItems,
++	err error,
++	columns []ProjectColumn,
++) {
 +	if items == nil {
 +		items = make(map[string]ProjectItems)
 +	}
@@ -2829,7 +4365,8 @@ index 0000000..ff244cf
 +			if _, ok := items[contentID]; !ok {
 +				items[contentID] = ProjectItems{}
 +			}
-+			if projectItemsState.generation == refreshGeneration && projectItemsState.contentGen[contentID] == contentGenerations[contentID] {
++			if projectItemsState.generation == refreshGeneration &&
++				projectItemsState.contentGen[contentID] == contentGenerations[contentID] {
 +				projectItemsState.items[contentID] = items[contentID]
 +				projectItemsState.columns[contentID] = projectColumnsKey(columns)
 +			}
@@ -2861,11 +4398,15 @@ index 0000000..ff244cf
 +	delete(projectItemsState.columns, contentID)
 +	delete(projectItemsState.inFlight, contentID)
 +	projectItemsState.mu.Unlock()
++	invalidatePersistentProjectItems(contentID)
 +}
 +
 +// FetchProjectItemsBatched keeps ProjectV2's nested connection cost out of the
 +// normal issue/PR search query and bounds each enrichment request separately.
-+func FetchProjectItemsBatched(contentIDs []string, projectColumns ...[]ProjectColumn) (map[string]ProjectItems, error) {
++func FetchProjectItemsBatched(
++	contentIDs []string,
++	projectColumns ...[]ProjectColumn,
++) (map[string]ProjectItems, error) {
 +	var columns []ProjectColumn
 +	if len(projectColumns) > 0 {
 +		columns = projectColumns[0]
@@ -2879,7 +4420,17 @@ index 0000000..ff244cf
 +		}
 +		items, err := fetchProjectItemsCached(contentIDs[start:end], columns)
 +		if err != nil {
-+			log.Warn("Project enrichment batch failed; retaining earlier Project metadata", "batchStart", start, "batchSize", end-start, "remaining", len(contentIDs)-end, "error", err)
++			log.Warn(
++				"Project enrichment batch failed; retaining earlier Project metadata",
++				"batchStart",
++				start,
++				"batchSize",
++				end-start,
++				"remaining",
++				len(contentIDs)-end,
++				"error",
++				err,
++			)
 +			for contentID, projectItems := range items {
 +				result[contentID] = projectItems
 +			}
@@ -2890,6 +4441,13 @@ index 0000000..ff244cf
 +		}
 +	}
 +	return result, nil
++}
++
++func RevalidateProjectItems(
++	contentIDs []string,
++	columns []ProjectColumn,
++) (map[string]ProjectItems, error) {
++	return FetchProjectItemsBatched(contentIDs, columns)
 +}
 +
 +var projectGraphQLClient = func() (*gh.GraphQLClient, error) {
@@ -2903,7 +4461,12 @@ index 0000000..ff244cf
 +	return append([]ProjectItem(nil), authoritative.Nodes...)
 +}
 +
-+func ProjectUpdateTargets(contentID, repository string, number int, currentID, currentRepository string, currentNumber int) bool {
++func ProjectUpdateTargets(
++	contentID, repository string,
++	number int,
++	currentID, currentRepository string,
++	currentNumber int,
++) bool {
 +	if contentID != "" {
 +		return contentID == currentID
 +	}
@@ -2911,16 +4474,17 @@ index 0000000..ff244cf
 +}
 diff --git a/internal/data/projects_live_test.go b/internal/data/projects_live_test.go
 new file mode 100644
-index 0000000..22a3282
+index 0000000..e68f901
 --- /dev/null
 +++ b/internal/data/projects_live_test.go
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,182 @@
 +package data
 +
 +import (
 +	"fmt"
 +	"os"
 +	"strconv"
++	"strings"
 +	"testing"
 +)
 +
@@ -2931,7 +4495,9 @@ index 0000000..22a3282
 +	fieldName := os.Getenv("GH_DASH_PROJECTS_LIVE_FIELD")
 +	number, err := strconv.Atoi(os.Getenv("GH_DASH_PROJECTS_LIVE_NUMBER"))
 +	if repository == "" || project == "" || fieldName == "" || err != nil || number < 1 {
-+		t.Skip("set GH_DASH_PROJECTS_LIVE_REPOSITORY, GH_DASH_PROJECTS_LIVE_NUMBER, GH_DASH_PROJECTS_LIVE_PROJECT, and GH_DASH_PROJECTS_LIVE_FIELD for an authenticated Project smoke test")
++		t.Skip(
++			"set GH_DASH_PROJECTS_LIVE_REPOSITORY, GH_DASH_PROJECTS_LIVE_NUMBER, GH_DASH_PROJECTS_LIVE_PROJECT, and GH_DASH_PROJECTS_LIVE_FIELD for an authenticated Project smoke test",
++		)
 +	}
 +	return repository, number, project, fieldName
 +}
@@ -2939,7 +4505,12 @@ index 0000000..22a3282
 +func liveProjectItem(t *testing.T) (ProjectItem, string, string) {
 +	t.Helper()
 +	repository, number, projectSelector, fieldName := liveProjectTarget(t)
-+	response, err := FetchIssues(fmt.Sprintf("repo:%s is:issue %d", repository, number), 20, nil, true)
++	response, err := FetchIssues(
++		fmt.Sprintf("repo:%s is:issue %d", repository, number),
++		20,
++		nil,
++		true,
++	)
 +	if err != nil {
 +		t.Fatal(err)
 +	}
@@ -2955,7 +4526,12 @@ index 0000000..22a3282
 +			return item, fieldName, issue.ID
 +		}
 +	}
-+	t.Fatalf("could not find %s#%d in Project %q; check Project access and the configured target", repository, number, projectSelector)
++	t.Fatalf(
++		"could not find %s#%d in Project %q; check Project access and the configured target",
++		repository,
++		number,
++		projectSelector,
++	)
 +	return ProjectItem{}, "", ""
 +}
 +
@@ -3006,7 +4582,14 @@ index 0000000..22a3282
 +	if temporary == original {
 +		temporary = field.Options[1].ID
 +	}
-+	if err := UpdateProjectField(contentID, item.Project.ID, item.ID, field.ID, field.Type, temporary); err != nil {
++	if err := UpdateProjectField(
++		contentID,
++		item.Project.ID,
++		item.ID,
++		field.ID,
++		field.Type,
++		temporary,
++	); err != nil {
 +		t.Fatal(err)
 +	}
 +	t.Cleanup(func() {
@@ -3014,7 +4597,14 @@ index 0000000..22a3282
 +		if original == "" {
 +			restoreErr = ClearProjectField(contentID, item.Project.ID, item.ID, field.ID)
 +		} else {
-+			restoreErr = UpdateProjectField(contentID, item.Project.ID, item.ID, field.ID, field.Type, original)
++			restoreErr = UpdateProjectField(
++				contentID,
++				item.Project.ID,
++				item.ID,
++				field.ID,
++				field.Type,
++				original,
++			)
 +		}
 +		if restoreErr != nil {
 +			t.Errorf("failed to restore Project field %q: %v", fieldName, restoreErr)
@@ -3029,12 +4619,53 @@ index 0000000..22a3282
 +		t.Fatal("authoritative Project refetch did not return the mutated Project item")
 +	}
 +}
++
++func TestAuthenticatedPullRequestProjectPreviewSmoke(t *testing.T) {
++	if os.Getenv("GH_DASH_PROJECTS_LIVE_TEST") == "" {
++		t.Skip("set GH_DASH_PROJECTS_LIVE_TEST=1 for an authenticated Project smoke test")
++	}
++	repository, number, _, _ := liveProjectTarget(t)
++	response, err := FetchIssues(
++		fmt.Sprintf("repo:%s is:issue %d", repository, number),
++		20,
++		nil,
++		false,
++	)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var contentID string
++	for _, issue := range response.Issues {
++		if issue.Number == number && issue.Repository.NameWithOwner == repository {
++			contentID = issue.ID
++			break
++		}
++	}
++	if contentID == "" {
++		t.Fatalf("could not find %s#%d in live search results", repository, number)
++	}
++	items, err := FetchProjectItemsFull(contentID)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, item := range items.Nodes {
++		for _, field := range item.Fields() {
++			if field.RawType == "ProjectV2ItemFieldPullRequestValue" {
++				if field.Value == "" || !strings.Contains(field.Value, "#") {
++					t.Fatalf("linked pull request field was not readable: %#v", field)
++				}
++				return
++			}
++		}
++	}
++	t.Fatal("live Project preview did not contain a linked pull request field")
++}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000..16e1f3d
+index 0000000..8532d79
 --- /dev/null
 +++ b/internal/data/projects_test.go
-@@ -0,0 +1,491 @@
+@@ -0,0 +1,611 @@
 +package data
 +
 +import (
@@ -3056,7 +4687,10 @@ index 0000000..16e1f3d
 +		ref.Common.ID, ref.Common.Name = id, name
 +		return ref
 +	}
-+	item := ProjectItem{ID: "item-1", Project: Project{ID: "project-1", Number: 3, Title: "Roadmap"}}
++	item := ProjectItem{
++		ID:      "item-1",
++		Project: Project{ID: "project-1", Number: 3, Title: "Roadmap"},
++	}
 +	item.FieldValues.Nodes = []ProjectFieldValue{
 +		{Typename: "ProjectV2ItemFieldTextValue", TextValue: struct {
 +			Field ProjectFieldRef
@@ -3080,7 +4714,10 @@ index 0000000..16e1f3d
 +	if len(fields) != 4 {
 +		t.Fatalf("got %d normalized fields, want 4", len(fields))
 +	}
-+	if field, ok := item.Field("Status"); !ok || field.Value != "In Progress" || field.OptionID != "option-1" {
++	if field, ok := item.Field(
++		"Status",
++	); !ok || field.Value != "In Progress" ||
++		field.OptionID != "option-1" {
 +		t.Fatalf("single-select field was not normalized: %#v", field)
 +	}
 +	if field, ok := item.Field("Repository"); !ok || field.Value != "owner/repo" {
@@ -3090,22 +4727,45 @@ index 0000000..16e1f3d
 +
 +func TestProjectColumnsDisambiguateMultipleProjectsDeterministically(t *testing.T) {
 +	items := []ProjectItem{
-+		{Project: Project{Number: 9, Title: "Zeta"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Done"))},
-+		{Project: Project{Number: 2, Title: "Alpha"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Todo"))},
++		{
++			Project:     Project{Number: 9, Title: "Zeta"},
++			FieldValues: ProjectFieldValues(singleSelect("Status", "Done")),
++		},
++		{
++			Project:     Project{Number: 2, Title: "Alpha"},
++			FieldValues: ProjectFieldValues(singleSelect("Status", "Todo")),
++		},
 +	}
 +	got := FormatProjectField(items, ProjectColumn{Name: "Status"})
 +	if got != "Alpha: Todo, Zeta: Done" {
 +		t.Fatalf("got %q", got)
 +	}
-+	if got := FormatProjectField(items, ProjectColumn{Name: "Status", Project: "2"}); got != "Todo" {
++	if got := FormatProjectField(
++		items,
++		ProjectColumn{Name: "Status", Project: "2"},
++	); got != "Todo" {
 +		t.Fatalf("project-specific value got %q", got)
 +	}
 +}
 +
 +func TestProjectSelectorsRejectUnqualifiedCollisions(t *testing.T) {
 +	items := []ProjectItem{
-+		{Project: Project{ID: "alice-project", Number: 1, Title: "Roadmap", Owner: projectOwner("alice")}},
-+		{Project: Project{ID: "org-project", Number: 1, Title: "Roadmap", Owner: projectOwner("example-org")}},
++		{
++			Project: Project{
++				ID:     "alice-project",
++				Number: 1,
++				Title:  "Roadmap",
++				Owner:  projectOwner("alice"),
++			},
++		},
++		{
++			Project: Project{
++				ID:     "org-project",
++				Number: 1,
++				Title:  "Roadmap",
++				Owner:  projectOwner("example-org"),
++			},
++		},
 +	}
 +	if _, err := SelectProjectItems(items, "1"); err == nil {
 +		t.Fatal("unqualified duplicate Project number should be ambiguous")
@@ -3141,13 +4801,31 @@ index 0000000..16e1f3d
 +	require.Equal(t, "Done", field.Value)
 +	formatted := FormatProjectField([]ProjectItem{item}, ProjectColumn{Name: "Status"})
 +	require.Contains(t, formatted, "ambiguous Project field")
-+	require.Equal(t, "Done", FormatProjectField([]ProjectItem{item}, ProjectColumn{FieldID: "field-2"}))
++	require.Equal(
++		t,
++		"Done",
++		FormatProjectField([]ProjectItem{item}, ProjectColumn{FieldID: "field-2"}),
++	)
 +}
 +
 +func TestProjectPreviewQualifiesOwnerWhenMembershipsCollide(t *testing.T) {
 +	items := []ProjectItem{
-+		{Project: Project{ID: "alice-project", Number: 1, Title: "Roadmap", Owner: projectOwner("alice")}},
-+		{Project: Project{ID: "org-project", Number: 1, Title: "Roadmap", Owner: projectOwner("example-org")}},
++		{
++			Project: Project{
++				ID:     "alice-project",
++				Number: 1,
++				Title:  "Roadmap",
++				Owner:  projectOwner("alice"),
++			},
++		},
++		{
++			Project: Project{
++				ID:     "org-project",
++				Number: 1,
++				Title:  "Roadmap",
++				Owner:  projectOwner("example-org"),
++			},
++		},
 +	}
 +	preview := RenderProjectItems(items)
 +	require.Contains(t, preview, "alice / Roadmap (#1)")
@@ -3155,9 +4833,20 @@ index 0000000..16e1f3d
 +}
 +
 +func TestApplyProjectFieldValueUpdatesLocalSourceOfTruth(t *testing.T) {
-+	item := ProjectItem{ID: "item-1", Project: Project{ID: "project-1"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Todo"))}
++	item := ProjectItem{
++		ID:          "item-1",
++		Project:     Project{ID: "project-1"},
++		FieldValues: ProjectFieldValues(singleSelect("Status", "Todo")),
++	}
 +	item.FieldValues.Nodes[0].SingleSelectValue.Field.Common.ID = "field-1"
-+	updated := ApplyProjectFieldValue([]ProjectItem{item}, "project-1", "item-1", "field-1", "Status", "Done")
++	updated := ApplyProjectFieldValue(
++		[]ProjectItem{item},
++		"project-1",
++		"item-1",
++		"field-1",
++		"Status",
++		"Done",
++	)
 +	field, ok := updated[0].Field("Status")
 +	if !ok || field.Value != "Done" {
 +		t.Fatalf("updated field = %#v, ok=%v", field, ok)
@@ -3166,7 +4855,15 @@ index 0000000..16e1f3d
 +
 +func TestReplaceProjectItemsHandlesPreviouslyUnsetField(t *testing.T) {
 +	old := []ProjectItem{{ID: "item-1", Project: Project{ID: "project-1"}}}
-+	authoritative := ProjectItems{Nodes: []ProjectItem{{ID: "item-1", Project: Project{ID: "project-1"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Done"))}}}
++	authoritative := ProjectItems{
++		Nodes: []ProjectItem{
++			{
++				ID:          "item-1",
++				Project:     Project{ID: "project-1"},
++				FieldValues: ProjectFieldValues(singleSelect("Status", "Done")),
++			},
++		},
++	}
 +	updated := ReplaceProjectItems(old, authoritative)
 +	field, ok := updated[0].Field("Status")
 +	if !ok || field.Value != "Done" {
@@ -3204,7 +4901,15 @@ index 0000000..16e1f3d
 +				batches = append(batches, len(contentIDs))
 +				items := make(map[string]ProjectItems, len(contentIDs))
 +				for _, contentID := range contentIDs {
-+					items[contentID] = ProjectItems{Nodes: []ProjectItem{{ID: "item-" + contentID, Project: Project{ID: "project-1"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Ready"))}}}
++					items[contentID] = ProjectItems{
++						Nodes: []ProjectItem{
++							{
++								ID:          "item-" + contentID,
++								Project:     Project{ID: "project-1"},
++								FieldValues: ProjectFieldValues(singleSelect("Status", "Ready")),
++							},
++						},
++					}
 +				}
 +				return items, nil
 +			}
@@ -3351,10 +5056,30 @@ index 0000000..16e1f3d
 +		retryAt   time.Time
 +		wantRetry bool
 +	}{
-+		{name: "permission", err: errors.New("Resource not accessible by personal access token"), class: projectPermission},
-+		{name: "primary quota", err: primary, class: projectPrimaryQuota, retryAt: now.Add(11 * time.Minute), wantRetry: true},
-+		{name: "secondary rate limit", err: secondary, class: projectSecondaryLimit, retryAt: now.Add(17 * time.Second), wantRetry: true},
-+		{name: "transient network", err: errors.New("temporary network failure"), class: projectTransient},
++		{
++			name:  "permission",
++			err:   errors.New("Resource not accessible by personal access token"),
++			class: projectPermission,
++		},
++		{
++			name:      "primary quota",
++			err:       primary,
++			class:     projectPrimaryQuota,
++			retryAt:   now.Add(11 * time.Minute),
++			wantRetry: true,
++		},
++		{
++			name:      "secondary rate limit",
++			err:       secondary,
++			class:     projectSecondaryLimit,
++			retryAt:   now.Add(17 * time.Second),
++			wantRetry: true,
++		},
++		{
++			name:  "transient network",
++			err:   errors.New("temporary network failure"),
++			class: projectTransient,
++		},
 +	}
 +	for _, testCase := range tests {
 +		t.Run(testCase.name, func(t *testing.T) {
@@ -3413,7 +5138,12 @@ index 0000000..16e1f3d
 +		return nil
 +	}
 +	recordProjectEnrichmentFailure(errors.New("projects scope required"))
-+	if _, err := FetchProjectItemsFull("issue-1"); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
++	if _, err := FetchProjectItemsFull(
++		"issue-1",
++	); !errors.Is(
++		err,
++		ErrProjectEnrichmentUnavailable,
++	) {
 +		t.Fatalf("full preview error = %v", err)
 +	}
 +	if _, err := FetchProjectFields("project-1"); !errors.Is(err, ErrProjectEnrichmentUnavailable) {
@@ -3469,7 +5199,9 @@ index 0000000..16e1f3d
 +			status = "Review"
 +		}
 +		for contentID := range items {
-+			items[contentID].Nodes[0].FieldValues = ProjectFieldValues(singleSelect("Status", status))
++			items[contentID].Nodes[0].FieldValues = ProjectFieldValues(
++				singleSelect("Status", status),
++			)
 +		}
 +		return items, nil
 +	}
@@ -3498,13 +5230,29 @@ index 0000000..16e1f3d
 +func projectItemsFor(contentIDs []string) map[string]ProjectItems {
 +	items := make(map[string]ProjectItems, len(contentIDs))
 +	for _, contentID := range contentIDs {
-+		items[contentID] = ProjectItems{Nodes: []ProjectItem{{ID: "item-" + contentID, Project: Project{ID: "project-1", Title: "Roadmap"}, FieldValues: ProjectFieldValues(singleSelect("Status", "Ready"))}}}
++		items[contentID] = ProjectItems{
++			Nodes: []ProjectItem{
++				{
++					ID:          "item-" + contentID,
++					Project:     Project{ID: "project-1", Title: "Roadmap"},
++					FieldValues: ProjectFieldValues(singleSelect("Status", "Ready")),
++				},
++			},
++		}
 +	}
 +	return items
 +}
 +
 +func TestUpdateProjectFieldRejectsInvalidNumberBeforeNetwork(t *testing.T) {
-+	if err := UpdateProjectField("content", "project", "item", "field", "NUMBER", "not-a-number"); err == nil || !strings.Contains(err.Error(), "numeric") {
++	if err := UpdateProjectField(
++		"content",
++		"project",
++		"item",
++		"field",
++		"NUMBER",
++		"not-a-number",
++	); err == nil ||
++		!strings.Contains(err.Error(), "numeric") {
 +		t.Fatalf("got %v", err)
 +	}
 +}
@@ -3512,11 +5260,14 @@ index 0000000..16e1f3d
 +func singleSelect(name, value string) ProjectFieldValue {
 +	var ref ProjectFieldRef
 +	ref.Common.Name = name
-+	return ProjectFieldValue{Typename: "ProjectV2ItemFieldSingleSelectValue", SingleSelectValue: struct {
-+		Field    ProjectFieldRef
-+		Name     string
-+		OptionID string
-+	}{ref, value, value + "-id"}}
++	return ProjectFieldValue{
++		Typename: "ProjectV2ItemFieldSingleSelectValue",
++		SingleSelectValue: struct {
++			Field    ProjectFieldRef
++			Name     string
++			OptionID string
++		}{ref, value, value + "-id"},
++	}
 +}
 +
 +func projectOwner(login string) ProjectOwner {
@@ -3527,7 +5278,7 @@ index 0000000..16e1f3d
 +	return struct{ Nodes []ProjectFieldValue }{values}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index e7cf4ec..528c07b 100644
+index e7cf4ec..f7de54e 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -20,7 +20,7 @@ type Issue struct {
@@ -3539,19 +5290,23 @@ index e7cf4ec..528c07b 100644
  		issue.renderStatus(),
  		issue.renderRepoName(),
  		issue.renderTitle(),
-@@ -31,6 +31,10 @@ func (issue *Issue) ToTableRow() table.Row {
+@@ -31,6 +31,14 @@ func (issue *Issue) ToTableRow() table.Row {
  		issue.renderUpdateAt(),
  		issue.renderCreatedAt(),
  	}
 +	for _, column := range issue.Ctx.Config.Defaults.Layout.Projects.Fields {
-+		row = append(row, issue.getTextStyle().Render(data.FormatProjectField(issue.Data.ProjectItems.Nodes, data.ProjectColumn{Name: column.Name, FieldID: column.FieldID, Project: column.Project})))
++		row = append(
++			row,
++			issue.getTextStyle().
++				Render(data.FormatProjectFieldForItems(issue.Data.ProjectItems, data.ProjectColumn{Name: column.Name, FieldID: column.FieldID, Project: column.Project})),
++		)
 +	}
 +	return row
  }
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664..e256002 100644
+index f421664..53df4fe 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,8 @@ import (
@@ -3563,7 +5318,7 @@ index f421664..e256002 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tasks"
-@@ -152,6 +154,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -152,6 +154,31 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			}
  		}
  
@@ -3575,8 +5330,18 @@ index f421664..e256002 100644
 +			break
 +		}
 +		for i := range m.Issues {
-+			if data.ProjectUpdateTargets(msg.ContentID, msg.Repository, msg.ItemNumber, m.Issues[i].ID, m.Issues[i].Repository.NameWithOwner, m.Issues[i].Number) {
-+				m.Issues[i].ProjectItems.Nodes = data.ReplaceProjectItems(m.Issues[i].ProjectItems.Nodes, msg.ProjectItems)
++			if data.ProjectUpdateTargets(
++				msg.ContentID,
++				msg.Repository,
++				msg.ItemNumber,
++				m.Issues[i].ID,
++				m.Issues[i].Repository.NameWithOwner,
++				m.Issues[i].Number,
++			) {
++				m.Issues[i].ProjectItems.Nodes = data.ReplaceProjectItems(
++					m.Issues[i].ProjectItems.Nodes,
++					msg.ProjectItems,
++				)
 +				m.Table.SetRows(m.BuildRows())
 +				break
 +			}
@@ -3585,7 +5350,38 @@ index f421664..e256002 100644
  	case SectionIssuesFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -212,7 +229,7 @@ func GetSectionColumns(
+@@ -165,7 +192,30 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+ 			m.Table.SetRows(m.BuildRows())
+ 			m.UpdateLastUpdated(time.Now())
+ 			m.UpdateTotalItemsCount(m.TotalCount)
++			if m.Ctx.Config.Defaults.Layout.Projects.Enabled {
++				cmd = tea.Batch(cmd, m.revalidateProjects(msg.Issues, msg.TaskId))
++			}
++		}
++
++	case SectionProjectsFetchedMsg:
++		if m.LastFetchTaskId != msg.TaskId || msg.Generation != data.ProjectRefreshGeneration() {
++			break
++		}
++		for index := range m.Issues {
++			if items, ok := msg.Items[m.Issues[index].ID]; ok {
++				items.State = data.ProjectStateLiveVerified
++				m.Issues[index].ProjectItems = items
++			} else if msg.Err != nil {
++				if len(m.Issues[index].ProjectItems.Nodes) == 0 {
++					m.Issues[index].ProjectItems.State = data.ProjectStateError
++				}
++			} else {
++				m.Issues[index].ProjectItems = data.ProjectItems{
++					State: data.ProjectStateLiveVerified,
++				}
++			}
+ 		}
++		m.Table.SetRows(m.BuildRows())
+ 	}
+ 
+ 	search, searchCmd := m.SearchBar.Update(msg)
+@@ -212,7 +262,7 @@ func GetSectionColumns(
  		sLayout.Reactions,
  	)
  
@@ -3594,7 +5390,7 @@ index f421664..e256002 100644
  		{
  			Title:  "",
  			Width:  stateLayout.Width,
-@@ -259,6 +276,23 @@ func GetSectionColumns(
+@@ -259,6 +309,23 @@ func GetSectionColumns(
  			Hidden: createdAtLayout.Hidden,
  		},
  	}
@@ -3618,17 +5414,66 @@ index f421664..e256002 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -323,7 +357,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -323,7 +390,17 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  		if limit == nil {
  			limit = &m.Ctx.Config.Defaults.IssuesLimit
  		}
 -		res, err := data.FetchIssues(m.GetFilters(), *limit, m.PageInfo)
-+		res, err := data.FetchAllIssues(m.GetFilters(), *limit, m.Ctx.Config.Defaults.Layout.Projects.Enabled, projectcolumns.Configured(m.Ctx))
++		var pageInfo *data.PageInfo
++		if m.PageInfo != nil {
++			pageInfo = m.PageInfo
++		}
++		res, err := data.FetchIssues(
++			m.GetFilters(),
++			*limit,
++			pageInfo,
++			m.Ctx.Config.Defaults.Layout.Projects.Enabled,
++			projectcolumns.Configured(m.Ctx),
++		)
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
+@@ -350,6 +427,24 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+ 	return cmds
+ }
+ 
++func (m *Model) revalidateProjects(issues []data.IssueData, taskID string) tea.Cmd {
++	ids := make([]string, 0, len(issues))
++	for _, issue := range issues {
++		ids = append(ids, issue.ID)
++	}
++	columns := projectcolumns.Configured(m.Ctx)
++	generation := data.ProjectRefreshGeneration()
++	return func() tea.Msg {
++		items, err := data.RevalidateProjectItems(ids, columns)
++		return SectionProjectsFetchedMsg{
++			Items:      items,
++			Err:        err,
++			TaskId:     taskID,
++			Generation: generation,
++		}
++	}
++}
++
+ func (m *Model) UpdateLastUpdated(t time.Time) {
+ 	m.Table.UpdateLastUpdated(t)
+ }
+@@ -391,6 +486,13 @@ type SectionIssuesFetchedMsg struct {
+ 	TaskId     string
+ }
+ 
++type SectionProjectsFetchedMsg struct {
++	Items      map[string]data.ProjectItems
++	Err        error
++	TaskId     string
++	Generation uint64
++}
++
+ func addAssignees(assignees, addedAssignees []data.Assignee) []data.Assignee {
+ 	newAssignees := assignees
+ 	for _, assignee := range addedAssignees {
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 494ec4c..b00be04 100644
+index 494ec4c..4e08da6 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -17,6 +17,7 @@ import (
@@ -3713,7 +5558,7 @@ index 494ec4c..b00be04 100644
  }
  
  func (m *Model) SetSectionId(id int) {
-@@ -268,18 +296,71 @@ func (m *Model) SetSectionId(id int) {
+@@ -268,18 +296,77 @@ func (m *Model) SetSectionId(id int) {
  func (m *Model) SetRow(data *data.IssueData) {
  	if data == nil {
  		m.issue = nil
@@ -3756,11 +5601,7 @@ index 494ec4c..b00be04 100644
 +		}
 +		return m.ctx.Styles.Common.ErrorStyle.Render(message)
 +	case projectPreviewReady:
-+		projects := data.RenderProjectItems(m.issue.Data.ProjectItems.Nodes)
-+		if projects == "" {
-+			projects = "none"
-+		}
-+		return "Projects\n" + projects
++		return data.RenderProjectPresentation(m.issue.Data.ProjectItems)
 +	default:
 +		return ""
 +	}
@@ -3772,10 +5613,20 @@ index 494ec4c..b00be04 100644
 +}
 +
 +func (m *Model) StartProjectEdit() {
-+	if m.issue == nil || len(m.issue.Data.ProjectItems.Nodes) == 0 || !m.ctx.Config.Defaults.Layout.Projects.Enabled {
++	if m.issue == nil || len(m.issue.Data.ProjectItems.Nodes) == 0 ||
++		m.issue.Data.ProjectItems.State != data.ProjectStateLiveVerified ||
++		!m.ctx.Config.Defaults.Layout.Projects.Enabled {
 +		return
 +	}
-+	m.projectEditor = projecteditor.New(m.ctx, issuessection.SectionType, m.sectionId, m.issue.Data.Number, m.issue.Data.ID, m.issue.Data.Repository.NameWithOwner, m.issue.Data.ProjectItems.Nodes)
++	m.projectEditor = projecteditor.New(
++		m.ctx,
++		issuessection.SectionType,
++		m.sectionId,
++		m.issue.Data.Number,
++		m.issue.Data.ID,
++		m.issue.Data.Repository.NameWithOwner,
++		m.issue.Data.ProjectItems.Nodes,
++	)
 +	m.projectEditor.SetWidth(m.width)
  }
  
@@ -3787,7 +5638,7 @@ index 494ec4c..b00be04 100644
  	// TODO: move this to the NewModel func
  	// currently it's not possible since the styles aren't yet instantiated when NewModel is called
 diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
-index 6996626..774159f 100644
+index 6996626..3cc5bc0 100644
 --- a/internal/tui/components/issueview/issueview_test.go
 +++ b/internal/tui/components/issueview/issueview_test.go
 @@ -1,6 +1,8 @@
@@ -3799,7 +5650,7 @@ index 6996626..774159f 100644
  	"testing"
  
  	"github.com/stretchr/testify/require"
-@@ -51,3 +53,59 @@ func TestRenderBodyDoesNotPanicBeforeContextSync(t *testing.T) {
+@@ -51,3 +53,64 @@ func TestRenderBodyDoesNotPanicBeforeContextSync(t *testing.T) {
  		_ = m.renderBody()
  	})
  }
@@ -3820,13 +5671,16 @@ index 6996626..774159f 100644
 +	ctx.Config.Defaults.Layout.Projects.Enabled = true
 +	m := NewModel(ctx)
 +	m.SetWidth(80)
-+	listOnly := data.ProjectItems{Nodes: []data.ProjectItem{projectItemWithFields("Status", "Inbox")}}
++	listOnly := data.ProjectItems{
++		Nodes: []data.ProjectItem{projectItemWithFields("Status", "Inbox")},
++	}
 +	m.SetRow(&data.IssueData{ID: "issue-1", Title: "Example issue", Body: "Details"})
 +	m.SetProjectPreviewLoading()
 +	// The cheap list result is deliberately not installed into the selected
 +	// preview while the authoritative request is pending.
 +	m.issue.Data.ProjectItems = listOnly
-+	if got := m.renderProjectPreview(); !strings.Contains(got, "Projects: loading…") || strings.Contains(got, "Inbox") {
++	if got := m.renderProjectPreview(); !strings.Contains(got, "Projects: loading…") ||
++		strings.Contains(got, "Inbox") {
 +		t.Fatalf("loading preview = %q", got)
 +	}
 +}
@@ -3837,7 +5691,9 @@ index 6996626..774159f 100644
 +	m := NewModel(ctx)
 +	m.SetWidth(80)
 +	m.SetRow(&data.IssueData{ID: "issue-1", Title: "Example issue", Body: "Details"})
-+	full := data.ProjectItems{Nodes: []data.ProjectItem{projectItemWithFields("Status", "Review", "Area", "Platform")}}
++	full := data.ProjectItems{
++		Nodes: []data.ProjectItem{projectItemWithFields("Status", "Review", "Area", "Platform")},
++	}
 +	m.SetProjectPreviewReady(full)
 +	ready := m.renderProjectPreview()
 +	if ready == "" || !containsAll(ready, "Review", "Platform") {
@@ -3860,20 +5716,22 @@ index 6996626..774159f 100644
 +	return true
 +}
 diff --git a/internal/tui/components/notificationssection/notificationssection.go b/internal/tui/components/notificationssection/notificationssection.go
-index e25424c..dc37ef9 100644
+index e25424c..692ac35 100644
 --- a/internal/tui/components/notificationssection/notificationssection.go
 +++ b/internal/tui/components/notificationssection/notificationssection.go
-@@ -28,6 +28,9 @@ const SectionType = "notification"
+@@ -28,6 +28,11 @@ const SectionType = "notification"
  // repoFilterRegex matches "repo:owner/name" patterns in search strings
  var repoFilterRegex = regexp.MustCompile(`repo:([^\s]+)`)
  
-+var fetchNotificationPullRequest = data.FetchPullRequest
-+var fetchNotificationIssue = data.FetchIssue
++var (
++	fetchNotificationPullRequest = data.FetchPullRequest
++	fetchNotificationIssue       = data.FetchIssue
++)
 +
  // stateFilterRegex matches "is:unread", "is:read", "is:done", "is:all" patterns
  var stateFilterRegex = regexp.MustCompile(`is:(unread|read|done|all)`)
  
-@@ -970,7 +973,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -970,7 +975,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching PR for comment count", "url", url)
@@ -3882,7 +5740,7 @@ index e25424c..dc37ef9 100644
  				if err != nil {
  					log.Error("Failed to fetch PR for comment count", "url", url, "err", err)
  					return nil
-@@ -1004,7 +1007,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -1004,7 +1009,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching Issue for comment count", "url", url)
@@ -3893,16 +5751,14 @@ index e25424c..dc37ef9 100644
  					return nil
 diff --git a/internal/tui/components/notificationssection/notificationssection_test.go b/internal/tui/components/notificationssection/notificationssection_test.go
 new file mode 100644
-index 0000000..88b36f7
+index 0000000..6580bc2
 --- /dev/null
 +++ b/internal/tui/components/notificationssection/notificationssection_test.go
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,60 @@
 +package notificationssection
 +
 +import (
 +	"testing"
-+
-+	tea "charm.land/bubbletea/v2"
 +
 +	"github.com/dlvhdr/gh-dash/v4/internal/data"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationrow"
@@ -3924,8 +5780,24 @@ index 0000000..88b36f7
 +	}
 +	m := Model{}
 +	notifications := []notificationrow.Data{
-+		{Notification: data.NotificationData{Id: "pr", Subject: data.NotificationSubject{Type: "PullRequest", Url: "https://github.com/owner/repo/pull/1"}}},
-+		{Notification: data.NotificationData{Id: "issue", Subject: data.NotificationSubject{Type: "Issue", Url: "https://github.com/owner/repo/issues/2"}}},
++		{
++			Notification: data.NotificationData{
++				Id: "pr",
++				Subject: data.NotificationSubject{
++					Type: "PullRequest",
++					Url:  "https://github.com/owner/repo/pull/1",
++				},
++			},
++		},
++		{
++			Notification: data.NotificationData{
++				Id: "issue",
++				Subject: data.NotificationSubject{
++					Type: "Issue",
++					Url:  "https://github.com/owner/repo/issues/2",
++				},
++			},
++		},
 +	}
 +	cmds := m.fetchCommentCountsForNotifications(notifications)
 +	if len(cmds) != 2 {
@@ -3937,8 +5809,6 @@ index 0000000..88b36f7
 +		}
 +		if msg := cmd(); msg == nil {
 +			t.Fatal("background comment command returned nil")
-+		} else if _, ok := msg.(tea.Msg); !ok {
-+			t.Fatalf("background message has type %T", msg)
 +		}
 +	}
 +	if calls != 2 {
@@ -3947,10 +5817,10 @@ index 0000000..88b36f7
 +}
 diff --git a/internal/tui/components/projectcolumns/projectcolumns.go b/internal/tui/components/projectcolumns/projectcolumns.go
 new file mode 100644
-index 0000000..7fd8436
+index 0000000..def202f
 --- /dev/null
 +++ b/internal/tui/components/projectcolumns/projectcolumns.go
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,24 @@
 +package projectcolumns
 +
 +import (
@@ -3968,16 +5838,19 @@ index 0000000..7fd8436
 +		if field.Hidden != nil && *field.Hidden {
 +			continue
 +		}
-+		columns = append(columns, data.ProjectColumn{Name: field.Name, FieldID: field.FieldID, Project: field.Project})
++		columns = append(
++			columns,
++			data.ProjectColumn{Name: field.Name, FieldID: field.FieldID, Project: field.Project},
++		)
 +	}
 +	return columns
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..da1a811
+index 0000000..d4f82aa
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,283 @@
+@@ -0,0 +1,324 @@
 +package projecteditor
 +
 +import (
@@ -4043,13 +5916,30 @@ index 0000000..da1a811
 +	active      bool
 +}
 +
-+func New(ctx *context.ProgramContext, sectionType string, sectionID, number int, contentID, repository string, items []data.ProjectItem) Model {
++func New(
++	ctx *context.ProgramContext,
++	sectionType string,
++	sectionID, number int,
++	contentID, repository string,
++	items []data.ProjectItem,
++) Model {
 +	input := inputbox.NewModel(ctx, inputbox.ModelOpts{TextArea: func() *textarea.Model {
 +		ta := inputbox.DefaultTextArea(ctx)
 +		return &ta
 +	}()})
 +	input.SetHeight(4)
-+	return Model{ctx: ctx, sectionType: sectionType, sectionID: sectionID, itemNumber: number, contentID: contentID, repository: repository, items: items, mode: modeProjects, input: input, active: true}
++	return Model{
++		ctx:         ctx,
++		sectionType: sectionType,
++		sectionID:   sectionID,
++		itemNumber:  number,
++		contentID:   contentID,
++		repository:  repository,
++		items:       items,
++		mode:        modeProjects,
++		input:       input,
++		active:      true,
++	}
 +}
 +
 +func (m Model) Active() bool { return m.active && m.mode != mode(-1) }
@@ -4192,7 +6082,14 @@ index 0000000..da1a811
 +	project := m.currentProject()
 +	field := m.fields[m.field]
 +	return func() tea.Msg {
-+		err := data.UpdateProjectField(m.contentID, project.Project.ID, project.ID, field.ID, field.Type, value)
++		err := data.UpdateProjectField(
++			m.contentID,
++			project.Project.ID,
++			project.ID,
++			field.ID,
++			field.Type,
++			value,
++		)
 +		var projectItems data.ProjectItems
 +		if err == nil {
 +			refreshed, refreshErr := data.FetchProjectItemsFull(m.contentID)
@@ -4202,7 +6099,20 @@ index 0000000..da1a811
 +				projectItems = refreshed
 +			}
 +		}
-+		return ProjectFieldUpdatedMsg{SectionType: m.sectionType, SectionID: m.sectionID, ContentID: m.contentID, Repository: m.repository, ItemNumber: m.itemNumber, ProjectID: project.Project.ID, ItemID: project.ID, FieldID: field.ID, FieldName: field.Name, Value: displayValue, ProjectItems: projectItems, Err: err}
++		return ProjectFieldUpdatedMsg{
++			SectionType:  m.sectionType,
++			SectionID:    m.sectionID,
++			ContentID:    m.contentID,
++			Repository:   m.repository,
++			ItemNumber:   m.itemNumber,
++			ProjectID:    project.Project.ID,
++			ItemID:       project.ID,
++			FieldID:      field.ID,
++			FieldName:    field.Name,
++			Value:        displayValue,
++			ProjectItems: projectItems,
++			Err:          err,
++		}
 +	}
 +}
 +
@@ -4250,23 +6160,27 @@ index 0000000..da1a811
 +	}
 +	for i, value := range values {
 +		prefix := "  "
-+		if (m.mode == modeProjects && i == m.project) || (m.mode == modeFields && i == m.field) || (m.mode == modeOptions && i == m.option) {
++		if (m.mode == modeProjects && i == m.project) || (m.mode == modeFields && i == m.field) ||
++			(m.mode == modeOptions && i == m.option) {
 +			prefix = "> "
 +		}
 +		lines = append(lines, prefix+value)
 +	}
 +	if m.status != "" {
-+		lines = append(lines, lipgloss.NewStyle().Foreground(m.ctx.Theme.ErrorText).Render(m.status))
++		lines = append(
++			lines,
++			lipgloss.NewStyle().Foreground(m.ctx.Theme.ErrorText).Render(m.status),
++		)
 +	}
 +	lines = append(lines, "↑/↓ select · Enter choose · Esc cancel")
 +	return strings.Join(lines, "\n")
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000..a0aa6b3
+index 0000000..98e0ad0
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,60 @@
 +package projecteditor
 +
 +import (
@@ -4295,7 +6209,10 @@ index 0000000..a0aa6b3
 +
 +func TestEditorFlowChoosesProjectThenSingleSelectOption(t *testing.T) {
 +	ctx := newEditorTestContext(t)
-+	item := data.ProjectItem{ID: "item-1", Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"}}
++	item := data.ProjectItem{
++		ID:      "item-1",
++		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
++	}
 +	m := New(ctx, "issue", 3, 7, "issue-1", "owner/repo", []data.ProjectItem{item})
 +
 +	var cmd tea.Cmd
@@ -4325,7 +6242,7 @@ index 0000000..a0aa6b3
 +	require.Equal(t, []string{"E"}, keys.IssueKeys.EditProject.Keys())
 +}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
-index 1b2b493..f7ff978 100644
+index 1b2b493..8a10c0c 100644
 --- a/internal/tui/components/prrow/prrow.go
 +++ b/internal/tui/components/prrow/prrow.go
 @@ -8,6 +8,7 @@ import (
@@ -4347,7 +6264,7 @@ index 1b2b493..f7ff978 100644
  			pr.renderState(),
  			pr.renderExtendedTitle(isSelected),
  			pr.renderLabels(isSelected),
-@@ -399,21 +401,29 @@ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
+@@ -399,21 +401,33 @@ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
  			pr.renderUpdateAt(),
  			pr.renderCreatedAt(),
  		}
@@ -4385,7 +6302,11 @@ index 1b2b493..f7ff978 100644
 -		pr.renderCreatedAt(),
 +	for _, column := range pr.Ctx.Config.Defaults.Layout.Projects.Fields {
 +		if pr.Data.Primary != nil {
-+			row = append(row, pr.getTextStyle().Render(data.FormatProjectField(pr.Data.Primary.ProjectItems.Nodes, data.ProjectColumn{Name: column.Name, FieldID: column.FieldID, Project: column.Project})))
++			row = append(
++				row,
++				pr.getTextStyle().
++					Render(data.FormatProjectFieldForItems(pr.Data.Primary.ProjectItems, data.ProjectColumn{Name: column.Name, FieldID: column.FieldID, Project: column.Project})),
++			)
 +		} else {
 +			row = append(row, "")
 +		}
@@ -4393,7 +6314,7 @@ index 1b2b493..f7ff978 100644
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996b..4890a4c 100644
+index 08e996b..d939212 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,8 @@ import (
@@ -4405,7 +6326,7 @@ index 08e996b..4890a4c 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
-@@ -196,6 +198,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -196,6 +198,32 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			break
  		}
  
@@ -4417,8 +6338,19 @@ index 08e996b..4890a4c 100644
 +			break
 +		}
 +		for i := range m.Prs {
-+			if m.Prs[i].Primary != nil && data.ProjectUpdateTargets(msg.ContentID, msg.Repository, msg.ItemNumber, m.Prs[i].Primary.ID, m.Prs[i].Primary.Repository.NameWithOwner, m.Prs[i].Primary.Number) {
-+				m.Prs[i].Primary.ProjectItems.Nodes = data.ReplaceProjectItems(m.Prs[i].Primary.ProjectItems.Nodes, msg.ProjectItems)
++			if m.Prs[i].Primary != nil &&
++				data.ProjectUpdateTargets(
++					msg.ContentID,
++					msg.Repository,
++					msg.ItemNumber,
++					m.Prs[i].Primary.ID,
++					m.Prs[i].Primary.Repository.NameWithOwner,
++					m.Prs[i].Primary.Number,
++				) {
++				m.Prs[i].Primary.ProjectItems.Nodes = data.ReplaceProjectItems(
++					m.Prs[i].Primary.ProjectItems.Nodes,
++					msg.ProjectItems,
++				)
 +				m.Table.SetRows(m.BuildRows())
 +				break
 +			}
@@ -4427,7 +6359,41 @@ index 08e996b..4890a4c 100644
  	case SectionPullRequestsFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -273,7 +290,7 @@ func GetSectionColumns(
+@@ -209,7 +237,33 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+ 			m.Table.SetRows(m.BuildRows())
+ 			m.Table.UpdateLastUpdated(time.Now())
+ 			m.UpdateTotalItemsCount(m.TotalCount)
++			if m.Ctx.Config.Defaults.Layout.Projects.Enabled {
++				cmd = tea.Batch(cmd, m.revalidateProjects(msg.Prs, msg.TaskId))
++			}
++		}
++
++	case SectionProjectsFetchedMsg:
++		if m.LastFetchTaskId != msg.TaskId || msg.Generation != data.ProjectRefreshGeneration() {
++			break
++		}
++		for index := range m.Prs {
++			if m.Prs[index].Primary == nil {
++				continue
++			}
++			if items, ok := msg.Items[m.Prs[index].Primary.ID]; ok {
++				items.State = data.ProjectStateLiveVerified
++				m.Prs[index].Primary.ProjectItems = items
++			} else if msg.Err != nil {
++				if len(m.Prs[index].Primary.ProjectItems.Nodes) == 0 {
++					m.Prs[index].Primary.ProjectItems.State = data.ProjectStateError
++				}
++			} else {
++				m.Prs[index].Primary.ProjectItems = data.ProjectItems{
++					State: data.ProjectStateLiveVerified,
++				}
++			}
+ 		}
++		m.Table.SetRows(m.BuildRows())
+ 	}
+ 
+ 	search, searchCmd := m.SearchBar.Update(msg)
+@@ -273,7 +327,7 @@ func GetSectionColumns(
  	linesLayout := config.MergeColumnConfigs(dLayout.Lines, sLayout.Lines)
  
  	if !ctx.Config.Theme.Ui.Table.Compact {
@@ -4436,7 +6402,7 @@ index 08e996b..4890a4c 100644
  			{
  				Title:  "",
  				Width:  utils.IntPtr(3),
-@@ -330,10 +347,10 @@ func GetSectionColumns(
+@@ -330,10 +384,10 @@ func GetSectionColumns(
  				Width:  createdAtLayout.Width,
  				Hidden: createdAtLayout.Hidden,
  			},
@@ -4449,7 +6415,7 @@ index 08e996b..4890a4c 100644
  		{
  			Title:  "",
  			Width:  utils.IntPtr(3),
-@@ -400,7 +417,23 @@ func GetSectionColumns(
+@@ -400,7 +454,23 @@ func GetSectionColumns(
  			Width:  createdAtLayout.Width,
  			Hidden: createdAtLayout.Hidden,
  		},
@@ -4473,21 +6439,68 @@ index 08e996b..4890a4c 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -482,7 +515,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -436,6 +506,13 @@ type SectionPullRequestsFetchedMsg struct {
+ 	TaskId     string
+ }
+ 
++type SectionProjectsFetchedMsg struct {
++	Items      map[string]data.ProjectItems
++	Err        error
++	TaskId     string
++	Generation uint64
++}
++
+ func (m *Model) GetCurrRow() data.RowData {
+ 	idx := m.Table.GetCurrItem()
+ 	if idx < 0 || idx >= len(m.Prs) {
+@@ -482,7 +559,13 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  			limit = &m.Ctx.Config.Defaults.PrsLimit
  		}
  
 -		res, err := data.FetchPullRequests(m.GetFilters(), *limit, m.PageInfo)
-+		res, err := data.FetchPullRequests(m.GetFilters(), *limit, m.PageInfo, m.Ctx.Config.Defaults.Layout.Projects.Enabled, projectcolumns.Configured(m.Ctx))
++		res, err := data.FetchPullRequests(
++			m.GetFilters(),
++			*limit,
++			m.PageInfo,
++			m.Ctx.Config.Defaults.Layout.Projects.Enabled,
++			projectcolumns.Configured(m.Ctx),
++		)
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
+@@ -519,6 +602,26 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+ 	return cmds
+ }
+ 
++func (m *Model) revalidateProjects(prs []prrow.Data, taskID string) tea.Cmd {
++	ids := make([]string, 0, len(prs))
++	for _, pr := range prs {
++		if pr.Primary != nil {
++			ids = append(ids, pr.Primary.ID)
++		}
++	}
++	columns := projectcolumns.Configured(m.Ctx)
++	generation := data.ProjectRefreshGeneration()
++	return func() tea.Msg {
++		items, err := data.RevalidateProjectItems(ids, columns)
++		return SectionProjectsFetchedMsg{
++			Items:      items,
++			Err:        err,
++			TaskId:     taskID,
++			Generation: generation,
++		}
++	}
++}
++
+ func (m *Model) ResetRows() {
+ 	m.Prs = nil
+ 	m.BaseModel.ResetRows()
 diff --git a/internal/tui/components/prview/projectpreview_test.go b/internal/tui/components/prview/projectpreview_test.go
 new file mode 100644
-index 0000000..c9c29fb
+index 0000000..973cfb9
 --- /dev/null
 +++ b/internal/tui/components/prview/projectpreview_test.go
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,91 @@
 +package prview
 +
 +import (
@@ -4506,7 +6519,12 @@ index 0000000..c9c29fb
 +
 +func newProjectPreviewTestContext(t *testing.T) *context.ProgramContext {
 +	t.Helper()
-+	cfg, err := config.ParseConfig(config.Location{ConfigFlag: "../../../config/testdata/test-config.yml", SkipGlobalConfig: true})
++	cfg, err := config.ParseConfig(
++		config.Location{
++			ConfigFlag:       "../../../config/testdata/test-config.yml",
++			SkipGlobalConfig: true,
++		},
++	)
 +	require.NoError(t, err)
 +	cfg.Defaults.Layout.Projects.Enabled = true
 +	thm := theme.ParseTheme(&cfg)
@@ -4519,14 +6537,22 @@ index 0000000..c9c29fb
 +	primary := &data.PullRequestData{ID: "pr-1", Url: "https://github.com/o/r/pull/1"}
 +	m.SetRow(&prrow.Data{Primary: primary})
 +	m.SetProjectPreviewLoading()
-+	listOnly := data.ProjectItems{Nodes: []data.ProjectItem{{Project: data.Project{Title: "Roadmap", Number: 1}}}}
++	listOnly := data.ProjectItems{
++		Nodes: []data.ProjectItem{{Project: data.Project{Title: "Roadmap", Number: 1}}},
++	}
 +	m.pr.Data.Primary.ProjectItems = listOnly
 +	require.Contains(t, stripANSI(m.renderProjectPreview()), "Projects: loading…")
 +
 +	m.SetProjectPreviewError(errors.New("temporary network failure"))
-+	require.Contains(t, stripANSI(m.renderProjectPreview()), "Projects unavailable: temporary network failure")
++	require.Contains(
++		t,
++		stripANSI(m.renderProjectPreview()),
++		"Projects unavailable: temporary network failure",
++	)
 +
-+	full := data.ProjectItems{Nodes: []data.ProjectItem{{Project: data.Project{Title: "Roadmap", Number: 1}}}}
++	full := data.ProjectItems{
++		Nodes: []data.ProjectItem{{Project: data.Project{Title: "Roadmap", Number: 1}}},
++	}
 +	m.SetProjectPreviewReady(full)
 +	require.True(t, strings.Contains(stripANSI(m.renderProjectPreview()), "Projects"))
 +}
@@ -4544,7 +6570,11 @@ index 0000000..c9c29fb
 +
 +	m.SetRow(pr("a"))
 +	m.SetProjectPreviewLoading()
-+	require.NotNil(t, m.EnrichCurrRow(), "an already-enriched PR still needs a Project preview request")
++	require.NotNil(
++		t,
++		m.EnrichCurrRow(),
++		"an already-enriched PR still needs a Project preview request",
++	)
 +	firstGeneration := m.enrichGeneration
 +	require.True(t, m.AcceptsProjectPreview("a", firstGeneration))
 +
@@ -4563,7 +6593,7 @@ index 0000000..c9c29fb
 +	return value
 +}
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9..3fb372a 100644
+index 470d9f9..44ddf9e 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -4618,17 +6648,24 @@ index 470d9f9..3fb372a 100644
  
  var tabs = []string{" Overview", " Activity", " Commits", " Checks", " Files Changed"}
  
-@@ -62,6 +77,20 @@ func NewModel(ctx *context.ProgramContext) Model {
+@@ -62,6 +77,27 @@ func NewModel(ctx *context.ProgramContext) Model {
  }
  
  func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 +	if request, ok := msg.(enrichPrRequestMsg); ok {
-+		if request.Generation != m.enrichGeneration || m.pr == nil || m.pr.Data.Primary == nil || m.pr.Data.Primary.Url != request.URL {
++		if request.Generation != m.enrichGeneration || m.pr == nil || m.pr.Data.Primary == nil ||
++			m.pr.Data.Primary.Url != request.URL {
 +			return m, nil
 +		}
 +		return m, func() tea.Msg {
 +			d, err := data.FetchPullRequest(request.URL)
-+			return EnrichedPrMsg{Id: m.sectionId, Type: prssection.SectionType, Data: d, Err: err, Generation: request.Generation}
++			return EnrichedPrMsg{
++				Id:         m.sectionId,
++				Type:       prssection.SectionType,
++				Data:       d,
++				Err:        err,
++				Generation: request.Generation,
++			}
 +		}
 +	}
 +	if m.projectEditor.Active() {
@@ -4639,7 +6676,7 @@ index 470d9f9..3fb372a 100644
  	cmd, handled := m.editor.Update(msg)
  
  	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+d" {
-@@ -189,6 +218,11 @@ func (m *Model) viewOverviewTab() string {
+@@ -189,6 +225,11 @@ func (m *Model) viewOverviewTab() string {
  		body.WriteString(labels)
  		body.WriteString("\n\n")
  	}
@@ -4651,7 +6688,7 @@ index 470d9f9..3fb372a 100644
  
  	body.WriteString(m.renderSummary())
  	body.WriteString("\n\n")
-@@ -207,6 +241,10 @@ func (m *Model) viewOverviewTab() string {
+@@ -207,6 +248,10 @@ func (m *Model) viewOverviewTab() string {
  	if m.editor.Mode() != cmpcontroller.ModeNone {
  		body.WriteString(m.ctx.Styles.Sidebar.InputBox.Render(m.editor.View()))
  	}
@@ -4662,7 +6699,7 @@ index 470d9f9..3fb372a 100644
  
  	return body.String()
  }
-@@ -557,32 +595,111 @@ func (m *Model) SetSectionId(id int) {
+@@ -557,32 +602,110 @@ func (m *Model) SetSectionId(id int) {
  func (m *Model) SetRow(d *prrow.Data) {
  	if d == nil {
  		m.pr = nil
@@ -4705,11 +6742,7 @@ index 470d9f9..3fb372a 100644
 +		}
 +		return m.ctx.Styles.Common.ErrorStyle.Render(message)
 +	case projectPreviewReady:
-+		projects := data.RenderProjectItems(m.pr.Data.Primary.ProjectItems.Nodes)
-+		if projects == "" {
-+			projects = "none"
-+		}
-+		return "Projects\n" + projects
++		return data.RenderProjectPresentation(m.pr.Data.Primary.ProjectItems)
 +	default:
 +		return ""
 +	}
@@ -4768,26 +6801,29 @@ index 470d9f9..3fb372a 100644
 +		cmds = append(cmds, tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
 +			return enrichPrRequestMsg{Generation: generation, URL: url}
 +		}))
- 	}
++	}
 +	if m.ctx.Config.Defaults.Layout.Projects.Enabled && m.pr.Data.Primary.ID != "" {
 +		contentID := m.pr.Data.Primary.ID
 +		cmds = append(cmds, tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
 +			return ProjectPreviewRequestMsg{ContentID: contentID, Generation: generation}
 +		}))
-+	}
+ 	}
 +	return tea.Batch(cmds...)
 +}
 +
 +func (m *Model) AcceptsEnrichedPR(msg EnrichedPrMsg) bool {
-+	return msg.Generation == m.enrichGeneration && m.pr != nil && m.pr.Data.Primary != nil && m.pr.Data.Primary.Url == msg.Data.Url
++	return msg.Generation == m.enrichGeneration && m.pr != nil && m.pr.Data.Primary != nil &&
++		m.pr.Data.Primary.Url == msg.Data.Url
 +}
 +
 +func (m *Model) AcceptsProjectPreview(contentID string, generation uint64) bool {
-+	return generation == m.enrichGeneration && m.pr != nil && m.pr.Data != nil && m.pr.Data.Primary != nil && m.pr.Data.Primary.ID == contentID
++	return generation == m.enrichGeneration && m.pr != nil && m.pr.Data != nil &&
++		m.pr.Data.Primary != nil &&
++		m.pr.Data.Primary.ID == contentID
  }
  
  func (m *Model) SetWidth(width int) {
-@@ -591,15 +708,25 @@ func (m *Model) SetWidth(width int) {
+@@ -591,15 +714,36 @@ func (m *Model) SetWidth(width int) {
  	m.editor.SetWidth(
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
  	)
@@ -4800,10 +6836,21 @@ index 470d9f9..3fb372a 100644
 +}
 +
 +func (m *Model) StartProjectEdit() {
-+	if m.pr == nil || m.pr.Data == nil || m.pr.Data.Primary == nil || len(m.pr.Data.Primary.ProjectItems.Nodes) == 0 || !m.ctx.Config.Defaults.Layout.Projects.Enabled {
++	if m.pr == nil || m.pr.Data == nil || m.pr.Data.Primary == nil ||
++		len(m.pr.Data.Primary.ProjectItems.Nodes) == 0 ||
++		m.pr.Data.Primary.ProjectItems.State != data.ProjectStateLiveVerified ||
++		!m.ctx.Config.Defaults.Layout.Projects.Enabled {
 +		return
 +	}
-+	m.projectEditor = projecteditor.New(m.ctx, prssection.SectionType, m.sectionId, m.pr.Data.Primary.Number, m.pr.Data.Primary.ID, m.pr.Data.Primary.Repository.NameWithOwner, m.pr.Data.Primary.ProjectItems.Nodes)
++	m.projectEditor = projecteditor.New(
++		m.ctx,
++		prssection.SectionType,
++		m.sectionId,
++		m.pr.Data.Primary.Number,
++		m.pr.Data.Primary.ID,
++		m.pr.Data.Primary.Repository.NameWithOwner,
++		m.pr.Data.Primary.ProjectItems.Nodes,
++	)
 +	m.projectEditor.SetWidth(m.width)
  }
  
@@ -4915,7 +6962,7 @@ index 88c244f..ccbfaa0 100644
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c714..cec6271 100644
+index eb3c714..457952d 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -34,6 +34,7 @@ import (
@@ -5013,7 +7060,7 @@ index eb3c714..cec6271 100644
  		if msg.Err == nil {
  			m.prView.SetEnrichedPR(msg.Data)
  			m.prs[msg.Id].(*prssection.Model).EnrichPR(msg.Data)
-@@ -747,6 +765,84 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -747,6 +765,103 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			log.Error("failed enriching pr", "err", msg.Err)
  		}
  
@@ -5023,7 +7070,12 @@ index eb3c714..cec6271 100644
 +		}
 +		cmds = append(cmds, func() tea.Msg {
 +			items, err := data.FetchProjectItemsFull(msg.ContentID)
-+			return prview.ProjectPreviewMsg{ContentID: msg.ContentID, Generation: msg.Generation, Items: items, Err: err}
++			return prview.ProjectPreviewMsg{
++				ContentID:  msg.ContentID,
++				Generation: msg.Generation,
++				Items:      items,
++				Err:        err,
++			}
 +		})
 +
 +	case prview.ProjectPreviewMsg:
@@ -5034,7 +7086,8 @@ index eb3c714..cec6271 100644
 +			if currSection := m.getCurrSection(); currSection != nil {
 +				if prs, ok := currSection.(*prssection.Model); ok {
 +					for index := range prs.Prs {
-+						if prs.Prs[index].Primary != nil && prs.Prs[index].Primary.ID == msg.ContentID {
++						if prs.Prs[index].Primary != nil &&
++							prs.Prs[index].Primary.ID == msg.ContentID {
 +							prs.Prs[index].Primary.ProjectItems = msg.Items
 +							prs.Table.SetRows(prs.BuildRows())
 +							break
@@ -5049,16 +7102,29 @@ index eb3c714..cec6271 100644
 +		cmds = append(cmds, m.syncSidebar())
 +
 +	case issueProjectPreviewRequestMsg:
-+		if !acceptsIssueProjectPreview(m.projectPreviewGeneration, m.isCurrentIssue(msg.ContentID), msg.Generation) {
++		if !acceptsIssueProjectPreview(
++			m.projectPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
 +			break
 +		}
 +		cmds = append(cmds, func() tea.Msg {
 +			items, err := data.FetchProjectItemsFull(msg.ContentID)
-+			return issueProjectPreviewMsg{ContentID: msg.ContentID, Generation: msg.Generation, Items: items, Err: err}
++			return issueProjectPreviewMsg{
++				ContentID:  msg.ContentID,
++				Generation: msg.Generation,
++				Items:      items,
++				Err:        err,
++			}
 +		})
 +
 +	case issueProjectPreviewMsg:
-+		if !acceptsIssueProjectPreview(m.projectPreviewGeneration, m.isCurrentIssue(msg.ContentID), msg.Generation) {
++		if !acceptsIssueProjectPreview(
++			m.projectPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
 +			break
 +		}
 +		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
@@ -5098,7 +7164,7 @@ index eb3c714..cec6271 100644
  	case notificationPRFetchedMsg:
  		if msg.Err == nil {
  			// Convert enriched PR to prrow.Data for display
-@@ -760,6 +856,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -760,6 +875,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with PR view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.prView.SetSectionId(0)
@@ -5106,7 +7172,7 @@ index eb3c714..cec6271 100644
  			m.prView.SetRow(m.notificationView.GetSubjectPR())
  			m.prView.SetWidth(width)
  			m.prView.SetEnrichedPR(msg.PR)
-@@ -776,6 +873,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -776,6 +892,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.SetContent(m.prView.View())
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -5116,7 +7182,7 @@ index eb3c714..cec6271 100644
  		} else {
  			log.Error("failed fetching notification PR", "err", msg.Err)
  		}
-@@ -787,6 +887,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -787,6 +906,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with Issue view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.issueSidebar.SetSectionId(0)
@@ -5124,12 +7190,15 @@ index eb3c714..cec6271 100644
  			m.issueSidebar.SetRow(m.notificationView.GetSubjectIssue())
  			m.issueSidebar.SetWidth(width)
  			m.sidebar.SetContent(m.issueSidebar.View())
-@@ -795,10 +896,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -795,10 +915,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.ScrollToBottom()
  			}
  			m.markNotificationAsRead(msg.NotificationId)
 +			if m.ctx.Config.Defaults.Layout.Projects.Enabled {
-+				cmds = append(cmds, fetchNotificationProjectPreview(msg.NotificationId, msg.Issue.ID))
++				cmds = append(
++					cmds,
++					fetchNotificationProjectPreview(msg.NotificationId, msg.Issue.ID),
++				)
 +			}
  		} else {
  			log.Error("failed fetching notification Issue", "err", msg.Err)
@@ -5139,7 +7208,8 @@ index eb3c714..cec6271 100644
 +		if m.notificationView.GetSubjectId() != msg.NotificationId {
 +			break
 +		}
-+		if subject := m.notificationView.GetSubjectPR(); subject != nil && subject.Primary != nil && subject.Primary.ID == msg.ContentID {
++		if subject := m.notificationView.GetSubjectPR(); subject != nil && subject.Primary != nil &&
++			subject.Primary.ID == msg.ContentID {
 +			m.prView.SetRow(subject)
 +			if msg.Err != nil {
 +				m.prView.SetProjectPreviewError(msg.Err)
@@ -5149,7 +7219,8 @@ index eb3c714..cec6271 100644
 +			m.prView.SetWidth(m.sidebar.GetSidebarContentWidth())
 +			m.sidebar.SetContent(m.prView.View())
 +		}
-+		if subject := m.notificationView.GetSubjectIssue(); subject != nil && subject.ID == msg.ContentID {
++		if subject := m.notificationView.GetSubjectIssue(); subject != nil &&
++			subject.ID == msg.ContentID {
 +			if msg.Err == nil {
 +				subject.ProjectItems = msg.Items
 +			}
@@ -5166,15 +7237,7 @@ index eb3c714..cec6271 100644
  	case notificationssection.UpdateNotificationReadStateMsg:
  		m.updateNotificationSections(msg)
  
-@@ -898,6 +1030,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 		if !currSection.IsPromptConfirmationFocused() {
- 			m.footer.SetLeftSection(currSection.GetPagerContent())
- 		}
-+
- 	}
- 
- 	tm, tabsCmd := m.tabs.Update(msg)
-@@ -1025,6 +1158,44 @@ type notificationIssueFetchedMsg struct {
+@@ -1025,6 +1181,48 @@ type notificationIssueFetchedMsg struct {
  	Err              error
  }
  
@@ -5212,36 +7275,58 @@ index eb3c714..cec6271 100644
 +	Err        error
 +}
 +
-+func acceptsIssueProjectPreview(currentGeneration uint64, currentIssue bool, messageGeneration uint64) bool {
++func acceptsIssueProjectPreview(
++	currentGeneration uint64,
++	currentIssue bool,
++	messageGeneration uint64,
++) bool {
 +	return currentIssue && currentGeneration == messageGeneration
 +}
 +
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1051,14 +1222,39 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1051,14 +1249,57 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  }
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
 +	m.projectPreviewGeneration++
  	m.prView.SetSummaryViewLess()
  	m.prView.GoToFirstTab()
++	var cachedPreview data.ProjectItems
++	var hasCachedPreview bool
 +	if m.ctx.Config.Defaults.Layout.Projects.Enabled {
-+		switch m.getCurrRowData().(type) {
++		switch row := m.getCurrRowData().(type) {
 +		case *prrow.Data:
 +			m.prView.SetProjectPreviewLoading()
++			if row.Primary != nil && row.Primary.ID != "" {
++				cachedPreview, hasCachedPreview = data.HydrateFullProjectItems(row.Primary.ID)
++			}
 +		case *data.IssueData:
 +			m.issueSidebar.SetProjectPreviewLoading()
++			if row.ID != "" {
++				cachedPreview, hasCachedPreview = data.HydrateFullProjectItems(row.ID)
++			}
 +		}
 +	}
  	sidebarCmd := m.syncSidebar()
 -	enrichCmd := m.prView.EnrichCurrRow()
++	if hasCachedPreview {
++		if _, ok := m.getCurrRowData().(*prrow.Data); ok {
++			m.prView.SetProjectPreviewReady(cachedPreview)
++		} else if _, ok := m.getCurrRowData().(*data.IssueData); ok {
++			m.issueSidebar.SetProjectPreviewReady(cachedPreview)
++		}
++		sidebarCmd = tea.Batch(sidebarCmd, m.syncSidebar())
++	}
 +	var enrichCmd tea.Cmd
 +	if _, ok := m.getCurrRowData().(*prrow.Data); ok {
 +		enrichCmd = m.prView.EnrichCurrRow()
 +	}
 +	var projectCmd tea.Cmd
-+	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && m.ctx.Config.Defaults.Layout.Projects.Enabled && issue.ID != "" {
++	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
++		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
++		issue.ID != "" {
 +		contentID := issue.ID
 +		generation := m.projectPreviewGeneration
 +		projectCmd = tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
@@ -5261,7 +7346,7 @@ index eb3c714..cec6271 100644
  }
  
  func (m *Model) onWindowSizeChanged(msg tea.WindowSizeMsg) {
-@@ -1110,8 +1306,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
+@@ -1110,8 +1351,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
  
  	currSection := m.getCurrSection()
  	if currSection != nil && id == currSection.GetId() {
@@ -5274,7 +7359,7 @@ index eb3c714..cec6271 100644
  	}
  
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f..a031d9f 100644
+index e391c6f..b421ab0 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -21,6 +21,7 @@ import (
@@ -5285,7 +7370,7 @@ index e391c6f..a031d9f 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issueview"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationssection"
-@@ -168,6 +169,192 @@ func TestGetCurrentViewSections_RepoViewWithNilRepo(t *testing.T) {
+@@ -168,6 +169,203 @@ func TestGetCurrentViewSections_RepoViewWithNilRepo(t *testing.T) {
  	require.Empty(t, sections, "sections should be empty when repo is nil")
  }
  
@@ -5312,7 +7397,13 @@ index e391c6f..a031d9f 100644
 +	ctx.Theme = theme.ParseTheme(&cfg)
 +	ctx.Styles = context.InitStyles(ctx.Theme)
 +
-+	issueSection := issuessection.NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
++	issueSection := issuessection.NewModel(
++		1,
++		ctx,
++		config.IssuesSectionConfig{},
++		time.Now(),
++		time.Now(),
++	)
 +	issueSection.LastFetchTaskId = "initial"
 +	m := Model{
 +		ctx:           ctx,
@@ -5379,7 +7470,12 @@ index e391c6f..a031d9f 100644
 +	ctx.Theme = theme.ParseTheme(ctx.Config)
 +	ctx.Styles = context.InitStyles(ctx.Theme)
 +
-+	notifications := notificationssection.NewModel(0, ctx, config.NotificationsSectionConfig{}, time.Now())
++	notifications := notificationssection.NewModel(
++		0,
++		ctx,
++		config.NotificationsSectionConfig{},
++		time.Now(),
++	)
 +	notifications.Notifications = []notificationrow.Data{{
 +		Notification: data.NotificationData{
 +			Id: "notification-1",
@@ -5478,7 +7574,7 @@ index e391c6f..a031d9f 100644
  func TestPromptConfirmation_NilSection(t *testing.T) {
  	// promptConfirmation should return nil when currSection is nil
  	m := Model{}
-@@ -1191,6 +1378,41 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
+@@ -1191,6 +1389,50 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
  		"positionOverride should remain empty when sidebar is closed")
  }
  
@@ -5509,23 +7605,34 @@ index e391c6f..a031d9f 100644
 +	}
 +	issue := data.IssueData{ID: "issue-1", Number: 1}
 +	issue.Repository.NameWithOwner = "owner/repo"
-+	issue.ProjectItems.Nodes = []data.ProjectItem{{ID: "item-1", Project: data.Project{ID: "project-1", Title: "Roadmap"}}}
++	issue.ProjectItems = data.ProjectItems{
++		State: data.ProjectStateLiveVerified,
++		Nodes: []data.ProjectItem{
++			{ID: "item-1", Project: data.Project{ID: "project-1", Title: "Roadmap"}},
++		},
++	}
 +	m.issueSidebar.SetRow(&issue)
 +
 +	updated, _ := m.Update(tea.KeyPressMsg{Text: "E"})
 +	m = updated.(Model)
-+	require.True(t, m.issueSidebar.IsTextInputBoxFocused(), "the default editor key must enter the Project editor")
++	require.True(
++		t,
++		m.issueSidebar.IsTextInputBoxFocused(),
++		"the default editor key must enter the Project editor",
++	)
 +}
 +
  func TestTogglePreviewPosition_TogglesWhenSidebarOpen(t *testing.T) {
  	cfg, err := config.ParseConfig(config.Location{
  		ConfigFlag:       "../config/testdata/test-config.yml",
-@@ -1738,6 +1960,27 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
+@@ -1738,6 +1980,29 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
  		"cache should be cleared after refresh all key press")
  }
  
 +func TestScheduledRefreshAdvancesProjectGeneration(t *testing.T) {
-+	cfg, err := config.ParseConfig(config.Location{ConfigFlag: "../config/testdata/test-config.yml"})
++	cfg, err := config.ParseConfig(
++		config.Location{ConfigFlag: "../config/testdata/test-config.yml"},
++	)
 +	require.NoError(t, err)
 +	ctx := &context.ProgramContext{
 +		Config:    &cfg,
