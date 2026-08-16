@@ -1,12 +1,26 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a..46dc6e4 100644
+index a38043a..c8d0338 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
-@@ -32,6 +32,36 @@ type IssueData struct {
+@@ -32,6 +32,50 @@ type IssueData struct {
  	Reactions         IssueReactions `graphql:"reactions(first: 1)"`
  	Labels            IssueLabels    `graphql:"labels(first: 20)"`
  	ProjectItems      ProjectItems
-+	Relationships     IssueRelationships
++	Parent            *RelatedIssue
++	SubIssues         RelatedIssueConnection `graphql:"subIssues(first: 20)"`
++	SubIssuesSummary  SubIssuesSummary
++	BlockedBy         RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
++	Blocking          RelatedIssueConnection `graphql:"blocking(first: 20)"`
++}
++
++func (data IssueData) NativeRelationships() IssueRelationships {
++	return IssueRelationships{
++		Parent:           data.Parent,
++		SubIssues:        data.SubIssues,
++		SubIssuesSummary: data.SubIssuesSummary,
++		BlockedBy:        data.BlockedBy,
++		Blocking:         data.Blocking,
++	}
 +}
 +
 +// IssueRelationships is the native GitHub hierarchy/dependency view for an
@@ -39,22 +53,6 @@ index a38043a..46dc6e4 100644
  }
  
  type issueListData struct {
-@@ -52,6 +82,7 @@ type issueListData struct {
- 	Comments          IssueComments `graphql:"comments(last: 15)"`
- 	Reactions         IssueReactions
- 	Labels            IssueLabels `graphql:"labels(first: 20)"`
-+	Relationships     IssueRelationships
- }
- 
- func (data issueListData) toIssueData() IssueData {
-@@ -71,6 +102,7 @@ func (data issueListData) toIssueData() IssueData {
- 		Comments:          data.Comments,
- 		Reactions:         data.Reactions,
- 		Labels:            data.Labels,
-+		Relationships:     data.Relationships,
- 	}
- }
- 
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
 index 0000000..c642b3b
@@ -97,7 +95,7 @@ index 0000000..c642b3b
 +}
 diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
 new file mode 100644
-index 0000000..f623501
+index 0000000..bfa58a3
 --- /dev/null
 +++ b/internal/data/relationships_test.go
 @@ -0,0 +1,22 @@
@@ -107,10 +105,10 @@ index 0000000..f623501
 +
 +func TestRelationshipIndicators(t *testing.T) {
 +	r := IssueRelationships{
-+		Parent:     &RelatedIssue{Number: 1},
-+		SubIssues:  RelatedIssueConnection{TotalCount: 2},
-+		BlockedBy:  RelatedIssueConnection{TotalCount: 1},
-+		Blocking:   RelatedIssueConnection{TotalCount: 3},
++		Parent:    &RelatedIssue{Number: 1},
++		SubIssues: RelatedIssueConnection{TotalCount: 2},
++		BlockedBy: RelatedIssueConnection{TotalCount: 1},
++		Blocking:  RelatedIssueConnection{TotalCount: 3},
 +	}
 +	if got, want := r.Indicators(), "↳⊞⇠⇢"; got != want {
 +		t.Fatalf("Indicators() = %q, want %q", got, want)
@@ -124,7 +122,7 @@ index 0000000..f623501
 +	}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index f7de54e..115238a 100644
+index f7de54e..659dadd 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
@@ -138,39 +136,18 @@ index f7de54e..115238a 100644
  		issue.Data.Title,
  		issue.Data.Number,
  	)
-+	if indicators := issue.Data.Relationships.Indicators(); indicators != "" {
++	if indicators := issue.Data.NativeRelationships().Indicators(); indicators != "" {
 +		title += " " + issue.getTextStyle().Foreground(issue.Ctx.Theme.FaintText).Render(indicators)
 +	}
 +	return title
  }
  
  func (issue *Issue) renderOpenedBy() string {
-diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
-index 439f5ac..b35faab 100644
---- a/internal/tui/components/issueview/action.go
-+++ b/internal/tui/components/issueview/action.go
-@@ -12,6 +12,7 @@ const (
- 	IssueActionCheckout
- 	IssueActionClose
- 	IssueActionReopen
-+	IssueActionRelationships
- )
- 
- // IssueAction represents an action to be performed on an issue.
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 4e08da6..ef68d9d 100644
+index 4e08da6..b112d7c 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
-@@ -135,6 +135,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
- 			return m, nil, &IssueAction{Type: IssueActionClose}
- 		case key.Matches(keyMsg, keys.IssueKeys.Reopen):
- 			return m, nil, &IssueAction{Type: IssueActionReopen}
-+		case key.Matches(keyMsg, keys.IssueKeys.Relationships):
-+			return m, nil, &IssueAction{Type: IssueActionRelationships}
- 		}
- 	}
- 
-@@ -154,6 +156,12 @@ func (m Model) View() string {
+@@ -154,6 +154,12 @@ func (m Model) View() string {
  	s.WriteString(m.renderAuthor())
  	s.WriteString("\n\n")
  
@@ -183,12 +160,12 @@ index 4e08da6..ef68d9d 100644
  	labels := m.renderLabels()
  	if labels != "" {
  		s.WriteString(labels)
-@@ -180,6 +188,38 @@ func (m Model) View() string {
+@@ -180,6 +186,38 @@ func (m Model) View() string {
  	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
  }
  
 +func (m *Model) renderRelationships() string {
-+	r := m.issue.Data.Relationships
++	r := m.issue.Data.NativeRelationships()
 +	if r.Parent == nil && r.SubIssues.TotalCount == 0 && r.BlockedBy.TotalCount == 0 && r.Blocking.TotalCount == 0 {
 +		return ""
 +	}
@@ -222,44 +199,3 @@ index 4e08da6..ef68d9d 100644
  func (m *Model) ViewCompletions() string {
  	if !m.hasData() {
  		return ""
-diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f300a81..551391b 100644
---- a/internal/tui/keys/issueKeys.go
-+++ b/internal/tui/keys/issueKeys.go
-@@ -19,6 +19,7 @@ type IssueKeyMap struct {
- 	Reopen               key.Binding
- 	ToggleSmartFiltering key.Binding
- 	ViewPRs              key.Binding
-+	Relationships        key.Binding
- 	EditProject          key.Binding
- }
- 
-@@ -59,6 +60,10 @@ var IssueKeys = IssueKeyMap{
- 		key.WithKeys("s"),
- 		key.WithHelp("s", "switch to notifications"),
- 	),
-+	Relationships: key.NewBinding(
-+		key.WithKeys("g"),
-+		key.WithHelp("g", "relationships"),
-+	),
- 	EditProject: key.NewBinding(
- 		key.WithKeys("E"),
- 		key.WithHelp("E", "edit Project field"),
-@@ -76,6 +81,7 @@ func IssueFullHelp() []key.Binding {
- 		IssueKeys.Reopen,
- 		IssueKeys.ToggleSmartFiltering,
- 		IssueKeys.ViewPRs,
-+		IssueKeys.Relationships,
- 		IssueKeys.EditProject,
- 	}
- }
-@@ -123,6 +129,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
- 			key = &IssueKeys.Reopen
- 		case "viewPrs":
- 			key = &IssueKeys.ViewPRs
-+		case "relationships":
-+			key = &IssueKeys.Relationships
- 		case "editProject":
- 			key = &IssueKeys.EditProject
- 		default:
-

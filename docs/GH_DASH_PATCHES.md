@@ -41,11 +41,11 @@ and blocking relationships. The compact row glyphs are `↳` (parent), `⊞`
 (sub-issues), `⇠` (blocked by), and `⇢` (blocking). The preview includes
 repository-qualified identifiers, titles, and open/closed state, plus the
 sub-issue completion summary when GitHub provides it. Relationship failures
-remain non-fatal to ordinary issue rendering. `g` opens the relationship
-action entry point and is independently rebindable as `relationships`.
+remain non-fatal to ordinary issue rendering.
 
 No labels, issue-body conventions, Project fields, or local task database are
-used to represent these relationships.
+used to represent these relationships. Relationship editing is not included
+in this patch revision; no write is attempted from the relationship preview.
 
 ## Nix integration
 
@@ -64,10 +64,16 @@ checks.
 
 ## Validation
 
-Useful checks include:
+Useful checks include running both patches from a pristine source checkout:
 
 ```sh
-git apply --check patches/gh-dash/projects-v2.patch
-git diff --check
+src=$(mktemp -d)
+git clone --branch v4.25.2 --depth 1 https://github.com/dlvhdr/gh-dash.git "$src"
+(cd "$src" && \
+  git apply --check /path/to/.files/patches/gh-dash/projects-v2.patch && \
+  git apply /path/to/.files/patches/gh-dash/projects-v2.patch && \
+  git apply --check /path/to/.files/patches/gh-dash/issue-relationships.patch && \
+  git apply /path/to/.files/patches/gh-dash/issue-relationships.patch && \
+  git diff --check)
 nix flake check --no-build --system aarch64-darwin
 ```
