@@ -259,3 +259,192 @@ index 4e08da6..b112d7c 100644
  func (m *Model) ViewCompletions() string {
  	if !m.hasData() {
  		return ""
+diff --git a/internal/tui/ui.go b/internal/tui/ui.go
+index 457952d..d9a1851 100644
+--- a/internal/tui/ui.go
++++ b/internal/tui/ui.go
+@@ -51,26 +51,28 @@ import (
+ )
+ 
+ var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
++var fetchIssueRelationships = data.FetchIssueRelationships
+ 
+ type Model struct {
+-	keys                     *keys.KeyMap
+-	sidebar                  sidebar.Model
+-	prView                   prview.Model
+-	issueSidebar             issueview.Model
+-	branchSidebar            branchsidebar.Model
+-	notificationView         notificationview.Model
+-	currSectionId            int
+-	footer                   footer.Model
+-	repo                     section.Section
+-	prs                      []section.Section
+-	issues                   []section.Section
+-	notifications            []section.Section
+-	tabs                     tabs.Model
+-	ctx                      *context.ProgramContext
+-	taskSpinner              spinner.Model
+-	tasks                    map[string]context.Task
+-	positionOverride         string // "" means no override, "right" or "bottom"
+-	projectPreviewGeneration uint64
++	keys                          *keys.KeyMap
++	sidebar                       sidebar.Model
++	prView                        prview.Model
++	issueSidebar                  issueview.Model
++	branchSidebar                 branchsidebar.Model
++	notificationView              notificationview.Model
++	currSectionId                 int
++	footer                        footer.Model
++	repo                          section.Section
++	prs                           []section.Section
++	issues                        []section.Section
++	notifications                 []section.Section
++	tabs                          tabs.Model
++	ctx                           *context.ProgramContext
++	taskSpinner                   spinner.Model
++	tasks                         map[string]context.Task
++	positionOverride              string // "" means no override, "right" or "bottom"
++	projectPreviewGeneration      uint64
++	relationshipPreviewGeneration uint64
+ }
+ 
+ type Repositories struct {
+@@ -820,6 +822,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			}
+ 		})
+ 
++	case issueRelationshipsRequestMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		cmds = append(cmds, func() tea.Msg {
++			relationships, err := fetchIssueRelationships(msg.ContentID)
++			return issueRelationshipsMsg{
++				ContentID:     msg.ContentID,
++				Generation:    msg.Generation,
++				Relationships: relationships,
++				Err:           err,
++			}
++		})
++
++	case issueRelationshipsMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		if msg.Err != nil {
++			log.Warn("Issue relationship enrichment unavailable", "contentID", msg.ContentID, "error", msg.Err)
++			break
++		}
++		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
++			issue.Parent = msg.Relationships.Parent
++			issue.SubIssues = msg.Relationships.SubIssues
++			issue.SubIssuesSummary = msg.Relationships.SubIssuesSummary
++			issue.BlockedBy = msg.Relationships.BlockedBy
++			issue.Blocking = msg.Relationships.Blocking
++			m.issueSidebar.SetRow(issue)
++			if currSection := m.getCurrSection(); currSection != nil {
++				if issues, ok := currSection.(*issuessection.Model); ok {
++					for index := range issues.Issues {
++						if issues.Issues[index].ID == msg.ContentID {
++							issues.Issues[index] = *issue
++							issues.Table.SetRows(issues.BuildRows())
++							break
++						}
++					}
++				}
++			}
++			cmds = append(cmds, m.syncSidebar())
++		}
++
+ 	case issueProjectPreviewMsg:
+ 		if !acceptsIssueProjectPreview(
+ 			m.projectPreviewGeneration,
+@@ -1215,6 +1268,18 @@ type issueProjectPreviewMsg struct {
+ 	Err        error
+ }
+ 
++type issueRelationshipsRequestMsg struct {
++	ContentID  string
++	Generation uint64
++}
++
++type issueRelationshipsMsg struct {
++	ContentID     string
++	Generation    uint64
++	Relationships data.IssueRelationships
++	Err           error
++}
++
+ func acceptsIssueProjectPreview(
+ 	currentGeneration uint64,
+ 	currentIssue bool,
+@@ -1223,6 +1288,14 @@ func acceptsIssueProjectPreview(
+ 	return currentIssue && currentGeneration == messageGeneration
+ }
+ 
++func acceptsIssueRelationships(
++	currentGeneration uint64,
++	currentIssue bool,
++	messageGeneration uint64,
++) bool {
++	return currentIssue && currentGeneration == messageGeneration
++}
++
+ func (m *Model) setCurrSectionId(newSectionId int) {
+ 	m.currSectionId = newSectionId
+ 	m.tabs.SetCurrSectionId(newSectionId)
+@@ -1250,6 +1323,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+ 
+ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 	m.projectPreviewGeneration++
++	m.relationshipPreviewGeneration++
+ 	m.prView.SetSummaryViewLess()
+ 	m.prView.GoToFirstTab()
+ 	var cachedPreview data.ProjectItems
+@@ -1282,6 +1356,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 		enrichCmd = m.prView.EnrichCurrRow()
+ 	}
+ 	var projectCmd tea.Cmd
++	var relationshipCmd tea.Cmd
++	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && issue.ID != "" {
++		contentID := issue.ID
++		generation := m.relationshipPreviewGeneration
++		relationshipCmd = tea.Tick(0, func(time.Time) tea.Msg {
++			return issueRelationshipsRequestMsg{ContentID: contentID, Generation: generation}
++		})
++	}
+ 	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
+ 		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
+ 		issue.ID != "" {
+@@ -1294,7 +1376,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 	m.sidebar.ScrollToTop()
+ 	m.notificationView.ResetSubject()
+ 	keys.SetNotificationSubject(keys.NotificationSubjectNone)
+-	return tea.Batch(sidebarCmd, enrichCmd, projectCmd)
++	return tea.Batch(sidebarCmd, enrichCmd, projectCmd, relationshipCmd)
+ }
+ 
+ func (m *Model) isCurrentIssue(contentID string) bool {
+diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
+index b421ab0..f42eb80 100644
+--- a/internal/tui/ui_test.go
++++ b/internal/tui/ui_test.go
+@@ -2526,3 +2526,9 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestAcceptsIssueRelationshipsRejectsStaleSelection(t *testing.T) {
++	require.True(t, acceptsIssueRelationships(4, true, 4))
++	require.False(t, acceptsIssueRelationships(4, true, 3))
++	require.False(t, acceptsIssueRelationships(4, false, 4))
++}
