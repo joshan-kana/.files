@@ -245,7 +245,7 @@ def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, An
         current = data["user"]["projectV2"]
         for item in current["items"]["nodes"]:
             content = item.get("content") or {}
-            if content.get("__typename") != "Issue" or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}":
+            if content.get("__typename") not in {"Issue", "PullRequest"} or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}":
                 continue
             values: dict[str, Any] = {}
             for value in item.get("fieldValues", {}).get("nodes", []):
@@ -268,6 +268,7 @@ def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, An
             items[content["number"]] = {
                 "id": item["id"],
                 "fields": values,
+                "content_type": content["__typename"],
             }
         has_next, cursor = page_info(current["items"])
         if not has_next:
@@ -416,8 +417,13 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
             fail(f"duplicate operations target issue #{number}")
         seen.add(number)
         issue = issue_metadata(client, number, issue_cache)
-        if issue.get("pull_request"):
-            fail(f"issue #{number} is a pull request, not an issue")
+        target_is_pull_request = bool(issue.get("pull_request"))
+        relationship_keys = sorted({"blocked_by", "parent", "relates_to"} & set(operation))
+        if target_is_pull_request and relationship_keys:
+            fail(
+                f"pull request #{number} only supports project membership/field operations; "
+                f"relationship keys are not allowed: {relationship_keys}"
+            )
         ensure_project = operation.get("ensure_project", False)
         if not isinstance(ensure_project, bool):
             fail(f"operation for #{number} ensure_project must be boolean")
@@ -500,6 +506,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
         normalized.append(
             {
                 "issue": number,
+                "content_type": "PullRequest" if target_is_pull_request else "Issue",
                 "ensure_project": ensure_project,
                 "fields": requested_fields,
                 "blocked_by": blockers,
@@ -774,7 +781,9 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
 
 def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str, Any]) -> dict[str, Any]:
     project, project_items = project_data(project_client)
-    open_issues = [issue for issue in issue_list(github, "open") if not issue.get("pull_request")]
+    open_items = issue_list(github, "open")
+    open_issues = [issue for issue in open_items if not issue.get("pull_request")]
+    open_pull_requests = [issue for issue in open_items if issue.get("pull_request")]
     dependency_cache: dict[int, list[dict[str, Any]]] = {}
     parent_cache: dict[int, dict[str, Any] | None] = {}
     sub_issue_cache: dict[int, list[dict[str, Any]]] = {}
@@ -799,6 +808,16 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
                 [relationship_ref(child) for child in children], key=lambda value: value["number"]
             ),
             "relates_to": None,
+        }
+    pull_requests: dict[str, Any] = {}
+    for pull_request in open_pull_requests:
+        number = pull_request["number"]
+        item = project_items.get(number)
+        pull_requests[str(number)] = {
+            "title": pull_request["title"],
+            "state": pull_request["state"],
+            "project_item_id": item["id"] if item else None,
+            "fields": item["fields"] if item else {},
         }
     schema: dict[str, Any] = {}
     for name, field in project["fields"].items():
@@ -832,6 +851,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
             },
         },
         "issues": issues,
+        "pull_requests": pull_requests,
         "last_result": last_result,
     }
 
