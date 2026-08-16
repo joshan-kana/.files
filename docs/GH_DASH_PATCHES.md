@@ -1,6 +1,6 @@
 # gh-dash native GitHub patches
 
-`.files` applies two small downstream patches to the pinned gh-dash package.
+`.files` applies two focused downstream patches to the pinned gh-dash package.
 GitHub remains authoritative: gh-dash only presents native state and the
 Projects cache is disposable presentation data.
 

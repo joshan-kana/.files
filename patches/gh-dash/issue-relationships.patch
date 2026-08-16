@@ -1,16 +1,16 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad95a79cc8 100644
+index a38043a..a237a82 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
-@@ -32,6 +32,51 @@ type IssueData struct {
+@@ -32,6 +32,52 @@ type IssueData struct {
  	Reactions         IssueReactions `graphql:"reactions(first: 1)"`
  	Labels            IssueLabels    `graphql:"labels(first: 20)"`
  	ProjectItems      ProjectItems
 +	Parent            *RelatedIssue
-+	SubIssues         RelatedIssueConnection `graphql:"subIssues(first: 20)"`
++	SubIssues         RelatedIssueConnection `graphql:"subIssues(first: 100, after: $after)"`
 +	SubIssuesSummary  SubIssuesSummary
-+	BlockedBy         RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
-+	Blocking          RelatedIssueConnection `graphql:"blocking(first: 20)"`
++	BlockedBy         RelatedIssueConnection `graphql:"blockedBy(first: 100, after: $after)"`
++	Blocking          RelatedIssueConnection `graphql:"blocking(first: 100, after: $after)"`
 +}
 +
 +func (data IssueData) NativeRelationships() IssueRelationships {
@@ -28,10 +28,10 @@ index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad
 +// relationship semantics and writes.
 +type IssueRelationships struct {
 +	Parent           *RelatedIssue
-+	SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 20)"`
++	SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 100, after: $after)"`
 +	SubIssuesSummary SubIssuesSummary
-+	BlockedBy        RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
-+	Blocking         RelatedIssueConnection `graphql:"blocking(first: 20)"`
++	BlockedBy        RelatedIssueConnection `graphql:"blockedBy(first: 100, after: $after)"`
++	Blocking         RelatedIssueConnection `graphql:"blocking(first: 100, after: $after)"`
 +}
 +
 +type RelatedIssue struct {
@@ -46,6 +46,7 @@ index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad
 +type RelatedIssueConnection struct {
 +	Nodes      []RelatedIssue
 +	TotalCount int
++	PageInfo   PageInfo
 +}
 +
 +type SubIssuesSummary struct {
@@ -54,7 +55,7 @@ index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad
  }
  
  type issueListData struct {
-@@ -293,7 +338,64 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -293,7 +339,237 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  	}
  	log.Info("Successfully fetched Issue", "url", issueUrl)
  
@@ -93,36 +94,223 @@ index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad
 +			return IssueRelationships{}, err
 +		}
 +	}
-+	var queryResult struct {
-+		Node struct {
-+			Issue struct {
-+				Parent           *RelatedIssue
-+				SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 20)"`
-+				SubIssuesSummary SubIssuesSummary
-+				BlockedBy        RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
-+				Blocking         RelatedIssueConnection `graphql:"blocking(first: 20)"`
-+			} `graphql:"... on Issue"`
-+		} `graphql:"node(id: $id)"`
++	parent, summary, subIssues, err := fetchSubIssuesRelationships(client, issueID)
++	if err != nil {
++		return IssueRelationships{}, err
 +	}
-+	err := client.Query("FetchIssueRelationships", &queryResult, map[string]any{
-+		"id": graphql.ID(issueID),
-+	})
++	blockedBy, err := fetchBlockedByRelationships(client, issueID)
++	if err != nil {
++		return IssueRelationships{}, err
++	}
++	blocking, err := fetchBlockingRelationships(client, issueID)
 +	if err != nil {
 +		return IssueRelationships{}, err
 +	}
 +	return IssueRelationships{
-+		Parent:           queryResult.Node.Issue.Parent,
-+		SubIssues:        queryResult.Node.Issue.SubIssues,
-+		SubIssuesSummary: queryResult.Node.Issue.SubIssuesSummary,
-+		BlockedBy:        queryResult.Node.Issue.BlockedBy,
-+		Blocking:         queryResult.Node.Issue.Blocking,
++		Parent: parent, SubIssues: subIssues, SubIssuesSummary: summary,
++		BlockedBy: blockedBy, Blocking: blocking,
 +	}, nil
++}
++
++func relationshipVariables(issueID, after string) map[string]interface{} {
++	var cursor *graphql.String
++	if after != "" {
++		value := graphql.String(after)
++		cursor = &value
++	}
++	return map[string]interface{}{"id": graphql.ID(issueID), "after": cursor}
++}
++
++func fetchSubIssuesRelationships(
++	client *gh.GraphQLClient,
++	issueID string,
++) (*RelatedIssue, SubIssuesSummary, RelatedIssueConnection, error) {
++	var all RelatedIssueConnection
++	var parent *RelatedIssue
++	var summary SubIssuesSummary
++	after := ""
++	seen := map[string]bool{}
++	seenCursors := map[string]bool{"": true}
++	for {
++		var result struct {
++			Node struct {
++				Issue struct {
++					Parent           *RelatedIssue
++					SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 100, after: $after)"`
++					SubIssuesSummary SubIssuesSummary
++				} `graphql:"... on Issue"`
++			} `graphql:"node(id: $id)"`
++		}
++		if err := queryGraphQL(
++			client,
++			"FetchIssueRelationships",
++			&result,
++			relationshipVariables(issueID, after),
++		); err != nil {
++			return nil, SubIssuesSummary{}, RelatedIssueConnection{}, err
++		}
++		page := result.Node.Issue.SubIssues
++		if result.Node.Issue.Parent != nil {
++			parent = result.Node.Issue.Parent
++		}
++		if result.Node.Issue.SubIssuesSummary.Total > 0 ||
++			result.Node.Issue.SubIssuesSummary.Completed > 0 {
++			summary = result.Node.Issue.SubIssuesSummary
++		}
++		if all.TotalCount < page.TotalCount {
++			all.TotalCount = page.TotalCount
++		}
++		appendRelatedIssues(&all.Nodes, seen, page.Nodes)
++		if !page.PageInfo.HasNextPage {
++			all.PageInfo = page.PageInfo
++			return parent, summary, all, nil
++		}
++		if page.PageInfo.EndCursor == "" || page.PageInfo.EndCursor == after {
++			return nil, SubIssuesSummary{}, RelatedIssueConnection{}, fmt.Errorf(
++				"sub-issues pagination cursor did not advance",
++			)
++		}
++		if seenCursors[page.PageInfo.EndCursor] {
++			return nil, SubIssuesSummary{}, RelatedIssueConnection{}, fmt.Errorf(
++				"sub-issues pagination cursor repeated: %q",
++				page.PageInfo.EndCursor,
++			)
++		}
++		seenCursors[page.PageInfo.EndCursor] = true
++		after = page.PageInfo.EndCursor
++	}
++}
++
++func fetchBlockedByRelationships(
++	client *gh.GraphQLClient,
++	issueID string,
++) (RelatedIssueConnection, error) {
++	var all RelatedIssueConnection
++	after := ""
++	seen := map[string]bool{}
++	seenCursors := map[string]bool{"": true}
++	for {
++		var result struct {
++			Node struct {
++				Issue struct {
++					BlockedBy RelatedIssueConnection `graphql:"blockedBy(first: 100, after: $after)"`
++				} `graphql:"... on Issue"`
++			} `graphql:"node(id: $id)"`
++		}
++		if err := queryGraphQL(
++			client,
++			"FetchIssueRelationships",
++			&result,
++			relationshipVariables(issueID, after),
++		); err != nil {
++			return RelatedIssueConnection{}, err
++		}
++		page := result.Node.Issue.BlockedBy
++		if all.TotalCount < page.TotalCount {
++			all.TotalCount = page.TotalCount
++		}
++		appendRelatedIssues(&all.Nodes, seen, page.Nodes)
++		if !page.PageInfo.HasNextPage {
++			all.PageInfo = page.PageInfo
++			return all, nil
++		}
++		if page.PageInfo.EndCursor == "" || page.PageInfo.EndCursor == after {
++			return RelatedIssueConnection{}, fmt.Errorf(
++				"blocked-by pagination cursor did not advance",
++			)
++		}
++		if seenCursors[page.PageInfo.EndCursor] {
++			return RelatedIssueConnection{}, fmt.Errorf(
++				"blocked-by pagination cursor repeated: %q",
++				page.PageInfo.EndCursor,
++			)
++		}
++		seenCursors[page.PageInfo.EndCursor] = true
++		after = page.PageInfo.EndCursor
++	}
++}
++
++func fetchBlockingRelationships(
++	client *gh.GraphQLClient,
++	issueID string,
++) (RelatedIssueConnection, error) {
++	var all RelatedIssueConnection
++	after := ""
++	seen := map[string]bool{}
++	seenCursors := map[string]bool{"": true}
++	for {
++		var result struct {
++			Node struct {
++				Issue struct {
++					Blocking RelatedIssueConnection `graphql:"blocking(first: 100, after: $after)"`
++				} `graphql:"... on Issue"`
++			} `graphql:"node(id: $id)"`
++		}
++		if err := queryGraphQL(
++			client,
++			"FetchIssueRelationships",
++			&result,
++			relationshipVariables(issueID, after),
++		); err != nil {
++			return RelatedIssueConnection{}, err
++		}
++		page := result.Node.Issue.Blocking
++		if all.TotalCount < page.TotalCount {
++			all.TotalCount = page.TotalCount
++		}
++		appendRelatedIssues(&all.Nodes, seen, page.Nodes)
++		if !page.PageInfo.HasNextPage {
++			all.PageInfo = page.PageInfo
++			return all, nil
++		}
++		if page.PageInfo.EndCursor == "" || page.PageInfo.EndCursor == after {
++			return RelatedIssueConnection{}, fmt.Errorf(
++				"blocking pagination cursor did not advance",
++			)
++		}
++		if seenCursors[page.PageInfo.EndCursor] {
++			return RelatedIssueConnection{}, fmt.Errorf(
++				"blocking pagination cursor repeated: %q",
++				page.PageInfo.EndCursor,
++			)
++		}
++		seenCursors[page.PageInfo.EndCursor] = true
++		after = page.PageInfo.EndCursor
++	}
++}
++
++func appendRelatedIssues(dst *[]RelatedIssue, seen map[string]bool, nodes []RelatedIssue) {
++	for _, node := range nodes {
++		key := node.ID
++		if key == "" {
++			key = node.Identifier()
++		}
++		if seen[key] {
++			continue
++		}
++		seen[key] = true
++		*dst = append(*dst, node)
++	}
  }
  
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
+diff --git a/internal/data/projects.go b/internal/data/projects.go
+index ac462cf..c36e735 100644
+--- a/internal/data/projects.go
++++ b/internal/data/projects.go
+@@ -1596,6 +1596,9 @@ func InvalidateProjectItems(contentID string) {
+ 	delete(projectItemsState.columns, contentID)
+ 	delete(projectItemsState.inFlight, contentID)
+ 	projectItemsState.mu.Unlock()
++	// Advance the authoritative generation so an in-flight fingerprint or
++	// full-preview read from before the mutation cannot repopulate live state.
++	BeginProjectRefreshGeneration()
+ 	invalidatePersistentProjectItems(contentID)
+ }
+ 
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2ac60f6fe
+index 0000000..fbc2030
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
 @@ -0,0 +1,203 @@
@@ -331,7 +519,7 @@ index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2
 +}
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de8d29e7a5
+index 0000000..07c61f4
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
 @@ -0,0 +1,43 @@
@@ -380,7 +568,7 @@ index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de
 +}
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be3951b011
+index 0000000..c642b3b
 --- /dev/null
 +++ b/internal/data/relationships.go
 @@ -0,0 +1,34 @@
@@ -418,9 +606,163 @@ index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be
 +	}
 +	return fmt.Sprintf("%s %s — %s", r.Identifier(), r.Title, state)
 +}
+diff --git a/internal/data/relationships_pagination_test.go b/internal/data/relationships_pagination_test.go
+new file mode 100644
+index 0000000..fd32fee
+--- /dev/null
++++ b/internal/data/relationships_pagination_test.go
+@@ -0,0 +1,148 @@
++package data
++
++import (
++	"encoding/json"
++	"fmt"
++	"strings"
++	"testing"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++	graphql "github.com/cli/shurcooL-graphql"
++	"github.com/stretchr/testify/require"
++)
++
++func TestFetchIssueRelationshipsPaginatesAllConnections(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, variables map[string]interface{}) error {
++		after := ""
++		if cursor, ok := variables["after"].(*graphql.String); ok && cursor != nil {
++			after = string(*cursor)
++		}
++		page := 0
++		if after != "" {
++			page = 1
++		}
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{}},
++		}
++		issue := payload["node"].(map[string]interface{})["issue"].(map[string]interface{})
++		if page == 0 {
++			issue["parent"] = map[string]interface{}{
++				"id":         "parent-1",
++				"number":     1,
++				"title":      "Parent",
++				"state":      "OPEN",
++				"repository": map[string]interface{}{"nameWithOwner": "o/r"},
++			}
++			issue["subIssuesSummary"] = map[string]interface{}{"total": 101, "completed": 4}
++		}
++		field := "subIssues"
++		queryJSON := fmt.Sprintf("%T", result)
++		if strings.Contains(queryJSON, "BlockedBy") {
++			field = "blockedBy"
++		} else if strings.Contains(queryJSON, "Blocking") {
++			field = "blocking"
++		}
++		nodes := []map[string]interface{}{}
++		start := page * 100
++		end := start + 1
++		if page == 0 {
++			end = 100
++		}
++		for i := start; i < end; i++ {
++			nodes = append(nodes, map[string]interface{}{
++				"id": fmt.Sprintf("%s-%d", field, i), "number": i + 1,
++				"title": fmt.Sprintf("%s %d", field, i), "state": "OPEN",
++				"repository": map[string]interface{}{"nameWithOwner": "o/r"},
++			})
++		}
++		issue[field] = map[string]interface{}{
++			"nodes": nodes, "totalCount": 101,
++			"pageInfo": map[string]interface{}{"hasNextPage": page == 0, "endCursor": "cursor-100"},
++		}
++		encoded, err := json.Marshal(payload)
++		require.NoError(t, err)
++		return json.Unmarshal(encoded, result)
++	}
++
++	got, err := FetchIssueRelationships("issue-1")
++	require.NoError(t, err)
++	require.Len(t, got.SubIssues.Nodes, 101)
++	require.Len(t, got.BlockedBy.Nodes, 101)
++	require.Len(t, got.Blocking.Nodes, 101)
++	require.Equal(t, 101, got.SubIssues.TotalCount)
++	require.Equal(t, 101, got.BlockedBy.TotalCount)
++	require.Equal(t, 101, got.Blocking.TotalCount)
++	require.Equal(t, "parent-1", got.Parent.ID)
++}
++
++func TestFetchIssueRelationshipsRejectsStalledPagination(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, _ map[string]interface{}) error {
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{
++				"subIssues": map[string]interface{}{
++					"nodes": []interface{}{}, "totalCount": 1,
++					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "same"},
++				},
++			}},
++		}
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		return json.Unmarshal(encoded, result)
++	}
++	_, err := FetchIssueRelationships("issue-1")
++	require.ErrorContains(t, err, "pagination cursor did not advance")
++}
++
++func TestFetchIssueRelationshipsRejectsCursorCycle(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, variables map[string]interface{}) error {
++		after := ""
++		if cursor, ok := variables["after"].(*graphql.String); ok && cursor != nil {
++			after = string(*cursor)
++		}
++		endCursor := "cursor-a"
++		switch after {
++		case "cursor-a":
++			endCursor = "cursor-b"
++		case "cursor-b":
++			endCursor = "cursor-a"
++		}
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{
++				"subIssues": map[string]interface{}{
++					"nodes": []interface{}{}, "totalCount": 1,
++					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": endCursor},
++				},
++			}},
++		}
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		return json.Unmarshal(encoded, result)
++	}
++	_, err := FetchIssueRelationships("issue-1")
++	require.ErrorContains(t, err, "pagination cursor repeated")
++}
 diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c2c43cac5
+index 0000000..3d53627
 --- /dev/null
 +++ b/internal/data/relationships_test.go
 @@ -0,0 +1,27 @@
@@ -452,7 +794,7 @@ index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c
 +	}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b482d0dc27 100644
+index f7de54e..659dadd 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
@@ -474,7 +816,7 @@ index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b4
  
  func (issue *Issue) renderOpenedBy() string {
 diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
-index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29fad897d3 100644
+index 439f5ac..b607be1 100644
 --- a/internal/tui/components/issueview/action.go
 +++ b/internal/tui/components/issueview/action.go
 @@ -1,5 +1,7 @@
@@ -499,7 +841,7 @@ index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29
 +	Relationships data.IssueRelationships
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 4e08da67a92baaede027189a02967a773a373d71..ad7536b535afdaa302ba335e85a94b7e2f3907fe 100644
+index 4e08da6..f1146c9 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -18,6 +18,7 @@ import (
@@ -639,7 +981,7 @@ index 4e08da67a92baaede027189a02967a773a373d71..ad7536b535afdaa302ba335e85a94b7e
  }
  
  func (m *Model) SetSectionId(id int) {
-@@ -342,7 +417,15 @@ func (m *Model) renderProjectPreview() string {
+@@ -342,7 +417,16 @@ func (m *Model) renderProjectPreview() string {
  }
  
  func (m *Model) IsTextInputBoxFocused() bool {
@@ -647,21 +989,22 @@ index 4e08da67a92baaede027189a02967a773a373d71..ad7536b535afdaa302ba335e85a94b7e
 +	return m.editor.Active() || m.projectEditor.Active() || m.relationshipEditor.Active()
 +}
 +
-+func (m *Model) StartRelationshipEdit() {
++func (m *Model) StartRelationshipEdit() tea.Cmd {
 +	if m.issue == nil || m.issue.Data.ID == "" {
-+		return
++		return nil
 +	}
 +	m.relationshipEditor = relationshipeditor.New(m.ctx, m.issue.Data)
 +	m.relationshipEditor.SetWidth(m.getIndentedContentWidth())
++	return m.relationshipEditor.Refresh()
  }
  
  func (m *Model) StartProjectEdit() {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..7db2b361d090218711f535501386928d7104f2f7
+index 0000000..fb028ef
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,442 @@
+@@ -0,0 +1,451 @@
 +package relationshipeditor
 +
 +import (
@@ -761,6 +1104,15 @@ index 0000000000000000000000000000000000000000..7db2b361d090218711f535501386928d
 +func (m Model) Active() bool { return m.active }
 +
 +func (m Model) SessionID() uint64 { return m.sessionID }
++
++func (m *Model) Refresh() tea.Cmd {
++	if !m.active || m.issueID == "" {
++		return nil
++	}
++	m.mode = modeLoadingRelationships
++	m.status = ""
++	return fetchRelationships(m.sessionID, m.issueID)
++}
 +
 +func (m *Model) Close() {
 +	m.active = false
@@ -1106,7 +1458,7 @@ index 0000000000000000000000000000000000000000..7db2b361d090218711f535501386928d
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..fdb9fd147ef82a29ebc39053ab9b28a0828d306c
+index 0000000..fdb9fd1
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
 @@ -0,0 +1,144 @@
@@ -1255,7 +1607,7 @@ index 0000000000000000000000000000000000000000..fdb9fd147ef82a29ebc39053ab9b28a0
 +	return mutations
 +}
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f300a81686ac5fc368dfb197de090de53e60a57e..aaef4c2b66921e8de13c4fbca4ed3b2a4f2c297d 100644
+index f300a81..aaef4c2 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -20,6 +20,7 @@ type IssueKeyMap struct {
@@ -1296,7 +1648,7 @@ index f300a81686ac5fc368dfb197de090de53e60a57e..aaef4c2b66921e8de13c4fbca4ed3b2a
  		}
 diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..a703c41831116c5dcfeedfcd199733252f9b269c
+index 0000000..a703c41
 --- /dev/null
 +++ b/internal/tui/keys/issueKeys_test.go
 @@ -0,0 +1,26 @@
@@ -1327,7 +1679,7 @@ index 0000000000000000000000000000000000000000..a703c41831116c5dcfeedfcd19973325
 +	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd901a1ac8 100644
+index 457952d..0db3cb5 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -50,27 +50,31 @@ import (
@@ -1381,33 +1733,53 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  }
  
  type Repositories struct {
-@@ -500,6 +504,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -235,6 +239,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			return m, nil
+ 		}
+ 
++		// R is also the global refresh-all binding. Give the issue relationship
++		// editor precedence while an issue is selected so its default binding
++		// remains usable and discoverable.
++		_, hasSelectedIssue := currRowData.(*data.IssueData)
++		hasNotificationIssue := m.notificationView.GetSubjectIssue() != nil
++		if key.Matches(msg, keys.IssueKeys.EditRelationships) &&
++			((m.ctx.View == config.IssuesView && hasSelectedIssue) || hasNotificationIssue) {
++			m.relationshipPreviewGeneration++
++			cmd = m.issueSidebar.StartRelationshipEdit()
++			m.syncSidebar()
++			return m, cmd
++		}
++
+ 		switch {
+ 		case m.isUserDefinedKeybinding(msg):
+ 			cmd = m.executeKeybinding(msg.String())
+@@ -500,6 +517,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.syncSidebar()
  				return m, nil
  
 +			case key.Matches(msg, keys.IssueKeys.EditRelationships):
 +				m.relationshipPreviewGeneration++
-+				m.issueSidebar.StartRelationshipEdit()
++				cmd = m.issueSidebar.StartRelationshipEdit()
 +				m.syncSidebar()
-+				return m, nil
++				return m, cmd
 +
  			case key.Matches(msg, keys.IssueKeys.Checkout):
  				cmd, err := m.issueSidebar.Checkout()
  				if err != nil {
-@@ -618,6 +628,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -618,6 +641,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  
  			// Issue keybindings when viewing an Issue notification
  			case m.notificationView.GetSubjectIssue() != nil:
 +				if key.Matches(msg, keys.IssueKeys.EditRelationships) {
 +					m.relationshipPreviewGeneration++
-+					m.issueSidebar.StartRelationshipEdit()
++					cmd = m.issueSidebar.StartRelationshipEdit()
 +					m.syncSidebar()
-+					return m, nil
++					return m, cmd
 +				}
  				var issueCmd tea.Cmd
  				var action *issueview.IssueAction
  				m.issueSidebar, issueCmd, action = m.issueSidebar.Update(msg)
-@@ -650,6 +666,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -650,6 +679,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  					case issueview.IssueActionReopen:
  						cmd = m.promptConfirmationForNotificationIssue("reopen")
  						return m, cmd
@@ -1424,7 +1796,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  					}
  				}
  
-@@ -820,6 +846,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -820,6 +859,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			}
  		})
  
@@ -1488,7 +1860,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  	case issueProjectPreviewMsg:
  		if !acceptsIssueProjectPreview(
  			m.projectPreviewGeneration,
-@@ -1042,7 +1125,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -1042,7 +1138,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  	}
  
  	if m.issueSidebar.IsTextInputBoxFocused() {
@@ -1526,7 +1898,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  		m.syncSidebar()
  	}
  
-@@ -1215,6 +1327,18 @@ type issueProjectPreviewMsg struct {
+@@ -1215,6 +1340,18 @@ type issueProjectPreviewMsg struct {
  	Err        error
  }
  
@@ -1545,7 +1917,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  func acceptsIssueProjectPreview(
  	currentGeneration uint64,
  	currentIssue bool,
-@@ -1223,6 +1347,14 @@ func acceptsIssueProjectPreview(
+@@ -1223,6 +1360,14 @@ func acceptsIssueProjectPreview(
  	return currentIssue && currentGeneration == messageGeneration
  }
  
@@ -1560,7 +1932,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1250,6 +1382,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1250,6 +1395,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
  	m.projectPreviewGeneration++
@@ -1568,7 +1940,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  	m.prView.SetSummaryViewLess()
  	m.prView.GoToFirstTab()
  	var cachedPreview data.ProjectItems
-@@ -1282,6 +1415,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+@@ -1282,6 +1428,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
  		enrichCmd = m.prView.EnrichCurrRow()
  	}
  	var projectCmd tea.Cmd
@@ -1583,7 +1955,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
  		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
  		issue.ID != "" {
-@@ -1294,7 +1435,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+@@ -1294,7 +1448,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
  	m.sidebar.ScrollToTop()
  	m.notificationView.ResetSubject()
  	keys.SetNotificationSubject(keys.NotificationSubjectNone)
@@ -1593,7 +1965,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd
  
  func (m *Model) isCurrentIssue(contentID string) bool {
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index b421ab02abea3d06fc42885c6b92d838db441006..f42eb808649860f7a4122966aea6e34c62b98d66 100644
+index b421ab0..f42eb80 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -2526,3 +2526,9 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {

@@ -6483,10 +6483,10 @@ index 0000000..def202f
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..d4f82aa
+index 0000000..abc59d1
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,324 @@
+@@ -0,0 +1,493 @@
 +package projecteditor
 +
 +import (
@@ -6494,8 +6494,10 @@ index 0000000..d4f82aa
 +	"strings"
 +
 +	"charm.land/bubbles/v2/textarea"
++	"charm.land/bubbles/v2/textinput"
 +	tea "charm.land/bubbletea/v2"
 +	"charm.land/lipgloss/v2"
++	"github.com/sahilm/fuzzy"
 +
 +	"github.com/dlvhdr/gh-dash/v4/internal/data"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/inputbox"
@@ -6542,9 +6544,13 @@ index 0000000..d4f82aa
 +	repository  string
 +	items       []data.ProjectItem
 +	fields      []data.ProjectField
++	filtered    []int
++	filter      textinput.Model
 +	project     int
 +	field       int
 +	option      int
++	optionField int
++	activeField int
 +	mode        mode
 +	input       inputbox.Model
 +	width       int
@@ -6564,7 +6570,10 @@ index 0000000..d4f82aa
 +		return &ta
 +	}()})
 +	input.SetHeight(4)
-+	return Model{
++	filter := inputbox.DefaultTextInput(ctx)
++	filter.Prompt = "Filter: "
++	filter.Focus()
++	model := Model{
 +		ctx:         ctx,
 +		sectionType: sectionType,
 +		sectionID:   sectionID,
@@ -6572,10 +6581,13 @@ index 0000000..d4f82aa
 +		contentID:   contentID,
 +		repository:  repository,
 +		items:       items,
++		filter:      filter,
 +		mode:        modeProjects,
 +		input:       input,
 +		active:      true,
 +	}
++	model.applyFilter()
++	return model
 +}
 +
 +func (m Model) Active() bool { return m.active && m.mode != mode(-1) }
@@ -6590,6 +6602,7 @@ index 0000000..d4f82aa
 +	m.width = width
 +	if m.active {
 +		m.input.SetWidth(width)
++		m.filter.SetWidth(max(0, width))
 +	}
 +}
 +
@@ -6597,6 +6610,7 @@ index 0000000..d4f82aa
 +	m.ctx = ctx
 +	if m.active {
 +		m.input.UpdateProgramContext(ctx)
++		m.filter.SetStyles(inputbox.DefaultTextInput(ctx).Styles())
 +	}
 +}
 +
@@ -6610,6 +6624,8 @@ index 0000000..d4f82aa
 +				m.mode = modeProjects
 +			} else {
 +				m.fields, m.field, m.mode, m.status = msg.Fields, 0, modeFields, ""
++				m.filter.SetValue("")
++				m.applyFilter()
 +			}
 +		}
 +		return m, nil
@@ -6625,14 +6641,11 @@ index 0000000..d4f82aa
 +			switch msg.String() {
 +			case "ctrl+d":
 +				value := strings.TrimSpace(m.input.Value())
-+				if value == "" {
-+					m.status = "Value cannot be empty"
-+					return m, nil
-+				}
 +				m.input.Blur()
 +				m.mode = modeLoadingFields
 +				return m, m.update(value, value)
 +			case "esc", "ctrl+c":
++				m.filter.Focus()
 +				m.input.Blur()
 +				m.mode = modeFields
 +				return m, nil
@@ -6640,28 +6653,66 @@ index 0000000..d4f82aa
 +			m.input, cmd = m.input.Update(msg)
 +			return m, cmd
 +		}
++		if m.mode == modeProjects || m.mode == modeFields || m.mode == modeOptions {
++			switch msg.String() {
++			case "up", "down", "left", "right", "enter", "esc", "ctrl+c":
++				// Navigation and cancellation are handled below while the
++				// filter remains focused, so printable j/k/q are searchable.
++			default:
++				var filterCmd tea.Cmd
++				m.filter, filterCmd = m.filter.Update(msg)
++				m.applyFilter()
++				return m, filterCmd
++			}
++		}
 +		switch msg.String() {
-+		case "up", "k":
++		case "up":
 +			m.move(-1)
-+		case "down", "j":
++		case "down":
 +			m.move(1)
-+		case "esc", "q":
++		case "ctrl+c":
 +			m.Close()
++		case "esc":
++			if strings.TrimSpace(m.filter.Value()) != "" {
++				m.filter.SetValue("")
++				m.applyFilter()
++				return m, nil
++			}
++			switch m.mode {
++			case modeOptions:
++				m.mode = modeFields
++			case modeFields:
++				m.mode = modeProjects
++			default:
++				m.Close()
++			}
++			if m.Active() {
++				m.filter.SetValue("")
++				m.applyFilter()
++			}
 +		case "enter":
++			if m.selectedIndex() < 0 {
++				return m, nil
++			}
 +			switch m.mode {
 +			case modeProjects:
 +				m.mode = modeLoadingFields
 +				return m, m.fetchFields()
 +			case modeFields:
-+				field := m.fields[m.field]
++				fieldIndex := m.filtered[m.field]
++				field := m.fields[fieldIndex]
 +				if field.Type == "ProjectV2SingleSelectField" || field.Type == "SINGLE_SELECT" {
 +					if len(field.Options) == 0 {
 +						m.status = "This field has no selectable options"
 +					} else {
-+						m.mode, m.option = modeOptions, 0
++						m.mode, m.option, m.optionField = modeOptions, 0, fieldIndex
++						m.filter.SetValue("")
++						m.applyFilter()
 +					}
 +				} else if isEditable(field.Type) {
++					m.activeField = fieldIndex
 +					m.mode = modeInput
++					m.filter.Blur()
 +					m.input.Reset()
 +					m.input.SetPrompt(fmt.Sprintf("Set %s (Ctrl+d to submit)...", field.Name))
 +					return m, tea.Sequence(textarea.Blink, m.input.Focus())
@@ -6669,8 +6720,9 @@ index 0000000..d4f82aa
 +					m.status = fmt.Sprintf("Field type %s is display-only", field.Type)
 +				}
 +			case modeOptions:
-+				field := m.fields[m.field]
-+				option := field.Options[m.option]
++				field := m.fields[m.optionField]
++				option := field.Options[m.filtered[m.option]]
++				m.activeField = m.optionField
 +				m.mode = modeLoadingFields
 +				return m, m.update(option.ID, option.Name)
 +			}
@@ -6683,11 +6735,11 @@ index 0000000..d4f82aa
 +	var length int
 +	switch m.mode {
 +	case modeProjects:
-+		length = len(m.items)
++		length = len(m.filtered)
 +	case modeFields:
-+		length = len(m.fields)
++		length = len(m.filtered)
 +	case modeOptions:
-+		length = len(m.fields[m.field].Options)
++		length = len(m.filtered)
 +	default:
 +		return
 +	}
@@ -6704,7 +6756,102 @@ index 0000000..d4f82aa
 +	}
 +}
 +
-+func (m Model) currentProject() data.ProjectItem { return m.items[m.project] }
++func (m Model) selectedIndex() int {
++	if len(m.filtered) == 0 {
++		return -1
++	}
++	switch m.mode {
++	case modeProjects:
++		return m.filtered[m.project]
++	case modeLoadingFields:
++		return m.filtered[m.project]
++	case modeFields:
++		return m.filtered[m.field]
++	case modeOptions:
++		return m.filtered[m.option]
++	default:
++		return -1
++	}
++}
++
++func (m Model) currentProject() data.ProjectItem {
++	return m.items[m.selectedIndex()]
++}
++
++func (m *Model) applyFilter() {
++	values := m.filterValues()
++	query := strings.TrimSpace(m.filter.Value())
++	filtered := make([]int, 0, len(values))
++	if query == "" {
++		for index := range values {
++			filtered = append(filtered, index)
++		}
++	} else {
++		matches := fuzzy.Find(strings.ToLower(query), fuzzySource(values))
++		for _, match := range matches {
++			filtered = append(filtered, match.Index)
++		}
++	}
++	m.filtered = filtered
++	m.clampSelection()
++}
++
++type fuzzySource []string
++
++func (s fuzzySource) String(i int) string { return s[i] }
++func (s fuzzySource) Len() int            { return len(s) }
++
++func (m Model) filterValues() []string {
++	var values []string
++	switch m.mode {
++	case modeProjects:
++		values = make([]string, len(m.items))
++		for i, item := range m.items {
++			values[i] = data.ProjectDisplayName(m.items, item.Project)
++		}
++	case modeFields:
++		values = make([]string, len(m.fields))
++		for i, field := range m.fields {
++			values[i] = fmt.Sprintf("%s [%s]", field.Name, field.Type)
++		}
++	case modeOptions:
++		if m.optionField >= 0 && m.optionField < len(m.fields) {
++			values = make([]string, len(m.fields[m.optionField].Options))
++			for i, option := range m.fields[m.optionField].Options {
++				values[i] = option.Name
++			}
++		}
++	}
++	return values
++}
++
++func (m *Model) clampSelection() {
++	if len(m.filtered) == 0 {
++		m.project, m.field, m.option = 0, 0, 0
++		return
++	}
++	selected := m.project
++	switch m.mode {
++	case modeFields:
++		selected = m.field
++	case modeOptions:
++		selected = m.option
++	}
++	if selected >= len(m.filtered) {
++		selected = len(m.filtered) - 1
++	}
++	if selected < 0 {
++		selected = 0
++	}
++	switch m.mode {
++	case modeProjects:
++		m.project = selected
++	case modeFields:
++		m.field = selected
++	case modeOptions:
++		m.option = selected
++	}
++}
 +
 +func (m Model) fetchFields() tea.Cmd {
 +	projectID := m.currentProject().Project.ID
@@ -6716,16 +6863,21 @@ index 0000000..d4f82aa
 +
 +func (m Model) update(value, displayValue string) tea.Cmd {
 +	project := m.currentProject()
-+	field := m.fields[m.field]
++	field := m.fields[m.activeField]
 +	return func() tea.Msg {
-+		err := data.UpdateProjectField(
-+			m.contentID,
-+			project.Project.ID,
-+			project.ID,
-+			field.ID,
-+			field.Type,
-+			value,
-+		)
++		var err error
++		if strings.TrimSpace(value) == "" {
++			err = data.ClearProjectField(m.contentID, project.Project.ID, project.ID, field.ID)
++		} else {
++			err = data.UpdateProjectField(
++				m.contentID,
++				project.Project.ID,
++				project.ID,
++				field.ID,
++				field.Type,
++				value,
++			)
++		}
 +		var projectItems data.ProjectItems
 +		if err == nil {
 +			refreshed, refreshErr := data.FetchProjectItemsFull(m.contentID)
@@ -6778,29 +6930,33 @@ index 0000000..d4f82aa
 +	case modeInput:
 +		return m.input.View()
 +	}
-+	lines := []string{lipgloss.NewStyle().Bold(true).Render("Edit Project field — " + title)}
-+	var values []string
-+	switch m.mode {
-+	case modeProjects:
-+		for _, item := range m.items {
-+			values = append(values, data.ProjectDisplayName(m.items, item.Project))
-+		}
-+	case modeFields:
-+		for _, field := range m.fields {
-+			values = append(values, fmt.Sprintf("%s [%s]", field.Name, field.Type))
-+		}
-+	case modeOptions:
-+		for _, option := range m.fields[m.field].Options {
-+			values = append(values, option.Name)
-+		}
++	if m.mode == modeLoadingFields {
++		return lipgloss.NewStyle().Bold(true).Render("Edit Project field — " + title)
 +	}
-+	for i, value := range values {
++	lines := []string{lipgloss.NewStyle().Bold(true).Render("Edit Project field — " + title)}
++	if m.mode == modeProjects || m.mode == modeFields || m.mode == modeOptions {
++		lines = append(lines, m.filter.View())
++	}
++	values := m.filterValues()
++	for i, index := range m.filtered {
++		value := values[index]
 +		prefix := "  "
-+		if (m.mode == modeProjects && i == m.project) || (m.mode == modeFields && i == m.field) ||
-+			(m.mode == modeOptions && i == m.option) {
++		if i == m.selectedIndexPosition() {
 +			prefix = "> "
 +		}
 +		lines = append(lines, prefix+value)
++	}
++	if len(m.filtered) == 0 {
++		label := "items"
++		switch m.mode {
++		case modeProjects:
++			label = "projects"
++		case modeFields:
++			label = "fields"
++		case modeOptions:
++			label = "options"
++		}
++		lines = append(lines, "No matching "+label)
 +	}
 +	if m.status != "" {
 +		lines = append(
@@ -6808,15 +6964,28 @@ index 0000000..d4f82aa
 +			lipgloss.NewStyle().Foreground(m.ctx.Theme.ErrorText).Render(m.status),
 +		)
 +	}
-+	lines = append(lines, "↑/↓ select · Enter choose · Esc cancel")
++	lines = append(lines, "↑/↓ select · type to filter · Enter choose · Esc back/cancel")
 +	return strings.Join(lines, "\n")
++}
++
++func (m Model) selectedIndexPosition() int {
++	switch m.mode {
++	case modeProjects:
++		return m.project
++	case modeFields:
++		return m.field
++	case modeOptions:
++		return m.option
++	default:
++		return -1
++	}
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000..98e0ad0
+index 0000000..152c4e5
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,146 @@
 +package projecteditor
 +
 +import (
@@ -6831,6 +7000,17 @@ index 0000000..98e0ad0
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/keys"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
 +)
++
++func key(text string) tea.KeyPressMsg {
++	if text == "enter" {
++		return tea.KeyPressMsg{Code: tea.KeyEnter}
++	}
++	if text == "backspace" {
++		return tea.KeyPressMsg{Code: tea.KeyBackspace}
++	}
++	runes := []rune(text)
++	return tea.KeyPressMsg{Code: runes[0], Text: text}
++}
 +
 +func newEditorTestContext(t *testing.T) *context.ProgramContext {
 +	t.Helper()
@@ -6876,6 +7056,81 @@ index 0000000..98e0ad0
 +func TestDefaultProjectEditorKeyIsE(t *testing.T) {
 +	require.Equal(t, []string{"E"}, keys.PRKeys.EditProject.Keys())
 +	require.Equal(t, []string{"E"}, keys.IssueKeys.EditProject.Keys())
++}
++
++func TestEditorFiltersProjectsCaseInsensitivelyAndRestoresOnClear(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{
++		{Project: data.Project{ID: "one", Number: 1, Title: "Infrastructure"}},
++		{Project: data.Project{ID: "two", Number: 2, Title: "Priority"}},
++	})
++	m, _ = m.Update(key("INFRA"))
++	require.Equal(t, "INFRA", m.filter.Value())
++	require.Len(t, m.filtered, 1)
++	require.Equal(t, 0, m.filtered[0])
++	m, _ = m.Update(key("backspace"))
++	require.Equal(t, "INFR", m.filter.Value())
++	m.filter.SetValue("")
++	m.applyFilter()
++	require.Len(t, m.filtered, 2)
++}
++
++func TestEditorFiltersFieldsAndOptions(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
++		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
++	}})
++	m.mode = modeFields
++	m.fields = []data.ProjectField{
++		{
++			ID:      "status",
++			Name:    "Status",
++			Type:    "SINGLE_SELECT",
++			Options: []data.ProjectOption{{ID: "high", Name: "High"}, {ID: "low", Name: "Low"}},
++		},
++		{ID: "validation", Name: "Validation", Type: "TEXT"},
++	}
++	m.filter.SetValue("val")
++	m.applyFilter()
++	require.Equal(t, []int{1}, m.filtered)
++	m, _ = m.Update(key("enter"))
++	require.Equal(t, modeInput, m.mode)
++	require.Equal(t, 1, m.activeField)
++	m.mode = modeFields
++	m.filter.Blur()
++	m.mode, m.field = modeOptions, 0
++	m.optionField = 0
++	m.filter.SetValue("HI")
++	m.applyFilter()
++	require.Equal(t, []int{0}, m.filtered)
++}
++
++func TestEditorSearchTextAcceptsNavigationAndQuitLetters(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
++		Project: data.Project{ID: "project-1", Number: 1, Title: "qkj"},
++	}})
++	for _, character := range []string{"j", "k", "q"} {
++		m, _ = m.Update(key(character))
++	}
++	require.Equal(t, "jkq", m.filter.Value())
++}
++
++func TestEditorNoMatchesEnterIsSafeAndEscClearsThenBacks(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
++		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
++	}})
++	m, _ = m.Update(key("missing"))
++	require.Empty(t, m.filtered)
++	m, cmd := m.Update(key("enter"))
++	require.Nil(t, cmd)
++	require.Equal(t, modeProjects, m.mode)
++	m, _ = m.Update(key("esc"))
++	require.Equal(t, "", m.filter.Value())
++	require.True(t, m.Active())
++	m, _ = m.Update(key("esc"))
++	require.False(t, m.Active())
 +}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
 index 1b2b493..8a10c0c 100644
