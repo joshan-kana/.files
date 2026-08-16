@@ -448,3 +448,223 @@ index b421ab0..f42eb80 100644
 +	require.False(t, acceptsIssueRelationships(4, true, 3))
 +	require.False(t, acceptsIssueRelationships(4, false, 4))
 +}
+
+diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
+index ad2eb37..e3ec59a 100644
+--- a/internal/data/issueapi.go
++++ b/internal/data/issueapi.go
+@@ -61,6 +61,7 @@ type IssueRelationships struct {
+ }
+ 
+ type RelatedIssue struct {
++	ID         string
+ 	Number     int
+ 	Title      string
+ 	State      string
+ 	URL        string
+ 	Repository Repository
+ }
+
+diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
+new file mode 100644
+index 0000000..a4fe264
+--- /dev/null
++++ b/internal/data/relationship_mutations.go
+@@ -0,0 +1,151 @@
++package data
++
++import (
++	"fmt"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
++
++type RelationshipMutation string
++
++const (
++	AddBlockedBy    RelationshipMutation = "add-blocked-by"
++	RemoveBlockedBy RelationshipMutation = "remove-blocked-by"
++	AddBlocking     RelationshipMutation = "add-blocking"
++	RemoveBlocking  RelationshipMutation = "remove-blocking"
++	SetParent       RelationshipMutation = "set-parent"
++	RemoveParent    RelationshipMutation = "remove-parent"
++	AddSubIssue     RelationshipMutation = "add-sub-issue"
++	RemoveSubIssue  RelationshipMutation = "remove-sub-issue"
++)
++
++var relationshipGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++	return client.Do(query, variables, result)
++}
++
++var fetchIssueRelationshipsForMutation = FetchIssueRelationships
++
++// MutateIssueRelationship performs one live-validated native relationship write
++// and returns the authoritative relationship state fetched after the write.
++func MutateIssueRelationship(issueID, targetID string, mutation RelationshipMutation) (IssueRelationships, error) {
++	if issueID == "" || targetID == "" {
++		return IssueRelationships{}, fmt.Errorf("relationship mutation requires issue and target IDs")
++	}
++	if issueID == targetID {
++		return IssueRelationships{}, fmt.Errorf("an issue cannot relate to itself")
++	}
++	current, err := fetchIssueRelationshipsForMutation(issueID)
++	if err != nil {
++		return IssueRelationships{}, fmt.Errorf("live relationship validation failed: %w", err)
++	}
++	if err := validateRelationshipMutation(current, targetID, mutation); err != nil {
++		return IssueRelationships{}, err
++	}
++
++	client, err := relationshipGraphQLClient()
++	if err != nil {
++		return IssueRelationships{}, err
++	}
++	query, variables := relationshipMutationRequest(issueID, targetID, mutation)
++	if query == "" {
++		return IssueRelationships{}, fmt.Errorf("unsupported relationship mutation %q", mutation)
++	}
++	var response map[string]interface{}
++	if err := relationshipGraphQLDo(client, query, variables, &response); err != nil {
++		return IssueRelationships{}, err
++	}
++	updated, err := fetchIssueRelationshipsForMutation(issueID)
++	if err != nil {
++		return IssueRelationships{}, fmt.Errorf("relationship write succeeded but authoritative refetch failed: %w", err)
++	}
++	return updated, nil
++}
++
++func relationshipGraphQLClient() (*gh.GraphQLClient, error) {
++	if client == nil {
++		var err error
++		client, err = gh.DefaultGraphQLClient()
++		if err != nil {
++			return nil, err
++		}
++	}
++	return client, nil
++}
++
++func validateRelationshipMutation(current IssueRelationships, targetID string, mutation RelationshipMutation) error {
++	contains := func(issues []RelatedIssue) bool {
++		for _, issue := range issues {
++			if issue.ID == targetID {
++				return true
++			}
++		}
++		return false
++	}
++	switch mutation {
++	case AddBlockedBy, AddBlocking, AddSubIssue:
++		if contains(current.BlockedBy.Nodes) && mutation == AddBlockedBy {
++			return fmt.Errorf("blocked-by relationship already exists")
++		}
++		if contains(current.Blocking.Nodes) && mutation == AddBlocking {
++			return fmt.Errorf("blocking relationship already exists")
++		}
++		if contains(current.SubIssues.Nodes) && mutation == AddSubIssue {
++			return fmt.Errorf("sub-issue relationship already exists")
++		}
++	case RemoveBlockedBy:
++		if !contains(current.BlockedBy.Nodes) {
++			return fmt.Errorf("blocked-by relationship is not present in live state")
++		}
++	case RemoveBlocking:
++		if !contains(current.Blocking.Nodes) {
++			return fmt.Errorf("blocking relationship is not present in live state")
++		}
++	case SetParent:
++		if current.Parent != nil {
++			return fmt.Errorf("parent already exists; remove it before setting another parent")
++		}
++	case RemoveParent:
++		if current.Parent == nil || current.Parent.ID != targetID {
++			return fmt.Errorf("requested parent is not present in live state")
++		}
++	case RemoveSubIssue:
++		if !contains(current.SubIssues.Nodes) {
++			return fmt.Errorf("sub-issue relationship is not present in live state")
++		}
++	default:
++		return fmt.Errorf("unsupported relationship mutation %q", mutation)
++	}
++	return nil
++}
++
++func relationshipMutationRequest(issueID, targetID string, mutation RelationshipMutation) (string, map[string]interface{}) {
++	input := map[string]interface{}{}
++	switch mutation {
++	case AddBlockedBy:
++		input["issueId"], input["blockingIssueId"] = issueID, targetID
++		return `mutation AddBlockedBy($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case RemoveBlockedBy:
++		input["issueId"], input["blockingIssueId"] = issueID, targetID
++		return `mutation RemoveBlockedBy($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case AddBlocking:
++		input["issueId"], input["blockingIssueId"] = targetID, issueID
++		return `mutation AddBlocking($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case RemoveBlocking:
++		input["issueId"], input["blockingIssueId"] = targetID, issueID
++		return `mutation RemoveBlocking($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case SetParent:
++		input["issueId"], input["subIssueId"], input["replaceParent"] = targetID, issueID, true
++		return `mutation SetParent($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case RemoveParent:
++		input["issueId"], input["subIssueId"] = targetID, issueID
++		return `mutation RemoveParent($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case AddSubIssue:
++		input["issueId"], input["subIssueId"] = issueID, targetID
++		return `mutation AddSubIssue($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	case RemoveSubIssue:
++		input["issueId"], input["subIssueId"] = issueID, targetID
++		return `mutation RemoveSubIssue($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++	default:
++		return "", nil
++	}
++}
+
+diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
+new file mode 100644
+index 0000000..930c12b
+--- /dev/null
++++ b/internal/data/relationship_mutations_test.go
+@@ -0,0 +1,39 @@
++package data
++
++import "testing"
++
++func TestValidateRelationshipMutationUsesLiveState(t *testing.T) {
++	current := IssueRelationships{
++		Parent:    &RelatedIssue{ID: "parent"},
++		SubIssues: RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "child"}}},
++		BlockedBy: RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "prereq"}}},
++		Blocking:  RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "downstream"}}},
++	}
++	for _, test := range []struct {
++		name    string
++		id      string
++		mut     RelationshipMutation
++		wantErr bool
++	}{
++		{"duplicate prerequisite", "prereq", AddBlockedBy, true},
++		{"missing prerequisite removal", "missing", RemoveBlockedBy, true},
++		{"duplicate child", "child", AddSubIssue, true},
++		{"parent replacement", "other-parent", SetParent, true},
++		{"current parent removal", "parent", RemoveParent, false},
++		{"new dependency", "new", AddBlocking, false},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			if err := validateRelationshipMutation(current, test.id, test.mut); (err != nil) != test.wantErr {
++				t.Fatalf("validateRelationshipMutation() error = %v, wantErr %v", err, test.wantErr)
++			}
++		})
++	}
++}
++
++func TestRelationshipMutationRequestInvertsBlockingDirection(t *testing.T) {
++	_, variables := relationshipMutationRequest("issue", "target", AddBlocking)
++	input := variables["input"].(map[string]interface{})
++	if input["issueId"] != "target" || input["blockingIssueId"] != "issue" {
++		t.Fatalf("AddBlocking input = %#v, want target blocking issue", input)
++	}
++}
