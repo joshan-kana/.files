@@ -20,7 +20,13 @@ concurrency:
 
 jobs:
   bridge:
-    if: github.event_name != 'issues' || (github.event.action == 'edited' && github.event.issue.number == 71)
+    if: >-
+      github.event_name != 'issues' ||
+      (
+        github.event.action == 'edited' &&
+        github.event.issue.number == 71 &&
+        contains(github.event.issue.body, '<!-- infrastructure-sentinel-command:v1')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
