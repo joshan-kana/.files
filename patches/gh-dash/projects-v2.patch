@@ -6483,10 +6483,10 @@ index 0000000..def202f
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..abc59d1
+index 0000000..acb65b5
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,493 @@
+@@ -0,0 +1,506 @@
 +package projecteditor
 +
 +import (
@@ -6534,6 +6534,12 @@ index 0000000..abc59d1
 +	ProjectItems data.ProjectItems
 +	Err          error
 +}
++
++var (
++	clearProjectField     = data.ClearProjectField
++	updateProjectField    = data.UpdateProjectField
++	fetchProjectItemsFull = data.FetchProjectItemsFull
++)
 +
 +type Model struct {
 +	ctx         *context.ProgramContext
@@ -6874,9 +6880,9 @@ index 0000000..abc59d1
 +	return func() tea.Msg {
 +		var err error
 +		if value == clearProjectOptionID || strings.TrimSpace(value) == "" {
-+			err = data.ClearProjectField(m.contentID, project.Project.ID, project.ID, field.ID)
++			err = clearProjectField(m.contentID, project.Project.ID, project.ID, field.ID)
 +		} else {
-+			err = data.UpdateProjectField(
++			err = updateProjectField(
 +				m.contentID,
 +				project.Project.ID,
 +				project.ID,
@@ -6887,7 +6893,7 @@ index 0000000..abc59d1
 +		}
 +		var projectItems data.ProjectItems
 +		if err == nil {
-+			refreshed, refreshErr := data.FetchProjectItemsFull(m.contentID)
++			refreshed, refreshErr := fetchProjectItemsFull(m.contentID)
 +			if refreshErr != nil {
 +				err = refreshErr
 +			} else {
@@ -6989,10 +6995,10 @@ index 0000000..abc59d1
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000..152c4e5
+index 0000000..f75e087
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,213 @@
 +package projecteditor
 +
 +import (
@@ -7076,14 +7082,60 @@ index 0000000..152c4e5
 +		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
 +	}})
 +	m.mode = modeOptions
-+	m.fields = []data.ProjectField{{ID: "status", Name: "Status", Type: "SINGLE_SELECT",
-+		Options: []data.ProjectOption{{ID: "todo", Name: "Todo"}}}}
++	m.fields = []data.ProjectField{{
++		ID: "status", Name: "Status", Type: "SINGLE_SELECT",
++		Options: []data.ProjectOption{{ID: "todo", Name: "Todo"}},
++	}}
 +	m.optionField = 0
 +	m.filter.SetValue("clear")
 +	m.applyFilter()
 +	require.Equal(t, []int{0}, m.filtered)
 +	require.Equal(t, clearProjectOptionID, m.options()[m.filtered[0]].ID)
 +	require.Contains(t, m.filterValues()[m.filtered[0]], "Clear value")
++}
++
++func TestSelectingClearChoiceDispatchesClearProjectField(t *testing.T) {
++	originalClear := clearProjectField
++	originalUpdate := updateProjectField
++	originalFetch := fetchProjectItemsFull
++	t.Cleanup(func() {
++		clearProjectField = originalClear
++		updateProjectField = originalUpdate
++		fetchProjectItemsFull = originalFetch
++	})
++	clearCalled := false
++	updateCalled := false
++	clearProjectField = func(string, string, string, string) error {
++		clearCalled = true
++		return nil
++	}
++	updateProjectField = func(string, string, string, string, string, string) error {
++		updateCalled = true
++		return nil
++	}
++	fetchProjectItemsFull = func(string) (data.ProjectItems, error) {
++		return data.ProjectItems{}, nil
++	}
++
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
++		ID: "item-1", Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
++	}})
++	m.mode = modeOptions
++	m.fields = []data.ProjectField{{
++		ID: "status", Name: "Status", Type: "SINGLE_SELECT",
++		Options: []data.ProjectOption{{ID: "todo", Name: "Todo"}},
++	}}
++	m.optionField = 0
++	m.filter.SetValue("clear")
++	m.applyFilter()
++	updated, cmd := m.Update(key("enter"))
++	require.Equal(t, modeLoadingFields, updated.mode)
++	require.NotNil(t, cmd)
++	msg := cmd()
++	require.NotNil(t, msg)
++	require.False(t, updateCalled)
++	require.True(t, clearCalled)
 +}
 +
 +func TestEditorFiltersProjectsCaseInsensitivelyAndRestoresOnClear(t *testing.T) {
@@ -7130,7 +7182,7 @@ index 0000000..152c4e5
 +	m.optionField = 0
 +	m.filter.SetValue("HI")
 +	m.applyFilter()
-+	require.Equal(t, []int{0}, m.filtered)
++	require.Equal(t, []int{1}, m.filtered)
 +}
 +
 +func TestEditorSearchTextAcceptsNavigationAndQuitLetters(t *testing.T) {

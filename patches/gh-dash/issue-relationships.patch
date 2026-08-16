@@ -1607,7 +1607,7 @@ index 0000000..fdb9fd1
 +	return mutations
 +}
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f300a81..aaef4c2 100644
+index f300a81..1fedd07 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -20,6 +20,7 @@ type IssueKeyMap struct {
@@ -1648,7 +1648,7 @@ index f300a81..aaef4c2 100644
  		}
 diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
 new file mode 100644
-index 0000000..a703c41
+index 0000000..664b5fc
 --- /dev/null
 +++ b/internal/tui/keys/issueKeys_test.go
 @@ -0,0 +1,26 @@
