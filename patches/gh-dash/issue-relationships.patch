@@ -1,5 +1,5 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a..a237a82 100644
+index a38043a3325e2d8399e60996f5c54b8d99e87ddc..a237a82b1ae58d2e8b6444efb03d8ec99d002b7c 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -32,6 +32,52 @@ type IssueData struct {
@@ -294,23 +294,9 @@ index a38043a..a237a82 100644
  }
  
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
-diff --git a/internal/data/projects.go b/internal/data/projects.go
-index ac462cf..c36e735 100644
---- a/internal/data/projects.go
-+++ b/internal/data/projects.go
-@@ -1596,6 +1596,9 @@ func InvalidateProjectItems(contentID string) {
- 	delete(projectItemsState.columns, contentID)
- 	delete(projectItemsState.inFlight, contentID)
- 	projectItemsState.mu.Unlock()
-+	// Advance the authoritative generation so an in-flight fingerprint or
-+	// full-preview read from before the mutation cannot repopulate live state.
-+	BeginProjectRefreshGeneration()
- 	invalidatePersistentProjectItems(contentID)
- }
- 
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000..fbc2030
+index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2ac60f6fe
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
 @@ -0,0 +1,203 @@
@@ -519,7 +505,7 @@ index 0000000..fbc2030
 +}
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000..07c61f4
+index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de8d29e7a5
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
 @@ -0,0 +1,43 @@
@@ -568,7 +554,7 @@ index 0000000..07c61f4
 +}
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
-index 0000000..c642b3b
+index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be3951b011
 --- /dev/null
 +++ b/internal/data/relationships.go
 @@ -0,0 +1,34 @@
@@ -608,7 +594,7 @@ index 0000000..c642b3b
 +}
 diff --git a/internal/data/relationships_pagination_test.go b/internal/data/relationships_pagination_test.go
 new file mode 100644
-index 0000000..fd32fee
+index 0000000000000000000000000000000000000000..fd32fee808c5f0f042a28c278d95ad4c98e79e62
 --- /dev/null
 +++ b/internal/data/relationships_pagination_test.go
 @@ -0,0 +1,148 @@
@@ -762,7 +748,7 @@ index 0000000..fd32fee
 +}
 diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
 new file mode 100644
-index 0000000..3d53627
+index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c2c43cac5
 --- /dev/null
 +++ b/internal/data/relationships_test.go
 @@ -0,0 +1,27 @@
@@ -794,7 +780,7 @@ index 0000000..3d53627
 +	}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index f7de54e..659dadd 100644
+index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b482d0dc27 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
@@ -816,7 +802,7 @@ index f7de54e..659dadd 100644
  
  func (issue *Issue) renderOpenedBy() string {
 diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
-index 439f5ac..b607be1 100644
+index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29fad897d3 100644
 --- a/internal/tui/components/issueview/action.go
 +++ b/internal/tui/components/issueview/action.go
 @@ -1,5 +1,7 @@
@@ -841,7 +827,7 @@ index 439f5ac..b607be1 100644
 +	Relationships data.IssueRelationships
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 4e08da6..f1146c9 100644
+index 304666c6b000be69835a241995884cca1d3bb62e..514a9fbbec7409f77da2b9ed5b85ce4d623d9051 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -18,6 +18,7 @@ import (
@@ -903,7 +889,19 @@ index 4e08da6..f1146c9 100644
  	if m.projectEditor.Active() {
  		var cmd tea.Cmd
  		m.projectEditor, cmd = m.projectEditor.Update(msg)
-@@ -154,6 +176,12 @@ func (m Model) View() string {
+@@ -147,6 +169,11 @@ func (m Model) View() string {
+ 			Padding(0, m.ctx.Styles.Sidebar.ContentPadding).
+ 			Render(m.projectEditor.View())
+ 	}
++	if m.relationshipEditor.Active() {
++		return lipgloss.NewStyle().
++			Padding(0, m.ctx.Styles.Sidebar.ContentPadding).
++			Render(m.relationshipEditor.View())
++	}
+ 	s := strings.Builder{}
+ 
+ 	s.WriteString(m.renderFullNameAndNumber())
+@@ -159,6 +186,12 @@ func (m Model) View() string {
  	s.WriteString(m.renderAuthor())
  	s.WriteString("\n\n")
  
@@ -916,15 +914,7 @@ index 4e08da6..f1146c9 100644
  	labels := m.renderLabels()
  	if labels != "" {
  		s.WriteString(labels)
-@@ -176,10 +204,56 @@ func (m Model) View() string {
- 		s.WriteString("\n\n")
- 		s.WriteString(m.projectEditor.View())
- 	}
-+	if m.relationshipEditor.Active() {
-+		s.WriteString("\n\n")
-+		s.WriteString(m.relationshipEditor.View())
-+	}
- 
+@@ -180,6 +213,48 @@ func (m Model) View() string {
  	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
  }
  
@@ -973,7 +963,7 @@ index 4e08da6..f1146c9 100644
  func (m *Model) ViewCompletions() string {
  	if !m.hasData() {
  		return ""
-@@ -287,6 +361,7 @@ func (m *Model) SetWidth(width int) {
+@@ -287,6 +362,7 @@ func (m *Model) SetWidth(width int) {
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
  	)
  	m.projectEditor.SetWidth(m.getIndentedContentWidth())
@@ -981,7 +971,7 @@ index 4e08da6..f1146c9 100644
  }
  
  func (m *Model) SetSectionId(id int) {
-@@ -342,7 +417,16 @@ func (m *Model) renderProjectPreview() string {
+@@ -342,7 +418,16 @@ func (m *Model) renderProjectPreview() string {
  }
  
  func (m *Model) IsTextInputBoxFocused() bool {
@@ -999,12 +989,64 @@ index 4e08da6..f1146c9 100644
  }
  
  func (m *Model) StartProjectEdit() {
+diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
+index 3cc5bc06b8f9524b61bf957810003b880a32fff5..7cfba81bb623e9596eff05badf6637fbb821a0de 100644
+--- a/internal/tui/components/issueview/issueview_test.go
++++ b/internal/tui/components/issueview/issueview_test.go
+@@ -9,6 +9,8 @@ import (
+ 
+ 	"github.com/dlvhdr/gh-dash/v4/internal/config"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projecteditor"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/relationshipeditor"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
+ )
+@@ -54,6 +56,38 @@ func TestRenderBodyDoesNotPanicBeforeContextSync(t *testing.T) {
+ 	})
+ }
+ 
++func TestProjectAndRelationshipEditorsTakeOverIssuePreview(t *testing.T) {
++	ctx := newTestContext(t)
++	m := NewModel(ctx)
++	m.SetWidth(80)
++	m.SetRow(
++		&data.IssueData{ID: "issue-1", Title: "Long issue", Body: strings.Repeat("body ", 200)},
++	)
++
++	m.projectEditor = projecteditor.New(
++		ctx,
++		"issue",
++		1,
++		1,
++		"issue-1",
++		"owner/repo",
++		[]data.ProjectItem{{
++			ID: "item-1", Project: data.Project{ID: "project-1", Title: "Roadmap"},
++		}},
++	)
++	projectView := m.View()
++	require.Contains(t, projectView, "Edit Project field")
++	require.NotContains(t, projectView, "Long issue")
++	require.NotContains(t, projectView, "body body")
++
++	m.projectEditor.Close()
++	m.relationshipEditor = relationshipeditor.New(ctx, m.issue.Data)
++	relationshipView := m.View()
++	require.Contains(t, relationshipView, "Edit relationships")
++	require.NotContains(t, relationshipView, "Long issue")
++	require.NotContains(t, relationshipView, "body body")
++}
++
+ func projectItemWithFields(values ...string) data.ProjectItem {
+ 	item := data.ProjectItem{Project: data.Project{Number: 1, Title: "Roadmap"}}
+ 	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000..fb028ef
+index 0000000000000000000000000000000000000000..67cd8775d88721131a1e4d171e6e23a93a5c28c9
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,451 @@
+@@ -0,0 +1,499 @@
 +package relationshipeditor
 +
 +import (
@@ -1086,6 +1128,7 @@ index 0000000..fb028ef
 +	initialized   bool
 +	sessionID     uint64
 +	searchVersion uint64
++	filterMode    bool
 +}
 +
 +func New(ctx *context.ProgramContext, issue data.IssueData) Model {
@@ -1164,7 +1207,6 @@ index 0000000..fb028ef
 +			return m, nil
 +		}
 +		m.candidates, m.mode, m.status = msg.Candidates, modeCandidates, ""
-+		m.query.Focus()
 +		m.filterCandidates()
 +		return m, nil
 +	case candidateSearchMsg:
@@ -1212,7 +1254,8 @@ index 0000000..fb028ef
 +					return m, fetchRelationships(m.sessionID, m.issueID)
 +				}
 +				m.mode = modeLoadingCandidates
-+				m.query.Focus()
++				m.filterMode = false
++				m.query.Blur()
 +				return m, fetchCandidates(m.sessionID, m.searchVersion, m.query.Value())
 +			case modeRelationships:
 +				if len(m.removeItems) == 0 {
@@ -1229,26 +1272,52 @@ index 0000000..fb028ef
 +}
 +
 +func (m *Model) updateCandidates(msg tea.KeyMsg) (Model, tea.Cmd) {
++	if m.filterMode {
++		switch msg.String() {
++		case "esc":
++			m.filterMode = false
++			m.query.Blur()
++			return *m, nil
++		case "ctrl+c":
++			m.Close()
++			return *m, nil
++		case "up":
++			m.move(-1)
++			return *m, nil
++		case "down":
++			m.move(1)
++			return *m, nil
++		case "enter":
++			return m.selectCandidate()
++		}
++		return m.updateCandidateFilter(msg)
++	}
 +	switch msg.String() {
 +	case "esc":
 +		m.mode, m.status = modeActions, ""
++		m.query.SetValue("")
 +		m.query.Blur()
 +		return *m, nil
-+	case "up":
++	case "/":
++		m.filterMode = true
++		return *m, m.query.Focus()
++	case "up", "k":
 +		m.move(-1)
 +		return *m, nil
-+	case "down":
++	case "down", "j":
 +		m.move(1)
 +		return *m, nil
 +	case "enter":
-+		if len(m.filtered) == 0 {
-+			m.status = "No matching accessible issues"
-+			return *m, nil
-+		}
-+		target := m.filtered[m.selectedRel]
-+		m.mode = modeApplying
-+		return *m, applyMutation(m.sessionID, m.issueID, target.ID, m.pending)
++		return m.selectCandidate()
 +	}
++	if msg.String() == "q" {
++		m.Close()
++		return *m, nil
++	}
++	return *m, nil
++}
++
++func (m *Model) updateCandidateFilter(msg tea.KeyMsg) (Model, tea.Cmd) {
 +	var cmd tea.Cmd
 +	m.query, cmd = m.query.Update(msg)
 +	m.filterCandidates()
@@ -1259,6 +1328,18 @@ index 0000000..fb028ef
 +		return candidateSearchMsg{SessionID: m.sessionID, Query: query, Version: version}
 +	})
 +	return *m, tea.Batch(cmd, searchCmd)
++}
++
++func (m *Model) selectCandidate() (Model, tea.Cmd) {
++	if len(m.filtered) == 0 {
++		m.status = "No matching accessible issues"
++		return *m, nil
++	}
++	target := m.filtered[m.selectedRel]
++	m.mode = modeApplying
++	m.filterMode = false
++	m.query.Blur()
++	return *m, applyMutation(m.sessionID, m.issueID, target.ID, m.pending)
 +}
 +
 +func (m *Model) filterCandidates() {
@@ -1312,7 +1393,7 @@ index 0000000..fb028ef
 +	if !m.active {
 +		return ""
 +	}
-+	lines := []string{"Relationships (↑/↓, Enter, Esc)"}
++	lines := []string{"Edit relationships"}
 +	switch m.mode {
 +	case modeActions:
 +		for i, item := range m.actions {
@@ -1345,6 +1426,15 @@ index 0000000..fb028ef
 +	}
 +	if m.status != "" {
 +		lines = append(lines, m.status)
++	}
++	if m.mode == modeCandidates {
++		if m.filterMode {
++			lines = append(lines, "type to filter · ↑/↓ select · Enter choose · Esc stop filtering")
++		} else {
++			lines = append(lines, "j/k/↑/↓ select · / filter · Enter choose · Esc back")
++		}
++	} else {
++		lines = append(lines, "j/k/↑/↓ select · Enter choose · Esc back")
 +	}
 +	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
 +}
@@ -1458,10 +1548,10 @@ index 0000000..fb028ef
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000..fdb9fd1
+index 0000000000000000000000000000000000000000..98458bc4d3344c3209c82ebfd7eaebf9219b9321
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,144 @@
+@@ -0,0 +1,167 @@
 +package relationshipeditor
 +
 +import (
@@ -1592,6 +1682,29 @@ index 0000000..fdb9fd1
 +	require.True(t, updated.active)
 +}
 +
++func TestCandidatePickerUsesVimNavigationAndExplicitFilterMode(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "self"})
++	m.mode = modeCandidates
++	m.active = true
++	m.candidates = []data.RelatedIssue{
++		related("one", "acme/app", 1, "One", "OPEN"),
++		related("two", "acme/app", 2, "Two", "OPEN"),
++	}
++	m.filterCandidates()
++
++	m, _ = m.Update(tea.KeyPressMsg{Text: "j"})
++	require.Equal(t, 1, m.selectedRel)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "k"})
++	require.Equal(t, 0, m.selectedRel)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "/"})
++	require.True(t, m.filterMode)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "j"})
++	require.Equal(t, "j", m.query.Value())
++	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.False(t, m.filterMode)
++	require.True(t, m.Active())
++}
++
 +func TestCandidateSummaryIncludesRepositoryNumberTitleAndState(t *testing.T) {
 +	summary := related("id", "octo/tools", 42, "Cache cleanup", "CLOSED").Summary()
 +	require.True(t, strings.Contains(summary, "octo/tools#42"))
@@ -1607,7 +1720,7 @@ index 0000000..fdb9fd1
 +	return mutations
 +}
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f300a81..1fedd07 100644
+index 41e14c243281ab4603f481d93980e2cced3386de..d50a39f981c55b6ac0f57f6042e29d8d12ef9d7d 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -20,6 +20,7 @@ type IssueKeyMap struct {
@@ -1619,12 +1732,12 @@ index f300a81..1fedd07 100644
  
  var IssueKeys = IssueKeyMap{
 @@ -63,6 +64,10 @@ var IssueKeys = IssueKeyMap{
- 		key.WithKeys("E"),
- 		key.WithHelp("E", "edit Project field"),
+ 		key.WithKeys("f"),
+ 		key.WithHelp("f", "edit Project field"),
  	),
 +	EditRelationships: key.NewBinding(
-+		key.WithKeys("I"),
-+		key.WithHelp("I", "edit relationships"),
++		key.WithKeys("i"),
++		key.WithHelp("i", "edit relationships"),
 +	),
  }
  
@@ -1648,7 +1761,7 @@ index f300a81..1fedd07 100644
  		}
 diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
 new file mode 100644
-index 0000000..664b5fc
+index 0000000000000000000000000000000000000000..81f5ec573375ad1c2c775e29bf0d0ccf76ecc3a5
 --- /dev/null
 +++ b/internal/tui/keys/issueKeys_test.go
 @@ -0,0 +1,26 @@
@@ -1663,7 +1776,7 @@ index 0000000..664b5fc
 +)
 +
 +func TestIssueRelationshipEditorHasDiscoverableDefaultBinding(t *testing.T) {
-+	require.Equal(t, []string{"I"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, []string{"i"}, IssueKeys.EditRelationships.Keys())
 +	require.Equal(t, "edit relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
 +
@@ -1678,296 +1791,45 @@ index 0000000..664b5fc
 +	require.Equal(t, []string{"gR"}, IssueKeys.EditRelationships.Keys())
 +	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
-diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index 457952d..0db3cb5 100644
---- a/internal/tui/ui.go
-+++ b/internal/tui/ui.go
-@@ -50,27 +50,31 @@ import (
- 	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
- )
- 
--var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
-+var (
-+	fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
-+	fetchIssueRelationships           = data.FetchIssueRelationships
-+)
- 
- type Model struct {
--	keys                     *keys.KeyMap
--	sidebar                  sidebar.Model
--	prView                   prview.Model
--	issueSidebar             issueview.Model
--	branchSidebar            branchsidebar.Model
--	notificationView         notificationview.Model
--	currSectionId            int
--	footer                   footer.Model
--	repo                     section.Section
--	prs                      []section.Section
--	issues                   []section.Section
--	notifications            []section.Section
--	tabs                     tabs.Model
--	ctx                      *context.ProgramContext
--	taskSpinner              spinner.Model
--	tasks                    map[string]context.Task
--	positionOverride         string // "" means no override, "right" or "bottom"
--	projectPreviewGeneration uint64
-+	keys                          *keys.KeyMap
-+	sidebar                       sidebar.Model
-+	prView                        prview.Model
-+	issueSidebar                  issueview.Model
-+	branchSidebar                 branchsidebar.Model
-+	notificationView              notificationview.Model
-+	currSectionId                 int
-+	footer                        footer.Model
-+	repo                          section.Section
-+	prs                           []section.Section
-+	issues                        []section.Section
-+	notifications                 []section.Section
-+	tabs                          tabs.Model
-+	ctx                           *context.ProgramContext
-+	taskSpinner                   spinner.Model
-+	tasks                         map[string]context.Task
-+	positionOverride              string // "" means no override, "right" or "bottom"
-+	projectPreviewGeneration      uint64
-+	relationshipPreviewGeneration uint64
+diff --git a/internal/tui/keys/keys_test.go b/internal/tui/keys/keys_test.go
+index a20aca2c68d9b99fce1eb38489c01d21a7fba93e..6e75373ad473cfc77c22b95b70430b4e91df7ae3 100644
+--- a/internal/tui/keys/keys_test.go
++++ b/internal/tui/keys/keys_test.go
+@@ -167,6 +167,21 @@ func TestFullHelpForPRViewDoesNotIncludeNotificationKeys(t *testing.T) {
+ 	}
  }
  
- type Repositories struct {
-@@ -235,6 +239,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 			return m, nil
- 		}
- 
-+		// R is also the global refresh-all binding. Give the issue relationship
-+		// editor precedence while an issue is selected so its default binding
-+		// remains usable and discoverable.
-+		_, hasSelectedIssue := currRowData.(*data.IssueData)
-+		hasNotificationIssue := m.notificationView.GetSubjectIssue() != nil
-+		if key.Matches(msg, keys.IssueKeys.EditRelationships) &&
-+			((m.ctx.View == config.IssuesView && hasSelectedIssue) || hasNotificationIssue) {
-+			m.relationshipPreviewGeneration++
-+			cmd = m.issueSidebar.StartRelationshipEdit()
-+			m.syncSidebar()
-+			return m, cmd
-+		}
-+
- 		switch {
- 		case m.isUserDefinedKeybinding(msg):
- 			cmd = m.executeKeybinding(msg.String())
-@@ -500,6 +517,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 				m.syncSidebar()
- 				return m, nil
- 
-+			case key.Matches(msg, keys.IssueKeys.EditRelationships):
-+				m.relationshipPreviewGeneration++
-+				cmd = m.issueSidebar.StartRelationshipEdit()
-+				m.syncSidebar()
-+				return m, cmd
-+
- 			case key.Matches(msg, keys.IssueKeys.Checkout):
- 				cmd, err := m.issueSidebar.Checkout()
- 				if err != nil {
-@@ -618,6 +641,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 
- 			// Issue keybindings when viewing an Issue notification
- 			case m.notificationView.GetSubjectIssue() != nil:
-+				if key.Matches(msg, keys.IssueKeys.EditRelationships) {
-+					m.relationshipPreviewGeneration++
-+					cmd = m.issueSidebar.StartRelationshipEdit()
-+					m.syncSidebar()
-+					return m, cmd
-+				}
- 				var issueCmd tea.Cmd
- 				var action *issueview.IssueAction
- 				m.issueSidebar, issueCmd, action = m.issueSidebar.Update(msg)
-@@ -650,6 +679,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 					case issueview.IssueActionReopen:
- 						cmd = m.promptConfirmationForNotificationIssue("reopen")
- 						return m, cmd
-+
-+					case issueview.IssueActionRelationshipUpdated:
-+						if row := m.notificationView.GetSubjectIssue(); row != nil {
-+							row.Parent = action.Relationships.Parent
-+							row.SubIssues = action.Relationships.SubIssues
-+							row.SubIssuesSummary = action.Relationships.SubIssuesSummary
-+							row.BlockedBy = action.Relationships.BlockedBy
-+							row.Blocking = action.Relationships.Blocking
-+							m.issueSidebar.SetRow(row)
-+						}
- 					}
- 				}
- 
-@@ -820,6 +859,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 			}
- 		})
- 
-+	case issueRelationshipsRequestMsg:
-+		if !acceptsIssueRelationships(
-+			m.relationshipPreviewGeneration,
-+			m.isCurrentIssue(msg.ContentID),
-+			msg.Generation,
-+		) {
-+			break
-+		}
-+		cmds = append(cmds, func() tea.Msg {
-+			relationships, err := fetchIssueRelationships(msg.ContentID)
-+			return issueRelationshipsMsg{
-+				ContentID:     msg.ContentID,
-+				Generation:    msg.Generation,
-+				Relationships: relationships,
-+				Err:           err,
-+			}
-+		})
-+
-+	case issueRelationshipsMsg:
-+		if !acceptsIssueRelationships(
-+			m.relationshipPreviewGeneration,
-+			m.isCurrentIssue(msg.ContentID),
-+			msg.Generation,
-+		) {
-+			break
-+		}
-+		if msg.Err != nil {
-+			log.Warn(
-+				"Issue relationship enrichment unavailable",
-+				"contentID",
-+				msg.ContentID,
-+				"error",
-+				msg.Err,
-+			)
-+			break
-+		}
-+		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
-+			issue.Parent = msg.Relationships.Parent
-+			issue.SubIssues = msg.Relationships.SubIssues
-+			issue.SubIssuesSummary = msg.Relationships.SubIssuesSummary
-+			issue.BlockedBy = msg.Relationships.BlockedBy
-+			issue.Blocking = msg.Relationships.Blocking
-+			m.issueSidebar.SetRow(issue)
-+			if currSection := m.getCurrSection(); currSection != nil {
-+				if issues, ok := currSection.(*issuessection.Model); ok {
-+					for index := range issues.Issues {
-+						if issues.Issues[index].ID == msg.ContentID {
-+							issues.Issues[index] = *issue
-+							issues.Table.SetRows(issues.BuildRows())
-+							break
-+						}
-+					}
-+				}
-+			}
-+			cmds = append(cmds, m.syncSidebar())
-+		}
-+
- 	case issueProjectPreviewMsg:
- 		if !acceptsIssueProjectPreview(
- 			m.projectPreviewGeneration,
-@@ -1042,7 +1138,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 	}
- 
- 	if m.issueSidebar.IsTextInputBoxFocused() {
--		m.issueSidebar, issueSidebarCmd, _ = m.issueSidebar.Update(msg)
-+		var issueAction *issueview.IssueAction
-+		m.issueSidebar, issueSidebarCmd, issueAction = m.issueSidebar.Update(msg)
-+		if issueAction != nil && issueAction.Type == issueview.IssueActionRelationshipUpdated {
-+			if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
-+				issue.Parent = issueAction.Relationships.Parent
-+				issue.SubIssues = issueAction.Relationships.SubIssues
-+				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
-+				issue.BlockedBy = issueAction.Relationships.BlockedBy
-+				issue.Blocking = issueAction.Relationships.Blocking
-+				if currSection := m.getCurrSection(); currSection != nil {
-+					if issues, ok := currSection.(*issuessection.Model); ok {
-+						for index := range issues.Issues {
-+							if issues.Issues[index].ID == issue.ID {
-+								issues.Issues[index] = *issue
-+								issues.Table.SetRows(issues.BuildRows())
-+								break
-+							}
-+						}
-+					}
-+				}
-+			}
-+			if issue := m.notificationView.GetSubjectIssue(); issue != nil {
-+				issue.Parent = issueAction.Relationships.Parent
-+				issue.SubIssues = issueAction.Relationships.SubIssues
-+				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
-+				issue.BlockedBy = issueAction.Relationships.BlockedBy
-+				issue.Blocking = issueAction.Relationships.Blocking
-+				m.issueSidebar.SetRow(issue)
-+			}
-+		}
- 		m.syncSidebar()
- 	}
- 
-@@ -1215,6 +1340,18 @@ type issueProjectPreviewMsg struct {
- 	Err        error
- }
- 
-+type issueRelationshipsRequestMsg struct {
-+	ContentID  string
-+	Generation uint64
-+}
-+
-+type issueRelationshipsMsg struct {
-+	ContentID     string
-+	Generation    uint64
-+	Relationships data.IssueRelationships
-+	Err           error
-+}
-+
- func acceptsIssueProjectPreview(
- 	currentGeneration uint64,
- 	currentIssue bool,
-@@ -1223,6 +1360,14 @@ func acceptsIssueProjectPreview(
- 	return currentIssue && currentGeneration == messageGeneration
- }
- 
-+func acceptsIssueRelationships(
-+	currentGeneration uint64,
-+	currentIssue bool,
-+	messageGeneration uint64,
-+) bool {
-+	return currentIssue && currentGeneration == messageGeneration
-+}
-+
- func (m *Model) setCurrSectionId(newSectionId int) {
- 	m.currSectionId = newSectionId
- 	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1250,6 +1395,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
- 
- func (m *Model) onViewedRowChanged() tea.Cmd {
- 	m.projectPreviewGeneration++
-+	m.relationshipPreviewGeneration++
- 	m.prView.SetSummaryViewLess()
- 	m.prView.GoToFirstTab()
- 	var cachedPreview data.ProjectItems
-@@ -1282,6 +1428,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
- 		enrichCmd = m.prView.EnrichCurrRow()
- 	}
- 	var projectCmd tea.Cmd
-+	var relationshipCmd tea.Cmd
-+	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && issue.ID != "" {
-+		contentID := issue.ID
-+		generation := m.relationshipPreviewGeneration
-+		relationshipCmd = tea.Tick(0, func(time.Time) tea.Msg {
-+			return issueRelationshipsRequestMsg{ContentID: contentID, Generation: generation}
-+		})
++func TestNativePlanningKeysPreserveUpstreamPRExpandBinding(t *testing.T) {
++	if got := IssueKeys.EditProject.Keys(); len(got) != 1 || got[0] != "f" {
++		t.Fatalf("issue Project key = %v, want [f]", got)
 +	}
- 	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
- 		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
- 		issue.ID != "" {
-@@ -1294,7 +1448,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
- 	m.sidebar.ScrollToTop()
- 	m.notificationView.ResetSubject()
- 	keys.SetNotificationSubject(keys.NotificationSubjectNone)
--	return tea.Batch(sidebarCmd, enrichCmd, projectCmd)
-+	return tea.Batch(sidebarCmd, enrichCmd, projectCmd, relationshipCmd)
- }
- 
- func (m *Model) isCurrentIssue(contentID string) bool {
++	if got := PRKeys.EditProject.Keys(); len(got) != 1 || got[0] != "f" {
++		t.Fatalf("PR Project key = %v, want [f]", got)
++	}
++	if got := IssueKeys.EditRelationships.Keys(); len(got) != 1 || got[0] != "i" {
++		t.Fatalf("relationship key = %v, want [i]", got)
++	}
++	if got := PRKeys.SummaryViewMore.Keys(); len(got) != 1 || got[0] != "e" {
++		t.Fatalf("PR expand key = %v, want [e]", got)
++	}
++}
++
+ // findKeyByHelp searches for a key binding by its help description
+ func findKeyByHelp(keys []key.Binding, helpDesc string) bool {
+ 	for _, k := range keys {
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index b421ab0..f42eb80 100644
+index b421ab02abea3d06fc42885c6b92d838db441006..56aba37abb53fb22294efe0d41871b9089a18751 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
+@@ -1424,7 +1424,7 @@ func TestProjectEditorDefaultKeyEntersFromIssueView(t *testing.T) {
+ 	}
+ 	m.issueSidebar.SetRow(&issue)
+ 
+-	updated, _ := m.Update(tea.KeyPressMsg{Text: "E"})
++	updated, _ := m.Update(tea.KeyPressMsg{Text: "f"})
+ 	m = updated.(Model)
+ 	require.True(
+ 		t,
 @@ -2526,3 +2526,9 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
  		})
  	}

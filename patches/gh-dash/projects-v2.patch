@@ -1,5 +1,5 @@
 diff --git a/internal/config/parser.go b/internal/config/parser.go
-index 96a2283..86397a2 100644
+index 96a2283274df241dfcc4609fb53de90d25636ddf..86397a28b9e02dfe2721ef2995abdf00005c9bd3 100644
 --- a/internal/config/parser.go
 +++ b/internal/config/parser.go
 @@ -148,6 +148,19 @@ type ColumnConfig struct {
@@ -36,7 +36,7 @@ index 96a2283..86397a2 100644
  type Defaults struct {
 diff --git a/internal/config/parser_projects_test.go b/internal/config/parser_projects_test.go
 new file mode 100644
-index 0000000..0402527
+index 0000000000000000000000000000000000000000..0402527d543928e8d1ff19b6b1e760191dded65d
 --- /dev/null
 +++ b/internal/config/parser_projects_test.go
 @@ -0,0 +1,49 @@
@@ -90,7 +90,7 @@ index 0000000..0402527
 +	}
 +}
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index 9fa1763..a38043a 100644
+index 9fa1763cf9a78a386ce3ed431181ac5664c636a9..a38043a3325e2d8399e60996f5c54b8d99e87ddc 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -14,6 +14,7 @@ import (
@@ -308,7 +308,7 @@ index 9fa1763..a38043a 100644
  }
 diff --git a/internal/data/issueapi_test.go b/internal/data/issueapi_test.go
 new file mode 100644
-index 0000000..3179532
+index 0000000000000000000000000000000000000000..3179532970dbaf74dc5f9b30e71a18c47feb01ae
 --- /dev/null
 +++ b/internal/data/issueapi_test.go
 @@ -0,0 +1,65 @@
@@ -378,7 +378,7 @@ index 0000000..3179532
 +	}
 +}
 diff --git a/internal/data/prapi.go b/internal/data/prapi.go
-index 11eecdb..6373b00 100644
+index 11eecdb58395a316e7e3359197509b644a915471..6373b00c49420e1731a7bbe51b1e51a7449baad7 100644
 --- a/internal/data/prapi.go
 +++ b/internal/data/prapi.go
 @@ -27,6 +27,7 @@ type SuggestedReviewer struct {
@@ -604,7 +604,7 @@ index 11eecdb..6373b00 100644
  		return EnrichedPullRequestData{}, err
  	}
 diff --git a/internal/data/prapi_test.go b/internal/data/prapi_test.go
-index 79af55c..dab4daf 100644
+index 79af55c19edec15d5934a285f3edc2f19a23f368..dab4dafb28699d88665cd57acb7b6a3d0e8124f9 100644
 --- a/internal/data/prapi_test.go
 +++ b/internal/data/prapi_test.go
 @@ -1,12 +1,85 @@
@@ -695,7 +695,7 @@ index 79af55c..dab4daf 100644
  	originalCachedClient := cachedClient
 diff --git a/internal/data/project_field_types_test.go b/internal/data/project_field_types_test.go
 new file mode 100644
-index 0000000..25433ff
+index 0000000000000000000000000000000000000000..25433ff990e8f8367d2b879fbe5768791e8eac49
 --- /dev/null
 +++ b/internal/data/project_field_types_test.go
 @@ -0,0 +1,48 @@
@@ -749,7 +749,7 @@ index 0000000..25433ff
 +}
 diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
 new file mode 100644
-index 0000000..b17ea1b
+index 0000000000000000000000000000000000000000..b17ea1bb7e00bbaa068af7fcb2883f163005ec9e
 --- /dev/null
 +++ b/internal/data/projectcache.go
 @@ -0,0 +1,379 @@
@@ -1134,7 +1134,7 @@ index 0000000..b17ea1b
 +}
 diff --git a/internal/data/projectcache_test.go b/internal/data/projectcache_test.go
 new file mode 100644
-index 0000000..0b94757
+index 0000000000000000000000000000000000000000..0b9475749b851747347e9f56571db003fc54b571
 --- /dev/null
 +++ b/internal/data/projectcache_test.go
 @@ -0,0 +1,159 @@
@@ -1299,7 +1299,7 @@ index 0000000..0b94757
 +}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000..d8368cf
+index 0000000000000000000000000000000000000000..d8368cfc11687d589f471691e5fcca24e3163ab2
 --- /dev/null
 +++ b/internal/data/projectlist.go
 @@ -0,0 +1,1163 @@
@@ -2468,7 +2468,7 @@ index 0000000..d8368cf
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
 new file mode 100644
-index 0000000..31f2a9a
+index 0000000000000000000000000000000000000000..31f2a9adf7c675226a76e5ea9c917dfbeba932d1
 --- /dev/null
 +++ b/internal/data/projectlist_query_test.go
 @@ -0,0 +1,638 @@
@@ -3112,7 +3112,7 @@ index 0000000..31f2a9a
 +}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000..d476df1
+index 0000000000000000000000000000000000000000..d476df1e8569345b21d6b596d10a9d5c008e06dd
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
 @@ -0,0 +1,174 @@
@@ -3292,10 +3292,10 @@ index 0000000..d476df1
 +}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000..ac462cf
+index 0000000000000000000000000000000000000000..c36e735411202e80e6a7ad366e4cd9764de680a1
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1672 @@
+@@ -0,0 +1,1675 @@
 +package data
 +
 +import (
@@ -4894,6 +4894,9 @@ index 0000000..ac462cf
 +	delete(projectItemsState.columns, contentID)
 +	delete(projectItemsState.inFlight, contentID)
 +	projectItemsState.mu.Unlock()
++	// Advance the authoritative generation so an in-flight fingerprint or
++	// full-preview read from before the mutation cannot repopulate live state.
++	BeginProjectRefreshGeneration()
 +	invalidatePersistentProjectItems(contentID)
 +}
 +
@@ -4970,7 +4973,7 @@ index 0000000..ac462cf
 +}
 diff --git a/internal/data/projects_live_test.go b/internal/data/projects_live_test.go
 new file mode 100644
-index 0000000..e68f901
+index 0000000000000000000000000000000000000000..e68f901253bd74f8abdecbe2e2ad7117175f4601
 --- /dev/null
 +++ b/internal/data/projects_live_test.go
 @@ -0,0 +1,182 @@
@@ -5158,7 +5161,7 @@ index 0000000..e68f901
 +}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000..5082173
+index 0000000000000000000000000000000000000000..508217319664c4434d6e519bf319476a8031ba2a
 --- /dev/null
 +++ b/internal/data/projects_test.go
 @@ -0,0 +1,624 @@
@@ -5787,7 +5790,7 @@ index 0000000..5082173
 +	return struct{ Nodes []ProjectFieldValue }{values}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index e7cf4ec..f7de54e 100644
+index e7cf4eca6280f0be1d5c538267f131594acb9a3c..f7de54e3ffbf4da534ca734508d2cf35580eb6a0 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -20,7 +20,7 @@ type Issue struct {
@@ -5815,7 +5818,7 @@ index e7cf4ec..f7de54e 100644
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664..6edb322 100644
+index f421664c50b9fe50ab136653a82c42d26c10f313..6edb3222a7d4954d0829483ab9271f44f934c099 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,8 @@ import (
@@ -6035,7 +6038,7 @@ index f421664..6edb322 100644
  	for _, assignee := range addedAssignees {
 diff --git a/internal/tui/components/issuessection/issuessection_test.go b/internal/tui/components/issuessection/issuessection_test.go
 new file mode 100644
-index 0000000..5c92a29
+index 0000000000000000000000000000000000000000..5c92a29495f594010960bb3d01bd1bebeb43b6d3
 --- /dev/null
 +++ b/internal/tui/components/issuessection/issuessection_test.go
 @@ -0,0 +1,69 @@
@@ -6109,7 +6112,7 @@ index 0000000..5c92a29
 +	require.Len(t, m.Issues[0].ProjectItems.Nodes, 1)
 +}
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 494ec4c..4e08da6 100644
+index 494ec4c00c573b3be588a901917bbc3daf7bb6e3..304666c6b000be69835a241995884cca1d3bb62e 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -17,6 +17,7 @@ import (
@@ -6163,7 +6166,19 @@ index 494ec4c..4e08da6 100644
  	cmd, handled := m.editor.Update(msg)
  
  	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+d" {
-@@ -141,6 +159,11 @@ func (m Model) View() string {
+@@ -124,6 +142,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
+ }
+ 
+ func (m Model) View() string {
++	if m.projectEditor.Active() {
++		return lipgloss.NewStyle().
++			Padding(0, m.ctx.Styles.Sidebar.ContentPadding).
++			Render(m.projectEditor.View())
++	}
+ 	s := strings.Builder{}
+ 
+ 	s.WriteString(m.renderFullNameAndNumber())
+@@ -141,6 +164,11 @@ func (m Model) View() string {
  		s.WriteString(labels)
  		s.WriteString("\n\n")
  	}
@@ -6175,17 +6190,14 @@ index 494ec4c..4e08da6 100644
  
  	s.WriteString(m.renderBody())
  	s.WriteString("\n\n")
-@@ -149,6 +172,10 @@ func (m Model) View() string {
+@@ -149,7 +177,6 @@ func (m Model) View() string {
  	if m.editor.Mode() != cmpcontroller.ModeNone {
  		s.WriteString(m.ctx.Styles.Sidebar.InputBox.Render(m.editor.View()))
  	}
-+	if m.projectEditor.Active() {
-+		s.WriteString("\n\n")
-+		s.WriteString(m.projectEditor.View())
-+	}
- 
+-
  	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
  }
+ 
 @@ -259,6 +286,7 @@ func (m *Model) SetWidth(width int) {
  	m.editor.SetWidth(
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
@@ -6274,7 +6286,7 @@ index 494ec4c..4e08da6 100644
  	// TODO: move this to the NewModel func
  	// currently it's not possible since the styles aren't yet instantiated when NewModel is called
 diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
-index 6996626..3cc5bc0 100644
+index 6996626d9205ee1c147b62b0e0ddb211a63989ab..3cc5bc06b8f9524b61bf957810003b880a32fff5 100644
 --- a/internal/tui/components/issueview/issueview_test.go
 +++ b/internal/tui/components/issueview/issueview_test.go
 @@ -1,6 +1,8 @@
@@ -6352,7 +6364,7 @@ index 6996626..3cc5bc0 100644
 +	return true
 +}
 diff --git a/internal/tui/components/notificationssection/notificationssection.go b/internal/tui/components/notificationssection/notificationssection.go
-index e25424c..692ac35 100644
+index e25424c3b698d377059fbf6a914a9bba158152ee..692ac35205cb6075546752ed56ceb587a0c3a50f 100644
 --- a/internal/tui/components/notificationssection/notificationssection.go
 +++ b/internal/tui/components/notificationssection/notificationssection.go
 @@ -28,6 +28,11 @@ const SectionType = "notification"
@@ -6387,7 +6399,7 @@ index e25424c..692ac35 100644
  					return nil
 diff --git a/internal/tui/components/notificationssection/notificationssection_test.go b/internal/tui/components/notificationssection/notificationssection_test.go
 new file mode 100644
-index 0000000..6580bc2
+index 0000000000000000000000000000000000000000..6580bc2905065a48aa14cec1e013203e18fea562
 --- /dev/null
 +++ b/internal/tui/components/notificationssection/notificationssection_test.go
 @@ -0,0 +1,60 @@
@@ -6453,7 +6465,7 @@ index 0000000..6580bc2
 +}
 diff --git a/internal/tui/components/projectcolumns/projectcolumns.go b/internal/tui/components/projectcolumns/projectcolumns.go
 new file mode 100644
-index 0000000..def202f
+index 0000000000000000000000000000000000000000..def202f1b1255f17ca807785aa1df28e25e241b1
 --- /dev/null
 +++ b/internal/tui/components/projectcolumns/projectcolumns.go
 @@ -0,0 +1,24 @@
@@ -6483,10 +6495,10 @@ index 0000000..def202f
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..acb65b5
+index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd79225acf5299
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,506 @@
+@@ -0,0 +1,529 @@
 +package projecteditor
 +
 +import (
@@ -6558,6 +6570,7 @@ index 0000000..acb65b5
 +	optionField int
 +	activeField int
 +	mode        mode
++	filterMode  bool
 +	input       inputbox.Model
 +	width       int
 +	status      string
@@ -6578,7 +6591,6 @@ index 0000000..acb65b5
 +	input.SetHeight(4)
 +	filter := inputbox.DefaultTextInput(ctx)
 +	filter.Prompt = "Filter: "
-+	filter.Focus()
 +	model := Model{
 +		ctx:         ctx,
 +		sectionType: sectionType,
@@ -6651,7 +6663,8 @@ index 0000000..acb65b5
 +				m.mode = modeLoadingFields
 +				return m, m.update(value, value)
 +			case "esc", "ctrl+c":
-+				m.filter.Focus()
++				m.filterMode = false
++				m.filter.Blur()
 +				m.input.Blur()
 +				m.mode = modeFields
 +				return m, nil
@@ -6660,30 +6673,39 @@ index 0000000..acb65b5
 +			return m, cmd
 +		}
 +		if m.mode == modeProjects || m.mode == modeFields || m.mode == modeOptions {
-+			switch msg.String() {
-+			case "up", "down", "left", "right", "enter", "esc", "ctrl+c":
-+				// Navigation and cancellation are handled below while the
-+				// filter remains focused, so printable j/k/q are searchable.
-+			default:
-+				var filterCmd tea.Cmd
-+				m.filter, filterCmd = m.filter.Update(msg)
-+				m.applyFilter()
-+				return m, filterCmd
++			if m.filterMode {
++				switch msg.String() {
++				case "up":
++					m.move(-1)
++				case "down":
++					m.move(1)
++				case "esc":
++					m.filterMode = false
++					m.filter.Blur()
++				case "ctrl+c":
++					m.Close()
++				case "enter":
++					return m.selectCurrent()
++				default:
++					var filterCmd tea.Cmd
++					m.filter, filterCmd = m.filter.Update(msg)
++					m.applyFilter()
++					return m, filterCmd
++				}
++				return m, nil
 +			}
 +		}
 +		switch msg.String() {
-+		case "up":
++		case "/":
++			m.filterMode = true
++			return m, m.filter.Focus()
++		case "up", "k":
 +			m.move(-1)
-+		case "down":
++		case "down", "j":
 +			m.move(1)
 +		case "ctrl+c":
 +			m.Close()
 +		case "esc":
-+			if strings.TrimSpace(m.filter.Value()) != "" {
-+				m.filter.SetValue("")
-+				m.applyFilter()
-+				return m, nil
-+			}
 +			switch m.mode {
 +			case modeOptions:
 +				m.mode = modeFields
@@ -6692,44 +6714,53 @@ index 0000000..acb65b5
 +			default:
 +				m.Close()
 +			}
-+			if m.Active() {
-+				m.filter.SetValue("")
-+				m.applyFilter()
-+			}
++			m.filter.SetValue("")
++			m.filter.Blur()
++			m.applyFilter()
 +		case "enter":
-+			if m.selectedIndex() < 0 {
-+				return m, nil
-+			}
-+			switch m.mode {
-+			case modeProjects:
-+				m.mode = modeLoadingFields
-+				return m, m.fetchFields()
-+			case modeFields:
-+				fieldIndex := m.filtered[m.field]
-+				field := m.fields[fieldIndex]
-+				if field.Type == "ProjectV2SingleSelectField" || field.Type == "SINGLE_SELECT" {
-+					m.mode, m.option, m.optionField = modeOptions, 0, fieldIndex
-+					m.filter.SetValue("")
-+					m.applyFilter()
-+				} else if isEditable(field.Type) {
-+					m.activeField = fieldIndex
-+					m.mode = modeInput
-+					m.filter.Blur()
-+					m.input.Reset()
-+					m.input.SetPrompt(fmt.Sprintf("Set %s (Ctrl+d to submit)...", field.Name))
-+					return m, tea.Sequence(textarea.Blink, m.input.Focus())
-+				} else {
-+					m.status = fmt.Sprintf("Field type %s is display-only", field.Type)
-+				}
-+			case modeOptions:
-+				option := m.options()[m.filtered[m.option]]
-+				m.activeField = m.optionField
-+				m.mode = modeLoadingFields
-+				return m, m.update(option.ID, option.Name)
-+			}
++			return m.selectCurrent()
 +		}
 +	}
 +	return m, nil
++}
++
++func (m *Model) selectCurrent() (Model, tea.Cmd) {
++	if m.selectedIndex() < 0 {
++		return *m, nil
++	}
++	switch m.mode {
++	case modeProjects:
++		m.mode = modeLoadingFields
++		m.filterMode = false
++		m.filter.Blur()
++		return *m, m.fetchFields()
++	case modeFields:
++		fieldIndex := m.filtered[m.field]
++		field := m.fields[fieldIndex]
++		if field.Type == "ProjectV2SingleSelectField" || field.Type == "SINGLE_SELECT" {
++			m.mode, m.option, m.optionField = modeOptions, 0, fieldIndex
++			m.filter.SetValue("")
++			m.filter.Blur()
++			m.applyFilter()
++		} else if isEditable(field.Type) {
++			m.activeField = fieldIndex
++			m.mode = modeInput
++			m.filter.Blur()
++			m.input.Reset()
++			m.input.SetPrompt(fmt.Sprintf("Set %s (Ctrl+d to submit)...", field.Name))
++			return *m, tea.Sequence(textarea.Blink, m.input.Focus())
++		} else {
++			m.status = fmt.Sprintf("Field type %s is display-only", field.Type)
++		}
++	case modeOptions:
++		option := m.options()[m.filtered[m.option]]
++		m.activeField = m.optionField
++		m.mode = modeLoadingFields
++		m.filterMode = false
++		m.filter.Blur()
++		return *m, m.update(option.ID, option.Name)
++	}
++	return *m, nil
 +}
 +
 +func (m *Model) move(delta int) {
@@ -6977,7 +7008,11 @@ index 0000000..acb65b5
 +			lipgloss.NewStyle().Foreground(m.ctx.Theme.ErrorText).Render(m.status),
 +		)
 +	}
-+	lines = append(lines, "↑/↓ select · type to filter · Enter choose · Esc back/cancel")
++	if m.filterMode {
++		lines = append(lines, "type to filter · ↑/↓ select · Enter choose · Esc stop filtering")
++	} else {
++		lines = append(lines, "j/k/↑/↓ select · / filter · Enter choose · Esc back")
++	}
 +	return strings.Join(lines, "\n")
 +}
 +
@@ -6995,10 +7030,10 @@ index 0000000..acb65b5
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000..f75e087
+index 0000000000000000000000000000000000000000..83473c42cf216893c1425b988f7ac85b2d21c068
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,231 @@
 +package projecteditor
 +
 +import (
@@ -7066,9 +7101,9 @@ index 0000000..f75e087
 +	require.Equal(t, 1, m.option)
 +}
 +
-+func TestDefaultProjectEditorKeyIsE(t *testing.T) {
-+	require.Equal(t, []string{"E"}, keys.PRKeys.EditProject.Keys())
-+	require.Equal(t, []string{"E"}, keys.IssueKeys.EditProject.Keys())
++func TestDefaultProjectEditorKeyIsF(t *testing.T) {
++	require.Equal(t, []string{"f"}, keys.PRKeys.EditProject.Keys())
++	require.Equal(t, []string{"f"}, keys.IssueKeys.EditProject.Keys())
 +}
 +
 +func TestIterationFieldsAreDisplayOnly(t *testing.T) {
@@ -7144,6 +7179,7 @@ index 0000000..f75e087
 +		{Project: data.Project{ID: "one", Number: 1, Title: "Infrastructure"}},
 +		{Project: data.Project{ID: "two", Number: 2, Title: "Priority"}},
 +	})
++	m, _ = m.Update(key("/"))
 +	m, _ = m.Update(key("INFRA"))
 +	require.Equal(t, "INFRA", m.filter.Value())
 +	require.Len(t, m.filtered, 1)
@@ -7190,30 +7226,47 @@ index 0000000..f75e087
 +	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
 +		Project: data.Project{ID: "project-1", Number: 1, Title: "qkj"},
 +	}})
++	m, _ = m.Update(key("/"))
 +	for _, character := range []string{"j", "k", "q"} {
 +		m, _ = m.Update(key(character))
 +	}
 +	require.Equal(t, "jkq", m.filter.Value())
 +}
 +
-+func TestEditorNoMatchesEnterIsSafeAndEscClearsThenBacks(t *testing.T) {
++func TestEditorNoMatchesEnterIsSafeAndEscStopsFilteringThenBacks(t *testing.T) {
 +	ctx := newEditorTestContext(t)
 +	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
 +		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
 +	}})
++	m, _ = m.Update(key("/"))
 +	m, _ = m.Update(key("missing"))
 +	require.Empty(t, m.filtered)
 +	m, cmd := m.Update(key("enter"))
 +	require.Nil(t, cmd)
 +	require.Equal(t, modeProjects, m.mode)
-+	m, _ = m.Update(key("esc"))
-+	require.Equal(t, "", m.filter.Value())
++	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Equal(t, "missing", m.filter.Value())
 +	require.True(t, m.Active())
-+	m, _ = m.Update(key("esc"))
++	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 +	require.False(t, m.Active())
 +}
++
++func TestEditorNavigationUsesVimKeysOutsideFilterMode(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{
++		{Project: data.Project{ID: "one", Title: "One"}},
++		{Project: data.Project{ID: "two", Title: "Two"}},
++	})
++	m, _ = m.Update(key("j"))
++	require.Equal(t, 1, m.project)
++	m, _ = m.Update(key("k"))
++	require.Equal(t, 0, m.project)
++	m, _ = m.Update(key("/"))
++	m, _ = m.Update(key("j"))
++	require.Equal(t, "j", m.filter.Value())
++}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
-index 1b2b493..8a10c0c 100644
+index 1b2b4933876b8b40bbf681391cc45db07c83b89f..8a10c0cb168a7534cd67fc8b3fd7a377dc9e9407 100644
 --- a/internal/tui/components/prrow/prrow.go
 +++ b/internal/tui/components/prrow/prrow.go
 @@ -8,6 +8,7 @@ import (
@@ -7285,7 +7338,7 @@ index 1b2b493..8a10c0c 100644
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996b..8a41d19 100644
+index 08e996ba91352b8822bf6cba37d9307bab5571e4..8a41d191f90e82964b73dc942b983ae3aaf5149e 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,8 @@ import (
@@ -7513,10 +7566,10 @@ index 08e996b..8a41d19 100644
  	m.BaseModel.ResetRows()
 diff --git a/internal/tui/components/prview/projectpreview_test.go b/internal/tui/components/prview/projectpreview_test.go
 new file mode 100644
-index 0000000..973cfb9
+index 0000000000000000000000000000000000000000..f8060e67a96310ce9e23e214dd05d0116ded44e1
 --- /dev/null
 +++ b/internal/tui/components/prview/projectpreview_test.go
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,117 @@
 +package prview
 +
 +import (
@@ -7528,6 +7581,7 @@ index 0000000..973cfb9
 +
 +	"github.com/dlvhdr/gh-dash/v4/internal/config"
 +	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projecteditor"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
@@ -7573,6 +7627,31 @@ index 0000000..973cfb9
 +	require.True(t, strings.Contains(stripANSI(m.renderProjectPreview()), "Projects"))
 +}
 +
++func TestProjectEditorTakesOverPRPreview(t *testing.T) {
++	ctx := newProjectPreviewTestContext(t)
++	m := NewModel(ctx)
++	m.SetWidth(80)
++	m.SetRow(&prrow.Data{Primary: &data.PullRequestData{
++		ID: "pr-1", Url: "https://github.com/o/r/pull/1", Title: "Long pull request",
++	}, Enriched: data.EnrichedPullRequestData{Body: strings.Repeat("summary ", 200)}})
++	m.projectEditor = projecteditor.New(
++		ctx,
++		"pullRequest",
++		1,
++		1,
++		"pr-1",
++		"owner/repo",
++		[]data.ProjectItem{{
++			ID: "item-1", Project: data.Project{ID: "project-1", Title: "Roadmap"},
++		}},
++	)
++
++	view := m.View()
++	require.Contains(t, view, "Edit Project field")
++	require.NotContains(t, view, "Long pull request")
++	require.NotContains(t, view, "summary summary")
++}
++
 +func TestAlreadyEnrichedPRRevisitStartsIndependentProjectPreview(t *testing.T) {
 +	ctx := newProjectPreviewTestContext(t)
 +	m := NewModel(ctx)
@@ -7609,7 +7688,7 @@ index 0000000..973cfb9
 +	return value
 +}
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9..44ddf9e 100644
+index 470d9f9778b0d736674f442617f28a1af05de30f..917935e96a151143743107c570684b20facea01f 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -7692,7 +7771,22 @@ index 470d9f9..44ddf9e 100644
  	cmd, handled := m.editor.Update(msg)
  
  	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+d" {
-@@ -189,6 +225,11 @@ func (m *Model) viewOverviewTab() string {
+@@ -131,6 +167,14 @@ func (m Model) View() string {
+ 	if !m.hasData() {
+ 		return ""
+ 	}
++	if m.projectEditor.Active() {
++		return lipgloss.JoinVertical(
++			lipgloss.Left,
++			lipgloss.NewStyle().
++				Padding(0, m.ctx.Styles.Sidebar.ContentPadding).
++				Render(m.projectEditor.View()),
++		)
++	}
+ 
+ 	body := strings.Builder{}
+ 	switch m.carousel.SelectedItem() {
+@@ -189,6 +233,11 @@ func (m *Model) viewOverviewTab() string {
  		body.WriteString(labels)
  		body.WriteString("\n\n")
  	}
@@ -7704,18 +7798,15 @@ index 470d9f9..44ddf9e 100644
  
  	body.WriteString(m.renderSummary())
  	body.WriteString("\n\n")
-@@ -207,6 +248,10 @@ func (m *Model) viewOverviewTab() string {
+@@ -207,7 +256,6 @@ func (m *Model) viewOverviewTab() string {
  	if m.editor.Mode() != cmpcontroller.ModeNone {
  		body.WriteString(m.ctx.Styles.Sidebar.InputBox.Render(m.editor.View()))
  	}
-+	if m.projectEditor.Active() {
-+		body.WriteString("\n\n")
-+		body.WriteString(m.projectEditor.View())
-+	}
- 
+-
  	return body.String()
  }
-@@ -557,32 +602,110 @@ func (m *Model) SetSectionId(id int) {
+ 
+@@ -557,32 +605,110 @@ func (m *Model) SetSectionId(id int) {
  func (m *Model) SetRow(d *prrow.Data) {
  	if d == nil {
  		m.pr = nil
@@ -7839,7 +7930,7 @@ index 470d9f9..44ddf9e 100644
  }
  
  func (m *Model) SetWidth(width int) {
-@@ -591,15 +714,36 @@ func (m *Model) SetWidth(width int) {
+@@ -591,15 +717,36 @@ func (m *Model) SetWidth(width int) {
  	m.editor.SetWidth(
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
  	)
@@ -7878,7 +7969,7 @@ index 470d9f9..44ddf9e 100644
  		carousel.Styles{
  			Item:     lipgloss.NewStyle().Padding(0, 1).Foreground(m.ctx.Theme.FaintText),
 diff --git a/internal/tui/components/reposection/commands.go b/internal/tui/components/reposection/commands.go
-index 308b2a5..f6e0287 100644
+index 308b2a5b456daef8d425f8132f36d6250900b55a..f6e028751612136d550a6297ad8f6af5ee1c15c5 100644
 --- a/internal/tui/components/reposection/commands.go
 +++ b/internal/tui/components/reposection/commands.go
 @@ -255,6 +255,7 @@ func (m *Model) fetchPRsCmd() tea.Cmd {
@@ -7898,7 +7989,7 @@ index 308b2a5..f6e0287 100644
  		log.Debug("Fetching PRs", "res", res)
  		if err != nil {
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f13b4e2..f300a81 100644
+index f13b4e224cae358b3363a4ac8b3c738364a533ff..41e14c243281ab4603f481d93980e2cced3386de 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -19,6 +19,7 @@ type IssueKeyMap struct {
@@ -7914,8 +8005,8 @@ index f13b4e2..f300a81 100644
  		key.WithHelp("s", "switch to notifications"),
  	),
 +	EditProject: key.NewBinding(
-+		key.WithKeys("E"),
-+		key.WithHelp("E", "edit Project field"),
++		key.WithKeys("f"),
++		key.WithHelp("f", "edit Project field"),
 +	),
  }
  
@@ -7938,7 +8029,7 @@ index f13b4e2..f300a81 100644
  			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
  		}
 diff --git a/internal/tui/keys/prKeys.go b/internal/tui/keys/prKeys.go
-index 88c244f..ccbfaa0 100644
+index 88c244fdb9ac9d48b593be046309fe6ec1a5ca97..06c9d2702625db2e7e6a914710ee9c7fc8a5f999 100644
 --- a/internal/tui/keys/prKeys.go
 +++ b/internal/tui/keys/prKeys.go
 @@ -29,6 +29,7 @@ type PRKeyMap struct {
@@ -7954,8 +8045,8 @@ index 88c244f..ccbfaa0 100644
  		key.WithHelp("s", "switch to issues"),
  	),
 +	EditProject: key.NewBinding(
-+		key.WithKeys("E"),
-+		key.WithHelp("E", "edit Project field"),
++		key.WithKeys("f"),
++		key.WithHelp("f", "edit Project field"),
 +	),
  }
  
@@ -7978,7 +8069,7 @@ index 88c244f..ccbfaa0 100644
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c714..457952d 100644
+index eb3c7145b6ff64254035db22959c2cd4a468f615..d65b144b674d888c79be529459e427419387e3c4 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -34,6 +34,7 @@ import (
@@ -7989,11 +8080,14 @@ index eb3c714..457952d 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prssection"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prview"
-@@ -49,24 +50,27 @@ import (
+@@ -49,24 +50,31 @@ import (
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
  )
  
-+var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
++var (
++	fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
++	fetchIssueRelationships           = data.FetchIssueRelationships
++)
 +
  type Model struct {
 -	keys             *keys.KeyMap
@@ -8013,28 +8107,50 @@ index eb3c714..457952d 100644
 -	taskSpinner      spinner.Model
 -	tasks            map[string]context.Task
 -	positionOverride string // "" means no override, "right" or "bottom"
-+	keys                     *keys.KeyMap
-+	sidebar                  sidebar.Model
-+	prView                   prview.Model
-+	issueSidebar             issueview.Model
-+	branchSidebar            branchsidebar.Model
-+	notificationView         notificationview.Model
-+	currSectionId            int
-+	footer                   footer.Model
-+	repo                     section.Section
-+	prs                      []section.Section
-+	issues                   []section.Section
-+	notifications            []section.Section
-+	tabs                     tabs.Model
-+	ctx                      *context.ProgramContext
-+	taskSpinner              spinner.Model
-+	tasks                    map[string]context.Task
-+	positionOverride         string // "" means no override, "right" or "bottom"
-+	projectPreviewGeneration uint64
++	keys                          *keys.KeyMap
++	sidebar                       sidebar.Model
++	prView                        prview.Model
++	issueSidebar                  issueview.Model
++	branchSidebar                 branchsidebar.Model
++	notificationView              notificationview.Model
++	currSectionId                 int
++	footer                        footer.Model
++	repo                          section.Section
++	prs                           []section.Section
++	issues                        []section.Section
++	notifications                 []section.Section
++	tabs                          tabs.Model
++	ctx                           *context.ProgramContext
++	taskSpinner                   spinner.Model
++	tasks                         map[string]context.Task
++	positionOverride              string // "" means no override, "right" or "bottom"
++	projectPreviewGeneration      uint64
++	relationshipPreviewGeneration uint64
  }
  
  type Repositories struct {
-@@ -425,6 +429,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -231,6 +239,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			return m, nil
+ 		}
+ 
++		// R is also the global refresh-all binding. Give the issue relationship
++		// editor precedence while an issue is selected so its default binding
++		// remains usable and discoverable.
++		_, hasSelectedIssue := currRowData.(*data.IssueData)
++		hasNotificationIssue := m.notificationView.GetSubjectIssue() != nil
++		if key.Matches(msg, keys.IssueKeys.EditRelationships) &&
++			!m.isUserDefinedKeybinding(msg) &&
++			((m.ctx.View == config.IssuesView && hasSelectedIssue) || hasNotificationIssue) {
++			m.relationshipPreviewGeneration++
++			cmd = m.issueSidebar.StartRelationshipEdit()
++			m.syncSidebar()
++			return m, cmd
++		}
++
+ 		switch {
+ 		case m.isUserDefinedKeybinding(msg):
+ 			cmd = m.executeKeybinding(msg.String())
+@@ -425,6 +447,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			case key.Matches(msg, keys.PRKeys.Comment):
  				return m, m.openSidebarForPRInput(m.prView.SetIsCommenting)
  
@@ -8046,7 +8162,7 @@ index eb3c714..457952d 100644
  			case key.Matches(msg, keys.PRKeys.Close):
  				if currRowData != nil {
  					cmd = m.promptConfirmation(currSection, "close")
-@@ -486,6 +495,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -486,6 +513,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			case key.Matches(msg, keys.IssueKeys.Comment):
  				return m, m.openSidebarForInput(m.issueSidebar.SetIsCommenting)
  
@@ -8055,10 +8171,63 @@ index eb3c714..457952d 100644
 +				m.syncSidebar()
 +				return m, nil
 +
++			case key.Matches(msg, keys.IssueKeys.EditRelationships):
++				m.relationshipPreviewGeneration++
++				cmd = m.issueSidebar.StartRelationshipEdit()
++				m.syncSidebar()
++				return m, cmd
++
  			case key.Matches(msg, keys.IssueKeys.Checkout):
  				cmd, err := m.issueSidebar.Checkout()
  				if err != nil {
-@@ -704,6 +718,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -525,6 +563,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 
+ 			// PR keybindings when viewing a PR notification
+ 			case m.notificationView.GetSubjectPR() != nil:
++				if key.Matches(msg, keys.PRKeys.EditProject) {
++					m.prView.StartProjectEdit()
++					m.syncSidebar()
++					return m, nil
++				}
+ 				// Check for PR actions first (before updating prView)
+ 				if !m.prView.IsTextInputBoxFocused() {
+ 					action := prview.MsgToAction(msg)
+@@ -604,6 +647,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 
+ 			// Issue keybindings when viewing an Issue notification
+ 			case m.notificationView.GetSubjectIssue() != nil:
++				if key.Matches(msg, keys.IssueKeys.EditProject) {
++					m.issueSidebar.StartProjectEdit()
++					m.syncSidebar()
++					return m, nil
++				}
++				if key.Matches(msg, keys.IssueKeys.EditRelationships) {
++					m.relationshipPreviewGeneration++
++					cmd = m.issueSidebar.StartRelationshipEdit()
++					m.syncSidebar()
++					return m, cmd
++				}
+ 				var issueCmd tea.Cmd
+ 				var action *issueview.IssueAction
+ 				m.issueSidebar, issueCmd, action = m.issueSidebar.Update(msg)
+@@ -636,6 +690,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 					case issueview.IssueActionReopen:
+ 						cmd = m.promptConfirmationForNotificationIssue("reopen")
+ 						return m, cmd
++
++					case issueview.IssueActionRelationshipUpdated:
++						if row := m.notificationView.GetSubjectIssue(); row != nil {
++							row.Parent = action.Relationships.Parent
++							row.SubIssues = action.Relationships.SubIssues
++							row.SubIssuesSummary = action.Relationships.SubIssuesSummary
++							row.BlockedBy = action.Relationships.BlockedBy
++							row.Blocking = action.Relationships.Blocking
++							m.issueSidebar.SetRow(row)
++						}
+ 					}
+ 				}
+ 
+@@ -704,6 +768,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			m.doRefreshAtInterval(), m.doUpdateFooterAtInterval())
  
  	case intervalRefresh:
@@ -8066,7 +8235,7 @@ index eb3c714..457952d 100644
  		newSections, fetchSectionsCmds := m.fetchAllViewSections()
  		m.setCurrentViewSections(newSections)
  		cmds = append(cmds, fetchSectionsCmds, m.doRefreshAtInterval())
-@@ -738,6 +753,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -738,6 +803,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		}
  
  	case prview.EnrichedPrMsg:
@@ -8076,7 +8245,7 @@ index eb3c714..457952d 100644
  		if msg.Err == nil {
  			m.prView.SetEnrichedPR(msg.Data)
  			m.prs[msg.Id].(*prssection.Model).EnrichPR(msg.Data)
-@@ -747,6 +765,103 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -747,6 +815,160 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			log.Error("failed enriching pr", "err", msg.Err)
  		}
  
@@ -8135,6 +8304,63 @@ index eb3c714..457952d 100644
 +			}
 +		})
 +
++	case issueRelationshipsRequestMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		cmds = append(cmds, func() tea.Msg {
++			relationships, err := fetchIssueRelationships(msg.ContentID)
++			return issueRelationshipsMsg{
++				ContentID:     msg.ContentID,
++				Generation:    msg.Generation,
++				Relationships: relationships,
++				Err:           err,
++			}
++		})
++
++	case issueRelationshipsMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		if msg.Err != nil {
++			log.Warn(
++				"Issue relationship enrichment unavailable",
++				"contentID",
++				msg.ContentID,
++				"error",
++				msg.Err,
++			)
++			break
++		}
++		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
++			issue.Parent = msg.Relationships.Parent
++			issue.SubIssues = msg.Relationships.SubIssues
++			issue.SubIssuesSummary = msg.Relationships.SubIssuesSummary
++			issue.BlockedBy = msg.Relationships.BlockedBy
++			issue.Blocking = msg.Relationships.Blocking
++			m.issueSidebar.SetRow(issue)
++			if currSection := m.getCurrSection(); currSection != nil {
++				if issues, ok := currSection.(*issuessection.Model); ok {
++					for index := range issues.Issues {
++						if issues.Issues[index].ID == msg.ContentID {
++							issues.Issues[index] = *issue
++							issues.Table.SetRows(issues.BuildRows())
++							break
++						}
++					}
++				}
++			}
++			cmds = append(cmds, m.syncSidebar())
++		}
++
 +	case issueProjectPreviewMsg:
 +		if !acceptsIssueProjectPreview(
 +			m.projectPreviewGeneration,
@@ -8180,7 +8406,7 @@ index eb3c714..457952d 100644
  	case notificationPRFetchedMsg:
  		if msg.Err == nil {
  			// Convert enriched PR to prrow.Data for display
-@@ -760,6 +875,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -760,6 +982,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with PR view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.prView.SetSectionId(0)
@@ -8188,7 +8414,7 @@ index eb3c714..457952d 100644
  			m.prView.SetRow(m.notificationView.GetSubjectPR())
  			m.prView.SetWidth(width)
  			m.prView.SetEnrichedPR(msg.PR)
-@@ -776,6 +892,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -776,6 +999,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.SetContent(m.prView.View())
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -8198,7 +8424,7 @@ index eb3c714..457952d 100644
  		} else {
  			log.Error("failed fetching notification PR", "err", msg.Err)
  		}
-@@ -787,6 +906,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -787,6 +1013,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with Issue view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.issueSidebar.SetSectionId(0)
@@ -8206,7 +8432,7 @@ index eb3c714..457952d 100644
  			m.issueSidebar.SetRow(m.notificationView.GetSubjectIssue())
  			m.issueSidebar.SetWidth(width)
  			m.sidebar.SetContent(m.issueSidebar.View())
-@@ -795,10 +915,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -795,10 +1022,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.ScrollToBottom()
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -8253,7 +8479,45 @@ index eb3c714..457952d 100644
  	case notificationssection.UpdateNotificationReadStateMsg:
  		m.updateNotificationSections(msg)
  
-@@ -1025,6 +1181,48 @@ type notificationIssueFetchedMsg struct {
+@@ -886,7 +1149,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 	}
+ 
+ 	if m.issueSidebar.IsTextInputBoxFocused() {
+-		m.issueSidebar, issueSidebarCmd, _ = m.issueSidebar.Update(msg)
++		var issueAction *issueview.IssueAction
++		m.issueSidebar, issueSidebarCmd, issueAction = m.issueSidebar.Update(msg)
++		if issueAction != nil && issueAction.Type == issueview.IssueActionRelationshipUpdated {
++			if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
++				issue.Parent = issueAction.Relationships.Parent
++				issue.SubIssues = issueAction.Relationships.SubIssues
++				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
++				issue.BlockedBy = issueAction.Relationships.BlockedBy
++				issue.Blocking = issueAction.Relationships.Blocking
++				if currSection := m.getCurrSection(); currSection != nil {
++					if issues, ok := currSection.(*issuessection.Model); ok {
++						for index := range issues.Issues {
++							if issues.Issues[index].ID == issue.ID {
++								issues.Issues[index] = *issue
++								issues.Table.SetRows(issues.BuildRows())
++								break
++							}
++						}
++					}
++				}
++			}
++			if issue := m.notificationView.GetSubjectIssue(); issue != nil {
++				issue.Parent = issueAction.Relationships.Parent
++				issue.SubIssues = issueAction.Relationships.SubIssues
++				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
++				issue.BlockedBy = issueAction.Relationships.BlockedBy
++				issue.Blocking = issueAction.Relationships.Blocking
++				m.issueSidebar.SetRow(issue)
++			}
++		}
+ 		m.syncSidebar()
+ 	}
+ 
+@@ -1025,6 +1317,68 @@ type notificationIssueFetchedMsg struct {
  	Err              error
  }
  
@@ -8291,7 +8555,27 @@ index eb3c714..457952d 100644
 +	Err        error
 +}
 +
++type issueRelationshipsRequestMsg struct {
++	ContentID  string
++	Generation uint64
++}
++
++type issueRelationshipsMsg struct {
++	ContentID     string
++	Generation    uint64
++	Relationships data.IssueRelationships
++	Err           error
++}
++
 +func acceptsIssueProjectPreview(
++	currentGeneration uint64,
++	currentIssue bool,
++	messageGeneration uint64,
++) bool {
++	return currentIssue && currentGeneration == messageGeneration
++}
++
++func acceptsIssueRelationships(
 +	currentGeneration uint64,
 +	currentIssue bool,
 +	messageGeneration uint64,
@@ -8302,11 +8586,12 @@ index eb3c714..457952d 100644
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1051,14 +1249,57 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1051,14 +1405,66 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  }
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
 +	m.projectPreviewGeneration++
++	m.relationshipPreviewGeneration++
  	m.prView.SetSummaryViewLess()
  	m.prView.GoToFirstTab()
 +	var cachedPreview data.ProjectItems
@@ -8340,6 +8625,14 @@ index eb3c714..457952d 100644
 +		enrichCmd = m.prView.EnrichCurrRow()
 +	}
 +	var projectCmd tea.Cmd
++	var relationshipCmd tea.Cmd
++	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && issue.ID != "" {
++		contentID := issue.ID
++		generation := m.relationshipPreviewGeneration
++		relationshipCmd = tea.Tick(0, func(time.Time) tea.Msg {
++			return issueRelationshipsRequestMsg{ContentID: contentID, Generation: generation}
++		})
++	}
 +	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
 +		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
 +		issue.ID != "" {
@@ -8353,7 +8646,7 @@ index eb3c714..457952d 100644
  	m.notificationView.ResetSubject()
  	keys.SetNotificationSubject(keys.NotificationSubjectNone)
 -	return tea.Batch(sidebarCmd, enrichCmd)
-+	return tea.Batch(sidebarCmd, enrichCmd, projectCmd)
++	return tea.Batch(sidebarCmd, enrichCmd, projectCmd, relationshipCmd)
 +}
 +
 +func (m *Model) isCurrentIssue(contentID string) bool {
@@ -8362,7 +8655,7 @@ index eb3c714..457952d 100644
  }
  
  func (m *Model) onWindowSizeChanged(msg tea.WindowSizeMsg) {
-@@ -1110,8 +1351,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
+@@ -1110,8 +1516,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
  
  	currSection := m.getCurrSection()
  	if currSection != nil && id == currSection.GetId() {
@@ -8375,7 +8668,7 @@ index eb3c714..457952d 100644
  	}
  
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f..b421ab0 100644
+index e391c6f33ae5df88245b5e827c7e017453bad69d..b421ab02abea3d06fc42885c6b92d838db441006 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -21,6 +21,7 @@ import (

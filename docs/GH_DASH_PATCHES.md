@@ -25,8 +25,12 @@ Projects are opt-in through `defaults.layout.projects`. Configured fields are
 discovered from live Project schemas and can be shown on issue and PR rows and
 in selected previews. The existing editor supports keyboard navigation,
 single-select and supported scalar values, including clearing a value. Empty
-configured values remain visible as an unset value. `E` is the default editor
-binding and can be rebound with `editProject`.
+configured values remain visible as an unset value. `f` is the default editor
+binding in both Issue and PR views (`f  edit Project field`) and can be rebound
+with `editProject`; upstream PR `e` remains reserved for expanding the
+description. Project and field pickers start in Vim-style navigation mode:
+`j`/`k` and the arrow keys move the selection, `/` enters filtering, and `Esc`
+leaves filtering before backing out of the editor.
 
 The versioned cache is host/account/content/configuration isolated and is only
 a presentation optimization. Cached values are visibly unverified until a
@@ -44,9 +48,9 @@ sub-issue completion summary when GitHub provides it. Relationship failures
 remain non-fatal to ordinary issue rendering.
 
 No labels, issue-body conventions, Project fields, or local task database are
-used to represent these relationships. From an issue preview, `I` opens the
+used to represent these relationships. From an issue preview, `i` opens the
 keyboard-driven relationship editor; the binding can be changed with
-`editRelationships` (default `I`). Add operations use a fuzzy selector over accessible
+`editRelationships` (default `i`). Add operations use a fuzzy selector over accessible
 issues, displaying repository, number, title, and open/closed state. Existing
 relationships are filtered out, and removal operations select only from the
 live relationships currently returned for the issue. The editor supports
@@ -54,6 +58,14 @@ adding and removing blocked-by, blocking, and sub-issue relationships, and
 setting or removing a parent. Every write is validated against live state and
 followed by an authoritative relationship refetch; failures leave the issue
 usable and do not claim a local write succeeded.
+
+Relationship issue search pickers use the same interaction model as Project pickers:
+`j`/`k` and arrows navigate, `/` starts filtering, `Esc` first stops filtering,
+and a second `Esc` returns to the relationship actions. While filtering, `j`,
+`k`, and `q` are ordinary query text. Existing live-relationship removal lists
+retain their direct j/k and arrow navigation. While either editor is active, it
+exclusively occupies the preview pane so its first selectable rows remain
+visible regardless of the issue or PR body length.
 
 ## Nix integration
 
