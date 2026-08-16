@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+bridge_path = Path('.github/scripts/infrastructure-sentinel.py')
+source = bridge_path.read_text()
+
+
+def replace_once(old: str, new: str) -> None:
+    global source
+    count = source.count(old)
+    if count != 1:
+        raise SystemExit(f'expected one bridge match, found {count}: {old[:80]!r}')
+    source = source.replace(old, new, 1)
+
+
+replace_once(
+    '''            if content.get("__typename") != "Issue" or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}":
+                continue
+''',
+    '''            if content.get("__typename") not in {"Issue", "PullRequest"} or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}":
+                continue
+''',
+)
+replace_once(
+    '''            items[content["number"]] = {
+                "id": item["id"],
+                "fields": values,
+            }
+''',
+    '''            items[content["number"]] = {
+                "id": item["id"],
+                "fields": values,
+                "content_type": content["__typename"],
+            }
+''',
+)
+replace_once(
+    '''        issue = issue_metadata(client, number, issue_cache)
+        if issue.get("pull_request"):
+            fail(f"issue #{number} is a pull request, not an issue")
+        ensure_project = operation.get("ensure_project", False)
+''',
+    '''        issue = issue_metadata(client, number, issue_cache)
+        target_is_pull_request = bool(issue.get("pull_request"))
+        relationship_keys = sorted({"blocked_by", "parent", "relates_to"} & set(operation))
+        if target_is_pull_request and relationship_keys:
+            fail(
+                f"pull request #{number} only supports project membership/field operations; "
+                f"relationship keys are not allowed: {relationship_keys}"
+            )
+        ensure_project = operation.get("ensure_project", False)
+''',
+)
+replace_once(
+    '''                "issue": number,
+                "ensure_project": ensure_project,
+''',
+    '''                "issue": number,
+                "content_type": "PullRequest" if target_is_pull_request else "Issue",
+                "ensure_project": ensure_project,
+''',
+)
+replace_once(
+    '''    open_issues = [issue for issue in issue_list(github, "open") if not issue.get("pull_request")]
+''',
+    '''    open_items = issue_list(github, "open")
+    open_issues = [issue for issue in open_items if not issue.get("pull_request")]
+    open_pull_requests = [issue for issue in open_items if issue.get("pull_request")]
+''',
+)
+replace_once(
+    '''            "relates_to": None,
+        }
+    schema: dict[str, Any] = {}
+''',
+    '''            "relates_to": None,
+        }
+    pull_requests: dict[str, Any] = {}
+    for pull_request in open_pull_requests:
+        number = pull_request["number"]
+        item = project_items.get(number)
+        pull_requests[str(number)] = {
+            "title": pull_request["title"],
+            "state": pull_request["state"],
+            "project_item_id": item["id"] if item else None,
+            "fields": item["fields"] if item else {},
+        }
+    schema: dict[str, Any] = {}
+''',
+)
+replace_once(
+    '''        "issues": issues,
+        "last_result": last_result,
+''',
+    '''        "issues": issues,
+        "pull_requests": pull_requests,
+        "last_result": last_result,
+''',
+)
+bridge_path.write_text(source)
+
+test_path = Path('.github/scripts/test_infrastructure_sentinel.py')
+tests = test_path.read_text()
+marker = '\n\nclass RelationshipTests(unittest.TestCase):\n'
+if tests.count(marker) != 1:
+    raise SystemExit('could not find RelationshipTests insertion point')
+addition = r'''
+
+class PullRequestProjectTests(unittest.TestCase):
+    def test_pull_request_can_target_project_membership_and_fields(self) -> None:
+        project = {
+            "fields": {
+                "Status": {
+                    "type": "SINGLE_SELECT",
+                    "options": [{"id": "review", "name": "Review", "description": ""}],
+                }
+            }
+        }
+        command = {
+            "version": 1,
+            "request_id": "pr-project",
+            "operations": [{"issue": 80, "ensure_project": True, "fields": {"Status": "Review"}}],
+        }
+        with (
+            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=(project, {})),
+            __import__('unittest').mock.patch.object(bridge, "issue_list", return_value=[]),
+            __import__('unittest').mock.patch.object(
+                bridge,
+                "issue_metadata",
+                return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
+            ),
+            __import__('unittest').mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+        ):
+            normalized = bridge.normalize_command(command, FakeClient())
+        self.assertEqual(normalized[0]["content_type"], "PullRequest")
+        self.assertTrue(normalized[0]["ensure_project"])
+        self.assertEqual(normalized[0]["fields"], {"Status": "Review"})
+
+    def test_pull_request_relationship_operations_are_rejected(self) -> None:
+        command = {
+            "version": 1,
+            "request_id": "pr-relationship",
+            "operations": [{"issue": 80, "blocked_by": []}],
+        }
+        with (
+            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=({"fields": {}}, {})),
+            __import__('unittest').mock.patch.object(
+                bridge,
+                "issue_metadata",
+                return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
+            ),
+            __import__('unittest').mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+        ):
+            with self.assertRaisesRegex(bridge.BridgeError, "only supports project membership/field operations"):
+                bridge.normalize_command(command, FakeClient())
+
+    def test_snapshot_exposes_pull_request_project_fields(self) -> None:
+        project = {"title": "infrastructure", "fields": {}}
+        project_items = {
+            80: {"id": "project-item-80", "fields": {"Status": "Review"}, "content_type": "PullRequest"}
+        }
+        open_items = [{
+            "number": 80,
+            "title": "docs: update infrastructure docs submodule",
+            "state": "open",
+            "pull_request": {"url": "example"},
+        }]
+        with (
+            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=(project, project_items)),
+            __import__('unittest').mock.patch.object(bridge, "issue_list", return_value=open_items),
+        ):
+            state = bridge.build_snapshot(FakeClient(), FakeClient(), {})
+        self.assertEqual(state["pull_requests"]["80"]["project_item_id"], "project-item-80")
+        self.assertEqual(state["pull_requests"]["80"]["fields"]["Status"], "Review")
+'''
+tests = tests.replace(marker, addition + marker, 1)
+test_path.write_text(tests)
