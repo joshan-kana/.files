@@ -1,0 +1,265 @@
+diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
+index a38043a..46dc6e4 100644
+--- a/internal/data/issueapi.go
++++ b/internal/data/issueapi.go
+@@ -32,6 +32,36 @@ type IssueData struct {
+ 	Reactions         IssueReactions `graphql:"reactions(first: 1)"`
+ 	Labels            IssueLabels    `graphql:"labels(first: 20)"`
+ 	ProjectItems      ProjectItems
++	Relationships     IssueRelationships
++}
++
++// IssueRelationships is the native GitHub hierarchy/dependency view for an
++// issue. It is presentation data only; GitHub remains authoritative for all
++// relationship semantics and writes.
++type IssueRelationships struct {
++	Parent           *RelatedIssue
++	SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 20)"`
++	SubIssuesSummary SubIssuesSummary
++	BlockedBy        RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
++	Blocking         RelatedIssueConnection `graphql:"blocking(first: 20)"`
++}
++
++type RelatedIssue struct {
++	Number     int
++	Title      string
++	State      string
++	URL        string
++	Repository Repository
++}
++
++type RelatedIssueConnection struct {
++	Nodes      []RelatedIssue
++	TotalCount int
++}
++
++type SubIssuesSummary struct {
++	Total     int
++	Completed int
+ }
+ 
+ type issueListData struct {
+@@ -52,6 +82,7 @@ type issueListData struct {
+ 	Comments          IssueComments `graphql:"comments(last: 15)"`
+ 	Reactions         IssueReactions
+ 	Labels            IssueLabels `graphql:"labels(first: 20)"`
++	Relationships     IssueRelationships
+ }
+ 
+ func (data issueListData) toIssueData() IssueData {
+@@ -71,6 +102,7 @@ func (data issueListData) toIssueData() IssueData {
+ 		Comments:          data.Comments,
+ 		Reactions:         data.Reactions,
+ 		Labels:            data.Labels,
++		Relationships:     data.Relationships,
+ 	}
+ }
+ 
+diff --git a/internal/data/relationships.go b/internal/data/relationships.go
+new file mode 100644
+index 0000000..c642b3b
+--- /dev/null
++++ b/internal/data/relationships.go
+@@ -0,0 +1,34 @@
++package data
++
++import "fmt"
++
++// RelationshipIndicators returns a compact, stable list for issue rows. The
++// symbols are intentionally unobtrusive and do not imply workflow state.
++func (r IssueRelationships) Indicators() string {
++	indicators := ""
++	if r.Parent != nil {
++		indicators += "↳"
++	}
++	if r.SubIssues.TotalCount > 0 {
++		indicators += "⊞"
++	}
++	if r.BlockedBy.TotalCount > 0 {
++		indicators += "⇠"
++	}
++	if r.Blocking.TotalCount > 0 {
++		indicators += "⇢"
++	}
++	return indicators
++}
++
++func (r RelatedIssue) Identifier() string {
++	return fmt.Sprintf("%s#%d", r.Repository.NameWithOwner, r.Number)
++}
++
++func (r RelatedIssue) Summary() string {
++	state := "open"
++	if r.State == "CLOSED" {
++		state = "closed"
++	}
++	return fmt.Sprintf("%s %s — %s", r.Identifier(), r.Title, state)
++}
+diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
+new file mode 100644
+index 0000000..f623501
+--- /dev/null
++++ b/internal/data/relationships_test.go
+@@ -0,0 +1,22 @@
++package data
++
++import "testing"
++
++func TestRelationshipIndicators(t *testing.T) {
++	r := IssueRelationships{
++		Parent:     &RelatedIssue{Number: 1},
++		SubIssues:  RelatedIssueConnection{TotalCount: 2},
++		BlockedBy:  RelatedIssueConnection{TotalCount: 1},
++		Blocking:   RelatedIssueConnection{TotalCount: 3},
++	}
++	if got, want := r.Indicators(), "↳⊞⇠⇢"; got != want {
++		t.Fatalf("Indicators() = %q, want %q", got, want)
++	}
++}
++
++func TestRelatedIssueSummaryIncludesRepositoryAndState(t *testing.T) {
++	r := RelatedIssue{Number: 7, Title: "Planning", State: "CLOSED", Repository: Repository{NameWithOwner: "org/repo"}}
++	if got, want := r.Summary(), "org/repo#7 Planning — closed"; got != want {
++		t.Fatalf("Summary() = %q, want %q", got, want)
++	}
++}
+diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
+index f7de54e..115238a 100644
+--- a/internal/tui/components/issuerow/issuerow.go
++++ b/internal/tui/components/issuerow/issuerow.go
+@@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
+ }
+ 
+ func (issue *Issue) renderTitle() string {
+-	return components.RenderIssueTitle(
++	title := components.RenderIssueTitle(
+ 		issue.Ctx,
+ 		issue.Data.State,
+ 		issue.Data.Title,
+ 		issue.Data.Number,
+ 	)
++	if indicators := issue.Data.Relationships.Indicators(); indicators != "" {
++		title += " " + issue.getTextStyle().Foreground(issue.Ctx.Theme.FaintText).Render(indicators)
++	}
++	return title
+ }
+ 
+ func (issue *Issue) renderOpenedBy() string {
+diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
+index 439f5ac..b35faab 100644
+--- a/internal/tui/components/issueview/action.go
++++ b/internal/tui/components/issueview/action.go
+@@ -12,6 +12,7 @@ const (
+ 	IssueActionCheckout
+ 	IssueActionClose
+ 	IssueActionReopen
++	IssueActionRelationships
+ )
+ 
+ // IssueAction represents an action to be performed on an issue.
+diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
+index 4e08da6..ef68d9d 100644
+--- a/internal/tui/components/issueview/issueview.go
++++ b/internal/tui/components/issueview/issueview.go
+@@ -135,6 +135,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
+ 			return m, nil, &IssueAction{Type: IssueActionClose}
+ 		case key.Matches(keyMsg, keys.IssueKeys.Reopen):
+ 			return m, nil, &IssueAction{Type: IssueActionReopen}
++		case key.Matches(keyMsg, keys.IssueKeys.Relationships):
++			return m, nil, &IssueAction{Type: IssueActionRelationships}
+ 		}
+ 	}
+ 
+@@ -154,6 +156,12 @@ func (m Model) View() string {
+ 	s.WriteString(m.renderAuthor())
+ 	s.WriteString("\n\n")
+ 
++	relationships := m.renderRelationships()
++	if relationships != "" {
++		s.WriteString(relationships)
++		s.WriteString("\n\n")
++	}
++
+ 	labels := m.renderLabels()
+ 	if labels != "" {
+ 		s.WriteString(labels)
+@@ -180,6 +188,38 @@ func (m Model) View() string {
+ 	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
+ }
+ 
++func (m *Model) renderRelationships() string {
++	r := m.issue.Data.Relationships
++	if r.Parent == nil && r.SubIssues.TotalCount == 0 && r.BlockedBy.TotalCount == 0 && r.Blocking.TotalCount == 0 {
++		return ""
++	}
++
++	lines := []string{"Relationships"}
++	appendGroup := func(label string, issues []data.RelatedIssue, total int) {
++		if total == 0 {
++			return
++		}
++		if label == "Sub-issues" && (r.SubIssuesSummary.Total > 0 || r.SubIssuesSummary.Completed > 0) {
++			lines = append(lines, fmt.Sprintf("  %s  %d / %d complete", label, r.SubIssuesSummary.Completed, r.SubIssuesSummary.Total))
++		} else {
++			lines = append(lines, "  "+label)
++		}
++		for _, issue := range issues {
++			lines = append(lines, "    "+issue.Summary())
++		}
++		if len(issues) < total {
++			lines = append(lines, fmt.Sprintf("    … and %d more", total-len(issues)))
++		}
++	}
++	if r.Parent != nil {
++		appendGroup("Parent", []data.RelatedIssue{*r.Parent}, 1)
++	}
++	appendGroup("Sub-issues", r.SubIssues.Nodes, r.SubIssues.TotalCount)
++	appendGroup("Blocked by", r.BlockedBy.Nodes, r.BlockedBy.TotalCount)
++	appendGroup("Blocking", r.Blocking.Nodes, r.Blocking.TotalCount)
++	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
++}
++
+ func (m *Model) ViewCompletions() string {
+ 	if !m.hasData() {
+ 		return ""
+diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
+index f300a81..551391b 100644
+--- a/internal/tui/keys/issueKeys.go
++++ b/internal/tui/keys/issueKeys.go
+@@ -19,6 +19,7 @@ type IssueKeyMap struct {
+ 	Reopen               key.Binding
+ 	ToggleSmartFiltering key.Binding
+ 	ViewPRs              key.Binding
++	Relationships        key.Binding
+ 	EditProject          key.Binding
+ }
+ 
+@@ -59,6 +60,10 @@ var IssueKeys = IssueKeyMap{
+ 		key.WithKeys("s"),
+ 		key.WithHelp("s", "switch to notifications"),
+ 	),
++	Relationships: key.NewBinding(
++		key.WithKeys("g"),
++		key.WithHelp("g", "relationships"),
++	),
+ 	EditProject: key.NewBinding(
+ 		key.WithKeys("E"),
+ 		key.WithHelp("E", "edit Project field"),
+@@ -76,6 +81,7 @@ func IssueFullHelp() []key.Binding {
+ 		IssueKeys.Reopen,
+ 		IssueKeys.ToggleSmartFiltering,
+ 		IssueKeys.ViewPRs,
++		IssueKeys.Relationships,
+ 		IssueKeys.EditProject,
+ 	}
+ }
+@@ -123,6 +129,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
+ 			key = &IssueKeys.Reopen
+ 		case "viewPrs":
+ 			key = &IssueKeys.ViewPRs
++		case "relationships":
++			key = &IssueKeys.Relationships
+ 		case "editProject":
+ 			key = &IssueKeys.EditProject
+ 		default:
+
