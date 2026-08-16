@@ -1043,10 +1043,10 @@ index 3cc5bc06b8f9524b61bf957810003b880a32fff5..7cfba81bb623e9596eff05badf6637fb
  	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..970d6cd72f24d063b9141cb8f0bc48c2527b3542
+index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d2b40f989
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,522 @@
 +package relationshipeditor
 +
 +import (
@@ -1197,6 +1197,12 @@ index 0000000000000000000000000000000000000000..970d6cd72f24d063b9141cb8f0bc48c2
 +		m.selectedRel = 0
 +		if isRemoval(m.pending) {
 +			m.removeItems = relationshipItems(msg.Relationships, m.pending)
++			if len(m.removeItems) == 0 {
++				m.pending = ""
++				m.mode = modeActions
++				m.status = "No live relationship is available"
++				return m, nil
++			}
 +			m.mode = modeRelationships
 +		} else {
 +			m.removeItems = nil
@@ -1565,10 +1571,10 @@ index 0000000000000000000000000000000000000000..970d6cd72f24d063b9141cb8f0bc48c2
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..d2ffa67abc83cabbc897868cc2374ad8361abcc7
+index 0000000000000000000000000000000000000000..bacd911088b35878efb45f60cd3aa02355395066
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,255 @@
 +package relationshipeditor
 +
 +import (
@@ -1709,6 +1715,22 @@ index 0000000000000000000000000000000000000000..d2ffa67abc83cabbc897868cc2374ad8
 +	require.Nil(t, cmd)
 +	require.Equal(t, modeRelationships, updated.mode)
 +	require.Equal(t, []data.RelatedIssue{live}, updated.removeItems)
++}
++
++func TestRemovalRefreshWithNoLiveTargetsReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++	m.pending = data.RemoveBlocking
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID:     m.sessionID,
++		Relationships: data.IssueRelationships{},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Empty(t, updated.pending)
++	require.Equal(t, "No live relationship is available", updated.status)
 +}
 +
 +func TestEscFromRelationshipPickerReturnsToActionMenu(t *testing.T) {
