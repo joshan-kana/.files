@@ -36,8 +36,8 @@ corrupt, or stale cache data causes refetch rather than GitHub reconstruction.
 
 ## Native issue relationships
 
-Issue rows and previews expose native GitHub parent, sub-issue, blocked-by,
-and blocking relationships. The compact row glyphs are `↳` (parent), `⊞`
+Selected issue previews expose native GitHub parent, sub-issue, blocked-by,
+and blocking relationships. The compact row helpers use `↳` (parent), `⊞`
 (sub-issues), `⇠` (blocked by), and `⇢` (blocking). The preview includes
 repository-qualified identifiers, titles, and open/closed state, plus the
 sub-issue completion summary when GitHub provides it. Relationship failures

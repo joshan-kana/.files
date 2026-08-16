@@ -1,5 +1,5 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a..c8d0338 100644
+index a38043a..ad2eb37 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -32,6 +32,50 @@ type IssueData struct {
@@ -53,6 +53,66 @@ index a38043a..c8d0338 100644
  }
  
  type issueListData struct {
+@@ -293,7 +337,58 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+ 	}
+ 	log.Info("Successfully fetched Issue", "url", issueUrl)
+ 
+-	return queryResult.Resource.Issue.toIssueData(), nil
++	issue := queryResult.Resource.Issue.toIssueData()
++	if relationships, relationshipErr := FetchIssueRelationships(issue.ID); relationshipErr == nil {
++		issue.Parent = relationships.Parent
++		issue.SubIssues = relationships.SubIssues
++		issue.SubIssuesSummary = relationships.SubIssuesSummary
++		issue.BlockedBy = relationships.BlockedBy
++		issue.Blocking = relationships.Blocking
++	} else {
++		log.Warn("Issue relationship enrichment unavailable", "url", issueUrl, "error", relationshipErr)
++	}
++
++	return issue, nil
++}
++
++// FetchIssueRelationships is deliberately separate from the base issue read.
++// Relationship permissions, pagination, or API availability must not make an
++// otherwise renderable issue disappear from the UI.
++func FetchIssueRelationships(issueID string) (IssueRelationships, error) {
++	if issueID == "" {
++		return IssueRelationships{}, fmt.Errorf("issue relationship lookup requires an issue ID")
++	}
++	if client == nil {
++		var err error
++		client, err = gh.DefaultGraphQLClient()
++		if err != nil {
++			return IssueRelationships{}, err
++		}
++	}
++	var queryResult struct {
++		Node struct {
++			Issue struct {
++				Parent           *RelatedIssue
++				SubIssues        RelatedIssueConnection `graphql:"subIssues(first: 20)"`
++				SubIssuesSummary SubIssuesSummary
++				BlockedBy        RelatedIssueConnection `graphql:"blockedBy(first: 20)"`
++				Blocking         RelatedIssueConnection `graphql:"blocking(first: 20)"`
++			} `graphql:"... on Issue"`
++		} `graphql:"node(id: $id)"`
++	}
++	err := client.Query("FetchIssueRelationships", &queryResult, map[string]any{
++		"id": graphql.ID(issueID),
++	})
++	if err != nil {
++		return IssueRelationships{}, err
++	}
++	return IssueRelationships{
++		Parent:           queryResult.Node.Issue.Parent,
++		SubIssues:        queryResult.Node.Issue.SubIssues,
++		SubIssuesSummary: queryResult.Node.Issue.SubIssuesSummary,
++		BlockedBy:        queryResult.Node.Issue.BlockedBy,
++		Blocking:         queryResult.Node.Issue.Blocking,
++	}, nil
+ }
+ 
+ func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
 index 0000000..c642b3b
