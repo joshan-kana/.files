@@ -1043,10 +1043,10 @@ index 3cc5bc06b8f9524b61bf957810003b880a32fff5..7cfba81bb623e9596eff05badf6637fb
  	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..67cd8775d88721131a1e4d171e6e23a93a5c28c9
+index 0000000000000000000000000000000000000000..970d6cd72f24d063b9141cb8f0bc48c2527b3542
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,499 @@
+@@ -0,0 +1,516 @@
 +package relationshipeditor
 +
 +import (
@@ -1185,16 +1185,23 @@ index 0000000000000000000000000000000000000000..67cd8775d88721131a1e4d171e6e23a9
 +			return m, nil
 +		}
 +		if msg.Err != nil {
++			m.pending = ""
++			m.removeItems = nil
 +			m.status, m.mode = msg.Err.Error(), modeActions
 +			return m, nil
 +		}
-+		m.current, m.actions, m.selected, m.removeItems, m.mode, m.status = msg.Relationships, relationshipActions(
-+			msg.Relationships,
-+		), 0, relationshipItems(
-+			msg.Relationships,
-+			m.pending,
-+		), modeRelationships, ""
++		m.current = msg.Relationships
++		m.actions = relationshipActions(msg.Relationships)
++		m.selected = 0
++		m.status = ""
 +		m.selectedRel = 0
++		if isRemoval(m.pending) {
++			m.removeItems = relationshipItems(msg.Relationships, m.pending)
++			m.mode = modeRelationships
++		} else {
++			m.removeItems = nil
++			m.mode = modeActions
++		}
 +		return m, nil
 +	case candidatesFetchedMsg:
 +		if (m.mode != modeLoadingCandidates && m.mode != modeCandidates) ||
@@ -1233,7 +1240,17 @@ index 0000000000000000000000000000000000000000..67cd8775d88721131a1e4d171e6e23a9
 +			return m, nil
 +		}
 +		switch msg.String() {
-+		case "esc", "q":
++		case "esc":
++			if m.mode == modeRelationships {
++				m.mode = modeActions
++				m.removeItems = nil
++				m.selectedRel = 0
++				m.pending = ""
++				return m, nil
++			}
++			m.Close()
++			return m, nil
++		case "q":
 +			m.Close()
 +			return m, nil
 +		case "up", "k":
@@ -1548,10 +1565,10 @@ index 0000000000000000000000000000000000000000..67cd8775d88721131a1e4d171e6e23a9
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..98458bc4d3344c3209c82ebfd7eaebf9219b9321
+index 0000000000000000000000000000000000000000..d2ffa67abc83cabbc897868cc2374ad8361abcc7
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,239 @@
 +package relationshipeditor
 +
 +import (
@@ -1656,6 +1673,78 @@ index 0000000000000000000000000000000000000000..98458bc4d3344c3209c82ebfd7eaebf9
 +	updated, cmd = m.Update(RelationshipUpdatedMsg{Err: errors.New("write failed")})
 +	require.Nil(t, cmd)
 +	require.Equal(t, "write failed", updated.status)
++}
++
++func TestInitialRelationshipRefreshReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID: m.sessionID,
++		Relationships: data.IssueRelationships{
++			BlockedBy: data.RelatedIssueConnection{Nodes: []data.RelatedIssue{
++				related("blocked", "acme/app", 2, "Blocked", "OPEN"),
++			}},
++		},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Contains(t, mutationsOf(updated.actions), data.AddBlockedBy)
++	require.Contains(t, mutationsOf(updated.actions), data.RemoveBlockedBy)
++}
++
++func TestRemovalRefreshOpensLiveRelationshipPicker(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++	m.pending = data.RemoveBlocking
++	live := related("blocking", "acme/app", 3, "Blocking", "OPEN")
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID: m.sessionID,
++		Relationships: data.IssueRelationships{
++			Blocking: data.RelatedIssueConnection{Nodes: []data.RelatedIssue{live}},
++		},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeRelationships, updated.mode)
++	require.Equal(t, []data.RelatedIssue{live}, updated.removeItems)
++}
++
++func TestEscFromRelationshipPickerReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeRelationships
++	m.pending = data.RemoveBlocking
++	m.removeItems = []data.RelatedIssue{related("blocking", "acme/app", 3, "Blocking", "OPEN")}
++	m.selectedRel = 1
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.True(t, updated.Active())
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Zero(t, updated.selectedRel)
++	require.Empty(t, updated.pending)
++}
++
++func TestEscFromActionMenuClosesEditor(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.False(t, updated.Active())
++}
++
++func TestEscFromCandidateNavigationReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidates = []data.RelatedIssue{related("candidate", "acme/app", 2, "Candidate", "OPEN")}
++	m.filterCandidates()
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.True(t, updated.Active())
++	require.Equal(t, modeActions, updated.mode)
 +}
 +
 +func TestRelationshipEditorUpdateMessageClosesOnSuccess(t *testing.T) {
