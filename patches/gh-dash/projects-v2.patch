@@ -90,7 +90,7 @@ index 0000000..0402527
 +	}
 +}
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index 9fa1763..f295c37 100644
+index 9fa1763..a38043a 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -14,6 +14,7 @@ import (
@@ -175,23 +175,17 @@ index 9fa1763..f295c37 100644
  			}
  			IssueCount int
  			PageInfo   PageInfo
-@@ -133,12 +183,32 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+@@ -133,12 +183,31 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
  		return IssuesResponse{}, err
  	}
  	log.Info("Successfully fetched issues", "query", query, "count", queryResult.Search.IssueCount)
-+	log.Debug(
-+		"Ordinary issue rows ready",
-+		"count",
-+		len(queryResult.Search.Nodes),
-+		"duration",
-+		time.Since(started),
-+	)
- 
+-
  	issues := make([]IssueData, 0, len(queryResult.Search.Nodes))
  	for _, node := range queryResult.Search.Nodes {
 -		issues = append(issues, node.Issue)
 +		issues = append(issues, node.Issue.toIssueData())
-+	}
+ 	}
+-
 +	if enrichProjects {
 +		var columns []ProjectColumn
 +		if len(projectColumns) > 0 {
@@ -205,12 +199,18 @@ index 9fa1763..f295c37 100644
 +				issues[index].ProjectItems.State = ProjectStateLoading
 +			}
 +		}
- 	}
--
++	}
++	log.Debug(
++		"Ordinary issue rows ready",
++		"count",
++		len(issues),
++		"duration",
++		time.Since(started),
++	)
  	return IssuesResponse{
  		Issues:     issues,
  		TotalCount: queryResult.Search.IssueCount,
-@@ -146,12 +216,55 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
+@@ -146,12 +215,55 @@ func FetchIssues(query string, limit int, pageInfo *PageInfo) (IssuesResponse, e
  	}, nil
  }
  
@@ -266,7 +266,7 @@ index 9fa1763..f295c37 100644
  // FetchIssue fetches a single issue by its GitHub URL
  func FetchIssue(issueUrl string) (IssueData, error) {
  	var err error
-@@ -164,7 +277,7 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -164,7 +276,7 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  
  	var queryResult struct {
  		Resource struct {
@@ -275,7 +275,7 @@ index 9fa1763..f295c37 100644
  		} `graphql:"resource(url: $url)"`
  	}
  	parsedUrl, err := url.Parse(issueUrl)
-@@ -181,5 +294,29 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -181,5 +293,29 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  	}
  	log.Info("Successfully fetched Issue", "url", issueUrl)
  
@@ -378,7 +378,7 @@ index 0000000..3179532
 +	}
 +}
 diff --git a/internal/data/prapi.go b/internal/data/prapi.go
-index 11eecdb..57828ec 100644
+index 11eecdb..6373b00 100644
 --- a/internal/data/prapi.go
 +++ b/internal/data/prapi.go
 @@ -27,6 +27,7 @@ type SuggestedReviewer struct {
@@ -528,23 +528,17 @@ index 11eecdb..57828ec 100644
  			}
  			IssueCount int
  			PageInfo   PageInfo
-@@ -557,12 +644,32 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+@@ -557,12 +644,31 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
  		return PullRequestsResponse{}, err
  	}
  	log.Info("Successfully fetched PRs", "count", queryResult.Search.IssueCount)
-+	log.Debug(
-+		"Ordinary PR rows ready",
-+		"count",
-+		len(queryResult.Search.Nodes),
-+		"duration",
-+		time.Since(started),
-+	)
- 
+-
  	prs := make([]PullRequestData, 0, len(queryResult.Search.Nodes))
  	for _, node := range queryResult.Search.Nodes {
 -		prs = append(prs, node.PullRequest)
 +		prs = append(prs, node.PullRequest.toPullRequestData())
-+	}
+ 	}
+-
 +	if enrichProjects {
 +		var columns []ProjectColumn
 +		if len(projectColumns) > 0 {
@@ -558,12 +552,18 @@ index 11eecdb..57828ec 100644
 +				prs[index].ProjectItems.State = ProjectStateLoading
 +			}
 +		}
- 	}
--
++	}
++	log.Debug(
++		"Ordinary PR rows ready",
++		"count",
++		len(prs),
++		"duration",
++		time.Since(started),
++	)
  	return PullRequestsResponse{
  		Prs:        prs,
  		TotalCount: queryResult.Search.IssueCount,
-@@ -570,6 +677,30 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
+@@ -570,6 +676,30 @@ func FetchPullRequests(query string, limit int, pageInfo *PageInfo) (PullRequest
  	}, nil
  }
  
@@ -594,7 +594,7 @@ index 11eecdb..57828ec 100644
  func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
  	var err error
  	if client == nil {
-@@ -592,7 +723,7 @@ func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
+@@ -592,7 +722,7 @@ func FetchPullRequest(prUrl string) (EnrichedPullRequestData, error) {
  		"url": githubv4.URI{URL: parsedUrl},
  	}
  	log.Debug("Fetching PR", "url", prUrl)
@@ -749,10 +749,10 @@ index 0000000..25433ff
 +}
 diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
 new file mode 100644
-index 0000000..551207c
+index 0000000..b17ea1b
 --- /dev/null
 +++ b/internal/data/projectcache.go
-@@ -0,0 +1,386 @@
+@@ -0,0 +1,379 @@
 +package data
 +
 +// Persistent Project cache. This file deliberately contains presentation data
@@ -949,9 +949,8 @@ index 0000000..551207c
 +	}
 +	columnsKey := projectColumnsKey(columns)
 +	result := make(map[string]ProjectItems)
-+	touched := false
 +	for index := range cache.Entries {
-+		entry := &cache.Entries[index]
++		entry := cache.Entries[index]
 +		if entry.Host != identity.Host || entry.Account != identity.Account {
 +			continue
 +		}
@@ -959,13 +958,9 @@ index 0000000..551207c
 +			(entry.ColumnsKey != columnsKey && !entry.FullPreview) {
 +			continue
 +		}
-+		entry.LastUsed = projectCacheNow()
-+		entry.Items.State = ProjectStateCachedUnverified
-+		result[entry.ContentID] = entry.Items
-+		touched = true
-+	}
-+	if touched {
-+		writeProjectCache(identity, *cache)
++		items := entry.Items
++		items.State = ProjectStateCachedUnverified
++		result[entry.ContentID] = items
 +	}
 +	return result
 +}
@@ -980,15 +975,14 @@ index 0000000..551207c
 +		return ProjectItems{}, false
 +	}
 +	for index := range cache.Entries {
-+		entry := &cache.Entries[index]
++		entry := cache.Entries[index]
 +		if entry.Host == identity.Host && entry.Account == identity.Account &&
 +			entry.ContentID == contentID &&
 +			entry.FullPreview &&
 +			entry.ColumnsKey == "" {
-+			entry.LastUsed = projectCacheNow()
-+			entry.Items.State = ProjectStateCachedUnverified
-+			writeProjectCache(identity, *cache)
-+			return entry.Items, true
++			items := entry.Items
++			items.State = ProjectStateCachedUnverified
++			return items, true
 +		}
 +	}
 +	return ProjectItems{}, false
@@ -1043,7 +1037,6 @@ index 0000000..551207c
 +	if !found {
 +		cache.Entries = append(cache.Entries, entry)
 +	}
-+	cache.Version = projectCacheFormatVersion
 +	writeProjectCache(identity, *cache)
 +}
 +
@@ -1067,10 +1060,6 @@ index 0000000..551207c
 +func writeProjectCache(identity projectCacheIdentity, cache projectCacheFile) {
 +	path := ProjectCachePath()
 +	if path == "" {
-+		return
-+	}
-+	contents, err := json.MarshalIndent(cache, "", "  ")
-+	if err != nil {
 +		return
 +	}
 +	projectCacheMu.Lock()
@@ -1099,6 +1088,10 @@ index 0000000..551207c
 +	}
 +	cache.Version = projectCacheFormatVersion
 +	cache.Entries = merged
++	contents, err := json.MarshalIndent(cache, "", "  ")
++	if err != nil {
++		return
++	}
 +	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 +		return
 +	}
@@ -1141,10 +1134,10 @@ index 0000000..551207c
 +}
 diff --git a/internal/data/projectcache_test.go b/internal/data/projectcache_test.go
 new file mode 100644
-index 0000000..bb2055b
+index 0000000..0b94757
 --- /dev/null
 +++ b/internal/data/projectcache_test.go
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,159 @@
 +package data
 +
 +import (
@@ -1255,11 +1248,15 @@ index 0000000..bb2055b
 +	}
 +}
 +
-+func TestProjectCachePersistsLastUsedOnWarmHydration(t *testing.T) {
++func TestProjectCacheHydrationDoesNotPersistLastUsed(t *testing.T) {
 +	configureProjectCacheTest(t)
 +	current := time.Unix(100, 0)
 +	projectCacheNow = func() time.Time { return current }
 +	persistProjectItems("issue-1", nil, cachedTestItems(), false)
++	before, err := os.ReadFile(ProjectCachePath())
++	if err != nil {
++		t.Fatal(err)
++	}
 +
 +	current = time.Unix(200, 0)
 +	_ = HydrateProjectItems([]string{"issue-1"}, nil)
@@ -1268,12 +1265,12 @@ index 0000000..bb2055b
 +	if err != nil {
 +		t.Fatal(err)
 +	}
-+	var cache projectCacheFile
-+	if err := json.Unmarshal(contents, &cache); err != nil {
-+		t.Fatal(err)
-+	}
-+	if len(cache.Entries) != 1 || !cache.Entries[0].LastUsed.Equal(current) {
-+		t.Fatalf("last-used timestamp was not persisted: %#v", cache.Entries)
++	if string(contents) != string(before) {
++		t.Fatalf(
++			"cache hydration performed a synchronous write:\\nbefore=%s\\nafter=%s",
++			before,
++			contents,
++		)
 +	}
 +}
 +
@@ -1302,10 +1299,10 @@ index 0000000..bb2055b
 +}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000..8b24e1f
+index 0000000..d8368cf
 --- /dev/null
 +++ b/internal/data/projectlist.go
-@@ -0,0 +1,1054 @@
+@@ -0,0 +1,1163 @@
 +package data
 +
 +import (
@@ -1924,7 +1921,11 @@ index 0000000..8b24e1f
 +	if len(contentIDs) == 0 {
 +		return map[string]ProjectItems{}, nil
 +	}
-+	client, err := projectGraphQLClient()
++	// Capture the generation before the membership request. A refresh that
++	// begins while this request is blocked must not let its result populate the
++	// new generation's fingerprint cache.
++	requestGeneration := ProjectRefreshGeneration()
++	result, err := fetchProjectMembershipsShared(contentIDs, requestGeneration)
 +	if err != nil {
 +		return nil, err
 +	}
@@ -1934,6 +1935,158 @@ index 0000000..8b24e1f
 +		len(contentIDs),
 +		"columns",
 +		len(columns),
++	)
++	log.Debug(
++		"Project fingerprint validation complete",
++		"contentIDs",
++		len(contentIDs),
++		"duration",
++		time.Since(started),
++	)
++	// Membership and Project updatedAt values are the authoritative cheap
++	// fingerprint. A matching disk entry is still unverified until this live
++	// request succeeds, but it lets warm launches skip schema/value reads.
++	cached := cachedProjectItems(contentIDs, columns)
++	unchanged := make(map[string]bool, len(result))
++	for contentID, live := range result {
++		if warm, ok := cached[contentID]; ok && projectItemsFingerprintEqual(live, warm) {
++			warm.State = ProjectStateLiveVerified
++			result[contentID] = warm
++			unchanged[contentID] = true
++		}
++	}
++	if len(columns) == 0 {
++		for contentID, items := range result {
++			items.State = ProjectStateLiveVerified
++			result[contentID] = items
++			persistProjectItems(contentID, columns, items, false)
++		}
++		return result, nil
++	}
++	type projectItemRef struct {
++		contentID string
++		index     int
++	}
++	byProject := make(map[string][]projectItemRef)
++	for contentID, projectItems := range result {
++		if unchanged[contentID] {
++			continue
++		}
++		for index := range projectItems.Nodes {
++			byProject[projectItems.Nodes[index].Project.ID] = append(
++				byProject[projectItems.Nodes[index].Project.ID],
++				projectItemRef{contentID: contentID, index: index},
++			)
++		}
++	}
++	for projectID, refs := range byProject {
++		fields, schemaErr := FetchProjectSchema(projectID)
++		if schemaErr != nil {
++			return nil, schemaErr
++		}
++		itemIDs := make([]string, 0, len(refs))
++		var project Project
++		for _, ref := range refs {
++			item := result[ref.contentID].Nodes[ref.index]
++			itemIDs = append(itemIDs, item.ID)
++			project = item.Project
++		}
++		values, valuesErr := fetchConfiguredProjectValues(itemIDs, fields, columns, project)
++		if valuesErr != nil {
++			return nil, valuesErr
++		}
++		for _, ref := range refs {
++			projectItems := result[ref.contentID]
++			item := &projectItems.Nodes[ref.index]
++			for _, column := range columns {
++				if column.FieldID == "" && column.Project == "" &&
++					countProjectFieldsByName(fields, column.Name) > 1 &&
++					!containsString(item.AmbiguousFields, column.Name) {
++					item.AmbiguousFields = append(item.AmbiguousFields, column.Name)
++				}
++			}
++			item.FieldValues.Nodes = append(item.FieldValues.Nodes, values[item.ID]...)
++			result[ref.contentID] = projectItems
++		}
++	}
++	for contentID, items := range result {
++		items.State = ProjectStateLiveVerified
++		result[contentID] = items
++		// Hydration is read-only; refresh the access timestamp only after the
++		// authoritative membership read has completed.
++		persistProjectItems(contentID, columns, items, false)
++	}
++	return result, nil
++}
++
++func fetchProjectMembershipsShared(
++	contentIDs []string,
++	generation uint64,
++) (map[string]ProjectItems, error) {
++	contentIDs = uniqueContentIDs(contentIDs)
++	if len(contentIDs) == 0 {
++		return map[string]ProjectItems{}, nil
++	}
++
++	owners := make([]string, 0, len(contentIDs))
++	waiters := make(map[string]*projectFingerprintCall, len(contentIDs))
++	projectFingerprintState.mu.Lock()
++	for _, contentID := range contentIDs {
++		if call, ok := projectFingerprintState.inFlight[contentID]; ok &&
++			call.generation == generation {
++			waiters[contentID] = call
++			continue
++		}
++		call := &projectFingerprintCall{
++			done:       make(chan struct{}),
++			generation: generation,
++		}
++		projectFingerprintState.inFlight[contentID] = call
++		waiters[contentID] = call
++		owners = append(owners, contentID)
++	}
++	projectFingerprintState.mu.Unlock()
++
++	if len(owners) > 0 {
++		items, err := fetchProjectMembershipsNetwork(owners, generation)
++		projectFingerprintState.mu.Lock()
++		for _, contentID := range owners {
++			call := waiters[contentID]
++			call.items = items[contentID]
++			call.err = err
++			if projectFingerprintState.inFlight[contentID] == call {
++				delete(projectFingerprintState.inFlight, contentID)
++			}
++			close(call.done)
++		}
++		projectFingerprintState.mu.Unlock()
++	}
++
++	result := make(map[string]ProjectItems, len(contentIDs))
++	for _, contentID := range contentIDs {
++		call := waiters[contentID]
++		<-call.done
++		if call.err != nil {
++			return result, call.err
++		}
++		result[contentID] = call.items
++	}
++	return result, nil
++}
++
++func fetchProjectMembershipsNetwork(
++	contentIDs []string,
++	generation uint64,
++) (map[string]ProjectItems, error) {
++	started := time.Now()
++	client, err := projectGraphQLClient()
++	if err != nil {
++		return nil, err
++	}
++	log.Debug(
++		"Fetching Project membership fingerprints",
++		"contentIDs",
++		len(contentIDs),
 +	)
 +	query := `query ProjectMemberships($ids: [ID!]!) {
 +  nodes(ids: $ids) {
@@ -1974,13 +2127,6 @@ index 0000000..8b24e1f
 +	); err != nil {
 +		return nil, err
 +	}
-+	log.Debug(
-+		"Project fingerprint validation complete",
-+		"contentIDs",
-+		len(contentIDs),
-+		"duration",
-+		time.Since(started),
-+	)
 +	result := make(map[string]ProjectItems, len(response.Nodes))
 +	type overflowMembership struct {
 +		contentID string
@@ -2085,80 +2231,14 @@ index 0000000..8b24e1f
 +			after = next
 +		}
 +	}
-+	rememberProjectFingerprints(contentIDs, result)
-+	// Membership and Project updatedAt values are the authoritative cheap
-+	// fingerprint. A matching disk entry is still unverified until this live
-+	// request succeeds, but it lets warm launches skip schema/value reads.
-+	cached := cachedProjectItems(contentIDs, columns)
-+	unchanged := make(map[string]bool, len(result))
-+	for contentID, live := range result {
-+		if warm, ok := cached[contentID]; ok && projectItemsFingerprintEqual(live, warm) {
-+			warm.State = ProjectStateLiveVerified
-+			result[contentID] = warm
-+			unchanged[contentID] = true
-+		}
-+	}
-+	if len(columns) == 0 {
-+		for contentID, items := range result {
-+			items.State = ProjectStateLiveVerified
-+			result[contentID] = items
-+			persistProjectItems(contentID, columns, items, false)
-+		}
-+		return result, nil
-+	}
-+	type projectItemRef struct {
-+		contentID string
-+		index     int
-+	}
-+	byProject := make(map[string][]projectItemRef)
-+	for contentID, projectItems := range result {
-+		if unchanged[contentID] {
-+			continue
-+		}
-+		for index := range projectItems.Nodes {
-+			byProject[projectItems.Nodes[index].Project.ID] = append(
-+				byProject[projectItems.Nodes[index].Project.ID],
-+				projectItemRef{contentID: contentID, index: index},
-+			)
-+		}
-+	}
-+	for projectID, refs := range byProject {
-+		fields, schemaErr := FetchProjectSchema(projectID)
-+		if schemaErr != nil {
-+			return nil, schemaErr
-+		}
-+		itemIDs := make([]string, 0, len(refs))
-+		var project Project
-+		for _, ref := range refs {
-+			item := result[ref.contentID].Nodes[ref.index]
-+			itemIDs = append(itemIDs, item.ID)
-+			project = item.Project
-+		}
-+		values, valuesErr := fetchConfiguredProjectValues(itemIDs, fields, columns, project)
-+		if valuesErr != nil {
-+			return nil, valuesErr
-+		}
-+		for _, ref := range refs {
-+			projectItems := result[ref.contentID]
-+			item := &projectItems.Nodes[ref.index]
-+			for _, column := range columns {
-+				if column.FieldID == "" && column.Project == "" &&
-+					countProjectFieldsByName(fields, column.Name) > 1 &&
-+					!containsString(item.AmbiguousFields, column.Name) {
-+					item.AmbiguousFields = append(item.AmbiguousFields, column.Name)
-+				}
-+			}
-+			item.FieldValues.Nodes = append(item.FieldValues.Nodes, values[item.ID]...)
-+			result[ref.contentID] = projectItems
-+		}
-+	}
-+	for contentID, items := range result {
-+		items.State = ProjectStateLiveVerified
-+		result[contentID] = items
-+		if !unchanged[contentID] {
-+			persistProjectItems(contentID, columns, items, false)
-+		}
-+	}
++	log.Debug(
++		"Project fingerprint validation complete",
++		"contentIDs",
++		len(contentIDs),
++		"duration",
++		time.Since(started),
++	)
++	rememberProjectFingerprints(generation, contentIDs, result)
 +	return result, nil
 +}
 +
@@ -2175,6 +2255,28 @@ index 0000000..8b24e1f
 +		if !ok || item.Project.ID != old.Project.ID || item.UpdatedAt != old.UpdatedAt ||
 +			item.Project.UpdatedAt != old.Project.UpdatedAt {
 +			return false
++		}
++	}
++	return true
++}
++
++func projectItemsFullPreviewFingerprintSafe(items ProjectItems) bool {
++	for _, item := range items.Nodes {
++		for _, value := range item.FieldValues.Nodes {
++			switch value.Typename {
++			case "ProjectV2ItemFieldTextValue",
++				"ProjectV2ItemFieldNumberValue",
++				"ProjectV2ItemFieldDateValue",
++				"ProjectV2ItemFieldSingleSelectValue",
++				"ProjectV2ItemFieldIterationValue":
++				// These values are owned by the Project and are covered by
++				// the Project item/project updatedAt fingerprint.
++			default:
++				// Linked users, labels, repositories, PRs, reviewers,
++				// milestones, issue fields, multi-select options, and
++				// unknown future values can change without that fingerprint.
++				return false
++			}
 +		}
 +	}
 +	return true
@@ -2222,8 +2324,12 @@ index 0000000..8b24e1f
 +		fingerprint = fingerprints[contentID]
 +	}
 +	if full, ok := cachedFullProjectItems(contentID); ok {
-+		if projectItemsFingerprintEqual(fingerprint, full) {
++		if projectItemsFullPreviewFingerprintSafe(full) &&
++			projectItemsFingerprintEqual(fingerprint, full) {
 +			full.State = ProjectStateLiveVerified
++			// Live fingerprint validation completed, so access-time persistence
++			// no longer delays the initial cache hydration path.
++			persistProjectItems(contentID, nil, full, true)
 +			return full, nil
 +		}
 +	}
@@ -2362,10 +2468,10 @@ index 0000000..8b24e1f
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
 new file mode 100644
-index 0000000..c5c5ade
+index 0000000..31f2a9a
 --- /dev/null
 +++ b/internal/data/projectlist_query_test.go
-@@ -0,0 +1,510 @@
+@@ -0,0 +1,638 @@
 +package data
 +
 +import (
@@ -2375,6 +2481,7 @@ index 0000000..c5c5ade
 +	"strings"
 +	"sync"
 +	"testing"
++	"time"
 +
 +	gh "github.com/cli/go-gh/v2/pkg/api"
 +)
@@ -2405,6 +2512,133 @@ index 0000000..c5c5ade
 +	}
 +	if len(items["issue-1"].Nodes) != 1 {
 +		t.Fatalf("got %#v", items)
++	}
++}
++
++func TestProjectMembershipQueryAccepts26IDs(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	resetProjectItemsState()
++	ids := make([]string, 26)
++	for index := range ids {
++		ids[index] = fmt.Sprintf("issue-%d", index)
++	}
++	calls := 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		if !strings.Contains(query, "ProjectMemberships") {
++			t.Fatalf("unexpected query: %s", query)
++		}
++		calls++
++		gotIDs, ok := variables["ids"].([]string)
++		if !ok || len(gotIDs) != len(ids) {
++			t.Fatalf("membership ids = %#v", variables["ids"])
++		}
++		return json.Unmarshal([]byte(`{"nodes":[]}`), result)
++	}
++	items, err := fetchProjectItemsNetwork(ids, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if calls != 1 || len(items) != len(ids) {
++		t.Fatalf("26-ID membership query calls=%d items=%#v", calls, items)
++	}
++}
++
++func TestProjectFingerprintPublicationRejectsStaleGeneration(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	resetProjectItemsState()
++	started := make(chan struct{})
++	release := make(chan struct{})
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
++		if strings.Contains(query, "ProjectMemberships") {
++			close(started)
++			<-release
++		}
++		return json.Unmarshal([]byte(
++			`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++		), result)
++	}
++	generation1 := BeginProjectRefreshGeneration()
++	done := make(chan error, 1)
++	go func() {
++		_, err := fetchProjectMembershipsShared([]string{"issue-1"}, generation1)
++		done <- err
++	}()
++	<-started
++	generation2 := BeginProjectRefreshGeneration()
++	if generation2 == generation1 {
++		t.Fatalf("refresh generation did not advance")
++	}
++	close(release)
++	if err := <-done; err != nil {
++		t.Fatal(err)
++	}
++	if _, ok := projectFingerprint("issue-1"); ok {
++		t.Fatal("stale generation populated the new fingerprint cache")
++	}
++}
++
++func TestProjectFingerprintMembershipReadsCoalesceAcrossListAndPreview(t *testing.T) {
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	resetProjectItemsState()
++	started := make(chan struct{})
++	release := make(chan struct{})
++	duplicate := make(chan struct{})
++	var once sync.Once
++	calls := 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
++		if strings.Contains(query, "ProjectMemberships") {
++			calls++
++			if calls > 1 {
++				close(duplicate)
++			}
++			once.Do(func() { close(started) })
++			<-release
++		}
++		return json.Unmarshal([]byte(
++			`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","project":{"id":"project-1"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}},{"id":"issue-2","projectItems":{"nodes":[{"id":"item-2","project":{"id":"project-1"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++		), result)
++	}
++	generation := BeginProjectRefreshGeneration()
++	listDone := make(chan error, 1)
++	go func() {
++		_, err := fetchProjectMembershipsShared([]string{"issue-1", "issue-2"}, generation)
++		listDone <- err
++	}()
++	<-started
++	previewDone := make(chan error, 1)
++	go func() {
++		items, err := fetchProjectMembershipsShared([]string{"issue-2"}, generation)
++		if err == nil && len(items["issue-2"].Nodes) != 1 {
++			err = fmt.Errorf("coalesced preview returned %#v", items)
++		}
++		previewDone <- err
++	}()
++	select {
++	case <-duplicate:
++		t.Fatal("membership request was not coalesced")
++	case <-time.After(50 * time.Millisecond):
++	}
++	close(release)
++	if err := <-listDone; err != nil {
++		t.Fatal(err)
++	}
++	if err := <-previewDone; err != nil {
++		t.Fatal(err)
++	}
++	if calls != 1 {
++		t.Fatalf("membership calls=%d, want 1", calls)
 +	}
 +}
 +
@@ -2878,10 +3112,10 @@ index 0000000..c5c5ade
 +}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000..02b8246
+index 0000000..d476df1
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,174 @@
 +package data
 +
 +import (
@@ -3001,12 +3235,67 @@ index 0000000..02b8246
 +		t.Fatalf("fingerprint was not reused: calls=%d items=%#v", membershipCalls, items)
 +	}
 +}
++
++func TestSelectedPreviewDoesNotFingerprintVerifyLinkedValues(t *testing.T) {
++	configureProjectCacheTest(t)
++	resetProjectItemsState()
++	defer resetProjectItemsState()
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	fullMembershipCalls, valueCalls := 0, 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
++		switch {
++		case strings.Contains(query, "FullProjectMemberships"):
++			fullMembershipCalls++
++			return json.Unmarshal([]byte(
++				`{"node":{"projectItems":{"nodes":[{"id":"item-1","updatedAt":"2026-01-01T00:00:00Z","project":{"id":"project-1","updatedAt":"2026-01-01T00:00:00Z"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++			), result)
++		case strings.Contains(query, "FullProjectFieldValues"):
++			valueCalls++
++			return json.Unmarshal([]byte(
++				`{"node":{"fieldValues":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":""}}}}`,
++			), result)
++		case strings.Contains(query, "ProjectMemberships"):
++			return json.Unmarshal([]byte(
++				`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","updatedAt":"2026-01-01T00:00:00Z","project":{"id":"project-1","updatedAt":"2026-01-01T00:00:00Z"}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++			), result)
++		default:
++			t.Fatalf("unexpected query: %s", query)
++			return nil
++		}
++	}
++
++	full := cachedTestItems()
++	full.Nodes[0].UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
++	full.Nodes[0].Project.UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
++	full.Nodes[0].FieldValues.Nodes = []ProjectFieldValue{{
++		Typename: "ProjectV2ItemFieldPullRequestValue",
++	}}
++	persistProjectItems("issue-1", nil, full, true)
++
++	items, err := FetchProjectItemsFull("issue-1")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if fullMembershipCalls != 1 || valueCalls != 1 ||
++		len(items.Nodes) != 1 || len(items.Nodes[0].FieldValues.Nodes) != 0 {
++		t.Fatalf(
++			"linked-value preview was not read live: membership=%d values=%d items=%#v",
++			fullMembershipCalls,
++			valueCalls,
++			items,
++		)
++	}
++}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000..45ea7f9
+index 0000000..ac462cf
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1644 @@
+@@ -0,0 +1,1672 @@
 +package data
 +
 +import (
@@ -3271,6 +3560,22 @@ index 0000000..45ea7f9
 +
 +var projectFingerprints = projectFingerprintCache{
 +	items: make(map[string]ProjectItems),
++}
++
++type projectFingerprintCall struct {
++	done       chan struct{}
++	items      ProjectItems
++	err        error
++	generation uint64
++}
++
++type projectFingerprintRequests struct {
++	mu       sync.Mutex
++	inFlight map[string]*projectFingerprintCall
++}
++
++var projectFingerprintState = projectFingerprintRequests{
++	inFlight: make(map[string]*projectFingerprintCall),
 +}
 +
 +type projectEnrichmentBreaker struct {
@@ -3584,6 +3889,9 @@ index 0000000..45ea7f9
 +	projectFingerprints.items = make(map[string]ProjectItems)
 +	projectFingerprints.generation = 0
 +	projectFingerprints.mu.Unlock()
++	projectFingerprintState.mu.Lock()
++	projectFingerprintState.inFlight = make(map[string]*projectFingerprintCall)
++	projectFingerprintState.mu.Unlock()
 +
 +	projectBreaker.mu.Lock()
 +	projectBreaker.failures = 0
@@ -3614,6 +3922,13 @@ index 0000000..45ea7f9
 +	projectFingerprints.items = make(map[string]ProjectItems)
 +	projectFingerprints.generation = generation
 +	projectFingerprints.mu.Unlock()
++	projectFingerprintState.mu.Lock()
++	for contentID, call := range projectFingerprintState.inFlight {
++		if call.generation != generation {
++			delete(projectFingerprintState.inFlight, contentID)
++		}
++	}
++	projectFingerprintState.mu.Unlock()
 +
 +	projectSchemas.mu.Lock()
 +	projectSchemas.generation = generation
@@ -3622,13 +3937,15 @@ index 0000000..45ea7f9
 +	return generation
 +}
 +
-+func rememberProjectFingerprints(contentIDs []string, items map[string]ProjectItems) {
-+	generation := ProjectRefreshGeneration()
++func rememberProjectFingerprints(
++	generation uint64,
++	contentIDs []string,
++	items map[string]ProjectItems,
++) {
 +	projectFingerprints.mu.Lock()
 +	defer projectFingerprints.mu.Unlock()
 +	if projectFingerprints.generation != generation {
-+		projectFingerprints.items = make(map[string]ProjectItems)
-+		projectFingerprints.generation = generation
++		return
 +	}
 +	for _, contentID := range uniqueContentIDs(contentIDs) {
 +		fingerprint := ProjectItems{}
@@ -4841,10 +5158,10 @@ index 0000000..e68f901
 +}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000..515137e
+index 0000000..5082173
 --- /dev/null
 +++ b/internal/data/projects_test.go
-@@ -0,0 +1,623 @@
+@@ -0,0 +1,624 @@
 +package data
 +
 +import (
@@ -5083,6 +5400,7 @@ index 0000000..515137e
 +	}{
 +		{size: 20, batches: []int{20}},
 +		{size: 21, batches: []int{20, 1}},
++		{size: 26, batches: []int{20, 6}},
 +		{size: 50, batches: []int{20, 20, 10}},
 +	} {
 +		resetProjectItemsState()

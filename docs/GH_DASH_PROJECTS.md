@@ -101,25 +101,36 @@ refetches. Changed memberships or fingerprints selectively refetch the needed
 schema/values. The UI distinguishes `cached-unverified`, `live-verified`,
 loading, and live-error states; offline or rate-limited Project access leaves
 ordinary issue/PR rows usable and keeps cached values visibly unverified. A
-cached table cell is prefixed with `~` while it is being verified, and warm
-cache use refreshes its on-disk access time without discarding entries for
-other hosts or accounts. Atomic writes merge the latest disk contents before
-replacement so concurrent gh-dash processes retain independent identities.
-Editing requires live-verified item and schema state. No daemon, launch agent,
-SQLite database, custom sync process, TTL freshness policy, fast poller, or
-stale-as-authoritative fallback is used.
+cached table cell is prefixed with `~` while it is being verified. Cache
+hydration is read-only and does not synchronously rewrite the cache on the
+first-render path; access timestamps are persisted with completed live
+validation (or after a live selected-preview read), without discarding entries
+for other hosts or accounts. Atomic writes merge the latest disk contents
+before replacement so concurrent gh-dash processes retain independent
+identities. Editing requires live-verified item and schema state. No daemon,
+launch agent, SQLite database, custom sync process, TTL freshness policy, fast
+poller, or stale-as-authoritative fallback is used.
 
 Every initial section load and native section refetch re-enters the selected
 Project-preview lifecycle. A cached complete preview can appear immediately
 with a verifying marker; the debounced live fingerprint/full fetch then either
-verifies it or atomically replaces it. List-only Status/Priority/Area/Kind
-values cannot masquerade as complete preview metadata. Failure is shown as a
-live error while any retained cache remains visibly unverified. This lifecycle
-is independent of ordinary PR detail enrichment, so revisiting an already
-enriched PR still contacts GitHub for authoritative Project validation.
+verifies it or atomically replaces it. Fingerprint-only verification is limited
+to Project-owned text, number, date, single-select, and iteration values.
+Previews containing linked PRs, reviewers, milestones, users, labels,
+repositories, multi-select/issue-field values, or unknown future values always
+perform one live full-preview read because those displays can change without a
+Project item/project `updatedAt` change. List columns retain the cheap
+membership fingerprint path. List-only Status/Priority/Area/Kind values cannot
+masquerade as complete preview metadata. Failure is shown as a live error while
+any retained cache remains visibly unverified. This lifecycle is independent of
+ordinary PR detail enrichment, so revisiting an already enriched PR still
+contacts GitHub for authoritative Project validation.
 Configured visible Project fields are requested for PR list rows as well as
 issue rows; repository/branch view PR lookups do not spend Project calls when
-those columns are not rendered.
+those columns are not rendered. Production membership requests intentionally
+cap `nodes(ids:)` batches at 20 IDs. A 26-row issue/PR page therefore makes two
+membership/fingerprint calls (20 IDs, then 6 IDs); a contract test also accepts
+one 26-ID query, but no live evidence justified raising the production cap.
 
 The downstream patch is stored at
 `patches/gh-dash/projects-v2.patch` and applied by
