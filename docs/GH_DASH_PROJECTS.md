@@ -53,7 +53,9 @@ finally asks only for configured visible columns using variable-backed
 `fieldValueByName` selections. A zero-column configuration therefore does not
 request field values. Duplicate field names remain ambiguous; a configured
 field ID takes the targeted field-value fallback needed to resolve that
-collision.
+collision. The list and selected-preview paths share the live fingerprint
+captured for the current refresh generation, so revisiting the selected row
+does not repeat an unchanged membership validation.
 
 When an issue or pull request is selected, the Project block first shows an
 explicit loading state while the authoritative full membership/value request is
@@ -98,7 +100,11 @@ presentation from `cached-unverified` to `live-verified` without schema/value
 refetches. Changed memberships or fingerprints selectively refetch the needed
 schema/values. The UI distinguishes `cached-unverified`, `live-verified`,
 loading, and live-error states; offline or rate-limited Project access leaves
-ordinary issue/PR rows usable and keeps cached values visibly unverified.
+ordinary issue/PR rows usable and keeps cached values visibly unverified. A
+cached table cell is prefixed with `~` while it is being verified, and warm
+cache use refreshes its on-disk access time without discarding entries for
+other hosts or accounts. Atomic writes merge the latest disk contents before
+replacement so concurrent gh-dash processes retain independent identities.
 Editing requires live-verified item and schema state. No daemon, launch agent,
 SQLite database, custom sync process, TTL freshness policy, fast poller, or
 stale-as-authoritative fallback is used.

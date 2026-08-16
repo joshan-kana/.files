@@ -749,10 +749,10 @@ index 0000000..25433ff
 +}
 diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
 new file mode 100644
-index 0000000..e27ff15
+index 0000000..551207c
 --- /dev/null
 +++ b/internal/data/projectcache.go
-@@ -0,0 +1,354 @@
+@@ -0,0 +1,386 @@
 +package data
 +
 +// Persistent Project cache. This file deliberately contains presentation data
@@ -920,8 +920,10 @@ index 0000000..e27ff15
 +	filtered := cache.Entries[:0]
 +	cutoff := projectCacheNow().Add(-projectCacheRetention)
 +	for _, entry := range cache.Entries {
-+		if entry.Host == identity.Host && entry.Account == identity.Account &&
-+			(entry.LastUsed.IsZero() || entry.LastUsed.After(cutoff)) {
++		// Retention is housekeeping only. Keep every live host/account in the
++		// file so switching identities does not evict another account's warm
++		// entries when this process eventually writes the cache.
++		if entry.LastUsed.IsZero() || entry.LastUsed.After(cutoff) {
 +			filtered = append(filtered, entry)
 +		}
 +	}
@@ -947,6 +949,7 @@ index 0000000..e27ff15
 +	}
 +	columnsKey := projectColumnsKey(columns)
 +	result := make(map[string]ProjectItems)
++	touched := false
 +	for index := range cache.Entries {
 +		entry := &cache.Entries[index]
 +		if entry.Host != identity.Host || entry.Account != identity.Account {
@@ -959,6 +962,10 @@ index 0000000..e27ff15
 +		entry.LastUsed = projectCacheNow()
 +		entry.Items.State = ProjectStateCachedUnverified
 +		result[entry.ContentID] = entry.Items
++		touched = true
++	}
++	if touched {
++		writeProjectCache(identity, *cache)
 +	}
 +	return result
 +}
@@ -980,6 +987,7 @@ index 0000000..e27ff15
 +			entry.ColumnsKey == "" {
 +			entry.LastUsed = projectCacheNow()
 +			entry.Items.State = ProjectStateCachedUnverified
++			writeProjectCache(identity, *cache)
 +			return entry.Items, true
 +		}
 +	}
@@ -1067,6 +1075,30 @@ index 0000000..e27ff15
 +	}
 +	projectCacheMu.Lock()
 +	defer projectCacheMu.Unlock()
++	// Re-read immediately before replacement and preserve entries written by
++	// another gh-dash process. Current-identity entries are replaced as a
++	// coherent set so invalidation can remove them without deleting other
++	// hosts/accounts.
++	latest := projectCacheFile{Version: projectCacheFormatVersion}
++	if existing, readErr := os.ReadFile(path); readErr == nil {
++		if jsonErr := json.Unmarshal(existing, &latest); jsonErr != nil ||
++			latest.Version != projectCacheFormatVersion {
++			latest = projectCacheFile{Version: projectCacheFormatVersion}
++		}
++	}
++	merged := latest.Entries[:0]
++	for _, entry := range latest.Entries {
++		if entry.Host != identity.Host || entry.Account != identity.Account {
++			merged = append(merged, entry)
++		}
++	}
++	for _, entry := range cache.Entries {
++		if entry.Host == identity.Host && entry.Account == identity.Account {
++			merged = append(merged, entry)
++		}
++	}
++	cache.Version = projectCacheFormatVersion
++	cache.Entries = merged
 +	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 +		return
 +	}
@@ -1109,13 +1141,14 @@ index 0000000..e27ff15
 +}
 diff --git a/internal/data/projectcache_test.go b/internal/data/projectcache_test.go
 new file mode 100644
-index 0000000..3d28b0a
+index 0000000..bb2055b
 --- /dev/null
 +++ b/internal/data/projectcache_test.go
-@@ -0,0 +1,108 @@
+@@ -0,0 +1,155 @@
 +package data
 +
 +import (
++	"encoding/json"
 +	"os"
 +	"path/filepath"
 +	"strings"
@@ -1221,12 +1254,58 @@ index 0000000..3d28b0a
 +		t.Fatalf("full preview = %#v, ok=%v", items, ok)
 +	}
 +}
++
++func TestProjectCachePersistsLastUsedOnWarmHydration(t *testing.T) {
++	configureProjectCacheTest(t)
++	current := time.Unix(100, 0)
++	projectCacheNow = func() time.Time { return current }
++	persistProjectItems("issue-1", nil, cachedTestItems(), false)
++
++	current = time.Unix(200, 0)
++	_ = HydrateProjectItems([]string{"issue-1"}, nil)
++
++	contents, err := os.ReadFile(ProjectCachePath())
++	if err != nil {
++		t.Fatal(err)
++	}
++	var cache projectCacheFile
++	if err := json.Unmarshal(contents, &cache); err != nil {
++		t.Fatal(err)
++	}
++	if len(cache.Entries) != 1 || !cache.Entries[0].LastUsed.Equal(current) {
++		t.Fatalf("last-used timestamp was not persisted: %#v", cache.Entries)
++	}
++}
++
++func TestProjectCacheRetainsOtherAccountEntriesAcrossWrites(t *testing.T) {
++	identity := configureProjectCacheTest(t)
++	persistProjectItems("alice-issue", nil, cachedTestItems(), false)
++
++	identity.Account = "bob"
++	persistProjectItems("bob-issue", nil, cachedTestItems(), false)
++
++	contents, err := os.ReadFile(ProjectCachePath())
++	if err != nil {
++		t.Fatal(err)
++	}
++	var cache projectCacheFile
++	if err := json.Unmarshal(contents, &cache); err != nil {
++		t.Fatal(err)
++	}
++	accounts := make(map[string]bool)
++	for _, entry := range cache.Entries {
++		accounts[entry.Account] = true
++	}
++	if !accounts["alice"] || !accounts["bob"] {
++		t.Fatalf("account entries were not retained: %#v", cache.Entries)
++	}
++}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000..075c8ae
+index 0000000..8b24e1f
 --- /dev/null
 +++ b/internal/data/projectlist.go
-@@ -0,0 +1,1050 @@
+@@ -0,0 +1,1054 @@
 +package data
 +
 +import (
@@ -2006,6 +2085,7 @@ index 0000000..075c8ae
 +			after = next
 +		}
 +	}
++	rememberProjectFingerprints(contentIDs, result)
 +	// Membership and Project updatedAt values are the authoritative cheap
 +	// fingerprint. A matching disk entry is still unverified until this live
 +	// request succeeds, but it lets warm launches skip schema/value reads.
@@ -2130,16 +2210,19 @@ index 0000000..075c8ae
 +	if err != nil {
 +		return ProjectItems{}, err
 +	}
-+	// Validate the cheap membership fingerprint first. If the cached full
-+	// snapshot still matches, this is the only Project query needed for a
-+	// revisited item.
-+	fingerprint, err := fetchProjectItemsNetwork([]string{contentID}, nil)
-+	if err != nil {
-+		return ProjectItems{}, err
++	// Reuse the current generation's list validation when available. If the
++	// selected preview wins the race, it performs the one shared fingerprint
++	// request and publishes it for subsequent list/full callers.
++	fingerprint, fingerprintFound := projectFingerprint(contentID)
++	if !fingerprintFound {
++		fingerprints, fingerprintErr := fetchProjectItemsNetwork([]string{contentID}, nil)
++		if fingerprintErr != nil {
++			return ProjectItems{}, fingerprintErr
++		}
++		fingerprint = fingerprints[contentID]
 +	}
 +	if full, ok := cachedFullProjectItems(contentID); ok {
-+		if live, exists := fingerprint[contentID]; exists &&
-+			projectItemsFingerprintEqual(live, full) {
++		if projectItemsFingerprintEqual(fingerprint, full) {
 +			full.State = ProjectStateLiveVerified
 +			return full, nil
 +		}
@@ -2795,16 +2878,17 @@ index 0000000..c5c5ade
 +}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000..1463b9c
+index 0000000..02b8246
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,119 @@
 +package data
 +
 +import (
 +	"encoding/json"
 +	"strings"
 +	"testing"
++	"time"
 +
 +	gh "github.com/cli/go-gh/v2/pkg/api"
 +)
@@ -2880,12 +2964,49 @@ index 0000000..1463b9c
 +		t.Fatalf("membership calls=%d value calls=%d items=%#v", membershipCalls, valueCalls, items)
 +	}
 +}
++
++func TestSelectedPreviewReusesCurrentGenerationFingerprint(t *testing.T) {
++	configureProjectCacheTest(t)
++	original := projectGraphQLDo
++	originalClient := projectGraphQLClient
++	defer func() { projectGraphQLDo = original }()
++	defer func() { projectGraphQLClient = originalClient }()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	membershipCalls := 0
++	projectGraphQLDo = func(_ *gh.GraphQLClient, query string, _ map[string]interface{}, result interface{}) error {
++		if !strings.Contains(query, "ProjectMemberships") {
++			t.Fatalf("selected preview issued an unexpected query: %s", query)
++		}
++		membershipCalls++
++		return json.Unmarshal([]byte(
++			`{"nodes":[{"id":"issue-1","projectItems":{"nodes":[{"id":"item-1","updatedAt":"2026-01-01T00:00:00Z","project":{"id":"project-1","number":1,"title":"Roadmap","updatedAt":"2026-01-01T00:00:00Z","owner":{"login":"owner"}}}],"pageInfo":{"hasNextPage":false,"endCursor":""}}}]}`,
++		), result)
++	}
++
++	if _, err := fetchProjectItemsNetwork([]string{"issue-1"}, nil); err != nil {
++		t.Fatal(err)
++	}
++	full := cachedTestItems()
++	full.Nodes[0].UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
++	full.Nodes[0].Project.UpdatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
++	full.Nodes[0].FieldValues.Nodes = []ProjectFieldValue{singleSelect("Status", "Ready")}
++	persistProjectItems("issue-1", nil, full, true)
++
++	items, err := FetchProjectItemsFull("issue-1")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if membershipCalls != 1 || items.State != ProjectStateLiveVerified ||
++		len(items.Nodes[0].FieldValues.Nodes) != 1 {
++		t.Fatalf("fingerprint was not reused: calls=%d items=%#v", membershipCalls, items)
++	}
++}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000..e7d4125
+index 0000000..45ea7f9
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1586 @@
+@@ -0,0 +1,1644 @@
 +package data
 +
 +import (
@@ -3136,6 +3257,20 @@ index 0000000..e7d4125
 +	columns:    make(map[string]string),
 +	inFlight:   make(map[string]*projectItemsCall),
 +	contentGen: make(map[string]uint64),
++}
++
++// projectFingerprints is shared by list enrichment and selected full-preview
++// reads. It contains only the cheap membership/updatedAt snapshot obtained by
++// GitHub during the current refresh generation; it never supplies freshness
++// across a generation boundary.
++type projectFingerprintCache struct {
++	mu         sync.Mutex
++	items      map[string]ProjectItems
++	generation uint64
++}
++
++var projectFingerprints = projectFingerprintCache{
++	items: make(map[string]ProjectItems),
 +}
 +
 +type projectEnrichmentBreaker struct {
@@ -3445,6 +3580,10 @@ index 0000000..e7d4125
 +	projectItemsState.generation = 0
 +	projectItemsState.contentGen = make(map[string]uint64)
 +	projectItemsState.mu.Unlock()
++	projectFingerprints.mu.Lock()
++	projectFingerprints.items = make(map[string]ProjectItems)
++	projectFingerprints.generation = 0
++	projectFingerprints.mu.Unlock()
 +
 +	projectBreaker.mu.Lock()
 +	projectBreaker.failures = 0
@@ -3471,12 +3610,46 @@ index 0000000..e7d4125
 +	projectItemsState.items = make(map[string]ProjectItems)
 +	projectItemsState.columns = make(map[string]string)
 +	projectItemsState.mu.Unlock()
++	projectFingerprints.mu.Lock()
++	projectFingerprints.items = make(map[string]ProjectItems)
++	projectFingerprints.generation = generation
++	projectFingerprints.mu.Unlock()
 +
 +	projectSchemas.mu.Lock()
 +	projectSchemas.generation = generation
 +	projectSchemas.fields = make(map[string][]ProjectField)
 +	projectSchemas.mu.Unlock()
 +	return generation
++}
++
++func rememberProjectFingerprints(contentIDs []string, items map[string]ProjectItems) {
++	generation := ProjectRefreshGeneration()
++	projectFingerprints.mu.Lock()
++	defer projectFingerprints.mu.Unlock()
++	if projectFingerprints.generation != generation {
++		projectFingerprints.items = make(map[string]ProjectItems)
++		projectFingerprints.generation = generation
++	}
++	for _, contentID := range uniqueContentIDs(contentIDs) {
++		fingerprint := ProjectItems{}
++		for _, item := range items[contentID].Nodes {
++			fingerprint.Nodes = append(fingerprint.Nodes, ProjectItem{
++				ID: item.ID, UpdatedAt: item.UpdatedAt, Project: item.Project,
++			})
++		}
++		projectFingerprints.items[contentID] = fingerprint
++	}
++}
++
++func projectFingerprint(contentID string) (ProjectItems, bool) {
++	generation := ProjectRefreshGeneration()
++	projectFingerprints.mu.Lock()
++	defer projectFingerprints.mu.Unlock()
++	if projectFingerprints.generation != generation {
++		return ProjectItems{}, false
++	}
++	fingerprint, ok := projectFingerprints.items[contentID]
++	return fingerprint, ok
 +}
 +
 +// ProjectRefreshGeneration reports the current process-local Project data
@@ -3844,7 +4017,13 @@ index 0000000..e7d4125
 +	if len(values) == 0 && projectItems.State == ProjectStateCachedUnverified {
 +		return "…"
 +	}
-+	return strings.Join(values, ", ")
++	formatted := strings.Join(values, ", ")
++	if projectItems.State == ProjectStateCachedUnverified && formatted != "" {
++		// Keep cached values useful on a warm launch while making it impossible
++		// to mistake them for live-verified GitHub data in the table.
++		return "~" + formatted
++	}
++	return formatted
 +}
 +
 +type ProjectColumn struct {
@@ -4662,10 +4841,10 @@ index 0000000..e68f901
 +}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000..8532d79
+index 0000000..515137e
 --- /dev/null
 +++ b/internal/data/projects_test.go
-@@ -0,0 +1,611 @@
+@@ -0,0 +1,623 @@
 +package data
 +
 +import (
@@ -4746,6 +4925,18 @@ index 0000000..8532d79
 +	); got != "Todo" {
 +		t.Fatalf("project-specific value got %q", got)
 +	}
++}
++
++func TestCachedProjectColumnValueIsMarkedUnverified(t *testing.T) {
++	item := ProjectItem{
++		Project:     Project{Number: 1, Title: "Roadmap"},
++		FieldValues: ProjectFieldValues(singleSelect("Status", "Ready")),
++	}
++	got := FormatProjectFieldForItems(
++		ProjectItems{Nodes: []ProjectItem{item}, State: ProjectStateCachedUnverified},
++		ProjectColumn{Name: "Status"},
++	)
++	require.Equal(t, "~Ready", got)
 +}
 +
 +func TestProjectSelectorsRejectUnqualifiedCollisions(t *testing.T) {
@@ -5306,7 +5497,7 @@ index e7cf4ec..f7de54e 100644
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664..53df4fe 100644
+index f421664..6edb322 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,8 @@ import (
@@ -5318,7 +5509,27 @@ index f421664..53df4fe 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tasks"
-@@ -152,6 +154,31 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -24,7 +26,9 @@ const SectionType = "issue"
+ 
+ type Model struct {
+ 	section.BaseModel
+-	Issues []data.IssueData
++	Issues                    []data.IssueData
++	projectValidationSequence uint64
++	projectValidationByID     map[string]uint64
+ }
+ 
+ func NewModel(
+@@ -34,7 +38,7 @@ func NewModel(
+ 	lastUpdated time.Time,
+ 	createdAt time.Time,
+ ) Model {
+-	m := Model{}
++	m := Model{projectValidationByID: make(map[string]uint64)}
+ 	m.BaseModel = section.NewModel(
+ 		ctx,
+ 		section.NewSectionOptions{
+@@ -152,6 +156,31 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			}
  		}
  
@@ -5350,20 +5561,40 @@ index f421664..53df4fe 100644
  	case SectionIssuesFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -165,7 +192,30 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -165,7 +194,50 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			m.Table.SetRows(m.BuildRows())
  			m.UpdateLastUpdated(time.Now())
  			m.UpdateTotalItemsCount(m.TotalCount)
 +			if m.Ctx.Config.Defaults.Layout.Projects.Enabled {
 +				cmd = tea.Batch(cmd, m.revalidateProjects(msg.Issues, msg.TaskId))
 +			}
-+		}
++			// Search pagination is demand-driven upstream, but the default Issues
++			// view must eventually expose every matching row without requiring
++			// the user to scroll to the last loaded row.
++			if m.PageInfo.HasNextPage {
++				cmds := append([]tea.Cmd{cmd}, m.FetchNextPageSectionRows()...)
++				cmd = tea.Batch(cmds...)
++			}
+ 		}
 +
 +	case SectionProjectsFetchedMsg:
-+		if m.LastFetchTaskId != msg.TaskId || msg.Generation != data.ProjectRefreshGeneration() {
++		if msg.Generation != data.ProjectRefreshGeneration() {
 +			break
 +		}
++		targets := make(map[string]struct{}, len(msg.ContentIDs))
++		for _, contentID := range msg.ContentIDs {
++			targets[contentID] = struct{}{}
++		}
 +		for index := range m.Issues {
++			contentID := m.Issues[index].ID
++			if len(targets) > 0 {
++				if _, ok := targets[contentID]; !ok {
++					continue
++				}
++			}
++			if msg.RequestID != 0 && m.projectValidationByID[contentID] != msg.RequestID {
++				continue
++			}
 +			if items, ok := msg.Items[m.Issues[index].ID]; ok {
 +				items.State = data.ProjectStateLiveVerified
 +				m.Issues[index].ProjectItems = items
@@ -5376,12 +5607,12 @@ index f421664..53df4fe 100644
 +					State: data.ProjectStateLiveVerified,
 +				}
 +			}
- 		}
++		}
 +		m.Table.SetRows(m.BuildRows())
  	}
  
  	search, searchCmd := m.SearchBar.Update(msg)
-@@ -212,7 +262,7 @@ func GetSectionColumns(
+@@ -212,7 +284,7 @@ func GetSectionColumns(
  		sLayout.Reactions,
  	)
  
@@ -5390,7 +5621,7 @@ index f421664..53df4fe 100644
  		{
  			Title:  "",
  			Width:  stateLayout.Width,
-@@ -259,6 +309,23 @@ func GetSectionColumns(
+@@ -259,6 +331,23 @@ func GetSectionColumns(
  			Hidden: createdAtLayout.Hidden,
  		},
  	}
@@ -5414,7 +5645,7 @@ index f421664..53df4fe 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -323,7 +390,17 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -323,7 +412,17 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  		if limit == nil {
  			limit = &m.Ctx.Config.Defaults.IssuesLimit
  		}
@@ -5433,7 +5664,7 @@ index f421664..53df4fe 100644
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
-@@ -350,6 +427,24 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -350,6 +449,34 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  	return cmds
  }
  
@@ -5444,6 +5675,14 @@ index f421664..53df4fe 100644
 +	}
 +	columns := projectcolumns.Configured(m.Ctx)
 +	generation := data.ProjectRefreshGeneration()
++	m.projectValidationSequence++
++	requestID := m.projectValidationSequence
++	if m.projectValidationByID == nil {
++		m.projectValidationByID = make(map[string]uint64)
++	}
++	for _, contentID := range ids {
++		m.projectValidationByID[contentID] = requestID
++	}
 +	return func() tea.Msg {
 +		items, err := data.RevalidateProjectItems(ids, columns)
 +		return SectionProjectsFetchedMsg{
@@ -5451,6 +5690,8 @@ index f421664..53df4fe 100644
 +			Err:        err,
 +			TaskId:     taskID,
 +			Generation: generation,
++			ContentIDs: ids,
++			RequestID:  requestID,
 +		}
 +	}
 +}
@@ -5458,7 +5699,7 @@ index f421664..53df4fe 100644
  func (m *Model) UpdateLastUpdated(t time.Time) {
  	m.Table.UpdateLastUpdated(t)
  }
-@@ -391,6 +486,13 @@ type SectionIssuesFetchedMsg struct {
+@@ -391,6 +518,15 @@ type SectionIssuesFetchedMsg struct {
  	TaskId     string
  }
  
@@ -5467,11 +5708,88 @@ index f421664..53df4fe 100644
 +	Err        error
 +	TaskId     string
 +	Generation uint64
++	ContentIDs []string
++	RequestID  uint64
 +}
 +
  func addAssignees(assignees, addedAssignees []data.Assignee) []data.Assignee {
  	newAssignees := assignees
  	for _, assignee := range addedAssignees {
+diff --git a/internal/tui/components/issuessection/issuessection_test.go b/internal/tui/components/issuessection/issuessection_test.go
+new file mode 100644
+index 0000000..5c92a29
+--- /dev/null
++++ b/internal/tui/components/issuessection/issuessection_test.go
+@@ -0,0 +1,69 @@
++package issuessection
++
++import (
++	"testing"
++	"time"
++
++	tea "charm.land/bubbletea/v2"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/config"
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
++)
++
++func testIssuesSectionContext(t *testing.T, projects bool) *context.ProgramContext {
++	t.Helper()
++	cfg, err := config.ParseConfig(config.Location{
++		ConfigFlag:       "../../../config/testdata/test-config.yml",
++		SkipGlobalConfig: true,
++	})
++	require.NoError(t, err)
++	cfg.Defaults.Layout.Projects.Enabled = projects
++	ctx := &context.ProgramContext{Config: &cfg}
++	ctx.Theme = theme.ParseTheme(&cfg)
++	ctx.Styles = context.InitStyles(ctx.Theme)
++	ctx.StartTask = func(context.Task) tea.Cmd { return nil }
++	return ctx
++}
++
++func TestIssuePagesContinueLoadingAfterFirstPaint(t *testing.T) {
++	ctx := testIssuesSectionContext(t, false)
++	m := NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
++	m.LastFetchTaskId = "page-1"
++
++	_, cmd := m.Update(SectionIssuesFetchedMsg{
++		Issues:     []data.IssueData{{ID: "issue-1", Number: 1}},
++		TotalCount: 26,
++		PageInfo:   data.PageInfo{HasNextPage: true, EndCursor: "cursor-1"},
++		TaskId:     "page-1",
++	})
++
++	require.NotNil(t, cmd)
++	require.NotEqual(t, "page-1", m.LastFetchTaskId,
++		"the next search page should be scheduled automatically")
++	require.Len(t, m.Issues, 1)
++}
++
++func TestProjectValidationIsIndependentFromOrdinaryPageTask(t *testing.T) {
++	ctx := testIssuesSectionContext(t, true)
++	m := NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
++	m.LastFetchTaskId = "page-2"
++	m.Issues = []data.IssueData{{ID: "issue-1"}}
++	m.projectValidationByID["issue-1"] = 1
++
++	items := data.ProjectItems{Nodes: []data.ProjectItem{{
++		Project: data.Project{ID: "project-1", Title: "Roadmap"},
++	}}}
++	m.Update(SectionProjectsFetchedMsg{
++		Items:      map[string]data.ProjectItems{"issue-1": items},
++		ContentIDs: []string{"issue-1"},
++		RequestID:  1,
++		TaskId:     "page-1",
++		Generation: data.ProjectRefreshGeneration(),
++	})
++
++	require.Equal(t, data.ProjectStateLiveVerified, m.Issues[0].ProjectItems.State)
++	require.Len(t, m.Issues[0].ProjectItems.Nodes, 1)
++}
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
 index 494ec4c..4e08da6 100644
 --- a/internal/tui/components/issueview/issueview.go
@@ -6314,7 +6632,7 @@ index 1b2b493..8a10c0c 100644
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996b..d939212 100644
+index 08e996b..8a41d19 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,8 @@ import (
@@ -6326,7 +6644,27 @@ index 08e996b..d939212 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
-@@ -196,6 +198,32 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -25,7 +27,9 @@ const SectionType = "pr"
+ 
+ type Model struct {
+ 	section.BaseModel
+-	Prs []prrow.Data
++	Prs                       []prrow.Data
++	projectValidationSequence uint64
++	projectValidationByID     map[string]uint64
+ }
+ 
+ func NewModel(
+@@ -35,7 +39,7 @@ func NewModel(
+ 	lastUpdated time.Time,
+ 	createdAt time.Time,
+ ) Model {
+-	m := Model{}
++	m := Model{projectValidationByID: make(map[string]uint64)}
+ 	m.BaseModel = section.NewModel(
+ 		ctx,
+ 		section.NewSectionOptions{
+@@ -196,6 +200,32 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			break
  		}
  
@@ -6359,7 +6697,7 @@ index 08e996b..d939212 100644
  	case SectionPullRequestsFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -209,7 +237,33 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -209,7 +239,46 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			m.Table.SetRows(m.BuildRows())
  			m.Table.UpdateLastUpdated(time.Now())
  			m.UpdateTotalItemsCount(m.TotalCount)
@@ -6369,11 +6707,24 @@ index 08e996b..d939212 100644
 +		}
 +
 +	case SectionProjectsFetchedMsg:
-+		if m.LastFetchTaskId != msg.TaskId || msg.Generation != data.ProjectRefreshGeneration() {
++		if msg.Generation != data.ProjectRefreshGeneration() {
 +			break
+ 		}
++		targets := make(map[string]struct{}, len(msg.ContentIDs))
++		for _, contentID := range msg.ContentIDs {
++			targets[contentID] = struct{}{}
 +		}
 +		for index := range m.Prs {
 +			if m.Prs[index].Primary == nil {
++				continue
++			}
++			contentID := m.Prs[index].Primary.ID
++			if len(targets) > 0 {
++				if _, ok := targets[contentID]; !ok {
++					continue
++				}
++			}
++			if msg.RequestID != 0 && m.projectValidationByID[contentID] != msg.RequestID {
 +				continue
 +			}
 +			if items, ok := msg.Items[m.Prs[index].Primary.ID]; ok {
@@ -6388,12 +6739,12 @@ index 08e996b..d939212 100644
 +					State: data.ProjectStateLiveVerified,
 +				}
 +			}
- 		}
++		}
 +		m.Table.SetRows(m.BuildRows())
  	}
  
  	search, searchCmd := m.SearchBar.Update(msg)
-@@ -273,7 +327,7 @@ func GetSectionColumns(
+@@ -273,7 +342,7 @@ func GetSectionColumns(
  	linesLayout := config.MergeColumnConfigs(dLayout.Lines, sLayout.Lines)
  
  	if !ctx.Config.Theme.Ui.Table.Compact {
@@ -6402,7 +6753,7 @@ index 08e996b..d939212 100644
  			{
  				Title:  "",
  				Width:  utils.IntPtr(3),
-@@ -330,10 +384,10 @@ func GetSectionColumns(
+@@ -330,10 +399,10 @@ func GetSectionColumns(
  				Width:  createdAtLayout.Width,
  				Hidden: createdAtLayout.Hidden,
  			},
@@ -6415,7 +6766,7 @@ index 08e996b..d939212 100644
  		{
  			Title:  "",
  			Width:  utils.IntPtr(3),
-@@ -400,7 +454,23 @@ func GetSectionColumns(
+@@ -400,7 +469,23 @@ func GetSectionColumns(
  			Width:  createdAtLayout.Width,
  			Hidden: createdAtLayout.Hidden,
  		},
@@ -6439,7 +6790,7 @@ index 08e996b..d939212 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -436,6 +506,13 @@ type SectionPullRequestsFetchedMsg struct {
+@@ -436,6 +521,15 @@ type SectionPullRequestsFetchedMsg struct {
  	TaskId     string
  }
  
@@ -6448,12 +6799,14 @@ index 08e996b..d939212 100644
 +	Err        error
 +	TaskId     string
 +	Generation uint64
++	ContentIDs []string
++	RequestID  uint64
 +}
 +
  func (m *Model) GetCurrRow() data.RowData {
  	idx := m.Table.GetCurrItem()
  	if idx < 0 || idx >= len(m.Prs) {
-@@ -482,7 +559,13 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -482,7 +576,13 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  			limit = &m.Ctx.Config.Defaults.PrsLimit
  		}
  
@@ -6468,7 +6821,7 @@ index 08e996b..d939212 100644
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
-@@ -519,6 +602,26 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -519,6 +619,36 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  	return cmds
  }
  
@@ -6481,6 +6834,14 @@ index 08e996b..d939212 100644
 +	}
 +	columns := projectcolumns.Configured(m.Ctx)
 +	generation := data.ProjectRefreshGeneration()
++	m.projectValidationSequence++
++	requestID := m.projectValidationSequence
++	if m.projectValidationByID == nil {
++		m.projectValidationByID = make(map[string]uint64)
++	}
++	for _, contentID := range ids {
++		m.projectValidationByID[contentID] = requestID
++	}
 +	return func() tea.Msg {
 +		items, err := data.RevalidateProjectItems(ids, columns)
 +		return SectionProjectsFetchedMsg{
@@ -6488,6 +6849,8 @@ index 08e996b..d939212 100644
 +			Err:        err,
 +			TaskId:     taskID,
 +			Generation: generation,
++			ContentIDs: ids,
++			RequestID:  requestID,
 +		}
 +	}
 +}
