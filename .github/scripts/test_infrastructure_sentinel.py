@@ -43,6 +43,44 @@ class FakeClient:
 
 
 class PullRequestProjectTests(unittest.TestCase):
+    def test_explicit_unsupported_payload_version_is_rejected(self) -> None:
+        command = {
+            "version": 2,
+            "request_id": "unsupported-version",
+            "operations": [],
+        }
+
+        with self.assertRaisesRegex(bridge.BridgeError, "unsupported command version: 2"):
+            bridge.normalize_command(command, FakeClient())
+
+    def test_command_without_payload_version_defaults_to_v1(self) -> None:
+        project = {
+            "fields": {
+                "Status": {
+                    "type": "SINGLE_SELECT",
+                    "options": [{"id": "review", "name": "Review", "description": ""}],
+                }
+            }
+        }
+        command = {
+            "request_id": "pr-project-without-version",
+            "operations": [{"issue": 80, "ensure_project": True, "fields": {"Status": "Review"}}],
+        }
+        with (
+            mock.patch.object(bridge, "project_data", return_value=(project, {})),
+            mock.patch.object(bridge, "issue_list", return_value=[]),
+            mock.patch.object(
+                bridge,
+                "issue_metadata",
+                return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
+            ),
+            mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+        ):
+            normalized = bridge.normalize_command(command, FakeClient())
+
+        self.assertEqual(normalized[0]["issue"], 80)
+        self.assertEqual(normalized[0]["fields"], {"Status": "Review"})
+
     def test_pull_request_can_target_project_membership_and_fields(self) -> None:
         project = {
             "fields": {
