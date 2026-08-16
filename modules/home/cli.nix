@@ -133,6 +133,8 @@ lib.mkIf cfg.features.cli.enable {
     source = tuicrConfig;
   };
 
+  programs.lazygit.enable = enabled "lazygit";
+
   programs.zsh = {
     enable = enabled "zsh";
     autosuggestion.enable = true;
