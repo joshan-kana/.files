@@ -1,8 +1,8 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a..ad2eb37 100644
+index a38043a3325e2d8399e60996f5c54b8d99e87ddc..b5e09c1b4f50499bd5d7e610a84e12ad95a79cc8 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
-@@ -32,6 +32,50 @@ type IssueData struct {
+@@ -32,6 +32,51 @@ type IssueData struct {
  	Reactions         IssueReactions `graphql:"reactions(first: 1)"`
  	Labels            IssueLabels    `graphql:"labels(first: 20)"`
  	ProjectItems      ProjectItems
@@ -35,6 +35,7 @@ index a38043a..ad2eb37 100644
 +}
 +
 +type RelatedIssue struct {
++	ID         string
 +	Number     int
 +	Title      string
 +	State      string
@@ -53,7 +54,7 @@ index a38043a..ad2eb37 100644
  }
  
  type issueListData struct {
-@@ -293,7 +337,58 @@ func FetchIssue(issueUrl string) (IssueData, error) {
+@@ -293,7 +338,64 @@ func FetchIssue(issueUrl string) (IssueData, error) {
  	}
  	log.Info("Successfully fetched Issue", "url", issueUrl)
  
@@ -66,7 +67,13 @@ index a38043a..ad2eb37 100644
 +		issue.BlockedBy = relationships.BlockedBy
 +		issue.Blocking = relationships.Blocking
 +	} else {
-+		log.Warn("Issue relationship enrichment unavailable", "url", issueUrl, "error", relationshipErr)
++		log.Warn(
++			"Issue relationship enrichment unavailable",
++			"url",
++			issueUrl,
++			"error",
++			relationshipErr,
++		)
 +	}
 +
 +	return issue, nil
@@ -113,364 +120,12 @@ index a38043a..ad2eb37 100644
  }
  
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
-diff --git a/internal/data/relationships.go b/internal/data/relationships.go
-new file mode 100644
-index 0000000..c642b3b
---- /dev/null
-+++ b/internal/data/relationships.go
-@@ -0,0 +1,34 @@
-+package data
-+
-+import "fmt"
-+
-+// RelationshipIndicators returns a compact, stable list for issue rows. The
-+// symbols are intentionally unobtrusive and do not imply workflow state.
-+func (r IssueRelationships) Indicators() string {
-+	indicators := ""
-+	if r.Parent != nil {
-+		indicators += "↳"
-+	}
-+	if r.SubIssues.TotalCount > 0 {
-+		indicators += "⊞"
-+	}
-+	if r.BlockedBy.TotalCount > 0 {
-+		indicators += "⇠"
-+	}
-+	if r.Blocking.TotalCount > 0 {
-+		indicators += "⇢"
-+	}
-+	return indicators
-+}
-+
-+func (r RelatedIssue) Identifier() string {
-+	return fmt.Sprintf("%s#%d", r.Repository.NameWithOwner, r.Number)
-+}
-+
-+func (r RelatedIssue) Summary() string {
-+	state := "open"
-+	if r.State == "CLOSED" {
-+		state = "closed"
-+	}
-+	return fmt.Sprintf("%s %s — %s", r.Identifier(), r.Title, state)
-+}
-diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
-new file mode 100644
-index 0000000..bfa58a3
---- /dev/null
-+++ b/internal/data/relationships_test.go
-@@ -0,0 +1,22 @@
-+package data
-+
-+import "testing"
-+
-+func TestRelationshipIndicators(t *testing.T) {
-+	r := IssueRelationships{
-+		Parent:    &RelatedIssue{Number: 1},
-+		SubIssues: RelatedIssueConnection{TotalCount: 2},
-+		BlockedBy: RelatedIssueConnection{TotalCount: 1},
-+		Blocking:  RelatedIssueConnection{TotalCount: 3},
-+	}
-+	if got, want := r.Indicators(), "↳⊞⇠⇢"; got != want {
-+		t.Fatalf("Indicators() = %q, want %q", got, want)
-+	}
-+}
-+
-+func TestRelatedIssueSummaryIncludesRepositoryAndState(t *testing.T) {
-+	r := RelatedIssue{Number: 7, Title: "Planning", State: "CLOSED", Repository: Repository{NameWithOwner: "org/repo"}}
-+	if got, want := r.Summary(), "org/repo#7 Planning — closed"; got != want {
-+		t.Fatalf("Summary() = %q, want %q", got, want)
-+	}
-+}
-diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index f7de54e..659dadd 100644
---- a/internal/tui/components/issuerow/issuerow.go
-+++ b/internal/tui/components/issuerow/issuerow.go
-@@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
- }
- 
- func (issue *Issue) renderTitle() string {
--	return components.RenderIssueTitle(
-+	title := components.RenderIssueTitle(
- 		issue.Ctx,
- 		issue.Data.State,
- 		issue.Data.Title,
- 		issue.Data.Number,
- 	)
-+	if indicators := issue.Data.NativeRelationships().Indicators(); indicators != "" {
-+		title += " " + issue.getTextStyle().Foreground(issue.Ctx.Theme.FaintText).Render(indicators)
-+	}
-+	return title
- }
- 
- func (issue *Issue) renderOpenedBy() string {
-diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 4e08da6..b112d7c 100644
---- a/internal/tui/components/issueview/issueview.go
-+++ b/internal/tui/components/issueview/issueview.go
-@@ -154,6 +154,12 @@ func (m Model) View() string {
- 	s.WriteString(m.renderAuthor())
- 	s.WriteString("\n\n")
- 
-+	relationships := m.renderRelationships()
-+	if relationships != "" {
-+		s.WriteString(relationships)
-+		s.WriteString("\n\n")
-+	}
-+
- 	labels := m.renderLabels()
- 	if labels != "" {
- 		s.WriteString(labels)
-@@ -180,6 +186,38 @@ func (m Model) View() string {
- 	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
- }
- 
-+func (m *Model) renderRelationships() string {
-+	r := m.issue.Data.NativeRelationships()
-+	if r.Parent == nil && r.SubIssues.TotalCount == 0 && r.BlockedBy.TotalCount == 0 && r.Blocking.TotalCount == 0 {
-+		return ""
-+	}
-+
-+	lines := []string{"Relationships"}
-+	appendGroup := func(label string, issues []data.RelatedIssue, total int) {
-+		if total == 0 {
-+			return
-+		}
-+		if label == "Sub-issues" && (r.SubIssuesSummary.Total > 0 || r.SubIssuesSummary.Completed > 0) {
-+			lines = append(lines, fmt.Sprintf("  %s  %d / %d complete", label, r.SubIssuesSummary.Completed, r.SubIssuesSummary.Total))
-+		} else {
-+			lines = append(lines, "  "+label)
-+		}
-+		for _, issue := range issues {
-+			lines = append(lines, "    "+issue.Summary())
-+		}
-+		if len(issues) < total {
-+			lines = append(lines, fmt.Sprintf("    … and %d more", total-len(issues)))
-+		}
-+	}
-+	if r.Parent != nil {
-+		appendGroup("Parent", []data.RelatedIssue{*r.Parent}, 1)
-+	}
-+	appendGroup("Sub-issues", r.SubIssues.Nodes, r.SubIssues.TotalCount)
-+	appendGroup("Blocked by", r.BlockedBy.Nodes, r.BlockedBy.TotalCount)
-+	appendGroup("Blocking", r.Blocking.Nodes, r.Blocking.TotalCount)
-+	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
-+}
-+
- func (m *Model) ViewCompletions() string {
- 	if !m.hasData() {
- 		return ""
-diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index 457952d..d9a1851 100644
---- a/internal/tui/ui.go
-+++ b/internal/tui/ui.go
-@@ -51,26 +51,28 @@ import (
- )
- 
- var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
-+var fetchIssueRelationships = data.FetchIssueRelationships
- 
- type Model struct {
--	keys                     *keys.KeyMap
--	sidebar                  sidebar.Model
--	prView                   prview.Model
--	issueSidebar             issueview.Model
--	branchSidebar            branchsidebar.Model
--	notificationView         notificationview.Model
--	currSectionId            int
--	footer                   footer.Model
--	repo                     section.Section
--	prs                      []section.Section
--	issues                   []section.Section
--	notifications            []section.Section
--	tabs                     tabs.Model
--	ctx                      *context.ProgramContext
--	taskSpinner              spinner.Model
--	tasks                    map[string]context.Task
--	positionOverride         string // "" means no override, "right" or "bottom"
--	projectPreviewGeneration uint64
-+	keys                          *keys.KeyMap
-+	sidebar                       sidebar.Model
-+	prView                        prview.Model
-+	issueSidebar                  issueview.Model
-+	branchSidebar                 branchsidebar.Model
-+	notificationView              notificationview.Model
-+	currSectionId                 int
-+	footer                        footer.Model
-+	repo                          section.Section
-+	prs                           []section.Section
-+	issues                        []section.Section
-+	notifications                 []section.Section
-+	tabs                          tabs.Model
-+	ctx                           *context.ProgramContext
-+	taskSpinner                   spinner.Model
-+	tasks                         map[string]context.Task
-+	positionOverride              string // "" means no override, "right" or "bottom"
-+	projectPreviewGeneration      uint64
-+	relationshipPreviewGeneration uint64
- }
- 
- type Repositories struct {
-@@ -820,6 +822,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
- 			}
- 		})
- 
-+	case issueRelationshipsRequestMsg:
-+		if !acceptsIssueRelationships(
-+			m.relationshipPreviewGeneration,
-+			m.isCurrentIssue(msg.ContentID),
-+			msg.Generation,
-+		) {
-+			break
-+		}
-+		cmds = append(cmds, func() tea.Msg {
-+			relationships, err := fetchIssueRelationships(msg.ContentID)
-+			return issueRelationshipsMsg{
-+				ContentID:     msg.ContentID,
-+				Generation:    msg.Generation,
-+				Relationships: relationships,
-+				Err:           err,
-+			}
-+		})
-+
-+	case issueRelationshipsMsg:
-+		if !acceptsIssueRelationships(
-+			m.relationshipPreviewGeneration,
-+			m.isCurrentIssue(msg.ContentID),
-+			msg.Generation,
-+		) {
-+			break
-+		}
-+		if msg.Err != nil {
-+			log.Warn("Issue relationship enrichment unavailable", "contentID", msg.ContentID, "error", msg.Err)
-+			break
-+		}
-+		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
-+			issue.Parent = msg.Relationships.Parent
-+			issue.SubIssues = msg.Relationships.SubIssues
-+			issue.SubIssuesSummary = msg.Relationships.SubIssuesSummary
-+			issue.BlockedBy = msg.Relationships.BlockedBy
-+			issue.Blocking = msg.Relationships.Blocking
-+			m.issueSidebar.SetRow(issue)
-+			if currSection := m.getCurrSection(); currSection != nil {
-+				if issues, ok := currSection.(*issuessection.Model); ok {
-+					for index := range issues.Issues {
-+						if issues.Issues[index].ID == msg.ContentID {
-+							issues.Issues[index] = *issue
-+							issues.Table.SetRows(issues.BuildRows())
-+							break
-+						}
-+					}
-+				}
-+			}
-+			cmds = append(cmds, m.syncSidebar())
-+		}
-+
- 	case issueProjectPreviewMsg:
- 		if !acceptsIssueProjectPreview(
- 			m.projectPreviewGeneration,
-@@ -1215,6 +1268,18 @@ type issueProjectPreviewMsg struct {
- 	Err        error
- }
- 
-+type issueRelationshipsRequestMsg struct {
-+	ContentID  string
-+	Generation uint64
-+}
-+
-+type issueRelationshipsMsg struct {
-+	ContentID     string
-+	Generation    uint64
-+	Relationships data.IssueRelationships
-+	Err           error
-+}
-+
- func acceptsIssueProjectPreview(
- 	currentGeneration uint64,
- 	currentIssue bool,
-@@ -1223,6 +1288,14 @@ func acceptsIssueProjectPreview(
- 	return currentIssue && currentGeneration == messageGeneration
- }
- 
-+func acceptsIssueRelationships(
-+	currentGeneration uint64,
-+	currentIssue bool,
-+	messageGeneration uint64,
-+) bool {
-+	return currentIssue && currentGeneration == messageGeneration
-+}
-+
- func (m *Model) setCurrSectionId(newSectionId int) {
- 	m.currSectionId = newSectionId
- 	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1250,6 +1323,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
- 
- func (m *Model) onViewedRowChanged() tea.Cmd {
- 	m.projectPreviewGeneration++
-+	m.relationshipPreviewGeneration++
- 	m.prView.SetSummaryViewLess()
- 	m.prView.GoToFirstTab()
- 	var cachedPreview data.ProjectItems
-@@ -1282,6 +1356,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
- 		enrichCmd = m.prView.EnrichCurrRow()
- 	}
- 	var projectCmd tea.Cmd
-+	var relationshipCmd tea.Cmd
-+	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && issue.ID != "" {
-+		contentID := issue.ID
-+		generation := m.relationshipPreviewGeneration
-+		relationshipCmd = tea.Tick(0, func(time.Time) tea.Msg {
-+			return issueRelationshipsRequestMsg{ContentID: contentID, Generation: generation}
-+		})
-+	}
- 	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
- 		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
- 		issue.ID != "" {
-@@ -1294,7 +1376,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
- 	m.sidebar.ScrollToTop()
- 	m.notificationView.ResetSubject()
- 	keys.SetNotificationSubject(keys.NotificationSubjectNone)
--	return tea.Batch(sidebarCmd, enrichCmd, projectCmd)
-+	return tea.Batch(sidebarCmd, enrichCmd, projectCmd, relationshipCmd)
- }
- 
- func (m *Model) isCurrentIssue(contentID string) bool {
-diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index b421ab0..f42eb80 100644
---- a/internal/tui/ui_test.go
-+++ b/internal/tui/ui_test.go
-@@ -2526,3 +2526,9 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
- 		})
- 	}
- }
-+
-+func TestAcceptsIssueRelationshipsRejectsStaleSelection(t *testing.T) {
-+	require.True(t, acceptsIssueRelationships(4, true, 4))
-+	require.False(t, acceptsIssueRelationships(4, true, 3))
-+	require.False(t, acceptsIssueRelationships(4, false, 4))
-+}
-
-diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index ad2eb37..e3ec59a 100644
---- a/internal/data/issueapi.go
-+++ b/internal/data/issueapi.go
-@@ -61,6 +61,7 @@ type IssueRelationships struct {
- }
- 
- type RelatedIssue struct {
-+	ID         string
- 	Number     int
- 	Title      string
- 	State      string
- 	URL        string
- 	Repository Repository
- }
-
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000..a4fe264
+index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2ac60f6fe
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
-@@ -0,0 +1,151 @@
+@@ -0,0 +1,203 @@
 +package data
 +
 +import (
@@ -498,11 +153,37 @@ index 0000000..a4fe264
 +
 +var fetchIssueRelationshipsForMutation = FetchIssueRelationships
 +
++// FetchRelationshipCandidates searches accessible GitHub issues for the
++// relationship editor. The search endpoint remains the authority for which
++// issues the current account can see.
++func FetchRelationshipCandidates(query string, limit int) ([]RelatedIssue, error) {
++	if limit < 1 {
++		limit = 25
++	}
++	response, err := FetchIssues(query, limit, nil, false)
++	if err != nil {
++		return nil, err
++	}
++	candidates := make([]RelatedIssue, 0, len(response.Issues))
++	for _, issue := range response.Issues {
++		candidates = append(candidates, RelatedIssue{
++			ID: issue.ID, Number: issue.Number, Title: issue.Title, State: issue.State,
++			URL: issue.Url, Repository: issue.Repository,
++		})
++	}
++	return candidates, nil
++}
++
 +// MutateIssueRelationship performs one live-validated native relationship write
 +// and returns the authoritative relationship state fetched after the write.
-+func MutateIssueRelationship(issueID, targetID string, mutation RelationshipMutation) (IssueRelationships, error) {
++func MutateIssueRelationship(
++	issueID, targetID string,
++	mutation RelationshipMutation,
++) (IssueRelationships, error) {
 +	if issueID == "" || targetID == "" {
-+		return IssueRelationships{}, fmt.Errorf("relationship mutation requires issue and target IDs")
++		return IssueRelationships{}, fmt.Errorf(
++			"relationship mutation requires issue and target IDs",
++		)
 +	}
 +	if issueID == targetID {
 +		return IssueRelationships{}, fmt.Errorf("an issue cannot relate to itself")
@@ -529,7 +210,10 @@ index 0000000..a4fe264
 +	}
 +	updated, err := fetchIssueRelationshipsForMutation(issueID)
 +	if err != nil {
-+		return IssueRelationships{}, fmt.Errorf("relationship write succeeded but authoritative refetch failed: %w", err)
++		return IssueRelationships{}, fmt.Errorf(
++			"relationship write succeeded but authoritative refetch failed: %w",
++			err,
++		)
 +	}
 +	return updated, nil
 +}
@@ -545,7 +229,11 @@ index 0000000..a4fe264
 +	return client, nil
 +}
 +
-+func validateRelationshipMutation(current IssueRelationships, targetID string, mutation RelationshipMutation) error {
++func validateRelationshipMutation(
++	current IssueRelationships,
++	targetID string,
++	mutation RelationshipMutation,
++) error {
 +	contains := func(issues []RelatedIssue) bool {
 +		for _, issue := range issues {
 +			if issue.ID == targetID {
@@ -591,44 +279,62 @@ index 0000000..a4fe264
 +	return nil
 +}
 +
-+func relationshipMutationRequest(issueID, targetID string, mutation RelationshipMutation) (string, map[string]interface{}) {
++func relationshipMutationRequest(
++	issueID, targetID string,
++	mutation RelationshipMutation,
++) (string, map[string]interface{}) {
 +	input := map[string]interface{}{}
 +	switch mutation {
 +	case AddBlockedBy:
 +		input["issueId"], input["blockingIssueId"] = issueID, targetID
-+		return `mutation AddBlockedBy($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation AddBlockedBy($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case RemoveBlockedBy:
 +		input["issueId"], input["blockingIssueId"] = issueID, targetID
-+		return `mutation RemoveBlockedBy($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation RemoveBlockedBy($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case AddBlocking:
 +		input["issueId"], input["blockingIssueId"] = targetID, issueID
-+		return `mutation AddBlocking($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation AddBlocking($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case RemoveBlocking:
 +		input["issueId"], input["blockingIssueId"] = targetID, issueID
-+		return `mutation RemoveBlocking($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation RemoveBlocking($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case SetParent:
 +		input["issueId"], input["subIssueId"], input["replaceParent"] = targetID, issueID, true
-+		return `mutation SetParent($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation SetParent($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case RemoveParent:
 +		input["issueId"], input["subIssueId"] = targetID, issueID
-+		return `mutation RemoveParent($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation RemoveParent($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case AddSubIssue:
 +		input["issueId"], input["subIssueId"] = issueID, targetID
-+		return `mutation AddSubIssue($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation AddSubIssue($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	case RemoveSubIssue:
 +		input["issueId"], input["subIssueId"] = issueID, targetID
-+		return `mutation RemoveSubIssue($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{"input": input}
++		return `mutation RemoveSubIssue($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
 +	default:
 +		return "", nil
 +	}
 +}
-
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000..930c12b
+index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de8d29e7a5
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,43 @@
 +package data
 +
 +import "testing"
@@ -654,7 +360,11 @@ index 0000000..930c12b
 +		{"new dependency", "new", AddBlocking, false},
 +	} {
 +		t.Run(test.name, func(t *testing.T) {
-+			if err := validateRelationshipMutation(current, test.id, test.mut); (err != nil) != test.wantErr {
++			if err := validateRelationshipMutation(
++				current,
++				test.id,
++				test.mut,
++			); (err != nil) != test.wantErr {
 +				t.Fatalf("validateRelationshipMutation() error = %v, wantErr %v", err, test.wantErr)
 +			}
 +		})
@@ -667,4 +377,1118 @@ index 0000000..930c12b
 +	if input["issueId"] != "target" || input["blockingIssueId"] != "issue" {
 +		t.Fatalf("AddBlocking input = %#v, want target blocking issue", input)
 +	}
++}
+diff --git a/internal/data/relationships.go b/internal/data/relationships.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be3951b011
+--- /dev/null
++++ b/internal/data/relationships.go
+@@ -0,0 +1,34 @@
++package data
++
++import "fmt"
++
++// RelationshipIndicators returns a compact, stable list for issue rows. The
++// symbols are intentionally unobtrusive and do not imply workflow state.
++func (r IssueRelationships) Indicators() string {
++	indicators := ""
++	if r.Parent != nil {
++		indicators += "↳"
++	}
++	if r.SubIssues.TotalCount > 0 {
++		indicators += "⊞"
++	}
++	if r.BlockedBy.TotalCount > 0 {
++		indicators += "⇠"
++	}
++	if r.Blocking.TotalCount > 0 {
++		indicators += "⇢"
++	}
++	return indicators
++}
++
++func (r RelatedIssue) Identifier() string {
++	return fmt.Sprintf("%s#%d", r.Repository.NameWithOwner, r.Number)
++}
++
++func (r RelatedIssue) Summary() string {
++	state := "open"
++	if r.State == "CLOSED" {
++		state = "closed"
++	}
++	return fmt.Sprintf("%s %s — %s", r.Identifier(), r.Title, state)
++}
+diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c2c43cac5
+--- /dev/null
++++ b/internal/data/relationships_test.go
+@@ -0,0 +1,27 @@
++package data
++
++import "testing"
++
++func TestRelationshipIndicators(t *testing.T) {
++	r := IssueRelationships{
++		Parent:    &RelatedIssue{Number: 1},
++		SubIssues: RelatedIssueConnection{TotalCount: 2},
++		BlockedBy: RelatedIssueConnection{TotalCount: 1},
++		Blocking:  RelatedIssueConnection{TotalCount: 3},
++	}
++	if got, want := r.Indicators(), "↳⊞⇠⇢"; got != want {
++		t.Fatalf("Indicators() = %q, want %q", got, want)
++	}
++}
++
++func TestRelatedIssueSummaryIncludesRepositoryAndState(t *testing.T) {
++	r := RelatedIssue{
++		Number:     7,
++		Title:      "Planning",
++		State:      "CLOSED",
++		Repository: Repository{NameWithOwner: "org/repo"},
++	}
++	if got, want := r.Summary(), "org/repo#7 Planning — closed"; got != want {
++		t.Fatalf("Summary() = %q, want %q", got, want)
++	}
++}
+diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
+index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b482d0dc27 100644
+--- a/internal/tui/components/issuerow/issuerow.go
++++ b/internal/tui/components/issuerow/issuerow.go
+@@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
+ }
+ 
+ func (issue *Issue) renderTitle() string {
+-	return components.RenderIssueTitle(
++	title := components.RenderIssueTitle(
+ 		issue.Ctx,
+ 		issue.Data.State,
+ 		issue.Data.Title,
+ 		issue.Data.Number,
+ 	)
++	if indicators := issue.Data.NativeRelationships().Indicators(); indicators != "" {
++		title += " " + issue.getTextStyle().Foreground(issue.Ctx.Theme.FaintText).Render(indicators)
++	}
++	return title
+ }
+ 
+ func (issue *Issue) renderOpenedBy() string {
+diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
+index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29fad897d3 100644
+--- a/internal/tui/components/issueview/action.go
++++ b/internal/tui/components/issueview/action.go
+@@ -1,5 +1,7 @@
+ package issueview
+ 
++import "github.com/dlvhdr/gh-dash/v4/internal/data"
++
+ // IssueActionType identifies the type of action requested by a key press in the issue view.
+ type IssueActionType int
+ 
+@@ -12,9 +14,11 @@ const (
+ 	IssueActionCheckout
+ 	IssueActionClose
+ 	IssueActionReopen
++	IssueActionRelationshipUpdated
+ )
+ 
+ // IssueAction represents an action to be performed on an issue.
+ type IssueAction struct {
+-	Type IssueActionType
++	Type          IssueActionType
++	Relationships data.IssueRelationships
+ }
+diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
+index 4e08da67a92baaede027189a02967a773a373d71..c43a80d2f1ab2ea32e5db2bebf44f2984718c836 100644
+--- a/internal/tui/components/issueview/issueview.go
++++ b/internal/tui/components/issueview/issueview.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issuerow"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issuessection"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projecteditor"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/relationshipeditor"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tasks"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/constants"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
+@@ -32,14 +33,15 @@ var (
+ )
+ 
+ type Model struct {
+-	ctx           *context.ProgramContext
+-	issue         *issuerow.Issue
+-	sectionId     int
+-	width         int
+-	editor        cmpcontroller.Controller
+-	projectEditor projecteditor.Model
+-	projectState  projectPreviewState
+-	projectErr    error
++	ctx                *context.ProgramContext
++	issue              *issuerow.Issue
++	sectionId          int
++	width              int
++	editor             cmpcontroller.Controller
++	projectEditor      projecteditor.Model
++	relationshipEditor relationshipeditor.Model
++	projectState       projectPreviewState
++	projectErr         error
+ }
+ 
+ type projectPreviewState uint8
+@@ -63,6 +65,24 @@ func NewModel(ctx *context.ProgramContext) Model {
+ }
+ 
+ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
++	if m.relationshipEditor.Active() {
++		var cmd tea.Cmd
++		m.relationshipEditor, cmd = m.relationshipEditor.Update(msg)
++		if relationshipMsg, ok := msg.(relationshipeditor.RelationshipUpdatedMsg); ok {
++			if relationshipMsg.Err == nil && m.issue != nil {
++				m.issue.Data.Parent = relationshipMsg.Relationships.Parent
++				m.issue.Data.SubIssues = relationshipMsg.Relationships.SubIssues
++				m.issue.Data.SubIssuesSummary = relationshipMsg.Relationships.SubIssuesSummary
++				m.issue.Data.BlockedBy = relationshipMsg.Relationships.BlockedBy
++				m.issue.Data.Blocking = relationshipMsg.Relationships.Blocking
++				return m, cmd, &IssueAction{
++					Type:          IssueActionRelationshipUpdated,
++					Relationships: relationshipMsg.Relationships,
++				}
++			}
++		}
++		return m, cmd, nil
++	}
+ 	if m.projectEditor.Active() {
+ 		var cmd tea.Cmd
+ 		m.projectEditor, cmd = m.projectEditor.Update(msg)
+@@ -154,6 +174,12 @@ func (m Model) View() string {
+ 	s.WriteString(m.renderAuthor())
+ 	s.WriteString("\n\n")
+ 
++	relationships := m.renderRelationships()
++	if relationships != "" {
++		s.WriteString(relationships)
++		s.WriteString("\n\n")
++	}
++
+ 	labels := m.renderLabels()
+ 	if labels != "" {
+ 		s.WriteString(labels)
+@@ -176,10 +202,56 @@ func (m Model) View() string {
+ 		s.WriteString("\n\n")
+ 		s.WriteString(m.projectEditor.View())
+ 	}
++	if m.relationshipEditor.Active() {
++		s.WriteString("\n\n")
++		s.WriteString(m.relationshipEditor.View())
++	}
+ 
+ 	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
+ }
+ 
++func (m *Model) renderRelationships() string {
++	r := m.issue.Data.NativeRelationships()
++	if r.Parent == nil && r.SubIssues.TotalCount == 0 && r.BlockedBy.TotalCount == 0 &&
++		r.Blocking.TotalCount == 0 {
++		return ""
++	}
++
++	lines := []string{"Relationships"}
++	appendGroup := func(label string, issues []data.RelatedIssue, total int) {
++		if total == 0 {
++			return
++		}
++		if label == "Sub-issues" &&
++			(r.SubIssuesSummary.Total > 0 || r.SubIssuesSummary.Completed > 0) {
++			lines = append(
++				lines,
++				fmt.Sprintf(
++					"  %s  %d / %d complete",
++					label,
++					r.SubIssuesSummary.Completed,
++					r.SubIssuesSummary.Total,
++				),
++			)
++		} else {
++			lines = append(lines, "  "+label)
++		}
++		for _, issue := range issues {
++			lines = append(lines, "    "+issue.Summary())
++		}
++		if len(issues) < total {
++			lines = append(lines, fmt.Sprintf("    … and %d more", total-len(issues)))
++		}
++	}
++	if r.Parent != nil {
++		appendGroup("Parent", []data.RelatedIssue{*r.Parent}, 1)
++	}
++	appendGroup("Sub-issues", r.SubIssues.Nodes, r.SubIssues.TotalCount)
++	appendGroup("Blocked by", r.BlockedBy.Nodes, r.BlockedBy.TotalCount)
++	appendGroup("Blocking", r.Blocking.Nodes, r.Blocking.TotalCount)
++	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
++}
++
+ func (m *Model) ViewCompletions() string {
+ 	if !m.hasData() {
+ 		return ""
+@@ -287,6 +359,7 @@ func (m *Model) SetWidth(width int) {
+ 		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
+ 	)
+ 	m.projectEditor.SetWidth(m.getIndentedContentWidth())
++	m.relationshipEditor.SetWidth(m.getIndentedContentWidth())
+ }
+ 
+ func (m *Model) SetSectionId(id int) {
+@@ -342,7 +415,15 @@ func (m *Model) renderProjectPreview() string {
+ }
+ 
+ func (m *Model) IsTextInputBoxFocused() bool {
+-	return m.editor.Active() || m.projectEditor.Active()
++	return m.editor.Active() || m.projectEditor.Active() || m.relationshipEditor.Active()
++}
++
++func (m *Model) StartRelationshipEdit() {
++	if m.issue == nil || m.issue.Data.ID == "" {
++		return
++	}
++	m.relationshipEditor = relationshipeditor.New(m.ctx, m.issue.Data)
++	m.relationshipEditor.SetWidth(m.getIndentedContentWidth())
+ }
+ 
+ func (m *Model) StartProjectEdit() {
+diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..1124400510c3ddaeb60030e50a938a2480d4a420
+--- /dev/null
++++ b/internal/tui/components/relationshipeditor/editor.go
+@@ -0,0 +1,380 @@
++package relationshipeditor
++
++import (
++	"strings"
++
++	tea "charm.land/bubbletea/v2"
++	"charm.land/lipgloss/v2"
++	"github.com/sahilm/fuzzy"
++
++	"charm.land/bubbles/v2/textinput"
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/inputbox"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++)
++
++type mode uint8
++
++const (
++	modeActions mode = iota
++	modeLoadingRelationships
++	modeRelationships
++	modeLoadingCandidates
++	modeCandidates
++	modeApplying
++)
++
++type action struct {
++	label    string
++	mutation data.RelationshipMutation
++}
++
++type RelationshipUpdatedMsg struct {
++	IssueID       string
++	Relationships data.IssueRelationships
++	Err           error
++}
++
++type candidatesFetchedMsg struct {
++	Candidates []data.RelatedIssue
++	Err        error
++}
++
++type relationshipsFetchedMsg struct {
++	Relationships data.IssueRelationships
++	Err           error
++}
++
++type Model struct {
++	ctx         *context.ProgramContext
++	issueID     string
++	current     data.IssueRelationships
++	actions     []action
++	selected    int
++	removeItems []data.RelatedIssue
++	candidates  []data.RelatedIssue
++	filtered    []data.RelatedIssue
++	query       inputbox.Model
++	selectedRel int
++	pending     data.RelationshipMutation
++	mode        mode
++	status      string
++	width       int
++	active      bool
++	initialized bool
++}
++
++func New(ctx *context.ProgramContext, issue data.IssueData) Model {
++	input := inputbox.NewModel(ctx, inputbox.ModelOpts{TextInput: func() *textinput.Model {
++		ti := inputbox.DefaultTextInput(ctx)
++		return &ti
++	}()})
++	return Model{
++		ctx: ctx, issueID: issue.ID, current: issue.NativeRelationships(),
++		actions: relationshipActions(issue.NativeRelationships()), query: input,
++		mode: modeActions, active: true, initialized: true,
++	}
++}
++
++func (m Model) Active() bool { return m.active }
++
++func (m *Model) Close() {
++	m.active = false
++	if m.initialized {
++		m.query.Blur()
++	}
++}
++
++func (m *Model) SetWidth(width int) {
++	m.width = width
++	if m.initialized {
++		m.query.SetWidth(width)
++	}
++}
++
++func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
++	m.ctx = ctx
++	if m.initialized {
++		m.query.UpdateProgramContext(ctx)
++	}
++}
++
++func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
++	switch msg := msg.(type) {
++	case relationshipsFetchedMsg:
++		if m.mode != modeLoadingRelationships {
++			return m, nil
++		}
++		if msg.Err != nil {
++			m.status, m.mode = msg.Err.Error(), modeActions
++			return m, nil
++		}
++		m.current, m.actions, m.selected, m.removeItems, m.mode, m.status = msg.Relationships, relationshipActions(
++			msg.Relationships,
++		), 0, relationshipItems(
++			msg.Relationships,
++			m.pending,
++		), modeRelationships, ""
++		return m, nil
++	case candidatesFetchedMsg:
++		if m.mode != modeLoadingCandidates {
++			return m, nil
++		}
++		if msg.Err != nil {
++			m.status, m.mode = msg.Err.Error(), modeActions
++			return m, nil
++		}
++		m.candidates, m.mode, m.status = msg.Candidates, modeCandidates, ""
++		m.filterCandidates()
++		return m, nil
++	case RelationshipUpdatedMsg:
++		if msg.Err != nil {
++			m.status, m.mode = msg.Err.Error(), modeActions
++			return m, nil
++		}
++		m.Close()
++		return m, nil
++	case tea.KeyMsg:
++		if m.mode == modeCandidates {
++			return m.updateCandidates(msg)
++		}
++		switch msg.String() {
++		case "esc", "q":
++			m.Close()
++			return m, nil
++		case "up", "k":
++			m.move(-1)
++		case "down", "j":
++			m.move(1)
++		case "enter":
++			switch m.mode {
++			case modeActions:
++				if len(m.actions) == 0 {
++					m.status = "No editable relationships are available"
++					return m, nil
++				}
++				selected := m.actions[m.selected]
++				m.pending = selected.mutation
++				if isRemoval(selected.mutation) {
++					m.mode = modeLoadingRelationships
++					return m, fetchRelationships(m.issueID)
++				}
++				m.mode = modeLoadingCandidates
++				return m, fetchCandidates()
++			case modeRelationships:
++				if len(m.removeItems) == 0 {
++					m.status = "No live relationship is available"
++					return m, nil
++				}
++				target := m.removeItems[m.selectedRel]
++				m.mode = modeApplying
++				return m, applyMutation(m.issueID, target.ID, m.pending)
++			}
++		}
++	}
++	return m, nil
++}
++
++func (m *Model) updateCandidates(msg tea.KeyMsg) (Model, tea.Cmd) {
++	switch msg.String() {
++	case "esc":
++		m.mode, m.status = modeActions, ""
++		m.query.Blur()
++		return *m, nil
++	case "up":
++		m.move(-1)
++		return *m, nil
++	case "down":
++		m.move(1)
++		return *m, nil
++	case "enter":
++		if len(m.filtered) == 0 {
++			m.status = "No matching accessible issues"
++			return *m, nil
++		}
++		target := m.filtered[m.selectedRel]
++		m.mode = modeApplying
++		return *m, applyMutation(m.issueID, target.ID, m.pending)
++	}
++	var cmd tea.Cmd
++	m.query, cmd = m.query.Update(msg)
++	m.filterCandidates()
++	return *m, cmd
++}
++
++func (m *Model) filterCandidates() {
++	query := strings.TrimSpace(m.query.Value())
++	available := make([]data.RelatedIssue, 0, len(m.candidates))
++	for _, candidate := range m.candidates {
++		if candidate.ID == m.issueID || relationshipExists(m.current, candidate.ID, m.pending) {
++			continue
++		}
++		available = append(available, candidate)
++	}
++	if query == "" {
++		m.filtered = available
++		m.selectedRel = 0
++		return
++	}
++	values := make([]string, len(available))
++	for i, candidate := range available {
++		values[i] = candidate.Summary()
++	}
++	matches := fuzzy.Find(query, values)
++	m.filtered = make([]data.RelatedIssue, 0, len(matches))
++	for _, match := range matches {
++		filtered := available[match.Index]
++		m.filtered = append(m.filtered, filtered)
++	}
++	if m.selectedRel >= len(m.filtered) {
++		m.selectedRel = 0
++	}
++}
++
++func (m *Model) move(delta int) {
++	length := len(m.actions)
++	if m.mode == modeRelationships {
++		length = len(m.removeItems)
++	}
++	if m.mode == modeCandidates {
++		length = len(m.filtered)
++	}
++	if length == 0 {
++		return
++	}
++	if m.mode == modeCandidates || m.mode == modeRelationships {
++		m.selectedRel = (m.selectedRel + delta + length) % length
++	} else {
++		m.selected = (m.selected + delta + length) % length
++	}
++}
++
++func (m Model) View() string {
++	if !m.active {
++		return ""
++	}
++	lines := []string{"Relationships (j/k, Enter, Esc)"}
++	switch m.mode {
++	case modeActions:
++		for i, item := range m.actions {
++			prefix := "  "
++			if i == m.selected {
++				prefix = "› "
++			}
++			lines = append(lines, prefix+item.label)
++		}
++	case modeRelationships:
++		lines = append(lines, "Select a live relationship to remove")
++		for i, item := range m.removeItems {
++			prefix := "  "
++			if i == m.selectedRel {
++				prefix = "› "
++			}
++			lines = append(lines, prefix+item.Summary())
++		}
++	case modeCandidates:
++		lines = append(lines, "Search accessible issues: "+m.query.View())
++		for i, item := range m.filtered {
++			prefix := "  "
++			if i == m.selectedRel {
++				prefix = "› "
++			}
++			lines = append(lines, prefix+item.Summary())
++		}
++	case modeLoadingRelationships, modeLoadingCandidates, modeApplying:
++		lines = append(lines, "Working…")
++	}
++	if m.status != "" {
++		lines = append(lines, m.status)
++	}
++	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
++}
++
++func relationshipActions(r data.IssueRelationships) []action {
++	items := []action{
++		{"Add blocked by", data.AddBlockedBy},
++		{"Add blocking", data.AddBlocking},
++		{"Add sub-issue", data.AddSubIssue},
++	}
++	if r.Parent == nil {
++		items = append(items, action{"Set parent", data.SetParent})
++	} else {
++		items = append(items, action{"Remove parent", data.RemoveParent})
++	}
++	if len(r.BlockedBy.Nodes) > 0 {
++		items = append(items, action{"Remove blocked by", data.RemoveBlockedBy})
++	}
++	if len(r.Blocking.Nodes) > 0 {
++		items = append(items, action{"Remove blocking", data.RemoveBlocking})
++	}
++	if len(r.SubIssues.Nodes) > 0 {
++		items = append(items, action{"Remove sub-issue", data.RemoveSubIssue})
++	}
++	return items
++}
++
++func relationshipItems(
++	r data.IssueRelationships,
++	mutation data.RelationshipMutation,
++) []data.RelatedIssue {
++	switch mutation {
++	case data.RemoveParent:
++		if r.Parent != nil {
++			return []data.RelatedIssue{*r.Parent}
++		}
++	case data.RemoveBlockedBy:
++		return r.BlockedBy.Nodes
++	case data.RemoveBlocking:
++		return r.Blocking.Nodes
++	case data.RemoveSubIssue:
++		return r.SubIssues.Nodes
++	}
++	return nil
++}
++
++func relationshipExists(
++	r data.IssueRelationships,
++	id string,
++	mutation data.RelationshipMutation,
++) bool {
++	switch mutation {
++	case data.AddBlockedBy:
++		for _, item := range r.BlockedBy.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	case data.AddBlocking:
++		for _, item := range r.Blocking.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	case data.AddSubIssue:
++		for _, item := range r.SubIssues.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	}
++	return false
++}
++
++func isRemoval(m data.RelationshipMutation) bool { return strings.HasPrefix(string(m), "remove-") }
++func fetchRelationships(id string) tea.Cmd {
++	return func() tea.Msg { r, err := data.FetchIssueRelationships(id); return relationshipsFetchedMsg{r, err} }
++}
++
++func fetchCandidates() tea.Cmd {
++	return func() tea.Msg {
++		c, err := data.FetchRelationshipCandidates("", 50)
++		return candidatesFetchedMsg{c, err}
++	}
++}
++
++func applyMutation(issueID, targetID string, mutation data.RelationshipMutation) tea.Cmd {
++	return func() tea.Msg {
++		r, err := data.MutateIssueRelationship(issueID, targetID, mutation)
++		return RelationshipUpdatedMsg{issueID, r, err}
++	}
++}
+diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..55e210b275b6687fd51431fa6c17f8750b26e6d2
+--- /dev/null
++++ b/internal/tui/components/relationshipeditor/editor_test.go
+@@ -0,0 +1,126 @@
++package relationshipeditor
++
++import (
++	"errors"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++)
++
++func related(id, repo string, number int, title, state string) data.RelatedIssue {
++	return data.RelatedIssue{
++		ID: id, Number: number, Title: title, State: state,
++		Repository: data.Repository{NameWithOwner: repo},
++	}
++}
++
++func TestRelationshipActionsExposeAllApplicableOperations(t *testing.T) {
++	current := data.IssueRelationships{
++		Parent: &[]data.RelatedIssue{related("parent", "acme/app", 1, "Parent", "OPEN")}[0],
++		BlockedBy: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("blocked", "acme/app", 2, "Blocked", "OPEN")},
++		},
++		Blocking: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("blocking", "acme/app", 3, "Blocking", "CLOSED")},
++		},
++		SubIssues: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("child", "acme/app", 4, "Child", "OPEN")},
++		},
++	}
++
++	actions := relationshipActions(current)
++	mutations := make([]data.RelationshipMutation, 0, len(actions))
++	for _, item := range actions {
++		mutations = append(mutations, item.mutation)
++	}
++	require.ElementsMatch(t, []data.RelationshipMutation{
++		data.AddBlockedBy, data.AddBlocking, data.AddSubIssue, data.RemoveParent,
++		data.RemoveBlockedBy, data.RemoveBlocking, data.RemoveSubIssue,
++	}, mutations)
++	require.Equal(
++		t,
++		[]data.RelatedIssue{*current.Parent},
++		relationshipItems(current, data.RemoveParent),
++	)
++	require.Equal(t, current.BlockedBy.Nodes, relationshipItems(current, data.RemoveBlockedBy))
++	require.Equal(t, current.Blocking.Nodes, relationshipItems(current, data.RemoveBlocking))
++	require.Equal(t, current.SubIssues.Nodes, relationshipItems(current, data.RemoveSubIssue))
++}
++
++func TestRelationshipActionsOfferSetParentWhenAbsent(t *testing.T) {
++	actions := relationshipActions(data.IssueRelationships{})
++	require.Contains(t, mutationsOf(actions), data.SetParent)
++	require.NotContains(t, mutationsOf(actions), data.RemoveParent)
++}
++
++func TestFilterCandidatesIsFuzzyAndDoesNotMutateFetchedCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "self"})
++	m.pending = data.AddBlockedBy
++	m.current = data.IssueRelationships{
++		BlockedBy: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("existing", "acme/app", 2, "Fix cache", "OPEN")},
++		},
++	}
++	m.candidates = []data.RelatedIssue{
++		related("self", "acme/app", 1, "Current issue", "OPEN"),
++		related("existing", "acme/app", 2, "Fix cache", "OPEN"),
++		related("candidate", "octo/tools", 42, "Cache cleanup", "CLOSED"),
++	}
++	m.query.SetValue("cache")
++	m.filterCandidates()
++	require.Len(t, m.candidates, 3)
++	require.Len(t, m.filtered, 1)
++	require.Equal(t, "octo/tools#42 Cache cleanup — closed", m.filtered[0].Summary())
++
++	m.query.SetValue("tool")
++	m.filterCandidates()
++	require.Len(t, m.filtered, 1)
++	require.Equal(t, "octo/tools#42 Cache cleanup — closed", m.filtered[0].Summary())
++}
++
++func TestRelationshipEditorZeroValueIsSafe(t *testing.T) {
++	var m Model
++	require.NotPanics(t, func() {
++		m.SetWidth(80)
++		m.UpdateProgramContext(&context.ProgramContext{})
++		m.Close()
++	})
++}
++
++func TestRelationshipEditorRejectsStaleMessagesByMode(t *testing.T) {
++	m := Model{mode: modeActions, status: "ready"}
++	updated, cmd := m.Update(relationshipsFetchedMsg{Relationships: data.IssueRelationships{}})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Equal(t, "ready", updated.status)
++
++	updated, cmd = m.Update(RelationshipUpdatedMsg{Err: errors.New("write failed")})
++	require.Nil(t, cmd)
++	require.Equal(t, "write failed", updated.status)
++}
++
++func TestRelationshipEditorUpdateMessageClosesOnSuccess(t *testing.T) {
++	m := Model{active: true, initialized: false, mode: modeApplying}
++	updated, cmd := m.Update(RelationshipUpdatedMsg{Relationships: data.IssueRelationships{}})
++	require.Nil(t, cmd)
++	require.False(t, updated.active)
++}
++
++func TestCandidateSummaryIncludesRepositoryNumberTitleAndState(t *testing.T) {
++	summary := related("id", "octo/tools", 42, "Cache cleanup", "CLOSED").Summary()
++	require.True(t, strings.Contains(summary, "octo/tools#42"))
++	require.True(t, strings.Contains(summary, "Cache cleanup"))
++	require.True(t, strings.Contains(summary, "closed"))
++}
++
++func mutationsOf(actions []action) []data.RelationshipMutation {
++	mutations := make([]data.RelationshipMutation, 0, len(actions))
++	for _, item := range actions {
++		mutations = append(mutations, item.mutation)
++	}
++	return mutations
++}
+diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
+index f300a81686ac5fc368dfb197de090de53e60a57e..aaef4c2b66921e8de13c4fbca4ed3b2a4f2c297d 100644
+--- a/internal/tui/keys/issueKeys.go
++++ b/internal/tui/keys/issueKeys.go
+@@ -20,6 +20,7 @@ type IssueKeyMap struct {
+ 	ToggleSmartFiltering key.Binding
+ 	ViewPRs              key.Binding
+ 	EditProject          key.Binding
++	EditRelationships    key.Binding
+ }
+ 
+ var IssueKeys = IssueKeyMap{
+@@ -63,6 +64,10 @@ var IssueKeys = IssueKeyMap{
+ 		key.WithKeys("E"),
+ 		key.WithHelp("E", "edit Project field"),
+ 	),
++	EditRelationships: key.NewBinding(
++		key.WithKeys("R"),
++		key.WithHelp("R", "edit relationships"),
++	),
+ }
+ 
+ func IssueFullHelp() []key.Binding {
+@@ -77,6 +82,7 @@ func IssueFullHelp() []key.Binding {
+ 		IssueKeys.ToggleSmartFiltering,
+ 		IssueKeys.ViewPRs,
+ 		IssueKeys.EditProject,
++		IssueKeys.EditRelationships,
+ 	}
+ }
+ 
+@@ -125,6 +131,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
+ 			key = &IssueKeys.ViewPRs
+ 		case "editProject":
+ 			key = &IssueKeys.EditProject
++		case "editRelationships":
++			key = &IssueKeys.EditRelationships
+ 		default:
+ 			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
+ 		}
+diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..a703c41831116c5dcfeedfcd199733252f9b269c
+--- /dev/null
++++ b/internal/tui/keys/issueKeys_test.go
+@@ -0,0 +1,26 @@
++package keys
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/config"
++)
++
++func TestIssueRelationshipEditorHasDiscoverableDefaultBinding(t *testing.T) {
++	require.Equal(t, []string{"R"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, "edit relationships", IssueKeys.EditRelationships.Help().Desc)
++}
++
++func TestIssueRelationshipEditorCanBeRebound(t *testing.T) {
++	original := IssueKeys.EditRelationships
++	t.Cleanup(func() { IssueKeys.EditRelationships = original })
++
++	err := rebindIssueKeys(
++		[]config.Keybinding{{Builtin: "editRelationships", Key: "gR", Name: "relationships"}},
++	)
++	require.NoError(t, err)
++	require.Equal(t, []string{"gR"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
++}
+diff --git a/internal/tui/ui.go b/internal/tui/ui.go
+index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..8f2bb8ba9f5445660853d792ba1b2b5fd24968d9 100644
+--- a/internal/tui/ui.go
++++ b/internal/tui/ui.go
+@@ -50,27 +50,31 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
+ )
+ 
+-var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
++var (
++	fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
++	fetchIssueRelationships           = data.FetchIssueRelationships
++)
+ 
+ type Model struct {
+-	keys                     *keys.KeyMap
+-	sidebar                  sidebar.Model
+-	prView                   prview.Model
+-	issueSidebar             issueview.Model
+-	branchSidebar            branchsidebar.Model
+-	notificationView         notificationview.Model
+-	currSectionId            int
+-	footer                   footer.Model
+-	repo                     section.Section
+-	prs                      []section.Section
+-	issues                   []section.Section
+-	notifications            []section.Section
+-	tabs                     tabs.Model
+-	ctx                      *context.ProgramContext
+-	taskSpinner              spinner.Model
+-	tasks                    map[string]context.Task
+-	positionOverride         string // "" means no override, "right" or "bottom"
+-	projectPreviewGeneration uint64
++	keys                          *keys.KeyMap
++	sidebar                       sidebar.Model
++	prView                        prview.Model
++	issueSidebar                  issueview.Model
++	branchSidebar                 branchsidebar.Model
++	notificationView              notificationview.Model
++	currSectionId                 int
++	footer                        footer.Model
++	repo                          section.Section
++	prs                           []section.Section
++	issues                        []section.Section
++	notifications                 []section.Section
++	tabs                          tabs.Model
++	ctx                           *context.ProgramContext
++	taskSpinner                   spinner.Model
++	tasks                         map[string]context.Task
++	positionOverride              string // "" means no override, "right" or "bottom"
++	projectPreviewGeneration      uint64
++	relationshipPreviewGeneration uint64
+ }
+ 
+ type Repositories struct {
+@@ -500,6 +504,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 				m.syncSidebar()
+ 				return m, nil
+ 
++			case key.Matches(msg, keys.IssueKeys.EditRelationships):
++				m.issueSidebar.StartRelationshipEdit()
++				m.syncSidebar()
++				return m, nil
++
+ 			case key.Matches(msg, keys.IssueKeys.Checkout):
+ 				cmd, err := m.issueSidebar.Checkout()
+ 				if err != nil {
+@@ -650,6 +659,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 					case issueview.IssueActionReopen:
+ 						cmd = m.promptConfirmationForNotificationIssue("reopen")
+ 						return m, cmd
++
++					case issueview.IssueActionRelationshipUpdated:
++						if issue := m.getCurrRowData(); issue != nil {
++							if row, ok := issue.(*data.IssueData); ok {
++								row.Parent = action.Relationships.Parent
++								row.SubIssues = action.Relationships.SubIssues
++								row.SubIssuesSummary = action.Relationships.SubIssuesSummary
++								row.BlockedBy = action.Relationships.BlockedBy
++								row.Blocking = action.Relationships.Blocking
++							}
++						}
+ 					}
+ 				}
+ 
+@@ -820,6 +840,63 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 			}
+ 		})
+ 
++	case issueRelationshipsRequestMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		cmds = append(cmds, func() tea.Msg {
++			relationships, err := fetchIssueRelationships(msg.ContentID)
++			return issueRelationshipsMsg{
++				ContentID:     msg.ContentID,
++				Generation:    msg.Generation,
++				Relationships: relationships,
++				Err:           err,
++			}
++		})
++
++	case issueRelationshipsMsg:
++		if !acceptsIssueRelationships(
++			m.relationshipPreviewGeneration,
++			m.isCurrentIssue(msg.ContentID),
++			msg.Generation,
++		) {
++			break
++		}
++		if msg.Err != nil {
++			log.Warn(
++				"Issue relationship enrichment unavailable",
++				"contentID",
++				msg.ContentID,
++				"error",
++				msg.Err,
++			)
++			break
++		}
++		if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
++			issue.Parent = msg.Relationships.Parent
++			issue.SubIssues = msg.Relationships.SubIssues
++			issue.SubIssuesSummary = msg.Relationships.SubIssuesSummary
++			issue.BlockedBy = msg.Relationships.BlockedBy
++			issue.Blocking = msg.Relationships.Blocking
++			m.issueSidebar.SetRow(issue)
++			if currSection := m.getCurrSection(); currSection != nil {
++				if issues, ok := currSection.(*issuessection.Model); ok {
++					for index := range issues.Issues {
++						if issues.Issues[index].ID == msg.ContentID {
++							issues.Issues[index] = *issue
++							issues.Table.SetRows(issues.BuildRows())
++							break
++						}
++					}
++				}
++			}
++			cmds = append(cmds, m.syncSidebar())
++		}
++
+ 	case issueProjectPreviewMsg:
+ 		if !acceptsIssueProjectPreview(
+ 			m.projectPreviewGeneration,
+@@ -1042,7 +1119,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ 	}
+ 
+ 	if m.issueSidebar.IsTextInputBoxFocused() {
+-		m.issueSidebar, issueSidebarCmd, _ = m.issueSidebar.Update(msg)
++		var issueAction *issueview.IssueAction
++		m.issueSidebar, issueSidebarCmd, issueAction = m.issueSidebar.Update(msg)
++		if issueAction != nil && issueAction.Type == issueview.IssueActionRelationshipUpdated {
++			if issue, ok := m.getCurrRowData().(*data.IssueData); ok {
++				issue.Parent = issueAction.Relationships.Parent
++				issue.SubIssues = issueAction.Relationships.SubIssues
++				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
++				issue.BlockedBy = issueAction.Relationships.BlockedBy
++				issue.Blocking = issueAction.Relationships.Blocking
++			}
++		}
+ 		m.syncSidebar()
+ 	}
+ 
+@@ -1215,6 +1302,18 @@ type issueProjectPreviewMsg struct {
+ 	Err        error
+ }
+ 
++type issueRelationshipsRequestMsg struct {
++	ContentID  string
++	Generation uint64
++}
++
++type issueRelationshipsMsg struct {
++	ContentID     string
++	Generation    uint64
++	Relationships data.IssueRelationships
++	Err           error
++}
++
+ func acceptsIssueProjectPreview(
+ 	currentGeneration uint64,
+ 	currentIssue bool,
+@@ -1223,6 +1322,14 @@ func acceptsIssueProjectPreview(
+ 	return currentIssue && currentGeneration == messageGeneration
+ }
+ 
++func acceptsIssueRelationships(
++	currentGeneration uint64,
++	currentIssue bool,
++	messageGeneration uint64,
++) bool {
++	return currentIssue && currentGeneration == messageGeneration
++}
++
+ func (m *Model) setCurrSectionId(newSectionId int) {
+ 	m.currSectionId = newSectionId
+ 	m.tabs.SetCurrSectionId(newSectionId)
+@@ -1250,6 +1357,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+ 
+ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 	m.projectPreviewGeneration++
++	m.relationshipPreviewGeneration++
+ 	m.prView.SetSummaryViewLess()
+ 	m.prView.GoToFirstTab()
+ 	var cachedPreview data.ProjectItems
+@@ -1282,6 +1390,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 		enrichCmd = m.prView.EnrichCurrRow()
+ 	}
+ 	var projectCmd tea.Cmd
++	var relationshipCmd tea.Cmd
++	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && issue.ID != "" {
++		contentID := issue.ID
++		generation := m.relationshipPreviewGeneration
++		relationshipCmd = tea.Tick(0, func(time.Time) tea.Msg {
++			return issueRelationshipsRequestMsg{ContentID: contentID, Generation: generation}
++		})
++	}
+ 	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
+ 		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
+ 		issue.ID != "" {
+@@ -1294,7 +1410,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+ 	m.sidebar.ScrollToTop()
+ 	m.notificationView.ResetSubject()
+ 	keys.SetNotificationSubject(keys.NotificationSubjectNone)
+-	return tea.Batch(sidebarCmd, enrichCmd, projectCmd)
++	return tea.Batch(sidebarCmd, enrichCmd, projectCmd, relationshipCmd)
+ }
+ 
+ func (m *Model) isCurrentIssue(contentID string) bool {
+diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
+index b421ab02abea3d06fc42885c6b92d838db441006..f42eb808649860f7a4122966aea6e34c62b98d66 100644
+--- a/internal/tui/ui_test.go
++++ b/internal/tui/ui_test.go
+@@ -2526,3 +2526,9 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestAcceptsIssueRelationshipsRejectsStaleSelection(t *testing.T) {
++	require.True(t, acceptsIssueRelationships(4, true, 4))
++	require.False(t, acceptsIssueRelationships(4, true, 3))
++	require.False(t, acceptsIssueRelationships(4, false, 4))
 +}

@@ -44,8 +44,16 @@ sub-issue completion summary when GitHub provides it. Relationship failures
 remain non-fatal to ordinary issue rendering.
 
 No labels, issue-body conventions, Project fields, or local task database are
-used to represent these relationships. Relationship editing is not included
-in this patch revision; no write is attempted from the relationship preview.
+used to represent these relationships. From an issue preview, `R` opens the
+keyboard-driven relationship editor; the binding can be changed with
+`editRelationships`. Add operations use a fuzzy selector over accessible
+issues, displaying repository, number, title, and open/closed state. Existing
+relationships are filtered out, and removal operations select only from the
+live relationships currently returned for the issue. The editor supports
+adding and removing blocked-by, blocking, and sub-issue relationships, and
+setting or removing a parent. Every write is validated against live state and
+followed by an authoritative relationship refetch; failures leave the issue
+usable and do not claim a local write succeeded.
 
 ## Nix integration
 
