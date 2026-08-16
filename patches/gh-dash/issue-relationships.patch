@@ -1623,8 +1623,8 @@ index f300a81..aaef4c2 100644
  		key.WithHelp("E", "edit Project field"),
  	),
 +	EditRelationships: key.NewBinding(
-+		key.WithKeys("R"),
-+		key.WithHelp("R", "edit relationships"),
++		key.WithKeys("I"),
++		key.WithHelp("I", "edit relationships"),
 +	),
  }
  
@@ -1663,7 +1663,7 @@ index 0000000..a703c41
 +)
 +
 +func TestIssueRelationshipEditorHasDiscoverableDefaultBinding(t *testing.T) {
-+	require.Equal(t, []string{"R"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, []string{"I"}, IssueKeys.EditRelationships.Keys())
 +	require.Equal(t, "edit relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
 +

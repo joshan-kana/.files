@@ -44,9 +44,9 @@ sub-issue completion summary when GitHub provides it. Relationship failures
 remain non-fatal to ordinary issue rendering.
 
 No labels, issue-body conventions, Project fields, or local task database are
-used to represent these relationships. From an issue preview, `R` opens the
+used to represent these relationships. From an issue preview, `I` opens the
 keyboard-driven relationship editor; the binding can be changed with
-`editRelationships`. Add operations use a fuzzy selector over accessible
+`editRelationships` (default `I`). Add operations use a fuzzy selector over accessible
 issues, displaying repository, number, title, and open/closed state. Existing
 relationships are filtered out, and removal operations select only from the
 live relationships currently returned for the issue. The editor supports

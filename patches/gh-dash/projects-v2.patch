@@ -6702,13 +6702,9 @@ index 0000000..abc59d1
 +				fieldIndex := m.filtered[m.field]
 +				field := m.fields[fieldIndex]
 +				if field.Type == "ProjectV2SingleSelectField" || field.Type == "SINGLE_SELECT" {
-+					if len(field.Options) == 0 {
-+						m.status = "This field has no selectable options"
-+					} else {
-+						m.mode, m.option, m.optionField = modeOptions, 0, fieldIndex
-+						m.filter.SetValue("")
-+						m.applyFilter()
-+					}
++					m.mode, m.option, m.optionField = modeOptions, 0, fieldIndex
++					m.filter.SetValue("")
++					m.applyFilter()
 +				} else if isEditable(field.Type) {
 +					m.activeField = fieldIndex
 +					m.mode = modeInput
@@ -6720,8 +6716,7 @@ index 0000000..abc59d1
 +					m.status = fmt.Sprintf("Field type %s is display-only", field.Type)
 +				}
 +			case modeOptions:
-+				field := m.fields[m.optionField]
-+				option := field.Options[m.filtered[m.option]]
++				option := m.options()[m.filtered[m.option]]
 +				m.activeField = m.optionField
 +				m.mode = modeLoadingFields
 +				return m, m.update(option.ID, option.Name)
@@ -6816,13 +6811,25 @@ index 0000000..abc59d1
 +		}
 +	case modeOptions:
 +		if m.optionField >= 0 && m.optionField < len(m.fields) {
-+			values = make([]string, len(m.fields[m.optionField].Options))
-+			for i, option := range m.fields[m.optionField].Options {
++			options := m.options()
++			values = make([]string, len(options))
++			for i, option := range options {
 +				values[i] = option.Name
 +			}
 +		}
 +	}
 +	return values
++}
++
++const clearProjectOptionID = "__ghdash_clear_project_value__"
++
++func (m Model) options() []data.ProjectOption {
++	if m.optionField < 0 || m.optionField >= len(m.fields) {
++		return nil
++	}
++	options := make([]data.ProjectOption, 0, len(m.fields[m.optionField].Options)+1)
++	options = append(options, data.ProjectOption{ID: clearProjectOptionID, Name: "— Clear value —"})
++	return append(options, m.fields[m.optionField].Options...)
 +}
 +
 +func (m *Model) clampSelection() {
@@ -6866,7 +6873,7 @@ index 0000000..abc59d1
 +	field := m.fields[m.activeField]
 +	return func() tea.Msg {
 +		var err error
-+		if strings.TrimSpace(value) == "" {
++		if value == clearProjectOptionID || strings.TrimSpace(value) == "" {
 +			err = data.ClearProjectField(m.contentID, project.Project.ID, project.ID, field.ID)
 +		} else {
 +			err = data.UpdateProjectField(
@@ -6906,7 +6913,7 @@ index 0000000..abc59d1
 +
 +func isEditable(fieldType string) bool {
 +	switch fieldType {
-+	case "ProjectV2Field", "TEXT", "NUMBER", "DATE", "ProjectV2IterationField", "ITERATION":
++	case "ProjectV2Field", "TEXT", "NUMBER", "DATE":
 +		return true
 +	default:
 +		return false
@@ -7056,6 +7063,27 @@ index 0000000..152c4e5
 +func TestDefaultProjectEditorKeyIsE(t *testing.T) {
 +	require.Equal(t, []string{"E"}, keys.PRKeys.EditProject.Keys())
 +	require.Equal(t, []string{"E"}, keys.IssueKeys.EditProject.Keys())
++}
++
++func TestIterationFieldsAreDisplayOnly(t *testing.T) {
++	require.False(t, isEditable("ProjectV2IterationField"))
++	require.False(t, isEditable("ITERATION"))
++}
++
++func TestSingleSelectClearChoiceIsFilterableAndDistinct(t *testing.T) {
++	ctx := newEditorTestContext(t)
++	m := New(ctx, "issue", 1, 1, "issue-1", "owner/repo", []data.ProjectItem{{
++		Project: data.Project{ID: "project-1", Number: 1, Title: "Roadmap"},
++	}})
++	m.mode = modeOptions
++	m.fields = []data.ProjectField{{ID: "status", Name: "Status", Type: "SINGLE_SELECT",
++		Options: []data.ProjectOption{{ID: "todo", Name: "Todo"}}}}
++	m.optionField = 0
++	m.filter.SetValue("clear")
++	m.applyFilter()
++	require.Equal(t, []int{0}, m.filtered)
++	require.Equal(t, clearProjectOptionID, m.options()[m.filtered[0]].ID)
++	require.Contains(t, m.filterValues()[m.filtered[0]], "Clear value")
 +}
 +
 +func TestEditorFiltersProjectsCaseInsensitivelyAndRestoresOnClear(t *testing.T) {
