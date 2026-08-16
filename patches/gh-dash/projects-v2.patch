@@ -517,10 +517,10 @@ index 11eecdb..728dffc 100644
  		return EnrichedPullRequestData{}, err
  	}
 diff --git a/internal/data/prapi_test.go b/internal/data/prapi_test.go
-index 79af55c..3ca4c92 100644
+index 79af55c..6eb91d1 100644
 --- a/internal/data/prapi_test.go
 +++ b/internal/data/prapi_test.go
-@@ -1,12 +1,50 @@
+@@ -1,12 +1,80 @@
  package data
  
  import (
@@ -552,6 +552,36 @@ index 79af55c..3ca4c92 100644
 +	pr, err := FetchPullRequest("https://github.com/o/r/pull/1")
 +	require.NoError(t, err)
 +	require.Equal(t, "pr-1", pr.ID)
++}
++
++func TestEnrichPullRequestProjectsPassesConfiguredVisibleColumns(t *testing.T) {
++	resetProjectItemsState()
++	defer resetProjectItemsState()
++
++	original := fetchProjectItemsBatchWithColumns
++	defer func() { fetchProjectItemsBatchWithColumns = original }()
++
++	var got []ProjectColumn
++	fetchProjectItemsBatchWithColumns = func(contentIDs []string, columns []ProjectColumn) (map[string]ProjectItems, error) {
++		got = append([]ProjectColumn(nil), columns...)
++		return map[string]ProjectItems{
++			"pr-1": {Nodes: []ProjectItem{{ID: "item-1"}}},
++		}, nil
++	}
++
++	prs := []PullRequestData{{ID: "pr-1"}}
++	err := enrichPullRequestProjects(prs, []ProjectColumn{
++		{Name: "Status"},
++		{Name: "Priority", FieldID: "PVTF_priority"},
++		{Name: "Area", Project: "owner/1"},
++	})
++	require.NoError(t, err)
++	require.Equal(t, []ProjectColumn{
++		{Name: "Status"},
++		{Name: "Priority", FieldID: "PVTF_priority"},
++		{Name: "Area", Project: "owner/1"},
++	}, got)
++	require.Len(t, prs[0].ProjectItems.Nodes, 1)
 +}
 +
 +func hasFieldNamed(typ reflect.Type, name string) bool {
@@ -3521,18 +3551,19 @@ index e7cf4ec..528c07b 100644
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664..46df0fb 100644
+index f421664..e256002 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
-@@ -11,6 +11,7 @@ import (
+@@ -11,6 +11,8 @@ import (
  	"github.com/dlvhdr/gh-dash/v4/internal/config"
  	"github.com/dlvhdr/gh-dash/v4/internal/data"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issuerow"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projectcolumns"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projecteditor"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tasks"
-@@ -152,6 +153,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -152,6 +154,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			}
  		}
  
@@ -3554,7 +3585,7 @@ index f421664..46df0fb 100644
  	case SectionIssuesFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -212,7 +228,7 @@ func GetSectionColumns(
+@@ -212,7 +229,7 @@ func GetSectionColumns(
  		sLayout.Reactions,
  	)
  
@@ -3563,7 +3594,7 @@ index f421664..46df0fb 100644
  		{
  			Title:  "",
  			Width:  stateLayout.Width,
-@@ -259,6 +275,23 @@ func GetSectionColumns(
+@@ -259,6 +276,23 @@ func GetSectionColumns(
  			Hidden: createdAtLayout.Hidden,
  		},
  	}
@@ -3587,34 +3618,15 @@ index f421664..46df0fb 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -323,7 +356,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -323,7 +357,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  		if limit == nil {
  			limit = &m.Ctx.Config.Defaults.IssuesLimit
  		}
 -		res, err := data.FetchIssues(m.GetFilters(), *limit, m.PageInfo)
-+		res, err := data.FetchAllIssues(m.GetFilters(), *limit, m.Ctx.Config.Defaults.Layout.Projects.Enabled, configuredProjectColumns(m.Ctx))
++		res, err := data.FetchAllIssues(m.GetFilters(), *limit, m.Ctx.Config.Defaults.Layout.Projects.Enabled, projectcolumns.Configured(m.Ctx))
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
-@@ -350,6 +383,18 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
- 	return cmds
- }
- 
-+func configuredProjectColumns(ctx *context.ProgramContext) []data.ProjectColumn {
-+	fields := ctx.Config.Defaults.Layout.Projects.Fields
-+	columns := make([]data.ProjectColumn, 0, len(fields))
-+	for _, field := range fields {
-+		if field.Hidden != nil && *field.Hidden {
-+			continue
-+		}
-+		columns = append(columns, data.ProjectColumn{Name: field.Name, FieldID: field.FieldID, Project: field.Project})
-+	}
-+	return columns
-+}
-+
- func (m *Model) UpdateLastUpdated(t time.Time) {
- 	m.Table.UpdateLastUpdated(t)
- }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
 index 494ec4c..b00be04 100644
 --- a/internal/tui/components/issueview/issueview.go
@@ -3932,6 +3944,33 @@ index 0000000..88b36f7
 +	if calls != 2 {
 +		t.Fatalf("background ordinary fetches = %d, want 2", calls)
 +	}
++}
+diff --git a/internal/tui/components/projectcolumns/projectcolumns.go b/internal/tui/components/projectcolumns/projectcolumns.go
+new file mode 100644
+index 0000000..7fd8436
+--- /dev/null
++++ b/internal/tui/components/projectcolumns/projectcolumns.go
+@@ -0,0 +1,21 @@
++package projectcolumns
++
++import (
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++)
++
++// Configured returns the visible Project fields requested by the user's layout.
++// Hidden fields remain available to the selected-item/editor paths, but are not
++// fetched for list enrichment that cannot render them.
++func Configured(ctx *context.ProgramContext) []data.ProjectColumn {
++	fields := ctx.Config.Defaults.Layout.Projects.Fields
++	columns := make([]data.ProjectColumn, 0, len(fields))
++	for _, field := range fields {
++		if field.Hidden != nil && *field.Hidden {
++			continue
++		}
++		columns = append(columns, data.ProjectColumn{Name: field.Name, FieldID: field.FieldID, Project: field.Project})
++	}
++	return columns
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
@@ -4354,18 +4393,19 @@ index 1b2b493..f7ff978 100644
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996b..f7b5dbd 100644
+index 08e996b..4890a4c 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
-@@ -11,6 +11,7 @@ import (
+@@ -11,6 +11,8 @@ import (
  
  	"github.com/dlvhdr/gh-dash/v4/internal/config"
  	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projectcolumns"
 +	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/projecteditor"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
-@@ -196,6 +197,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -196,6 +198,21 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			break
  		}
  
@@ -4387,7 +4427,7 @@ index 08e996b..f7b5dbd 100644
  	case SectionPullRequestsFetchedMsg:
  		if m.LastFetchTaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -273,7 +289,7 @@ func GetSectionColumns(
+@@ -273,7 +290,7 @@ func GetSectionColumns(
  	linesLayout := config.MergeColumnConfigs(dLayout.Lines, sLayout.Lines)
  
  	if !ctx.Config.Theme.Ui.Table.Compact {
@@ -4396,7 +4436,7 @@ index 08e996b..f7b5dbd 100644
  			{
  				Title:  "",
  				Width:  utils.IntPtr(3),
-@@ -330,10 +346,10 @@ func GetSectionColumns(
+@@ -330,10 +347,10 @@ func GetSectionColumns(
  				Width:  createdAtLayout.Width,
  				Hidden: createdAtLayout.Hidden,
  			},
@@ -4409,7 +4449,7 @@ index 08e996b..f7b5dbd 100644
  		{
  			Title:  "",
  			Width:  utils.IntPtr(3),
-@@ -400,7 +416,23 @@ func GetSectionColumns(
+@@ -400,7 +417,23 @@ func GetSectionColumns(
  			Width:  createdAtLayout.Width,
  			Hidden: createdAtLayout.Hidden,
  		},
@@ -4433,21 +4473,21 @@ index 08e996b..f7b5dbd 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -482,7 +514,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -482,7 +515,7 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  			limit = &m.Ctx.Config.Defaults.PrsLimit
  		}
  
 -		res, err := data.FetchPullRequests(m.GetFilters(), *limit, m.PageInfo)
-+		res, err := data.FetchPullRequests(m.GetFilters(), *limit, m.PageInfo, m.Ctx.Config.Defaults.Layout.Projects.Enabled)
++		res, err := data.FetchPullRequests(m.GetFilters(), *limit, m.PageInfo, m.Ctx.Config.Defaults.Layout.Projects.Enabled, projectcolumns.Configured(m.Ctx))
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
 diff --git a/internal/tui/components/prview/projectpreview_test.go b/internal/tui/components/prview/projectpreview_test.go
 new file mode 100644
-index 0000000..0d0f444
+index 0000000..c9c29fb
 --- /dev/null
 +++ b/internal/tui/components/prview/projectpreview_test.go
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,74 @@
 +package prview
 +
 +import (
@@ -4491,11 +4531,39 @@ index 0000000..0d0f444
 +	require.True(t, strings.Contains(stripANSI(m.renderProjectPreview()), "Projects"))
 +}
 +
++func TestAlreadyEnrichedPRRevisitStartsIndependentProjectPreview(t *testing.T) {
++	ctx := newProjectPreviewTestContext(t)
++	m := NewModel(ctx)
++
++	pr := func(id string) *prrow.Data {
++		return &prrow.Data{
++			Primary:    &data.PullRequestData{ID: id, Url: "https://github.com/o/r/pull/" + id},
++			IsEnriched: true,
++		}
++	}
++
++	m.SetRow(pr("a"))
++	m.SetProjectPreviewLoading()
++	require.NotNil(t, m.EnrichCurrRow(), "an already-enriched PR still needs a Project preview request")
++	firstGeneration := m.enrichGeneration
++	require.True(t, m.AcceptsProjectPreview("a", firstGeneration))
++
++	m.SetRow(pr("b"))
++	m.SetProjectPreviewLoading()
++	require.NotNil(t, m.EnrichCurrRow())
++	m.SetRow(pr("a"))
++	m.SetProjectPreviewLoading()
++	require.NotNil(t, m.EnrichCurrRow(), "returning to an enriched PR must not stick in loading")
++	require.Greater(t, m.enrichGeneration, firstGeneration)
++	require.False(t, m.AcceptsProjectPreview("b", m.enrichGeneration))
++	require.True(t, m.AcceptsProjectPreview("a", m.enrichGeneration))
++}
++
 +func stripANSI(value string) string {
 +	return value
 +}
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9..5403a6e 100644
+index 470d9f9..3fb372a 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -4550,7 +4618,7 @@ index 470d9f9..5403a6e 100644
  
  var tabs = []string{" Overview", " Activity", " Commits", " Checks", " Files Changed"}
  
-@@ -62,6 +77,25 @@ func NewModel(ctx *context.ProgramContext) Model {
+@@ -62,6 +77,20 @@ func NewModel(ctx *context.ProgramContext) Model {
  }
  
  func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -4560,12 +4628,7 @@ index 470d9f9..5403a6e 100644
 +		}
 +		return m, func() tea.Msg {
 +			d, err := data.FetchPullRequest(request.URL)
-+			var projectItems data.ProjectItems
-+			var projectErr error
-+			if err == nil && m.ctx.Config.Defaults.Layout.Projects.Enabled && d.ID != "" {
-+				projectItems, projectErr = data.FetchProjectItemsFull(d.ID)
-+			}
-+			return EnrichedPrMsg{Id: m.sectionId, Type: prssection.SectionType, Data: d, ProjectItems: projectItems, ProjectErr: projectErr, Err: err, Generation: request.Generation}
++			return EnrichedPrMsg{Id: m.sectionId, Type: prssection.SectionType, Data: d, Err: err, Generation: request.Generation}
 +		}
 +	}
 +	if m.projectEditor.Active() {
@@ -4576,7 +4639,7 @@ index 470d9f9..5403a6e 100644
  	cmd, handled := m.editor.Update(msg)
  
  	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+d" {
-@@ -189,6 +223,11 @@ func (m *Model) viewOverviewTab() string {
+@@ -189,6 +218,11 @@ func (m *Model) viewOverviewTab() string {
  		body.WriteString(labels)
  		body.WriteString("\n\n")
  	}
@@ -4588,7 +4651,7 @@ index 470d9f9..5403a6e 100644
  
  	body.WriteString(m.renderSummary())
  	body.WriteString("\n\n")
-@@ -207,6 +246,10 @@ func (m *Model) viewOverviewTab() string {
+@@ -207,6 +241,10 @@ func (m *Model) viewOverviewTab() string {
  	if m.editor.Mode() != cmpcontroller.ModeNone {
  		body.WriteString(m.ctx.Styles.Sidebar.InputBox.Render(m.editor.View()))
  	}
@@ -4599,7 +4662,7 @@ index 470d9f9..5403a6e 100644
  
  	return body.String()
  }
-@@ -557,32 +600,87 @@ func (m *Model) SetSectionId(id int) {
+@@ -557,32 +595,111 @@ func (m *Model) SetSectionId(id int) {
  func (m *Model) SetRow(d *prrow.Data) {
  	if d == nil {
  		m.pr = nil
@@ -4657,26 +4720,40 @@ index 470d9f9..5403a6e 100644
 -	Type string
 -	Data data.EnrichedPullRequestData
 -	Err  error
-+	Id           int
-+	Type         string
-+	Data         data.EnrichedPullRequestData
-+	ProjectItems data.ProjectItems
-+	ProjectErr   error
-+	Err          error
-+	Generation   uint64
++	Id         int
++	Type       string
++	Data       data.EnrichedPullRequestData
++	Err        error
++	Generation uint64
 +}
 +
 +type enrichPrRequestMsg struct {
 +	Generation uint64
 +	URL        string
++}
++
++type ProjectPreviewRequestMsg struct {
++	ContentID  string
++	Generation uint64
++}
++
++type ProjectPreviewMsg struct {
++	ContentID  string
++	Generation uint64
++	Items      data.ProjectItems
++	Err        error
  }
  
  func (m *Model) EnrichCurrRow() tea.Cmd {
 -	if m == nil || m.pr == nil || m.pr.Data.IsEnriched {
 +	if m == nil {
++		return nil
++	}
++	m.enrichGeneration++
++	if m.pr == nil || m.pr.Data == nil || m.pr.Data.Primary == nil {
  		return nil
  	}
--	url := m.pr.Data.Primary.Url
+ 	url := m.pr.Data.Primary.Url
 -	return func() tea.Msg {
 -		d, err := data.FetchPullRequest(url)
 -		return EnrichedPrMsg{
@@ -4685,23 +4762,32 @@ index 470d9f9..5403a6e 100644
 -			Data: d,
 -			Err:  err,
 -		}
-+	m.enrichGeneration++
-+	if m.pr == nil || m.pr.Data.IsEnriched {
-+		return nil
- 	}
-+	url := m.pr.Data.Primary.Url
 +	generation := m.enrichGeneration
-+	return tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
-+		return enrichPrRequestMsg{Generation: generation, URL: url}
-+	})
++	cmds := make([]tea.Cmd, 0, 2)
++	if !m.pr.Data.IsEnriched {
++		cmds = append(cmds, tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
++			return enrichPrRequestMsg{Generation: generation, URL: url}
++		}))
+ 	}
++	if m.ctx.Config.Defaults.Layout.Projects.Enabled && m.pr.Data.Primary.ID != "" {
++		contentID := m.pr.Data.Primary.ID
++		cmds = append(cmds, tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
++			return ProjectPreviewRequestMsg{ContentID: contentID, Generation: generation}
++		}))
++	}
++	return tea.Batch(cmds...)
 +}
 +
 +func (m *Model) AcceptsEnrichedPR(msg EnrichedPrMsg) bool {
 +	return msg.Generation == m.enrichGeneration && m.pr != nil && m.pr.Data.Primary != nil && m.pr.Data.Primary.Url == msg.Data.Url
++}
++
++func (m *Model) AcceptsProjectPreview(contentID string, generation uint64) bool {
++	return generation == m.enrichGeneration && m.pr != nil && m.pr.Data != nil && m.pr.Data.Primary != nil && m.pr.Data.Primary.ID == contentID
  }
  
  func (m *Model) SetWidth(width int) {
-@@ -591,15 +689,25 @@ func (m *Model) SetWidth(width int) {
+@@ -591,15 +708,25 @@ func (m *Model) SetWidth(width int) {
  	m.editor.SetWidth(
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
  	)
@@ -4729,14 +4815,14 @@ index 470d9f9..5403a6e 100644
  		carousel.Styles{
  			Item:     lipgloss.NewStyle().Padding(0, 1).Foreground(m.ctx.Theme.FaintText),
 diff --git a/internal/tui/components/reposection/commands.go b/internal/tui/components/reposection/commands.go
-index 308b2a5..8b237c4 100644
+index 308b2a5..f6e0287 100644
 --- a/internal/tui/components/reposection/commands.go
 +++ b/internal/tui/components/reposection/commands.go
 @@ -255,6 +255,7 @@ func (m *Model) fetchPRsCmd() tea.Cmd {
  			fmt.Sprintf("author:@me repo:%s", git.GetRepoShortName(m.Ctx.RepoUrl)),
  			*limit,
  			nil,
-+			m.Ctx.Config.Defaults.Layout.Projects.Enabled,
++			false,
  		)
  		if err != nil {
  			return constants.TaskFinishedMsg{
@@ -4744,7 +4830,7 @@ index 308b2a5..8b237c4 100644
  			fmt.Sprintf("author:@me repo:%s head:%s", git.GetRepoShortName(m.Ctx.RepoUrl), branch),
  			1,
  			nil,
-+			m.Ctx.Config.Defaults.Layout.Projects.Enabled,
++			false,
  		)
  		log.Debug("Fetching PRs", "res", res)
  		if err != nil {
@@ -4829,7 +4915,7 @@ index 88c244f..ccbfaa0 100644
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c714..385bbf7 100644
+index eb3c714..cec6271 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -34,6 +34,7 @@ import (
@@ -4844,7 +4930,7 @@ index eb3c714..385bbf7 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
  )
  
-+var fetchProjectItemsFull = data.FetchProjectItemsFull
++var fetchNotificationProjectItemsFull = data.FetchProjectItemsFull
 +
  type Model struct {
 -	keys             *keys.KeyMap
@@ -4917,7 +5003,7 @@ index eb3c714..385bbf7 100644
  		newSections, fetchSectionsCmds := m.fetchAllViewSections()
  		m.setCurrentViewSections(newSections)
  		cmds = append(cmds, fetchSectionsCmds, m.doRefreshAtInterval())
-@@ -738,8 +753,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -738,6 +753,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		}
  
  	case prview.EnrichedPrMsg:
@@ -4926,26 +5012,48 @@ index eb3c714..385bbf7 100644
 +		}
  		if msg.Err == nil {
  			m.prView.SetEnrichedPR(msg.Data)
-+			if m.ctx.Config.Defaults.Layout.Projects.Enabled {
-+				if msg.ProjectErr != nil {
-+					m.prView.SetProjectPreviewError(msg.ProjectErr)
-+				} else {
-+					m.prView.SetProjectPreviewReady(msg.ProjectItems)
-+				}
-+			}
  			m.prs[msg.Id].(*prssection.Model).EnrichPR(msg.Data)
- 			syncCmd := m.syncSidebar()
- 			cmds = append(cmds, syncCmd)
-@@ -747,6 +772,53 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -747,6 +765,84 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			log.Error("failed enriching pr", "err", msg.Err)
  		}
  
++	case prview.ProjectPreviewRequestMsg:
++		if !m.prView.AcceptsProjectPreview(msg.ContentID, msg.Generation) {
++			break
++		}
++		cmds = append(cmds, func() tea.Msg {
++			items, err := data.FetchProjectItemsFull(msg.ContentID)
++			return prview.ProjectPreviewMsg{ContentID: msg.ContentID, Generation: msg.Generation, Items: items, Err: err}
++		})
++
++	case prview.ProjectPreviewMsg:
++		if !m.prView.AcceptsProjectPreview(msg.ContentID, msg.Generation) {
++			break
++		}
++		if msg.Err == nil {
++			if currSection := m.getCurrSection(); currSection != nil {
++				if prs, ok := currSection.(*prssection.Model); ok {
++					for index := range prs.Prs {
++						if prs.Prs[index].Primary != nil && prs.Prs[index].Primary.ID == msg.ContentID {
++							prs.Prs[index].Primary.ProjectItems = msg.Items
++							prs.Table.SetRows(prs.BuildRows())
++							break
++						}
++					}
++				}
++			}
++			m.prView.SetProjectPreviewReady(msg.Items)
++		} else {
++			m.prView.SetProjectPreviewError(msg.Err)
++		}
++		cmds = append(cmds, m.syncSidebar())
++
 +	case issueProjectPreviewRequestMsg:
 +		if !acceptsIssueProjectPreview(m.projectPreviewGeneration, m.isCurrentIssue(msg.ContentID), msg.Generation) {
 +			break
 +		}
 +		cmds = append(cmds, func() tea.Msg {
-+			items, err := fetchProjectItemsFull(msg.ContentID)
++			items, err := data.FetchProjectItemsFull(msg.ContentID)
 +			return issueProjectPreviewMsg{ContentID: msg.ContentID, Generation: msg.Generation, Items: items, Err: err}
 +		})
 +
@@ -4990,7 +5098,7 @@ index eb3c714..385bbf7 100644
  	case notificationPRFetchedMsg:
  		if msg.Err == nil {
  			// Convert enriched PR to prrow.Data for display
-@@ -760,6 +832,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -760,6 +856,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with PR view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.prView.SetSectionId(0)
@@ -4998,7 +5106,7 @@ index eb3c714..385bbf7 100644
  			m.prView.SetRow(m.notificationView.GetSubjectPR())
  			m.prView.SetWidth(width)
  			m.prView.SetEnrichedPR(msg.PR)
-@@ -776,6 +849,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -776,6 +873,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.SetContent(m.prView.View())
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -5008,7 +5116,7 @@ index eb3c714..385bbf7 100644
  		} else {
  			log.Error("failed fetching notification PR", "err", msg.Err)
  		}
-@@ -787,6 +863,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -787,6 +887,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with Issue view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.issueSidebar.SetSectionId(0)
@@ -5016,7 +5124,7 @@ index eb3c714..385bbf7 100644
  			m.issueSidebar.SetRow(m.notificationView.GetSubjectIssue())
  			m.issueSidebar.SetWidth(width)
  			m.sidebar.SetContent(m.issueSidebar.View())
-@@ -795,10 +872,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -795,10 +896,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.ScrollToBottom()
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -5058,7 +5166,7 @@ index eb3c714..385bbf7 100644
  	case notificationssection.UpdateNotificationReadStateMsg:
  		m.updateNotificationSections(msg)
  
-@@ -898,6 +1006,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -898,6 +1030,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		if !currSection.IsPromptConfirmationFocused() {
  			m.footer.SetLeftSection(currSection.GetPagerContent())
  		}
@@ -5066,7 +5174,7 @@ index eb3c714..385bbf7 100644
  	}
  
  	tm, tabsCmd := m.tabs.Update(msg)
-@@ -1025,6 +1134,44 @@ type notificationIssueFetchedMsg struct {
+@@ -1025,6 +1158,44 @@ type notificationIssueFetchedMsg struct {
  	Err              error
  }
  
@@ -5082,7 +5190,7 @@ index eb3c714..385bbf7 100644
 +		return nil
 +	}
 +	return func() tea.Msg {
-+		items, err := fetchProjectItemsFull(contentID)
++		items, err := fetchNotificationProjectItemsFull(contentID)
 +		return notificationProjectPreviewMsg{
 +			NotificationId: notificationID,
 +			ContentID:      contentID,
@@ -5111,7 +5219,7 @@ index eb3c714..385bbf7 100644
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1051,14 +1198,36 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1051,14 +1222,39 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  }
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
@@ -5127,7 +5235,11 @@ index eb3c714..385bbf7 100644
 +		}
 +	}
  	sidebarCmd := m.syncSidebar()
- 	enrichCmd := m.prView.EnrichCurrRow()
+-	enrichCmd := m.prView.EnrichCurrRow()
++	var enrichCmd tea.Cmd
++	if _, ok := m.getCurrRowData().(*prrow.Data); ok {
++		enrichCmd = m.prView.EnrichCurrRow()
++	}
 +	var projectCmd tea.Cmd
 +	if issue, ok := m.getCurrRowData().(*data.IssueData); ok && m.ctx.Config.Defaults.Layout.Projects.Enabled && issue.ID != "" {
 +		contentID := issue.ID
@@ -5149,11 +5261,31 @@ index eb3c714..385bbf7 100644
  }
  
  func (m *Model) onWindowSizeChanged(msg tea.WindowSizeMsg) {
+@@ -1110,8 +1306,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
+ 
+ 	currSection := m.getCurrSection()
+ 	if currSection != nil && id == currSection.GetId() {
+-		if _, ok := msg.(prssection.SectionPullRequestsFetchedMsg); ok {
+-			cmd = m.onViewedRowChanged()
++		switch msg.(type) {
++		case prssection.SectionPullRequestsFetchedMsg, issuessection.SectionIssuesFetchedMsg:
++			cmd = tea.Batch(cmd, m.onViewedRowChanged())
+ 		}
+ 	}
+ 
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f..e73efed 100644
+index e391c6f..a031d9f 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
-@@ -168,6 +168,146 @@ func TestGetCurrentViewSections_RepoViewWithNilRepo(t *testing.T) {
+@@ -21,6 +21,7 @@ import (
+ 	"github.com/dlvhdr/gh-dash/v4/internal/data"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/branchsidebar"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/footer"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issuessection"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/issueview"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationrow"
+ 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationssection"
+@@ -168,6 +169,192 @@ func TestGetCurrentViewSections_RepoViewWithNilRepo(t *testing.T) {
  	require.Empty(t, sections, "sections should be empty when repo is nil")
  }
  
@@ -5167,6 +5299,52 @@ index e391c6f..e73efed 100644
 +	if acceptsIssueProjectPreview(7, false, 7) {
 +		t.Fatal("preview for a no-longer-selected issue should be rejected")
 +	}
++}
++
++func TestIssueFetchRestartsSelectedProjectPreviewAfterInitialAndRefresh(t *testing.T) {
++	cfg, err := config.ParseConfig(config.Location{
++		ConfigFlag:       "../config/testdata/test-config.yml",
++		SkipGlobalConfig: true,
++	})
++	require.NoError(t, err)
++	cfg.Defaults.Layout.Projects.Enabled = true
++	ctx := &context.ProgramContext{Config: &cfg, View: config.IssuesView}
++	ctx.Theme = theme.ParseTheme(&cfg)
++	ctx.Styles = context.InitStyles(ctx.Theme)
++
++	issueSection := issuessection.NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
++	issueSection.LastFetchTaskId = "initial"
++	m := Model{
++		ctx:           ctx,
++		currSectionId: 1,
++		issues:        []section.Section{nil, &issueSection},
++		issueSidebar:  issueview.NewModel(ctx),
++		prView:        prview.NewModel(ctx),
++		sidebar:       sidebar.NewModel(),
++	}
++	m.sidebar.IsOpen = true
++	m.sidebar.UpdateProgramContext(ctx)
++
++	fetched := issuessection.SectionIssuesFetchedMsg{
++		TaskId:   "initial",
++		Issues:   []data.IssueData{{ID: "issue-1", Number: 1, Title: "Example"}},
++		PageInfo: data.PageInfo{},
++	}
++	cmd := m.updateSection(1, issuessection.SectionType, fetched)
++	require.NotNil(t, cmd, "initial issue fetch should schedule the selected Project preview")
++	require.Contains(t, m.issueSidebar.View(), "Projects: loading…")
++
++	m.issueSidebar.SetProjectPreviewReady(data.ProjectItems{Nodes: []data.ProjectItem{{
++		Project: data.Project{Title: "Roadmap"},
++	}}})
++	issueSection.LastFetchTaskId = "refresh"
++	fetched.TaskId = "refresh"
++	fetched.Issues[0].ProjectItems = data.ProjectItems{Nodes: []data.ProjectItem{{
++		Project: data.Project{Title: "Roadmap"},
++	}}}
++	cmd = m.updateSection(1, issuessection.SectionType, fetched)
++	require.NotNil(t, cmd, "native issue refresh should restart the selected Project preview")
++	require.Contains(t, m.issueSidebar.View(), "Projects: loading…")
 +}
 +
 +func notificationProjectItems(values ...string) data.ProjectItems {
@@ -5276,10 +5454,10 @@ index e391c6f..e73efed 100644
 +
 +func TestNotificationBackgroundDoesNotStartFullProjectFetch(t *testing.T) {
 +	m, issue := newNotificationProjectTestModel(t)
-+	original := fetchProjectItemsFull
-+	defer func() { fetchProjectItemsFull = original }()
++	original := fetchNotificationProjectItemsFull
++	defer func() { fetchNotificationProjectItemsFull = original }()
 +	fullFetches := 0
-+	fetchProjectItemsFull = func(contentID string) (data.ProjectItems, error) {
++	fetchNotificationProjectItemsFull = func(contentID string) (data.ProjectItems, error) {
 +		fullFetches++
 +		require.Equal(t, issue.ID, contentID)
 +		return notificationProjectItems("Status", "Review"), nil
@@ -5300,7 +5478,7 @@ index e391c6f..e73efed 100644
  func TestPromptConfirmation_NilSection(t *testing.T) {
  	// promptConfirmation should return nil when currSection is nil
  	m := Model{}
-@@ -1191,6 +1331,41 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
+@@ -1191,6 +1378,41 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
  		"positionOverride should remain empty when sidebar is closed")
  }
  
@@ -5342,7 +5520,7 @@ index e391c6f..e73efed 100644
  func TestTogglePreviewPosition_TogglesWhenSidebarOpen(t *testing.T) {
  	cfg, err := config.ParseConfig(config.Location{
  		ConfigFlag:       "../config/testdata/test-config.yml",
-@@ -1738,6 +1913,27 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
+@@ -1738,6 +1960,27 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
  		"cache should be cleared after refresh all key press")
  }
  
