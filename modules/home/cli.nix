@@ -133,7 +133,15 @@ lib.mkIf cfg.features.cli.enable {
     source = tuicrConfig;
   };
 
-  programs.lazygit.enable = enabled "lazygit";
+  programs.lazygit = {
+    enable = enabled "lazygit";
+    settings.git.diffRenderers = [
+      {
+        colorArg = "always";
+        command = ''sh -c 'PAGER=cat eval "$(git config --get pager.diff || git config --get core.pager)"' '';
+      }
+    ];
+  };
 
   programs.zsh = {
     enable = enabled "zsh";
