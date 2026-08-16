@@ -384,6 +384,11 @@ def bridge_issue(client: GitHub) -> dict[str, Any]:
 
 
 def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str, Any]]:
+    # The v1 marker already identifies the command protocol. Early producers
+    # omitted the duplicate JSON version field, so infer it only when absent;
+    # explicit values still go through the strict version check below.
+    if "version" not in command:
+        command = {"version": COMMAND_VERSION, **command}
     allowed_root = {"version", "request_id", "operations"}
     extras = set(command) - allowed_root
     if extras:
