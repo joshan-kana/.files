@@ -658,10 +658,10 @@ index 4e08da67a92baaede027189a02967a773a373d71..ad7536b535afdaa302ba335e85a94b7e
  func (m *Model) StartProjectEdit() {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928bba7999cb
+index 0000000000000000000000000000000000000000..7db2b361d090218711f535501386928d7104f2f7
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,442 @@
 +package relationshipeditor
 +
 +import (
@@ -705,6 +705,7 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +type candidatesFetchedMsg struct {
 +	SessionID  uint64
 +	Query      string
++	Version    uint64
 +	Candidates []data.RelatedIssue
 +	Err        error
 +}
@@ -802,7 +803,8 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +		return m, nil
 +	case candidatesFetchedMsg:
 +		if (m.mode != modeLoadingCandidates && m.mode != modeCandidates) ||
-+			msg.SessionID != m.sessionID || msg.Query != strings.TrimSpace(m.query.Value()) {
++			msg.SessionID != m.sessionID || msg.Version != m.searchVersion ||
++			msg.Query != strings.TrimSpace(m.query.Value()) {
 +			return m, nil
 +		}
 +		if msg.Err != nil {
@@ -818,7 +820,7 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +			msg.Version != m.searchVersion || msg.Query != strings.TrimSpace(m.query.Value()) {
 +			return m, nil
 +		}
-+		return m, fetchCandidates(m.sessionID, msg.Query)
++		return m, fetchCandidates(m.sessionID, msg.Version, msg.Query)
 +	case RelationshipUpdatedMsg:
 +		if msg.SessionID != m.sessionID || msg.IssueID != m.issueID {
 +			return m, nil
@@ -832,6 +834,9 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +	case tea.KeyMsg:
 +		if m.mode == modeCandidates {
 +			return m.updateCandidates(msg)
++		}
++		if m.mode == modeApplying {
++			return m, nil
 +		}
 +		switch msg.String() {
 +		case "esc", "q":
@@ -856,7 +861,7 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +				}
 +				m.mode = modeLoadingCandidates
 +				m.query.Focus()
-+				return m, fetchCandidates(m.sessionID, m.query.Value())
++				return m, fetchCandidates(m.sessionID, m.searchVersion, m.query.Value())
 +			case modeRelationships:
 +				if len(m.removeItems) == 0 {
 +					m.status = "No live relationship is available"
@@ -897,7 +902,7 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +	m.filterCandidates()
 +	m.searchVersion++
 +	version := m.searchVersion
-+	query := m.query.Value()
++	query := strings.TrimSpace(m.query.Value())
 +	searchCmd := tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
 +		return candidateSearchMsg{SessionID: m.sessionID, Query: query, Version: version}
 +	})
@@ -1070,11 +1075,17 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +	}
 +}
 +
-+func fetchCandidates(sessionID uint64, query string) tea.Cmd {
++func fetchCandidates(sessionID, version uint64, query string) tea.Cmd {
 +	return func() tea.Msg {
 +		query = strings.TrimSpace(query)
 +		c, err := data.FetchRelationshipCandidates(query, 50)
-+		return candidatesFetchedMsg{SessionID: sessionID, Query: query, Candidates: c, Err: err}
++		return candidatesFetchedMsg{
++			SessionID:  sessionID,
++			Query:      query,
++			Version:    version,
++			Candidates: c,
++			Err:        err,
++		}
 +	}
 +}
 +
@@ -1095,10 +1106,10 @@ index 0000000000000000000000000000000000000000..ed9083f08a2ef24f80e2597740db928b
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..c3a3a9b3e81f849715fd214c78f72cab3206d478
+index 0000000000000000000000000000000000000000..fdb9fd147ef82a29ebc39053ab9b28a0828d306c
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,144 @@
 +package relationshipeditor
 +
 +import (
@@ -1106,6 +1117,7 @@ index 0000000000000000000000000000000000000000..c3a3a9b3e81f849715fd214c78f72cab
 +	"strings"
 +	"testing"
 +
++	tea "charm.land/bubbletea/v2"
 +	"github.com/stretchr/testify/require"
 +
 +	"github.com/dlvhdr/gh-dash/v4/internal/data"
@@ -1221,6 +1233,13 @@ index 0000000000000000000000000000000000000000..c3a3a9b3e81f849715fd214c78f72cab
 +	require.True(t, updated.active)
 +}
 +
++func TestRelationshipEditorCannotCancelInFlightMutation(t *testing.T) {
++	m := Model{active: true, mode: modeApplying}
++	updated, cmd := m.Update(tea.KeyPressMsg{Text: "q"})
++	require.Nil(t, cmd)
++	require.True(t, updated.active)
++}
++
 +func TestCandidateSummaryIncludesRepositoryNumberTitleAndState(t *testing.T) {
 +	summary := related("id", "octo/tools", 42, "Cache cleanup", "CLOSED").Summary()
 +	require.True(t, strings.Contains(summary, "octo/tools#42"))
@@ -1308,7 +1327,7 @@ index 0000000000000000000000000000000000000000..a703c41831116c5dcfeedfcd19973325
 +	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b3c27546a 100644
+index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..1280f895511d63b1b5041aa784dd42cd901a1ac8 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -50,27 +50,31 @@ import (
@@ -1469,7 +1488,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
  	case issueProjectPreviewMsg:
  		if !acceptsIssueProjectPreview(
  			m.projectPreviewGeneration,
-@@ -1042,7 +1125,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -1042,7 +1125,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  	}
  
  	if m.issueSidebar.IsTextInputBoxFocused() {
@@ -1495,11 +1514,19 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
 +					}
 +				}
 +			}
++			if issue := m.notificationView.GetSubjectIssue(); issue != nil {
++				issue.Parent = issueAction.Relationships.Parent
++				issue.SubIssues = issueAction.Relationships.SubIssues
++				issue.SubIssuesSummary = issueAction.Relationships.SubIssuesSummary
++				issue.BlockedBy = issueAction.Relationships.BlockedBy
++				issue.Blocking = issueAction.Relationships.Blocking
++				m.issueSidebar.SetRow(issue)
++			}
 +		}
  		m.syncSidebar()
  	}
  
-@@ -1215,6 +1319,18 @@ type issueProjectPreviewMsg struct {
+@@ -1215,6 +1327,18 @@ type issueProjectPreviewMsg struct {
  	Err        error
  }
  
@@ -1518,7 +1545,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
  func acceptsIssueProjectPreview(
  	currentGeneration uint64,
  	currentIssue bool,
-@@ -1223,6 +1339,14 @@ func acceptsIssueProjectPreview(
+@@ -1223,6 +1347,14 @@ func acceptsIssueProjectPreview(
  	return currentIssue && currentGeneration == messageGeneration
  }
  
@@ -1533,7 +1560,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1250,6 +1374,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1250,6 +1382,7 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
  	m.projectPreviewGeneration++
@@ -1541,7 +1568,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
  	m.prView.SetSummaryViewLess()
  	m.prView.GoToFirstTab()
  	var cachedPreview data.ProjectItems
-@@ -1282,6 +1407,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+@@ -1282,6 +1415,14 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
  		enrichCmd = m.prView.EnrichCurrRow()
  	}
  	var projectCmd tea.Cmd
@@ -1556,7 +1583,7 @@ index 457952d8aa757b6e46cb26b6ebb349c9e8702eae..4ef3cb501f778a5654aee736b0f1012b
  	if issue, ok := m.getCurrRowData().(*data.IssueData); ok &&
  		m.ctx.Config.Defaults.Layout.Projects.Enabled &&
  		issue.ID != "" {
-@@ -1294,7 +1427,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
+@@ -1294,7 +1435,7 @@ func (m *Model) onViewedRowChanged() tea.Cmd {
  	m.sidebar.ScrollToTop()
  	m.notificationView.ResetSubject()
  	keys.SetNotificationSubject(keys.NotificationSubjectNone)
