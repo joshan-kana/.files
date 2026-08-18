@@ -1109,3 +1109,2327 @@ index b421ab0..a428bef 100644
 +	require.NotContains(t, view, "Loading…")
 +	require.Contains(t, view, "Error Notification Issue")
 +}
+diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
+new file mode 100644
+index 0000000..74cfa8c
+--- /dev/null
++++ b/internal/data/relationship_mutations.go
+@@ -0,0 +1,294 @@
++package data
++
++import (
++	"fmt"
++	"strings"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
++
++type RelationshipMutation string
++
++const (
++	AddBlockedBy    RelationshipMutation = "add-blocked-by"
++	RemoveBlockedBy RelationshipMutation = "remove-blocked-by"
++	AddBlocking     RelationshipMutation = "add-blocking"
++	RemoveBlocking  RelationshipMutation = "remove-blocking"
++	SetParent       RelationshipMutation = "set-parent"
++	RemoveParent    RelationshipMutation = "remove-parent"
++	AddSubIssue     RelationshipMutation = "add-sub-issue"
++	RemoveSubIssue  RelationshipMutation = "remove-sub-issue"
++)
++
++var relationshipGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++	return client.Do(query, variables, result)
++}
++
++var fetchIssueRelationshipsForMutation = FetchIssueRelationships
++
++// FetchRelationshipCandidates searches accessible GitHub issues for the
++// relationship editor. The search endpoint remains the authority for which
++// issues the current account can see.
++func FetchRelationshipCandidates(query string, limit int) ([]RelatedIssue, error) {
++	if limit < 1 {
++		limit = 25
++	}
++	response, err := FetchIssues(query, limit, nil, false)
++	if err != nil {
++		return nil, err
++	}
++	candidates := make([]RelatedIssue, 0, len(response.Issues))
++	for _, issue := range response.Issues {
++		candidates = append(candidates, RelatedIssue{
++			ID: issue.ID, Number: issue.Number, Title: issue.Title, State: issue.State,
++			URL: issue.Url, Repository: issue.Repository,
++		})
++	}
++	return candidates, nil
++}
++
++func FetchProjectRelationshipCandidates(
++	projectID, query string,
++	limit int,
++) ([]RelatedIssue, error) {
++	if projectID == "" {
++		return nil, fmt.Errorf("GitHub Project is unavailable")
++	}
++	if limit < 1 {
++		limit = 25
++	}
++	client, err := projectGraphQLClient()
++	if err != nil {
++		return nil, err
++	}
++	var result []RelatedIssue
++	var after *string
++	seenCursors := make(map[string]struct{})
++	needle := strings.ToLower(strings.TrimSpace(query))
++	seen := make(map[string]struct{})
++	for {
++		var response struct {
++			Node struct {
++				Items struct {
++					Nodes []struct {
++						Content struct {
++							ID         string
++							Number     int
++							Title      string
++							State      string
++							URL        string
++							Repository Repository
++						} `graphql:"content"`
++					} `graphql:"nodes"`
++					PageInfo PageInfo
++				} `graphql:"items(first: 100, after: $after)"`
++			} `graphql:"node(id: $id)"`
++		}
++		if err := projectGraphQLRead(
++			client,
++			`query ProjectRelationshipCandidates($id: ID!, $after: String) {
++  node(id: $id) { ... on ProjectV2 {
++    items(first: 100, after: $after) { nodes { content { ... on Issue { id number title state url repository { nameWithOwner } } } } pageInfo { hasNextPage endCursor } }
++  } }
++}`,
++			map[string]interface{}{"id": projectID, "after": after},
++			&response,
++		); err != nil {
++			return nil, err
++		}
++		for _, item := range response.Node.Items.Nodes {
++			issue := item.Content
++			if issue.ID == "" ||
++				(needle != "" && !strings.Contains(strings.ToLower(issue.Title), needle) && !strings.Contains(strings.ToLower(fmt.Sprintf("%d", issue.Number)), needle)) {
++				continue
++			}
++			if _, ok := seen[issue.ID]; ok {
++				continue
++			}
++			seen[issue.ID] = struct{}{}
++			result = append(
++				result,
++				RelatedIssue{
++					ID:         issue.ID,
++					Number:     issue.Number,
++					Title:      issue.Title,
++					State:      issue.State,
++					URL:        issue.URL,
++					Repository: issue.Repository,
++				},
++			)
++			if len(result) == limit {
++				return result, nil
++			}
++		}
++		if !response.Node.Items.PageInfo.HasNextPage {
++			break
++		}
++		if response.Node.Items.PageInfo.EndCursor == "" {
++			return nil, fmt.Errorf("Project candidate pagination returned an empty cursor")
++		}
++		cursor := response.Node.Items.PageInfo.EndCursor
++		if _, ok := seenCursors[cursor]; ok {
++			return nil, fmt.Errorf("Project candidate pagination stalled on cursor %q", cursor)
++		}
++		seenCursors[cursor] = struct{}{}
++		after = &cursor
++	}
++	return result, nil
++}
++
++// MutateIssueRelationship performs one live-validated native relationship write
++// and returns the authoritative relationship state fetched after the write.
++func MutateIssueRelationship(
++	issueID, targetID string,
++	mutation RelationshipMutation,
++) (IssueRelationships, error) {
++	if issueID == "" || targetID == "" {
++		return IssueRelationships{}, fmt.Errorf(
++			"relationship mutation requires issue and target IDs",
++		)
++	}
++	if issueID == targetID {
++		return IssueRelationships{}, fmt.Errorf("an issue cannot relate to itself")
++	}
++	current, err := fetchIssueRelationshipsForMutation(issueID)
++	if err != nil {
++		return IssueRelationships{}, fmt.Errorf("live relationship validation failed: %w", err)
++	}
++	if err := validateRelationshipMutation(current, targetID, mutation); err != nil {
++		return IssueRelationships{}, err
++	}
++
++	client, err := relationshipGraphQLClient()
++	if err != nil {
++		return IssueRelationships{}, err
++	}
++	query, variables := relationshipMutationRequest(issueID, targetID, mutation)
++	if query == "" {
++		return IssueRelationships{}, fmt.Errorf("unsupported relationship mutation %q", mutation)
++	}
++	var response map[string]interface{}
++	if err := relationshipGraphQLDo(client, query, variables, &response); err != nil {
++		return IssueRelationships{}, err
++	}
++	updated, err := fetchIssueRelationshipsForMutation(issueID)
++	if err != nil {
++		return IssueRelationships{}, fmt.Errorf(
++			"relationship write succeeded but authoritative refetch failed: %w",
++			err,
++		)
++	}
++	return updated, nil
++}
++
++func relationshipGraphQLClient() (*gh.GraphQLClient, error) {
++	if client == nil {
++		var err error
++		client, err = gh.DefaultGraphQLClient()
++		if err != nil {
++			return nil, err
++		}
++	}
++	return client, nil
++}
++
++func validateRelationshipMutation(
++	current IssueRelationships,
++	targetID string,
++	mutation RelationshipMutation,
++) error {
++	contains := func(issues []RelatedIssue) bool {
++		for _, issue := range issues {
++			if issue.ID == targetID {
++				return true
++			}
++		}
++		return false
++	}
++	switch mutation {
++	case AddBlockedBy, AddBlocking, AddSubIssue:
++		if contains(current.BlockedBy.Nodes) && mutation == AddBlockedBy {
++			return fmt.Errorf("blocked-by relationship already exists")
++		}
++		if contains(current.Blocking.Nodes) && mutation == AddBlocking {
++			return fmt.Errorf("blocking relationship already exists")
++		}
++		if contains(current.SubIssues.Nodes) && mutation == AddSubIssue {
++			return fmt.Errorf("sub-issue relationship already exists")
++		}
++	case RemoveBlockedBy:
++		if !contains(current.BlockedBy.Nodes) {
++			return fmt.Errorf("blocked-by relationship is not present in live state")
++		}
++	case RemoveBlocking:
++		if !contains(current.Blocking.Nodes) {
++			return fmt.Errorf("blocking relationship is not present in live state")
++		}
++	case SetParent:
++		if current.Parent != nil {
++			return fmt.Errorf("parent already exists; remove it before setting another parent")
++		}
++	case RemoveParent:
++		if current.Parent == nil || current.Parent.ID != targetID {
++			return fmt.Errorf("requested parent is not present in live state")
++		}
++	case RemoveSubIssue:
++		if !contains(current.SubIssues.Nodes) {
++			return fmt.Errorf("sub-issue relationship is not present in live state")
++		}
++	default:
++		return fmt.Errorf("unsupported relationship mutation %q", mutation)
++	}
++	return nil
++}
++
++func relationshipMutationRequest(
++	issueID, targetID string,
++	mutation RelationshipMutation,
++) (string, map[string]interface{}) {
++	input := map[string]interface{}{}
++	switch mutation {
++	case AddBlockedBy:
++		input["issueId"], input["blockingIssueId"] = issueID, targetID
++		return `mutation AddBlockedBy($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case RemoveBlockedBy:
++		input["issueId"], input["blockingIssueId"] = issueID, targetID
++		return `mutation RemoveBlockedBy($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case AddBlocking:
++		input["issueId"], input["blockingIssueId"] = targetID, issueID
++		return `mutation AddBlocking($input: AddBlockedByInput!) { addBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case RemoveBlocking:
++		input["issueId"], input["blockingIssueId"] = targetID, issueID
++		return `mutation RemoveBlocking($input: RemoveBlockedByInput!) { removeBlockedBy(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case SetParent:
++		input["issueId"], input["subIssueId"], input["replaceParent"] = targetID, issueID, true
++		return `mutation SetParent($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case RemoveParent:
++		input["issueId"], input["subIssueId"] = targetID, issueID
++		return `mutation RemoveParent($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case AddSubIssue:
++		input["issueId"], input["subIssueId"] = issueID, targetID
++		return `mutation AddSubIssue($input: AddSubIssueInput!) { addSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	case RemoveSubIssue:
++		input["issueId"], input["subIssueId"] = issueID, targetID
++		return `mutation RemoveSubIssue($input: RemoveSubIssueInput!) { removeSubIssue(input: $input) { clientMutationId } }`, map[string]interface{}{
++			"input": input,
++		}
++	default:
++		return "", nil
++	}
++}
+diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
+new file mode 100644
+index 0000000..e73d7d9
+--- /dev/null
++++ b/internal/data/relationship_mutations_test.go
+@@ -0,0 +1,325 @@
++package data
++
++import (
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
++
++func TestValidateRelationshipMutationUsesLiveState(t *testing.T) {
++	current := IssueRelationships{
++		Parent:    &RelatedIssue{ID: "parent"},
++		SubIssues: RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "child"}}},
++		BlockedBy: RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "prereq"}}},
++		Blocking:  RelatedIssueConnection{Nodes: []RelatedIssue{{ID: "downstream"}}},
++	}
++	for _, test := range []struct {
++		name    string
++		id      string
++		mut     RelationshipMutation
++		wantErr bool
++	}{
++		{"duplicate prerequisite", "prereq", AddBlockedBy, true},
++		{"missing prerequisite removal", "missing", RemoveBlockedBy, true},
++		{"duplicate child", "child", AddSubIssue, true},
++		{"parent replacement", "other-parent", SetParent, true},
++		{"current parent removal", "parent", RemoveParent, false},
++		{"new dependency", "new", AddBlocking, false},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			if err := validateRelationshipMutation(
++				current,
++				test.id,
++				test.mut,
++			); (err != nil) != test.wantErr {
++				t.Fatalf("validateRelationshipMutation() error = %v, wantErr %v", err, test.wantErr)
++			}
++		})
++	}
++}
++
++func TestRelationshipMutationRequestInvertsBlockingDirection(t *testing.T) {
++	_, variables := relationshipMutationRequest("issue", "target", AddBlocking)
++	input := variables["input"].(map[string]interface{})
++	if input["issueId"] != "target" || input["blockingIssueId"] != "issue" {
++		t.Fatalf("AddBlocking input = %#v, want target blocking issue", input)
++	}
++}
++
++func TestFetchProjectRelationshipCandidatesUsesGraphQLDecodePath(t *testing.T) {
++	originalClient := projectGraphQLClient
++	originalDo := projectGraphQLDo
++	defer func() {
++		projectGraphQLClient = originalClient
++		projectGraphQLDo = originalDo
++	}()
++	var requestCount int
++	server := httptest.NewServer(
++		http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
++			requestCount++
++			if request.Method != http.MethodPost || request.URL.Path != "/graphql" {
++				t.Errorf(
++					"GraphQL request = %s %s, want POST /graphql",
++					request.Method,
++					request.URL.Path,
++				)
++			}
++			var body struct {
++				Query     string                 `json:"query"`
++				Variables map[string]interface{} `json:"variables"`
++			}
++			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
++				http.Error(response, err.Error(), http.StatusBadRequest)
++				return
++			}
++			if body.Variables["id"] != "project" || body.Query == "" {
++				t.Errorf("GraphQL request payload = %#v, want project query", body)
++			}
++			cursor := ""
++			if value, ok := body.Variables["after"].(string); ok {
++				cursor = value
++			}
++			payload := map[string]interface{}{
++				"data": map[string]interface{}{
++					"node": map[string]interface{}{
++						"items": map[string]interface{}{
++							"nodes": []map[string]interface{}{},
++							"pageInfo": map[string]interface{}{
++								"hasNextPage": true,
++								"endCursor":   "cursor-1",
++							},
++						},
++					},
++				},
++			}
++			items := payload["data"].(map[string]interface{})["node"].(map[string]interface{})["items"].(map[string]interface{})
++			if cursor == "" {
++				items["nodes"] = []map[string]interface{}{
++					{
++						"content": map[string]interface{}{
++							"id":         "issue-1",
++							"number":     1,
++							"title":      "First issue",
++							"state":      "OPEN",
++							"url":        "https://github.com/acme/app/issues/1",
++							"repository": map[string]interface{}{"nameWithOwner": "acme/app"},
++						},
++					},
++					{"content": map[string]interface{}{}},
++					{
++						"content": map[string]interface{}{
++							"id":         "issue-1",
++							"number":     1,
++							"title":      "Duplicate",
++							"state":      "OPEN",
++							"url":        "",
++							"repository": map[string]interface{}{"nameWithOwner": "acme/app"},
++						},
++					},
++				}
++			} else {
++				items["nodes"] = []map[string]interface{}{
++					{
++						"content": map[string]interface{}{
++							"id":         "issue-2",
++							"number":     2,
++							"title":      "Second issue",
++							"state":      "CLOSED",
++							"url":        "https://github.com/acme/app/issues/2",
++							"repository": map[string]interface{}{"nameWithOwner": "acme/app"},
++						},
++					},
++				}
++				items["pageInfo"] = map[string]interface{}{
++					"hasNextPage": false,
++					"endCursor":   "cursor-1",
++				}
++			}
++			if err := json.NewEncoder(response).Encode(payload); err != nil {
++				t.Fatalf("encode GraphQL response: %v", err)
++			}
++		}),
++	)
++	defer server.Close()
++
++	transport := roundTripperFunc(func(request *http.Request) (*http.Response, error) {
++		request.URL.Scheme = "http"
++		request.URL.Host = server.Listener.Addr().String()
++		return http.DefaultTransport.RoundTrip(request)
++	})
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) {
++		return gh.NewGraphQLClient(gh.ClientOptions{
++			Host:      "github.com",
++			AuthToken: "test-token",
++			Transport: transport,
++		})
++	}
++	projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		return client.Do(query, variables, result)
++	}
++
++	candidates, err := FetchProjectRelationshipCandidates("project", "issue", 10)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if requestCount != 2 {
++		t.Fatalf("GraphQL request count = %d, want 2", requestCount)
++	}
++	if len(candidates) != 2 || candidates[0].ID != "issue-1" || candidates[1].ID != "issue-2" {
++		t.Fatalf("unexpected candidates: %#v", candidates)
++	}
++	if candidates[0].Repository.NameWithOwner != "acme/app" || candidates[0].Number != 1 ||
++		candidates[0].Title != "First issue" ||
++		candidates[0].State != "OPEN" ||
++		candidates[0].URL == "" {
++		t.Fatalf("decoded first issue: %#v", candidates[0])
++	}
++	filtered, err := FetchProjectRelationshipCandidates("project", "second", 10)
++	if err != nil || len(filtered) != 1 || filtered[0].ID != "issue-2" {
++		t.Fatalf("filtered candidates = %#v, err = %v", filtered, err)
++	}
++	limited, err := FetchProjectRelationshipCandidates("project", "", 1)
++	if err != nil || len(limited) != 1 || limited[0].ID != "issue-1" {
++		t.Fatalf("limited candidates = %#v, err = %v", limited, err)
++	}
++}
++
++func TestFetchProjectRelationshipCandidatesRejectsRepeatedCursor(t *testing.T) {
++	originalClient := projectGraphQLClient
++	originalDo := projectGraphQLDo
++	defer func() {
++		projectGraphQLClient = originalClient
++		projectGraphQLDo = originalDo
++	}()
++
++	server := httptest.NewServer(
++		http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
++			if request.Method != http.MethodPost || request.URL.Path != "/graphql" {
++				t.Errorf(
++					"GraphQL request = %s %s, want POST /graphql",
++					request.Method,
++					request.URL.Path,
++				)
++			}
++			var body struct {
++				Query     string                 `json:"query"`
++				Variables map[string]interface{} `json:"variables"`
++			}
++			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
++				t.Errorf("decode GraphQL request: %v", err)
++			}
++			if body.Variables["id"] != "project" || body.Query == "" {
++				t.Errorf("GraphQL request payload = %#v, want project query", body)
++			}
++			payload := map[string]interface{}{
++				"data": map[string]interface{}{
++					"node": map[string]interface{}{
++						"items": map[string]interface{}{
++							"nodes": []map[string]interface{}{
++								{
++									"content": map[string]interface{}{
++										"id":     "issue-1",
++										"number": 1,
++										"title":  "First issue",
++									},
++								},
++							},
++							"pageInfo": map[string]interface{}{
++								"hasNextPage": true,
++								"endCursor":   "stuck",
++							},
++						},
++					},
++				},
++			}
++			if err := json.NewEncoder(response).Encode(payload); err != nil {
++				t.Fatalf("encode GraphQL response: %v", err)
++			}
++		}),
++	)
++	defer server.Close()
++	transport := roundTripperFunc(func(request *http.Request) (*http.Response, error) {
++		request.URL.Scheme = "http"
++		request.URL.Host = server.Listener.Addr().String()
++		return http.DefaultTransport.RoundTrip(request)
++	})
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) {
++		return gh.NewGraphQLClient(
++			gh.ClientOptions{Host: "github.com", AuthToken: "test-token", Transport: transport},
++		)
++	}
++	projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		return client.Do(query, variables, result)
++	}
++
++	_, err := FetchProjectRelationshipCandidates("project", "", 10)
++	if err == nil || err.Error() != `Project candidate pagination stalled on cursor "stuck"` {
++		t.Fatalf("FetchProjectRelationshipCandidates() error = %v, want repeated cursor error", err)
++	}
++}
++
++func TestFetchProjectRelationshipCandidatesRejectsEmptyCursor(t *testing.T) {
++	originalClient := projectGraphQLClient
++	originalDo := projectGraphQLDo
++	defer func() {
++		projectGraphQLClient = originalClient
++		projectGraphQLDo = originalDo
++	}()
++
++	server := httptest.NewServer(
++		http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
++			payload := map[string]interface{}{
++				"data": map[string]interface{}{
++					"node": map[string]interface{}{
++						"items": map[string]interface{}{
++							"nodes": []map[string]interface{}{
++								{
++									"content": map[string]interface{}{
++										"id":     "issue-1",
++										"number": 1,
++										"title":  "First issue",
++									},
++								},
++							},
++							"pageInfo": map[string]interface{}{
++								"hasNextPage": true,
++								"endCursor":   "",
++							},
++						},
++					},
++				},
++			}
++			if err := json.NewEncoder(response).Encode(payload); err != nil {
++				t.Fatalf("encode GraphQL response: %v", err)
++			}
++		}),
++	)
++	defer server.Close()
++	transport := roundTripperFunc(func(request *http.Request) (*http.Response, error) {
++		request.URL.Scheme = "http"
++		request.URL.Host = server.Listener.Addr().String()
++		return http.DefaultTransport.RoundTrip(request)
++	})
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) {
++		return gh.NewGraphQLClient(
++			gh.ClientOptions{Host: "github.com", AuthToken: "test-token", Transport: transport},
++		)
++	}
++	projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		return client.Do(query, variables, result)
++	}
++
++	_, err := FetchProjectRelationshipCandidates("project", "", 10)
++	if err == nil || err.Error() != "Project candidate pagination returned an empty cursor" {
++		t.Fatalf("FetchProjectRelationshipCandidates() error = %v, want empty cursor error", err)
++	}
++}
++
++type roundTripperFunc func(*http.Request) (*http.Response, error)
++
++func (roundTripper roundTripperFunc) RoundTrip(request *http.Request) (*http.Response, error) {
++	return roundTripper(request)
++}
+diff --git a/internal/data/relationships.go b/internal/data/relationships.go
+new file mode 100644
+index 0000000..c642b3b
+--- /dev/null
++++ b/internal/data/relationships.go
+@@ -0,0 +1,34 @@
++package data
++
++import "fmt"
++
++// RelationshipIndicators returns a compact, stable list for issue rows. The
++// symbols are intentionally unobtrusive and do not imply workflow state.
++func (r IssueRelationships) Indicators() string {
++	indicators := ""
++	if r.Parent != nil {
++		indicators += "↳"
++	}
++	if r.SubIssues.TotalCount > 0 {
++		indicators += "⊞"
++	}
++	if r.BlockedBy.TotalCount > 0 {
++		indicators += "⇠"
++	}
++	if r.Blocking.TotalCount > 0 {
++		indicators += "⇢"
++	}
++	return indicators
++}
++
++func (r RelatedIssue) Identifier() string {
++	return fmt.Sprintf("%s#%d", r.Repository.NameWithOwner, r.Number)
++}
++
++func (r RelatedIssue) Summary() string {
++	state := "open"
++	if r.State == "CLOSED" {
++		state = "closed"
++	}
++	return fmt.Sprintf("%s %s — %s", r.Identifier(), r.Title, state)
++}
+diff --git a/internal/data/relationships_pagination_test.go b/internal/data/relationships_pagination_test.go
+new file mode 100644
+index 0000000..fd32fee
+--- /dev/null
++++ b/internal/data/relationships_pagination_test.go
+@@ -0,0 +1,148 @@
++package data
++
++import (
++	"encoding/json"
++	"fmt"
++	"strings"
++	"testing"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++	graphql "github.com/cli/shurcooL-graphql"
++	"github.com/stretchr/testify/require"
++)
++
++func TestFetchIssueRelationshipsPaginatesAllConnections(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, variables map[string]interface{}) error {
++		after := ""
++		if cursor, ok := variables["after"].(*graphql.String); ok && cursor != nil {
++			after = string(*cursor)
++		}
++		page := 0
++		if after != "" {
++			page = 1
++		}
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{}},
++		}
++		issue := payload["node"].(map[string]interface{})["issue"].(map[string]interface{})
++		if page == 0 {
++			issue["parent"] = map[string]interface{}{
++				"id":         "parent-1",
++				"number":     1,
++				"title":      "Parent",
++				"state":      "OPEN",
++				"repository": map[string]interface{}{"nameWithOwner": "o/r"},
++			}
++			issue["subIssuesSummary"] = map[string]interface{}{"total": 101, "completed": 4}
++		}
++		field := "subIssues"
++		queryJSON := fmt.Sprintf("%T", result)
++		if strings.Contains(queryJSON, "BlockedBy") {
++			field = "blockedBy"
++		} else if strings.Contains(queryJSON, "Blocking") {
++			field = "blocking"
++		}
++		nodes := []map[string]interface{}{}
++		start := page * 100
++		end := start + 1
++		if page == 0 {
++			end = 100
++		}
++		for i := start; i < end; i++ {
++			nodes = append(nodes, map[string]interface{}{
++				"id": fmt.Sprintf("%s-%d", field, i), "number": i + 1,
++				"title": fmt.Sprintf("%s %d", field, i), "state": "OPEN",
++				"repository": map[string]interface{}{"nameWithOwner": "o/r"},
++			})
++		}
++		issue[field] = map[string]interface{}{
++			"nodes": nodes, "totalCount": 101,
++			"pageInfo": map[string]interface{}{"hasNextPage": page == 0, "endCursor": "cursor-100"},
++		}
++		encoded, err := json.Marshal(payload)
++		require.NoError(t, err)
++		return json.Unmarshal(encoded, result)
++	}
++
++	got, err := FetchIssueRelationships("issue-1")
++	require.NoError(t, err)
++	require.Len(t, got.SubIssues.Nodes, 101)
++	require.Len(t, got.BlockedBy.Nodes, 101)
++	require.Len(t, got.Blocking.Nodes, 101)
++	require.Equal(t, 101, got.SubIssues.TotalCount)
++	require.Equal(t, 101, got.BlockedBy.TotalCount)
++	require.Equal(t, 101, got.Blocking.TotalCount)
++	require.Equal(t, "parent-1", got.Parent.ID)
++}
++
++func TestFetchIssueRelationshipsRejectsStalledPagination(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, _ map[string]interface{}) error {
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{
++				"subIssues": map[string]interface{}{
++					"nodes": []interface{}{}, "totalCount": 1,
++					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "same"},
++				},
++			}},
++		}
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		return json.Unmarshal(encoded, result)
++	}
++	_, err := FetchIssueRelationships("issue-1")
++	require.ErrorContains(t, err, "pagination cursor did not advance")
++}
++
++func TestFetchIssueRelationshipsRejectsCursorCycle(t *testing.T) {
++	originalClient := client
++	originalQuery := queryGraphQL
++	defer func() {
++		client = originalClient
++		queryGraphQL = originalQuery
++	}()
++	client = &gh.GraphQLClient{}
++	queryGraphQL = func(_ *gh.GraphQLClient, _ string, result interface{}, variables map[string]interface{}) error {
++		after := ""
++		if cursor, ok := variables["after"].(*graphql.String); ok && cursor != nil {
++			after = string(*cursor)
++		}
++		endCursor := "cursor-a"
++		switch after {
++		case "cursor-a":
++			endCursor = "cursor-b"
++		case "cursor-b":
++			endCursor = "cursor-a"
++		}
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{"issue": map[string]interface{}{
++				"subIssues": map[string]interface{}{
++					"nodes": []interface{}{}, "totalCount": 1,
++					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": endCursor},
++				},
++			}},
++		}
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		return json.Unmarshal(encoded, result)
++	}
++	_, err := FetchIssueRelationships("issue-1")
++	require.ErrorContains(t, err, "pagination cursor repeated")
++}
+diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
+new file mode 100644
+index 0000000..3d53627
+--- /dev/null
++++ b/internal/data/relationships_test.go
+@@ -0,0 +1,27 @@
++package data
++
++import "testing"
++
++func TestRelationshipIndicators(t *testing.T) {
++	r := IssueRelationships{
++		Parent:    &RelatedIssue{Number: 1},
++		SubIssues: RelatedIssueConnection{TotalCount: 2},
++		BlockedBy: RelatedIssueConnection{TotalCount: 1},
++		Blocking:  RelatedIssueConnection{TotalCount: 3},
++	}
++	if got, want := r.Indicators(), "↳⊞⇠⇢"; got != want {
++		t.Fatalf("Indicators() = %q, want %q", got, want)
++	}
++}
++
++func TestRelatedIssueSummaryIncludesRepositoryAndState(t *testing.T) {
++	r := RelatedIssue{
++		Number:     7,
++		Title:      "Planning",
++		State:      "CLOSED",
++		Repository: Repository{NameWithOwner: "org/repo"},
++	}
++	if got, want := r.Summary(), "org/repo#7 Planning — closed"; got != want {
++		t.Fatalf("Summary() = %q, want %q", got, want)
++	}
++}
+diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
+index f7de54e..659dadd 100644
+--- a/internal/tui/components/issuerow/issuerow.go
++++ b/internal/tui/components/issuerow/issuerow.go
+@@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
+ }
+ 
+ func (issue *Issue) renderTitle() string {
+-	return components.RenderIssueTitle(
++	title := components.RenderIssueTitle(
+ 		issue.Ctx,
+ 		issue.Data.State,
+ 		issue.Data.Title,
+ 		issue.Data.Number,
+ 	)
++	if indicators := issue.Data.NativeRelationships().Indicators(); indicators != "" {
++		title += " " + issue.getTextStyle().Foreground(issue.Ctx.Theme.FaintText).Render(indicators)
++	}
++	return title
+ }
+ 
+ func (issue *Issue) renderOpenedBy() string {
+diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
+index 439f5ac..b607be1 100644
+--- a/internal/tui/components/issueview/action.go
++++ b/internal/tui/components/issueview/action.go
+@@ -1,5 +1,7 @@
+ package issueview
+ 
++import "github.com/dlvhdr/gh-dash/v4/internal/data"
++
+ // IssueActionType identifies the type of action requested by a key press in the issue view.
+ type IssueActionType int
+ 
+@@ -12,9 +14,11 @@ const (
+ 	IssueActionCheckout
+ 	IssueActionClose
+ 	IssueActionReopen
++	IssueActionRelationshipUpdated
+ )
+ 
+ // IssueAction represents an action to be performed on an issue.
+ type IssueAction struct {
+-	Type IssueActionType
++	Type          IssueActionType
++	Relationships data.IssueRelationships
+ }
+diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
+new file mode 100644
+index 0000000..4def9d7
+--- /dev/null
++++ b/internal/tui/components/relationshipeditor/editor.go
+@@ -0,0 +1,824 @@
++package relationshipeditor
++
++import (
++	"fmt"
++	"strings"
++	"sync/atomic"
++	"time"
++
++	tea "charm.land/bubbletea/v2"
++	"charm.land/lipgloss/v2"
++	"github.com/charmbracelet/x/ansi"
++	"github.com/sahilm/fuzzy"
++
++	"charm.land/bubbles/v2/textinput"
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/inputbox"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++)
++
++type mode uint8
++
++const (
++	modeActions mode = iota
++	modeLoadingRelationships
++	modeRelationships
++	modeLoadingCandidates
++	modeCandidates
++	modeCandidateProjects
++	modeApplying
++)
++
++type candidateScope uint8
++
++const (
++	candidateScopeRepo candidateScope = iota
++	candidateScopeProject
++	candidateScopeAll
++)
++
++const candidateViewportSize = 10
++
++type action struct {
++	label    string
++	mutation data.RelationshipMutation
++}
++
++type RelationshipUpdatedMsg struct {
++	SessionID     uint64
++	IssueID       string
++	Relationships data.IssueRelationships
++	Err           error
++}
++
++type candidatesFetchedMsg struct {
++	SessionID  uint64
++	Query      string
++	Version    uint64
++	Candidates []data.RelatedIssue
++	Scope      candidateScope
++	ProjectID  string
++	Err        error
++}
++
++type candidateSearchMsg struct {
++	SessionID uint64
++	Query     string
++	Version   uint64
++}
++
++type relationshipsFetchedMsg struct {
++	SessionID     uint64
++	Relationships data.IssueRelationships
++	Err           error
++}
++
++var relationshipEditorSession uint64
++
++type Model struct {
++	ctx            *context.ProgramContext
++	issueID        string
++	current        data.IssueRelationships
++	actions        []action
++	selected       int
++	removeItems    []data.RelatedIssue
++	candidates     []data.RelatedIssue
++	filtered       []data.RelatedIssue
++	query          inputbox.Model
++	selectedRel    int
++	pending        data.RelationshipMutation
++	mode           mode
++	status         string
++	width          int
++	active         bool
++	initialized    bool
++	sessionID      uint64
++	searchVersion  uint64
++	filterMode     bool
++	repository     string
++	candidateScope candidateScope
++	projects       []data.Project
++	projectIndex   int
++	projectCursor  int
++}
++
++func New(ctx *context.ProgramContext, issue data.IssueData) Model {
++	input := inputbox.NewModel(ctx, inputbox.ModelOpts{TextInput: func() *textinput.Model {
++		ti := inputbox.DefaultTextInput(ctx)
++		return &ti
++	}()})
++	projects := make([]data.Project, 0, len(issue.ProjectItems.Nodes))
++	seenProjects := make(map[string]struct{})
++	for _, item := range issue.ProjectItems.Nodes {
++		if item.Project.ID == "" {
++			continue
++		}
++		if _, ok := seenProjects[item.Project.ID]; ok {
++			continue
++		}
++		seenProjects[item.Project.ID] = struct{}{}
++		projects = append(projects, item.Project)
++	}
++	return Model{
++		ctx: ctx, issueID: issue.ID, current: issue.NativeRelationships(),
++		actions: relationshipActions(issue.NativeRelationships()), query: input,
++		mode: modeActions, active: true, initialized: true,
++		sessionID:  atomic.AddUint64(&relationshipEditorSession, 1),
++		repository: issue.Repository.NameWithOwner, projects: projects,
++		candidateScope: candidateScopeRepo,
++	}
++}
++
++func (m Model) Active() bool { return m.active }
++
++func (m Model) SessionID() uint64 { return m.sessionID }
++
++func (m *Model) Refresh() tea.Cmd {
++	if !m.active || m.issueID == "" {
++		return nil
++	}
++	m.mode = modeLoadingRelationships
++	m.status = ""
++	return fetchRelationships(m.sessionID, m.issueID)
++}
++
++func (m *Model) Close() {
++	m.active = false
++	if m.initialized {
++		m.query.Blur()
++	}
++}
++
++func (m *Model) SetWidth(width int) {
++	m.width = width
++	if m.initialized {
++		m.query.SetWidth(width)
++	}
++}
++
++func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
++	m.ctx = ctx
++	if m.initialized {
++		m.query.UpdateProgramContext(ctx)
++	}
++}
++
++func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
++	switch msg := msg.(type) {
++	case relationshipsFetchedMsg:
++		if m.mode != modeLoadingRelationships || msg.SessionID != m.sessionID {
++			return m, nil
++		}
++		if msg.Err != nil {
++			m.pending = ""
++			m.removeItems = nil
++			m.status, m.mode = msg.Err.Error(), modeActions
++			return m, nil
++		}
++		m.current = msg.Relationships
++		m.actions = relationshipActions(msg.Relationships)
++		m.selected = 0
++		m.status = ""
++		m.selectedRel = 0
++		if isRemoval(m.pending) {
++			m.removeItems = relationshipItems(msg.Relationships, m.pending)
++			if len(m.removeItems) == 0 {
++				m.pending = ""
++				m.mode = modeActions
++				m.status = "No live relationship is available"
++				return m, nil
++			}
++			m.mode = modeRelationships
++		} else {
++			m.removeItems = nil
++			m.mode = modeActions
++		}
++		return m, nil
++	case candidatesFetchedMsg:
++		if (m.mode != modeLoadingCandidates && m.mode != modeCandidates) ||
++			msg.SessionID != m.sessionID || msg.Version != m.searchVersion ||
++			msg.Query != strings.TrimSpace(m.query.Value()) || msg.Scope != m.candidateScope ||
++			(msg.Scope == candidateScopeProject && msg.ProjectID != m.currentProjectID()) {
++			return m, nil
++		}
++		if msg.Err != nil {
++			m.status = msg.Err.Error()
++			m.mode = modeCandidates
++			if m.filterMode {
++				return m, m.query.Focus()
++			}
++			return m, nil
++		}
++		m.candidates, m.mode, m.status = msg.Candidates, modeCandidates, ""
++		m.filterCandidates()
++		return m, nil
++	case candidateSearchMsg:
++		if m.mode != modeCandidates || msg.SessionID != m.sessionID ||
++			msg.Version != m.searchVersion || msg.Query != strings.TrimSpace(m.query.Value()) {
++			return m, nil
++		}
++		if m.candidateScope == candidateScopeAll && msg.Query == "" {
++			return m, nil
++		}
++		return m, fetchCandidates(
++			m.sessionID,
++			msg.Version,
++			msg.Query,
++			m.candidateScope,
++			m.currentProjectID(),
++			m.repository,
++		)
++	case RelationshipUpdatedMsg:
++		if msg.SessionID != m.sessionID || msg.IssueID != m.issueID {
++			return m, nil
++		}
++		if msg.Err != nil {
++			m.status, m.mode = msg.Err.Error(), modeActions
++			return m, nil
++		}
++		m.Close()
++		return m, nil
++	case tea.KeyMsg:
++		if m.mode == modeCandidateProjects {
++			return m.updateCandidateProjects(msg)
++		}
++		if m.mode == modeCandidates {
++			return m.updateCandidates(msg)
++		}
++		if m.mode == modeApplying {
++			return m, nil
++		}
++		switch msg.String() {
++		case "esc":
++			if m.mode == modeRelationships {
++				m.mode = modeActions
++				m.removeItems = nil
++				m.selectedRel = 0
++				m.pending = ""
++				return m, nil
++			}
++			m.Close()
++			return m, nil
++		case "q":
++			m.Close()
++			return m, nil
++		case "up", "k":
++			m.move(-1)
++		case "down", "j":
++			m.move(1)
++		case "enter":
++			switch m.mode {
++			case modeActions:
++				if len(m.actions) == 0 {
++					m.status = "No editable relationships are available"
++					return m, nil
++				}
++				selected := m.actions[m.selected]
++				m.pending = selected.mutation
++				if isRemoval(selected.mutation) {
++					m.mode = modeLoadingRelationships
++					return m, fetchRelationships(m.sessionID, m.issueID)
++				}
++				m.mode = modeLoadingCandidates
++				m.filterMode = false
++				m.query.Blur()
++				m.candidates, m.filtered = nil, nil
++				return m, m.startCandidateSearch()
++			case modeRelationships:
++				if len(m.removeItems) == 0 {
++					m.status = "No live relationship is available"
++					return m, nil
++				}
++				target := m.removeItems[m.selectedRel]
++				m.mode = modeApplying
++				return m, applyMutation(m.sessionID, m.issueID, target.ID, m.pending)
++			}
++		}
++	}
++	return m, nil
++}
++
++func (m *Model) updateCandidates(msg tea.KeyMsg) (Model, tea.Cmd) {
++	if m.filterMode {
++		switch msg.String() {
++		case "tab":
++			return m.cycleCandidateScope()
++		case "esc":
++			m.filterMode = false
++			m.query.Blur()
++			return *m, nil
++		case "ctrl+c":
++			m.Close()
++			return *m, nil
++		case "up":
++			m.move(-1)
++			return *m, nil
++		case "down":
++			m.move(1)
++			return *m, nil
++		case "enter":
++			return m.selectCandidate()
++		}
++		return m.updateCandidateFilter(msg)
++	}
++	switch msg.String() {
++	case "esc":
++		m.mode, m.status = modeActions, ""
++		m.query.SetValue("")
++		m.query.Blur()
++		return *m, nil
++	case "/":
++		m.filterMode = true
++		return *m, m.query.Focus()
++	case "tab":
++		return m.cycleCandidateScope()
++	case "p":
++		if m.candidateScope == candidateScopeProject && len(m.projects) > 1 {
++			m.projectCursor = m.projectIndex
++			m.mode = modeCandidateProjects
++			m.query.Blur()
++			return *m, nil
++		}
++	case "up", "k":
++		m.move(-1)
++		return *m, nil
++	case "down", "j":
++		m.move(1)
++		return *m, nil
++	case "enter":
++		return m.selectCandidate()
++	}
++	if msg.String() == "q" {
++		m.Close()
++		return *m, nil
++	}
++	return *m, nil
++}
++
++func (m *Model) cycleCandidateScope() (Model, tea.Cmd) {
++	m.candidateScope = (m.candidateScope + 1) % 3
++	m.searchVersion++
++	m.selectedRel = 0
++	m.candidates, m.filtered = nil, nil
++	if m.filterMode {
++		m.mode = modeCandidates
++		m.status = "Searching…"
++		return *m, fetchCandidates(
++			m.sessionID,
++			m.searchVersion,
++			strings.TrimSpace(m.query.Value()),
++			m.candidateScope,
++			m.currentProjectID(),
++			m.repository,
++		)
++	}
++	m.status = ""
++	return *m, m.startCandidateSearch()
++}
++
++func (m *Model) startCandidateSearch() tea.Cmd {
++	query := strings.TrimSpace(m.query.Value())
++	if m.candidateScope == candidateScopeAll && query == "" {
++		m.mode = modeCandidates
++		return nil
++	}
++	m.mode = modeLoadingCandidates
++	return fetchCandidates(
++		m.sessionID,
++		m.searchVersion,
++		query,
++		m.candidateScope,
++		m.currentProjectID(),
++		m.repository,
++	)
++}
++
++func (m Model) currentProjectID() string {
++	if m.candidateScope != candidateScopeProject || len(m.projects) == 0 ||
++		m.projectIndex >= len(m.projects) {
++		return ""
++	}
++	return m.projects[m.projectIndex].ID
++}
++
++func (m *Model) updateCandidateProjects(msg tea.KeyMsg) (Model, tea.Cmd) {
++	if len(m.projects) == 0 {
++		m.mode = modeCandidates
++		return *m, nil
++	}
++	switch msg.String() {
++	case "esc":
++		m.mode = modeCandidates
++	case "up", "k":
++		m.projectCursor = (m.projectCursor - 1 + len(m.projects)) % len(m.projects)
++	case "down", "j":
++		m.projectCursor = (m.projectCursor + 1) % len(m.projects)
++	case "enter":
++		m.projectIndex = m.projectCursor
++		m.mode = modeCandidates
++		m.searchVersion++
++		m.selectedRel = 0
++		m.candidates, m.filtered = nil, nil
++		return *m, m.startCandidateSearch()
++	}
++	return *m, nil
++}
++
++func (m *Model) updateCandidateFilter(msg tea.KeyMsg) (Model, tea.Cmd) {
++	var cmd tea.Cmd
++	m.query, cmd = m.query.Update(msg)
++	if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++		m.candidates, m.filtered = nil, nil
++		m.selectedRel = 0
++		m.mode = modeCandidates
++		m.status = "Type / to search all accessible GitHub issues"
++	}
++	m.filterCandidates()
++	m.searchVersion++
++	version := m.searchVersion
++	query := strings.TrimSpace(m.query.Value())
++	searchCmd := tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg {
++		return candidateSearchMsg{SessionID: m.sessionID, Query: query, Version: version}
++	})
++	return *m, tea.Batch(cmd, searchCmd)
++}
++
++func (m *Model) selectCandidate() (Model, tea.Cmd) {
++	if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++		m.status = "Type / to search all accessible GitHub issues"
++		return *m, nil
++	}
++	if len(m.filtered) == 0 {
++		m.status = "No matching accessible issues"
++		return *m, nil
++	}
++	target := m.filtered[m.selectedRel]
++	m.mode = modeApplying
++	m.filterMode = false
++	m.query.Blur()
++	return *m, applyMutation(m.sessionID, m.issueID, target.ID, m.pending)
++}
++
++func (m *Model) filterCandidates() {
++	query := strings.TrimSpace(m.query.Value())
++	available := make([]data.RelatedIssue, 0, len(m.candidates))
++	for _, candidate := range m.candidates {
++		if candidate.ID == m.issueID || relationshipExists(m.current, candidate.ID, m.pending) {
++			continue
++		}
++		available = append(available, candidate)
++	}
++	if query == "" {
++		m.filtered = available
++		m.selectedRel = 0
++		return
++	}
++	values := make([]string, len(available))
++	for i, candidate := range available {
++		values[i] = candidate.Summary()
++	}
++	matches := fuzzy.Find(query, values)
++	m.filtered = make([]data.RelatedIssue, 0, len(matches))
++	for _, match := range matches {
++		filtered := available[match.Index]
++		m.filtered = append(m.filtered, filtered)
++	}
++	if m.selectedRel >= len(m.filtered) {
++		m.selectedRel = 0
++	}
++}
++
++func (m *Model) move(delta int) {
++	length := len(m.actions)
++	if m.mode == modeRelationships {
++		length = len(m.removeItems)
++	}
++	if m.mode == modeCandidates {
++		length = len(m.filtered)
++	}
++	if length == 0 {
++		return
++	}
++	if m.mode == modeCandidates || m.mode == modeRelationships {
++		m.selectedRel = (m.selectedRel + delta + length) % length
++	} else {
++		m.selected = (m.selected + delta + length) % length
++	}
++}
++
++func (m Model) View() string {
++	if !m.active {
++		return ""
++	}
++	lines := []string{"Edit relationships"}
++	switch m.mode {
++	case modeActions:
++		for i, item := range m.actions {
++			lines = append(lines, m.renderRow(item.label, "", i == m.selected))
++		}
++	case modeRelationships:
++		lines = append(lines, "Select a live relationship to remove")
++		start, end := visibleRange(len(m.removeItems), m.selectedRel, candidateViewportSize)
++		for i := start; i < end; i++ {
++			lines = append(lines, m.renderIssueRow(m.removeItems[i], i == m.selectedRel))
++		}
++	case modeCandidates:
++		lines = append(lines, "Scope: "+m.scopeLabel()+" · "+m.query.View())
++		if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++			lines = append(
++				lines,
++				m.ctx.Styles.Common.FaintTextStyle.Render(
++					"Type / to search all accessible GitHub issues",
++				),
++			)
++		} else {
++			start, end := visibleRange(len(m.filtered), m.selectedRel, candidateViewportSize)
++			for i := start; i < end; i++ {
++				lines = append(lines, m.renderIssueRow(m.filtered[i], i == m.selectedRel))
++			}
++			if len(m.filtered) > candidateViewportSize {
++				lines = append(
++					lines,
++					m.ctx.Styles.Common.FaintTextStyle.Render(
++						fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.filtered)),
++					),
++				)
++			}
++		}
++	case modeCandidateProjects:
++		lines = append(lines, "Choose a Project")
++		start, end := visibleRange(len(m.projects), m.projectCursor, candidateViewportSize)
++		for i := start; i < end; i++ {
++			project := m.projects[i]
++			lines = append(
++				lines,
++				m.renderRow(
++					project.Title,
++					fmt.Sprintf("%s #%d", project.Owner.Login(), project.Number),
++					i == m.projectCursor,
++				),
++			)
++		}
++		if len(m.projects) > candidateViewportSize {
++			lines = append(
++				lines,
++				m.ctx.Styles.Common.FaintTextStyle.Render(
++					fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.projects)),
++				),
++			)
++		}
++	case modeLoadingRelationships, modeLoadingCandidates, modeApplying:
++		lines = append(lines, "Working…")
++	}
++	if m.status != "" {
++		lines = append(lines, m.status)
++	}
++	if m.mode == modeCandidates {
++		if m.filterMode {
++			lines = append(
++				lines,
++				"type to filter · ↑/↓ select · Tab scope · Enter choose · Esc stop filtering",
++			)
++		} else {
++			help := "j/k/↑/↓ select · / filter · Tab scope · Enter choose · Esc back"
++			if m.candidateScope == candidateScopeProject && len(m.projects) > 1 {
++				help += " · p choose Project"
++			}
++			lines = append(lines, help)
++		}
++	} else {
++		lines = append(lines, "j/k/↑/↓ select · Enter choose · Esc back")
++	}
++	return strings.Join(lines, "\n")
++}
++
++func (m Model) renderRow(primary, secondary string, selected bool) string {
++	return m.renderPickerRow(primary, secondary, "", selected)
++}
++
++func (m Model) renderPickerRow(primary, secondary, trailing string, selected bool) string {
++	primaryStyle := lipgloss.NewStyle().Foreground(m.ctx.Theme.PrimaryText)
++	secondaryStyle := lipgloss.NewStyle().Foreground(m.ctx.Theme.SecondaryText)
++	faintStyle := lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText)
++	selectedBackground := m.ctx.Theme.SelectedBackground
++	hasSelectedBackground := selected &&
++		(selectedBackground.Light != nil || selectedBackground.Dark != nil)
++	backgroundStyle := lipgloss.NewStyle()
++	if hasSelectedBackground {
++		backgroundStyle = backgroundStyle.Background(selectedBackground)
++		primaryStyle = primaryStyle.Background(selectedBackground)
++		secondaryStyle = secondaryStyle.Background(selectedBackground)
++		faintStyle = faintStyle.Background(selectedBackground)
++	}
++	content := primaryStyle.Render(primary)
++	if secondary != "" {
++		content += backgroundStyle.Render("  ") + secondaryStyle.Render(secondary)
++	}
++	if trailing != "" {
++		content += backgroundStyle.Render("  ") + faintStyle.Render(trailing)
++	}
++	prefix := "  "
++	if selected {
++		prefix = m.ctx.Styles.Select.Pointer.
++			Background(selectedBackground).
++			Render("› ")
++		if !hasSelectedBackground {
++			prefix = m.ctx.Styles.Select.Pointer.Render("› ")
++		}
++	} else if hasSelectedBackground {
++		prefix = backgroundStyle.Render(prefix)
++	}
++	if m.width > 0 {
++		content = ansi.Truncate(content, max(0, m.width-lipgloss.Width(prefix)), "…")
++	}
++	row := prefix + content
++	if hasSelectedBackground && m.width > 0 {
++		padding := max(0, m.width-lipgloss.Width(row))
++		if padding > 0 {
++			row += backgroundStyle.Render(strings.Repeat(" ", padding))
++		}
++	}
++	return row
++}
++
++func (m Model) renderIssueRow(item data.RelatedIssue, selected bool) string {
++	state := strings.ToLower(item.State)
++	return m.renderPickerRow(
++		item.Title,
++		fmt.Sprintf("#%d  %s", item.Number, item.Repository.NameWithOwner),
++		state,
++		selected,
++	)
++}
++
++func (m Model) scopeLabel() string {
++	switch m.candidateScope {
++	case candidateScopeProject:
++		if len(m.projects) == 0 {
++			return "Project · No GitHub Project is available for this issue"
++		}
++		return "Project · " + m.projects[m.projectIndex].DisplayName(false)
++	case candidateScopeAll:
++		return "All"
++	default:
++		return "Repo · " + m.repository
++	}
++}
++
++func visibleRange(total, selected, size int) (int, int) {
++	if total <= 0 || size <= 0 {
++		return 0, 0
++	}
++	if selected < 0 {
++		selected = 0
++	}
++	if selected >= total {
++		selected = total - 1
++	}
++	if size > total {
++		size = total
++	}
++	start := selected - size/2
++	if start < 0 {
++		start = 0
++	}
++	end := start + size
++	if end > total {
++		end = total
++		start = end - size
++	}
++	return start, end
++}
++
++func relationshipActions(r data.IssueRelationships) []action {
++	items := []action{
++		{"Add blocked by", data.AddBlockedBy},
++		{"Add blocking", data.AddBlocking},
++		{"Add sub-issue", data.AddSubIssue},
++	}
++	if r.Parent == nil {
++		items = append(items, action{"Set parent", data.SetParent})
++	} else {
++		items = append(items, action{"Remove parent", data.RemoveParent})
++	}
++	if len(r.BlockedBy.Nodes) > 0 {
++		items = append(items, action{"Remove blocked by", data.RemoveBlockedBy})
++	}
++	if len(r.Blocking.Nodes) > 0 {
++		items = append(items, action{"Remove blocking", data.RemoveBlocking})
++	}
++	if len(r.SubIssues.Nodes) > 0 {
++		items = append(items, action{"Remove sub-issue", data.RemoveSubIssue})
++	}
++	return items
++}
++
++func relationshipItems(
++	r data.IssueRelationships,
++	mutation data.RelationshipMutation,
++) []data.RelatedIssue {
++	switch mutation {
++	case data.RemoveParent:
++		if r.Parent != nil {
++			return []data.RelatedIssue{*r.Parent}
++		}
++	case data.RemoveBlockedBy:
++		return r.BlockedBy.Nodes
++	case data.RemoveBlocking:
++		return r.Blocking.Nodes
++	case data.RemoveSubIssue:
++		return r.SubIssues.Nodes
++	}
++	return nil
++}
++
++func relationshipExists(
++	r data.IssueRelationships,
++	id string,
++	mutation data.RelationshipMutation,
++) bool {
++	switch mutation {
++	case data.AddBlockedBy:
++		for _, item := range r.BlockedBy.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	case data.AddBlocking:
++		for _, item := range r.Blocking.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	case data.AddSubIssue:
++		for _, item := range r.SubIssues.Nodes {
++			if item.ID == id {
++				return true
++			}
++		}
++	}
++	return false
++}
++
++func isRemoval(m data.RelationshipMutation) bool { return strings.HasPrefix(string(m), "remove-") }
++func fetchRelationships(sessionID uint64, id string) tea.Cmd {
++	return func() tea.Msg {
++		r, err := data.FetchIssueRelationships(id)
++		return relationshipsFetchedMsg{SessionID: sessionID, Relationships: r, Err: err}
++	}
++}
++
++func fetchCandidates(
++	sessionID, version uint64,
++	query string,
++	scope candidateScope,
++	projectID, repository string,
++) tea.Cmd {
++	return func() tea.Msg {
++		query = strings.TrimSpace(query)
++		var c []data.RelatedIssue
++		var err error
++		switch scope {
++		case candidateScopeRepo:
++			c, err = data.FetchRelationshipCandidates("repo:"+repository+" in:title "+query, 25)
++		case candidateScopeProject:
++			c, err = data.FetchProjectRelationshipCandidates(projectID, query, 50)
++		case candidateScopeAll:
++			if query == "" {
++				return candidatesFetchedMsg{
++					SessionID: sessionID,
++					Query:     query,
++					Version:   version,
++					Scope:     scope,
++					ProjectID: projectID,
++				}
++			}
++			c, err = data.FetchRelationshipCandidates("in:title "+query, 50)
++		}
++		return candidatesFetchedMsg{
++			SessionID:  sessionID,
++			Query:      query,
++			Version:    version,
++			Candidates: c,
++			Scope:      scope,
++			ProjectID:  projectID,
++			Err:        err,
++		}
++	}
++}
++
++func applyMutation(
++	sessionID uint64,
++	issueID, targetID string,
++	mutation data.RelationshipMutation,
++) tea.Cmd {
++	return func() tea.Msg {
++		r, err := data.MutateIssueRelationship(issueID, targetID, mutation)
++		return RelationshipUpdatedMsg{
++			SessionID:     sessionID,
++			IssueID:       issueID,
++			Relationships: r,
++			Err:           err,
++		}
++	}
++}
+diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
+new file mode 100644
+index 0000000..ef9467e
+--- /dev/null
++++ b/internal/tui/components/relationshipeditor/editor_test.go
+@@ -0,0 +1,485 @@
++package relationshipeditor
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++	"testing"
++
++	tea "charm.land/bubbletea/v2"
++	"charm.land/lipgloss/v2"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/data"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
++	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
++)
++
++func related(id, repo string, number int, title, state string) data.RelatedIssue {
++	return data.RelatedIssue{
++		ID: id, Number: number, Title: title, State: state,
++		Repository: data.Repository{NameWithOwner: repo},
++	}
++}
++
++func TestRelationshipActionsExposeAllApplicableOperations(t *testing.T) {
++	current := data.IssueRelationships{
++		Parent: &[]data.RelatedIssue{related("parent", "acme/app", 1, "Parent", "OPEN")}[0],
++		BlockedBy: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("blocked", "acme/app", 2, "Blocked", "OPEN")},
++		},
++		Blocking: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("blocking", "acme/app", 3, "Blocking", "CLOSED")},
++		},
++		SubIssues: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("child", "acme/app", 4, "Child", "OPEN")},
++		},
++	}
++
++	actions := relationshipActions(current)
++	mutations := make([]data.RelationshipMutation, 0, len(actions))
++	for _, item := range actions {
++		mutations = append(mutations, item.mutation)
++	}
++	require.ElementsMatch(t, []data.RelationshipMutation{
++		data.AddBlockedBy, data.AddBlocking, data.AddSubIssue, data.RemoveParent,
++		data.RemoveBlockedBy, data.RemoveBlocking, data.RemoveSubIssue,
++	}, mutations)
++	require.Equal(
++		t,
++		[]data.RelatedIssue{*current.Parent},
++		relationshipItems(current, data.RemoveParent),
++	)
++	require.Equal(t, current.BlockedBy.Nodes, relationshipItems(current, data.RemoveBlockedBy))
++	require.Equal(t, current.Blocking.Nodes, relationshipItems(current, data.RemoveBlocking))
++	require.Equal(t, current.SubIssues.Nodes, relationshipItems(current, data.RemoveSubIssue))
++}
++
++func TestRelationshipActionsOfferSetParentWhenAbsent(t *testing.T) {
++	actions := relationshipActions(data.IssueRelationships{})
++	require.Contains(t, mutationsOf(actions), data.SetParent)
++	require.NotContains(t, mutationsOf(actions), data.RemoveParent)
++}
++
++func TestFilterCandidatesIsFuzzyAndDoesNotMutateFetchedCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "self"})
++	m.pending = data.AddBlockedBy
++	m.current = data.IssueRelationships{
++		BlockedBy: data.RelatedIssueConnection{
++			Nodes: []data.RelatedIssue{related("existing", "acme/app", 2, "Fix cache", "OPEN")},
++		},
++	}
++	m.candidates = []data.RelatedIssue{
++		related("self", "acme/app", 1, "Current issue", "OPEN"),
++		related("existing", "acme/app", 2, "Fix cache", "OPEN"),
++		related("candidate", "octo/tools", 42, "Cache cleanup", "CLOSED"),
++	}
++	m.query.SetValue("cache")
++	m.filterCandidates()
++	require.Len(t, m.candidates, 3)
++	require.Len(t, m.filtered, 1)
++	require.Equal(t, "octo/tools#42 Cache cleanup — closed", m.filtered[0].Summary())
++
++	m.query.SetValue("tool")
++	m.filterCandidates()
++	require.Len(t, m.filtered, 1)
++	require.Equal(t, "octo/tools#42 Cache cleanup — closed", m.filtered[0].Summary())
++}
++
++func TestRelationshipEditorZeroValueIsSafe(t *testing.T) {
++	var m Model
++	require.NotPanics(t, func() {
++		m.SetWidth(80)
++		m.UpdateProgramContext(&context.ProgramContext{})
++		m.Close()
++	})
++}
++
++func TestRelationshipEditorRejectsStaleMessagesByMode(t *testing.T) {
++	m := Model{mode: modeActions, status: "ready"}
++	updated, cmd := m.Update(relationshipsFetchedMsg{Relationships: data.IssueRelationships{}})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Equal(t, "ready", updated.status)
++
++	updated, cmd = m.Update(RelationshipUpdatedMsg{Err: errors.New("write failed")})
++	require.Nil(t, cmd)
++	require.Equal(t, "write failed", updated.status)
++}
++
++func TestInitialRelationshipRefreshReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID: m.sessionID,
++		Relationships: data.IssueRelationships{
++			BlockedBy: data.RelatedIssueConnection{Nodes: []data.RelatedIssue{
++				related("blocked", "acme/app", 2, "Blocked", "OPEN"),
++			}},
++		},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Contains(t, mutationsOf(updated.actions), data.AddBlockedBy)
++	require.Contains(t, mutationsOf(updated.actions), data.RemoveBlockedBy)
++}
++
++func TestRemovalRefreshOpensLiveRelationshipPicker(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++	m.pending = data.RemoveBlocking
++	live := related("blocking", "acme/app", 3, "Blocking", "OPEN")
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID: m.sessionID,
++		Relationships: data.IssueRelationships{
++			Blocking: data.RelatedIssueConnection{Nodes: []data.RelatedIssue{live}},
++		},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeRelationships, updated.mode)
++	require.Equal(t, []data.RelatedIssue{live}, updated.removeItems)
++}
++
++func TestRemovalRefreshWithNoLiveTargetsReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeLoadingRelationships
++	m.pending = data.RemoveBlocking
++
++	updated, cmd := m.Update(relationshipsFetchedMsg{
++		SessionID:     m.sessionID,
++		Relationships: data.IssueRelationships{},
++	})
++	require.Nil(t, cmd)
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Empty(t, updated.pending)
++	require.Equal(t, "No live relationship is available", updated.status)
++}
++
++func TestEscFromRelationshipPickerReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeRelationships
++	m.pending = data.RemoveBlocking
++	m.removeItems = []data.RelatedIssue{related("blocking", "acme/app", 3, "Blocking", "OPEN")}
++	m.selectedRel = 1
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.True(t, updated.Active())
++	require.Equal(t, modeActions, updated.mode)
++	require.Nil(t, updated.removeItems)
++	require.Zero(t, updated.selectedRel)
++	require.Empty(t, updated.pending)
++}
++
++func TestEscFromActionMenuClosesEditor(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.False(t, updated.Active())
++}
++
++func TestEscFromCandidateNavigationReturnsToActionMenu(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidates = []data.RelatedIssue{related("candidate", "acme/app", 2, "Candidate", "OPEN")}
++	m.filterCandidates()
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.Nil(t, cmd)
++	require.True(t, updated.Active())
++	require.Equal(t, modeActions, updated.mode)
++}
++
++func TestRelationshipEditorUpdateMessageClosesOnSuccess(t *testing.T) {
++	m := Model{active: true, initialized: false, mode: modeApplying}
++	updated, cmd := m.Update(RelationshipUpdatedMsg{Relationships: data.IssueRelationships{}})
++	require.Nil(t, cmd)
++	require.False(t, updated.active)
++}
++
++func TestRelationshipEditorRejectsStaleSessionSuccess(t *testing.T) {
++	m := Model{active: true, issueID: "issue", sessionID: 2, mode: modeApplying}
++	updated, cmd := m.Update(RelationshipUpdatedMsg{
++		SessionID: 1,
++		IssueID:   "issue",
++	})
++	require.Nil(t, cmd)
++	require.True(t, updated.active)
++}
++
++func TestRelationshipEditorCannotCancelInFlightMutation(t *testing.T) {
++	m := Model{active: true, mode: modeApplying}
++	updated, cmd := m.Update(tea.KeyPressMsg{Text: "q"})
++	require.Nil(t, cmd)
++	require.True(t, updated.active)
++}
++
++func TestCandidatePickerUsesVimNavigationAndExplicitFilterMode(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "self"})
++	m.mode = modeCandidates
++	m.active = true
++	m.candidates = []data.RelatedIssue{
++		related("one", "acme/app", 1, "One", "OPEN"),
++		related("two", "acme/app", 2, "Two", "OPEN"),
++	}
++	m.filterCandidates()
++
++	m, _ = m.Update(tea.KeyPressMsg{Text: "j"})
++	require.Equal(t, 1, m.selectedRel)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "k"})
++	require.Equal(t, 0, m.selectedRel)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "/"})
++	require.True(t, m.filterMode)
++	m, _ = m.Update(tea.KeyPressMsg{Text: "j"})
++	require.Equal(t, "j", m.query.Value())
++	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++	require.False(t, m.filterMode)
++	require.True(t, m.Active())
++}
++
++func TestCandidateSummaryIncludesRepositoryNumberTitleAndState(t *testing.T) {
++	summary := related("id", "octo/tools", 42, "Cache cleanup", "CLOSED").Summary()
++	require.True(t, strings.Contains(summary, "octo/tools#42"))
++	require.True(t, strings.Contains(summary, "Cache cleanup"))
++	require.True(t, strings.Contains(summary, "closed"))
++}
++
++func TestCandidateScopeDefaultsAndCycles(t *testing.T) {
++	m := New(
++		&context.ProgramContext{},
++		data.IssueData{ID: "issue", Repository: data.Repository{NameWithOwner: "acme/app"}},
++	)
++	m.mode = modeCandidates
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.NotNil(t, cmd)
++	require.Equal(t, candidateScopeProject, updated.candidateScope)
++	updated.mode = modeCandidates
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.Equal(t, candidateScopeAll, updated.candidateScope)
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.Equal(t, candidateScopeRepo, updated.candidateScope)
++}
++
++func TestCandidateScopeTabDuringFilteringKeepsFilterModeAndRejectsStaleResponse(t *testing.T) {
++	m := New(
++		&context.ProgramContext{},
++		data.IssueData{ID: "issue", Repository: data.Repository{NameWithOwner: "acme/app"}},
++	)
++	m.mode = modeCandidates
++	m.filterMode = true
++	m.query.SetValue("seed")
++	m.searchVersion = 4
++
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.NotNil(t, cmd)
++	require.Equal(t, modeCandidates, updated.mode)
++	require.True(t, updated.filterMode)
++	require.Equal(t, "seed", updated.query.Value())
++	require.Equal(t, "Searching…", updated.status)
++	version := updated.searchVersion
++
++	for _, character := range []string{"p", "j", "k", "q"} {
++		updated, _ = updated.Update(tea.KeyPressMsg{Text: character})
++	}
++	require.Equal(t, "seedpjkq", updated.query.Value())
++	require.True(t, updated.filterMode)
++	require.Equal(t, modeCandidates, updated.mode)
++
++	stale, staleCmd := updated.Update(candidatesFetchedMsg{
++		SessionID:  updated.sessionID,
++		Query:      "seed",
++		Version:    version,
++		Scope:      candidateScopeProject,
++		ProjectID:  "",
++		Candidates: []data.RelatedIssue{related("stale", "acme/app", 1, "Stale", "OPEN")},
++	})
++	require.Nil(t, staleCmd)
++	require.Empty(t, stale.candidates)
++}
++
++func TestCandidateFetchErrorKeepsActiveFilterPicker(t *testing.T) {
++	for _, scope := range []candidateScope{candidateScopeRepo, candidateScopeAll} {
++		t.Run(scopeLabelForTest(scope), func(t *testing.T) {
++			m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++			m.mode = modeCandidates
++			m.candidateScope = scope
++			m.filterMode = true
++			m.query.SetValue("planning")
++			m.query.Focus()
++			m.searchVersion = 7
++
++			updated, cmd := m.Update(candidatesFetchedMsg{
++				SessionID: m.sessionID,
++				Query:     "planning",
++				Version:   m.searchVersion,
++				Scope:     scope,
++				Err:       errors.New("temporary GitHub failure"),
++			})
++
++			_ = cmd
++			require.Equal(t, modeCandidates, updated.mode)
++			require.True(t, updated.filterMode)
++			require.True(t, updated.query.Focused())
++			require.Equal(t, "planning", updated.query.Value())
++			require.Equal(t, "temporary GitHub failure", updated.status)
++		})
++	}
++}
++
++func scopeLabelForTest(scope candidateScope) string {
++	if scope == candidateScopeAll {
++		return "all"
++	}
++	return "repo"
++}
++
++func TestAllScopeEmptyQueryDoesNotFetchCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeAll
++	m.query.SetValue("")
++	cmd := m.startCandidateSearch()
++	updated := m
++	require.Nil(t, cmd)
++	require.Equal(t, modeCandidates, updated.mode)
++	require.Empty(t, updated.filtered)
++}
++
++func TestExactProjectChooserCancelKeepsCommittedProjectAndCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeProject
++	m.projects = []data.Project{
++		{ID: "project-a", Title: "Project A"},
++		{ID: "project-b", Title: "Project B"},
++	}
++	m.projectIndex = 0
++	m.candidates = []data.RelatedIssue{related("a-issue", "acme/app", 1, "Project A issue", "OPEN")}
++	m.filterCandidates()
++
++	updated, _ := m.Update(tea.KeyPressMsg{Text: "p"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Text: "j"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++
++	require.Equal(t, modeCandidates, updated.mode)
++	require.Equal(t, 0, updated.projectIndex)
++	require.Equal(t, "project-a", updated.currentProjectID())
++	require.Equal(t, "a-issue", updated.filtered[0].ID)
++}
++
++func TestExactProjectChooserEnterCommitsAndRejectsStaleProjectResult(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeProject
++	m.projects = []data.Project{
++		{ID: "project-a", Title: "Project A"},
++		{ID: "project-b", Title: "Project B"},
++	}
++	m.projectIndex = 0
++
++	updated, _ := m.Update(tea.KeyPressMsg{Text: "p"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Text: "j"})
++	updated, cmd := updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
++
++	require.NotNil(t, cmd)
++	require.Equal(t, 1, updated.projectIndex)
++	require.Equal(t, "project-b", updated.currentProjectID())
++	require.Equal(t, modeLoadingCandidates, updated.mode)
++	stale, staleCmd := updated.Update(candidatesFetchedMsg{
++		SessionID:  updated.sessionID,
++		Version:    updated.searchVersion,
++		Scope:      candidateScopeProject,
++		ProjectID:  "project-a",
++		Candidates: []data.RelatedIssue{related("stale", "acme/app", 1, "Stale", "OPEN")},
++	})
++	require.Nil(t, staleCmd)
++	require.Empty(t, stale.candidates)
++}
++
++func TestAllScopeClearingQueryDropsStaleCandidatesAndCannotSubmit(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeAll
++	m.query.SetValue("gh-dash")
++	m.candidates = []data.RelatedIssue{related("old", "acme/app", 1, "Old result", "OPEN")}
++	m.filterCandidates()
++	m.query.SetValue("")
++	m.filterMode = true
++	updated, _ := m.updateCandidateFilter(tea.KeyPressMsg{Code: tea.KeyBackspace})
++	require.Empty(t, updated.candidates)
++	require.Empty(t, updated.filtered)
++	updated.mode = modeCandidates
++	updated, cmd := updated.selectCandidate()
++	require.Nil(t, cmd)
++	require.Empty(t, updated.candidates)
++}
++
++func TestCandidateFilterKeepsPJKQAsQueryText(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.filterMode = true
++	for _, char := range []string{"p", "j", "k", "q"} {
++		m, _ = m.Update(tea.KeyPressMsg{Text: char})
++	}
++	require.Equal(t, "pjkq", m.query.Value())
++}
++
++func TestVisibleRangeKeepsSelectionInViewport(t *testing.T) {
++	start, end := visibleRange(53, 52, candidateViewportSize)
++	require.Equal(t, 43, start)
++	require.Equal(t, 53, end)
++	start, end = visibleRange(3, 2, candidateViewportSize)
++	require.Equal(t, 0, start)
++	require.Equal(t, 3, end)
++}
++
++func TestCandidateProjectPickerUsesBoundedViewport(t *testing.T) {
++	projects := make([]data.Project, 15)
++	for index := range projects {
++		projects[index] = data.Project{
++			ID:     fmt.Sprintf("project-%d", index),
++			Title:  fmt.Sprintf("Project %d", index),
++			Number: index + 1,
++		}
++	}
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.ctx = &context.ProgramContext{Theme: *theme.DefaultTheme}
++	m.mode = modeCandidateProjects
++	m.projects = projects
++	view := m.View()
++	require.Contains(t, view, "Project 0")
++	require.Contains(t, view, "Project 9")
++	require.NotContains(t, view, "Project 10")
++	require.Contains(t, view, "showing 1-10 of 15")
++}
++
++func TestRelationshipPickerTruncatesRowsToWidth(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.ctx = &context.ProgramContext{Theme: *theme.DefaultTheme}
++	m.mode = modeCandidates
++	m.width = 24
++	row := m.renderIssueRow(
++		related(
++			"candidate",
++			"very-long-owner/very-long-repo",
++			123,
++			"A very long issue title",
++			"OPEN",
++		),
++		true,
++	)
++	require.LessOrEqual(t, lipgloss.Width(row), m.width)
++}
++
++func mutationsOf(actions []action) []data.RelationshipMutation {
++	mutations := make([]data.RelationshipMutation, 0, len(actions))
++	for _, item := range actions {
++		mutations = append(mutations, item.mutation)
++	}
++	return mutations
++}
+diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
+index 41e14c2..d50a39f 100644
+--- a/internal/tui/keys/issueKeys.go
++++ b/internal/tui/keys/issueKeys.go
+@@ -20,6 +20,7 @@ type IssueKeyMap struct {
+ 	ToggleSmartFiltering key.Binding
+ 	ViewPRs              key.Binding
+ 	EditProject          key.Binding
++	EditRelationships    key.Binding
+ }
+ 
+ var IssueKeys = IssueKeyMap{
+@@ -63,6 +64,10 @@ var IssueKeys = IssueKeyMap{
+ 		key.WithKeys("f"),
+ 		key.WithHelp("f", "edit Project field"),
+ 	),
++	EditRelationships: key.NewBinding(
++		key.WithKeys("i"),
++		key.WithHelp("i", "edit relationships"),
++	),
+ }
+ 
+ func IssueFullHelp() []key.Binding {
+@@ -77,6 +82,7 @@ func IssueFullHelp() []key.Binding {
+ 		IssueKeys.ToggleSmartFiltering,
+ 		IssueKeys.ViewPRs,
+ 		IssueKeys.EditProject,
++		IssueKeys.EditRelationships,
+ 	}
+ }
+ 
+@@ -125,6 +131,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
+ 			key = &IssueKeys.ViewPRs
+ 		case "editProject":
+ 			key = &IssueKeys.EditProject
++		case "editRelationships":
++			key = &IssueKeys.EditRelationships
+ 		default:
+ 			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
+ 		}
+diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
+new file mode 100644
+index 0000000..81f5ec5
+--- /dev/null
++++ b/internal/tui/keys/issueKeys_test.go
+@@ -0,0 +1,26 @@
++package keys
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dlvhdr/gh-dash/v4/internal/config"
++)
++
++func TestIssueRelationshipEditorHasDiscoverableDefaultBinding(t *testing.T) {
++	require.Equal(t, []string{"i"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, "edit relationships", IssueKeys.EditRelationships.Help().Desc)
++}
++
++func TestIssueRelationshipEditorCanBeRebound(t *testing.T) {
++	original := IssueKeys.EditRelationships
++	t.Cleanup(func() { IssueKeys.EditRelationships = original })
++
++	err := rebindIssueKeys(
++		[]config.Keybinding{{Builtin: "editRelationships", Key: "gR", Name: "relationships"}},
++	)
++	require.NoError(t, err)
++	require.Equal(t, []string{"gR"}, IssueKeys.EditRelationships.Keys())
++	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
++}
+diff --git a/internal/tui/keys/keys_test.go b/internal/tui/keys/keys_test.go
+index a20aca2..6e75373 100644
+--- a/internal/tui/keys/keys_test.go
++++ b/internal/tui/keys/keys_test.go
+@@ -167,6 +167,21 @@ func TestFullHelpForPRViewDoesNotIncludeNotificationKeys(t *testing.T) {
+ 	}
+ }
+ 
++func TestNativePlanningKeysPreserveUpstreamPRExpandBinding(t *testing.T) {
++	if got := IssueKeys.EditProject.Keys(); len(got) != 1 || got[0] != "f" {
++		t.Fatalf("issue Project key = %v, want [f]", got)
++	}
++	if got := PRKeys.EditProject.Keys(); len(got) != 1 || got[0] != "f" {
++		t.Fatalf("PR Project key = %v, want [f]", got)
++	}
++	if got := IssueKeys.EditRelationships.Keys(); len(got) != 1 || got[0] != "i" {
++		t.Fatalf("relationship key = %v, want [i]", got)
++	}
++	if got := PRKeys.SummaryViewMore.Keys(); len(got) != 1 || got[0] != "e" {
++		t.Fatalf("PR expand key = %v, want [e]", got)
++	}
++}
++
+ // findKeyByHelp searches for a key binding by its help description
+ func findKeyByHelp(keys []key.Binding, helpDesc string) bool {
+ 	for _, k := range keys {
