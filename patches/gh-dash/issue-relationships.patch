@@ -299,7 +299,7 @@ new file mode 100644
 index 0000000..bdac894
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
-@@ -0,0 +1,267 @@
+@@ -0,0 +1,272 @@
 +package data
 +
 +import (
@@ -362,6 +362,7 @@ index 0000000..bdac894
 +	}
 +	var result []RelatedIssue
 +	var after *string
++	seenCursors := make(map[string]struct{})
 +	needle := strings.ToLower(strings.TrimSpace(query))
 +	seen := make(map[string]struct{})
 +	for {
@@ -407,6 +408,10 @@ index 0000000..bdac894
 +			break
 +		}
 +		cursor := response.Node.Items.PageInfo.EndCursor
++		if _, ok := seenCursors[cursor]; ok {
++			break
++		}
++		seenCursors[cursor] = struct{}{}
 +		after = &cursor
 +	}
 +	return result, nil
@@ -1136,7 +1141,7 @@ new file mode 100644
 index 0000000..a49875e
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,697 @@
+@@ -0,0 +1,707 @@
 +package relationshipeditor
 +
 +import (
@@ -1532,6 +1537,12 @@ index 0000000..a49875e
 +func (m *Model) updateCandidateFilter(msg tea.KeyMsg) (Model, tea.Cmd) {
 +	var cmd tea.Cmd
 +	m.query, cmd = m.query.Update(msg)
++	if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++		m.candidates, m.filtered = nil, nil
++		m.selectedRel = 0
++		m.mode = modeCandidates
++		m.status = "Type / to search all accessible GitHub issues"
++	}
 +	m.filterCandidates()
 +	m.searchVersion++
 +	version := m.searchVersion
@@ -1543,6 +1554,10 @@ index 0000000..a49875e
 +}
 +
 +func (m *Model) selectCandidate() (Model, tea.Cmd) {
++	if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++		m.status = "Type / to search all accessible GitHub issues"
++		return *m, nil
++	}
 +	if len(m.filtered) == 0 {
 +		m.status = "No matching accessible issues"
 +		return *m, nil
