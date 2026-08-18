@@ -65,8 +65,9 @@ usable and do not claim a local write succeeded.
 Relationship issue search pickers use the same interaction model as Project pickers:
 `j`/`k` and arrows navigate, `/` starts filtering, `Tab` changes relationship
 scope even while filtering, and `Esc` first stops filtering,
-and a second `Esc` returns to the relationship actions. While filtering, `j`,
-`k`, and `q` are ordinary query text. Existing live-relationship removal lists
+and a second `Esc` returns to the relationship actions. While filtering, `p`,
+`j`, `k`, and `q` are ordinary query characters rather than picker commands.
+Existing live-relationship removal lists
 retain their direct j/k and arrow navigation. Candidate and Project lists use a
 bounded ten-row viewport that follows the selection. While either editor is active, it
 exclusively occupies the preview pane so its first selectable rows remain
