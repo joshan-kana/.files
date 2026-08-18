@@ -6495,10 +6495,10 @@ index 0000000..def202f
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..63e78bc
+index 0000000..2686dfb
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,570 @@
+@@ -0,0 +1,581 @@
 +package projecteditor
 +
 +import (
@@ -7019,17 +7019,28 @@ index 0000000..63e78bc
 +}
 +
 +func (m Model) renderValue(index int, value string, selected bool) string {
-+	label := value
++	primary, secondary := value, ""
 +	if m.mode == modeFields && index >= 0 && index < len(m.fields) {
 +		field := m.fields[index]
-+		label = m.ctx.Styles.Common.MainTextStyle.Render(field.Name) + " " + m.ctx.Styles.Common.FaintTextStyle.Render("["+field.Type+"]")
-+	} else {
-+		label = m.ctx.Styles.Common.MainTextStyle.Render(label)
++		primary, secondary = field.Name, "["+field.Type+"]"
++	} else if m.mode == modeProjects && index >= 0 && index < len(m.items) {
++		project := m.items[index].Project
++		primary, secondary = project.Title, fmt.Sprintf("%s #%d", project.Owner.Login(), project.Number)
 +	}
++	content := m.ctx.Styles.Common.MainTextStyle.Render(primary)
++	if secondary != "" {
++		content += "  " + m.ctx.Styles.Common.FaintTextStyle.Render(secondary)
++	}
++	prefix := "  "
 +	if selected {
-+		return m.ctx.Styles.Select.SelectedStyle.Render(m.ctx.Styles.Select.Pointer.Render("> ") + label)
++		prefix = m.ctx.Styles.Select.Pointer.Render("> ")
++		row := prefix + content
++		if m.ctx.Theme.SelectedBackground.Light == nil && m.ctx.Theme.SelectedBackground.Dark == nil {
++			return row
++		}
++		return lipgloss.NewStyle().Background(m.ctx.Theme.SelectedBackground).Width(max(m.width, lipgloss.Width(row))).Render(row)
 +	}
-+	return m.ctx.Styles.Select.ItemStyle.Render("  " + label)
++	return m.ctx.Styles.Select.ItemStyle.Render(prefix + content)
 +}
 +
 +func visibleRange(total, selected, size int) (int, int) {

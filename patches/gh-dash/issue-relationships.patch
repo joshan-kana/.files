@@ -296,7 +296,7 @@ index a38043a..a237a82 100644
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000..bdac894
+index 0000000..55e993a
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
 @@ -0,0 +1,272 @@
@@ -574,13 +574,18 @@ index 0000000..bdac894
 +}
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000..cc47c68
+index 0000000..2893723
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,111 @@
 +package data
 +
-+import "testing"
++import (
++	"encoding/json"
++	"testing"
++
++	gh "github.com/cli/go-gh/v2/pkg/api"
++)
 +
 +func TestValidateRelationshipMutationUsesLiveState(t *testing.T) {
 +	current := IssueRelationships{
@@ -622,29 +627,66 @@ index 0000000..cc47c68
 +	}
 +}
 +
-+func TestProjectRelationshipCandidatesDecodeIssueContent(t *testing.T) {
-+	type content struct {
-+		ID         string
-+		Number     int
-+		Title      string
-+		State      string
-+		URL        string
-+		Repository Repository
-+	}
-+	type node struct{ Content content `graphql:"content"` }
-+	response := struct {
-+		Node struct {
-+			Items struct{ Nodes []node }
++func TestFetchProjectRelationshipCandidatesUsesGraphQLDecodePath(t *testing.T) {
++	originalClient := projectGraphQLClient
++	originalDo := projectGraphQLDo
++	defer func() {
++		projectGraphQLClient = originalClient
++		projectGraphQLDo = originalDo
++	}()
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
++	projectGraphQLDo = func(_ *gh.GraphQLClient, _ string, variables map[string]interface{}, result interface{}) error {
++		after := ""
++		if cursor, ok := variables["after"].(*string); ok && cursor != nil {
++			after = *cursor
 +		}
-+	}{}
-+	response.Node.Items.Nodes = append(response.Node.Items.Nodes, node{Content: content{
-+		ID: "issue-id", Number: 42, Title: "Project issue", State: "OPEN",
-+		URL: "https://github.com/acme/app/issues/42",
-+		Repository: Repository{NameWithOwner: "acme/app"},
-+	}})
-+	issue := response.Node.Items.Nodes[0].Content
-+	if issue.ID != "issue-id" || issue.Number != 42 || issue.Repository.NameWithOwner != "acme/app" {
-+		t.Fatalf("decoded Project issue = %#v", issue)
++		payload := map[string]interface{}{
++			"node": map[string]interface{}{
++				"items": map[string]interface{}{
++					"nodes":    []map[string]interface{}{},
++					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "cursor-1"},
++				},
++			},
++		}
++		items := payload["node"].(map[string]interface{})["items"].(map[string]interface{})
++		nodes := items["nodes"].([]map[string]interface{})
++		if after == "" {
++			nodes = append(nodes,
++				map[string]interface{}{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "First issue", "state": "OPEN", "url": "https://github.com/acme/app/issues/1", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++				map[string]interface{}{"content": map[string]interface{}{}},
++				map[string]interface{}{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "Duplicate", "state": "OPEN", "url": "", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++			)
++		} else {
++			nodes = append(nodes,
++				map[string]interface{}{"content": map[string]interface{}{"id": "issue-2", "number": 2, "title": "Second issue", "state": "CLOSED", "url": "https://github.com/acme/app/issues/2", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++			)
++			items["pageInfo"] = map[string]interface{}{"hasNextPage": true, "endCursor": "cursor-1"}
++		}
++		items["nodes"] = nodes
++		encoded, err := json.Marshal(payload)
++		if err != nil {
++			return err
++		}
++		return json.Unmarshal(encoded, result)
++	}
++
++	candidates, err := FetchProjectRelationshipCandidates("project", "issue", 10)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(candidates) != 2 || candidates[0].ID != "issue-1" || candidates[1].ID != "issue-2" {
++		t.Fatalf("unexpected candidates: %#v", candidates)
++	}
++	if candidates[0].Repository.NameWithOwner != "acme/app" || candidates[0].Number != 1 || candidates[0].Title != "First issue" || candidates[0].State != "OPEN" || candidates[0].URL == "" {
++		t.Fatalf("decoded first issue: %#v", candidates[0])
++	}
++	filtered, err := FetchProjectRelationshipCandidates("project", "second", 10)
++	if err != nil || len(filtered) != 1 || filtered[0].ID != "issue-2" {
++		t.Fatalf("filtered candidates = %#v, err = %v", filtered, err)
++	}
++	limited, err := FetchProjectRelationshipCandidates("project", "", 1)
++	if err != nil || len(limited) != 1 || limited[0].ID != "issue-1" {
++		t.Fatalf("limited candidates = %#v, err = %v", limited, err)
 +	}
 +}
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
@@ -1138,10 +1180,10 @@ index 3cc5bc0..7cfba81 100644
  	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000..a49875e
+index 0000000..323592c
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,707 @@
+@@ -0,0 +1,727 @@
 +package relationshipeditor
 +
 +import (
@@ -1151,6 +1193,7 @@ index 0000000..a49875e
 +	"time"
 +
 +	tea "charm.land/bubbletea/v2"
++	"charm.land/lipgloss/v2"
 +	"github.com/sahilm/fuzzy"
 +
 +	"charm.land/bubbles/v2/textinput"
@@ -1218,29 +1261,30 @@ index 0000000..a49875e
 +var relationshipEditorSession uint64
 +
 +type Model struct {
-+	ctx           *context.ProgramContext
-+	issueID       string
-+	current       data.IssueRelationships
-+	actions       []action
-+	selected      int
-+	removeItems   []data.RelatedIssue
-+	candidates    []data.RelatedIssue
-+	filtered      []data.RelatedIssue
-+	query         inputbox.Model
-+	selectedRel   int
-+	pending       data.RelationshipMutation
-+	mode          mode
-+	status        string
-+	width         int
-+	active        bool
-+	initialized   bool
-+	sessionID     uint64
-+	searchVersion uint64
-+	filterMode    bool
-+	repository    string
++	ctx            *context.ProgramContext
++	issueID        string
++	current        data.IssueRelationships
++	actions        []action
++	selected       int
++	removeItems    []data.RelatedIssue
++	candidates     []data.RelatedIssue
++	filtered       []data.RelatedIssue
++	query          inputbox.Model
++	selectedRel    int
++	pending        data.RelationshipMutation
++	mode           mode
++	status         string
++	width          int
++	active         bool
++	initialized    bool
++	sessionID      uint64
++	searchVersion  uint64
++	filterMode     bool
++	repository     string
 +	candidateScope candidateScope
-+	projects      []data.Project
-+	projectIndex  int
++	projects       []data.Project
++	projectIndex   int
++	projectCursor  int
 +}
 +
 +func New(ctx *context.ProgramContext, issue data.IssueData) Model {
@@ -1264,7 +1308,7 @@ index 0000000..a49875e
 +		ctx: ctx, issueID: issue.ID, current: issue.NativeRelationships(),
 +		actions: relationshipActions(issue.NativeRelationships()), query: input,
 +		mode: modeActions, active: true, initialized: true,
-+		sessionID: atomic.AddUint64(&relationshipEditorSession, 1),
++		sessionID:  atomic.AddUint64(&relationshipEditorSession, 1),
 +		repository: issue.Repository.NameWithOwner, projects: projects,
 +		candidateScope: candidateScopeRepo,
 +	}
@@ -1357,6 +1401,9 @@ index 0000000..a49875e
 +	case candidateSearchMsg:
 +		if m.mode != modeCandidates || msg.SessionID != m.sessionID ||
 +			msg.Version != m.searchVersion || msg.Query != strings.TrimSpace(m.query.Value()) {
++			return m, nil
++		}
++		if m.candidateScope == candidateScopeAll && msg.Query == "" {
 +			return m, nil
 +		}
 +		return m, fetchCandidates(m.sessionID, msg.Version, msg.Query, m.candidateScope, m.currentProjectID(), m.repository)
@@ -1466,6 +1513,7 @@ index 0000000..a49875e
 +		return m.cycleCandidateScope()
 +	case "p":
 +		if m.candidateScope == candidateScopeProject && len(m.projects) > 1 {
++			m.projectCursor = m.projectIndex
 +			m.mode = modeCandidateProjects
 +			m.query.Blur()
 +			return *m, nil
@@ -1521,10 +1569,11 @@ index 0000000..a49875e
 +	case "esc":
 +		m.mode = modeCandidates
 +	case "up", "k":
-+		m.projectIndex = (m.projectIndex - 1 + len(m.projects)) % len(m.projects)
++		m.projectCursor = (m.projectCursor - 1 + len(m.projects)) % len(m.projects)
 +	case "down", "j":
-+		m.projectIndex = (m.projectIndex + 1) % len(m.projects)
++		m.projectCursor = (m.projectCursor + 1) % len(m.projects)
 +	case "enter":
++		m.projectIndex = m.projectCursor
 +		m.mode = modeCandidates
 +		m.searchVersion++
 +		m.selectedRel = 0
@@ -1624,7 +1673,7 @@ index 0000000..a49875e
 +	switch m.mode {
 +	case modeActions:
 +		for i, item := range m.actions {
-+			lines = append(lines, m.renderRow(item.label, i == m.selected))
++			lines = append(lines, m.renderRow(item.label, "", i == m.selected))
 +		}
 +	case modeRelationships:
 +		lines = append(lines, "Select a live relationship to remove")
@@ -1647,11 +1696,10 @@ index 0000000..a49875e
 +		}
 +	case modeCandidateProjects:
 +		lines = append(lines, "Choose a Project")
-+		start, end := visibleRange(len(m.projects), m.projectIndex, candidateViewportSize)
++		start, end := visibleRange(len(m.projects), m.projectCursor, candidateViewportSize)
 +		for i := start; i < end; i++ {
 +			project := m.projects[i]
-+			label := fmt.Sprintf("%s  %s #%d", project.Title, project.Owner.Login(), project.Number)
-+			lines = append(lines, m.renderRow(label, i == m.projectIndex))
++			lines = append(lines, m.renderRow(project.Title, fmt.Sprintf("%s #%d", project.Owner.Login(), project.Number), i == m.projectCursor))
 +		}
 +		if len(m.projects) > candidateViewportSize {
 +			lines = append(lines, m.ctx.Styles.Common.FaintTextStyle.Render(fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.projects))))
@@ -1664,9 +1712,13 @@ index 0000000..a49875e
 +	}
 +	if m.mode == modeCandidates {
 +		if m.filterMode {
-+			lines = append(lines, "type to filter · ↑/↓ select · Enter choose · Esc stop filtering")
++			lines = append(lines, "type to filter · ↑/↓ select · Tab scope · Enter choose · Esc stop filtering")
 +		} else {
-+			lines = append(lines, "j/k/↑/↓ select · / filter · Enter choose · Esc back")
++			help := "j/k/↑/↓ select · / filter · Tab scope · Enter choose · Esc back"
++			if m.candidateScope == candidateScopeProject && len(m.projects) > 1 {
++				help += " · p choose Project"
++			}
++			lines = append(lines, help)
 +		}
 +	} else {
 +		lines = append(lines, "j/k/↑/↓ select · Enter choose · Esc back")
@@ -1674,19 +1726,29 @@ index 0000000..a49875e
 +	return strings.Join(lines, "\n")
 +}
 +
-+func (m Model) renderRow(label string, selected bool) string {
-+	if selected {
-+		return m.ctx.Styles.Select.SelectedStyle.Render(m.ctx.Styles.Select.Pointer.Render("› ") + label)
++func (m Model) renderRow(primary, secondary string, selected bool) string {
++	primaryStyle := m.ctx.Styles.Common.MainTextStyle
++	secondaryStyle := m.ctx.Styles.Common.FaintTextStyle
++	content := primaryStyle.Render(primary)
++	if secondary != "" {
++		content += "  " + secondaryStyle.Render(secondary)
 +	}
-+	return m.ctx.Styles.Select.ItemStyle.Render("  " + label)
++	prefix := "  "
++	if selected {
++		prefix = m.ctx.Styles.Select.Pointer.Render("› ")
++	}
++	row := prefix + content
++	if selected {
++		if m.ctx.Theme.SelectedBackground.Light == nil && m.ctx.Theme.SelectedBackground.Dark == nil {
++			return row
++		}
++		return lipgloss.NewStyle().Background(m.ctx.Theme.SelectedBackground).Width(max(m.width, lipgloss.Width(row))).Render(row)
++	}
++	return m.ctx.Styles.Select.ItemStyle.Render(row)
 +}
 +
 +func (m Model) renderIssueRow(item data.RelatedIssue, selected bool) string {
-+	stateStyle := m.ctx.Styles.Common.FaintTextStyle
-+	label := m.ctx.Styles.Common.FaintTextStyle.Render(item.Identifier()) + "  " +
-+		m.ctx.Styles.Common.MainTextStyle.Render(item.Title) + "  " +
-+		stateStyle.Render(strings.ToLower(item.State))
-+	return m.renderRow(label, selected)
++	return m.renderRow(item.Title, item.Identifier()+"  "+strings.ToLower(item.State), selected)
 +}
 +
 +func (m Model) scopeLabel() string {
@@ -1851,10 +1913,10 @@ index 0000000..a49875e
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000..35e1979
+index 0000000..76b2d34
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,379 @@
 +package relationshipeditor
 +
 +import (
@@ -2127,6 +2189,76 @@ index 0000000..35e1979
 +	require.Nil(t, cmd)
 +	require.Equal(t, modeCandidates, updated.mode)
 +	require.Empty(t, updated.filtered)
++}
++
++func TestExactProjectChooserCancelKeepsCommittedProjectAndCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeProject
++	m.projects = []data.Project{{ID: "project-a", Title: "Project A"}, {ID: "project-b", Title: "Project B"}}
++	m.projectIndex = 0
++	m.candidates = []data.RelatedIssue{related("a-issue", "acme/app", 1, "Project A issue", "OPEN")}
++	m.filterCandidates()
++
++	updated, _ := m.Update(tea.KeyPressMsg{Text: "p"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Text: "j"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
++
++	require.Equal(t, modeCandidates, updated.mode)
++	require.Equal(t, 0, updated.projectIndex)
++	require.Equal(t, "project-a", updated.currentProjectID())
++	require.Equal(t, "a-issue", updated.filtered[0].ID)
++}
++
++func TestExactProjectChooserEnterCommitsAndRejectsStaleProjectResult(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeProject
++	m.projects = []data.Project{{ID: "project-a", Title: "Project A"}, {ID: "project-b", Title: "Project B"}}
++	m.projectIndex = 0
++
++	updated, _ := m.Update(tea.KeyPressMsg{Text: "p"})
++	updated, _ = updated.Update(tea.KeyPressMsg{Text: "j"})
++	updated, cmd := updated.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
++
++	require.NotNil(t, cmd)
++	require.Equal(t, 1, updated.projectIndex)
++	require.Equal(t, "project-b", updated.currentProjectID())
++	require.Equal(t, modeLoadingCandidates, updated.mode)
++	stale, staleCmd := updated.Update(candidatesFetchedMsg{
++		SessionID: updated.sessionID, Version: updated.searchVersion, Scope: candidateScopeProject,
++		ProjectID: "project-a", Candidates: []data.RelatedIssue{related("stale", "acme/app", 1, "Stale", "OPEN")},
++	})
++	require.Nil(t, staleCmd)
++	require.Empty(t, stale.candidates)
++}
++
++func TestAllScopeClearingQueryDropsStaleCandidatesAndCannotSubmit(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeAll
++	m.query.SetValue("gh-dash")
++	m.candidates = []data.RelatedIssue{related("old", "acme/app", 1, "Old result", "OPEN")}
++	m.filterCandidates()
++	m.query.SetValue("")
++	m.filterMode = true
++	updated, _ := m.updateCandidateFilter(tea.KeyPressMsg{Code: tea.KeyBackspace})
++	require.Empty(t, updated.candidates)
++	require.Empty(t, updated.filtered)
++	updated.mode = modeCandidates
++	updated, cmd := updated.selectCandidate()
++	require.Nil(t, cmd)
++	require.Empty(t, updated.candidates)
++}
++
++func TestCandidateFilterKeepsPJKQAsQueryText(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.filterMode = true
++	for _, char := range []string{"p", "j", "k", "q"} {
++		m, _ = m.Update(tea.KeyPressMsg{Text: char})
++	}
++	require.Equal(t, "pjkq", m.query.Value())
 +}
 +
 +func TestVisibleRangeKeepsSelectionInViewport(t *testing.T) {

@@ -52,6 +52,7 @@ let
     gca = "git commit -a -m";
     gpl = "git pull";
     gph = "git push";
+    dh = "gh dash";
     ollama = "docker exec -it ollama ollama";
     v = "nvim";
     l = "eza -a";
@@ -158,7 +159,7 @@ lib.mkIf cfg.features.cli.enable {
         };
       };
       include = [ "stylix.yml" ];
-      pager.diff = ''sh -c 'pager=$(git config --get pager.diff || git config --get core.pager); if [ -z "$pager" ]; then exec cat; fi; set -- $pager; exec "$@"' '';
+      pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
       repoPaths = {
         "joshan-kana/.files" = repoPath;
       };
@@ -186,7 +187,7 @@ lib.mkIf cfg.features.cli.enable {
     settings.git.diffRenderers = [
       {
         colorArg = "always";
-        command = ''sh -c 'pager=$(git config --get pager.diff || git config --get core.pager); if [ -z "$pager" ]; then exec cat; fi; set -- $pager; exec "$@"' '';
+        command = ''sh -c 'PAGER=cat eval "$(git config --get pager.diff || git config --get core.pager)"' '';
       }
     ];
   };
