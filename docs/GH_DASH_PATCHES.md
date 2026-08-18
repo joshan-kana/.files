@@ -50,8 +50,11 @@ remain non-fatal to ordinary issue rendering.
 No labels, issue-body conventions, Project fields, or local task database are
 used to represent these relationships. From an issue preview, `i` opens the
 keyboard-driven relationship editor; the binding can be changed with
-`editRelationships` (default `i`). Add operations use a fuzzy selector over accessible
-issues, displaying repository, number, title, and open/closed state. Existing
+`editRelationships` (default `i`). Add operations use a scoped selector over
+accessible issues, displaying repository, number, title, and open/closed state.
+The selector cycles with `Tab` through the current repository, attached Project
+memberships, and an explicit global search; `p` chooses an exact Project when
+Project scope is ambiguous. Empty global scope does not preload issues. Existing
 relationships are filtered out, and removal operations select only from the
 live relationships currently returned for the issue. The editor supports
 adding and removing blocked-by, blocking, and sub-issue relationships, and
@@ -60,10 +63,12 @@ followed by an authoritative relationship refetch; failures leave the issue
 usable and do not claim a local write succeeded.
 
 Relationship issue search pickers use the same interaction model as Project pickers:
-`j`/`k` and arrows navigate, `/` starts filtering, `Esc` first stops filtering,
+`j`/`k` and arrows navigate, `/` starts filtering, `Tab` changes relationship
+scope even while filtering, and `Esc` first stops filtering,
 and a second `Esc` returns to the relationship actions. While filtering, `j`,
 `k`, and `q` are ordinary query text. Existing live-relationship removal lists
-retain their direct j/k and arrow navigation. While either editor is active, it
+retain their direct j/k and arrow navigation. Candidate and Project lists use a
+bounded ten-row viewport that follows the selection. While either editor is active, it
 exclusively occupies the preview pane so its first selectable rows remain
 visible regardless of the issue or PR body length.
 
@@ -72,7 +77,12 @@ visible regardless of the issue or PR body length.
 `overlays/gh-dash-native-github.nix` pins the package and applies both patches
 sequentially. Home Manager installs the result through the native
 `programs.gh.extensions` integration; user configuration lives in
-`modules/home/cli.nix`.
+`modules/home/cli.nix`. The generated configuration includes the Stylix theme
+include, the Git-configured `pager.diff` resolver, the local
+`joshan-kana/.files` repo path, and compact table mode. Relationship reads and
+writes remain custom GraphQL because native `gh issue edit` flags are not
+sufficient to preserve the existing paginated relationship model, live
+validation, authoritative post-write refetch, and structured TUI errors.
 
 ## Updating gh-dash
 

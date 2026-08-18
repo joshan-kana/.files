@@ -45,6 +45,7 @@
       let
         cfg = osConfig.dotfiles;
         toml = pkgs.formats.toml { };
+        yaml = pkgs.formats.yaml { };
         enabled = name: !(builtins.elem name cfg.cli.disabledPrograms);
         syntaxScope = name: selectors: color: ''
           <dict>
@@ -190,6 +191,40 @@
                 update_badge_bg = base09;
                 mode_fg = base00;
                 mode_bg = base0D;
+              }
+            );
+          };
+
+          "gh-dash/stylix.yml" = lib.mkIf (enabled "gh") {
+            source = yaml.generate "gh-dash-stylix.yml" (
+              with config.lib.stylix.colors.withHashtag;
+              {
+                theme.colors = {
+                  text = {
+                    primary = base05;
+                    secondary = base04;
+                    inverted = base00;
+                    faint = base03;
+                    warning = base09;
+                    success = base0B;
+                    error = base08;
+                    actor = base0D;
+                  };
+                  background.selected = base02;
+                  border = {
+                    primary = base0D;
+                    secondary = base04;
+                    faint = base01;
+                  };
+                  icon = {
+                    newcontributor = base0B;
+                    contributor = base0D;
+                    collaborator = base0A;
+                    member = base0A;
+                    owner = base09;
+                    unknownrole = base04;
+                  };
+                };
               }
             );
           };

@@ -52,7 +52,6 @@ let
     gca = "git commit -a -m";
     gpl = "git pull";
     gph = "git push";
-    dh = "gh dash";
     ollama = "docker exec -it ollama ollama";
     v = "nvim";
     l = "eza -a";
@@ -122,42 +121,51 @@ lib.mkIf cfg.features.cli.enable {
     extensions = [ pkgs.gh-dash ];
   };
 
-  xdg.configFile."gh-dash/config.yml".source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
-    defaults = {
-      view = "issues";
-      layout = {
-        issues = {
-          repo.hidden = true;
-          creator.hidden = true;
-          reactions.hidden = true;
-          comments.hidden = true;
-          updatedAt.hidden = true;
-          createdAt.hidden = true;
-        };
-        projects = {
-          enabled = true;
-          fields = [
-            {
-              name = "Status";
-              width = 12;
-            }
-            {
-              name = "Priority";
-              width = 10;
-            }
-            {
-              name = "Area";
-              width = 14;
-            }
-            {
-              name = "Kind";
-              width = 12;
-            }
-          ];
+  xdg.configFile."gh-dash/config.yml" = lib.mkIf (enabled "gh") {
+    source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+      defaults = {
+        view = "issues";
+        layout = {
+          issues = {
+            repo.hidden = true;
+            creator.hidden = true;
+            reactions.hidden = true;
+            comments.hidden = true;
+            updatedAt.hidden = true;
+            createdAt.hidden = true;
+          };
+          projects = {
+            enabled = true;
+            fields = [
+              {
+                name = "Status";
+                width = 12;
+              }
+              {
+                name = "Priority";
+                width = 10;
+              }
+              {
+                name = "Area";
+                width = 14;
+              }
+              {
+                name = "Kind";
+                width = 12;
+              }
+            ];
+          };
         };
       };
+      include = [ "stylix.yml" ];
+      pager.diff = ''sh -c 'PAGER=cat eval "$(git config --get pager.diff || git config --get core.pager)"' '';
+      repoPaths = {
+        "joshan-kana/.files" = repoPath;
+      };
+      theme.ui.table.compact = true;
     };
   };
+
   programs.delta = {
     enable = enabled "delta";
     enableGitIntegration = enabled "git";

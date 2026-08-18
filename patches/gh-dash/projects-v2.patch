@@ -1,5 +1,5 @@
 diff --git a/internal/config/parser.go b/internal/config/parser.go
-index 96a2283274df241dfcc4609fb53de90d25636ddf..86397a28b9e02dfe2721ef2995abdf00005c9bd3 100644
+index 96a2283..86397a2 100644
 --- a/internal/config/parser.go
 +++ b/internal/config/parser.go
 @@ -148,6 +148,19 @@ type ColumnConfig struct {
@@ -36,7 +36,7 @@ index 96a2283274df241dfcc4609fb53de90d25636ddf..86397a28b9e02dfe2721ef2995abdf00
  type Defaults struct {
 diff --git a/internal/config/parser_projects_test.go b/internal/config/parser_projects_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..0402527d543928e8d1ff19b6b1e760191dded65d
+index 0000000..0402527
 --- /dev/null
 +++ b/internal/config/parser_projects_test.go
 @@ -0,0 +1,49 @@
@@ -90,7 +90,7 @@ index 0000000000000000000000000000000000000000..0402527d543928e8d1ff19b6b1e76019
 +	}
 +}
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index 9fa1763cf9a78a386ce3ed431181ac5664c636a9..a38043a3325e2d8399e60996f5c54b8d99e87ddc 100644
+index 9fa1763..a38043a 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -14,6 +14,7 @@ import (
@@ -308,7 +308,7 @@ index 9fa1763cf9a78a386ce3ed431181ac5664c636a9..a38043a3325e2d8399e60996f5c54b8d
  }
 diff --git a/internal/data/issueapi_test.go b/internal/data/issueapi_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..3179532970dbaf74dc5f9b30e71a18c47feb01ae
+index 0000000..3179532
 --- /dev/null
 +++ b/internal/data/issueapi_test.go
 @@ -0,0 +1,65 @@
@@ -378,7 +378,7 @@ index 0000000000000000000000000000000000000000..3179532970dbaf74dc5f9b30e71a18c4
 +	}
 +}
 diff --git a/internal/data/prapi.go b/internal/data/prapi.go
-index 11eecdb58395a316e7e3359197509b644a915471..6373b00c49420e1731a7bbe51b1e51a7449baad7 100644
+index 11eecdb..6373b00 100644
 --- a/internal/data/prapi.go
 +++ b/internal/data/prapi.go
 @@ -27,6 +27,7 @@ type SuggestedReviewer struct {
@@ -604,7 +604,7 @@ index 11eecdb58395a316e7e3359197509b644a915471..6373b00c49420e1731a7bbe51b1e51a7
  		return EnrichedPullRequestData{}, err
  	}
 diff --git a/internal/data/prapi_test.go b/internal/data/prapi_test.go
-index 79af55c19edec15d5934a285f3edc2f19a23f368..dab4dafb28699d88665cd57acb7b6a3d0e8124f9 100644
+index 79af55c..dab4daf 100644
 --- a/internal/data/prapi_test.go
 +++ b/internal/data/prapi_test.go
 @@ -1,12 +1,85 @@
@@ -695,7 +695,7 @@ index 79af55c19edec15d5934a285f3edc2f19a23f368..dab4dafb28699d88665cd57acb7b6a3d
  	originalCachedClient := cachedClient
 diff --git a/internal/data/project_field_types_test.go b/internal/data/project_field_types_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..25433ff990e8f8367d2b879fbe5768791e8eac49
+index 0000000..25433ff
 --- /dev/null
 +++ b/internal/data/project_field_types_test.go
 @@ -0,0 +1,48 @@
@@ -749,7 +749,7 @@ index 0000000000000000000000000000000000000000..25433ff990e8f8367d2b879fbe576879
 +}
 diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..b17ea1bb7e00bbaa068af7fcb2883f163005ec9e
+index 0000000..b17ea1b
 --- /dev/null
 +++ b/internal/data/projectcache.go
 @@ -0,0 +1,379 @@
@@ -1134,7 +1134,7 @@ index 0000000000000000000000000000000000000000..b17ea1bb7e00bbaa068af7fcb2883f16
 +}
 diff --git a/internal/data/projectcache_test.go b/internal/data/projectcache_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..0b9475749b851747347e9f56571db003fc54b571
+index 0000000..0b94757
 --- /dev/null
 +++ b/internal/data/projectcache_test.go
 @@ -0,0 +1,159 @@
@@ -1299,7 +1299,7 @@ index 0000000000000000000000000000000000000000..0b9475749b851747347e9f56571db003
 +}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..d8368cfc11687d589f471691e5fcca24e3163ab2
+index 0000000..d8368cf
 --- /dev/null
 +++ b/internal/data/projectlist.go
 @@ -0,0 +1,1163 @@
@@ -2468,7 +2468,7 @@ index 0000000000000000000000000000000000000000..d8368cfc11687d589f471691e5fcca24
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..31f2a9adf7c675226a76e5ea9c917dfbeba932d1
+index 0000000..31f2a9a
 --- /dev/null
 +++ b/internal/data/projectlist_query_test.go
 @@ -0,0 +1,638 @@
@@ -3112,7 +3112,7 @@ index 0000000000000000000000000000000000000000..31f2a9adf7c675226a76e5ea9c917dfb
 +}
 diff --git a/internal/data/projectpreview_test.go b/internal/data/projectpreview_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..d476df1e8569345b21d6b596d10a9d5c008e06dd
+index 0000000..d476df1
 --- /dev/null
 +++ b/internal/data/projectpreview_test.go
 @@ -0,0 +1,174 @@
@@ -3292,7 +3292,7 @@ index 0000000000000000000000000000000000000000..d476df1e8569345b21d6b596d10a9d5c
 +}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..c36e735411202e80e6a7ad366e4cd9764de680a1
+index 0000000..c36e735
 --- /dev/null
 +++ b/internal/data/projects.go
 @@ -0,0 +1,1675 @@
@@ -4973,7 +4973,7 @@ index 0000000000000000000000000000000000000000..c36e735411202e80e6a7ad366e4cd976
 +}
 diff --git a/internal/data/projects_live_test.go b/internal/data/projects_live_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..e68f901253bd74f8abdecbe2e2ad7117175f4601
+index 0000000..e68f901
 --- /dev/null
 +++ b/internal/data/projects_live_test.go
 @@ -0,0 +1,182 @@
@@ -5161,7 +5161,7 @@ index 0000000000000000000000000000000000000000..e68f901253bd74f8abdecbe2e2ad7117
 +}
 diff --git a/internal/data/projects_test.go b/internal/data/projects_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..508217319664c4434d6e519bf319476a8031ba2a
+index 0000000..5082173
 --- /dev/null
 +++ b/internal/data/projects_test.go
 @@ -0,0 +1,624 @@
@@ -5790,7 +5790,7 @@ index 0000000000000000000000000000000000000000..508217319664c4434d6e519bf319476a
 +	return struct{ Nodes []ProjectFieldValue }{values}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index e7cf4eca6280f0be1d5c538267f131594acb9a3c..f7de54e3ffbf4da534ca734508d2cf35580eb6a0 100644
+index e7cf4ec..f7de54e 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -20,7 +20,7 @@ type Issue struct {
@@ -5818,7 +5818,7 @@ index e7cf4eca6280f0be1d5c538267f131594acb9a3c..f7de54e3ffbf4da534ca734508d2cf35
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664c50b9fe50ab136653a82c42d26c10f313..6edb3222a7d4954d0829483ab9271f44f934c099 100644
+index f421664..6edb322 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,8 @@ import (
@@ -6038,7 +6038,7 @@ index f421664c50b9fe50ab136653a82c42d26c10f313..6edb3222a7d4954d0829483ab9271f44
  	for _, assignee := range addedAssignees {
 diff --git a/internal/tui/components/issuessection/issuessection_test.go b/internal/tui/components/issuessection/issuessection_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..5c92a29495f594010960bb3d01bd1bebeb43b6d3
+index 0000000..5c92a29
 --- /dev/null
 +++ b/internal/tui/components/issuessection/issuessection_test.go
 @@ -0,0 +1,69 @@
@@ -6112,7 +6112,7 @@ index 0000000000000000000000000000000000000000..5c92a29495f594010960bb3d01bd1beb
 +	require.Len(t, m.Issues[0].ProjectItems.Nodes, 1)
 +}
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 494ec4c00c573b3be588a901917bbc3daf7bb6e3..304666c6b000be69835a241995884cca1d3bb62e 100644
+index 494ec4c..304666c 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -17,6 +17,7 @@ import (
@@ -6286,7 +6286,7 @@ index 494ec4c00c573b3be588a901917bbc3daf7bb6e3..304666c6b000be69835a241995884cca
  	// TODO: move this to the NewModel func
  	// currently it's not possible since the styles aren't yet instantiated when NewModel is called
 diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
-index 6996626d9205ee1c147b62b0e0ddb211a63989ab..3cc5bc06b8f9524b61bf957810003b880a32fff5 100644
+index 6996626..3cc5bc0 100644
 --- a/internal/tui/components/issueview/issueview_test.go
 +++ b/internal/tui/components/issueview/issueview_test.go
 @@ -1,6 +1,8 @@
@@ -6364,7 +6364,7 @@ index 6996626d9205ee1c147b62b0e0ddb211a63989ab..3cc5bc06b8f9524b61bf957810003b88
 +	return true
 +}
 diff --git a/internal/tui/components/notificationssection/notificationssection.go b/internal/tui/components/notificationssection/notificationssection.go
-index e25424c3b698d377059fbf6a914a9bba158152ee..692ac35205cb6075546752ed56ceb587a0c3a50f 100644
+index e25424c..692ac35 100644
 --- a/internal/tui/components/notificationssection/notificationssection.go
 +++ b/internal/tui/components/notificationssection/notificationssection.go
 @@ -28,6 +28,11 @@ const SectionType = "notification"
@@ -6399,7 +6399,7 @@ index e25424c3b698d377059fbf6a914a9bba158152ee..692ac35205cb6075546752ed56ceb587
  					return nil
 diff --git a/internal/tui/components/notificationssection/notificationssection_test.go b/internal/tui/components/notificationssection/notificationssection_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..6580bc2905065a48aa14cec1e013203e18fea562
+index 0000000..6580bc2
 --- /dev/null
 +++ b/internal/tui/components/notificationssection/notificationssection_test.go
 @@ -0,0 +1,60 @@
@@ -6465,7 +6465,7 @@ index 0000000000000000000000000000000000000000..6580bc2905065a48aa14cec1e013203e
 +}
 diff --git a/internal/tui/components/projectcolumns/projectcolumns.go b/internal/tui/components/projectcolumns/projectcolumns.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..def202f1b1255f17ca807785aa1df28e25e241b1
+index 0000000..def202f
 --- /dev/null
 +++ b/internal/tui/components/projectcolumns/projectcolumns.go
 @@ -0,0 +1,24 @@
@@ -6495,10 +6495,10 @@ index 0000000000000000000000000000000000000000..def202f1b1255f17ca807785aa1df28e
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd79225acf5299
+index 0000000..63e78bc
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,529 @@
+@@ -0,0 +1,570 @@
 +package projecteditor
 +
 +import (
@@ -6525,6 +6525,8 @@ index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd7922
 +	modeOptions
 +	modeInput
 +)
++
++const projectViewportSize = 10
 +
 +type FieldsFetchedMsg struct {
 +	ProjectID string
@@ -6982,13 +6984,13 @@ index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd7922
 +		lines = append(lines, m.filter.View())
 +	}
 +	values := m.filterValues()
-+	for i, index := range m.filtered {
-+		value := values[index]
-+		prefix := "  "
-+		if i == m.selectedIndexPosition() {
-+			prefix = "> "
-+		}
-+		lines = append(lines, prefix+value)
++	start, end := visibleRange(len(m.filtered), m.selectedIndexPosition(), projectViewportSize)
++	for i := start; i < end; i++ {
++		index := m.filtered[i]
++		lines = append(lines, m.renderValue(index, values[index], i == m.selectedIndexPosition()))
++	}
++	if len(m.filtered) > projectViewportSize {
++		lines = append(lines, m.ctx.Styles.Common.FaintTextStyle.Render(fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.filtered))))
 +	}
 +	if len(m.filtered) == 0 {
 +		label := "items"
@@ -7016,6 +7018,45 @@ index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd7922
 +	return strings.Join(lines, "\n")
 +}
 +
++func (m Model) renderValue(index int, value string, selected bool) string {
++	label := value
++	if m.mode == modeFields && index >= 0 && index < len(m.fields) {
++		field := m.fields[index]
++		label = m.ctx.Styles.Common.MainTextStyle.Render(field.Name) + " " + m.ctx.Styles.Common.FaintTextStyle.Render("["+field.Type+"]")
++	} else {
++		label = m.ctx.Styles.Common.MainTextStyle.Render(label)
++	}
++	if selected {
++		return m.ctx.Styles.Select.SelectedStyle.Render(m.ctx.Styles.Select.Pointer.Render("> ") + label)
++	}
++	return m.ctx.Styles.Select.ItemStyle.Render("  " + label)
++}
++
++func visibleRange(total, selected, size int) (int, int) {
++	if total <= 0 || size <= 0 {
++		return 0, 0
++	}
++	if selected < 0 {
++		selected = 0
++	}
++	if selected >= total {
++		selected = total - 1
++	}
++	if size > total {
++		size = total
++	}
++	start := selected - size/2
++	if start < 0 {
++		start = 0
++	}
++	end := start + size
++	if end > total {
++		end = total
++		start = end - size
++	}
++	return start, end
++}
++
 +func (m Model) selectedIndexPosition() int {
 +	switch m.mode {
 +	case modeProjects:
@@ -7030,10 +7071,10 @@ index 0000000000000000000000000000000000000000..8efcddba93422aba0d27161c94fd7922
 +}
 diff --git a/internal/tui/components/projecteditor/editor_test.go b/internal/tui/components/projecteditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..83473c42cf216893c1425b988f7ac85b2d21c068
+index 0000000..40ecef9
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor_test.go
-@@ -0,0 +1,231 @@
+@@ -0,0 +1,237 @@
 +package projecteditor
 +
 +import (
@@ -7265,8 +7306,14 @@ index 0000000000000000000000000000000000000000..83473c42cf216893c1425b988f7ac85b
 +	m, _ = m.Update(key("j"))
 +	require.Equal(t, "j", m.filter.Value())
 +}
++
++func TestVisibleRangeHandlesLongProjectLists(t *testing.T) {
++	start, end := visibleRange(53, 52, projectViewportSize)
++	require.Equal(t, 43, start)
++	require.Equal(t, 53, end)
++}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
-index 1b2b4933876b8b40bbf681391cc45db07c83b89f..8a10c0cb168a7534cd67fc8b3fd7a377dc9e9407 100644
+index 1b2b493..8a10c0c 100644
 --- a/internal/tui/components/prrow/prrow.go
 +++ b/internal/tui/components/prrow/prrow.go
 @@ -8,6 +8,7 @@ import (
@@ -7338,7 +7385,7 @@ index 1b2b4933876b8b40bbf681391cc45db07c83b89f..8a10c0cb168a7534cd67fc8b3fd7a377
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996ba91352b8822bf6cba37d9307bab5571e4..8a41d191f90e82964b73dc942b983ae3aaf5149e 100644
+index 08e996b..8a41d19 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,8 @@ import (
@@ -7566,7 +7613,7 @@ index 08e996ba91352b8822bf6cba37d9307bab5571e4..8a41d191f90e82964b73dc942b983ae3
  	m.BaseModel.ResetRows()
 diff --git a/internal/tui/components/prview/projectpreview_test.go b/internal/tui/components/prview/projectpreview_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..f8060e67a96310ce9e23e214dd05d0116ded44e1
+index 0000000..f8060e6
 --- /dev/null
 +++ b/internal/tui/components/prview/projectpreview_test.go
 @@ -0,0 +1,117 @@
@@ -7688,7 +7735,7 @@ index 0000000000000000000000000000000000000000..f8060e67a96310ce9e23e214dd05d011
 +	return value
 +}
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9778b0d736674f442617f28a1af05de30f..917935e96a151143743107c570684b20facea01f 100644
+index 470d9f9..917935e 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -7968,8 +8015,15 @@ index 470d9f9778b0d736674f442617f28a1af05de30f..917935e96a151143743107c570684b20
  	m.carousel.SetStyles(
  		carousel.Styles{
  			Item:     lipgloss.NewStyle().Padding(0, 1).Foreground(m.ctx.Theme.FaintText),
+diff --git a/internal/tui/components/relationshipeditor/doc.go b/internal/tui/components/relationshipeditor/doc.go
+new file mode 100644
+index 0000000..e59efd3
+--- /dev/null
++++ b/internal/tui/components/relationshipeditor/doc.go
+@@ -0,0 +1 @@
++package relationshipeditor
 diff --git a/internal/tui/components/reposection/commands.go b/internal/tui/components/reposection/commands.go
-index 308b2a5b456daef8d425f8132f36d6250900b55a..f6e028751612136d550a6297ad8f6af5ee1c15c5 100644
+index 308b2a5..f6e0287 100644
 --- a/internal/tui/components/reposection/commands.go
 +++ b/internal/tui/components/reposection/commands.go
 @@ -255,6 +255,7 @@ func (m *Model) fetchPRsCmd() tea.Cmd {
@@ -7989,7 +8043,7 @@ index 308b2a5b456daef8d425f8132f36d6250900b55a..f6e028751612136d550a6297ad8f6af5
  		log.Debug("Fetching PRs", "res", res)
  		if err != nil {
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index f13b4e224cae358b3363a4ac8b3c738364a533ff..41e14c243281ab4603f481d93980e2cced3386de 100644
+index f13b4e2..41e14c2 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -19,6 +19,7 @@ type IssueKeyMap struct {
@@ -8029,7 +8083,7 @@ index f13b4e224cae358b3363a4ac8b3c738364a533ff..41e14c243281ab4603f481d93980e2cc
  			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
  		}
 diff --git a/internal/tui/keys/prKeys.go b/internal/tui/keys/prKeys.go
-index 88c244fdb9ac9d48b593be046309fe6ec1a5ca97..06c9d2702625db2e7e6a914710ee9c7fc8a5f999 100644
+index 88c244f..06c9d27 100644
 --- a/internal/tui/keys/prKeys.go
 +++ b/internal/tui/keys/prKeys.go
 @@ -29,6 +29,7 @@ type PRKeyMap struct {
@@ -8069,7 +8123,7 @@ index 88c244fdb9ac9d48b593be046309fe6ec1a5ca97..06c9d2702625db2e7e6a914710ee9c7f
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c7145b6ff64254035db22959c2cd4a468f615..d65b144b674d888c79be529459e427419387e3c4 100644
+index eb3c714..d65b144 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
 @@ -34,6 +34,7 @@ import (
@@ -8668,7 +8722,7 @@ index eb3c7145b6ff64254035db22959c2cd4a468f615..d65b144b674d888c79be529459e42741
  	}
  
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f33ae5df88245b5e827c7e017453bad69d..b421ab02abea3d06fc42885c6b92d838db441006 100644
+index e391c6f..b421ab0 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -21,6 +21,7 @@ import (

@@ -1,5 +1,5 @@
 diff --git a/internal/data/issueapi.go b/internal/data/issueapi.go
-index a38043a3325e2d8399e60996f5c54b8d99e87ddc..a237a82b1ae58d2e8b6444efb03d8ec99d002b7c 100644
+index a38043a..a237a82 100644
 --- a/internal/data/issueapi.go
 +++ b/internal/data/issueapi.go
 @@ -32,6 +32,52 @@ type IssueData struct {
@@ -296,14 +296,15 @@ index a38043a3325e2d8399e60996f5c54b8d99e87ddc..a237a82b1ae58d2e8b6444efb03d8ec9
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2ac60f6fe
+index 0000000..bdac894
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
-@@ -0,0 +1,203 @@
+@@ -0,0 +1,267 @@
 +package data
 +
 +import (
 +	"fmt"
++	"strings"
 +
 +	gh "github.com/cli/go-gh/v2/pkg/api"
 +)
@@ -346,6 +347,69 @@ index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2
 +		})
 +	}
 +	return candidates, nil
++}
++
++func FetchProjectRelationshipCandidates(projectID, query string, limit int) ([]RelatedIssue, error) {
++	if projectID == "" {
++		return nil, fmt.Errorf("GitHub Project is unavailable")
++	}
++	if limit < 1 {
++		limit = 25
++	}
++	client, err := projectGraphQLClient()
++	if err != nil {
++		return nil, err
++	}
++	var result []RelatedIssue
++	var after *string
++	needle := strings.ToLower(strings.TrimSpace(query))
++	seen := make(map[string]struct{})
++	for {
++		var response struct {
++			Node struct {
++				Items struct {
++					Nodes []struct {
++						Content struct {
++							ID         string
++							Number     int
++							Title      string
++							State      string
++							URL        string
++							Repository Repository
++						} `graphql:"content"`
++					} `graphql:"nodes"`
++					PageInfo PageInfo
++				} `graphql:"items(first: 100, after: $after)"`
++			} `graphql:"node(id: $id)"`
++		}
++		if err := projectGraphQLRead(client, `query ProjectRelationshipCandidates($id: ID!, $after: String) {
++  node(id: $id) { ... on ProjectV2 {
++    items(first: 100, after: $after) { nodes { content { ... on Issue { id number title state url repository { nameWithOwner } } } } pageInfo { hasNextPage endCursor } }
++  } }
++}`, map[string]interface{}{"id": projectID, "after": after}, &response); err != nil {
++			return nil, err
++		}
++		for _, item := range response.Node.Items.Nodes {
++			issue := item.Content
++			if issue.ID == "" || (needle != "" && !strings.Contains(strings.ToLower(issue.Title), needle) && !strings.Contains(strings.ToLower(fmt.Sprintf("%d", issue.Number)), needle)) {
++				continue
++			}
++			if _, ok := seen[issue.ID]; ok {
++				continue
++			}
++			seen[issue.ID] = struct{}{}
++			result = append(result, RelatedIssue{ID: issue.ID, Number: issue.Number, Title: issue.Title, State: issue.State, URL: issue.URL, Repository: issue.Repository})
++			if len(result) == limit {
++				return result, nil
++			}
++		}
++		if !response.Node.Items.PageInfo.HasNextPage || response.Node.Items.PageInfo.EndCursor == "" {
++			break
++		}
++		cursor := response.Node.Items.PageInfo.EndCursor
++		after = &cursor
++	}
++	return result, nil
 +}
 +
 +// MutateIssueRelationship performs one live-validated native relationship write
@@ -505,10 +569,10 @@ index 0000000000000000000000000000000000000000..fbc203069ea8640e884466807fc69ab2
 +}
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de8d29e7a5
+index 0000000..cc47c68
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,69 @@
 +package data
 +
 +import "testing"
@@ -552,9 +616,35 @@ index 0000000000000000000000000000000000000000..07c61f4ff01123f0369c6c74658650de
 +		t.Fatalf("AddBlocking input = %#v, want target blocking issue", input)
 +	}
 +}
++
++func TestProjectRelationshipCandidatesDecodeIssueContent(t *testing.T) {
++	type content struct {
++		ID         string
++		Number     int
++		Title      string
++		State      string
++		URL        string
++		Repository Repository
++	}
++	type node struct{ Content content `graphql:"content"` }
++	response := struct {
++		Node struct {
++			Items struct{ Nodes []node }
++		}
++	}{}
++	response.Node.Items.Nodes = append(response.Node.Items.Nodes, node{Content: content{
++		ID: "issue-id", Number: 42, Title: "Project issue", State: "OPEN",
++		URL: "https://github.com/acme/app/issues/42",
++		Repository: Repository{NameWithOwner: "acme/app"},
++	}})
++	issue := response.Node.Items.Nodes[0].Content
++	if issue.ID != "issue-id" || issue.Number != 42 || issue.Repository.NameWithOwner != "acme/app" {
++		t.Fatalf("decoded Project issue = %#v", issue)
++	}
++}
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be3951b011
+index 0000000..c642b3b
 --- /dev/null
 +++ b/internal/data/relationships.go
 @@ -0,0 +1,34 @@
@@ -594,7 +684,7 @@ index 0000000000000000000000000000000000000000..c642b3bad74a1062751d74134a6e52be
 +}
 diff --git a/internal/data/relationships_pagination_test.go b/internal/data/relationships_pagination_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..fd32fee808c5f0f042a28c278d95ad4c98e79e62
+index 0000000..fd32fee
 --- /dev/null
 +++ b/internal/data/relationships_pagination_test.go
 @@ -0,0 +1,148 @@
@@ -748,7 +838,7 @@ index 0000000000000000000000000000000000000000..fd32fee808c5f0f042a28c278d95ad4c
 +}
 diff --git a/internal/data/relationships_test.go b/internal/data/relationships_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c2c43cac5
+index 0000000..3d53627
 --- /dev/null
 +++ b/internal/data/relationships_test.go
 @@ -0,0 +1,27 @@
@@ -780,7 +870,7 @@ index 0000000000000000000000000000000000000000..3d536277303be473929735631e1ed87c
 +	}
 +}
 diff --git a/internal/tui/components/issuerow/issuerow.go b/internal/tui/components/issuerow/issuerow.go
-index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b482d0dc27 100644
+index f7de54e..659dadd 100644
 --- a/internal/tui/components/issuerow/issuerow.go
 +++ b/internal/tui/components/issuerow/issuerow.go
 @@ -77,12 +77,16 @@ func (issue *Issue) renderRepoName() string {
@@ -802,7 +892,7 @@ index f7de54e3ffbf4da534ca734508d2cf35580eb6a0..659dadd43cee34aee516f86e9a8ba7b4
  
  func (issue *Issue) renderOpenedBy() string {
 diff --git a/internal/tui/components/issueview/action.go b/internal/tui/components/issueview/action.go
-index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29fad897d3 100644
+index 439f5ac..b607be1 100644
 --- a/internal/tui/components/issueview/action.go
 +++ b/internal/tui/components/issueview/action.go
 @@ -1,5 +1,7 @@
@@ -827,7 +917,7 @@ index 439f5ac201dbae4b8a71a70563813a8c81f6165d..b607be18dcfa537e602b58642bb46a29
 +	Relationships data.IssueRelationships
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 304666c6b000be69835a241995884cca1d3bb62e..514a9fbbec7409f77da2b9ed5b85ce4d623d9051 100644
+index 304666c..514a9fb 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -18,6 +18,7 @@ import (
@@ -990,7 +1080,7 @@ index 304666c6b000be69835a241995884cca1d3bb62e..514a9fbbec7409f77da2b9ed5b85ce4d
  
  func (m *Model) StartProjectEdit() {
 diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
-index 3cc5bc06b8f9524b61bf957810003b880a32fff5..7cfba81bb623e9596eff05badf6637fbb821a0de 100644
+index 3cc5bc0..7cfba81 100644
 --- a/internal/tui/components/issueview/issueview_test.go
 +++ b/internal/tui/components/issueview/issueview_test.go
 @@ -9,6 +9,8 @@ import (
@@ -1043,19 +1133,19 @@ index 3cc5bc06b8f9524b61bf957810003b880a32fff5..7cfba81bb623e9596eff05badf6637fb
  	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d2b40f989
+index 0000000..a49875e
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,522 @@
+@@ -0,0 +1,697 @@
 +package relationshipeditor
 +
 +import (
++	"fmt"
 +	"strings"
 +	"sync/atomic"
 +	"time"
 +
 +	tea "charm.land/bubbletea/v2"
-+	"charm.land/lipgloss/v2"
 +	"github.com/sahilm/fuzzy"
 +
 +	"charm.land/bubbles/v2/textinput"
@@ -1072,8 +1162,19 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	modeRelationships
 +	modeLoadingCandidates
 +	modeCandidates
++	modeCandidateProjects
 +	modeApplying
 +)
++
++type candidateScope uint8
++
++const (
++	candidateScopeRepo candidateScope = iota
++	candidateScopeProject
++	candidateScopeAll
++)
++
++const candidateViewportSize = 10
 +
 +type action struct {
 +	label    string
@@ -1092,6 +1193,8 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	Query      string
 +	Version    uint64
 +	Candidates []data.RelatedIssue
++	Scope      candidateScope
++	ProjectID  string
 +	Err        error
 +}
 +
@@ -1129,6 +1232,10 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	sessionID     uint64
 +	searchVersion uint64
 +	filterMode    bool
++	repository    string
++	candidateScope candidateScope
++	projects      []data.Project
++	projectIndex  int
 +}
 +
 +func New(ctx *context.ProgramContext, issue data.IssueData) Model {
@@ -1136,11 +1243,25 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +		ti := inputbox.DefaultTextInput(ctx)
 +		return &ti
 +	}()})
++	projects := make([]data.Project, 0, len(issue.ProjectItems.Nodes))
++	seenProjects := make(map[string]struct{})
++	for _, item := range issue.ProjectItems.Nodes {
++		if item.Project.ID == "" {
++			continue
++		}
++		if _, ok := seenProjects[item.Project.ID]; ok {
++			continue
++		}
++		seenProjects[item.Project.ID] = struct{}{}
++		projects = append(projects, item.Project)
++	}
 +	return Model{
 +		ctx: ctx, issueID: issue.ID, current: issue.NativeRelationships(),
 +		actions: relationshipActions(issue.NativeRelationships()), query: input,
 +		mode: modeActions, active: true, initialized: true,
 +		sessionID: atomic.AddUint64(&relationshipEditorSession, 1),
++		repository: issue.Repository.NameWithOwner, projects: projects,
++		candidateScope: candidateScopeRepo,
 +	}
 +}
 +
@@ -1212,11 +1333,17 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	case candidatesFetchedMsg:
 +		if (m.mode != modeLoadingCandidates && m.mode != modeCandidates) ||
 +			msg.SessionID != m.sessionID || msg.Version != m.searchVersion ||
-+			msg.Query != strings.TrimSpace(m.query.Value()) {
++			msg.Query != strings.TrimSpace(m.query.Value()) || msg.Scope != m.candidateScope ||
++			(msg.Scope == candidateScopeProject && msg.ProjectID != m.currentProjectID()) {
 +			return m, nil
 +		}
 +		if msg.Err != nil {
-+			m.status, m.mode = msg.Err.Error(), modeActions
++			m.status = msg.Err.Error()
++			if m.candidateScope == candidateScopeProject {
++				m.mode = modeCandidates
++			} else {
++				m.mode = modeActions
++			}
 +			return m, nil
 +		}
 +		m.candidates, m.mode, m.status = msg.Candidates, modeCandidates, ""
@@ -1227,7 +1354,7 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +			msg.Version != m.searchVersion || msg.Query != strings.TrimSpace(m.query.Value()) {
 +			return m, nil
 +		}
-+		return m, fetchCandidates(m.sessionID, msg.Version, msg.Query)
++		return m, fetchCandidates(m.sessionID, msg.Version, msg.Query, m.candidateScope, m.currentProjectID(), m.repository)
 +	case RelationshipUpdatedMsg:
 +		if msg.SessionID != m.sessionID || msg.IssueID != m.issueID {
 +			return m, nil
@@ -1239,6 +1366,9 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +		m.Close()
 +		return m, nil
 +	case tea.KeyMsg:
++		if m.mode == modeCandidateProjects {
++			return m.updateCandidateProjects(msg)
++		}
 +		if m.mode == modeCandidates {
 +			return m.updateCandidates(msg)
 +		}
@@ -1279,7 +1409,8 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +				m.mode = modeLoadingCandidates
 +				m.filterMode = false
 +				m.query.Blur()
-+				return m, fetchCandidates(m.sessionID, m.searchVersion, m.query.Value())
++				m.candidates, m.filtered = nil, nil
++				return m, m.startCandidateSearch()
 +			case modeRelationships:
 +				if len(m.removeItems) == 0 {
 +					m.status = "No live relationship is available"
@@ -1297,6 +1428,8 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +func (m *Model) updateCandidates(msg tea.KeyMsg) (Model, tea.Cmd) {
 +	if m.filterMode {
 +		switch msg.String() {
++		case "tab":
++			return m.cycleCandidateScope()
 +		case "esc":
 +			m.filterMode = false
 +			m.query.Blur()
@@ -1324,6 +1457,14 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	case "/":
 +		m.filterMode = true
 +		return *m, m.query.Focus()
++	case "tab":
++		return m.cycleCandidateScope()
++	case "p":
++		if m.candidateScope == candidateScopeProject && len(m.projects) > 1 {
++			m.mode = modeCandidateProjects
++			m.query.Blur()
++			return *m, nil
++		}
 +	case "up", "k":
 +		m.move(-1)
 +		return *m, nil
@@ -1336,6 +1477,54 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	if msg.String() == "q" {
 +		m.Close()
 +		return *m, nil
++	}
++	return *m, nil
++}
++
++func (m *Model) cycleCandidateScope() (Model, tea.Cmd) {
++	m.candidateScope = (m.candidateScope + 1) % 3
++	m.searchVersion++
++	m.selectedRel = 0
++	m.candidates, m.filtered = nil, nil
++	m.status = ""
++	return *m, m.startCandidateSearch()
++}
++
++func (m *Model) startCandidateSearch() tea.Cmd {
++	query := strings.TrimSpace(m.query.Value())
++	if m.candidateScope == candidateScopeAll && query == "" {
++		m.mode = modeCandidates
++		return nil
++	}
++	m.mode = modeLoadingCandidates
++	return fetchCandidates(m.sessionID, m.searchVersion, query, m.candidateScope, m.currentProjectID(), m.repository)
++}
++
++func (m Model) currentProjectID() string {
++	if m.candidateScope != candidateScopeProject || len(m.projects) == 0 || m.projectIndex >= len(m.projects) {
++		return ""
++	}
++	return m.projects[m.projectIndex].ID
++}
++
++func (m *Model) updateCandidateProjects(msg tea.KeyMsg) (Model, tea.Cmd) {
++	if len(m.projects) == 0 {
++		m.mode = modeCandidates
++		return *m, nil
++	}
++	switch msg.String() {
++	case "esc":
++		m.mode = modeCandidates
++	case "up", "k":
++		m.projectIndex = (m.projectIndex - 1 + len(m.projects)) % len(m.projects)
++	case "down", "j":
++		m.projectIndex = (m.projectIndex + 1) % len(m.projects)
++	case "enter":
++		m.mode = modeCandidates
++		m.searchVersion++
++		m.selectedRel = 0
++		m.candidates, m.filtered = nil, nil
++		return *m, m.startCandidateSearch()
 +	}
 +	return *m, nil
 +}
@@ -1420,29 +1609,37 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	switch m.mode {
 +	case modeActions:
 +		for i, item := range m.actions {
-+			prefix := "  "
-+			if i == m.selected {
-+				prefix = "› "
-+			}
-+			lines = append(lines, prefix+item.label)
++			lines = append(lines, m.renderRow(item.label, i == m.selected))
 +		}
 +	case modeRelationships:
 +		lines = append(lines, "Select a live relationship to remove")
-+		for i, item := range m.removeItems {
-+			prefix := "  "
-+			if i == m.selectedRel {
-+				prefix = "› "
-+			}
-+			lines = append(lines, prefix+item.Summary())
++		start, end := visibleRange(len(m.removeItems), m.selectedRel, candidateViewportSize)
++		for i := start; i < end; i++ {
++			lines = append(lines, m.renderIssueRow(m.removeItems[i], i == m.selectedRel))
 +		}
 +	case modeCandidates:
-+		lines = append(lines, "Search accessible issues: "+m.query.View())
-+		for i, item := range m.filtered {
-+			prefix := "  "
-+			if i == m.selectedRel {
-+				prefix = "› "
++		lines = append(lines, "Scope: "+m.scopeLabel()+" · "+m.query.View())
++		if m.candidateScope == candidateScopeAll && strings.TrimSpace(m.query.Value()) == "" {
++			lines = append(lines, m.ctx.Styles.Common.FaintTextStyle.Render("Type / to search all accessible GitHub issues"))
++		} else {
++			start, end := visibleRange(len(m.filtered), m.selectedRel, candidateViewportSize)
++			for i := start; i < end; i++ {
++				lines = append(lines, m.renderIssueRow(m.filtered[i], i == m.selectedRel))
 +			}
-+			lines = append(lines, prefix+item.Summary())
++			if len(m.filtered) > candidateViewportSize {
++				lines = append(lines, m.ctx.Styles.Common.FaintTextStyle.Render(fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.filtered))))
++			}
++		}
++	case modeCandidateProjects:
++		lines = append(lines, "Choose a Project")
++		start, end := visibleRange(len(m.projects), m.projectIndex, candidateViewportSize)
++		for i := start; i < end; i++ {
++			project := m.projects[i]
++			label := fmt.Sprintf("%s  %s #%d", project.Title, project.Owner.Login(), project.Number)
++			lines = append(lines, m.renderRow(label, i == m.projectIndex))
++		}
++		if len(m.projects) > candidateViewportSize {
++			lines = append(lines, m.ctx.Styles.Common.FaintTextStyle.Render(fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.projects))))
 +		}
 +	case modeLoadingRelationships, modeLoadingCandidates, modeApplying:
 +		lines = append(lines, "Working…")
@@ -1459,7 +1656,61 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	} else {
 +		lines = append(lines, "j/k/↑/↓ select · Enter choose · Esc back")
 +	}
-+	return lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(strings.Join(lines, "\n"))
++	return strings.Join(lines, "\n")
++}
++
++func (m Model) renderRow(label string, selected bool) string {
++	if selected {
++		return m.ctx.Styles.Select.SelectedStyle.Render(m.ctx.Styles.Select.Pointer.Render("› ") + label)
++	}
++	return m.ctx.Styles.Select.ItemStyle.Render("  " + label)
++}
++
++func (m Model) renderIssueRow(item data.RelatedIssue, selected bool) string {
++	stateStyle := m.ctx.Styles.Common.FaintTextStyle
++	label := m.ctx.Styles.Common.FaintTextStyle.Render(item.Identifier()) + "  " +
++		m.ctx.Styles.Common.MainTextStyle.Render(item.Title) + "  " +
++		stateStyle.Render(strings.ToLower(item.State))
++	return m.renderRow(label, selected)
++}
++
++func (m Model) scopeLabel() string {
++	switch m.candidateScope {
++	case candidateScopeProject:
++		if len(m.projects) == 0 {
++			return "Project · No GitHub Project is available for this issue"
++		}
++		return "Project · " + m.projects[m.projectIndex].DisplayName(false)
++	case candidateScopeAll:
++		return "All"
++	default:
++		return "Repo · " + m.repository
++	}
++}
++
++func visibleRange(total, selected, size int) (int, int) {
++	if total <= 0 || size <= 0 {
++		return 0, 0
++	}
++	if selected < 0 {
++		selected = 0
++	}
++	if selected >= total {
++		selected = total - 1
++	}
++	if size > total {
++		size = total
++	}
++	start := selected - size/2
++	if start < 0 {
++		start = 0
++	}
++	end := start + size
++	if end > total {
++		end = total
++		start = end - size
++	}
++	return start, end
 +}
 +
 +func relationshipActions(r data.IssueRelationships) []action {
@@ -1540,15 +1791,29 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +	}
 +}
 +
-+func fetchCandidates(sessionID, version uint64, query string) tea.Cmd {
++func fetchCandidates(sessionID, version uint64, query string, scope candidateScope, projectID, repository string) tea.Cmd {
 +	return func() tea.Msg {
 +		query = strings.TrimSpace(query)
-+		c, err := data.FetchRelationshipCandidates(query, 50)
++		var c []data.RelatedIssue
++		var err error
++		switch scope {
++		case candidateScopeRepo:
++			c, err = data.FetchRelationshipCandidates("repo:"+repository+" in:title "+query, 25)
++		case candidateScopeProject:
++			c, err = data.FetchProjectRelationshipCandidates(projectID, query, 50)
++		case candidateScopeAll:
++			if query == "" {
++				return candidatesFetchedMsg{SessionID: sessionID, Query: query, Version: version, Scope: scope, ProjectID: projectID}
++			}
++			c, err = data.FetchRelationshipCandidates("in:title "+query, 50)
++		}
 +		return candidatesFetchedMsg{
 +			SessionID:  sessionID,
 +			Query:      query,
 +			Version:    version,
 +			Candidates: c,
++			Scope:      scope,
++			ProjectID:  projectID,
 +			Err:        err,
 +		}
 +	}
@@ -1571,14 +1836,15 @@ index 0000000000000000000000000000000000000000..46049c760664442d6485b062fd69de4d
 +}
 diff --git a/internal/tui/components/relationshipeditor/editor_test.go b/internal/tui/components/relationshipeditor/editor_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..bacd911088b35878efb45f60cd3aa02355395066
+index 0000000..35e1979
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor_test.go
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,309 @@
 +package relationshipeditor
 +
 +import (
 +	"errors"
++	"fmt"
 +	"strings"
 +	"testing"
 +
@@ -1823,6 +2089,59 @@ index 0000000000000000000000000000000000000000..bacd911088b35878efb45f60cd3aa023
 +	require.True(t, strings.Contains(summary, "closed"))
 +}
 +
++func TestCandidateScopeDefaultsAndCycles(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue", Repository: data.Repository{NameWithOwner: "acme/app"}})
++	m.mode = modeCandidates
++	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.NotNil(t, cmd)
++	require.Equal(t, candidateScopeProject, updated.candidateScope)
++	updated.mode = modeCandidates
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.Equal(t, candidateScopeAll, updated.candidateScope)
++	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyTab})
++	require.Equal(t, candidateScopeRepo, updated.candidateScope)
++}
++
++func TestAllScopeEmptyQueryDoesNotFetchCandidates(t *testing.T) {
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidates
++	m.candidateScope = candidateScopeAll
++	m.query.SetValue("")
++	cmd := m.startCandidateSearch()
++	updated := m
++	require.Nil(t, cmd)
++	require.Equal(t, modeCandidates, updated.mode)
++	require.Empty(t, updated.filtered)
++}
++
++func TestVisibleRangeKeepsSelectionInViewport(t *testing.T) {
++	start, end := visibleRange(53, 52, candidateViewportSize)
++	require.Equal(t, 43, start)
++	require.Equal(t, 53, end)
++	start, end = visibleRange(3, 2, candidateViewportSize)
++	require.Equal(t, 0, start)
++	require.Equal(t, 3, end)
++}
++
++func TestCandidateProjectPickerUsesBoundedViewport(t *testing.T) {
++	projects := make([]data.Project, 15)
++	for index := range projects {
++		projects[index] = data.Project{
++			ID:     fmt.Sprintf("project-%d", index),
++			Title:  fmt.Sprintf("Project %d", index),
++			Number: index + 1,
++		}
++	}
++	m := New(&context.ProgramContext{}, data.IssueData{ID: "issue"})
++	m.mode = modeCandidateProjects
++	m.projects = projects
++	view := m.View()
++	require.Contains(t, view, "Project 0")
++	require.Contains(t, view, "Project 9")
++	require.NotContains(t, view, "Project 10")
++	require.Contains(t, view, "showing 1-10 of 15")
++}
++
 +func mutationsOf(actions []action) []data.RelationshipMutation {
 +	mutations := make([]data.RelationshipMutation, 0, len(actions))
 +	for _, item := range actions {
@@ -1831,7 +2150,7 @@ index 0000000000000000000000000000000000000000..bacd911088b35878efb45f60cd3aa023
 +	return mutations
 +}
 diff --git a/internal/tui/keys/issueKeys.go b/internal/tui/keys/issueKeys.go
-index 41e14c243281ab4603f481d93980e2cced3386de..d50a39f981c55b6ac0f57f6042e29d8d12ef9d7d 100644
+index 41e14c2..d50a39f 100644
 --- a/internal/tui/keys/issueKeys.go
 +++ b/internal/tui/keys/issueKeys.go
 @@ -20,6 +20,7 @@ type IssueKeyMap struct {
@@ -1872,7 +2191,7 @@ index 41e14c243281ab4603f481d93980e2cced3386de..d50a39f981c55b6ac0f57f6042e29d8d
  		}
 diff --git a/internal/tui/keys/issueKeys_test.go b/internal/tui/keys/issueKeys_test.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..81f5ec573375ad1c2c775e29bf0d0ccf76ecc3a5
+index 0000000..81f5ec5
 --- /dev/null
 +++ b/internal/tui/keys/issueKeys_test.go
 @@ -0,0 +1,26 @@
@@ -1903,7 +2222,7 @@ index 0000000000000000000000000000000000000000..81f5ec573375ad1c2c775e29bf0d0ccf
 +	require.Equal(t, "relationships", IssueKeys.EditRelationships.Help().Desc)
 +}
 diff --git a/internal/tui/keys/keys_test.go b/internal/tui/keys/keys_test.go
-index a20aca2c68d9b99fce1eb38489c01d21a7fba93e..6e75373ad473cfc77c22b95b70430b4e91df7ae3 100644
+index a20aca2..6e75373 100644
 --- a/internal/tui/keys/keys_test.go
 +++ b/internal/tui/keys/keys_test.go
 @@ -167,6 +167,21 @@ func TestFullHelpForPRViewDoesNotIncludeNotificationKeys(t *testing.T) {
@@ -1929,7 +2248,7 @@ index a20aca2c68d9b99fce1eb38489c01d21a7fba93e..6e75373ad473cfc77c22b95b70430b4e
  func findKeyByHelp(keys []key.Binding, helpDesc string) bool {
  	for _, k := range keys {
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index b421ab02abea3d06fc42885c6b92d838db441006..56aba37abb53fb22294efe0d41871b9089a18751 100644
+index b421ab0..56aba37 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -1424,7 +1424,7 @@ func TestProjectEditorDefaultKeyEntersFromIssueView(t *testing.T) {
