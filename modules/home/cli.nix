@@ -187,7 +187,7 @@ lib.mkIf cfg.features.cli.enable {
     settings.git.diffRenderers = [
       {
         colorArg = "always";
-        command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
+        command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
       }
     ];
   };
