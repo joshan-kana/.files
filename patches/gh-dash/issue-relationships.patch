@@ -1200,7 +1200,7 @@ index 439f5ac..b607be1 100644
 +	Relationships data.IssueRelationships
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 304666c..2fedf35 100644
+index 304666c..1548afa 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -18,6 +18,7 @@ import (
@@ -1384,6 +1384,14 @@ index 304666c..2fedf35 100644
  }
  
  func (m *Model) StartProjectEdit() {
+@@ -367,6 +474,7 @@ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
+ 	m.ctx = ctx
+ 	m.editor.UpdateProgramContext(ctx)
+ 	m.projectEditor.UpdateProgramContext(ctx)
++	m.relationshipEditor.UpdateProgramContext(ctx)
+ 
+ 	// TODO: move this to the NewModel func
+ 	// currently it's not possible since the styles aren't yet instantiated when NewModel is called
 diff --git a/internal/tui/components/issueview/issueview_test.go b/internal/tui/components/issueview/issueview_test.go
 index 3cc5bc0..7cfba81 100644
 --- a/internal/tui/components/issueview/issueview_test.go
@@ -1438,10 +1446,10 @@ index 3cc5bc0..7cfba81 100644
  	for index := 0; index < len(values); index += 2 {
 diff --git a/internal/tui/components/relationshipeditor/editor.go b/internal/tui/components/relationshipeditor/editor.go
 new file mode 100644
-index 0000000..52e3ede
+index 0000000..51ca510
 --- /dev/null
 +++ b/internal/tui/components/relationshipeditor/editor.go
-@@ -0,0 +1,815 @@
+@@ -0,0 +1,820 @@
 +package relationshipeditor
 +
 +import (
@@ -2060,6 +2068,11 @@ index 0000000..52e3ede
 +		content = ansi.Truncate(content, max(0, m.width-lipgloss.Width(prefix)), "…")
 +	}
 +	row := prefix + content
++	if selected {
++		row = m.ctx.Styles.Select.SelectedStyle.Render(row)
++	} else {
++		row = m.ctx.Styles.Select.ItemStyle.Render(row)
++	}
 +	if selected {
 +		if m.ctx.Theme.SelectedBackground.Light == nil &&
 +			m.ctx.Theme.SelectedBackground.Dark == nil {

@@ -747,6 +747,78 @@ index 0000000..25433ff
 +		t.Fatalf("issue field normalization = %#v", fields)
 +	}
 +}
+diff --git a/internal/data/project_pagination_test.go b/internal/data/project_pagination_test.go
+new file mode 100644
+index 0000000..c20dc09
+--- /dev/null
++++ b/internal/data/project_pagination_test.go
+@@ -0,0 +1,66 @@
++package data
++
++import (
++	"strings"
++	"testing"
++)
++
++func TestNextProjectPageCursorRejectsInvalidProgress(t *testing.T) {
++	tests := []struct {
++		name      string
++		hasNext   bool
++		endCursor string
++		after     *string
++		seen      map[string]struct{}
++		wantError string
++	}{
++		{
++			name:      "empty cursor",
++			hasNext:   true,
++			wantError: "pagination returned an empty cursor",
++		},
++		{
++			name:      "unchanged cursor",
++			hasNext:   true,
++			endCursor: "cursor-1",
++			after:     stringPointer("cursor-1"),
++			wantError: "pagination cursor did not advance",
++		},
++		{
++			name:      "repeated cursor",
++			hasNext:   true,
++			endCursor: "cursor-1",
++			seen:      map[string]struct{}{"cursor-1": {}},
++			wantError: "pagination cursor repeated",
++		},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			_, err := nextProjectPageCursor(
++				"Project test",
++				test.hasNext,
++				test.endCursor,
++				test.after,
++				test.seen,
++			)
++			if err == nil || !strings.Contains(err.Error(), test.wantError) {
++				t.Fatalf("error = %v, want substring %q", err, test.wantError)
++			}
++		})
++	}
++}
++
++func TestNextProjectPageCursorReturnsNilAtEnd(t *testing.T) {
++	next, err := nextProjectPageCursor("Project test", false, "", nil, make(map[string]struct{}))
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if next != nil {
++		t.Fatalf("next cursor = %q, want nil", *next)
++	}
++}
++
++func stringPointer(value string) *string {
++	return &value
++}
 diff --git a/internal/data/projectcache.go b/internal/data/projectcache.go
 new file mode 100644
 index 0000000..b17ea1b
@@ -1299,10 +1371,10 @@ index 0000000..0b94757
 +}
 diff --git a/internal/data/projectlist.go b/internal/data/projectlist.go
 new file mode 100644
-index 0000000..d8368cf
+index 0000000..f9c5b4c
 --- /dev/null
 +++ b/internal/data/projectlist.go
-@@ -0,0 +1,1163 @@
+@@ -0,0 +1,1212 @@
 +package data
 +
 +import (
@@ -1404,6 +1476,24 @@ index 0000000..d8368cf
 +	inFlight: make(map[string]*projectSchemaCall),
 +}
 +
++func nextProjectPageCursor(operation string, hasNextPage bool, endCursor string, after *string, seen map[string]struct{}) (*string, error) {
++	if !hasNextPage {
++		return nil, nil
++	}
++	if endCursor == "" {
++		return nil, fmt.Errorf("%s pagination returned an empty cursor", operation)
++	}
++	if after != nil && *after == endCursor {
++		return nil, fmt.Errorf("%s pagination cursor did not advance: %q", operation, endCursor)
++	}
++	if _, ok := seen[endCursor]; ok {
++		return nil, fmt.Errorf("%s pagination cursor repeated: %q", operation, endCursor)
++	}
++	seen[endCursor] = struct{}{}
++	cursor := endCursor
++	return &cursor, nil
++}
++
 +// FetchProjectSchema fetches only stable field identity and type. Options are
 +// deliberately excluded from list enrichment and are fetched live by the
 +// editor when it opens.
@@ -1431,6 +1521,7 @@ index 0000000..d8368cf
 +	}
 +	var fields []ProjectField
 +	var after *string
++	seenCursors := make(map[string]struct{})
 +	for {
 +		query := `query ProjectSchema($id: ID!, $after: String) {
 +  node(id: $id) { ... on ProjectV2 {
@@ -1475,11 +1566,21 @@ index 0000000..d8368cf
 +			}
 +			fields = append(fields, ProjectField{ID: field.ID, Name: field.Name, Type: fieldType})
 +		}
-+		if !response.Node.Fields.PageInfo.HasNextPage {
++		next, cursorErr := nextProjectPageCursor(
++			"Project schema",
++			response.Node.Fields.PageInfo.HasNextPage,
++			response.Node.Fields.PageInfo.EndCursor,
++			after,
++			seenCursors,
++		)
++		if cursorErr != nil {
++			completeProjectSchemaCall(projectID, call, nil, cursorErr)
++			return nil, cursorErr
++		}
++		if next == nil {
 +			break
 +		}
-+		cursor := response.Node.Fields.PageInfo.EndCursor
-+		after = &cursor
++		after = next
 +	}
 +	sort.SliceStable(
 +		fields,
@@ -2336,6 +2437,7 @@ index 0000000..d8368cf
 +	log.Debug("Fetching full Project preview", "contentID", contentID)
 +	result := ProjectItems{}
 +	var after *string
++	seenCursors := make(map[string]struct{})
 +	for {
 +		query := `query FullProjectMemberships($id: ID!, $after: String) {
 +  node(id: $id) {
@@ -2395,11 +2497,20 @@ index 0000000..d8368cf
 +			item.FieldValues.Nodes = values
 +			result.Nodes = appendProjectItem(result, item).Nodes
 +		}
-+		if !response.Node.ProjectItems.PageInfo.HasNextPage {
++		next, cursorErr := nextProjectPageCursor(
++			"Project preview memberships",
++			response.Node.ProjectItems.PageInfo.HasNextPage,
++			response.Node.ProjectItems.PageInfo.EndCursor,
++			after,
++			seenCursors,
++		)
++		if cursorErr != nil {
++			return ProjectItems{}, cursorErr
++		}
++		if next == nil {
 +			break
 +		}
-+		cursor := response.Node.ProjectItems.PageInfo.EndCursor
-+		after = &cursor
++		after = next
 +	}
 +	result.State = ProjectStateLiveVerified
 +	persistProjectItems(contentID, nil, result, true)
@@ -2412,6 +2523,7 @@ index 0000000..d8368cf
 +) ([]ProjectFieldValue, error) {
 +	var values []ProjectFieldValue
 +	var after *string
++	seenCursors := make(map[string]struct{})
 +	for {
 +		query := `query FullProjectFieldValues($id: ID!, $after: String) {
 +  node(id: $id) { ... on ProjectV2Item {
@@ -2459,11 +2571,20 @@ index 0000000..d8368cf
 +			}
 +			values = append(values, value)
 +		}
-+		if !response.Node.FieldValues.PageInfo.HasNextPage {
++		next, cursorErr := nextProjectPageCursor(
++			"Project field values",
++			response.Node.FieldValues.PageInfo.HasNextPage,
++			response.Node.FieldValues.PageInfo.EndCursor,
++			after,
++			seenCursors,
++		)
++		if cursorErr != nil {
++			return nil, cursorErr
++		}
++		if next == nil {
 +			return values, nil
 +		}
-+		cursor := response.Node.FieldValues.PageInfo.EndCursor
-+		after = &cursor
++		after = next
 +	}
 +}
 diff --git a/internal/data/projectlist_query_test.go b/internal/data/projectlist_query_test.go
@@ -3292,10 +3413,10 @@ index 0000000..d476df1
 +}
 diff --git a/internal/data/projects.go b/internal/data/projects.go
 new file mode 100644
-index 0000000..c36e735
+index 0000000..29e7b21
 --- /dev/null
 +++ b/internal/data/projects.go
-@@ -0,0 +1,1675 @@
+@@ -0,0 +1,1685 @@
 +package data
 +
 +import (
@@ -4450,6 +4571,7 @@ index 0000000..c36e735
 +	}
 +	fields := make([]ProjectField, 0)
 +	var after *string
++	seenCursors := make(map[string]struct{})
 +	for {
 +		err = projectGraphQLRead(
 +			client,
@@ -4474,11 +4596,20 @@ index 0000000..c36e735
 +				ProjectField{ID: field.ID, Name: field.Name, Type: fieldType, Options: options},
 +			)
 +		}
-+		if !response.Node.Fields.PageInfo.HasNextPage {
++		next, cursorErr := nextProjectPageCursor(
++			"Project fields",
++			response.Node.Fields.PageInfo.HasNextPage,
++			response.Node.Fields.PageInfo.EndCursor,
++			after,
++			seenCursors,
++		)
++		if cursorErr != nil {
++			return nil, cursorErr
++		}
++		if next == nil {
 +			break
 +		}
-+		cursor := response.Node.Fields.PageInfo.EndCursor
-+		after = &cursor
++		after = next
 +	}
 +	sort.SliceStable(
 +		fields,
@@ -6495,10 +6626,10 @@ index 0000000..def202f
 +}
 diff --git a/internal/tui/components/projecteditor/editor.go b/internal/tui/components/projecteditor/editor.go
 new file mode 100644
-index 0000000..486d7e9
+index 0000000..97e64a2
 --- /dev/null
 +++ b/internal/tui/components/projecteditor/editor.go
-@@ -0,0 +1,605 @@
+@@ -0,0 +1,610 @@
 +package projecteditor
 +
 +import (
@@ -7051,6 +7182,11 @@ index 0000000..486d7e9
 +		content = ansi.Truncate(content, max(0, m.width-lipgloss.Width(prefix)), "…")
 +	}
 +	row := prefix + content
++	if selected {
++		row = m.ctx.Styles.Select.SelectedStyle.Render(row)
++	} else {
++		row = m.ctx.Styles.Select.ItemStyle.Render(row)
++	}
 +	if selected {
 +		if m.ctx.Theme.SelectedBackground.Light == nil &&
 +			m.ctx.Theme.SelectedBackground.Dark == nil {
