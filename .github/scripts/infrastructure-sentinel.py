@@ -313,8 +313,16 @@ def issue_list(client: GitHub, state: str) -> list[dict[str, Any]]:
 
 def issue_metadata(client: GitHub, number: int, cache: dict[int, dict[str, Any]]) -> dict[str, Any]:
     if number not in cache:
-        issue = client.request("GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{number}")
-        cache[number] = issue
+        pull_request = client.request(
+            "GET",
+            f"/repos/{OWNER}/{REPOSITORY}/pulls/{number}",
+            allow_statuses={404},
+        )
+        if pull_request is not None:
+            pull_request.setdefault("pull_request", {"url": pull_request.get("html_url")})
+            cache[number] = pull_request
+        else:
+            cache[number] = client.request("GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{number}")
     return cache[number]
 
 

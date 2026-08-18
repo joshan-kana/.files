@@ -42,7 +42,59 @@ class FakeClient:
         raise AssertionError(f"unexpected request: {method} {path}")
 
 
+class MetadataClient:
+    def __init__(self, pull_request=None, issue=None) -> None:
+        self.pull_request = pull_request
+        self.issue = issue
+        self.calls: list[tuple[str, str, object]] = []
+
+    def request(self, method: str, path: str, payload=None, **kwargs):
+        self.calls.append((method, path, payload))
+        if "/pulls/" in path:
+            return self.pull_request
+        if path.endswith("/issues/12"):
+            return self.issue
+        raise AssertionError(f"unexpected request: {method} {path}")
+
+
+class PermissionFailureClient:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def request(self, method: str, path: str, payload=None, **kwargs):
+        self.calls.append(path)
+        raise bridge.BridgeError("GitHub REST GET /pulls/87 failed (403): forbidden")
+
+
 class PullRequestProjectTests(unittest.TestCase):
+    def test_pull_request_metadata_uses_pull_request_endpoint(self) -> None:
+        client = MetadataClient(pull_request={"number": 87, "node_id": "pr-node", "html_url": "example"})
+
+        metadata = bridge.issue_metadata(client, 87, {})
+
+        self.assertEqual(metadata["node_id"], "pr-node")
+        self.assertEqual(metadata["pull_request"], {"url": "example"})
+        self.assertEqual([call[1] for call in client.calls], ["/repos/joshan-kana/.files/pulls/87"])
+
+    def test_issue_metadata_falls_back_to_issue_endpoint(self) -> None:
+        client = MetadataClient(pull_request=None, issue={"number": 12, "node_id": "issue-node"})
+
+        metadata = bridge.issue_metadata(client, 12, {})
+
+        self.assertEqual(metadata["node_id"], "issue-node")
+        self.assertEqual([call[1] for call in client.calls], [
+            "/repos/joshan-kana/.files/pulls/12",
+            "/repos/joshan-kana/.files/issues/12",
+        ])
+
+    def test_pull_request_permission_failure_does_not_fall_back_to_issue_endpoint(self) -> None:
+        client = PermissionFailureClient()
+
+        with self.assertRaisesRegex(bridge.BridgeError, r"failed \(403\)"):
+            bridge.issue_metadata(client, 87, {})
+
+        self.assertEqual(client.calls, ["/repos/joshan-kana/.files/pulls/87"])
+
     def test_explicit_unsupported_payload_version_is_rejected(self) -> None:
         command = {
             "version": 2,
