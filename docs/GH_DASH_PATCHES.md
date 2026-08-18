@@ -75,7 +75,7 @@ visible regardless of the issue or PR body length.
 
 ## Nix integration
 
-`overlays/gh-dash-native-github.nix` pins the package and applies both patches
+`overlays/gh-dash.nix` pins the package and applies both patches
 sequentially. Home Manager installs the result through the native
 `programs.gh.extensions` integration; user configuration lives in
 `modules/home/cli.nix`. The generated configuration includes the Stylix theme

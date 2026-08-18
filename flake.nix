@@ -117,7 +117,7 @@
             homeManagerInput.nixosModules.home-manager
             ./overlays/monaspace-liga-overlay.nix
             ./overlays/bottles.nix
-            ./overlays/gh-dash-native-github.nix
+            ./overlays/gh-dash.nix
             ./modules/nixos/theme.nix
             ./modules/nixos/restic-completions.nix
             hostModule
