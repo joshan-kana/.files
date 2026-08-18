@@ -296,7 +296,7 @@ index a38043a..a237a82 100644
  func enrichIssueProjects(issues []IssueData, projectColumns ...[]ProjectColumn) error {
 diff --git a/internal/data/relationship_mutations.go b/internal/data/relationship_mutations.go
 new file mode 100644
-index 0000000..55e993a
+index 0000000..9e64730
 --- /dev/null
 +++ b/internal/data/relationship_mutations.go
 @@ -0,0 +1,272 @@
@@ -409,7 +409,7 @@ index 0000000..55e993a
 +		}
 +		cursor := response.Node.Items.PageInfo.EndCursor
 +		if _, ok := seenCursors[cursor]; ok {
-+			break
++			return nil, fmt.Errorf("Project candidate pagination stalled on cursor %q", cursor)
 +		}
 +		seenCursors[cursor] = struct{}{}
 +		after = &cursor
@@ -574,14 +574,16 @@ index 0000000..55e993a
 +}
 diff --git a/internal/data/relationship_mutations_test.go b/internal/data/relationship_mutations_test.go
 new file mode 100644
-index 0000000..2893723
+index 0000000..d65546d
 --- /dev/null
 +++ b/internal/data/relationship_mutations_test.go
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,192 @@
 +package data
 +
 +import (
 +	"encoding/json"
++	"net/http"
++	"net/http/httptest"
 +	"testing"
 +
 +	gh "github.com/cli/go-gh/v2/pkg/api"
@@ -634,45 +636,76 @@ index 0000000..2893723
 +		projectGraphQLClient = originalClient
 +		projectGraphQLDo = originalDo
 +	}()
-+	projectGraphQLClient = func() (*gh.GraphQLClient, error) { return &gh.GraphQLClient{}, nil }
-+	projectGraphQLDo = func(_ *gh.GraphQLClient, _ string, variables map[string]interface{}, result interface{}) error {
-+		after := ""
-+		if cursor, ok := variables["after"].(*string); ok && cursor != nil {
-+			after = *cursor
++	var requestCount int
++	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
++		requestCount++
++		var body struct {
++			Variables struct {
++				After *string `json:"after"`
++			} `json:"variables"`
++		}
++		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
++			http.Error(response, err.Error(), http.StatusBadRequest)
++			return
++		}
++		cursor := ""
++		if body.Variables.After != nil {
++			cursor = *body.Variables.After
 +		}
 +		payload := map[string]interface{}{
-+			"node": map[string]interface{}{
-+				"items": map[string]interface{}{
-+					"nodes":    []map[string]interface{}{},
-+					"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "cursor-1"},
++			"data": map[string]interface{}{
++				"node": map[string]interface{}{
++					"items": map[string]interface{}{
++						"nodes": []map[string]interface{}{},
++						"pageInfo": map[string]interface{}{
++							"hasNextPage": true,
++							"endCursor":   "cursor-1",
++						},
++					},
 +				},
 +			},
 +		}
-+		items := payload["node"].(map[string]interface{})["items"].(map[string]interface{})
-+		nodes := items["nodes"].([]map[string]interface{})
-+		if after == "" {
-+			nodes = append(nodes,
-+				map[string]interface{}{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "First issue", "state": "OPEN", "url": "https://github.com/acme/app/issues/1", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
-+				map[string]interface{}{"content": map[string]interface{}{}},
-+				map[string]interface{}{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "Duplicate", "state": "OPEN", "url": "", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
-+			)
++		items := payload["data"].(map[string]interface{})["node"].(map[string]interface{})["items"].(map[string]interface{})
++		if cursor == "" {
++			items["nodes"] = []map[string]interface{}{
++				{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "First issue", "state": "OPEN", "url": "https://github.com/acme/app/issues/1", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++				{"content": map[string]interface{}{}},
++				{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "Duplicate", "state": "OPEN", "url": "", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++			}
 +		} else {
-+			nodes = append(nodes,
-+				map[string]interface{}{"content": map[string]interface{}{"id": "issue-2", "number": 2, "title": "Second issue", "state": "CLOSED", "url": "https://github.com/acme/app/issues/2", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
-+			)
-+			items["pageInfo"] = map[string]interface{}{"hasNextPage": true, "endCursor": "cursor-1"}
++			items["nodes"] = []map[string]interface{}{
++				{"content": map[string]interface{}{"id": "issue-2", "number": 2, "title": "Second issue", "state": "CLOSED", "url": "https://github.com/acme/app/issues/2", "repository": map[string]interface{}{"nameWithOwner": "acme/app"}}},
++			}
++			items["pageInfo"] = map[string]interface{}{"hasNextPage": false, "endCursor": "cursor-1"}
 +		}
-+		items["nodes"] = nodes
-+		encoded, err := json.Marshal(payload)
-+		if err != nil {
-+			return err
++		if err := json.NewEncoder(response).Encode(payload); err != nil {
++			t.Fatalf("encode GraphQL response: %v", err)
 +		}
-+		return json.Unmarshal(encoded, result)
++	}))
++	defer server.Close()
++
++	transport := roundTripperFunc(func(request *http.Request) (*http.Response, error) {
++		request.URL.Scheme = "http"
++		request.URL.Host = server.Listener.Addr().String()
++		return http.DefaultTransport.RoundTrip(request)
++	})
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) {
++		return gh.NewGraphQLClient(gh.ClientOptions{
++			Host:      "github.com",
++			AuthToken: "test-token",
++			Transport: transport,
++		})
++	}
++	projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		return client.Do(query, variables, result)
 +	}
 +
 +	candidates, err := FetchProjectRelationshipCandidates("project", "issue", 10)
 +	if err != nil {
 +		t.Fatal(err)
++	}
++	if requestCount != 2 {
++		t.Fatalf("GraphQL request count = %d, want 2", requestCount)
 +	}
 +	if len(candidates) != 2 || candidates[0].ID != "issue-1" || candidates[1].ID != "issue-2" {
 +		t.Fatalf("unexpected candidates: %#v", candidates)
@@ -688,6 +721,54 @@ index 0000000..2893723
 +	if err != nil || len(limited) != 1 || limited[0].ID != "issue-1" {
 +		t.Fatalf("limited candidates = %#v, err = %v", limited, err)
 +	}
++}
++
++func TestFetchProjectRelationshipCandidatesRejectsRepeatedCursor(t *testing.T) {
++	originalClient := projectGraphQLClient
++	originalDo := projectGraphQLDo
++	defer func() {
++		projectGraphQLClient = originalClient
++		projectGraphQLDo = originalDo
++	}()
++
++	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
++		payload := map[string]interface{}{
++			"data": map[string]interface{}{
++				"node": map[string]interface{}{
++					"items": map[string]interface{}{
++						"nodes":    []map[string]interface{}{{"content": map[string]interface{}{"id": "issue-1", "number": 1, "title": "First issue"}}},
++						"pageInfo": map[string]interface{}{"hasNextPage": true, "endCursor": "stuck"},
++					},
++				},
++			},
++		}
++		if err := json.NewEncoder(response).Encode(payload); err != nil {
++			t.Fatalf("encode GraphQL response: %v", err)
++		}
++	}))
++	defer server.Close()
++	transport := roundTripperFunc(func(request *http.Request) (*http.Response, error) {
++		request.URL.Scheme = "http"
++		request.URL.Host = server.Listener.Addr().String()
++		return http.DefaultTransport.RoundTrip(request)
++	})
++	projectGraphQLClient = func() (*gh.GraphQLClient, error) {
++		return gh.NewGraphQLClient(gh.ClientOptions{Host: "github.com", AuthToken: "test-token", Transport: transport})
++	}
++	projectGraphQLDo = func(client *gh.GraphQLClient, query string, variables map[string]interface{}, result interface{}) error {
++		return client.Do(query, variables, result)
++	}
++
++	_, err := FetchProjectRelationshipCandidates("project", "", 10)
++	if err == nil {
++		t.Fatal("FetchProjectRelationshipCandidates() error = nil, want repeated cursor error")
++	}
++}
++
++type roundTripperFunc func(*http.Request) (*http.Response, error)
++
++func (roundTripper roundTripperFunc) RoundTrip(request *http.Request) (*http.Response, error) {
++	return roundTripper(request)
 +}
 diff --git a/internal/data/relationships.go b/internal/data/relationships.go
 new file mode 100644
