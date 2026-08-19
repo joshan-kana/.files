@@ -10,12 +10,13 @@ let
   serverIp = serverCfg.lan.serverIp;
   searxPort = 8888;
   githubMcpPort = 8082;
+  searxEnv = "${secretsDir}/searxng.env";
 in
 {
   services.searx = {
     enable = true;
     openFirewall = true;
-    environmentFile = "${secretsDir}/searxng.env";
+    environmentFile = searxEnv;
     settings = {
       server = {
         port = searxPort;
@@ -31,11 +32,39 @@ in
     };
   };
 
-  systemd.tmpfiles.rules = [
-    "d ${secretsDir} 0700 root root - -"
-    "Z ${secretsDir} ~0700 root root - -"
-    "z ${secretsDir}/searxng.env 0400 root root - -"
-  ];
+  systemd.services.searx = {
+    after = [ "searxng-secrets.service" ];
+    requires = [ "searxng-secrets.service" ];
+  };
+
+  systemd.services.searxng-secrets = {
+    description = "Provision persistent SearXNG secrets";
+    before = [ "searx.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      UMask = "0077";
+    };
+    path = with pkgs; [
+      coreutils
+      gnugrep
+      openssl
+    ];
+    script = ''
+      set -euo pipefail
+
+      install -d -m 0700 ${secretsDir}
+      touch ${searxEnv}
+      chmod 0400 ${searxEnv}
+
+      if ! grep -q '^SEARX_SECRET_KEY=' ${searxEnv}; then
+        chmod 0600 ${searxEnv}
+        printf 'SEARX_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" >> ${searxEnv}
+        chmod 0400 ${searxEnv}
+      fi
+    '';
+  };
 
   systemd.services.github-mcp-server = {
     description = "GitHub MCP Server (Streamable HTTP)";
