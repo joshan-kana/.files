@@ -10,6 +10,7 @@ let
   appDataRoot = storage.appData.root;
   dataRoot = storage.dataRoot.path;
   dataGroup = storage.dataRoot.group.name;
+  poolName = storage.dataRoot.poolName;
   postgresDataRoot = "${appDataRoot}/postgresql";
   postgresDataDir = "${postgresDataRoot}/${config.services.postgresql.package.psqlSchema}";
   databaseBackupDir = "${appDataRoot}/immich/database-backups";
@@ -62,6 +63,16 @@ in
       RemainAfterExit = true;
     };
     script = ''
+      mount_source="$(${pkgs.util-linux}/bin/findmnt -n -o SOURCE --target ${lib.escapeShellArg dataRoot} || true)"
+      mount_type="$(${pkgs.util-linux}/bin/findmnt -n -o FSTYPE --target ${lib.escapeShellArg dataRoot} || true)"
+      expected_source=${lib.escapeShellArg "${poolName}/data"}
+
+      if [ "$mount_type" != "zfs" ] || [ "$mount_source" != "$expected_source" ]; then
+        echo "Refusing to prepare Immich storage: ${dataRoot} is not mounted from ${poolName}/data." >&2
+        echo "Detected source: ''${mount_source:-none}; filesystem: ''${mount_type:-none}" >&2
+        exit 1
+      fi
+
       ${pkgs.coreutils}/bin/install -d \
         -m 2775 \
         -o root \
