@@ -28,8 +28,9 @@ there when you want to know what applies to a machine.
 ## Layout
 
 The flake uses plain modular Nix. It does not use Snowfall Lib or flake-parts.
-Keep modules coarse and topic-based; avoid creating one file per small app unless
-that app grows enough configuration to deserve its own module.
+Keep modules coarse and topic-based generally; server applications are the
+exception and each deployed app lives in its own module under
+`hosts/nixos-server/apps/`.
 
 ```text
 hosts/              Real machines and host-specific topic files
@@ -45,8 +46,8 @@ Use this rule when adding code:
 - Put machine-specific behavior in `hosts/<host>/`.
 - Put reused system behavior in `modules/nixos/`.
 - Put reused user/home behavior in `modules/home/`.
-- Keep server-only apps under `hosts/nixos-server/` until another server needs
-  the same code.
+- Keep server-only apps under `hosts/nixos-server/apps/` until another server
+  needs the same code.
 
 ## Common Options
 
@@ -167,7 +168,7 @@ Use the current location of the program:
 - Plasma NixOS config: `desktop/plasma/plasma.nix`
 - Hyprland home config: `desktop/hyprland/hyprland.nix`
 - Hyprland NixOS config: `desktop/hyprland/hyprland-nixos.nix`
-- Server containers and hosted stack: `hosts/nixos-server/apps.nix`
+- Server apps and containers: `hosts/nixos-server/apps/<app>.nix`
 - Server networking: `hosts/nixos-server/networking.nix`
 - Server image build: `hosts/nixos-server/image.nix`
 - Host hardware: `hosts/<host>/hardware.nix`
