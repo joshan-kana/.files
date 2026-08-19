@@ -35,7 +35,7 @@ There are two kinds of state:
 | Thing | Where it lives | How to roll back |
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
-| App data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup, subject to the exclusions below |
+| Container app data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup |
 | Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
@@ -43,13 +43,13 @@ without rolling back the whole NixOS system.
 
 ## App Data Locations
 
-Application state lives under one parent directory:
+Container app data lives under one parent directory:
 
 ```text
 /var/lib/apps
 ```
 
-Current child paths include:
+Each app gets a plain child directory, for example:
 
 ```text
 /var/lib/apps/home-assistant
@@ -58,20 +58,14 @@ Current child paths include:
 /var/lib/apps/n8n
 /var/lib/apps/openclaw
 /var/lib/apps/openclaw-auth
-/var/lib/apps/postgresql
-/var/lib/apps/immich/database-backups
 ```
 
-Future apps should store mutable state under `/var/lib/apps` where practical so
-local Snapper protection remains consistent. Offsite restic coverage can differ
-for state that needs an application-aware backup method; the live PostgreSQL
-cluster is the current example.
+Future container apps should store mutable data under `/var/lib/apps` so the
+normal backup and restore flow includes them automatically.
 
 Large files stored under `/srv/vault` use local recursive ZFS snapshots and are
 not included in this restic repository. See [Vault ZFS Storage](vault-storage.md)
 for health checks, snapshot verification, and full-rebuild import instructions.
-See [Native Immich](immich.md) for the split between Immich's live PostgreSQL
-cluster, logical database dumps, managed Vault media, and external library.
 
 Tailscale is a native service and uses its own state outside `/var/lib/apps`.
 Normal replacement installs enrol with `/root/secrets/tailscale-oauth-client-secret` instead
@@ -151,9 +145,7 @@ sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 
 Use the single-app restore when only one app is broken. Use the whole
 `/var/lib/apps` restore when the full hosted app state needs to go back to the
-same point in time. For PostgreSQL-backed apps, prefer the documented logical
-backup/restore flow unless you specifically need a local crash-consistent
-filesystem snapshot recovery.
+same point in time.
 
 ## Vault ZFS Snapshot Restore
 
@@ -271,7 +263,7 @@ sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
   --password-file /root/secrets/restic-password snapshots
 ```
 
-Restore all app data on a replacement server:
+Restore all container app data on a replacement server:
 
 ```sh
 sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
@@ -291,27 +283,16 @@ sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
   --include /var/lib/apps/n8n
 ```
 
-The restored `/var/lib/apps` tree will not contain the live PostgreSQL cluster,
-because that path is intentionally excluded from restic. Restore PostgreSQL
-applications from their logical dumps instead; for Immich, use
-`/var/lib/apps/immich/database-backups/immich.sql.gz` as described in
-[Native Immich](immich.md).
+## Media Policy
 
-## Restic Exclusions
-
-The current default restic exclusions are:
+The only default restic exclusion is:
 
 ```text
 /var/lib/apps/home-assistant/www/media/ha-bambulab
-/var/lib/apps/postgresql
 ```
 
-The Home Assistant exclusion keeps Bambu Lab printer media from dominating the
-offsite repository. The PostgreSQL exclusion avoids treating a file-by-file copy
-of a running database cluster as a dependable restore artifact. Immich creates a
-logical PostgreSQL dump below `/var/lib/apps/immich/database-backups`, which is
-included in restic instead.
-
-SQLite files such as Home Assistant and n8n databases remain included as app
-state. If the printer media matters, back it up separately or remove that
-exclude from `hosts/nixos-server/storage.nix`.
+The raw HAOS backup showed that Bambu Lab printer media dominates the Home
+Assistant backup size. SQLite files such as Home Assistant and n8n databases are
+included because they are app state. If the printer media matters, back it up
+separately or remove that exclude from
+`profiles/nixos-server/hosted-stack.nix`.
