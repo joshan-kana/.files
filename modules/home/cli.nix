@@ -52,6 +52,7 @@ let
     gca = "git commit -a -m";
     gpl = "git pull";
     gph = "git push";
+    dh = "gh dash";
     ollama = "docker exec -it ollama ollama";
     v = "nvim";
     l = "eza -a";
@@ -116,7 +117,55 @@ lib.mkIf cfg.features.cli.enable {
     signing.format = "openpgp";
   };
 
-  programs.gh.enable = enabled "gh";
+  programs.gh = {
+    enable = enabled "gh";
+    extensions = [ pkgs.gh-dash ];
+  };
+
+  xdg.configFile."gh-dash/config.yml" = lib.mkIf (enabled "gh") {
+    source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+      defaults = {
+        view = "issues";
+        layout = {
+          issues = {
+            repo.hidden = true;
+            creator.hidden = true;
+            reactions.hidden = true;
+            comments.hidden = true;
+            updatedAt.hidden = true;
+            createdAt.hidden = true;
+          };
+          projects = {
+            enabled = true;
+            fields = [
+              {
+                name = "Status";
+                width = 12;
+              }
+              {
+                name = "Priority";
+                width = 10;
+              }
+              {
+                name = "Area";
+                width = 14;
+              }
+              {
+                name = "Kind";
+                width = 12;
+              }
+            ];
+          };
+        };
+      };
+      include = [ "stylix.yml" ];
+      pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
+      repoPaths = {
+        "joshan-kana/.files" = repoPath;
+      };
+      theme.ui.table.compact = true;
+    };
+  };
 
   programs.delta = {
     enable = enabled "delta";
@@ -138,7 +187,7 @@ lib.mkIf cfg.features.cli.enable {
     settings.git.diffRenderers = [
       {
         colorArg = "always";
-        command = ''sh -c 'PAGER=cat eval "$(git config --get pager.diff || git config --get core.pager)"' '';
+        command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
       }
     ];
   };
