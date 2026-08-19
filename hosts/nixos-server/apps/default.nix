@@ -8,6 +8,7 @@
     ./openclaw.nix
     ./open-webui.nix
     ./open-webui-computer.nix
+    ./open-webui-computer-model.nix
     ./open-webui-tools.nix
   ];
 }
