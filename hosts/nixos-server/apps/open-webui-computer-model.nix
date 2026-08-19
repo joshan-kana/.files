@@ -21,6 +21,13 @@ in
   # The base bootstrap uses sed to maintain its root-only environment file.
   systemd.services.open-webui-computer-bootstrap.path = lib.mkAfter [ pkgs.gnused ];
 
+  # Open WebUI should not consume the Computer gateway until its default model
+  # backend has also been reconciled.
+  systemd.services.open-webui-secrets = {
+    after = lib.mkAfter [ "open-webui-computer-model.service" ];
+    requires = lib.mkAfter [ "open-webui-computer-model.service" ];
+  };
+
   systemd.services.open-webui-computer-model = {
     description = "Configure the server Computer AI backend";
     wantedBy = [ "multi-user.target" ];
@@ -88,7 +95,7 @@ in
         -b "$cookies" \
         -X PUT \
         -H 'Content-Type: application/json' \
-        -d '$(builtins.toJSON { config = { "chat.default_model" = defaultModel; }; })' \
+        -d '${builtins.toJSON { config = { "chat.default_model" = defaultModel; }; }}' \
         ${computerBaseUrl}/api/admin/config >/dev/null
 
       # The one-time setup URL is no longer useful after the first account has
