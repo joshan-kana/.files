@@ -14,6 +14,15 @@ let
   openWebuiStateDir = "${appDataRoot}/open-webui";
   openWebuiPort = 8080;
   openWebuiEnv = "${secretsDir}/open-webui.env";
+  computerEnv = "${secretsDir}/open-webui-computer.env";
+  macComputerEnv = "${secretsDir}/open-webui-mac-computer.env";
+  computerHeaders = {
+    X-OpenWebUI-Chat-Id = "{{CHAT_ID}}";
+    X-OpenWebUI-Message-Id = "{{MESSAGE_ID}}";
+    X-OpenWebUI-User-Message-Id = "{{USER_MESSAGE_ID}}";
+    X-OpenWebUI-User-Message-Parent-Id = "{{USER_MESSAGE_PARENT_ID}}";
+    X-OpenWebUI-Task = "{{TASK}}";
+  };
 in
 {
   services.open-webui = {
@@ -24,6 +33,7 @@ in
     environmentFile = openWebuiEnv;
     environment = {
       WEBUI_URL = "http://${serverIp}:${toString openWebuiPort}";
+      WEBUI_ADMIN_NAME = "Joshan";
       ENABLE_WEB_SEARCH = "True";
       WEB_SEARCH_ENGINE = "searxng";
       WEB_SEARCH_RESULT_COUNT = "5";
@@ -45,9 +55,15 @@ in
     };
   };
 
+  # Build the environment file at boot from durable root-only inputs. This keeps
+  # Open WebUI's own encryption key stable and also seeds Computer connections
+  # with the lineage headers recommended by Computer upstream. A Mac Computer
+  # connection is added automatically when open-webui-mac-computer.env exists.
   systemd.services.open-webui-secrets = {
-    description = "Provision persistent Open WebUI secrets";
+    description = "Provision persistent Open WebUI secrets and connections";
     before = [ "open-webui.service" ];
+    after = [ "open-webui-computer-bootstrap.service" ];
+    requires = [ "open-webui-computer-bootstrap.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
@@ -57,6 +73,8 @@ in
     path = with pkgs; [
       coreutils
       gnugrep
+      gnused
+      jq
       openssl
     ];
     script = ''
@@ -64,21 +82,80 @@ in
 
       install -d -m 0700 ${secretsDir}
       touch ${openWebuiEnv}
-      chmod 0400 ${openWebuiEnv}
+      chmod 0600 ${openWebuiEnv}
 
-      append_if_missing() {
+      get_value() {
+        file="$1"
+        key="$2"
+        sed -n "s/^$key=//p" "$file" 2>/dev/null | tail -n 1
+      }
+
+      set_value() {
         key="$1"
         value="$2"
-        if ! grep -q "^$key=" ${openWebuiEnv}; then
-          chmod 0600 ${openWebuiEnv}
-          printf '%s=%s\n' "$key" "$value" >> ${openWebuiEnv}
-          chmod 0400 ${openWebuiEnv}
+        tmp="$(mktemp)"
+        grep -v "^$key=" ${openWebuiEnv} > "$tmp" || true
+        printf '%s=%s\n' "$key" "$value" >> "$tmp"
+        install -m 0600 "$tmp" ${openWebuiEnv}
+        rm -f "$tmp"
+      }
+
+      ensure_value() {
+        key="$1"
+        value="$2"
+        if [ -z "$(get_value ${openWebuiEnv} "$key")" ]; then
+          set_value "$key" "$value"
         fi
       }
 
-      append_if_missing WEBUI_SECRET_KEY "$(openssl rand -hex 32)"
-      append_if_missing WEBUI_ADMIN_EMAIL "joshan@localhost"
-      append_if_missing WEBUI_ADMIN_PASSWORD "$(openssl rand -hex 32)"
+      ensure_value WEBUI_SECRET_KEY "$(openssl rand -hex 32)"
+      ensure_value WEBUI_ADMIN_EMAIL "joshan@localhost"
+      ensure_value WEBUI_ADMIN_PASSWORD "$(openssl rand -hex 32)"
+
+      serverKey="$(get_value ${computerEnv} CPTR_GATEWAY_API_KEY)"
+      if [ -z "$serverKey" ]; then
+        echo "Server Computer gateway key is missing from ${computerEnv}" >&2
+        exit 1
+      fi
+
+      baseUrls="http://${serverIp}:8000/v1"
+      apiKeys="$serverKey"
+      apiConfigs="$(jq -cn \
+        --argjson headers '${builtins.toJSON computerHeaders}' \
+        '{"0": {"enable": true, "prefix_id": "server", "provider": "Open WebUI Computer (server)", "headers": $headers}}'
+      )"
+
+      if [ -s ${macComputerEnv} ]; then
+        macUrl="$(get_value ${macComputerEnv} CPTR_BASE_URL)"
+        macKey="$(get_value ${macComputerEnv} CPTR_GATEWAY_API_KEY)"
+        if [ -n "$macUrl" ] && [ -n "$macKey" ]; then
+          baseUrls="$baseUrls;$macUrl"
+          apiKeys="$apiKeys;$macKey"
+          apiConfigs="$(jq -cn \
+            --argjson current "$apiConfigs" \
+            --argjson headers '${builtins.toJSON computerHeaders}' \
+            '$current + {"1": {"enable": true, "prefix_id": "mac", "provider": "Open WebUI Computer (Mac)", "headers": $headers}}'
+          )"
+        fi
+      fi
+
+      set_value ENABLE_OPENAI_API True
+      set_value OPENAI_API_BASE_URLS "$baseUrls"
+      set_value OPENAI_API_KEYS "$apiKeys"
+      set_value OPENAI_API_CONFIGS "$apiConfigs"
+
+      githubToken="$(get_value ${openWebuiEnv} GITHUB_MCP_TOKEN)"
+      if [ -n "$githubToken" ]; then
+        toolServers="$(jq -cn \
+          --arg key "$githubToken" \
+          '[{"url":"http://${serverIp}:8082/mcp","path":"","type":"mcp","auth_type":"bearer","headers":null,"key":$key,"config":{"enable":true},"info":{"id":"github","name":"GitHub"}}]'
+        )"
+      else
+        toolServers='[]'
+      fi
+      set_value TOOL_SERVER_CONNECTIONS "$toolServers"
+
+      chmod 0400 ${openWebuiEnv}
     '';
   };
 
