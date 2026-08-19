@@ -48,8 +48,6 @@ in
     };
   };
 
-  users.users.${primaryUser}.extraGroups = [ "docker" ];
-
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
@@ -97,10 +95,13 @@ in
     ];
   };
 
-  users.users.${primaryUser}.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
-  ];
+  users.users.${primaryUser} = {
+    extraGroups = [ "docker" ];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
+    ];
+  };
 
   security.pam.sshAgentAuth = {
     enable = true;
