@@ -20,8 +20,7 @@ in
     ../../modules/nixos/base.nix
     ./networking.nix
     ./container-image-locking.nix
-    ./apps.nix
-    ./openclaw.nix
+    ./apps
     ./storage.nix
     ./vm.nix
     ./image.nix
@@ -48,6 +47,8 @@ in
       ];
     };
   };
+
+  users.users.${primaryUser}.extraGroups = [ "docker" ];
 
   hardware.bluetooth = {
     enable = true;
