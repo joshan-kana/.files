@@ -220,9 +220,7 @@ Import the home half from that host's `default.nix`, next to the system half:
 ```nix
 # hosts/nixos/default.nix
 home-manager.users.${config.dotfiles.users.primary.name}.imports = [
-  ../../modules/home/base.nix
-  ../../modules/home/cli.nix
-  ../../modules/home/desktop-linux.nix
+  ../../modules/home/my-feature.nix
 ];
 ```
 
