@@ -7,6 +7,7 @@
     ./n8n.nix
     ./openclaw.nix
     ./open-webui.nix
+    ./open-webui-bootstrap.nix
     ./open-webui-computer.nix
     ./open-webui-computer-model.nix
     ./open-webui-tools.nix
