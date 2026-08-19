@@ -30,6 +30,12 @@ write XMP sidecars or delete an external asset when those actions are requested
 through Immich. Use filesystem or service-level read-only permissions if the
 archive needs to be immutable to Immich.
 
+PostgreSQL intentionally stays at the native NixOS location instead of being
+relocated into `/var/lib/apps`. Redis and the machine-learning cache also keep
+their native locations. This avoids custom state plumbing; Immich's automatic
+logical database backups under the managed media root provide the application
+restore point.
+
 ## Deployment
 
 The NixOS Immich module requires a non-default `mediaLocation` to already exist
@@ -109,7 +115,7 @@ uptime
 If machine learning is too expensive for the Pi, it can be disabled later with
 `services.immich.machine-learning.enable = false` or moved to a remote machine.
 
-## Backups
+## Backups and restore
 
 Immich stores file paths and application metadata in PostgreSQL. Its automatic
 database dumps are stored below the managed media root at:
@@ -123,3 +129,19 @@ Both `/srv/vault/immich` and `/srv/vault/media-library` are covered by the
 recursive Vault ZFS/Sanoid snapshot policy, but the Vault is not currently part
 of the restic/Dropbox offsite backup. A complete recovery therefore needs both a
 compatible Immich database backup and the corresponding media files.
+
+Confirm that Vault snapshots exist after the deployment and first library scan:
+
+```sh
+zfs list -t snapshot -r vault/data
+```
+
+Use Immich's built-in database restore flow for application/database recovery.
+For deleted or damaged files under `/srv/vault`, use the ZFS restore procedures
+in `backup-restore.md`.
+
+A NixOS generation rollback is appropriate for a bad Nix configuration, but do
+not use it as a database rollback mechanism when it would downgrade the Immich
+server. Immich does not support downgrading to an earlier release after a newer
+release may have migrated the database. Restore a compatible Immich database
+backup instead when application state itself needs to move backward.
