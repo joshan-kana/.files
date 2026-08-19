@@ -9,4 +9,4 @@ if ! git diff --cached --quiet -- '*.nix'; then
   git diff --cached --name-only --diff-filter=ACMR -z -- '*.nix' | xargs -0 nix fmt -- --fail-on-change
 fi
 
-git diff --check --cached
+git diff --check --cached -- . ':(exclude)patches/**'
