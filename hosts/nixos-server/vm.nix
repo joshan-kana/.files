@@ -5,12 +5,9 @@
     services.restic.backups = lib.mkForce { };
     services.snapper.configs = lib.mkForce { };
     services.immich.enable = lib.mkForce false;
-    services.postgresqlBackup.enable = lib.mkForce false;
 
     # VM builds do not have the real Vault pool or LAN interface used by the
     # production Raspberry Pi deployment.
-    systemd.services.immich-vault-storage.enable = lib.mkForce false;
-    systemd.services.immich-server.enable = lib.mkForce false;
     systemd.services.docker-network-adguard = lib.mkForce { };
 
     systemd.services.docker-adguard = {
