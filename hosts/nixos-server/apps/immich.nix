@@ -22,11 +22,7 @@ in
     enable = true;
     openFirewall = true;
     mediaLocation = mediaRoot;
-
-    # The Pi can still generate thumbnails in the server process, but the
-    # separate ML worker is intentionally disabled until its cost on this host
-    # has been measured.
-    machine-learning.enable = false;
+    machine-learning.enable = true;
   };
 
   # Immich's native module owns the PostgreSQL instance it uses. Keep the live
