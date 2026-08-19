@@ -10,7 +10,9 @@ let
   appDataRoot = storage.appData.root;
   dataRoot = storage.dataRoot.path;
   dataGroup = storage.dataRoot.group.name;
-  postgresDataDir = "${appDataRoot}/postgresql/${config.services.postgresql.package.psqlSchema}";
+  postgresDataRoot = "${appDataRoot}/postgresql";
+  postgresDataDir = "${postgresDataRoot}/${config.services.postgresql.package.psqlSchema}";
+  databaseBackupDir = "${appDataRoot}/immich/database-backups";
   mediaRoot = "${dataRoot}/photos/immich";
   externalLibrary = "${dataRoot}/media-library";
 in
@@ -28,12 +30,22 @@ in
     machine-learning.enable = false;
   };
 
-  # Immich's native module owns the PostgreSQL instance it uses. Keep that
-  # database state inside the normal app-data snapshot and offsite-backup root.
+  # Immich's native module owns the PostgreSQL instance it uses. Keep the live
+  # cluster under appDataRoot for local snapshots, but back up a logical dump
+  # offsite instead of relying on restic to copy a running PostgreSQL cluster.
   services.postgresql.dataDir = postgresDataDir;
+  services.postgresqlBackup = {
+    enable = true;
+    backupAll = false;
+    databases = [ config.services.immich.database.name ];
+    location = databaseBackupDir;
+    pgdumpOptions = "--clean --if-exists";
+  };
+  services.restic.backups.apps.exclude = [ postgresDataRoot ];
 
   systemd.tmpfiles.rules = [
-    "d ${appDataRoot}/postgresql 0750 postgres postgres - -"
+    "d ${appDataRoot}/immich 0750 postgres postgres - -"
+    "d ${postgresDataRoot} 0750 postgres postgres - -"
     "d ${postgresDataDir} 0700 postgres postgres - -"
     "a+ ${appDataRoot} - - - - mask::rwx,u:postgres:x"
   ];
