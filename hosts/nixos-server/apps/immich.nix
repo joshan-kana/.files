@@ -32,11 +32,6 @@ in
   # database state inside the normal app-data snapshot and offsite-backup root.
   services.postgresql.dataDir = postgresDataDir;
 
-  # Vault is group-readable collaborative storage. Membership gives Immich
-  # read access to the existing external library without copying those files
-  # into its managed media tree.
-  users.users.immich.extraGroups = [ dataGroup ];
-
   systemd.tmpfiles.rules = [
     "d ${appDataRoot}/postgresql 0750 postgres postgres - -"
     "d ${postgresDataDir} 0700 postgres postgres - -"
@@ -78,5 +73,9 @@ in
     requires = [ "immich-vault-storage.service" ];
     after = [ "immich-vault-storage.service" ];
     unitConfig.RequiresMountsFor = [ dataRoot ];
+    serviceConfig = {
+      SupplementaryGroups = [ dataGroup ];
+      BindReadOnlyPaths = [ externalLibrary ];
+    };
   };
 }
