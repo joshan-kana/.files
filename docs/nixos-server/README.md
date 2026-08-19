@@ -205,8 +205,7 @@ the container image.
 
 Containers are declared with normal NixOS OCI-container syntax. Each keeps an
 `image = "repository:tag";` source plus its volumes, ports, environment files,
-and extra options in `hosts/nixos-server/apps.nix` (or any module in the server
-module graph):
+and extra options in the relevant `hosts/nixos-server/apps/<app>.nix` module:
 
 ```nix
 virtualisation.oci-containers.containers.openclaw = {
@@ -220,9 +219,9 @@ virtualisation.oci-containers.containers.openclaw = {
 to the upstream `virtualisation.oci-containers.containers` option. After every
 container definition across the whole module graph has merged, it appends the
 matching locked digest from `container-images.lock`, producing
-`repository:tag@sha256:<digest>` at evaluation time. The container modules may
-live anywhere in the server module graph; the transformation is global and does
-not depend on `apps.nix`.
+`repository:tag@sha256:<digest>` at evaluation time. The transformation is
+global and does not depend on where an app module lives in the server module
+graph.
 
 The lock is keyed by container name. Two containers may intentionally follow the
 same `repository:tag` source and still have independent lock records and
