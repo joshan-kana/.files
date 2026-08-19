@@ -82,11 +82,9 @@ that consume them instead of being created speculatively. Servers provisioned
 with an earlier version of the script may retain the previous empty child
 datasets until they are explicitly removed.
 
-Immich is the first app to add managed directories under this dataset. It uses
-`/srv/vault/photos/immich` for Immich-managed media and reads the existing
-`/srv/vault/media-library` through a read-only service bind. See
-[Native Immich](immich.md) for deployment, backup, performance, and restore
-checks.
+Immich uses `/srv/vault/immich` as its managed media root and indexes the
+existing `/srv/vault/media-library` in place as an external library. See
+[Native Immich](immich.md) for deployment and first-run setup.
 
 ## Routine Health Checks
 
