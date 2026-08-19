@@ -6,15 +6,9 @@ cd "$repo_root"
 
 if ! git diff --cached --quiet -- '*.nix'; then
   echo "Checking staged Nix formatting..."
-  nix_files=()
-  while IFS= read -r -d '' path; do
-    nix_files+=("$path")
-  done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.nix')
-  if ((${#nix_files[@]} > 0)); then
-    nix fmt -- --fail-on-change "${nix_files[@]}"
-  fi
+  git diff --cached --name-only --diff-filter=ACMR -z -- '*.nix' | xargs -0 nix fmt -- --fail-on-change
 fi
 
 # Generated gh-dash downstream patches preserve upstream diff whitespace and
 # are validated by gh-dash patch apply/source/build checks.
-git diff --check --cached -- . ':(exclude)patches/gh-dash/**'
+git diff --check --cached -- . ':(exclude)patches/**'

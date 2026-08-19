@@ -1202,7 +1202,7 @@ index 439f5ac..b607be1 100644
 +	Relationships data.IssueRelationships
  }
 diff --git a/internal/tui/components/issueview/issueview.go b/internal/tui/components/issueview/issueview.go
-index 304666c..de3af3c 100644
+index 304666c..b9a9410 100644
 --- a/internal/tui/components/issueview/issueview.go
 +++ b/internal/tui/components/issueview/issueview.go
 @@ -18,6 +18,7 @@ import (
@@ -1309,7 +1309,7 @@ index 304666c..de3af3c 100644
  	labels := m.renderLabels()
  	if labels != "" {
  		s.WriteString(labels)
-@@ -180,6 +226,92 @@ func (m Model) View() string {
+@@ -180,6 +226,101 @@ func (m Model) View() string {
  	return lipgloss.NewStyle().Padding(0, m.ctx.Styles.Sidebar.ContentPadding).Render(s.String())
  }
  
@@ -1332,8 +1332,17 @@ index 304666c..de3af3c 100644
 +		return strings.Join(lines, "\n")
 +	case relationshipPreviewReady:
 +		r := m.issue.Data.NativeRelationships()
-+		if r.Parent == nil && r.SubIssues.TotalCount == 0 && r.BlockedBy.TotalCount == 0 &&
-+			r.Blocking.TotalCount == 0 {
++		empty := r.Parent == nil &&
++			r.SubIssues.TotalCount == 0 &&
++			r.BlockedBy.TotalCount == 0 &&
++			r.Blocking.TotalCount == 0
++		if empty {
++			if m.relationshipErr != nil {
++				return strings.Join([]string{
++					heading.Render("Relationships"),
++					faint.Render("  Refresh unavailable"),
++				}, "\n")
++			}
 +			return ""
 +		}
 +
@@ -1402,7 +1411,7 @@ index 304666c..de3af3c 100644
  func (m *Model) ViewCompletions() string {
  	if !m.hasData() {
  		return ""
-@@ -287,6 +419,7 @@ func (m *Model) SetWidth(width int) {
+@@ -287,6 +428,7 @@ func (m *Model) SetWidth(width int) {
  		m.getIndentedContentWidth() - m.ctx.Styles.Sidebar.InputBox.GetHorizontalFrameSize(),
  	)
  	m.projectEditor.SetWidth(m.getIndentedContentWidth())
@@ -1410,7 +1419,7 @@ index 304666c..de3af3c 100644
  }
  
  func (m *Model) SetSectionId(id int) {
-@@ -298,11 +431,41 @@ func (m *Model) SetRow(data *data.IssueData) {
+@@ -298,11 +440,41 @@ func (m *Model) SetRow(data *data.IssueData) {
  		m.issue = nil
  		m.projectState = projectPreviewIdle
  		m.projectErr = nil
@@ -1452,7 +1461,7 @@ index 304666c..de3af3c 100644
  func (m *Model) SetProjectPreviewLoading() {
  	m.projectState = projectPreviewLoading
  	m.projectErr = nil
-@@ -342,7 +505,16 @@ func (m *Model) renderProjectPreview() string {
+@@ -342,7 +514,16 @@ func (m *Model) renderProjectPreview() string {
  }
  
  func (m *Model) IsTextInputBoxFocused() bool {
@@ -1470,7 +1479,7 @@ index 304666c..de3af3c 100644
  }
  
  func (m *Model) StartProjectEdit() {
-@@ -367,6 +539,7 @@ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
+@@ -367,6 +548,7 @@ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
  	m.ctx = ctx
  	m.editor.UpdateProgramContext(ctx)
  	m.projectEditor.UpdateProgramContext(ctx)
@@ -3205,7 +3214,7 @@ index d65b144..07ed5b8 100644
  	var hasCachedPreview bool
  	if m.ctx.Config.Defaults.Layout.Projects.Enabled {
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index b421ab0..e01069a 100644
+index b421ab0..c18ed55 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -2,6 +2,7 @@ package tui
@@ -3225,7 +3234,7 @@ index b421ab0..e01069a 100644
  	m = updated.(Model)
  	require.True(
  		t,
-@@ -2526,3 +2527,402 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
+@@ -2526,3 +2527,434 @@ func TestNotificationCommandTemplateVariables(t *testing.T) {
  		})
  	}
  }
@@ -3534,6 +3543,38 @@ index b421ab0..e01069a 100644
 +	view := m.issueSidebar.View()
 +	require.Contains(t, view, "Useful cached parent")
 +	require.Contains(t, view, "Refresh unavailable")
++	require.NotContains(t, view, "Unavailable")
++}
++
++func TestIssueRelationshipsCachedEmptyRefreshErrorIsVisible(t *testing.T) {
++	m, issueSection := newIssueRelationshipsTestModel(t)
++	m.issueSidebar.SetRow(&issueSection.Issues[0])
++	m.relationshipPreviewGeneration = 1
++	m.issueSidebar.SetRelationshipPreviewLoading()
++
++	updatedModel, _ := m.Update(issueRelationshipsMsg{
++		ContentID:     "issue-1",
++		Generation:    1,
++		Relationships: data.IssueRelationships{},
++	})
++	m = updatedModel.(Model)
++	require.Contains(t, m.relationshipCache, "issue-1")
++	m.onViewedRowChanged()
++	view := m.issueSidebar.View()
++	require.NotContains(t, view, "Relationships")
++	require.NotContains(t, view, "Loading…")
++
++	m.relationshipPreviewGeneration++
++	updatedModel, _ = m.Update(issueRelationshipsMsg{
++		ContentID:  "issue-1",
++		Generation: m.relationshipPreviewGeneration,
++		Err:        errors.New("refresh failed"),
++	})
++	m = updatedModel.(Model)
++	view = m.issueSidebar.View()
++	require.Contains(t, view, "Relationships")
++	require.Contains(t, view, "Refresh unavailable")
++	require.NotContains(t, view, "Loading…")
 +	require.NotContains(t, view, "Unavailable")
 +}
 +
