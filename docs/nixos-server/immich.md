@@ -8,8 +8,9 @@ module defaults unless explicitly configured otherwise.
 
 | Path | Purpose | Protection |
 | --- | --- | --- |
-| `/srv/vault/immich` | Immich-managed uploads, thumbnails, encoded video, profiles, and automatic database backups | Vault ZFS/Sanoid snapshots |
+| `/srv/vault/immich` | Immich-managed uploads, thumbnails, encoded video, and profiles | Vault ZFS/Sanoid snapshots |
 | `/srv/vault/media-library` | Existing photo/video archive added to Immich as an external library | Vault ZFS/Sanoid snapshots |
+| `/var/lib/apps/immich/backups` | Immich automatic logical PostgreSQL dumps | appDataRoot Snapper snapshots and restic/Dropbox |
 
 `services.immich.mediaLocation` is Immich's writable managed-storage root. It is
 not the path used to declare an external library. Immich creates and manages its
@@ -32,9 +33,14 @@ archive needs to be immutable to Immich.
 
 PostgreSQL intentionally stays at the native NixOS location instead of being
 relocated into `/var/lib/apps`. Redis and the machine-learning cache also keep
-their native locations. This avoids custom state plumbing; Immich's automatic
-logical database backups under the managed media root provide the application
-restore point.
+their native locations. Immich's own logical database dumps are the per-app
+recovery artifact and are kept under `appDataRoot` so the existing Snapper and
+restic jobs protect them.
+
+Immich itself always addresses its backup directory as
+`<mediaLocation>/backups`. The native service therefore bind-mounts
+`/var/lib/apps/immich/backups` at `/srv/vault/immich/backups` inside the Immich
+service. The backup files physically live only under `appDataRoot`.
 
 ## Deployment
 
@@ -48,6 +54,8 @@ test -d /srv/vault/media-library
 sudo install -d -m 2770 -o root -g server-data /srv/vault/immich
 ```
 
+The `/var/lib/apps/immich/backups` directory is created declaratively.
+
 Then evaluate and deploy:
 
 ```sh
@@ -56,21 +64,23 @@ cd /home/joshan/.files
 nix eval .#nixosConfigurations.nixos-server.config.services.immich.enable
 nix eval --raw .#nixosConfigurations.nixos-server.config.services.immich.host
 nix eval --raw .#nixosConfigurations.nixos-server.config.services.immich.mediaLocation
+nix eval --raw .#nixosConfigurations.nixos-server.config.services.immich.settings.backup.database.cronExpression
 
 sudo nixos-rebuild dry-activate --flake .#nixos-server
 sudo nixos-rebuild switch --flake .#nixos-server
 ```
 
-Expected values are `true`, `192.168.1.3`, and `/srv/vault/immich` with the
-current server defaults.
+With the current server defaults the expected values are `true`, `192.168.1.3`,
+`/srv/vault/immich`, and `*/15 * * * *`.
 
-Verify the native services:
+Verify the native services and filesystem access:
 
 ```sh
 systemctl status immich-server.service postgresql.service redis-immich.service --no-pager
 systemctl status immich-machine-learning.service --no-pager
 ss -ltnp | grep ':2283'
 sudo -u immich find /srv/vault/media-library -type f -readable -print -quit
+sudo -u immich test -w /var/lib/apps/immich/backups
 ```
 
 ## Add the existing library
@@ -118,21 +128,37 @@ If machine learning is too expensive for the Pi, it can be disabled later with
 ## Backups and restore
 
 Immich stores file paths and application metadata in PostgreSQL. Its automatic
-database dumps are stored below the managed media root at:
+logical database backup remains enabled, but its schedule is declared from the
+same server-wide snapshot cadence:
 
 ```text
-/srv/vault/immich/backups
+dotfiles.server.storage.snapshots.intervalMinutes
+```
+
+The default is 15 minutes, producing the cron expression `*/15 * * * *`.
+Immich's normal backup retention remains unchanged; the backup files themselves
+are subsequently versioned by the existing appDataRoot Snapper and restic
+policies, which provide the longer local and offsite history.
+
+Trigger one database dump manually after the first deployment from
+`Administration -> Job Queues -> Create job -> Create Database Dump`, then verify
+that it physically appears here:
+
+```sh
+ls -lh /var/lib/apps/immich/backups
 ```
 
 Those database dumps contain metadata, not the photos and videos themselves.
-Both `/srv/vault/immich` and `/srv/vault/media-library` are covered by the
-recursive Vault ZFS/Sanoid snapshot policy, but the Vault is not currently part
-of the restic/Dropbox offsite backup. A complete recovery therefore needs both a
-compatible Immich database backup and the corresponding media files.
+`/srv/vault/immich` and `/srv/vault/media-library` are protected by the recursive
+Vault ZFS/Sanoid snapshot policy, while the logical database dumps are protected
+by Snapper and restic/Dropbox under `appDataRoot`. A complete recovery therefore
+needs a compatible Immich database backup plus the corresponding media files.
 
-Confirm that Vault snapshots exist after the deployment and first library scan:
+Confirm both protection layers after the deployment and first library scan:
 
 ```sh
+snapper -c apps list
+restic-apps snapshots
 zfs list -t snapshot -r vault/data
 ```
 
