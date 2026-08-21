@@ -13,8 +13,7 @@ in
     inherit mediaLocation;
     group = storage.dataRoot.group.name;
 
-    settings.backup.database.cronExpression =
-      "*/${toString storage.snapshots.intervalMinutes} * * * *";
+    settings.backup.database.cronExpression = "*/${toString storage.snapshots.intervalMinutes} * * * *";
   };
 
   systemd = lib.mkIf config.services.immich.enable {
