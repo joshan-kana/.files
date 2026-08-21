@@ -1,7 +1,0 @@
-disabled = [
-  "repeated_keys",
-]
-
-ignore = [
-  ".direnv",
-]

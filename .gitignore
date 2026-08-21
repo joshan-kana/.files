@@ -1,4 +1,5 @@
 /result
+/.pre-commit-config.yaml
 
 ha-migration-input/
 ha-migration-work/
