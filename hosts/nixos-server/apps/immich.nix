@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 let
   storage = config.dotfiles.server.storage;
@@ -17,13 +17,15 @@ in
       "*/${toString storage.snapshots.intervalMinutes} * * * *";
   };
 
-  systemd.tmpfiles.rules = [
-    "d ${storage.appData.root}/immich 2770 immich ${storage.appData.group.name} - -"
-    "d ${backupLocation} 2770 immich ${storage.appData.group.name} - -"
-  ];
+  systemd = lib.mkIf config.services.immich.enable {
+    tmpfiles.rules = [
+      "d ${storage.appData.root}/immich 2770 immich ${storage.appData.group.name} - -"
+      "d ${backupLocation} 2770 immich ${storage.appData.group.name} - -"
+    ];
 
-  systemd.services.immich-server.serviceConfig = {
-    BindPaths = [ "${backupLocation}:${mediaLocation}/backups" ];
-    SupplementaryGroups = [ storage.appData.group.name ];
+    services.immich-server.serviceConfig = {
+      BindPaths = [ "${backupLocation}:${mediaLocation}/backups" ];
+      SupplementaryGroups = [ storage.appData.group.name ];
+    };
   };
 }
