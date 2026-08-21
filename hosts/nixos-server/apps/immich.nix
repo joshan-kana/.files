@@ -25,7 +25,7 @@ in
 
     services.immich-server.serviceConfig = {
       BindPaths = [ "${backupLocation}:${mediaLocation}/backups" ];
-      SupplementaryGroups = [ storage.appData.group.name ];
+      SupplementaryGroups = lib.mkAfter [ storage.appData.group.name ];
     };
   };
 }
