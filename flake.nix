@@ -55,6 +55,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pre-commit-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -66,6 +76,8 @@
       home-manager-stable,
       stylix,
       stylix-stable,
+      treefmt-nix,
+      pre-commit-hooks,
       ...
     }@inputs:
     let
@@ -82,23 +94,70 @@
 
       pkgsFor = system: import nixpkgs { inherit system; };
 
-      repoFormatterFor =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "treefmt";
-          runtimeInputs = [
-            pkgs.nixfmt
-            pkgs.treefmt
-          ];
-          text = ''
-            exec treefmt "$@"
-          '';
+      repoToolExcludedDirs = [
+        ".direnv/"
+        "patches/"
+        "docs/infrastructure-docs/"
+      ];
+
+      treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
+      preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
+      gitPathspecExcludeArgs = lib.concatMapStringsSep " " (
+        dir: lib.escapeShellArg ":(exclude)${dir}**"
+      ) repoToolExcludedDirs;
+
+      treefmtFor =
+        system:
+        treefmt-nix.lib.evalModule (pkgsFor system) {
+          projectRootFile = "flake.nix";
+
+          programs = {
+            deadnix.enable = true;
+            nixfmt.enable = true;
+            statix = {
+              enable = true;
+              disabled-lints = [ "repeated_keys" ];
+            };
+          };
+
+          settings = {
+            excludes = treefmtExcludes;
+
+            # Apply semantic fixes before the final formatting pass.
+            formatter = {
+              deadnix.priority = 1;
+              statix.priority = 2;
+              nixfmt.priority = 3;
+            };
+          };
         };
 
-      gitHookSetup = ''
-        git config --local core.hooksPath .githooks
-        chmod +x .githooks/pre-commit
-      '';
+      preCommitFor =
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        pre-commit-hooks.lib.${system}.run {
+          src = self;
+          hooks = {
+            nix-quality = {
+              enable = true;
+              name = "Nix formatting and linting";
+              entry = "${lib.getExe pkgs.nix} build --no-link .#checks.${system}.nix-quality";
+              files = "\\.nix$";
+              excludes = preCommitExcludes;
+              pass_filenames = false;
+            };
+
+            staged-whitespace = {
+              enable = true;
+              name = "Staged whitespace";
+              entry = "${lib.getExe pkgs.git} diff --check --cached -- . ${gitPathspecExcludeArgs}";
+              pass_filenames = false;
+              always_run = true;
+            };
+          };
+        };
 
       nixosHost =
         {
@@ -126,12 +185,14 @@
         };
     in
     {
-      formatter = forAllSystems (system: repoFormatterFor (pkgsFor system));
+      formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
 
       devShells = forAllSystems (
         system:
         let
           pkgs = pkgsFor system;
+          treefmt = treefmtFor system;
+          preCommit = preCommitFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
             name = "nf";
             runtimeInputs = with pkgs; [
@@ -151,7 +212,6 @@
             with pkgs;
             [
               nixfmt
-              treefmt
               nixd
               nil
               statix
@@ -159,19 +219,22 @@
               jq
               skopeo
             ]
-            ++ [ repoOptionsFzf ];
+            ++ [
+              repoOptionsFzf
+              treefmt.config.build.wrapper
+            ];
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
           default = pkgs.mkShell {
             packages = commonTools;
-            shellHook = gitHookSetup;
+            inherit (preCommit) shellHook;
           };
 
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
-            shellHook = gitHookSetup;
+            inherit (preCommit) shellHook;
           };
         }
       );
@@ -179,21 +242,10 @@
       checks = forAllSystems (
         system:
         let
-          pkgs = pkgsFor system;
-          repoFormatter = repoFormatterFor pkgs;
+          treefmt = treefmtFor system;
         in
         {
-          "quality-warnings" = pkgs.runCommand "check-nix-quality-warnings" { } ''
-            cd ${self}
-
-            ${lib.getExe pkgs.statix} check . || echo "WARNING: statix problems found. Run: nix run .#fix"
-
-            ${lib.getExe pkgs.deadnix} --fail . || echo "WARNING: deadnix problems found. Run: nix run .#fix"
-
-            ${lib.getExe repoFormatter} --fail-on-change --no-cache || echo "WARNING: formatting problems found. Run: nix fmt"
-
-            touch $out
-          '';
+          nix-quality = treefmt.config.build.check self;
         }
       );
 
@@ -201,18 +253,12 @@
         system:
         let
           pkgs = pkgsFor system;
+          treefmt = treefmtFor system;
           fixNix = pkgs.writeShellApplication {
             name = "fix-nix";
-            runtimeInputs = [
-              pkgs.deadnix
-              pkgs.nixfmt
-              pkgs.statix
-              pkgs.treefmt
-            ];
+            runtimeInputs = [ treefmt.config.build.wrapper ];
             text = ''
-              statix fix .
-              deadnix --edit .
-              treefmt
+              exec treefmt "$@"
             '';
           };
 
@@ -222,7 +268,7 @@
           fix = {
             type = "app";
             program = lib.getExe fixNix;
-            meta.description = "Apply statix fixes, deadnix edits, and treefmt formatting";
+            meta.description = "Apply deadnix, statix, and nixfmt fixes through treefmt";
           };
         }
         // lib.optionalAttrs (vscodePkg != null) {
