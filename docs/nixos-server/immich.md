@@ -140,6 +140,10 @@ Immich's normal backup retention remains unchanged; the backup files themselves
 are subsequently versioned by the existing appDataRoot Snapper and restic
 policies, which provide the longer local and offsite history.
 
+The cadence is set through `services.immich.settings`, which makes Immich system
+settings config-file-backed rather than editable in `Administration -> Settings`.
+External-library management is separate and remains available through the UI.
+
 Trigger one database dump manually after the first deployment from
 `Administration -> Job Queues -> Create job -> Create Database Dump`, then verify
 that it physically appears here:
