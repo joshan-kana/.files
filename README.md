@@ -414,7 +414,7 @@ Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
 
 ### Formatting
 - `nix fmt` - Format all `.nix` files in this repo with treefmt
-- `git config core.hooksPath .githooks` - Configure Git to run repo hooks from `.githooks/`
+- `nix develop` - Enter the development shell and install the repository's pre-commit hooks
 
 ### Validation
 
