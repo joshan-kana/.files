@@ -43,77 +43,69 @@ let
     dependencies = [ idna ];
   };
 
-  httpcore2 = wheel {
-    pname = "httpcore2";
-    version = "2.5.0";
-    hash = "sha256-XONRiN5GHTHo0AC/uO+L8ixsFlh6IR5Vcd6qXpvfhCo=";
-    dependencies = [
-      ps.h11
-      truststore
-    ];
-  };
-
-  httpx2 = wheel {
-    pname = "httpx2";
-    version = "2.5.0";
-    hash = "sha256-PS1NnPS2HxofRqlZR8/bR+gMtWovkcYlasj1jkiR30E=";
-    dependencies = [
-      anyio
-      httpcore2
-      idna
-      truststore
-    ];
-  };
-
   starlette = wheel {
     pname = "starlette";
     version = "1.3.1";
     hash = "sha256-xzcqrhHDw/JqQt971ibOwvR9A0g9Jh02lRamFaU3FMY=";
     dependencies = [ anyio ];
   };
-
-  sseStarlette = wheel {
-    pname = "sse-starlette";
-    pypiName = "sse_starlette";
-    version = "3.2.0";
-    hash = "sha256-WHaVS9UZIPws1Ruu5HoIDriKN7W3hOYVq7Cyg/gBzb8=";
-    dependencies = [
-      anyio
-      starlette
-    ];
-  };
-
-  mcpTypes = wheel {
-    pname = "mcp-types";
-    pypiName = "mcp_types";
-    version = "2.0.0";
-    hash = "sha256-ay3nl8onl/Vot5Up4bJZSONN5RG8wL2C/vEDmm0bjrA=";
-    dependencies = [
-      ps.pydantic
-      ps.typing-extensions
-    ];
-  };
-
-  mcp = wheel {
+in
+python.withPackages (_: [
+  (wheel {
     pname = "mcp";
     version = "2.0.0";
     hash = "sha256-HLTHXS0se4wddWNV5dgqOfKCLMfxPiKiBR18o1kjSdY=";
     dependencies = [
       anyio
       ps.cryptography
-      httpx2
+      (wheel {
+        pname = "httpx2";
+        version = "2.5.0";
+        hash = "sha256-PS1NnPS2HxofRqlZR8/bR+gMtWovkcYlasj1jkiR30E=";
+        dependencies = [
+          anyio
+          (wheel {
+            pname = "httpcore2";
+            version = "2.5.0";
+            hash = "sha256-XONRiN5GHTHo0AC/uO+L8ixsFlh6IR5Vcd6qXpvfhCo=";
+            dependencies = [
+              ps.h11
+              truststore
+            ];
+          })
+          idna
+          truststore
+        ];
+      })
       ps.jsonschema
-      mcpTypes
+      (wheel {
+        pname = "mcp-types";
+        pypiName = "mcp_types";
+        version = "2.0.0";
+        hash = "sha256-ay3nl8onl/Vot5Up4bJZSONN5RG8wL2C/vEDmm0bjrA=";
+        dependencies = [
+          ps.pydantic
+          ps.typing-extensions
+        ];
+      })
       ps.opentelemetry-api
       ps.pydantic
       ps.pyjwt
       ps.python-multipart
-      sseStarlette
+      (wheel {
+        pname = "sse-starlette";
+        pypiName = "sse_starlette";
+        version = "3.2.0";
+        hash = "sha256-WHaVS9UZIPws1Ruu5HoIDriKN7W3hOYVq7Cyg/gBzb8=";
+        dependencies = [
+          anyio
+          starlette
+        ];
+      })
       starlette
       ps.typing-extensions
       ps.typing-inspection
       ps.uvicorn
     ];
-  };
-in
-python.withPackages (_: [ mcp ])
+  })
+])
