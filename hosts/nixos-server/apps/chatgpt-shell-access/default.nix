@@ -28,16 +28,21 @@ let
   tunnelClientPlatform =
     tunnelClientPlatforms.${pkgs.stdenv.hostPlatform.system}
       or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
-  tunnelClient = pkgs.runCommand "tunnel-client-${tunnelClientVersion}" {
-    nativeBuildInputs = [ pkgs.unzip ];
-  } ''
-    mkdir -p "$out/bin"
-    unzip -j ${pkgs.fetchurl {
-      url = "https://persistent.oaistatic.com/tunnel-client/v${tunnelClientVersion}/tunnel-client-v${tunnelClientVersion}-${tunnelClientPlatform.asset}.zip";
-      hash = tunnelClientPlatform.hash;
-    }} tunnel-client -d "$out/bin"
-    chmod +x "$out/bin/tunnel-client"
-  '';
+  tunnelClient =
+    pkgs.runCommand "tunnel-client-${tunnelClientVersion}"
+      {
+        nativeBuildInputs = [ pkgs.unzip ];
+      }
+      ''
+        mkdir -p "$out/bin"
+        unzip -j ${
+          pkgs.fetchurl {
+            url = "https://persistent.oaistatic.com/tunnel-client/v${tunnelClientVersion}/tunnel-client-v${tunnelClientVersion}-${tunnelClientPlatform.asset}.zip";
+            inherit (tunnelClientPlatform) hash;
+          }
+        } tunnel-client -d "$out/bin"
+        chmod +x "$out/bin/tunnel-client"
+      '';
 in
 {
   systemd.services.chatgpt-shell-access = {
