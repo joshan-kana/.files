@@ -124,5 +124,8 @@ in
     builders-use-substitutes = true;
   };
 
+  # enable dynamic binary support
+  programs.nix-ld.enable = true;
+
   system.stateVersion = lib.mkDefault "23.05";
 }
