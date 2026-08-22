@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.system }} system closures
+    name: ${{ matrix.profile }} (${{ matrix.system }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
 
@@ -44,12 +44,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - system: x86_64-linux
+          - profile: nixos
+            system: x86_64-linux
             runner: ubuntu-24.04
-            profiles: "nixos"
-          - system: aarch64-linux
+          - profile: nixos-arm-parallels
+            system: aarch64-linux
             runner: ubuntu-24.04-arm
-            profiles: "nixos-arm-parallels nixos-orbstack nixos-server"
+          - profile: nixos-orbstack
+            system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - profile: nixos-server
+            system: aarch64-linux
+            runner: ubuntu-24.04-arm
 
     env:
       ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
@@ -59,6 +65,7 @@ jobs:
       NIX_CONFIG: |
         accept-flake-config = true
         experimental-features = nix-command flakes
+        build-dir = /nix/build
         substituters = https://cache.nixos.org/ https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
         trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 
@@ -66,33 +73,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Standard private-repository runners expose only a small amount of disk
+      # space. Give full NixOS closures a dedicated /nix volume while keeping
+      # the runner toolchain intact for later GitHub Actions steps.
+      - name: Expand Nix store
+        uses: wimpysworld/nothing-but-nix@v4
+        with:
+          hatchet-protocol: carve
+
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
-      - name: Build host closures
-        env:
-          PROFILES: ${{ matrix.profiles }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          built_paths="$RUNNER_TEMP/built-paths.txt"
-          : > "$built_paths"
-
-          for profile in $PROFILES; do
-            echo "::group::Build $profile"
-            nix build \
-              --no-link \
-              --print-out-paths \
-              ".#nixosConfigurations.${profile}.config.system.build.toplevel" \
-              | tee -a "$built_paths"
-            echo "::endgroup::"
-          done
-
-          sort -u -o "$built_paths" "$built_paths"
-          echo "Built paths:"
-          cat "$built_paths"
-
-      - name: Detect Attic publishing
+      - name: Detect Attic availability
         id: attic
         shell: bash
         run: |
@@ -104,7 +96,7 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Attic publishing is disabled until ATTIC_ENDPOINT, ATTIC_TOKEN, TS_OAUTH_CLIENT_ID, and TS_OAUTH_SECRET are configured."
+            echo "::notice::Attic reuse/publishing is disabled until ATTIC_ENDPOINT, ATTIC_TOKEN, TS_OAUTH_CLIENT_ID, and TS_OAUTH_SECRET are configured."
           fi
 
       - name: Join tailnet
@@ -115,18 +107,46 @@ jobs:
           oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Publish closure to Attic
+      - name: Enable Attic substituter
         if: steps.attic.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
           nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          nix run nixpkgs#attic-client -- use ci:dotfiles
+
+      - name: Build host closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          built_paths="$RUNNER_TEMP/built-paths.txt"
+          : > "$built_paths"
+
+          echo "::group::Disk space before build"
+          df -h / /nix || true
+          echo "::endgroup::"
+
+          nix build \
+            --no-link \
+            --print-out-paths \
+            ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
+            | tee "$built_paths"
+
+          echo "::group::Disk space after build"
+          df -h / /nix || true
+          echo "::endgroup::"
+
+      - name: Publish closure to Attic
+        if: steps.attic.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
           nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
       - name: Upload build-path report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: built-paths-${{ matrix.system }}
+          name: built-path-${{ matrix.profile }}
           path: ${{ runner.temp }}/built-paths.txt
           if-no-files-found: ignore
