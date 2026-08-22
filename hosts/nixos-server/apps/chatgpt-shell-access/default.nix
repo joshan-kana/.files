@@ -50,14 +50,16 @@ let
   startScript = pkgs.writeShellScript "chatgpt-shell-access-start" ''
     set -euo pipefail
     rm -f "$SSH_AUTH_SOCK"
-    ${pkgs.openssh}/bin/ssh-agent -D -a "$SSH_AUTH_SOCK" >/dev/null &
+    /run/wrappers/bin/sudo -n -H -u ${primaryUser} -- ${pkgs.bash}/bin/bash -c \
+      'exec ${pkgs.openssh}/bin/ssh-agent -D -a "$1"' _ "$SSH_AUTH_SOCK" >/dev/null &
     for _ in $(seq 1 100); do
       [ -S "$SSH_AUTH_SOCK" ] && break
       sleep 0.05
     done
     [ -S "$SSH_AUTH_SOCK" ]
-    chmod 0660 "$SSH_AUTH_SOCK"
-    ${pkgs.openssh}/bin/ssh-add "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" </dev/null
+    cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
+      /run/wrappers/bin/sudo -n -H -u ${primaryUser} -- ${pkgs.bash}/bin/bash -c \
+        'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
     exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
   '';
 in
