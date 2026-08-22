@@ -15,6 +15,7 @@ CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 LOCAL = [
     "/run/wrappers/bin/sudo",
     "-n",
+    "-E",
     "-H",
     "-u",
     os.environ["CHATGPT_SHELL_LOCAL_USER"],
