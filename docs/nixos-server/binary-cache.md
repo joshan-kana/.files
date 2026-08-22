@@ -39,18 +39,24 @@ intentionally outside Sanoid snapshots and the offsite restic backup.
 
 ## Upstream filtering
 
-The cache is named `dotfiles`. Keep Attic's default upstream cache key:
+The `dotfiles` cache skips paths signed by every upstream binary cache currently
+trusted by the NixOS fleet:
 
 ```text
 cache.nixos.org-1
+nix-community.cachix.org-1
+nixos-raspberrypi.cachix.org-1
 ```
 
-Attic uses upstream cache signing keys while pushing and skips store paths that
-are already available from the corresponding upstream cache. Do not use
-`attic push --ignore-upstream-cache-filter` for normal CI publishing.
+The GitHub Actions builder uses those same substituters and public keys. This is
+important: when CI obtains a path from an upstream cache, its upstream signature
+is present in the local Nix store and Attic can exclude it while pushing the
+closure. Do not use `attic push --ignore-upstream-cache-filter` for normal CI
+publishing.
 
-This keeps the Vault focused on locally-built paths instead of duplicating the
-standard NixOS binary cache.
+This keeps the Vault focused on paths that actually had to be built for this
+configuration instead of re-hosting binaries already available from an existing
+trusted cache.
 
 ## Network boundary
 
@@ -104,16 +110,21 @@ sudo atticd-atticadm make-token \
   --destroy-cache '*'
 ```
 
-Use that token locally to log in and create the fleet cache:
+Use that token locally to log in and create the fleet cache with all current
+upstream signing keys:
 
 ```bash
 attic login local http://127.0.0.1:8080 BOOTSTRAP_TOKEN
-attic cache create local:dotfiles --public
+attic cache create local:dotfiles \
+  --public \
+  --upstream-cache-key-name cache.nixos.org-1 \
+  --upstream-cache-key-name nix-community.cachix.org-1 \
+  --upstream-cache-key-name nixos-raspberrypi.cachix.org-1
 attic cache info local:dotfiles
 ```
 
-`attic cache info` should report `cache.nixos.org-1` under `Upstream Cache Keys`.
-Do not remove it.
+`attic cache info` should report all three names under `Upstream Cache Keys`.
+Keep this list aligned with the trusted upstream caches used by CI and the fleet.
 
 Create a CI token scoped only to the fleet cache:
 
@@ -171,7 +182,7 @@ native GitHub build matrix
         v
 attic push ci:dotfiles
         |
-        +-- paths signed by cache.nixos.org-1 --> skipped
+        +-- paths signed by a configured upstream cache --> skipped
         |
         `-- locally-built paths --> /srv/vault/nix-cache
 ```
@@ -218,5 +229,5 @@ http://nixos-server:8080/dotfiles
 
 as a substituter and the reported `dotfiles:...` key as a trusted public key.
 The public key is not secret and can be committed declaratively after bootstrap.
-Keep `cache.nixos.org` configured as well; Attic intentionally does not duplicate
-its paths.
+Keep the existing upstream caches configured as well; Attic intentionally does
+not duplicate their paths.
