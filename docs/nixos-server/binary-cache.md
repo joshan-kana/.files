@@ -7,27 +7,35 @@ does not delete the persistent cache.
 
 ## Storage and retention
 
-Attic stores its SQLite database and binary data under:
+Attic stores its SQLite database and binary data under a dedicated ZFS dataset:
 
 ```text
+vault/data       /srv/vault
+vault/nix-cache  /srv/vault/nix-cache
+
 /srv/vault/nix-cache/
 ├── server.db
 └── storage/
 ```
 
-`attic-cache-storage.service` prepares this directory only after verifying that
-`/srv/vault` is a real mount point. `atticd.service` has the same mount
-assertion. A missing or failed Vault mount must make the cache fail closed rather
-than creating `/srv/vault/nix-cache` on the SD-card root filesystem.
+The cache dataset is deliberately a sibling of `vault/data`, not a child of it.
+Sanoid snapshots `vault/data` recursively, so cache churn is not retained in the
+48-hour/14-day/8-week/12-month Vault snapshot history. This lets future Attic GC
+actually reclaim cache space instead of leaving deleted chunks pinned by ZFS
+snapshots.
+
+`attic-cache-storage.service` verifies that `vault/nix-cache` exists and that
+`/srv/vault/nix-cache` is a real mount point. `atticd.service` has the same mount
+assertion. A missing or incorrectly mounted cache dataset therefore fails closed
+rather than creating cache data on the SD-card root filesystem.
 
 Attic time-based garbage collection starts disabled. Ordinary Nix GC and Attic
 GC are deliberately separate controls. Retention can be enabled later after
 real cache growth has been measured.
 
-The cache is disposable acceleration data rather than primary data. If cache
-storage becomes large enough for Vault snapshots to retain too much churn, move
-it to a dedicated child ZFS dataset and exclude that dataset from Sanoid before
-enabling Attic retention.
+The cache is disposable acceleration data rather than primary data. The mirrored
+Vault protects it from a single-disk failure, but the cache dataset is
+intentionally outside Sanoid snapshots and the offsite restic backup.
 
 ## Upstream filtering
 
@@ -55,6 +63,17 @@ restricted to scoped Attic tokens.
 
 ## One-time server bootstrap
 
+Create the sibling cache dataset before switching to the Attic-enabled NixOS
+configuration. Dataset creation is explicit; normal NixOS activation only
+verifies and uses it.
+
+```bash
+findmnt /srv/vault
+sudo zfs create -o mountpoint=/srv/vault/nix-cache vault/nix-cache
+zfs list vault/nix-cache
+findmnt /srv/vault/nix-cache
+```
+
 Create the Attic signing/token secret on `nixos-server` before enabling the
 service:
 
@@ -62,11 +81,11 @@ service:
 sudo sh -c 'umask 077; printf "ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64=\"%s\"\n" "$(nix run nixpkgs#openssl -- genrsa -traditional 4096 | base64 -w0)" > /root/secrets/attic.env'
 ```
 
-Build and switch the server configuration, then verify that the Vault guard is
+Build and switch the server configuration, then verify that the dataset guard is
 working:
 
 ```bash
-findmnt /srv/vault
+findmnt /srv/vault/nix-cache
 sudo systemctl status attic-cache-storage.service atticd.service --no-pager
 curl http://127.0.0.1:8080/
 ```
