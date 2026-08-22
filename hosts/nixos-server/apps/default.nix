@@ -2,9 +2,9 @@
 
 {
   imports = [
-    ./home-assistant.nix
-    ./matter-server.nix
-    ./n8n.nix
-    ./openclaw.nix
+    ./home-assistant
+    ./matter-server
+    ./n8n
+    ./openclaw
   ];
 }
