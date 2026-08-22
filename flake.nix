@@ -42,6 +42,12 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    # Caelestia Shell: Quickshell desktop shell for Hyprland.
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
     spicetify-nix = {
       url = "github:Gerg-L/spicetify-nix";

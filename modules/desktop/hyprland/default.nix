@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -81,64 +82,13 @@ in
     };
   };
 
-  waybar = _: {
+  caelestia = _: {
+    home-manager.sharedModules = [ inputs.caelestia-shell.homeManagerModules.default ];
+
     home = _: {
-      programs.waybar.settings.mainBar = {
-        layer = "top";
-        spacing = 10;
-        modules-left = [
-          "hyprland/workspaces"
-          "mpris"
-        ];
-        modules-center = [ "clock" ];
-        modules-right = [
-          "backlight"
-          "wireplumber"
-          "battery"
-          "tray"
-        ];
-        "hyprland/workspaces" = {
-          on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'";
-          on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'";
-        };
-        mpris = {
-          interval = 1;
-          format = "{player}: {status_icon} {position}/{length}";
-          status-icons = {
-            playing = "▶";
-            paused = "⏸";
-          };
-        };
-        clock.format = "⎈ {:%a, %b %d |  %R}";
-        backlight = {
-          format = "{percent}% {icon}";
-          format-icons = [
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        battery = {
-          interval = 120;
-          format = "{capacity}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-            ""
-            ""
-          ];
-        };
-        wireplumber = {
-          format = "{volume}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        tray.spacing = 10;
+      programs.caelestia = {
+        enable = true;
+        cli.enable = true;
       };
     };
   };
@@ -154,26 +104,6 @@ in
   cliphist = _: {
     home = _: {
       services.cliphist = { };
-    };
-  };
-
-  dunst = _: {
-    home = { config, ... }: {
-      services.dunst.settings.global = {
-        mouse_right_click = "do_action";
-        dmenu = "${config.home.homeDirectory}/.nix-profile/bin/rofi -dmenu";
-      };
-    };
-  };
-
-  avizo = _: {
-    home = _: {
-      services.avizo.settings.default = {
-        time = 1.0;
-        fade-in = 0.1;
-        fade-out = 0.2;
-        padding = 10;
-      };
     };
   };
 
@@ -367,10 +297,7 @@ in
               (lua ''
                 function()
                   hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
-                  hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("dunst")
-                  hl.exec_cmd("avizo-service")
                   hl.exec_cmd("wl-paste --type text --watch cliphist store")
                   hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
@@ -395,7 +322,7 @@ in
             (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx"))
 
             # Applets and launchers
-            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch"))
+            (modBind "SPACE" (exec "hyprctl dispatch global caelestia:launcher"))
             (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
             (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
 
@@ -460,9 +387,9 @@ in
             (modBind "CTRL + D" ''hl.dsp.focus({ workspace = "e+1" })'')
 
             # Media keys
-            (bindWith "XF86AudioRaiseVolume" (exec "volumectl + 5") { repeating = true; })
-            (bindWith "XF86AudioLowerVolume" (exec "volumectl - 5") { repeating = true; })
-            (bind "XF86AudioMute" (exec "volumectl %"))
+            (bindWith "XF86AudioRaiseVolume" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+") { repeating = true; })
+            (bindWith "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") { repeating = true; })
+            (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
             (modBind "ALT + X" (exec "playerctl play-pause"))
             (modBind "ALT + C" (exec "playerctl next"))
             (modBind "ALT + Z" (exec "playerctl previous"))
@@ -472,10 +399,15 @@ in
             (modBind "ALT + F" (exec "playerctld shift"))
 
             # Brightness
-            (bindWith "XF86MonBrightnessUp" (exec "lightctl + 5") { repeating = true; })
-            (bindWith "XF86MonBrightnessDown" (exec "lightctl - 5") { repeating = true; })
+            (bindWith "XF86MonBrightnessUp" (exec "hyprctl dispatch global caelestia:brightnessUp") { repeating = true; })
+            (bindWith "XF86MonBrightnessDown" (exec "hyprctl dispatch global caelestia:brightnessDown") { repeating = true; })
 
-            (modBind "L" (exec "swaylock"))
+            # Caelestia shell
+            (modBind "L" (exec "hyprctl dispatch global caelestia:lock"))
+            (modBind "N" (exec "hyprctl dispatch global caelestia:sidebar"))
+            (modBind "K" (exec "hyprctl dispatch global caelestia:showall"))
+            (bind "CTRL + ALT + DELETE" (exec "hyprctl dispatch global caelestia:session"))
+            (bind "CTRL + ALT + C" (exec "hyprctl dispatch global caelestia:clearNotifs"))
             (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
             (modBind "Escape" ''hl.dsp.submap("passthru")'')
           ];
