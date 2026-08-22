@@ -1,0 +1,203 @@
+# Nix Binary Cache
+
+The fleet uses a self-hosted Attic binary cache on the NixOS server. Cache data
+is stored on the ZFS Vault, independently from every machine's `/nix/store`.
+Running `nix-collect-garbage`, including `sudo nix-collect-garbage -d`, therefore
+does not delete the persistent cache.
+
+## Storage and retention
+
+Attic stores its SQLite database and binary data under:
+
+```text
+/srv/vault/nix-cache/
+├── server.db
+└── storage/
+```
+
+`attic-cache-storage.service` prepares this directory only after verifying that
+`/srv/vault` is a real mount point. `atticd.service` has the same mount
+assertion. A missing or failed Vault mount must make the cache fail closed rather
+than creating `/srv/vault/nix-cache` on the SD-card root filesystem.
+
+Attic time-based garbage collection starts disabled. Ordinary Nix GC and Attic
+GC are deliberately separate controls. Retention can be enabled later after
+real cache growth has been measured.
+
+The cache is disposable acceleration data rather than primary data. If cache
+storage becomes large enough for Vault snapshots to retain too much churn, move
+it to a dedicated child ZFS dataset and exclude that dataset from Sanoid before
+enabling Attic retention.
+
+## Upstream filtering
+
+The cache is named `dotfiles`. Keep Attic's default upstream cache key:
+
+```text
+cache.nixos.org-1
+```
+
+Attic uses upstream cache signing keys while pushing and skips store paths that
+are already available from the corresponding upstream cache. Do not use
+`attic push --ignore-upstream-cache-filter` for normal CI publishing.
+
+This keeps the Vault focused on locally-built paths instead of duplicating the
+standard NixOS binary cache.
+
+## Network boundary
+
+Attic listens on TCP port 8080. The NixOS firewall permits that port only on the
+server LAN interface and `tailscale0`.
+
+Pull access should be public at the Attic cache level because the network itself
+is private and Nix clients still verify signed narinfo metadata. Push access is
+restricted to scoped Attic tokens.
+
+## One-time server bootstrap
+
+Create the Attic signing/token secret on `nixos-server` before enabling the
+service:
+
+```bash
+sudo sh -c 'umask 077; printf "ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64=\"%s\"\n" "$(nix run nixpkgs#openssl -- genrsa -traditional 4096 | base64 -w0)" > /root/secrets/attic.env'
+```
+
+Build and switch the server configuration, then verify that the Vault guard is
+working:
+
+```bash
+findmnt /srv/vault
+sudo systemctl status attic-cache-storage.service atticd.service --no-pager
+curl http://127.0.0.1:8080/
+```
+
+Generate a temporary administration token:
+
+```bash
+sudo atticd-atticadm make-token \
+  --sub bootstrap \
+  --validity '1 day' \
+  --pull '*' \
+  --push '*' \
+  --create-cache '*' \
+  --configure-cache '*' \
+  --configure-cache-retention '*' \
+  --destroy-cache '*'
+```
+
+Use that token locally to log in and create the fleet cache:
+
+```bash
+attic login local http://127.0.0.1:8080 BOOTSTRAP_TOKEN
+attic cache create local:dotfiles --public
+attic cache info local:dotfiles
+```
+
+`attic cache info` should report `cache.nixos.org-1` under `Upstream Cache Keys`.
+Do not remove it.
+
+Create a CI token scoped only to the fleet cache:
+
+```bash
+sudo atticd-atticadm make-token \
+  --sub github-actions \
+  --validity '1 year' \
+  --pull dotfiles \
+  --push dotfiles
+```
+
+Store that token in the GitHub repository secret `ATTIC_TOKEN`.
+
+## GitHub Actions connection
+
+`.github/workflows/system-upgrade-cache.yml` builds current host closures on
+matching native GitHub runners:
+
+| Nix system | Runner | Current profiles |
+| --- | --- | --- |
+| `x86_64-linux` | `ubuntu-24.04` | `nixos` |
+| `aarch64-linux` | `ubuntu-24.04-arm` | `nixos-arm-parallels`, `nixos-orbstack`, `nixos-server` |
+
+Configure these repository values before cache publishing is expected:
+
+- variable `ATTIC_ENDPOINT`: the Tailscale-reachable Attic API endpoint, for
+  example `http://nixos-server:8080` when Tailnet DNS resolves that hostname;
+- secret `ATTIC_TOKEN`: the scoped `dotfiles` pull/push token;
+- secret `TS_OAUTH_CLIENT_ID`: Tailscale OAuth client ID with writable
+  `auth_keys` scope and permission to issue `tag:ci` nodes;
+- secret `TS_OAUTH_SECRET`: matching Tailscale OAuth secret.
+
+The workflow still performs builds when those values are absent, but skips the
+publish phase with a notice. The Tailscale runner is ephemeral and joins only
+for publishing.
+
+## Flake update integration
+
+`scripts/flake-update` already uses `system-upgrade` as its default update
+branch. The cache workflow watches `system-upgrade*`, `upgrade-validation*`,
+relevant pull requests, and `main`.
+
+The normal update path is therefore:
+
+```text
+scripts/flake-update
+        |
+        v
+system-upgrade* branch
+        |
+        | push / open PR
+        v
+native GitHub build matrix
+        |
+        v
+attic push ci:dotfiles
+        |
+        +-- paths signed by cache.nixos.org-1 --> skipped
+        |
+        `-- locally-built paths --> /srv/vault/nix-cache
+```
+
+The updater does not auto-push, auto-merge, or auto-deploy. CI population occurs
+when the update branch is pushed for review.
+
+## Architecture model
+
+Attic storage is architecture-agnostic. Linux and Darwin store paths for any Nix
+system can share the same `dotfiles` cache.
+
+Use native builders first. Current GitHub-hosted runners cover the four primary
+platform families expected by this repository:
+
+- `x86_64-linux`;
+- `aarch64-linux`;
+- `x86_64-darwin`;
+- `aarch64-darwin`.
+
+When a future flake output targets a Linux architecture without a native hosted
+runner, extend the build matrix with QEMU/binfmt emulation for that system. Keep
+cross compilation as an explicit package-specific fallback rather than changing
+the cache model. Darwin outputs still require Darwin builders; QEMU on Linux is
+not a replacement for macOS.
+
+Do not build every architecture speculatively. Add a builder lane when the flake
+actually exposes an output for that system. This keeps CI and Vault usage tied
+to real fleet requirements while preserving an architecture-independent cache.
+
+## Client setup
+
+After creating `dotfiles`, run:
+
+```bash
+attic cache info local:dotfiles
+```
+
+Record the public key reported by Attic. Client configuration should then add:
+
+```text
+http://nixos-server:8080/dotfiles
+```
+
+as a substituter and the reported `dotfiles:...` key as a trusted public key.
+The public key is not secret and can be committed declaratively after bootstrap.
+Keep `cache.nixos.org` configured as well; Attic intentionally does not duplicate
+its paths.
