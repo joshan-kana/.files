@@ -12,10 +12,10 @@ WAIT_SECONDS = 10
 Host = Literal["nixos-server", "mac"]
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
+SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
 LOCAL = [
     "/run/wrappers/bin/sudo",
     "-n",
-    "-E",
     "-H",
     "-u",
     os.environ["CHATGPT_SHELL_LOCAL_USER"],
@@ -44,7 +44,7 @@ jobs: dict[str, asyncio.Task[dict[str, object]]] = {}
 
 async def _run(host: Host, command: str) -> dict[str, object]:
     argv = (
-        [*LOCAL, f'cd -- "$HOME" || exit\n{command}']
+        [*LOCAL, f'export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\ncd -- "$HOME" || exit\n{command}']
         if host == "nixos-server"
         else [*SSH, f"exec /bin/zsh -lc {shlex.quote(command)}"]
     )
