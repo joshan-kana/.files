@@ -2,29 +2,11 @@ name: System upgrade cache
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/system-upgrade-cache.yml"
-      - "flake.lock"
-      - "flake.nix"
-      - "hosts/**"
-      - "modules/**"
-      - "overlays/**"
-      - "pkgs/**"
-      - "scripts/flake-update"
   push:
     branches:
       - main
       - "system-upgrade*"
       - "upgrade-validation*"
-    paths:
-      - ".github/workflows/system-upgrade-cache.yml"
-      - "flake.lock"
-      - "flake.nix"
-      - "hosts/**"
-      - "modules/**"
-      - "overlays/**"
-      - "pkgs/**"
-      - "scripts/flake-update"
   workflow_dispatch:
 
 permissions:
@@ -73,9 +55,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Standard private-repository runners expose only a small amount of disk
-      # space. Give full NixOS closures a dedicated /nix volume while keeping
-      # the runner toolchain intact for later GitHub Actions steps.
       - name: Expand Nix store
         uses: wimpysworld/nothing-but-nix@v4
         with:
@@ -122,19 +101,11 @@ jobs:
           built_paths="$RUNNER_TEMP/built-paths.txt"
           : > "$built_paths"
 
-          echo "::group::Disk space before build"
-          df -h / /nix || true
-          echo "::endgroup::"
-
           nix build \
             --no-link \
             --print-out-paths \
             ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
             | tee "$built_paths"
-
-          echo "::group::Disk space after build"
-          df -h / /nix || true
-          echo "::endgroup::"
 
       - name: Publish closure to Attic
         if: steps.attic.outputs.enabled == 'true'
