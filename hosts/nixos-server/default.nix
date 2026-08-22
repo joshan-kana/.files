@@ -22,6 +22,7 @@ in
     ./container-image-locking.nix
     ./apps
     ./storage.nix
+    ./binary-cache.nix
     ./vm.nix
     ./image.nix
     ./hardware.nix
