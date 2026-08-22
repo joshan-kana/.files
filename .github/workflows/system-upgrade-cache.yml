@@ -1,0 +1,130 @@
+name: System upgrade cache
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/system-upgrade-cache.yml"
+      - "flake.lock"
+      - "flake.nix"
+      - "hosts/**"
+      - "modules/**"
+      - "overlays/**"
+      - "pkgs/**"
+      - "scripts/flake-update"
+  push:
+    branches:
+      - main
+      - "system-upgrade*"
+      - "upgrade-validation*"
+    paths:
+      - ".github/workflows/system-upgrade-cache.yml"
+      - "flake.lock"
+      - "flake.nix"
+      - "hosts/**"
+      - "modules/**"
+      - "overlays/**"
+      - "pkgs/**"
+      - "scripts/flake-update"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-upgrade-cache-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.system }} system closures
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+            profiles: "nixos"
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+            profiles: "nixos-arm-parallels nixos-orbstack nixos-server"
+
+    env:
+      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      NIX_CONFIG: |
+        accept-flake-config = true
+        experimental-features = nix-command flakes
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Build host closures
+        env:
+          PROFILES: ${{ matrix.profiles }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          built_paths="$RUNNER_TEMP/built-paths.txt"
+          : > "$built_paths"
+
+          for profile in $PROFILES; do
+            echo "::group::Build $profile"
+            nix build \
+              --no-link \
+              --print-out-paths \
+              ".#nixosConfigurations.${profile}.config.system.build.toplevel" \
+              | tee -a "$built_paths"
+            echo "::endgroup::"
+          done
+
+          sort -u -o "$built_paths" "$built_paths"
+          echo "Built paths:"
+          cat "$built_paths"
+
+      - name: Detect Attic publishing
+        id: attic
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$ATTIC_ENDPOINT" \
+             && -n "$ATTIC_TOKEN" \
+             && -n "$TS_OAUTH_CLIENT_ID" \
+             && -n "$TS_OAUTH_SECRET" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Attic publishing is disabled until ATTIC_ENDPOINT, ATTIC_TOKEN, TS_OAUTH_CLIENT_ID, and TS_OAUTH_SECRET are configured."
+          fi
+
+      - name: Join tailnet
+        if: steps.attic.outputs.enabled == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Publish closure to Attic
+        if: steps.attic.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
+
+      - name: Upload build-path report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-paths-${{ matrix.system }}
+          path: ${{ runner.temp }}/built-paths.txt
+          if-no-files-found: ignore
