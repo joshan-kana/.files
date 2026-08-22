@@ -11,15 +11,26 @@ MAX_JOBS = 64
 WAIT_SECONDS = 10
 Host = Literal["nixos-server", "mac"]
 
-MAC_KEY = f'{os.environ["CREDENTIALS_DIRECTORY"]}/chatgpt-shell-mac'
+CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
+LOCAL = [
+    "/run/wrappers/bin/sudo",
+    "-n",
+    "-H",
+    "-u",
+    os.environ["CHATGPT_SHELL_LOCAL_USER"],
+    "--",
+    os.environ["CHATGPT_SHELL_BASH"],
+    "-lc",
+]
 SSH = [
     "ssh",
     "-oBatchMode=yes",
     "-oConnectTimeout=5",
     "-oIdentitiesOnly=yes",
     "-oStrictHostKeyChecking=yes",
+    f"-oUserKnownHostsFile={CREDENTIALS}/chatgpt-shell-known-hosts",
     "-i",
-    MAC_KEY,
+    f"{CREDENTIALS}/chatgpt-shell-mac",
     os.environ["CHATGPT_SHELL_MAC_SSH_TARGET"],
 ]
 COMMAND_ENV = os.environ.copy()
@@ -32,7 +43,7 @@ jobs: dict[str, asyncio.Task[dict[str, object]]] = {}
 
 async def _run(host: Host, command: str) -> dict[str, object]:
     argv = (
-        ["bash", "-lc", command]
+        [*LOCAL, f'cd -- "$HOME" || exit\n{command}']
         if host == "nixos-server"
         else [*SSH, f"exec /bin/zsh -lc {shlex.quote(command)}"]
     )
