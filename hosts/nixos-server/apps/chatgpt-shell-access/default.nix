@@ -15,7 +15,7 @@ let
 
   tunnelClientVersion = "0.0.11";
   tunnelClientPlatform =
-    ({
+    {
       "aarch64-linux" = {
         asset = "linux-arm64";
         hash = "sha256-2LukeypyN5mjcrC4fX5NaTBAk9OiiDcjcxX+VAbZfnc=";
@@ -24,7 +24,8 @@ let
         asset = "linux-amd64";
         hash = "sha256-Ka3+XBOZ37n9qTg/IwwyQ1WRL1DcNuLkFrHxMiMXs8Q=";
       };
-    }).${pkgs.stdenv.hostPlatform.system}
+    }
+    .${pkgs.stdenv.hostPlatform.system}
       or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
 in
 {
@@ -80,7 +81,9 @@ in
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
-      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }}/bin/python3 ${./chatgpt-shell-access.py}";
+      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${
+        pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
+      }/bin/python3 ${./chatgpt-shell-access.py}";
       CHATGPT_SHELL_LOCAL_USER = primaryUser;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_MAC_SSH_TARGET = "${primaryUser}@Joshans-MacBook-Pro.local";
