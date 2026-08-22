@@ -25,16 +25,6 @@ let
       };
     }).${pkgs.stdenv.hostPlatform.system}
       or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
-  tunnelClient = pkgs.runCommand "tunnel-client-${tunnelClientVersion}" { nativeBuildInputs = [ pkgs.unzip ]; } ''
-    mkdir -p "$out/bin"
-    unzip -j ${
-      pkgs.fetchurl {
-        url = "https://persistent.oaistatic.com/tunnel-client/v${tunnelClientVersion}/tunnel-client-v${tunnelClientVersion}-${tunnelClientPlatform.asset}.zip";
-        inherit (tunnelClientPlatform) hash;
-      }
-    } tunnel-client -d "$out/bin"
-    chmod +x "$out/bin/tunnel-client"
-  '';
 in
 {
   users.groups.${serviceUser} = { };
@@ -119,7 +109,22 @@ in
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
           /run/wrappers/bin/sudo -n -H -u ${primaryUser} -- ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
-        exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
+        exec ${
+          pkgs.runCommand "tunnel-client-${tunnelClientVersion}"
+            {
+              nativeBuildInputs = [ pkgs.unzip ];
+            }
+            ''
+              mkdir -p "$out/bin"
+              unzip -j ${
+                pkgs.fetchurl {
+                  url = "https://persistent.oaistatic.com/tunnel-client/v${tunnelClientVersion}/tunnel-client-v${tunnelClientVersion}-${tunnelClientPlatform.asset}.zip";
+                  inherit (tunnelClientPlatform) hash;
+                }
+              } tunnel-client -d "$out/bin"
+              chmod +x "$out/bin/tunnel-client"
+            ''
+        }/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";
       RestartSec = "2s";
