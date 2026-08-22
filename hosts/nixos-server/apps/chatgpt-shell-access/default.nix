@@ -7,9 +7,10 @@
 let
   primaryUser = config.dotfiles.users.primary.name;
   serviceUser = "chatgpt-shell";
-  tunnelEnvironmentFile = "${config.dotfiles.server.secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeyFile = "${config.dotfiles.server.secretsDir}/chatgpt-shell-mac";
-  sudoSshKeyFile = "${config.dotfiles.server.secretsDir}/chatgpt-shell-sudo";
+  secretsDir = config.dotfiles.server.secretsDir;
+  tunnelEnvironmentFile = "${secretsDir}/chatgpt-shell-tunnel.env";
+  macSshKeyFile = "${secretsDir}/chatgpt-shell-mac";
+  sudoSshKeyFile = "${secretsDir}/chatgpt-shell-sudo";
   macKnownHostsFile = "${config.users.users.${primaryUser}.home}/.ssh/known_hosts";
 
   tunnelClientVersion = "0.0.11";
