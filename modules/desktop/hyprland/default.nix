@@ -24,8 +24,6 @@ in
     wl-clipboard
     brightnessctl
     polkit_gnome
-    awww
-    networkmanagerapplet
     playerctl
     grimblast
     nwg-panel
@@ -88,16 +86,55 @@ in
     home = _: {
       programs.caelestia = {
         enable = true;
-        cli.enable = true;
+        systemd.target = "hyprland-session.target";
+
+        settings = {
+          general = {
+            apps = {
+              terminal = [ "kitty" ];
+              audio = [ "pavucontrol" ];
+              playback = [ "mpv" ];
+              explorer = [ "nautilus" ];
+            };
+
+            # Preserve the existing power-management behaviour instead of adopting
+            # Caelestia's default lock/DPMS/suspend idle timers.
+            idle.timeouts = [ ];
+          };
+
+          launcher.useFuzzy.apps = true;
+
+          services = {
+            audioIncrement = 0.05;
+            brightnessIncrement = 0.05;
+            useTwelveHourClock = false;
+          };
+        };
+
+        cli = {
+          enable = true;
+
+          # Stylix remains the source of truth for application theming. Caelestia
+          # may theme Fuzzel because its clipboard/emoji helpers use it directly.
+          settings.theme = {
+            enableTerm = false;
+            enableHypr = false;
+            enableDiscord = false;
+            enableSpicetify = false;
+            enablePandora = false;
+            enableFuzzel = true;
+            enableBtop = false;
+            enableNvtop = false;
+            enableHtop = false;
+            enableGtk = false;
+            enableQt = false;
+            enableWarp = false;
+            enableChromium = false;
+            enableZed = false;
+            enableCava = false;
+          };
+        };
       };
-    };
-  };
-
-  swaylock = _: {
-    security.pam.services.swaylock = { };
-
-    home = _: {
-      programs.swaylock.package = pkgs.swaylock-effects;
     };
   };
 
@@ -296,10 +333,6 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
-                  hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("wl-paste --type text --watch cliphist store")
-                  hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
                   hl.exec_cmd("dropbox")
                   hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
@@ -323,7 +356,7 @@ in
 
             # Applets and launchers
             (modBind "SPACE" (exec "hyprctl dispatch global caelestia:launcher"))
-            (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
+            (modBind "V" (exec "caelestia clipboard"))
             (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
 
             # Window management
@@ -387,8 +420,13 @@ in
             (modBind "CTRL + D" ''hl.dsp.focus({ workspace = "e+1" })'')
 
             # Media keys
-            (bindWith "XF86AudioRaiseVolume" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+") { repeating = true; })
-            (bindWith "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") { repeating = true; })
+            (bindWith "XF86AudioRaiseVolume"
+              (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+")
+              { repeating = true; }
+            )
+            (bindWith "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") {
+              repeating = true;
+            })
             (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
             (modBind "ALT + X" (exec "playerctl play-pause"))
             (modBind "ALT + C" (exec "playerctl next"))
@@ -399,8 +437,12 @@ in
             (modBind "ALT + F" (exec "playerctld shift"))
 
             # Brightness
-            (bindWith "XF86MonBrightnessUp" (exec "hyprctl dispatch global caelestia:brightnessUp") { repeating = true; })
-            (bindWith "XF86MonBrightnessDown" (exec "hyprctl dispatch global caelestia:brightnessDown") { repeating = true; })
+            (bindWith "XF86MonBrightnessUp" (exec "hyprctl dispatch global caelestia:brightnessUp") {
+              repeating = true;
+            })
+            (bindWith "XF86MonBrightnessDown" (exec "hyprctl dispatch global caelestia:brightnessDown") {
+              repeating = true;
+            })
 
             # Caelestia shell
             (modBind "L" (exec "hyprctl dispatch global caelestia:lock"))
@@ -408,6 +450,8 @@ in
             (modBind "K" (exec "hyprctl dispatch global caelestia:showall"))
             (bind "CTRL + ALT + DELETE" (exec "hyprctl dispatch global caelestia:session"))
             (bind "CTRL + ALT + C" (exec "hyprctl dispatch global caelestia:clearNotifs"))
+            (bind "Print" (exec "caelestia screenshot"))
+            (modBind "period" (exec "caelestia emoji -p"))
             (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
             (modBind "Escape" ''hl.dsp.submap("passthru")'')
           ];
