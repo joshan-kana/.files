@@ -78,10 +78,7 @@ in
       commands = [
         {
           command = "${pkgs.bash}/bin/bash";
-          options = [
-            "NOPASSWD"
-            "SETENV"
-          ];
+          options = [ "NOPASSWD" ];
         }
       ];
     }
