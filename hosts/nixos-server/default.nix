@@ -119,7 +119,12 @@ in
   security.sudo.wheelNeedsPassword = true;
 
   systemd.tmpfiles.rules = [
-    ''f+ /etc/sudo-authorized-key 0444 root root - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu chatgpt-shell-sudo\n''
+    "f+ /etc/sudo-authorized-key 0444 root root - ${
+      lib.concatStringsSep "\\n" [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu chatgpt-shell-sudo"
+      ]
+    }\\n"
   ];
 
   environment.systemPackages = with pkgs; [
