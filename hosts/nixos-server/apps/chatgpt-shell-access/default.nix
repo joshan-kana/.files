@@ -7,10 +7,12 @@
 let
   primaryUser = config.dotfiles.users.primary.name;
   primaryHome = config.users.users.${primaryUser}.home;
+  serviceUser = "chatgpt-shell";
   secretsDir = config.dotfiles.server.secretsDir;
   mcpScript = ./chatgpt-shell-access.py;
   tunnelEnvironmentFile = "${secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeyFile = "${secretsDir}/chatgpt-shell-mac";
+  macKnownHostsFile = "${primaryHome}/.ssh/known_hosts";
 
   mcpPython = pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; };
 
@@ -45,6 +47,25 @@ let
       '';
 in
 {
+  users.groups.${serviceUser} = { };
+  users.users.${serviceUser} = {
+    isSystemUser = true;
+    group = serviceUser;
+  };
+
+  security.sudo.extraRules = [
+    {
+      users = [ serviceUser ];
+      runAs = primaryUser;
+      commands = [
+        {
+          command = "${pkgs.bash}/bin/bash";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
+
   systemd.services.chatgpt-shell-access = {
     description = "ChatGPT shell access through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
@@ -54,6 +75,7 @@ in
     unitConfig.ConditionPathExists = [
       tunnelEnvironmentFile
       macSshKeyFile
+      macKnownHostsFile
     ];
 
     path = with pkgs; [
@@ -73,18 +95,21 @@ in
     ];
 
     environment = {
-      HOME = primaryHome;
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${mcpPython}/bin/python3 ${mcpScript}";
+      CHATGPT_SHELL_LOCAL_USER = primaryUser;
+      CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_MAC_SSH_TARGET = "${primaryUser}@Joshans-MacBook-Pro.local";
     };
 
     serviceConfig = {
       Type = "simple";
-      User = primaryUser;
-      WorkingDirectory = primaryHome;
+      User = serviceUser;
       EnvironmentFile = tunnelEnvironmentFile;
-      LoadCredential = "chatgpt-shell-mac:${macSshKeyFile}";
+      LoadCredential = [
+        "chatgpt-shell-mac:${macSshKeyFile}"
+        "chatgpt-shell-known-hosts:${macKnownHostsFile}"
+      ];
       ExecStart = "${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text";
       Restart = "always";
       RestartSec = "2s";
