@@ -99,7 +99,10 @@ in
 
             # Preserve the existing power-management behaviour instead of adopting
             # Caelestia's default lock/DPMS/suspend idle timers.
-            idle.timeouts = [ ];
+            idle = {
+              lockBeforeSleep = false;
+              timeouts = [ ];
+            };
           };
 
           launcher.useFuzzy.apps = true;
@@ -421,13 +424,16 @@ in
 
             # Media keys
             (bindWith "XF86AudioRaiseVolume"
-              (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+")
+              (exec "${pkgs.wireplumber}/bin/wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; ${pkgs.wireplumber}/bin/wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+")
               { repeating = true; }
             )
-            (bindWith "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") {
-              repeating = true;
-            })
-            (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
+            (bindWith "XF86AudioLowerVolume"
+              (exec "${pkgs.wireplumber}/bin/wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-")
+              {
+                repeating = true;
+              }
+            )
+            (bind "XF86AudioMute" (exec "${pkgs.wireplumber}/bin/wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
             (modBind "ALT + X" (exec "playerctl play-pause"))
             (modBind "ALT + C" (exec "playerctl next"))
             (modBind "ALT + Z" (exec "playerctl previous"))
