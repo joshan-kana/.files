@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches:
-      - main
       - "system-upgrade*"
   workflow_dispatch:
 
@@ -54,15 +53,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Expand Nix store
-        uses: wimpysworld/nothing-but-nix@v4
+        uses: wimpysworld/nothing-but-nix@v10
         with:
-          hatchet-protocol: carve
+          hatchet-protocol: rampage
+          witness-carnage: true
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
       - name: Join tailnet
-        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
@@ -70,7 +70,7 @@ jobs:
           tags: tag:ci
 
       - name: Enable Attic
-        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         shell: bash
         run: |
           nix run nixpkgs#attic-client -- login ci http://nixos-server:8080 "$ATTIC_TOKEN"
@@ -86,7 +86,7 @@ jobs:
             | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
-        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         shell: bash
         run: nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
