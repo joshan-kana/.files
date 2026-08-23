@@ -96,7 +96,9 @@ jobs:
       - name: Publish closure to Attic
         if: startsWith(github.ref_name, 'system-upgrade')
         shell: bash
-        run: nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
+        run: |
+          sudo install -d -m 1777 /nix/attic-tmp
+          TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
       - name: Upload build-path report
         if: always()
