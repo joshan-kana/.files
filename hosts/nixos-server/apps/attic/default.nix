@@ -1,4 +1,8 @@
-{ config, ... }:
+{
+  config,
+  lib,
+  ...
+}:
 
 let
   serverCfg = config.dotfiles.server;
@@ -6,6 +10,12 @@ let
   cachePort = 8080;
 in
 {
+  users.groups.atticd = { };
+  users.users.atticd = {
+    isSystemUser = true;
+    group = "atticd";
+  };
+
   services.atticd = {
     enable = true;
     environmentFile = "${serverCfg.secretsDir}/attic.env";
@@ -18,6 +28,7 @@ in
     after = [ "zfs-mount.service" ];
     requires = [ "zfs-mount.service" ];
     unitConfig.AssertPathIsMountPoint = cacheRoot;
+    serviceConfig.DynamicUser = lib.mkForce false;
   };
 
   networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ cachePort ];
