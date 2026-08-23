@@ -1,0 +1,25 @@
+{ config, ... }:
+
+let
+  serverCfg = config.dotfiles.server;
+  cacheRoot = "/var/lib/atticd";
+  cachePort = 8080;
+in
+{
+  services.atticd = {
+    enable = true;
+    environmentFile = "${serverCfg.secretsDir}/attic.env";
+    settings.listen = "0.0.0.0:${toString cachePort}";
+  };
+
+  # vault/nix-cache is mounted directly at Attic's native state directory.
+  # Refuse to start rather than silently creating cache data on the SD card.
+  systemd.services.atticd = {
+    after = [ "zfs-mount.service" ];
+    requires = [ "zfs-mount.service" ];
+    unitConfig.AssertPathIsMountPoint = cacheRoot;
+  };
+
+  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ cachePort ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ cachePort ];
+}

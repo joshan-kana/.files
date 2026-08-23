@@ -6,7 +6,6 @@ on:
     branches:
       - main
       - "system-upgrade*"
-      - "upgrade-validation*"
   workflow_dispatch:
 
 permissions:
@@ -40,7 +39,6 @@ jobs:
             runner: ubuntu-24.04-arm
 
     env:
-      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
@@ -48,8 +46,8 @@ jobs:
         accept-flake-config = true
         experimental-features = nix-command flakes
         build-dir = /nix/build
-        substituters = https://cache.nixos.org/ https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
-        trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+        extra-substituters = https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
+        extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 
     steps:
       - name: Checkout
@@ -63,56 +61,34 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
-      - name: Detect Attic availability
-        id: attic
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -n "$ATTIC_ENDPOINT" \
-             && -n "$ATTIC_TOKEN" \
-             && -n "$TS_OAUTH_CLIENT_ID" \
-             && -n "$TS_OAUTH_SECRET" ]]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Attic reuse/publishing is disabled until ATTIC_ENDPOINT, ATTIC_TOKEN, TS_OAUTH_CLIENT_ID, and TS_OAUTH_SECRET are configured."
-          fi
-
       - name: Join tailnet
-        if: steps.attic.outputs.enabled == 'true'
+        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Enable Attic substituter
-        if: steps.attic.outputs.enabled == 'true'
+      - name: Enable Attic
+        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         shell: bash
         run: |
-          set -euo pipefail
-          nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          nix run nixpkgs#attic-client -- login ci http://nixos-server:8080 "$ATTIC_TOKEN"
           nix run nixpkgs#attic-client -- use ci:dotfiles
 
       - name: Build host closure
         shell: bash
         run: |
-          set -euo pipefail
-          built_paths="$RUNNER_TEMP/built-paths.txt"
-          : > "$built_paths"
-
           nix build \
             --no-link \
             --print-out-paths \
             ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
-            | tee "$built_paths"
+            | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
-        if: steps.attic.outputs.enabled == 'true'
+        if: env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
         shell: bash
-        run: |
-          set -euo pipefail
-          nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
+        run: nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
       - name: Upload build-path report
         if: always()
