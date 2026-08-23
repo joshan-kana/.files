@@ -64,7 +64,7 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       - name: Join tailnet
-        if: startsWith(github.ref_name, 'system-upgrade')
+        if: startsWith(github.ref_name, 'system-upgrade') || github.event_name == 'pull_request'
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
@@ -72,7 +72,7 @@ jobs:
           tags: tag:ci
 
       - name: Enable Attic
-        if: startsWith(github.ref_name, 'system-upgrade')
+        if: startsWith(github.ref_name, 'system-upgrade') || github.event_name == 'pull_request'
         shell: bash
         run: |
           nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
@@ -94,7 +94,7 @@ jobs:
             | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
-        if: startsWith(github.ref_name, 'system-upgrade')
+        if: startsWith(github.ref_name, 'system-upgrade') || github.event_name == 'pull_request'
         shell: bash
         run: |
           sudo install -d -m 1777 /nix/attic-tmp
