@@ -22,8 +22,6 @@ in
     settings.listen = "0.0.0.0:${toString cachePort}";
   };
 
-  # vault/nix-cache is mounted directly at Attic's native state directory.
-  # Refuse to start rather than silently creating cache data on the SD card.
   systemd.services.atticd = {
     after = [ "zfs-mount.service" ];
     requires = [ "zfs-mount.service" ];
