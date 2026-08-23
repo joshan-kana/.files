@@ -38,6 +38,8 @@ jobs:
             runner: ubuntu-24.04-arm
 
     env:
+      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
+      ATTIC_PUBLIC_KEY: ${{ vars.ATTIC_PUBLIC_KEY }}
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
@@ -62,7 +64,7 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       - name: Join tailnet
-        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade')
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
@@ -70,11 +72,17 @@ jobs:
           tags: tag:ci
 
       - name: Enable Attic
-        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade')
         shell: bash
         run: |
-          nix run nixpkgs#attic-client -- login ci http://nixos-server:8080 "$ATTIC_TOKEN"
-          nix run nixpkgs#attic-client -- use ci:dotfiles
+          nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          {
+            echo 'NIX_CONFIG<<EOF'
+            printf '%s\n' "$NIX_CONFIG"
+            echo "extra-substituters = $ATTIC_ENDPOINT/dotfiles"
+            echo "extra-trusted-public-keys = $ATTIC_PUBLIC_KEY"
+            echo EOF
+          } >> "$GITHUB_ENV"
 
       - name: Build host closure
         shell: bash
@@ -86,7 +94,7 @@ jobs:
             | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
-        if: startsWith(github.ref_name, 'system-upgrade') && env.ATTIC_TOKEN != '' && env.TS_OAUTH_CLIENT_ID != '' && env.TS_OAUTH_SECRET != ''
+        if: startsWith(github.ref_name, 'system-upgrade')
         shell: bash
         run: nix run nixpkgs#attic-client -- push ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
