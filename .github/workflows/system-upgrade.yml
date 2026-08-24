@@ -118,8 +118,17 @@ jobs:
               --base main \
               --head "$UPGRADE_BRANCH" \
               --title "chore: update Nix flake inputs" \
-              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The Nix build cache workflow evaluates every NixOS configuration, builds each one natively, publishes successful closures to Attic, and merges this PR only after the full fleet succeeds.\n\nMerging does not deploy any host.'
+              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow evaluates every NixOS configuration before dispatching the native Nix build cache workflow. The PR merges only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
           fi
+
+          echo "Evaluating every NixOS configuration before starting native builds..."
+          while IFS= read -r profile; do
+            echo "Evaluating $profile"
+            nix eval --raw ".#nixosConfigurations.$profile.config.system.build.toplevel.drvPath" >/dev/null
+          done < <(
+            nix eval --json .#nixosConfigurations --apply 'configs: builtins.attrNames configs' \
+              | jq -r '.[]'
+          )
 
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \

@@ -69,37 +69,9 @@ jobs:
           jq -r '.include[] | "Discovered \(.profile) (\(.system))"' <<<"$matrix"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
-  evaluate:
-    name: Evaluate ${{ matrix.profile }} (${{ matrix.system }})
-    needs: discover
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
-
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            accept-flake-config = true
-            experimental-features = nix-command flakes
-
-      - name: Evaluate host closure
-        shell: bash
-        run: |
-          nix eval --raw ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel.drvPath" >/dev/null
-
   build:
     name: ${{ matrix.profile }} (${{ matrix.system }})
-    needs:
-      - discover
-      - evaluate
+    needs: discover
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
 
