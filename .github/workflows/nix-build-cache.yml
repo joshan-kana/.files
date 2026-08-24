@@ -1,7 +1,6 @@
 name: Nix build cache
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       auto_merge_system_upgrade:
@@ -20,7 +19,6 @@ concurrency:
 jobs:
   discover:
     name: Discover NixOS configurations
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'system-upgrade'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
