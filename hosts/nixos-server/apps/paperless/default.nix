@@ -15,7 +15,6 @@ in
 
     settings = {
       PAPERLESS_OCR_LANGUAGE = "eng";
-      PAPERLESS_URL = "http://${server.lan.serverIp}:${toString config.services.paperless.port}";
     };
   };
 
