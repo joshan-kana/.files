@@ -13,13 +13,17 @@ in
     consumptionDir = "${server.storage.dataRoot.path}/paperless/consume";
     database.createLocally = true;
 
-    settings.PAPERLESS_URL = "http://${server.lan.serverIp}:${toString config.services.paperless.port}";
+    settings = {
+      PAPERLESS_OCR_LANGUAGE = "eng";
+      PAPERLESS_URL = "http://${server.lan.serverIp}:${toString config.services.paperless.port}";
+    };
   };
 
   services.postgresqlBackup = lib.mkIf config.services.paperless.enable {
     enable = true;
     databases = [ "paperless" ];
     location = "${dataDir}/backups";
+    startAt = "*:0/${toString server.storage.snapshots.intervalMinutes}";
   };
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
