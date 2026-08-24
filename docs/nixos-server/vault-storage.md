@@ -1,27 +1,56 @@
 # Vault ZFS Storage
 
-Vault is the server's local bulk-data layer: two USB HDDs in a ZFS mirror mounted
-at `/srv/vault`. The Nix configuration is the source of truth for pool settings,
-scrub cadence, snapshot cadence, and retention; this document only keeps the
-stable setup and recovery steps.
+Vault is the Raspberry Pi server's large local-data layer. Two backed-up 2 TB
+LaCie USB HDDs form a ZFS mirror named `vault`, with about 2 TB usable capacity
+and continued availability after one drive fails.
 
-## Storage model
+The storage layers deliberately remain separate:
 
 | Path | Storage | Protection |
 | --- | --- | --- |
-| `/var/lib/apps` | Btrfs on the SD card | Snapper + restic |
-| `/srv/vault` | ZFS mirror | ZFS checksums/self-healing + Sanoid snapshots |
+| `/var/lib/apps` | Btrfs on the SD card | Local Snapper snapshots and offsite restic/Dropbox backups |
+| `/srv/vault` | Mirrored LaCie USB HDDs | Local recursive Sanoid/ZFS snapshots only |
 
-Applications own their directories below `/srv/vault`; keep app-specific layout
-and recovery details in the corresponding app runbook.
+`/srv/vault` is not included in the restic/Dropbox backup in this change.
+Mirroring and snapshots are not offsite backups.
 
-## One-time pool creation
+## Physical Setup And Safety
 
-Pool creation is destructive and must only be done once. Use stable
-`/dev/disk/by-id/...` whole-disk paths, never `/dev/sdX`.
+Connect both drives to the Pi's blue USB 3.0 ports with the verified USB 3.0
+cables. Pool creation is a one-time, explicit operation because it erases both
+drives. Normal NixOS activation only enables ZFS import, scrubs, and snapshots;
+it never wipes disks or creates the pool.
 
-```sh
-find /dev/disk/by-id -maxdepth 1 -type l -printf '%f -> %l\n' | sort
+The setup script accepts only whole-disk `/dev/disk/by-id/...` paths, refuses
+mounted devices, shows signatures and exact commands in dry-run mode, and
+requires `CREATE VAULT` to apply. Never substitute `/dev/sda` or `/dev/sdb`.
+
+## First-Time Setup
+
+Run this after the storage configuration has been built and switched. Replace
+`DISK_A` and `DISK_B` with the two unambiguous LaCie whole-disk IDs. The dry run
+should show two roughly 2 TB USB disks, expected NTFS signatures, and no mounts.
+
+The setup script evaluates the effective `nixos-server` configuration before
+making changes. Its pool name, dataset mountpoint, and collaboration group come
+from:
+
+- `dotfiles.server.storage.dataRoot.poolName`
+- `dotfiles.server.storage.dataRoot.path`
+- `dotfiles.server.storage.dataRoot.group.name`
+
+Do not duplicate those values inside the script. Change them in Nix and rebuild
+the server before running first-time setup. The script refuses to overwrite an
+imported or importable pool and rejects disks containing ZFS member metadata.
+
+```bash
+cd /home/joshan/.files
+
+lsusb
+lsblk -o NAME,PATH,SIZE,FSTYPE,FSVER,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
+find /dev/disk/by-id -maxdepth 1 -type l -printf '%f -> %l\n' \
+  | sort \
+  | grep -Ei 'lacie|seagate|usb|ata'
 
 sudo ./scripts/nixos-server/create-vault-zfs.sh \
   --dry-run \
@@ -34,47 +63,85 @@ sudo ./scripts/nixos-server/create-vault-zfs.sh \
   /dev/disk/by-id/DISK_B
 
 zpool status vault
+zfs list -r vault
 findmnt /srv/vault
+zfs get mounted,mountpoint,compression,atime,recordsize -r vault
+systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
+sudo snapper list-configs || true
+sudo snapper -c apps list || true
 ```
 
-The script performs the safety checks and derives the intended pool name,
-mountpoint, and collaboration group from the Nix configuration. Do not rerun it
-to recover an existing pool.
+The initial dataset layout is:
 
-## Protection and health
+```text
+vault/data                 /srv/vault
+```
 
-ZFS checksums every block. The mirror lets ZFS repair a bad copy from the healthy
-disk, and the configured scrub regularly reads allocated data to discover latent
-corruption. Sanoid provides point-in-time recovery from deletion or unwanted
-changes.
+Child datasets and working directories are added alongside the applications
+that consume them instead of being created speculatively. Servers provisioned
+with an earlier version of the script may retain the previous empty child
+datasets until they are explicitly removed.
 
-Routine checks:
+Immich uses `/srv/vault/immich` as its managed media root and indexes the
+existing `/srv/vault/media-library` in place as an external library. Its logical
+database dumps live under `/var/lib/apps/immich/backups`, where the existing
+Snapper and restic policies protect them. See [Native Immich](immich.md) for
+deployment and first-run setup.
 
-```sh
+## Routine Health Checks
+
+```bash
 zpool status -x vault
 zpool status vault
 zfs list -r vault
 zfs list -t snapshot -r vault
 findmnt /srv/vault
+
 systemctl status sanoid.timer zfs-scrub.timer --no-pager
+systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
+journalctl -u sanoid.service -u zfs-scrub.service --since '7 days ago'
 ```
 
-A healthy pool should report no known data errors. Investigate any
-`DEGRADED`, `FAULTED`, checksum errors, or permanent errors before replacing or
-rewriting data.
+Sanoid checks `vault/data` and all child datasets every 15 minutes, retaining
+four frequent snapshots plus 48 hourly, 14 daily, 8 weekly, and 12 monthly
+snapshots. The shared interval and retention settings also protect
+`/var/lib/apps` through Snapper, while restic uses the shared retention settings
+for offsite pruning.
 
-## Rebuild or import recovery
+## Full Rebuild And Pool Import
 
-After rebuilding the server, keep both Vault drives attached. If the pool is not
-imported automatically, inspect and import the existing pool:
+After rebuilding the SD card, keep the LaCie drives connected. Apply the NixOS
+configuration, inspect importable pools, then import Vault if it was not imported
+automatically. Do not run the pool-creation script again.
 
-```sh
+```bash
+cd /home/joshan/.files
+sudo nixos-rebuild switch --flake .#nixos-server
+
 sudo zpool import
-sudo zpool import -d /dev/disk/by-id vault
+sudo zpool import vault
 
 zpool status vault
+zfs list -r vault
 findmnt /srv/vault
+
+sudo nixos-rebuild switch --flake .#nixos-server
+
+zpool status vault
+zfs list -r vault
+systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 ```
 
-If import fails, inspect device IDs, cables, power, and pool status first. Do not
-recreate, format, or wipe the pool as a recovery step.
+If `vault` is already imported, `sudo zpool import vault` will report that no
+such pool is available; verify it with `zpool status vault`. If import fails,
+inspect without forcing anything:
+
+```bash
+lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
+sudo zpool import -d /dev/disk/by-id
+sudo zpool import -d /dev/disk/by-id vault
+journalctl -b -u zfs-import-vault.service --no-pager
+```
+
+Check cables, power, and the stable device IDs before considering `zpool import
+-f`. Never recreate or wipe the pool as an import-recovery step.
