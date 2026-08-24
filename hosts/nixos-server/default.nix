@@ -81,7 +81,21 @@ in
 
   services.snapper.configs.apps.FREE_LIMIT = minFree;
 
-  nix.settings.min-free = minFree;
+  nix.settings = {
+    min-free = minFree;
+    substituters = lib.mkForce [
+      "https://cache.nixos.org/"
+      "https://nix-community.cachix.org"
+      "https://nixos-raspberrypi.cachix.org"
+      "http://nixos-server:8080/dotfiles"
+    ];
+    trusted-public-keys = lib.mkForce [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
+      "dotfiles:U1NE7k5WM7I0l3losIw3VhG4eUGZAxsSvkw6br7p2iA="
+    ];
+  };
 
   users.users.${primaryUser} = {
     extraGroups = [ "docker" ];

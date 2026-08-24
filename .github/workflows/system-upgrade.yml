@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * 1"
+  push:
+    branches:
+      - system-upgrade
 
 permissions:
   actions: write
@@ -17,8 +20,11 @@ concurrency:
 jobs:
   update:
     name: Update flake inputs
+    if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      validate: ${{ steps.prepare.outputs.validate }}
     env:
       GH_TOKEN: ${{ github.token }}
       UPGRADE_BRANCH: system-upgrade
@@ -41,6 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "validate=false" >> "$GITHUB_OUTPUT"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -64,7 +71,6 @@ jobs:
 
           if [[ "$GITHUB_EVENT_NAME" == "schedule" && -n "$pr_number" ]]; then
             echo "An upgrade PR (#$pr_number) is already open; leaving its editable branch untouched."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -72,7 +78,6 @@ jobs:
             if [[ -z "$pr_number" ]] && ! git merge-base --is-ancestor "origin/$UPGRADE_BRANCH" origin/main; then
               if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
                 echo "Remote $UPGRADE_BRANCH contains unmerged work without an open PR; leaving it untouched."
-                echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
 
@@ -99,7 +104,6 @@ jobs:
 
           if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
             echo "No flake updates are available."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -121,7 +125,39 @@ jobs:
               --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow evaluates every NixOS configuration before dispatching the native Nix build cache workflow. The PR merges only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
           fi
 
-          echo "Evaluating every NixOS configuration before starting native builds..."
+          echo "validate=true" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Evaluate system upgrade
+    needs: update
+    if: >-
+      always() &&
+      (
+        github.event_name == 'push' ||
+        (needs.update.result == 'success' && needs.update.outputs.validate == 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout upgrade branch
+        uses: actions/checkout@v4
+        with:
+          ref: system-upgrade
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = nix-command flakes
+
+      - name: Evaluate fleet
+        shell: bash
+        run: |
+          set -euo pipefail
           while IFS= read -r profile; do
             echo "Evaluating $profile"
             nix eval --raw ".#nixosConfigurations.$profile.config.system.build.toplevel.drvPath" >/dev/null
@@ -130,9 +166,10 @@ jobs:
               | jq -r '.[]'
           )
 
+      - name: Start native builds
+        shell: bash
+        run: |
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
-            --ref "$UPGRADE_BRANCH" \
+            --ref system-upgrade \
             -f auto_merge_system_upgrade=true
-
-          echo "Dispatched Nix build cache for $UPGRADE_BRANCH."
