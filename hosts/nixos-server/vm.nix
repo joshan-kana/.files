@@ -17,7 +17,6 @@
     };
 
     virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
-
     virtualisation.oci-containers.containers.adguard.ports = [
       "53:53/tcp"
       "53:53/udp"
