@@ -5,7 +5,7 @@
     ./attic
     ./chatgpt-shell-access
     ./home-assistant
-    ./immich.nix
+    ./immich
     ./matter-server
     ./n8n
     ./openclaw
