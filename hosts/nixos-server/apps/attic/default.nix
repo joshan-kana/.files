@@ -27,6 +27,12 @@ in
         cacheHost
         "${cacheHost}:${toString cachePort}"
       ];
+      chunking = {
+        nar-size-threshold = 0;
+        min-size = 16 * 1024;
+        avg-size = 64 * 1024;
+        max-size = 256 * 1024;
+      };
     };
   };
 

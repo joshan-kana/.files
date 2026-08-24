@@ -15,55 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  attic-benchmark:
-    if: github.event_name == 'pull_request' && github.head_ref == 'upgrade-validation-attic-cache'
-    name: Attic cold upload ${{ matrix.slot }}
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        slot: [1, 2, 3, 4]
-    env:
-      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
-      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
-      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
-      NIX_CONFIG: |
-        experimental-features = nix-command flakes
-
-    steps:
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-
-      - name: Join tailnet
-        uses: tailscale/github-action@v4
-        with:
-          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
-          tags: tag:ci
-
-      - name: Enable Attic
-        shell: bash
-        run: nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
-
-      - name: Upload unique 64 MiB payload
-        timeout-minutes: 10
-        shell: bash
-        run: |
-          cold_dir="$RUNNER_TEMP/attic-cold-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${{ matrix.slot }}"
-          mkdir -p "$cold_dir"
-          dd if=/dev/urandom of="$cold_dir/payload.bin" bs=1M count=64 status=none
-          cold_path="$(nix store add-path "$cold_dir")"
-          echo "Cold store path: $cold_path"
-          started=$SECONDS
-          printf '%s\n' "$cold_path" | nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin
-          elapsed=$((SECONDS - started))
-          echo "Cold Attic upload: 67108864 bytes in ${elapsed}s"
-          if (( elapsed > 0 )); then
-            awk -v s="$elapsed" 'BEGIN { printf "Cold Attic throughput: %.2f MiB/s\n", 64 / s }'
-          fi
-
   build:
     name: ${{ matrix.profile }} (${{ matrix.system }})
     runs-on: ${{ matrix.runner }}
@@ -113,7 +64,7 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       - name: Join tailnet
-        if: startsWith(github.ref_name, 'system-upgrade') || github.head_ref == 'upgrade-validation-attic-cache'
+        if: startsWith(github.ref_name, 'system-upgrade')
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
@@ -121,7 +72,7 @@ jobs:
           tags: tag:ci
 
       - name: Enable Attic
-        if: startsWith(github.ref_name, 'system-upgrade') || github.head_ref == 'upgrade-validation-attic-cache'
+        if: startsWith(github.ref_name, 'system-upgrade')
         shell: bash
         run: |
           nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
@@ -136,23 +87,19 @@ jobs:
       - name: Build host closure
         shell: bash
         run: |
-          started=$SECONDS
           nix build \
             --no-link \
             --print-out-paths \
             ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
             | tee "$RUNNER_TEMP/built-paths.txt"
-          echo "Build elapsed: $((SECONDS - started))s"
 
       - name: Publish closure to Attic
-        if: startsWith(github.ref_name, 'system-upgrade') || github.head_ref == 'upgrade-validation-attic-cache'
+        if: startsWith(github.ref_name, 'system-upgrade')
         timeout-minutes: 90
         shell: bash
         run: |
           sudo install -d -m 1777 /nix/attic-tmp
-          started=$SECONDS
           TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
-          echo "Attic publish elapsed: $((SECONDS - started))s"
 
       - name: Upload build-path report
         if: always()
