@@ -9,5 +9,6 @@
     ./matter-server
     ./n8n
     ./openclaw
+    ./paperless
   ];
 }
