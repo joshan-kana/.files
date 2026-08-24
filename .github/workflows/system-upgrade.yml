@@ -1,0 +1,182 @@
+name: System upgrade
+
+on:
+  workflow_dispatch:
+    inputs:
+      validate_only:
+        description: Evaluate the existing system-upgrade branch without updating flake inputs
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "0 2 * * 1"
+  push:
+    branches:
+      - system-upgrade
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: system-upgrade
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update flake inputs
+    if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.validate_only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      validate: ${{ steps.prepare.outputs.validate }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UPGRADE_BRANCH: system-upgrade
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = nix-command flakes
+
+      - name: Prepare upgrade branch
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "validate=false" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          branch_exists=false
+          if git ls-remote --exit-code --heads origin "$UPGRADE_BRANCH" >/dev/null 2>&1; then
+            branch_exists=true
+            git fetch origin "$UPGRADE_BRANCH"
+          fi
+
+          pr_number="$(
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$UPGRADE_BRANCH" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" && -n "$pr_number" ]]; then
+            echo "An upgrade PR (#$pr_number) is already open; leaving its editable branch untouched."
+            exit 0
+          fi
+
+          if [[ "$branch_exists" == true ]]; then
+            if [[ -z "$pr_number" ]] && ! git merge-base --is-ancestor "origin/$UPGRADE_BRANCH" origin/main; then
+              if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+                echo "Remote $UPGRADE_BRANCH contains unmerged work without an open PR; leaving it untouched."
+                exit 0
+              fi
+
+              echo "error: $UPGRADE_BRANCH contains unmerged work but has no open PR; refusing to overwrite it." >&2
+              exit 1
+            fi
+
+            if [[ -n "$pr_number" ]]; then
+              git switch -C "$UPGRADE_BRANCH" "origin/$UPGRADE_BRANCH"
+              git merge --no-edit origin/main
+            else
+              git switch -C "$UPGRADE_BRANCH" origin/main
+            fi
+          else
+            git switch -c "$UPGRADE_BRANCH" origin/main
+          fi
+
+          nix flake update
+
+          if ! git diff --quiet -- flake.lock; then
+            git add flake.lock
+            git commit -m "chore: update flake inputs"
+          fi
+
+          if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
+            echo "No flake updates are available."
+            exit 0
+          fi
+
+          if [[ "$branch_exists" == true && -z "$pr_number" ]]; then
+            old_sha="$(git rev-parse "origin/$UPGRADE_BRANCH")"
+            git push \
+              --force-with-lease="refs/heads/$UPGRADE_BRANCH:$old_sha" \
+              origin "HEAD:$UPGRADE_BRANCH"
+          else
+            git push origin "HEAD:$UPGRADE_BRANCH"
+          fi
+
+          if [[ -z "$pr_number" ]]; then
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$UPGRADE_BRANCH" \
+              --title "chore: update Nix flake inputs" \
+              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow evaluates every NixOS configuration before dispatching the native Nix build cache workflow. The PR merges only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
+          fi
+
+          echo "validate=true" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Evaluate system upgrade
+    needs: update
+    if: >-
+      always() &&
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.validate_only) ||
+        (needs.update.result == 'success' && needs.update.outputs.validate == 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout upgrade branch
+        uses: actions/checkout@v4
+        with:
+          ref: system-upgrade
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = nix-command flakes
+
+      - name: Evaluate fleet
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r profile; do
+            echo "Evaluating $profile"
+            nix eval --raw ".#nixosConfigurations.$profile.config.system.build.toplevel.drvPath" >/dev/null
+          done < <(
+            nix eval --json .#nixosConfigurations --apply 'configs: builtins.attrNames configs' \
+              | jq -r '.[]'
+          )
+
+      - name: Start native builds
+        shell: bash
+        run: |
+          gh workflow run nix-build-cache.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref system-upgrade \
+            -f auto_merge_system_upgrade=true
