@@ -105,6 +105,32 @@ jobs:
           TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
           echo "Attic publish elapsed: $((SECONDS - started))s"
 
+      - name: Prepare cold Attic payload
+        if: github.head_ref == 'upgrade-validation-attic-cache'
+        shell: bash
+        run: |
+          cold_dir="$RUNNER_TEMP/attic-cold-${{ matrix.profile }}-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$cold_dir"
+          dd if=/dev/urandom of="$cold_dir/payload.bin" bs=1M count=64 status=progress
+          nix store add-path "$cold_dir" > "$RUNNER_TEMP/cold-attic-path.txt"
+          printf '%s\n' $((64 * 1024 * 1024)) > "$RUNNER_TEMP/cold-attic-bytes.txt"
+          echo "Cold store path: $(cat "$RUNNER_TEMP/cold-attic-path.txt")"
+
+      - name: Benchmark cold Attic upload
+        if: github.head_ref == 'upgrade-validation-attic-cache'
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          sudo install -d -m 1777 /nix/attic-tmp
+          bytes="$(cat "$RUNNER_TEMP/cold-attic-bytes.txt")"
+          started=$SECONDS
+          TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/cold-attic-path.txt"
+          elapsed=$((SECONDS - started))
+          echo "Cold Attic upload: $bytes bytes in ${elapsed}s"
+          if (( elapsed > 0 )); then
+            awk -v b="$bytes" -v s="$elapsed" 'BEGIN { printf "Cold Attic throughput: %.2f MiB/s\n", b / 1048576 / s }'
+          fi
+
       - name: Upload build-path report
         if: always()
         uses: actions/upload-artifact@v4
