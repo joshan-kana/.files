@@ -1,0 +1,276 @@
+name: Nix build cache
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      auto_merge_system_upgrade:
+        description: Merge an up-to-date system-upgrade PR after every NixOS build succeeds
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-build-cache-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover NixOS configurations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.configurations.outputs.matrix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = nix-command flakes
+
+      - name: Discover fleet
+        id: configurations
+        shell: bash
+        run: |
+          systems="$(
+            nix eval --json .#nixosConfigurations --apply '
+              configs: builtins.mapAttrs (_: cfg: cfg.pkgs.stdenv.hostPlatform.system) configs
+            '
+          )"
+
+          matrix="$(
+            jq -c '
+              {
+                include: [
+                  to_entries[]
+                  | {
+                      profile: .key,
+                      system: .value,
+                      runner: (
+                        if .value == "x86_64-linux" then "ubuntu-24.04"
+                        elif .value == "aarch64-linux" then "ubuntu-24.04-arm"
+                        else error("unsupported GitHub runner system: " + .value)
+                        end
+                      )
+                    }
+                ]
+              }
+            ' <<<"$systems"
+          )"
+
+          jq -r '.include[] | "Discovered \(.profile) (\(.system))"' <<<"$matrix"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  evaluate:
+    name: Evaluate ${{ matrix.profile }} (${{ matrix.system }})
+    needs: discover
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            experimental-features = nix-command flakes
+
+      - name: Evaluate host closure
+        shell: bash
+        run: |
+          nix eval --raw ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel.drvPath" >/dev/null
+
+  build:
+    name: ${{ matrix.profile }} (${{ matrix.system }})
+    needs:
+      - discover
+      - evaluate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+
+    env:
+      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
+      ATTIC_PUBLIC_KEY: ${{ vars.ATTIC_PUBLIC_KEY }}
+      ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      USE_ATTIC: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      NIX_CONFIG: |
+        accept-flake-config = true
+        experimental-features = nix-command flakes
+        build-dir = /nix/build
+        extra-substituters = https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
+        extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Expand Nix store
+        uses: wimpysworld/nothing-but-nix@v10
+        with:
+          hatchet-protocol: rampage
+          witness-carnage: true
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Join tailnet
+        if: env.USE_ATTIC == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Enable Attic
+        if: env.USE_ATTIC == 'true'
+        shell: bash
+        run: |
+          nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
+          {
+            echo 'NIX_CONFIG<<EOF'
+            printf '%s\n' "$NIX_CONFIG"
+            echo "extra-substituters = $ATTIC_ENDPOINT/dotfiles"
+            echo "extra-trusted-public-keys = $ATTIC_PUBLIC_KEY"
+            echo EOF
+          } >> "$GITHUB_ENV"
+
+      - name: Build host closure
+        shell: bash
+        run: |
+          nix build \
+            --no-link \
+            --print-out-paths \
+            ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
+            | tee "$RUNNER_TEMP/built-paths.txt"
+
+      - name: Publish closure to Attic
+        if: env.USE_ATTIC == 'true'
+        timeout-minutes: 90
+        shell: bash
+        run: |
+          sudo install -d -m 1777 /nix/attic-tmp
+          TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
+
+      - name: Upload build-path report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-path-${{ matrix.profile }}
+          path: ${{ runner.temp }}/built-paths.txt
+          if-no-files-found: ignore
+
+  merge-system-upgrade:
+    name: Merge system upgrade
+    needs: build
+    if: >-
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.head.ref == 'system-upgrade' &&
+        github.event.pull_request.base.ref == 'main'
+      ) || (
+        github.event_name == 'workflow_dispatch' &&
+        inputs.auto_merge_system_upgrade &&
+        github.ref_name == 'system-upgrade'
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Merge validated upgrade
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_url="$(
+            gh pr list \
+              --repo "$REPOSITORY" \
+              --base main \
+              --head system-upgrade \
+              --state open \
+              --json url \
+              --jq '.[0].url // empty'
+          )"
+          [[ -n "$pr_url" ]] || {
+            echo "error: no open system-upgrade -> main PR found" >&2
+            exit 1
+          }
+
+          dispatch_validation() {
+            gh workflow run nix-build-cache.yml \
+              --repo "$REPOSITORY" \
+              --ref system-upgrade \
+              -f auto_merge_system_upgrade=true
+          }
+
+          refresh_and_revalidate() {
+            local old_head new_head
+            old_head="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
+            gh pr update-branch "$pr_url" --repo "$REPOSITORY"
+
+            new_head="$old_head"
+            for _ in {1..30}; do
+              new_head="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
+              [[ "$new_head" != "$old_head" ]] && break
+              sleep 2
+            done
+            [[ "$new_head" != "$old_head" ]] || {
+              echo "error: GitHub did not update system-upgrade to current main" >&2
+              exit 1
+            }
+
+            dispatch_validation
+            echo "Updated system-upgrade from main and dispatched a fresh full validation."
+          }
+
+          head_sha="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
+          base_sha="$(gh api "repos/$REPOSITORY/branches/main" --jq .commit.sha)"
+          relation="$(gh api "repos/$REPOSITORY/compare/$base_sha...$head_sha" --jq .status)"
+
+          if [[ "$relation" != "ahead" && "$relation" != "identical" ]]; then
+            echo "system-upgrade is not based on current main ($relation); updating it first."
+            refresh_and_revalidate
+            exit 0
+          fi
+
+          # Re-read main immediately before merging. If it moved since the comparison,
+          # update the PR and validate the new combined head instead of merging stale CI.
+          latest_base="$(gh api "repos/$REPOSITORY/branches/main" --jq .commit.sha)"
+          if [[ "$latest_base" != "$base_sha" ]]; then
+            echo "main moved during the merge check; refreshing system-upgrade first."
+            refresh_and_revalidate
+            exit 0
+          fi
+
+          gh pr merge "$pr_url" \
+            --repo "$REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --match-head-commit "$head_sha"
