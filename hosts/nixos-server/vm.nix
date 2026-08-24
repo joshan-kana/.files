@@ -5,6 +5,7 @@
     services.restic.backups = lib.mkForce { };
     services.snapper.configs = lib.mkForce { };
     services.immich.enable = lib.mkForce false;
+    services.paperless.enable = lib.mkForce false;
 
     # VM builds do not have the real Vault pool or LAN interface used by the
     # production Raspberry Pi deployment.
@@ -16,6 +17,7 @@
     };
 
     virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
+
     virtualisation.oci-containers.containers.adguard.ports = [
       "53:53/tcp"
       "53:53/udp"
