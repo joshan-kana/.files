@@ -14,7 +14,9 @@ service, PostgreSQL, Redis, storage paths, and database backups.
 
 The live PostgreSQL cluster and Redis instance use the native NixOS locations.
 Large document data is therefore kept out of restic while the small recovery
-state is included in the existing app-data backup policy.
+state is included in the existing app-data backup policy. Vault document media
+is not currently backed up offsite, so it should not be the only copy of
+irreplaceable documents.
 
 ## First run
 
