@@ -79,8 +79,10 @@ Verify the native services and filesystem access:
 systemctl status immich-server.service postgresql.service redis-immich.service --no-pager
 systemctl status immich-machine-learning.service --no-pager
 ss -ltnp | grep ':2283'
-sudo -u immich find /srv/vault/media-library -type f -readable -print -quit
-sudo -u immich test -w /var/lib/apps/immich/backups
+sudo -u immich sh -c 'cd / && find /srv/vault/media-library -type f -readable -print -quit'
+sudo nsenter -t "$(systemctl show -p MainPID --value immich-server.service)" -m \
+  findmnt -T /srv/vault/immich/backups
+stat /var/lib/apps/immich/backups/.immich
 ```
 
 ## Add the existing library
