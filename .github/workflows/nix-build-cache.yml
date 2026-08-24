@@ -197,10 +197,10 @@ jobs:
           }
 
           dispatch_validation() {
-            gh workflow run nix-build-cache.yml \
+            gh workflow run system-upgrade.yml \
               --repo "$REPOSITORY" \
               --ref system-upgrade \
-              -f auto_merge_system_upgrade=true
+              -f validate_only=true
           }
 
           refresh_and_revalidate() {
@@ -220,7 +220,7 @@ jobs:
             }
 
             dispatch_validation
-            echo "Updated system-upgrade from main and dispatched a fresh full validation."
+            echo "Updated system-upgrade from main and dispatched fresh evaluation before rebuilding."
           }
 
           head_sha="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
