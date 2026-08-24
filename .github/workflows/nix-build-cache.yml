@@ -170,7 +170,7 @@ jobs:
         shell: bash
         run: |
           sudo install -d -m 1777 /nix/attic-tmp
-          TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 1 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
+          TMPDIR=/nix/attic-tmp nix run nixpkgs#attic-client -- push --jobs 5 ci:dotfiles --stdin < "$RUNNER_TEMP/built-paths.txt"
 
       - name: Upload build-path report
         if: always()
