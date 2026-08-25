@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 let
   serverCfg = config.dotfiles.server;
@@ -19,4 +19,9 @@ in
       "${serverIp}:6611:6611"
     ];
   };
+
+  virtualisation.vmVariant.virtualisation.oci-containers.containers.onedev.ports = lib.mkForce [
+    "6610:6610"
+    "6611:6611"
+  ];
 }
