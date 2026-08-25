@@ -12,7 +12,7 @@
     "source": "docker.n8n.io/n8nio/n8n:latest"
   },
   "onedev": {
-    "digest": "sha256:848f1d3356905be09b4b3114a08ca99a7a7edcf999382ada999403c48ccc8f30",
+    "digest": "sha256:09c39994fd6572a79b10319c170afd04857849cc0f7993ec4614f584c58707f8",
     "source": "1dev/server:latest"
   },
   "openclaw": {
