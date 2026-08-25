@@ -12,10 +12,6 @@ in
     mediaDir = "${server.storage.dataRoot.path}/paperless/media";
     consumptionDir = "${server.storage.dataRoot.path}/paperless/consume";
     database.createLocally = true;
-
-    settings = {
-      PAPERLESS_OCR_LANGUAGE = "eng";
-    };
   };
 
   services.postgresqlBackup = lib.mkIf config.services.paperless.enable {
