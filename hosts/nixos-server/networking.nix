@@ -41,9 +41,6 @@ in
     iproute2
   ];
 
-  virtualisation.docker.enable = true;
-  virtualisation.oci-containers.backend = "docker";
-
   networking.networkmanager.enable = true;
   networking.networkmanager.ensureProfiles.profiles."wired-static" = {
     connection = {

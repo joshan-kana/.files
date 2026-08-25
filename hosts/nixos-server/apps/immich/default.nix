@@ -27,4 +27,6 @@ in
       SupplementaryGroups = lib.mkAfter [ storage.appData.group.name ];
     };
   };
+
+  virtualisation.vmVariant.services.immich.enable = lib.mkForce false;
 }

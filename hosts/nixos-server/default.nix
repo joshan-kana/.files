@@ -19,6 +19,7 @@ in
     ./options.nix
     ../../modules/nixos/base.nix
     ./networking.nix
+    ./containers.nix
     ./container-image-locking.nix
     ./apps
     ./storage.nix
@@ -48,11 +49,6 @@ in
     };
   };
 
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-  };
-
   nix.gc = {
     automatic = true;
     dates = cleanupSchedule;
@@ -78,8 +74,6 @@ in
       "--filter=until=${toString (cleanupRetentionDays * 24)}h"
     ];
   };
-
-  services.snapper.configs.apps.FREE_LIMIT = minFree;
 
   nix.settings = {
     min-free = minFree;
@@ -116,13 +110,11 @@ in
     "f+ /etc/sudo-authorized-key 0444 root root - ${
       lib.concatStringsSep "\\n" [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu chatgpt-shell-sudo"
       ]
     }\\n"
   ];
 
   environment.systemPackages = with pkgs; [
-    bluez
     curl
     jq
     rsync

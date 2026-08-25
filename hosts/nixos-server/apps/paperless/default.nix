@@ -36,4 +36,6 @@ in
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
     lib.optionals config.services.paperless.enable
       [ config.services.paperless.port ];
+
+  virtualisation.vmVariant.services.paperless.enable = lib.mkForce false;
 }
