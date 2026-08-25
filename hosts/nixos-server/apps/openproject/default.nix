@@ -25,6 +25,7 @@ in
     environmentFiles = [ "${secretsDir}/openproject.env" ];
   };
 
-  virtualisation.vmVariant.virtualisation.oci-containers.containers.openproject.ports =
-    lib.mkForce [ "8081:80" ];
+  virtualisation.vmVariant.virtualisation.oci-containers.containers.openproject.ports = lib.mkForce [
+    "8081:80"
+  ];
 }

@@ -20,7 +20,7 @@
     "source": "ghcr.io/openclaw/openclaw:latest"
   },
   "openproject": {
-    "digest": "sha256:096f2965196d9332bc4ac4446efe7181d59475af3c6012f4e921c9238f9b70cc",
+    "digest": "sha256:19a828d66e7c23322d1fbbaa974e7b712ef03c2badf1b10466ca45710e6bbbe5",
     "source": "openproject/openproject:17"
   }
 }
