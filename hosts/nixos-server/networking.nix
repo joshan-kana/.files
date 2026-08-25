@@ -117,12 +117,6 @@ in
 
   networking.firewall.allowedTCPPorts = [
     53 # Local DNS service over TCP
-    8123 # Home Assistant
-    5678 # n8n
-    5580 # Matter Server
-    18789 # OpenClaw gateway reverse proxy
-    21064 # HomeKit main bridge
-    21065 # HomeKit Bambu camera bridge
   ];
 
   networking.firewall.allowedUDPPorts = [
