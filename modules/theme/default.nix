@@ -5,8 +5,6 @@
 }:
 
 {
-  nixpkgs.overlays = (import ../../overlays/monaspace-liga-overlay.nix { }).nixpkgs.overlays;
-
   stylix = {
     enable = true;
     image = ./wallpaper.png;
@@ -16,8 +14,8 @@
       serif = config.stylix.fonts.monospace;
       sansSerif = config.stylix.fonts.monospace;
       monospace = {
-        package = pkgs.monaspace-liga;
-        name = "Monaspace Neon";
+        package = pkgs.monaspace;
+        name = "Monaspace Neon Frozen";
       };
       emoji = {
         package = pkgs.noto-fonts-color-emoji;
