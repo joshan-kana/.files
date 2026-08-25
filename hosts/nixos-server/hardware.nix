@@ -43,6 +43,7 @@
   };
 
   swapDevices = [ ];
+  zramSwap.enable = true;
 
   boot.supportedFilesystems = [ "btrfs" ];
   boot.growPartition = true;
