@@ -88,6 +88,11 @@ database dumps live under `/var/lib/apps/immich/backups`, where the existing
 Snapper and restic policies protect them. See [Native Immich](immich.md) for
 deployment and first-run setup.
 
+Paperless uses `/srv/vault/paperless` for its document media and consume
+directory. Its application data and PostgreSQL dumps stay under
+`/var/lib/apps/paperless` for Snapper + restic protection. See
+[Paperless-ngx](paperless.md) for first-run and recovery notes.
+
 ## Routine Health Checks
 
 ```bash
