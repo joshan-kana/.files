@@ -14,6 +14,10 @@ in
     database.createLocally = true;
   };
 
+  users.users = lib.mkIf config.services.paperless.enable {
+    ${config.services.paperless.user}.extraGroups = [ server.storage.appData.group.name ];
+  };
+
   services.postgresqlBackup = lib.mkIf config.services.paperless.enable {
     enable = true;
     databases = [ "paperless" ];
