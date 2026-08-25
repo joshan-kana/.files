@@ -11,6 +11,7 @@
     ./n8n
     ./onedev
     ./openclaw
+    ./openproject
     ./paperless
   ];
 }
