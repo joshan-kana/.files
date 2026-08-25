@@ -4,8 +4,6 @@
   virtualisation.vmVariant = {
     services.restic.backups = lib.mkForce { };
     services.snapper.configs = lib.mkForce { };
-    services.immich.enable = lib.mkForce false;
-    services.paperless.enable = lib.mkForce false;
 
     # VM builds do not have the real Vault pool or LAN interface used by the
     # production Raspberry Pi deployment.

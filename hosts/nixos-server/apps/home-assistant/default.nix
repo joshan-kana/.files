@@ -8,10 +8,21 @@ let
   appDataRoot = config.dotfiles.server.storage.appData.root;
 in
 {
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+
+  environment.systemPackages = [ pkgs.bluez ];
+
   networking.firewall.allowedTCPPorts = [
     8123
     21064 # HomeKit main bridge
     21065 # HomeKit Bambu camera bridge
+  ];
+
+  services.restic.backups.apps.exclude = [
+    "${appDataRoot}/home-assistant/www/media/ha-bambulab"
   ];
 
   systemd.services.docker-home-assistant = {

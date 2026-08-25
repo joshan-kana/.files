@@ -83,6 +83,7 @@ in
     configs.apps = {
       SUBVOLUME = appDataRoot;
       FSTYPE = "btrfs";
+      FREE_LIMIT = config.nix.settings.min-free;
       TIMELINE_CREATE = true;
       TIMELINE_CLEANUP = true;
       TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
@@ -100,7 +101,6 @@ in
     paths = [ appDataRoot ];
     exclude = [
       "${appDataRoot}/.snapshots"
-      "${appDataRoot}/home-assistant/www/media/ha-bambulab"
     ];
     pruneOpts = [
       "--keep-hourly ${toString snapshots.retention.hourly}"
