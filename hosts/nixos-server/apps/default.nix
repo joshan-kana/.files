@@ -8,6 +8,7 @@
     ./immich
     ./matter-server
     ./n8n
+    ./onedev
     ./openclaw
     ./paperless
   ];
