@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 let
   serverCfg = config.dotfiles.server;
@@ -8,6 +8,7 @@ in
   services.gitea = {
     enable = true;
     stateDir = "${serverCfg.storage.appData.root}/gitea";
+    group = serverCfg.storage.appData.group.name;
     database.type = "sqlite3";
 
     settings = {
@@ -22,5 +23,9 @@ in
     };
   };
 
-  networking.firewall.allowedTCPPorts = [ 3000 ];
+  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts =
+    lib.optionals config.services.gitea.enable
+      [ config.services.gitea.settings.server.HTTP_PORT ];
+
+  virtualisation.vmVariant.services.gitea.enable = lib.mkForce false;
 }
