@@ -26,5 +26,6 @@ in
   };
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
-    lib.optionals config.services.paperless.enable [ config.services.paperless.port ];
+    lib.optionals config.services.paperless.enable
+      [ config.services.paperless.port ];
 }
