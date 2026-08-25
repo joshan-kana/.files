@@ -11,6 +11,10 @@
     "digest": "sha256:f9a15cc65378e4e5b6c3b1445c83985131938db8d8b5b1ab891d7d50196b2162",
     "source": "docker.n8n.io/n8nio/n8n:latest"
   },
+  "onedev": {
+    "digest": "sha256:09c39994fd6572a79b10319c170afd04857849cc0f7993ec4614f584c58707f8",
+    "source": "1dev/server:latest"
+  },
   "openclaw": {
     "digest": "sha256:2f5ce8848a1a69b3c460622e566cb9395da9fd18d7ef7b038cd8e2c4f195decf",
     "source": "ghcr.io/openclaw/openclaw:latest"
