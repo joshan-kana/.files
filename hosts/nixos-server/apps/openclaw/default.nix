@@ -158,6 +158,8 @@ let
 
 in
 {
+  networking.firewall.allowedTCPPorts = [ 18789 ];
+
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;
     createHome = true;

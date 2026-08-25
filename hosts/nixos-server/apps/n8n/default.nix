@@ -6,6 +6,8 @@ let
   appDataRoot = serverCfg.storage.appData.root;
 in
 {
+  networking.firewall.allowedTCPPorts = [ 5678 ];
+
   virtualisation.oci-containers.containers.n8n = {
     image = "docker.n8n.io/n8nio/n8n:latest";
 

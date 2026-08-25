@@ -8,6 +8,12 @@ let
   appDataRoot = config.dotfiles.server.storage.appData.root;
 in
 {
+  networking.firewall.allowedTCPPorts = [
+    8123
+    21064 # HomeKit main bridge
+    21065 # HomeKit Bambu camera bridge
+  ];
+
   systemd.services.docker-home-assistant = {
     after = [
       "bluetooth.service"
