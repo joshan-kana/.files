@@ -25,23 +25,5 @@
   desktop = import ../../modules/desktop;
   hardware = import ./hardware.nix;
 
-  compatibility = { lib, ... }: {
-    # Preserve pre-refactor evaluator ownership while shared modules expose
-    # both native NixOS and Home Manager configurations. Remove selectively
-    # in post-merge behavior changes when enabling the new side is desired.
-    programs = {
-      lazygit.enable = lib.mkForce false;
-      starship.enable = lib.mkForce false;
-      neovim.enable = lib.mkForce false;
-    };
-
-    home = { lib, ... }: {
-      programs = {
-        nh.enable = lib.mkForce false;
-        direnv.enable = lib.mkForce false;
-      };
-    };
-  };
-
   dotfiles.profile.name = "nixos-arm-parallels";
 }

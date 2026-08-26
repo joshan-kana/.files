@@ -38,24 +38,8 @@
   maintenance = import ./maintenance.nix;
   access = import ./access.nix;
 
-  compatibility = { lib, ... }: {
-    # Preserve pre-refactor evaluator ownership while shared modules expose
-    # both native NixOS and Home Manager configurations. Remove selectively
-    # in post-merge behavior changes when enabling the new side is desired.
+  compatibility = _: {
     system.stateVersion = "25.05";
-
-    programs = {
-      lazygit.enable = lib.mkForce false;
-      starship.enable = lib.mkForce false;
-      neovim.enable = lib.mkForce false;
-    };
-
-    home = { lib, ... }: {
-      programs = {
-        nh.enable = lib.mkForce false;
-        direnv.enable = lib.mkForce false;
-      };
-    };
   };
 
   dotfiles = {
