@@ -19,11 +19,7 @@ let
     commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
-  ghPlan = pkgs.callPackage ./gh-plan.nix {
-    inherit repoPath;
-    owner = "joshan-kana";
-    project = 1;
-  };
+  ghPlan = pkgs.callPackage ./gh-plan.nix { };
   toml = pkgs.formats.toml { };
   tuicrConfig = toml.generate "tuicr-config.toml" {
     theme = "stylix";
