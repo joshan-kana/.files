@@ -1,6 +1,14 @@
 { inputs, pkgs, ... }:
 
 {
+  brave = _: {
+    environment.systemPackages = [ pkgs.brave ];
+  };
+
+  bitwarden = _: {
+    environment.systemPackages = [ pkgs.bitwarden-desktop ];
+  };
+
   mullvad = _: {
     services.mullvad-vpn.enable = true;
     environment.systemPackages = [ pkgs.mullvad-vpn ];
