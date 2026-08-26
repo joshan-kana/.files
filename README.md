@@ -34,11 +34,13 @@ and `home = { ... }: { ... };` switches into a real Home Manager module. The
 same system-scope interface is intended for NixOS and future nix-darwin hosts.
 
 ```text
-hosts/                  Machines and host-specific semantic scopes
+hosts/                  Machines, generated host state, and host-specific policy
+modules/apps.nix        Shared application scopes
 modules/cli.nix         Shared CLI system + Home Manager configuration
-modules/desktop/        Shared desktop semantic scope tree
+modules/containers/     Shared container runtime and image-locking implementation
+modules/desktop/        Desktop environments, display managers, and desktop policy
+modules/options/        Shared dotfiles option schema
 modules/system/         Shared identity/locale/docs/compatibility scopes
-desktop/                Plasma, Hyprland, and other desktop-owned scopes
 overlays/               Package overlays
 lib/semantic-scopes.nix Semantic scope engine
 scripts/                Helper scripts used by aliases and workflows
@@ -79,7 +81,7 @@ it into each native option path.
 ## Common Options
 
 Shared host values live under `dotfiles.*`, defined in
-`modules/options/common.nix`.
+`modules/options/default.nix`.
 
 Common options include:
 
@@ -89,6 +91,7 @@ Common options include:
 - `dotfiles.users.primary.email`
 - `dotfiles.users.primary.homeRoot`
 - `dotfiles.paths.repoName`
+- `dotfiles.paths.repoPath`
 - `dotfiles.rebuild.flags`
 - `dotfiles.services.ollama.url`
 - `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
@@ -117,12 +120,15 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Where it should apply | Put it here |
 | --- | --- |
 | Shared CLI | `modules/cli.nix` |
+| Shared applications | `modules/apps.nix` |
+| Shared audio/virtualisation | `modules/audio.nix`, `modules/virtualisation.nix` |
 | Shared desktop | `modules/desktop/` |
-| Hyprland | `desktop/hyprland/default.nix` |
-| Plasma | `desktop/plasma/default.nix` |
-| x86 desktop apps | `hosts/nixos/apps.nix` |
+| Display managers | `modules/desktop/display-manager/` |
+| Hyprland | `modules/desktop/hyprland/default.nix` |
+| Plasma | `modules/desktop/plasma/default.nix` |
+| x86-only desktop inventory | inline scopes in `hosts/nixos/default.nix` |
 | Parallels only | `hosts/nixos-arm-parallels/` |
-| OrbStack only | `hosts/nixos-orbstack/` |
+| OrbStack only | `hosts/nixos-orbstack/default.nix` plus generated state |
 | Server app | `hosts/nixos-server/apps/<app>/` |
 | Server networking/storage/hardware | the matching file under `hosts/nixos-server/` |
 
@@ -147,9 +153,9 @@ openclaw = { ... }: {
 
 ### Plasma generated state
 
-`desktop/plasma/default.nix` is the small handwritten semantic wrapper. Plasma
-Manager's exported state lives in `desktop/plasma/generated.nix`; do not hand-edit
-that generated file. From the Plasma host, regenerate it with:
+`modules/desktop/plasma/default.nix` is the small handwritten semantic wrapper.
+Plasma Manager's exported state lives in `modules/desktop/plasma/generated.nix`;
+do not hand-edit that generated file. From the Plasma host, regenerate it with:
 
 ```sh
 nix run .#update-plasma
@@ -224,11 +230,11 @@ semantic scopes:
 
 {
   imports = [
-    ../../modules/options/common.nix
+    ../../modules/options
     ./hardware.nix
   ];
 
-  system = import ../../modules/system.nix;
+  system = import ../../modules/system;
   nix = import ../../modules/nix.nix;
   cli = import ../../modules/cli.nix;
   networking = import ../../modules/networking.nix;

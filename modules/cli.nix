@@ -8,9 +8,7 @@
 
 let
   cfg = config.dotfiles;
-  primaryHome = "${cfg.users.primary.homeRoot}/${cfg.users.primary.name}";
-  repoPath =
-    if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
+  repoPath = cfg.paths.repoPath;
   scopeEnabled = path: lib.attrByPath (path ++ [ "enable" ]) null cfg.scopes != false;
   systemCommands = {
     cd = "cd $DOTFILES";
@@ -434,6 +432,8 @@ in
   };
 
   neovim = _: {
+    environment.sessionVariables.EDITOR = "nvim";
+
     home = _: {
       programs = {
         neovim = {
@@ -560,5 +560,4 @@ in
     };
   };
 
-  restic = import ./cli/restic.nix;
 }

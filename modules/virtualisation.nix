@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 {
-  nixpkgs.overlays = (import ../../overlays/bottles.nix { }).nixpkgs.overlays;
+  nixpkgs.overlays = (import ../overlays/bottles.nix { }).nixpkgs.overlays;
 
   virtualisation.docker.enable = true;
   users.users.${config.dotfiles.users.primary.name}.extraGroups = [

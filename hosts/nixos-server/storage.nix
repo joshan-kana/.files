@@ -12,6 +12,11 @@ let
   pool = cfg.dataRoot.poolName;
   secretsDir = config.dotfiles.server.secretsDir;
   snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
+  resticWrapperCommands = lib.pipe config.services.restic.backups [
+    (lib.filterAttrs (_: backup: backup.createWrapper))
+    lib.attrNames
+    (map (name: "restic-${name}"))
+  ];
 in
 {
   assertions = [
@@ -121,4 +126,13 @@ in
     "v ${appDataRoot}/.snapshots 0750 root root - -"
     "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
   ];
+
+  programs.zsh.interactiveShellInit =
+    lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ])
+      (
+        lib.mkAfter ''
+          autoload -Uz _restic
+          compdef _restic ${lib.escapeShellArgs resticWrapperCommands}
+        ''
+      );
 }

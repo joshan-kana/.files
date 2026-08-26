@@ -170,13 +170,24 @@
           stylixInput ? stylix,
           extraModules ? [ ],
         }:
+        let
+          hostFile =
+            if builtins.pathExists (hostModule + "/default.nix") then
+              hostModule + "/default.nix"
+            else
+              hostModule;
+          hostScope = import hostFile;
+          hostScopeWithFile = lib.setFunctionArgs (args: (hostScope args) // { _file = toString hostFile; }) (
+            lib.functionArgs hostScope
+          );
+        in
         nixpkgsInput.lib.nixosSystem {
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
-            (semantic.rootModule (import hostModule))
+            (semantic.rootModule hostScopeWithFile)
           ]
           ++ extraModules;
         };
@@ -284,8 +295,8 @@
                 ];
                 text = ''
                   repo="$(git rev-parse --show-toplevel)"
-                  target="$repo/desktop/plasma/generated.nix"
-                  tmpdir="$(mktemp -d "$repo/desktop/plasma/.generated.XXXXXX")"
+                  target="$repo/modules/desktop/plasma/generated.nix"
+                  tmpdir="$(mktemp -d "$repo/modules/desktop/plasma/.generated.XXXXXX")"
                   trap 'rm -rf -- "$tmpdir"' EXIT
 
                   rc2nix > "$tmpdir/generated.nix"

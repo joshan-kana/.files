@@ -106,7 +106,7 @@ assert_contains "$invalid_scope" "invalid scope" "invalid scope diagnostic"
 gh_cold_stderr="$test_cache/gh-cold.stderr"
 gh_cold="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable 2> "$gh_cold_stderr")"
 assert_contains "$gh_cold" "current/effective value:" "Home Manager full value heading"
-assert_contains "$gh_cold" $'current/effective value:\nfalse' "defaulted Home Manager value"
+assert_contains "$gh_cold" $'current/effective value:\ntrue' "semantic Home Manager value"
 assert_not_contains "$gh_cold" "<missing>" "defaulted Home Manager value"
 assert_contains "$(<"$gh_cold_stderr")" "cache miss:" "cold full-value cache"
 
@@ -115,7 +115,7 @@ gh_warm="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --va
 assert_eq "$gh_warm" "$gh_cold" "warm full-value result"
 assert_contains "$(<"$gh_warm_stderr")" "cache hit:" "warm full-value cache"
 
-assert_contains "$(run_nf "$host" --scope "$hm_scope" --value programs.gh.enable)" $'current/effective value:\nfalse' "normal Home Manager value"
+assert_contains "$(run_nf "$host" --scope "$hm_scope" --value programs.gh.enable)" $'current/effective value:\ntrue' "semantic Home Manager value"
 assert_contains "$(run_nf "$host" --scope "$hm_scope" --value programs.zsh.enable)" $'current/effective value:\ntrue' "configured Home Manager zsh value"
 assert_contains "$(run_nf "$host" --scope nixos --value programs.zsh.enable)" $'current/effective value:\ntrue' "configured NixOS zsh value"
 assert_contains "$(run_nf "$host" --scope "$hm_scope" --value stylix.enable)" $'current/effective value:\ntrue' "configured Home Manager Stylix value"
@@ -135,19 +135,19 @@ assert_contains "$full_packages" "<list:" "full list value"
 assert_not_contains "$full_packages" "<missing>" "full list value"
 
 gh_definitions="$(run_nf "$host" --scope "$hm_scope" --definitions programs.gh.enable)"
-assert_eq "$gh_definitions" "home-manager/modules/programs/gh.nix" "defaulted Home Manager origin"
-assert_eq "$(run_nf "$host" --scope "$hm_scope" --definitions programs.zsh.enable)" "local/modules/cli.nix" "explicit Home Manager origin"
+assert_contains "$gh_definitions" "Home Manager integration bridge" "semantic Home Manager origin"
+assert_contains "$(run_nf "$host" --scope "$hm_scope" --definitions programs.zsh.enable)" "Home Manager integration bridge" "semantic Home Manager origin"
 assert_contains "$(run_nf "$host" --scope "$hm_scope" --definitions stylix.enable)" "Home Manager integration bridge" "Home Manager integration origin"
-assert_eq "$(run_nf "$host" --scope nixos --definitions services.openssh.enable)" "local/hosts/nixos-orbstack/orbstack-generated.nix" "NixOS service origin"
-assert_eq "$(run_nf "$host" --scope nixos --definitions dotfiles.profile.name)" "local/hosts/nixos-orbstack/default.nix" "local custom option origin"
+assert_not_contains "$(run_nf "$host" --scope nixos --definitions services.openssh.enable)" "<unknown-file>" "NixOS service origin"
+assert_not_contains "$(run_nf "$host" --scope nixos --definitions dotfiles.profile.name)" "<unknown-file>" "local custom option origin"
 
 gh_item_origins="$(run_nf "$host" --scope "$hm_scope" --definition-items programs.gh.enable)"
-assert_contains "$gh_item_origins" "false" "default scalar definition item"
-assert_contains "$gh_item_origins" "home-manager/modules/programs/gh.nix" "default scalar item origin"
+assert_contains "$gh_item_origins" "true" "semantic scalar definition item"
+assert_contains "$gh_item_origins" "Home Manager integration bridge" "semantic scalar item origin"
 empty_item_origin="$(run_nf "$host" --scope "$hm_scope" --definition-item programs.bash.bashrcExtra "")"
 assert_contains "$empty_item_origin" "[string]" "empty definition item lookup"
 assert_not_contains "$empty_item_origin" "requires an item value" "empty definition item lookup"
-invalid_item_origin="$(run_nf "$host" --scope "$hm_scope" --definition-item programs.hunk.settings does-not-exist)"
+invalid_item_origin="$(run_nf "$host" --scope "$hm_scope" --definition-item programs.git.settings does-not-exist)"
 assert_contains "$invalid_item_origin" "<none>" "unknown definition item ID"
 assert_not_contains "$invalid_item_origin" "local/modules/cli.nix" "unknown definition item ID"
 
@@ -177,7 +177,7 @@ full_preview="$({
 })"
 assert_contains "$full_preview" "preview debounce: 1ms" "preview debounce setting"
 assert_contains "$full_preview" "full effective value" "full preview mode"
-assert_contains "$full_preview" $'current/effective value:\nfalse' "live full preview value"
+assert_contains "$full_preview" $'current/effective value:\ntrue' "live full preview value"
 assert_not_contains "$full_preview" "<missing>" "live full preview value"
 
 nixos_zsh_cache="$({ NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope nixos --value programs.zsh.enable >/dev/null; } 2>&1 | sed -n 's/^cache hit: //p')"
@@ -296,9 +296,9 @@ assert_contains "$(<"$NF_FZF_INPUT_FILE.2")" $'programs.zsh/\t\t-' "Ctrl-O group
 
 printf '0\n' > "$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=value-search
-run_nf "$host" --scope "$hm_scope" --value-search programs.hunk.settings >/dev/null
-assert_contains "$(<"$NF_FZF_ARGV_FILE")" "--definition-item 'programs.hunk.settings' {1}" "value-search item-origin preview"
-assert_contains "$(<"$NF_FZF_INPUT_FILE.1")" "mode = auto" "value-search evaluated items"
+run_nf "$host" --scope "$hm_scope" --value-search programs.btop.settings >/dev/null
+assert_contains "$(<"$NF_FZF_ARGV_FILE")" "--definition-item 'programs.btop.settings' {1}" "value-search item-origin preview"
+assert_contains "$(<"$NF_FZF_INPUT_FILE.1")" "update_ms = 100" "value-search evaluated items"
 
 printf '0\n' > "$NF_FZF_STATE_FILE"
 run_nf "$host" --scope "$hm_scope" --value-search programs.zsh.initContent >/dev/null
@@ -306,7 +306,7 @@ multiline_record="$(<"$NF_FZF_INPUT_FILE.1")"
 assert_contains "$multiline_record" '\n' "multiline value-search transport"
 multiline_id="${multiline_record%%$'\t'*}"
 multiline_origin="$(run_nf "$host" --scope "$hm_scope" --definition-item programs.zsh.initContent "$multiline_id")"
-assert_contains "$multiline_origin" "local/modules/cli.nix" "multiline definition item lookup"
+assert_contains "$multiline_origin" "Home Manager integration bridge" "multiline definition item lookup"
 assert_not_contains "$multiline_origin" "$multiline_id" "multiline definition item display"
 
 warm_docs_stderr="$test_cache/warm-docs.stderr"

@@ -1,3 +1,4 @@
+{ lockFile }:
 {
   config,
   lib,
@@ -15,11 +16,15 @@ let
     mapAttrs
     ;
 
-  parsedLocks = builtins.fromJSON (builtins.readFile ./container-images.lock);
+  scopeEnabled = path: lib.attrByPath (path ++ [ "enable" ]) null config.dotfiles.scopes != false;
+  enabled =
+    scopeEnabled [ "containers" ]
+    && scopeEnabled [
+      "containers"
+      "imageLocking"
+    ];
 
-  # A non-object JSON root is treated as an empty lock so individual container
-  # images remain discoverable through placeholders. Invalid JSON syntax may
-  # still fail parsing, which is appropriate.
+  parsedLocks = builtins.fromJSON (builtins.readFile lockFile);
   locks = if builtins.isAttrs parsedLocks then parsedLocks else { };
 
   placeholderDigest = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
@@ -35,7 +40,6 @@ let
       let
         source = container.image;
         lock = locks.${name} or null;
-
         lockIsCurrent =
           builtins.isAttrs lock
           && lock ? source
@@ -43,7 +47,6 @@ let
           && lock.source == source
           && lock ? digest
           && validDigest lock.digest;
-
         digest = if lockIsCurrent then lock.digest else placeholderDigest;
       in
       assert assertMsg (source != "" && !hasInfix "@" source)
@@ -52,6 +55,8 @@ let
       // {
         image = "${source}@${digest}";
       };
+
+  applyLocks = containers: if enabled then mapAttrs pinContainer containers else containers;
 
   registryContainers = filterAttrs (
     _name: container: container.imageFile == null && container.imageStream == null
@@ -62,16 +67,14 @@ let
   ) registryContainers;
 in
 {
-  # Add only `apply` to the upstream OCI-container option. A future upstream
-  # `apply` on this option should cause a clear module evaluation conflict.
+  # Extend the upstream OCI-container option without replacing its schema.
   options.virtualisation.oci-containers.containers = lib.mkOption {
-    apply = mapAttrs pinContainer;
+    apply = applyLocks;
   };
 
-  config.assertions = [
+  config.assertions = lib.optionals enabled [
     {
       assertion = invalidContainers == { };
-
       message = ''
         Container image locks are missing, stale, or malformed:
 

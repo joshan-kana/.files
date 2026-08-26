@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   inherit (lib) mkOption types;
@@ -58,9 +58,9 @@ in
       };
 
       repoPath = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Absolute path to the repository. Defaults to repoName under the primary user's home.";
+        type = types.str;
+        default = "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}/${config.dotfiles.paths.repoName}";
+        description = "Absolute path to the repository.";
       };
     };
 

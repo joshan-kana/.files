@@ -1,14 +1,11 @@
 { config, pkgs, ... }:
 
 let
-  cfg = config.dotfiles;
-  primaryHome = "${cfg.users.primary.homeRoot}/${cfg.users.primary.name}";
-  repoPath =
-    if cfg.paths.repoPath != null then cfg.paths.repoPath else "${primaryHome}/${cfg.paths.repoName}";
   xwaylandEnabled = true;
 in
 {
   programs.hyprland.xwayland.enable = xwaylandEnabled;
+  environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
   environment.systemPackages = with pkgs; [
     wl-clipboard
@@ -28,8 +25,8 @@ in
     home = _: {
       programs.eww = {
         package = pkgs.eww;
-        yuckConfig = builtins.readFile ../eww/eww.yuck;
-        scssConfig = builtins.readFile ../eww/eww.scss;
+        yuckConfig = builtins.readFile ./eww/eww.yuck;
+        scssConfig = builtins.readFile ./eww/eww.scss;
       };
     };
   };
@@ -149,10 +146,10 @@ in
   };
 
   dunst = _: {
-    home = _: {
+    home = { config, ... }: {
       services.dunst.settings.global = {
         mouse_right_click = "do_action";
-        dmenu = "${primaryHome}/.nix-profile/bin/rofi -dmenu";
+        dmenu = "${config.home.homeDirectory}/.nix-profile/bin/rofi -dmenu";
       };
     };
   };
@@ -171,8 +168,8 @@ in
   home = _: {
     programs.zsh.shellAliases = {
       h = "start-hyprland";
-      HI = "${repoPath}/scripts/hyprland_intel";
-      HN = "${repoPath}/scripts/hyprland_nvidia";
+      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
+      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
     };
 
     wayland.windowManager.hyprland = {
@@ -382,11 +379,11 @@ in
         bind = $mainMod ALT, 6, exec, code
         bind = $mainMod ALT, 7, exec, obsidian --disable-gpu
         bind = $mainMod ALT, E, exec, nautilus
-        bind = $mainMod SHIFT, V, exec, ~/.files/scripts/volume_mixer
-        bind = $mainMod ALT, V, exec, ~/.files/scripts/audio_fx
+        bind = $mainMod SHIFT, V, exec, ${config.dotfiles.paths.repoPath}/scripts/volume_mixer
+        bind = $mainMod ALT, V, exec, ${config.dotfiles.paths.repoPath}/scripts/audio_fx
 
         # Applets and launchers
-        bind = $mainMod, SPACE, exec, ~/.files/scripts/app_launch
+        bind = $mainMod, SPACE, exec, ${config.dotfiles.paths.repoPath}/scripts/app_launch
         bind = $mainMod, V, exec, cliphist list | tofi | cliphist decode | wl-copy
         bind = ALT, SPACE, exec, ~/repos/rofi-desktop/scripts/rofi-desktop.sh
 
@@ -488,7 +485,7 @@ in
         bind = $mainMod, L, exec, swaylock
 
         # Edit config in vscode
-        bind = $mainMod SHIFT, E, exec, code /home/joshan/.files/edit_config.code-workspace
+        bind = $mainMod SHIFT, E, exec, code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace
 
         # Passthrough Super key to a VM
         bind = $mainMod, Escape, submap, passthru

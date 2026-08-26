@@ -35,6 +35,8 @@ let
   '';
 in
 {
+  services.xserver.displayManager.lightdm.enable = false;
+
   # Enable display manager
   services.displayManager.ly.enable = true;
 

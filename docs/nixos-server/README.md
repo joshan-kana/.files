@@ -205,7 +205,7 @@ the container image.
 
 Containers are declared with normal NixOS OCI-container syntax. Each keeps an
 `image = "repository:tag";` source plus its volumes, ports, environment files,
-and extra options in the relevant `hosts/nixos-server/apps/<app>.nix` module:
+and extra options in the relevant `hosts/nixos-server/apps/<app>/default.nix` module:
 
 ```nix
 virtualisation.oci-containers.containers.openclaw = {
@@ -215,8 +215,8 @@ virtualisation.oci-containers.containers.openclaw = {
 };
 ```
 
-`hosts/nixos-server/container-image-locking.nix` adds an `apply` transformation
-to the upstream `virtualisation.oci-containers.containers` option. After every
+`modules/containers/image-locking.nix` adds an `apply` transformation to the
+upstream `virtualisation.oci-containers.containers` option for the server. After every
 container definition across the whole module graph has merged, it appends the
 matching locked digest from `container-images.lock`, producing
 `repository:tag@sha256:<digest>` at evaluation time. The transformation is
@@ -226,6 +226,17 @@ graph.
 The lock is keyed by container name. Two containers may intentionally follow the
 same `repository:tag` source and still have independent lock records and
 targeted-update behavior.
+
+Image locking is the `containers.imageLocking` semantic child. It is enabled by
+default with the server container stack and can be bypassed without disabling
+Docker/OCI containers:
+
+```nix
+dotfiles.scopes.containers.imageLocking.enable = false;
+```
+
+Disabling `dotfiles.scopes.containers.enable` disables the shared Docker/OCI
+runtime as well and also bypasses locking.
 
 If a container's lock entry is missing, stale, or malformed, the module writes a
 placeholder digest (`sha256:0000…`) into the image. That lets the updater

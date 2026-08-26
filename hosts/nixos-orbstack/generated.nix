@@ -2,10 +2,7 @@
 # This MAY be overwritten in the future. Make a copy and update the include
 # in configuration.nix if you want to keep your changes.
 
-{
-  lib,
-  ...
-}:
+{ lib, ... }:
 
 with lib;
 

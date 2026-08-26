@@ -3,8 +3,9 @@
 {
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
-    ../../modules/options/common.nix
+    ../../modules/options
     ./options.nix
+    (import ../../modules/containers/image-locking.nix { lockFile = ./container-images.lock; })
     "${modulesPath}/image/repart.nix"
   ];
 
@@ -13,8 +14,7 @@
   theme = import ../../modules/theme.nix;
   cli = import ../../modules/cli.nix;
   networking = import ./networking.nix;
-  containers = import ./containers.nix;
-  containerImageLocking = import ./container-image-locking.nix;
+  containers = import ../../modules/containers;
   apps = import ./apps;
   storage = import ./storage.nix;
   vm = import ../../modules/vm.nix;
@@ -23,7 +23,10 @@
   hardware = import ./hardware.nix;
   maintenance = import ./maintenance.nix;
   access = import ./access.nix;
-  compatibility = import ./compatibility.nix;
+
+  compatibility = _: {
+    system.stateVersion = "25.05";
+  };
 
   dotfiles = {
     profile.name = "nixos-server";
