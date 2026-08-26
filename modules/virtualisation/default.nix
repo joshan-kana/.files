@@ -23,7 +23,6 @@
   };
 
   bottles = _: {
-    nixpkgs.overlays = (import ../../overlays/bottles.nix { }).nixpkgs.overlays;
     environment.systemPackages = [ pkgs.bottles ];
   };
 
