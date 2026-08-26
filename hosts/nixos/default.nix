@@ -68,16 +68,8 @@
     }:
     (import ../../modules/desktop-apps { inherit inputs pkgs; })
     // {
-      brave = _: {
-        environment.systemPackages = [ pkgs.brave ];
-      };
-
       spotify = _: {
         programs.spicetify.enable = true;
-      };
-
-      bitwarden = _: {
-        environment.systemPackages = [ pkgs.bitwarden-desktop ];
       };
 
       discord = _: {
