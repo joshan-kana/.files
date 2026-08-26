@@ -176,11 +176,6 @@
           modules = [
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
-            (semantic.systemModule "monaspaceLiga" (import ./overlays/monaspace-liga-overlay.nix))
-            (semantic.systemModule "bottles" (import ./overlays/bottles.nix))
-            (semantic.systemModule "ghDash" (import ./overlays/gh-dash.nix))
-            (semantic.systemModule "theme" (import ./modules/nixos/theme.nix))
-            (semantic.systemModule "resticCompletions" (import ./modules/nixos/restic-completions.nix))
             (semantic.rootModule (import hostModule))
           ]
           ++ extraModules;
@@ -247,9 +242,13 @@
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
+          semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
         in
         {
           nix-quality = treefmt.config.build.check self;
+          semantic-system-portability = pkgs.writeText "semantic-system-portability-test.json" (
+            builtins.toJSON semanticPortabilityTest
+          );
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           semantic-scopes = pkgs.writeText "semantic-scopes-test.json" (builtins.toJSON semanticTest);
@@ -261,6 +260,8 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
+
           fixNix = pkgs.writeShellApplication {
             name = "fix-nix";
             runtimeInputs = [ treefmt.config.build.wrapper ];
@@ -268,6 +269,30 @@
               exec treefmt "$@"
             '';
           };
+
+          updatePlasma =
+            if plasmaRc2nix == null then
+              null
+            else
+              pkgs.writeShellApplication {
+                name = "update-plasma";
+                runtimeInputs = [
+                  pkgs.coreutils
+                  pkgs.git
+                  treefmt.config.build.wrapper
+                  plasmaRc2nix
+                ];
+                text = ''
+                  repo="$(git rev-parse --show-toplevel)"
+                  target="$repo/desktop/plasma/generated.nix"
+                  tmpdir="$(mktemp -d "$repo/desktop/plasma/.generated.XXXXXX")"
+                  trap 'rm -rf -- "$tmpdir"' EXIT
+
+                  rc2nix > "$tmpdir/generated.nix"
+                  treefmt "$tmpdir/generated.nix"
+                  mv -- "$tmpdir/generated.nix" "$target"
+                '';
+              };
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
@@ -278,6 +303,13 @@
             meta.description = "Apply deadnix, statix, and nixfmt fixes through treefmt";
           };
         }
+        // lib.optionalAttrs (updatePlasma != null) {
+          update-plasma = {
+            type = "app";
+            program = lib.getExe updatePlasma;
+            meta.description = "Regenerate Plasma Manager configuration with pinned rc2nix and treefmt";
+          };
+        }
         // lib.optionalAttrs (vscodePkg != null) {
           code = {
             type = "app";
@@ -285,7 +317,6 @@
           };
         }
       );
-
       nixosConfigurations = {
         nixos = nixosHost {
           system = "x86_64-linux";

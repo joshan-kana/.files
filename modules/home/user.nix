@@ -8,8 +8,6 @@ in
   home.username = cfg.users.primary.name;
   home.homeDirectory = lib.mkForce primaryHome;
 
-  home.stateVersion = "23.05";
-
   programs.home-manager.enable = true;
   home.packages = [ ];
 }

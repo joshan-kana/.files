@@ -9,13 +9,16 @@
     ../../modules/options/common.nix
   ];
 
-  system = import ../../modules/system.nix;
+  system = import ../../modules/system;
   nix = import ../../modules/nix.nix;
+  theme = import ../../modules/theme.nix;
   cli = import ../../modules/cli.nix;
   networking = import ../../modules/networking.nix;
   vm = import ../../modules/vm.nix;
-  desktop = import ../../modules/desktop.nix;
-  nvtop = import ../../overlays/nvtop-overlay.nix;
+  boot = import ../../modules/boot.nix;
+  ssh = import ../../modules/ssh.nix;
+  mullvad = import ../../modules/mullvad.nix;
+  desktop = import ../../modules/desktop;
   apps = import ./apps.nix;
   gpuTools = import ./gpu-tools.nix;
   twingate = import ./twingate.nix;

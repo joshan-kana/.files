@@ -36,8 +36,8 @@ same system-scope interface is intended for NixOS and future nix-darwin hosts.
 ```text
 hosts/                  Machines and host-specific semantic scopes
 modules/cli.nix         Shared CLI system + Home Manager configuration
-modules/desktop.nix     Shared desktop system + Home Manager configuration
-modules/nixos/          NixOS-only policy such as theme/boot/SSH/VPN
+modules/desktop/        Shared desktop semantic scope tree
+modules/system/         Shared identity/locale/docs/compatibility scopes
 desktop/                Plasma, Hyprland, and other desktop-owned scopes
 overlays/               Package overlays
 lib/semantic-scopes.nix Semantic scope engine
@@ -117,7 +117,7 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Where it should apply | Put it here |
 | --- | --- |
 | Shared CLI | `modules/cli.nix` |
-| Shared desktop | `modules/desktop.nix` |
+| Shared desktop | `modules/desktop/` |
 | Hyprland | `desktop/hyprland/default.nix` |
 | Plasma | `desktop/plasma/default.nix` |
 | x86 desktop apps | `hosts/nixos/apps.nix` |
@@ -145,6 +145,19 @@ openclaw = { ... }: {
 };
 ```
 
+### Plasma generated state
+
+`desktop/plasma/default.nix` is the small handwritten semantic wrapper. Plasma
+Manager's exported state lives in `desktop/plasma/generated.nix`; do not hand-edit
+that generated file. From the Plasma host, regenerate it with:
+
+```sh
+nix run .#update-plasma
+```
+
+The flake app uses the locked plasma-manager `rc2nix`, formats the result with the
+repo's treefmt configuration, and only then replaces the generated file.
+
 ### Host-specific scope overrides
 
 A host normally enables a semantic scope simply by importing it. To disable a
@@ -165,7 +178,7 @@ using an alias override registry.
 
 ### Themes
 
-System and Home Manager theme policy live together in `modules/nixos/theme.nix`.
+System and Home Manager theme policy live together in `modules/theme.nix`.
 Desktop-specific target configuration remains with its owning desktop/program
 scope. Keep the theme shared across hosts unless there is a real host-specific
 requirement.

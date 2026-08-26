@@ -77,12 +77,6 @@ let
   };
 in
 {
-  nixpkgs.overlays = [
-    (_final: prev: {
-      tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
-    })
-  ];
-
   environment.sessionVariables = {
     DOTFILES = repoPath;
     FLK_PROFILE = cfg.profile.name;
@@ -90,18 +84,14 @@ in
     NIXOS_REBUILD_FLAGS = cfg.rebuild.flags;
   };
 
-  environment.systemPackages = with pkgs; [
-    vim
-    wget
-    lshw
-    fastfetch
-    tree
-    glow
-    htop
-  ];
-
   nh = _: {
     programs.nh.flake = repoPath;
+
+    home = _: {
+      programs.zsh.shellAliases = systemAliases // {
+        inherit (systemCommands) edit;
+      };
+    };
   };
 
   direnv = _: {
@@ -182,10 +172,8 @@ in
             src = pkgs.zsh-fzf-tab;
           }
         ];
-        shellAliases = systemAliases // {
+        shellAliases = {
           bk = "cd ..";
-          inherit (systemCommands) edit;
-          neofetch = "fastfetch";
           sz = "du -sh";
         };
         initContent = ''
@@ -263,6 +251,9 @@ in
   };
 
   gh = _: {
+    environment.systemPackages = [ pkgs.gh ];
+    nixpkgs.overlays = (import ../overlays/gh-dash.nix { }).nixpkgs.overlays;
+
     home = _: {
       programs.gh.extensions = [ pkgs.gh-dash ];
       programs.zsh.shellAliases.dh = "gh dash";
@@ -326,6 +317,12 @@ in
   };
 
   tuicr = _: {
+    nixpkgs.overlays = [
+      (_final: prev: {
+        tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
+      })
+    ];
+
     home = _: {
       home.packages = [ pkgs.tuicr ];
       xdg.configFile."tuicr/config.toml".source = tuicrConfig;
@@ -423,6 +420,8 @@ in
   };
 
   htop = _: {
+    environment.systemPackages = [ pkgs.htop ];
+
     home = _: {
       programs.htop.enable = true;
     };
@@ -458,4 +457,108 @@ in
       };
     };
   };
+
+  vim = _: {
+    environment.systemPackages = [ pkgs.vim ];
+  };
+
+  wget = _: {
+    environment.systemPackages = [ pkgs.wget ];
+  };
+
+  lshw = _: {
+    environment.systemPackages = [ pkgs.lshw ];
+  };
+
+  fastfetch = _: {
+    environment.systemPackages = [ pkgs.fastfetch ];
+
+    home = _: {
+      programs.zsh.shellAliases.neofetch = "fastfetch";
+    };
+  };
+
+  tree = _: {
+    environment.systemPackages = [ pkgs.tree ];
+  };
+
+  glow = _: {
+    environment.systemPackages = [ pkgs.glow ];
+  };
+
+  stow = _: {
+    environment.systemPackages = [ pkgs.stow ];
+  };
+
+  youtubeTui = _: {
+    environment.systemPackages = [ pkgs.youtube-tui ];
+  };
+
+  killall = _: {
+    environment.systemPackages = [ pkgs.killall ];
+  };
+
+  xdgUtils = _: {
+    environment.systemPackages = [ pkgs.xdg-utils ];
+  };
+
+  trashCli = _: {
+    environment.systemPackages = [ pkgs.trash-cli ];
+  };
+
+  gnumake = _: {
+    environment.systemPackages = [ pkgs.gnumake ];
+  };
+
+  devbox = _: {
+    environment.systemPackages = [ pkgs.devbox ];
+  };
+
+  has = _: {
+    environment.systemPackages = [ pkgs.has ];
+  };
+
+  nvd = _: {
+    environment.systemPackages = [ pkgs.nvd ];
+  };
+
+  nixTree = _: {
+    environment.systemPackages = [ pkgs.nix-tree ];
+  };
+
+  python = _: {
+    environment.systemPackages = [ pkgs.python3 ];
+  };
+
+  ncmpcpp = _: {
+    home = _: {
+      programs.ncmpcpp.package = pkgs.ncmpcpp.override { visualizerSupport = true; };
+    };
+  };
+
+  cava = _: {
+    home = { config, ... }: {
+      programs.cava.settings = {
+        general.lower_cutoff_freq = 20;
+        general.upper_cutoff_freq = 20000;
+        smoothing.noise_reduction = 30;
+        smoothing.monstercat = 1;
+        general.bar_width = 1;
+        general.bar_spacing = 0;
+        output.channels = "mono";
+        color.gradient = 1;
+        color.gradient_count = 8;
+        color.gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
+        color.gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
+        color.gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
+        color.gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
+        color.gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
+        color.gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
+        color.gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
+        color.gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
+      };
+    };
+  };
+
+  restic = import ./cli/restic.nix;
 }

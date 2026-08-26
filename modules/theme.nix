@@ -5,10 +5,12 @@
 }:
 
 {
+  nixpkgs.overlays = (import ../overlays/monaspace-liga-overlay.nix { }).nixpkgs.overlays;
+
   stylix = {
     enable = true;
-    image = ../../wallpaper.png;
-    base16Scheme = ../../themes/carbon.yaml;
+    image = ../wallpaper.png;
+    base16Scheme = ../themes/carbon.yaml;
 
     fonts = {
       serif = config.stylix.fonts.monospace;
@@ -31,6 +33,25 @@
       size = 30;
     };
   };
+
+  fonts =
+    { lib, pkgs, ... }:
+    let
+      nerdSymbols =
+        if builtins.hasAttr "nerd-fonts" pkgs then
+          pkgs."nerd-fonts".symbols-only
+        else
+          pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; };
+    in
+    {
+      # Stylix already installs its configured fonts and sets the standard
+      # fontconfig defaults. Keep only the additional symbol fallback here.
+      fonts.packages = [ nerdSymbols ];
+      fonts.fontconfig.defaultFonts.monospace = lib.mkAfter [
+        "Symbols Nerd Font Mono"
+        "Symbols Nerd Font"
+      ];
+    };
 
   home =
     {

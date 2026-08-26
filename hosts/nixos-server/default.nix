@@ -8,8 +8,9 @@
     "${modulesPath}/image/repart.nix"
   ];
 
-  system = import ../../modules/system.nix;
+  system = import ../../modules/system;
   nix = import ../../modules/nix.nix;
+  theme = import ../../modules/theme.nix;
   cli = import ../../modules/cli.nix;
   networking = import ./networking.nix;
   containers = import ./containers.nix;
@@ -32,6 +33,19 @@
       mpv.enable = false;
       tmuxai.enable = false;
       ollama.enable = false;
+      cava.enable = false;
+      ncmpcpp.enable = false;
+      youtubeTui.enable = false;
+      stow.enable = false;
+      killall.enable = false;
+      xdgUtils.enable = false;
+      trashCli.enable = false;
+      gnumake.enable = false;
+      devbox.enable = false;
+      has.enable = false;
+      nvd.enable = false;
+      nixTree.enable = false;
+      python.enable = false;
     };
   };
 }

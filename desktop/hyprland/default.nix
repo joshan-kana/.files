@@ -10,6 +10,164 @@ in
 {
   programs.hyprland.xwayland.enable = xwaylandEnabled;
 
+  environment.systemPackages = with pkgs; [
+    wl-clipboard
+    brightnessctl
+    polkit_gnome
+    awww
+    networkmanagerapplet
+    playerctl
+    grimblast
+    nwg-panel
+    nwg-dock-hyprland
+    nwg-displays
+    wlr-randr
+  ];
+
+  eww = _: {
+    home = _: {
+      programs.eww = {
+        package = pkgs.eww;
+        yuckConfig = builtins.readFile ../eww/eww.yuck;
+        scssConfig = builtins.readFile ../eww/eww.scss;
+      };
+    };
+  };
+
+  wofi = _: {
+    home = _: {
+      programs.wofi.settings = {
+        allow_images = true;
+        matching = "fuzzy";
+      };
+    };
+  };
+
+  rofi = _: {
+    home = _: {
+      programs.rofi = {
+        package = pkgs.rofi;
+        terminal = "kitty";
+        plugins = with pkgs; [ rofi-calc ];
+      };
+    };
+  };
+
+  tofi = _: {
+    environment.systemPackages = [ pkgs.tofi ];
+
+    home = { config, ... }: {
+      home.file.".config/tofi/config".text = ''
+        font = ${config.stylix.fonts.monospace.name}
+        font-size = 18
+        background-color = #${config.lib.stylix.colors.base00}
+        text-color = #${config.lib.stylix.colors.base07}
+        selection-color = #${config.lib.stylix.colors.base0A}
+        width = 45%
+        height = 35%
+        border-width = 5
+        border-color = #${config.lib.stylix.colors.base03}
+        corner-radius = 20
+      '';
+    };
+  };
+
+  waybar = _: {
+    home = _: {
+      programs.waybar.settings.mainBar = {
+        layer = "top";
+        spacing = 10;
+        modules-left = [
+          "hyprland/workspaces"
+          "mpris"
+        ];
+        modules-center = [ "clock" ];
+        modules-right = [
+          "backlight"
+          "wireplumber"
+          "battery"
+          "tray"
+        ];
+        "hyprland/workspaces" = {
+          on-scroll-up = "hyprctl dispatch workspace e+1";
+          on-scroll-down = "hyprctl dispatch workspace e-1";
+        };
+        mpris = {
+          interval = 1;
+          format = "{player}: {status_icon} {position}/{length}";
+          status-icons = {
+            playing = "▶";
+            paused = "⏸";
+          };
+        };
+        clock.format = "⎈ {:%a, %b %d |  %R}";
+        backlight = {
+          format = "{percent}% {icon}";
+          format-icons = [
+            ""
+            ""
+          ];
+          scroll-step = 0.35;
+        };
+        battery = {
+          interval = 120;
+          format = "{capacity}% {icon}";
+          format-icons = [
+            ""
+            ""
+            ""
+            ""
+            ""
+          ];
+        };
+        wireplumber = {
+          format = "{volume}% {icon}";
+          format-icons = [
+            ""
+            ""
+            ""
+          ];
+          scroll-step = 0.35;
+        };
+        tray.spacing = 10;
+      };
+    };
+  };
+
+  swaylock = _: {
+    security.pam.services.swaylock = { };
+
+    home = _: {
+      programs.swaylock.package = pkgs.swaylock-effects;
+    };
+  };
+
+  cliphist = _: {
+    home = _: {
+      services.cliphist = { };
+    };
+  };
+
+  dunst = _: {
+    home = _: {
+      services.dunst.settings.global = {
+        mouse_right_click = "do_action";
+        dmenu = "${primaryHome}/.nix-profile/bin/rofi -dmenu";
+      };
+    };
+  };
+
+  avizo = _: {
+    home = _: {
+      services.avizo.settings.default = {
+        time = 1.0;
+        fade-in = 0.1;
+        fade-out = 0.2;
+        padding = 10;
+      };
+    };
+  };
+
   home = _: {
     programs.zsh.shellAliases = {
       h = "start-hyprland";
