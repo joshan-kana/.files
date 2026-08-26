@@ -1,126 +1,37 @@
-{
-  config,
-  inputs,
-  lib,
-  pkgs,
-  ...
-}:
+{ inputs, modulesPath, ... }:
 
-let
-  primaryUser = config.dotfiles.users.primary.name;
-  cleanupRetentionDays = 7;
-  cleanupSchedule = "weekly";
-  minFree = "2G";
-in
 {
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
-    ../../modules/nixos/options/common.nix
+    ../../modules/options/common.nix
     ./options.nix
-    ../../modules/nixos/base.nix
-    ./networking.nix
-    ./containers.nix
-    ./container-image-locking.nix
-    ./apps
-    ./storage.nix
-    ./vm.nix
-    ./image.nix
-    ./hardware.nix
+    "${modulesPath}/image/repart.nix"
   ];
+
+  system = import ../../modules/system.nix;
+  nix = import ../../modules/nix.nix;
+  cli = import ../../modules/cli.nix;
+  networking = import ./networking.nix;
+  containers = import ./containers.nix;
+  containerImageLocking = import ./container-image-locking.nix;
+  apps = import ./apps;
+  storage = import ./storage.nix;
+  vm = import ../../modules/vm.nix;
+  vmSafety = import ./vm-safety.nix;
+  image = import ./image.nix;
+  hardware = import ./hardware.nix;
+  maintenance = import ./maintenance.nix;
+  access = import ./access.nix;
+  compatibility = import ./compatibility.nix;
 
   dotfiles = {
     profile.name = "nixos-server";
-    cli = {
-      disabledPrograms = [
-        "mpv"
-        "tmuxai"
-      ];
-      disabledAliases = [
-        "h"
-        "HI"
-        "HN"
-        "k"
-        "cpd"
-        "p"
-        "sysvm"
-        "svm"
-        "ollama"
-      ];
+    scopes.vm.aliases.enable = false;
+    scopes.cli = {
+      clipboard.enable = false;
+      mpv.enable = false;
+      tmuxai.enable = false;
+      ollama.enable = false;
     };
   };
-
-  nix.gc = {
-    automatic = true;
-    dates = cleanupSchedule;
-    options = "--delete-older-than ${toString cleanupRetentionDays}d";
-  };
-
-  nix.optimise = {
-    automatic = true;
-    dates = [ cleanupSchedule ];
-  };
-
-  services.journald.extraConfig = ''
-    SystemMaxUse=1G
-    SystemKeepFree=${minFree}
-    MaxRetentionSec=${toString cleanupRetentionDays}day
-  '';
-
-  virtualisation.docker.autoPrune = {
-    enable = true;
-    dates = cleanupSchedule;
-    flags = [
-      "--all"
-      "--filter=until=${toString (cleanupRetentionDays * 24)}h"
-    ];
-  };
-
-  nix.settings = {
-    min-free = minFree;
-    substituters = [ "https://nixos-raspberrypi.cachix.org" ];
-    trusted-public-keys = [
-      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
-    ];
-  };
-
-  users.users.${primaryUser} = {
-    extraGroups = [ "docker" ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
-    ];
-  };
-
-  security.pam.sshAgentAuth = {
-    enable = true;
-    authorizedKeysFiles = [
-      "/etc/sudo-authorized-key"
-    ];
-  };
-
-  security.sudo = {
-    extraConfig = ''
-      Defaults:joshan noninteractive_auth
-    '';
-  };
-
-  security.sudo.wheelNeedsPassword = true;
-
-  systemd.tmpfiles.rules = [
-    "f+ /etc/sudo-authorized-key 0444 root root - ${
-      lib.concatStringsSep "\\n" [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
-      ]
-    }\\n"
-  ];
-
-  environment.systemPackages = with pkgs; [
-    curl
-    jq
-    rsync
-  ];
-
-  system.stateVersion = "25.05";
 }

@@ -1,34 +1,29 @@
 #!/usr/bin/env bash
 
-# Script to update Plasma configuration using plasma-manager's rc2nix exporter.
-# This script runs rc2nix directly from the upstream repo and replaces the
-# content in plasma-hm.nix from line 3 onwards.
+# Update the Home Manager half of the unified Plasma semantic scope using
+# plasma-manager's rc2nix exporter. The NixOS Plasma enable stays in the same
+# scope and is preserved by rebuilding the small wrapper around the exporter.
 
 set -euo pipefail
 
-# Define paths
-PLASMA_CONFIG_FILE="$DOTFILES/desktop/plasma/plasma-hm.nix"
+PLASMA_CONFIG_FILE="$DOTFILES/desktop/plasma/default.nix"
 TEMP_FILE=$(mktemp)
 ERR_FILE=$(mktemp)
+NEW_FILE=$(mktemp)
 
 cleanup() {
-    rm -f "$TEMP_FILE" "$ERR_FILE" "${TEMP_FILE}.new"
+    rm -f "$TEMP_FILE" "$ERR_FILE" "$NEW_FILE"
 }
-
 trap cleanup EXIT
 
-# Check if the plasma config file exists
 if [[ ! -f "$PLASMA_CONFIG_FILE" ]]; then
     echo "Error: Plasma config file not found at $PLASMA_CONFIG_FILE"
     exit 1
 fi
 
-# Run the exporter and capture output.
-# Keep stderr separate so warnings/errors don't corrupt the generated Nix.
 if ! nix run github:nix-community/plasma-manager#rc2nix -- >"$TEMP_FILE" 2>"$ERR_FILE"; then
     echo "Error: Failed to export Plasma config"
     if [[ -s "$ERR_FILE" ]]; then
-        echo "Error output:" >&2
         cat "$ERR_FILE" >&2
     fi
     exit 1
@@ -39,24 +34,27 @@ if [[ -s "$ERR_FILE" ]]; then
     cat "$ERR_FILE" >&2
 fi
 
-# Safety check: ensure we actually captured a plasma-manager module.
 if ! grep -q "programs.plasma" "$TEMP_FILE"; then
-    echo "Error: Export output did not contain programs.plasma (unexpected output)"
-    echo "Output:"
+    echo "Error: Export output did not contain programs.plasma"
     cat "$TEMP_FILE"
     exit 1
 fi
 
-echo "Updating $PLASMA_CONFIG_FILE..."
+{
+    cat <<'NIX'
+_: {
+  services.desktopManager.plasma6.enable = true;
 
-# Extract the first two lines (header) from the original file
-head -n 2 "$PLASMA_CONFIG_FILE" > "${TEMP_FILE}.new"
+  home =
+NIX
+    sed 's/^/    /' "$TEMP_FILE"
+    cat <<'NIX'
+  ;
+}
+NIX
+} >"$NEW_FILE"
 
-# Append the output from plasma-manager to the new file
-cat "$TEMP_FILE" >> "${TEMP_FILE}.new"
-
-# Replace the original file with the updated content
-mv "${TEMP_FILE}.new" "$PLASMA_CONFIG_FILE"
+nix fmt "$NEW_FILE" >/dev/null
+mv "$NEW_FILE" "$PLASMA_CONFIG_FILE"
 
 echo "Successfully updated $PLASMA_CONFIG_FILE"
-echo "The file has been updated with the latest plasma-manager configuration."

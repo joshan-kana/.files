@@ -83,6 +83,8 @@
     let
       inherit (nixpkgs) lib;
 
+      semantic = import ./lib/semantic-scopes.nix { inherit lib; };
+
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -174,12 +176,12 @@
           modules = [
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
-            ./overlays/monaspace-liga-overlay.nix
-            ./overlays/bottles.nix
-            ./overlays/gh-dash.nix
-            ./modules/nixos/theme.nix
-            ./modules/nixos/restic-completions.nix
-            hostModule
+            (semantic.systemModule "monaspaceLiga" (import ./overlays/monaspace-liga-overlay.nix))
+            (semantic.systemModule "bottles" (import ./overlays/bottles.nix))
+            (semantic.systemModule "ghDash" (import ./overlays/gh-dash.nix))
+            (semantic.systemModule "theme" (import ./modules/nixos/theme.nix))
+            (semantic.systemModule "resticCompletions" (import ./modules/nixos/restic-completions.nix))
+            (semantic.rootModule (import hostModule))
           ]
           ++ extraModules;
         };
@@ -242,10 +244,15 @@
       checks = forAllSystems (
         system:
         let
+          pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
         in
         {
           nix-quality = treefmt.config.build.check self;
+        }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          semantic-scopes = pkgs.writeText "semantic-scopes-test.json" (builtins.toJSON semanticTest);
         }
       );
 

@@ -1,14 +1,9 @@
 {
-  modulesPath,
   lib,
   config,
   ...
 }:
 {
-  imports = [
-    "${modulesPath}/virtualisation/lxc-container.nix"
-  ];
-
   # In LXC containers we don't have Wi‑Fi, and `/etc` may be read-only.
   # Avoid starting wpa_supplicant (it tries to create /etc/wpa_supplicant/*).
   systemd.services.wpa_supplicant.enable = lib.mkIf (config.boot.isContainer or false) (

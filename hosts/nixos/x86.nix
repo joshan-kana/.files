@@ -17,4 +17,8 @@
     warp-terminal
     onlyoffice-desktopeditors
   ];
+
+  home = _: {
+    programs.spicetify.enable = true;
+  };
 }

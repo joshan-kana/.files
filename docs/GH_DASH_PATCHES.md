@@ -78,7 +78,7 @@ visible regardless of the issue or PR body length.
 `overlays/gh-dash.nix` pins the package and applies both patches
 sequentially. Home Manager installs the result through the native
 `programs.gh.extensions` integration; user configuration lives in
-`modules/home/cli.nix`. The generated configuration includes the Stylix theme
+`modules/cli.nix`. The generated configuration includes the Stylix theme
 include, the Git-configured `pager.diff` resolver, the local
 `joshan-kana/.files` repo path, and compact table mode. Relationship reads and
 writes remain custom GraphQL because native `gh issue edit` flags are not

@@ -1,7 +1,21 @@
 { lib, ... }:
 
 let
-  inherit (lib) mkEnableOption mkOption types;
+  inherit (lib) mkOption types;
+
+  scopeOverrideType =
+    (types.submodule (_: {
+      freeformType = types.attrsOf scopeOverrideType;
+
+      options.enable = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Optional enable override for this semantic scope.";
+      };
+    }))
+    // {
+      description = "semantic scope override";
+    };
 in
 {
   options.dotfiles = {
@@ -62,32 +76,10 @@ in
       description = "OpenAI-compatible Ollama endpoint used by local tools.";
     };
 
-    features = {
-      cli.enable = mkEnableOption "shared CLI Home Manager configuration" // {
-        default = true;
-      };
-
-      desktop.enable = mkEnableOption "Linux desktop configuration";
-    };
-
-    cli = {
-      disabledPrograms = mkOption {
-        type = types.listOf types.str;
-        default = [ ];
-        description = "Names of shared CLI programs to disable for this host.";
-      };
-
-      disabledAliases = mkOption {
-        type = types.listOf types.str;
-        default = [ ];
-        description = "Names of shared shell aliases to disable for this host.";
-      };
-
-      aliasOverrides = mkOption {
-        type = types.attrsOf types.str;
-        default = { };
-        description = "Host-specific shell aliases that override shared aliases.";
-      };
+    scopes = mkOption {
+      type = types.attrsOf scopeOverrideType;
+      default = { };
+      description = "Host-specific enable overrides mirroring the semantic scope tree.";
     };
   };
 }
