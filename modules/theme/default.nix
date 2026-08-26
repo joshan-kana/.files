@@ -5,12 +5,12 @@
 }:
 
 {
-  nixpkgs.overlays = (import ../overlays/monaspace-liga-overlay.nix { }).nixpkgs.overlays;
+  nixpkgs.overlays = (import ./monaspace-liga-overlay.nix { }).nixpkgs.overlays;
 
   stylix = {
     enable = true;
-    image = ../wallpaper.png;
-    base16Scheme = ../themes/carbon.yaml;
+    image = ./wallpaper.png;
+    base16Scheme = ./carbon.yaml;
 
     fonts = {
       serif = config.stylix.fonts.monospace;

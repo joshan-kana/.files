@@ -184,7 +184,7 @@ using an alias override registry.
 
 ### Themes
 
-System and Home Manager theme policy live together in `modules/theme.nix`.
+System and Home Manager theme policy live together in `modules/theme/`.
 Desktop-specific target configuration remains with its owning desktop/program
 scope. Keep the theme shared across hosts unless there is a real host-specific
 requirement.

@@ -23,7 +23,7 @@
 
   system = import ../../modules/system;
   nix = import ../../modules/nix.nix;
-  theme = import ../../modules/theme.nix;
+  theme = import ../../modules/theme;
   cli =
     {
       config,
