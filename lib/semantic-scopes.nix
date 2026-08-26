@@ -113,17 +113,28 @@ let
       childConfigs = lib.mapAttrsToList (
         childName: child: scopeConfig context enabled (path ++ [ childName ]) child args
       ) children;
+      stateConfig =
+        lib.optionalAttrs
+          (
+            context == "system" && path != [ ] && lib.hasAttrByPath [ "dotfiles" "resolvedScopes" ] args.options
+          )
+          {
+            dotfiles.resolvedScopes = lib.setAttrByPath (path ++ [ "enable" ]) enabled;
+          };
     in
-    lib.mkIf enabled (
-      lib.mkMerge (
-        [
-          (scope.config or { })
-          nativeEnable
-          directConfig
-          homeConfig
-        ]
-        ++ childConfigs
-      )
+    lib.mkMerge (
+      [
+        stateConfig
+        (lib.mkIf enabled (
+          lib.mkMerge [
+            (scope.config or { })
+            nativeEnable
+            directConfig
+            homeConfig
+          ]
+        ))
+      ]
+      ++ childConfigs
     );
 
   mkScopeModule =
