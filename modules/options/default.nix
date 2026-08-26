@@ -16,6 +16,19 @@ let
     // {
       description = "semantic scope override";
     };
+
+  resolvedScopeType =
+    (types.submodule (_: {
+      freeformType = types.attrsOf resolvedScopeType;
+
+      options.enable = mkOption {
+        type = types.bool;
+        internal = true;
+      };
+    }))
+    // {
+      description = "resolved semantic scope state";
+    };
 in
 {
   options.dotfiles = {
@@ -86,6 +99,13 @@ in
       type = types.attrsOf scopeOverrideType;
       default = { };
       description = "Host-specific enable overrides mirroring the semantic scope tree.";
+    };
+
+    resolvedScopes = mkOption {
+      type = types.attrsOf resolvedScopeType;
+      default = { };
+      internal = true;
+      description = "Effective enable state for semantic scopes after inheritance and overrides.";
     };
   };
 }

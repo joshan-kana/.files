@@ -170,6 +170,10 @@ assert cfg.environment.variables.SEMANTIC_SOURCE_REENABLED == "yes";
 assert hm.home.sessionVariables.SEMANTIC_SOURCE_REENABLED == "yes";
 assert !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE);
 assert !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
+assert !cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
+assert cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
+assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
+assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.child.enable;
 assert builtins.elem "hello" packageNames;
 {
   gitNixosEnabled = cfg.programs.git.enable;
@@ -195,4 +199,7 @@ assert builtins.elem "hello" packageNames;
   parentOverrideCascadeAbsent =
     !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE)
     && !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
+  resolvedExternalDisabled = cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
+  resolvedSourceReenabled = cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
+  resolvedParentDisabled = cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
 }
