@@ -24,6 +24,12 @@ in
       description = "Flake profile name for this host.";
     };
 
+    secretsDir = mkOption {
+      type = types.str;
+      default = "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}/.secrets";
+      description = "Absolute directory containing primary-user secrets.";
+    };
+
     users.primary = {
       name = mkOption {
         type = types.str;
