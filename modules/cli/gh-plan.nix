@@ -1,9 +1,6 @@
 {
   lib,
   pkgs,
-  repoPath,
-  owner ? "joshan-kana",
-  project ? 1,
   fields ? [
     "Status"
     "Priority"
@@ -33,22 +30,23 @@ pkgs.writeShellApplication {
   text = ''
     set -euo pipefail
 
-    owner=${lib.escapeShellArg owner}
-    project=${lib.escapeShellArg (toString project)}
-    repo_path=${lib.escapeShellArg repoPath}
+    owner="''${GH_PLAN_OWNER:-}"
+    project="''${GH_PLAN_PROJECT:-}"
     fields_csv=${lib.escapeShellArg fieldsCsv}
-    owner="''${GH_PLAN_OWNER:-$owner}"
-    project="''${GH_PLAN_PROJECT:-$project}"
-    repo_path="''${GH_PLAN_REPO_PATH:-$repo_path}"
     fields_csv="''${GH_PLAN_FIELDS:-$fields_csv}"
+    start_dir="''${GH_PLAN_START_DIR:-$PWD}"
     self="$0"
-    export GH_PLAN_OWNER="$owner" GH_PLAN_PROJECT="$project" GH_PLAN_REPO_PATH="$repo_path" GH_PLAN_FIELDS="$fields_csv" GH_PLAN_SELF="$self"
+    export GH_PLAN_FIELDS="$fields_csv" GH_PLAN_START_DIR="$start_dir" GH_PLAN_SELF="$self"
 
     usage() {
       cat <<'USAGE'
     Usage: gh-plan [--owner OWNER] [--project NUMBER]
 
     Keyboard-first GitHub planning UI.
+
+    With no flags, choose from the authenticated user's Projects. Use
+    --owner for an organization or another Project owner. Project items may
+    come from any repository you can access.
 
       j/k, arrows  move
       /            filter
@@ -78,11 +76,37 @@ pkgs.writeShellApplication {
 
     repo_from_url() {
       local url=$1
-      if [[ $url =~ github\.com/([^/]+/[^/]+)/ ]]; then
+      if [[ $url =~ ^https?://[^/]+/([^/]+/[^/]+)/(issues|pull)/ ]]; then
         printf '%s\n' "''${BASH_REMATCH[1]}"
       else
         return 1
       fi
+    }
+
+    resolve_project() {
+      local projects count selected
+
+      if [[ -z $owner ]]; then
+        owner=$(gh api user --jq .login)
+      elif [[ $owner == '@me' ]]; then
+        owner=$(gh api user --jq .login)
+      fi
+
+      if [[ -z $project ]]; then
+        projects=$(gh project list --owner "$owner" --limit 100 --format json)
+        count=$(jq '.projects | length' <<<"$projects")
+        if (( count == 0 )); then
+          printf 'No open GitHub Projects found for %s. Use --owner or --project to select another Project.\n' "$owner" >&2
+          return 1
+        elif (( count == 1 )); then
+          selected=$(jq -r '.projects[0] | [(.number|tostring), .title, .owner.login] | @tsv' <<<"$projects")
+        else
+          selected=$(jq -r '.projects[] | [(.number|tostring), .title, .owner.login, ((.items.totalCount // 0)|tostring)] | @tsv' <<<"$projects"             | fzf --layout=reverse --border --height='~80%' --delimiter=$'\t' --with-nth=1,2,3,4                 --header='Number  Project  Owner  Items' --prompt='Project › ' --bind="$(picker_bindings)") || return 1
+        fi
+        IFS=$'\t' read -r project _ owner _ <<<"$selected"
+      fi
+
+      export GH_PLAN_OWNER="$owner" GH_PLAN_PROJECT="$project"
     }
 
     item_kind() {
@@ -109,7 +133,7 @@ pkgs.writeShellApplication {
             | ([
                 $item.content.url,
                 $item.content.type,
-                ($item.content.repository | split("/") | last),
+                ($item.content.repository),
                 ("#" + ($item.content.number | tostring))
               ]
               + [$fields[] as $field | value($item; $field)]
@@ -355,15 +379,21 @@ pkgs.writeShellApplication {
     pr_diff() {
       local url=$1 pager
       [[ $(item_kind "$url") == pr ]] || return 0
-      pager=$(git -C "$repo_path" config --get pager.diff 2>/dev/null || git -C "$repo_path" config --get core.pager 2>/dev/null || true)
+      pager=$(git -C "$start_dir" config --get pager.diff 2>/dev/null         || git -C "$start_dir" config --get core.pager 2>/dev/null         || git config --global --get pager.diff 2>/dev/null         || git config --global --get core.pager 2>/dev/null         || true)
       [[ -n $pager ]] || pager='cat'
       gh pr diff "$url" | sh -c "$pager"
     }
 
     checkout_pr() {
-      local url=$1
+      local url=$1 repo current_repo
       [[ $(item_kind "$url") == pr ]] || return 0
-      (cd "$repo_path" && gh pr checkout "$url")
+      repo=$(repo_from_url "$url")
+      current_repo=$(cd "$start_dir" && gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)
+      if [[ $current_repo != "$repo" ]]; then
+        printf 'Checkout requires starting gh-plan from a local clone of %s (current: %s).\n'           "$repo" "''${current_repo:-not a GitHub repository}" >&2
+        return 1
+      fi
+      (cd "$start_dir" && gh pr checkout "$url" -R "$repo")
     }
 
     help_screen() {
@@ -382,10 +412,10 @@ pkgs.writeShellApplication {
         --owner) owner=$2; export GH_PLAN_OWNER="$owner"; shift 2 ;;
         --project) project=$2; export GH_PLAN_PROJECT="$project"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
-        _rows) rows; exit ;;
+        _rows) resolve_project; rows; exit ;;
         _preview) preview "$2"; exit ;;
-        _edit-field) edit_field "$2"; exit ;;
-        _relationships) relationships "$2"; exit ;;
+        _edit-field) resolve_project; edit_field "$2"; exit ;;
+        _relationships) resolve_project; relationships "$2"; exit ;;
         _search-global) search_global "''${2:-}"; exit ;;
         _filter-excluded) filter_excluded; exit ;;
         _diff) pr_diff "$2"; exit ;;
@@ -397,6 +427,7 @@ pkgs.writeShellApplication {
       esac
     done
 
+    resolve_project
     main_ui
   '';
 }
