@@ -9,6 +9,10 @@
     environment.systemPackages = [ pkgs.bitwarden-desktop ];
   };
 
+  warp = _: {
+    environment.systemPackages = [ pkgs.warp-terminal ];
+  };
+
   mullvad = _: {
     services.mullvad-vpn.enable = true;
     environment.systemPackages = [ pkgs.mullvad-vpn ];

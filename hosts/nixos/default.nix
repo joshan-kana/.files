@@ -80,10 +80,6 @@
         environment.systemPackages = [ pkgs.dropbox ];
       };
 
-      warp = _: {
-        environment.systemPackages = [ pkgs.warp-terminal ];
-      };
-
       onlyoffice = _: {
         environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
       };
