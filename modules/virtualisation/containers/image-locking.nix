@@ -16,18 +16,7 @@ let
     mapAttrs
     ;
 
-  scopeEnabled = path: lib.attrByPath (path ++ [ "enable" ]) null config.dotfiles.scopes != false;
-  enabled =
-    scopeEnabled [ "virtualisation" ]
-    && scopeEnabled [
-      "virtualisation"
-      "containers"
-    ]
-    && scopeEnabled [
-      "virtualisation"
-      "containers"
-      "imageLocking"
-    ];
+  enabled = config.dotfiles.resolvedScopes.virtualisation.containers.imageLocking.enable;
 
   parsedLocks = builtins.fromJSON (builtins.readFile lockFile);
   locks = if builtins.isAttrs parsedLocks then parsedLocks else { };
