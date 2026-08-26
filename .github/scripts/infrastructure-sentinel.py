@@ -13,7 +13,6 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-
 OWNER = "joshan-kana"
 REPOSITORY = ".files"
 PROJECT_NUMBER = 1
@@ -245,7 +244,10 @@ def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, An
         current = data["user"]["projectV2"]
         for item in current["items"]["nodes"]:
             content = item.get("content") or {}
-            if content.get("__typename") not in {"Issue", "PullRequest"} or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}":
+            if (
+                content.get("__typename") not in {"Issue", "PullRequest"}
+                or content.get("repository", {}).get("nameWithOwner") != f"{OWNER}/{REPOSITORY}"
+            ):
                 continue
             values: dict[str, Any] = {}
             for value in item.get("fieldValues", {}).get("nodes", []):
@@ -280,8 +282,7 @@ def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, An
         if field["__typename"] in {"ProjectV2SingleSelectField", "ProjectV2MultiSelectField"}:
             raw_options = field.get("options", field.get("multiSelectOptions", []))
             entry["options"] = [
-                {"id": option["id"], "name": option["name"], "description": option.get("description", "")}
-                for option in raw_options
+                {"id": option["id"], "name": option["name"], "description": option.get("description", "")} for option in raw_options
             ]
         elif field["__typename"] == "ProjectV2IterationField":
             configuration = field.get("configuration") or {}
@@ -328,9 +329,7 @@ def issue_metadata(client: GitHub, number: int, cache: dict[int, dict[str, Any]]
 
 def dependencies(client: GitHub, number: int, cache: dict[int, list[dict[str, Any]]]) -> list[dict[str, Any]]:
     if number not in cache:
-        cache[number] = client.request(
-            "GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{number}/dependencies/blocked_by", dependency=True
-        )
+        cache[number] = client.request("GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{number}/dependencies/blocked_by", dependency=True)
     return cache[number]
 
 
@@ -699,9 +698,7 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
                 item = project_items.get(number)
                 actual = current_value(item, field)
                 if not value_equal(field["type"], actual, desired):
-                    raise BridgeError(
-                        f"issue #{number}: field {name} read-back was {actual!r}, expected {desired!r}", applied=applied
-                    )
+                    raise BridgeError(f"issue #{number}: field {name} read-back was {actual!r}, expected {desired!r}", applied=applied)
                 applied.append(f"issue #{number}: field {name} set to {desired!r}")
                 operation_changed = True
 
@@ -804,8 +801,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
     for issue in open_issues:
         number = issue["number"]
         blocked = [
-            {"number": item["number"], "state": item.get("state", "UNKNOWN")}
-            for item in dependencies(github, number, dependency_cache)
+            {"number": item["number"], "state": item.get("state", "UNKNOWN")} for item in dependencies(github, number, dependency_cache)
         ]
         parent = parent_issue(github, number, parent_cache)
         children = sub_issues(github, number, sub_issue_cache)
@@ -817,9 +813,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
             "fields": item["fields"] if item else {},
             "blocked_by": sorted(blocked, key=lambda value: value["number"]),
             "parent": relationship_ref(parent) if parent else None,
-            "sub_issues": sorted(
-                [relationship_ref(child) for child in children], key=lambda value: value["number"]
-            ),
+            "sub_issues": sorted([relationship_ref(child) for child in children], key=lambda value: value["number"]),
             "relates_to": None,
         }
     pull_requests: dict[str, Any] = {}
@@ -836,10 +830,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
     for name, field in project["fields"].items():
         entry = {"type": field["type"]}
         if "options" in field:
-            entry["options"] = [
-                {"name": option["name"], "description": option.get("description", "")}
-                for option in field["options"]
-            ]
+            entry["options"] = [{"name": option["name"], "description": option.get("description", "")} for option in field["options"]]
         if "iterations" in field:
             entry["iterations"] = [iteration["title"] for iteration in field["iterations"]]
         schema[name] = entry
@@ -857,10 +848,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
                 "write": False,
                 "status": "unsupported",
                 "issues": None,
-                "reason": (
-                    "GitHub's current first-party REST and GraphQL APIs do not expose native relates-to "
-                    "issue relationships"
-                ),
+                "reason": ("GitHub's current first-party REST and GraphQL APIs do not expose native relates-to issue relationships"),
             },
         },
         "issues": issues,
@@ -915,13 +903,17 @@ def main() -> int:
         issue = bridge_issue(github)
         previous_state = parse_block(issue.get("body") or "", STATE_RE, "state") or {}
         mode = os.environ.get("RUN_MODE", "snapshot")
-        last_result = previous_state.get("last_result") if isinstance(previous_state.get("last_result"), dict) else {
-            "request_id": None,
-            "status": None,
-            "applied": [],
-            "unchanged": [],
-            "errors": [],
-        }
+        last_result = (
+            previous_state.get("last_result")
+            if isinstance(previous_state.get("last_result"), dict)
+            else {
+                "request_id": None,
+                "status": None,
+                "applied": [],
+                "unchanged": [],
+                "errors": [],
+            }
+        )
         command = parse_block(issue.get("body") or "", COMMAND_RE, "command") if mode == "command" else None
         if mode == "command" and command is None:
             raise BridgeError("bridge issue edit did not contain a command block")

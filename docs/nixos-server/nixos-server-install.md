@@ -391,7 +391,6 @@ curl -I http://192.168.1.3:5678
 From outside the LAN, keep Tailscale connected and use the same LAN URL
 `http://192.168.1.3:8123`; access is provided by the approved subnet route.
 
-
 ## Updating Later
 
 For normal updates on the Pi, update flake inputs, commit the lock file, then

@@ -19,7 +19,6 @@ volume_muted = "[MUTED]" in volume_status
 # The notification will contain a bar that represents the volume level
 
 
-
 # print(volume_level)
 
 # print(volume_muted)

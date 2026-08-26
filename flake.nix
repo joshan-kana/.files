@@ -109,27 +109,106 @@
       ) repoToolExcludedDirs;
 
       treefmtFor =
-        system:
-        treefmt-nix.lib.evalModule (pkgsFor system) {
+        system: includeChecks:
+        let
+          pkgs = pkgsFor system;
+          markdownOptions = [
+            "--disable"
+            "MD013,MD057"
+          ];
+          typosConfig = pkgs.writeText "typos.toml" ''
+            [default.extend-words]
+            hass = "hass"
+          '';
+        in
+        treefmt-nix.lib.evalModule pkgs {
           projectRootFile = "flake.nix";
 
           programs = {
             deadnix.enable = true;
             nixfmt.enable = true;
+            ruff-check.enable = true;
+            ruff-format = {
+              enable = true;
+              lineLength = 140;
+            };
+            rumdl-check.enable = true;
+            rumdl-format.enable = true;
             statix = {
               enable = true;
               disabled-lints = [ "repeated_keys" ];
+            };
+            typos = {
+              enable = true;
+              configFile = toString typosConfig;
+              includes = [ "*.md" ];
+            };
+          }
+          // lib.optionalAttrs includeChecks {
+            shellcheck = {
+              enable = true;
+              includes = [
+                ".envrc"
+                "scripts/**"
+                "tests/**"
+              ];
+              excludes = [
+                "*.md"
+                "*.nix"
+                "*.py"
+              ];
+              severity = "warning";
+            };
+            yamllint = {
+              enable = true;
+              settings = {
+                extends = "default";
+                rules = {
+                  comments.min-spaces-from-content = 1;
+                  document-start = "disable";
+                  line-length = "disable";
+                  truthy.check-keys = false;
+                };
+              };
             };
           };
 
           settings = {
             excludes = treefmtExcludes;
 
-            # Apply semantic fixes before the final formatting pass.
             formatter = {
               deadnix.priority = 1;
               statix.priority = 2;
               nixfmt.priority = 3;
+
+              ruff-check = {
+                options = [
+                  "--isolated"
+                  "--select"
+                  "E4,E7,E9,F,I"
+                ];
+                priority = 1;
+              };
+              ruff-format.priority = 2;
+
+              rumdl-format = {
+                options = markdownOptions;
+                priority = 1;
+              };
+              rumdl-check = {
+                options = markdownOptions;
+                priority = 2;
+              };
+              typos.priority = 3;
+            }
+            // lib.optionalAttrs includeChecks {
+              actionlint = {
+                command = lib.getExe pkgs.actionlint;
+                includes = [
+                  ".github/workflows/*.yml"
+                  ".github/workflows/*.yaml"
+                ];
+              };
             };
           };
         };
@@ -142,11 +221,11 @@
         pre-commit-hooks.lib.${system}.run {
           src = self;
           hooks = {
-            nix-quality = {
+            repo-quality = {
               enable = true;
-              name = "Nix formatting and linting";
-              entry = "${lib.getExe pkgs.nix} build --no-link .#checks.${system}.nix-quality";
-              files = "\\.nix$";
+              name = "Repository formatting and linting";
+              entry = "${lib.getExe pkgs.nix} build --no-link .#checks.${system}.repo-quality";
+              files = "\\.(nix|md|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -193,13 +272,13 @@
         };
     in
     {
-      formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
+      formatter = forAllSystems (system: (treefmtFor system false).config.build.wrapper);
 
       devShells = forAllSystems (
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system;
+          treefmt = treefmtFor system false;
           preCommit = preCommitFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
             name = "nf";
@@ -216,6 +295,13 @@
             '';
           };
 
+          formatRepo = pkgs.writeShellScriptBin "fmt" ''
+            exec ${lib.getExe treefmt.config.build.wrapper} "$@"
+          '';
+          checkRepo = pkgs.writeShellScriptBin "chk" ''
+            exec ${lib.getExe pkgs.nix} flake check "$@"
+          '';
+
           commonTools =
             with pkgs;
             [
@@ -228,6 +314,8 @@
               skopeo
             ]
             ++ [
+              checkRepo
+              formatRepo
               repoOptionsFzf
               treefmt.config.build.wrapper
             ];
@@ -251,12 +339,12 @@
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system;
+          treefmt = treefmtFor system true;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
         in
         {
-          nix-quality = treefmt.config.build.check self;
+          repo-quality = treefmt.config.build.check self;
           semantic-system-portability = pkgs.writeText "semantic-system-portability-test.json" (
             builtins.toJSON semanticPortabilityTest
           );
@@ -270,16 +358,8 @@
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system;
+          treefmt = treefmtFor system false;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
-
-          fixNix = pkgs.writeShellApplication {
-            name = "fix-nix";
-            runtimeInputs = [ treefmt.config.build.wrapper ];
-            text = ''
-              exec treefmt "$@"
-            '';
-          };
 
           updatePlasma =
             if plasmaRc2nix == null then
@@ -307,14 +387,7 @@
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
-        {
-          fix = {
-            type = "app";
-            program = lib.getExe fixNix;
-            meta.description = "Apply deadnix, statix, and nixfmt fixes through treefmt";
-          };
-        }
-        // lib.optionalAttrs (updatePlasma != null) {
+        lib.optionalAttrs (updatePlasma != null) {
           update-plasma = {
             type = "app";
             program = lib.getExe updatePlasma;
