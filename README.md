@@ -120,7 +120,7 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Shared desktop | `modules/desktop.nix` |
 | Hyprland | `desktop/hyprland/default.nix` |
 | Plasma | `desktop/plasma/default.nix` |
-| x86 desktop only | `hosts/nixos/x86.nix` |
+| x86 desktop apps | `hosts/nixos/apps.nix` |
 | Parallels only | `hosts/nixos-arm-parallels/` |
 | OrbStack only | `hosts/nixos-orbstack/` |
 | Server app | `hosts/nixos-server/apps/<app>/` |

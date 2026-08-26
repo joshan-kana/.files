@@ -16,7 +16,9 @@
   vm = import ../../modules/vm.nix;
   desktop = import ../../modules/desktop.nix;
   nvtop = import ../../overlays/nvtop-overlay.nix;
-  x86 = import ./x86.nix;
+  apps = import ./apps.nix;
+  gpuTools = import ./gpu-tools.nix;
+  twingate = import ./twingate.nix;
   hardware = import ./hardware.nix;
 
   home-manager.users.${config.dotfiles.users.primary.name}.imports = [
