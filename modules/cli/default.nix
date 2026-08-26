@@ -9,7 +9,6 @@
 let
   cfg = config.dotfiles;
   repoPath = cfg.paths.repoPath;
-  scopeEnabled = path: lib.attrByPath (path ++ [ "enable" ]) null cfg.scopes != false;
   systemCommands = {
     cd = "cd $DOTFILES";
     edit = "if command -v code >/dev/null 2>&1; then code \"$DOTFILES/edit_config.code-workspace\"; else \${EDITOR:-nvim} \"$DOTFILES\"; fi";
@@ -172,17 +171,7 @@ in
     home = _: {
       programs = {
         git = {
-          settings =
-            gitSettings
-            //
-              lib.optionalAttrs
-                (scopeEnabled [
-                  "cli"
-                  "tuicr"
-                ])
-                {
-                  alias.review = "!tuicr -w";
-                };
+          settings = gitSettings;
           signing.format = gitSigningFormat;
         };
         zsh.shellAliases = {
@@ -369,6 +358,7 @@ in
 
     home = _: {
       home.packages = [ pkgs.tuicr ];
+      programs.git.settings.alias.review = "!tuicr -w";
       xdg.configFile."tuicr/config.toml".source = tuicrConfig;
     };
   };
