@@ -1,6 +1,5 @@
 {
   config,
-  modulesPath,
   pkgs,
   ...
 }:
@@ -44,8 +43,6 @@ let
   '';
 in
 {
-  imports = [ "${modulesPath}/image/repart.nix" ];
-
   image.repart = {
     name = "nixos-server";
     imageSize = "12G";

@@ -2,24 +2,27 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-vendored="$repo_root/hosts/nixos-orbstack/orbstack-generated.nix"
+vendored="$repo_root/hosts/nixos-orbstack/generated.nix"
 live="/etc/nixos/orbstack.nix"
 
 tmp_files=()
 cleanup() {
-  rm -f "${tmp_files[@]}"
+  rm -rf "${tmp_files[@]}"
 }
 trap cleanup EXIT
 
 normalize() {
   local input="$1"
   local output="$2"
+  local scratch_dir
+  local scratch
 
-  if command -v nixfmt >/dev/null 2>&1; then
-    nixfmt < "$input" > "$output"
-  else
-    cp "$input" "$output"
-  fi
+  scratch_dir="$(mktemp -d "$repo_root/.orbstack-normalize.XXXXXX")"
+  tmp_files+=("$scratch_dir")
+  scratch="$scratch_dir/generated.nix"
+  cp "$input" "$scratch"
+  nix fmt "$scratch" >/dev/null
+  cp "$scratch" "$output"
 }
 
 if [[ -r "$live" ]]; then
@@ -42,7 +45,7 @@ normalize "$vendored" "$vendored_normalized"
 normalize "$live_file" "$live_normalized"
 
 diff -u \
-  --label "vendored normalized: hosts/nixos-orbstack/orbstack-generated.nix" \
+  --label "vendored normalized: hosts/nixos-orbstack/generated.nix" \
   --label "live normalized: /etc/nixos/orbstack.nix" \
   "$vendored_normalized" \
   "$live_normalized"
