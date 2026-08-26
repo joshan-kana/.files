@@ -1,9 +1,6 @@
 { inputs, pkgs, ... }:
 
 {
-  # Retained for applications which currently require this Electron release.
-  nixpkgs.config.permittedInsecurePackages = [ "electron-39.8.10" ];
-
   mullvad = _: {
     services.mullvad-vpn.enable = true;
     environment.systemPackages = [ pkgs.mullvad-vpn ];
