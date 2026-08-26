@@ -19,6 +19,11 @@ let
     commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
+  ghPlan = pkgs.callPackage ./gh-plan.nix {
+    inherit repoPath;
+    owner = "joshan-kana";
+    project = 1;
+  };
   toml = pkgs.formats.toml { };
   tuicrConfig = toml.generate "tuicr-config.toml" {
     theme = "stylix";
@@ -561,6 +566,7 @@ in
         pkgs.gh-dash
       ];
       home = _: {
+        home.packages = [ ghPlan ];
         home.shellAliases = aliases;
         programs.gh.extensions = [
           pkgs.gh-dash
