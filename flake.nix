@@ -238,6 +238,13 @@
           nixpkgsInput ? nixpkgs,
           homeManagerInput ? home-manager,
           stylixInput ? stylix,
+          upgradeInputs ? [
+            "nixpkgs"
+            "home-manager"
+            "stylix"
+          ],
+          extraUpgradeInputs ? [ ],
+          containerLock ? null,
           extraModules ? [ ],
         }:
         let
@@ -250,20 +257,27 @@
           hostScopeWithFile = lib.setFunctionArgs (args: (hostScope args) // { _file = toString hostFile; }) (
             lib.functionArgs hostScope
           );
-        in
-        nixpkgsInput.lib.nixosSystem {
-          inherit system;
-          specialArgs = {
-            inherit inputs;
-            moduleRegistry = import ./modules;
+          configuration = nixpkgsInput.lib.nixosSystem {
+            inherit system;
+            specialArgs = {
+              inherit inputs;
+              moduleRegistry = import ./modules;
+            };
+            modules = [
+              ./modules/options
+              stylixInput.nixosModules.stylix
+              homeManagerInput.nixosModules.home-manager
+              (semantic.rootModule hostScopeWithFile)
+            ]
+            ++ extraModules;
           };
-          modules = [
-            ./modules/options
-            stylixInput.nixosModules.stylix
-            homeManagerInput.nixosModules.home-manager
-            (semantic.rootModule hostScopeWithFile)
-          ]
-          ++ extraModules;
+        in
+        configuration
+        // {
+          upgrade = {
+            inputs = upgradeInputs ++ extraUpgradeInputs;
+            inherit containerLock;
+          };
         };
     in
     {
@@ -323,6 +337,15 @@
           default = pkgs.mkShell {
             packages = commonTools;
             inherit (preCommit) shellHook;
+          };
+
+          system-upgrade = pkgs.mkShell {
+            packages = with pkgs; [
+              git
+              jq
+              nix
+              skopeo
+            ];
           };
 
           vscode = pkgs.mkShell {
@@ -413,11 +436,20 @@
         nixos = nixosHost {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
+          extraUpgradeInputs = [
+            "spicetify-nix"
+            "plasma-manager"
+            "zen-browser"
+          ];
         };
 
         nixos-arm-parallels = nixosHost {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-arm-parallels;
+          extraUpgradeInputs = [
+            "plasma-manager"
+            "zen-browser"
+          ];
         };
 
         nixos-orbstack = nixosHost {
@@ -431,6 +463,15 @@
           stylixInput = stylix-stable;
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-server;
+          upgradeInputs = [
+            "nixpkgs-stable"
+            "home-manager-stable"
+            "stylix-stable"
+            "nixos-hardware"
+            # cli.tuicr is intentionally sourced from unstable nixpkgs.
+            "nixpkgs"
+          ];
+          containerLock = "hosts/nixos-server/container-images.lock";
         };
       };
     };

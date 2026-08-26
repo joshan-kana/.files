@@ -75,10 +75,10 @@ in
         ${concatStringsSep "\n" (map (name: "  - ${name}") (attrNames invalidContainers))}
 
         Run:
-          sysfu server --containers-only
+          sysfu ${config.dotfiles.profile.name} --containers-only
 
         Or refresh selected containers with:
-          sysfu server --container <name>
+          sysfu ${config.dotfiles.profile.name} --container <name>
       '';
     }
   ];

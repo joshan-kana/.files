@@ -11,7 +11,7 @@ let
   repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
-    flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${dotfiles.profile.name}";
+    flakeUpdate = "${repoPath}/scripts/flake-update";
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
   };
@@ -149,10 +149,10 @@ in
         _sysfu() {
           _arguments -C \
             '(-h --help)'{-h,--help}'[show help]' \
-            '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
-            '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
-            '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
-            "*:flake input:(''${(j:|:)flake_inputs})"
+            '--containers-only[refresh only container locks]' \
+            '--container[refresh one container]:container:' \
+            '--no-containers[skip container locks]' \
+            '1:nixosConfiguration:'
         }
         compdef _sysfu sysfu
       '';

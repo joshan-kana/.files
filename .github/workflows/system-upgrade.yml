@@ -101,12 +101,7 @@ jobs:
             git switch -c "$UPGRADE_BRANCH" origin/main
           fi
 
-          nix flake update
-
-          if ! git diff --quiet -- flake.lock; then
-            git add flake.lock
-            git commit -m "chore: update flake inputs"
-          fi
+          nix develop --no-update-lock-file .#system-upgrade --command scripts/flake-update all
 
           if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
             echo "No flake updates are available."
@@ -120,8 +115,8 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --base main \
               --head "$UPGRADE_BRANCH" \
-              --title "chore: update Nix flake inputs" \
-              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow reports flake validation and native build status directly on this PR. GitHub auto-merge is enabled only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
+              --title "chore: upgrade system" \
+              --body $'Automated Nix input and container image update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow reports flake validation and native build status directly on this PR. GitHub auto-merge is enabled only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
           fi
 
           echo "validate=true" >> "$GITHUB_OUTPUT"

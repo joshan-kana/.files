@@ -172,28 +172,21 @@ git commit -m "chore(server): refresh container image digests"
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```
 
-`sysfu server` (the interactive `scripts/flake-update` wrapper) updates the flake
-inputs and, for the server target, refreshes the container lock as part of the
-same workflow. Container-specific options:
+`sysfu nixos-server` updates the server's declared flake inputs and container
+lock on the `system-upgrade` branch, validates with `nix flake check`, and commits
+the changed locks together. Container-specific options:
 
-- `sysfu server` — full flake update and a full container lock refresh.
-- `sysfu server --containers-only` — refresh only the container lock; skip the
-  flake input update.
-- `sysfu server --container <name>` — refresh only the named container(s);
-  repeatable, and **skips the flake input update** unless flake inputs are also
-  supplied. Unselected entries are preserved.
-- `sysfu server --no-containers` — run the normal flake update but leave
-  container images untouched.
+- `sysfu all` — update every flake input and every managed container lock.
+- `sysfu nixos-server --containers-only` — refresh only the server container lock.
+- `sysfu nixos-server --container <name>` — refresh only one server container.
+- `sysfu nixos-server --no-containers` — update server flake inputs only.
 
 A **full** container refresh rebuilds the lock exactly from the currently
 configured containers: removed containers disappear and stale keys cannot
 survive. A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`)
 resolves only the named containers and preserves every other lock entry
-unchanged. Container options are rejected on non-server targets, and
-`--no-containers` cannot be combined with `--containers-only` or `--container`.
-A selected flake-input update (such as `sysfu server nixpkgs-stable`) refreshes
-the container lock only if a container option is explicitly given, so a narrow
-flake update does not unexpectedly move every container.
+unchanged. Container-only updates require a configuration with a managed
+container lock, and `--no-containers` cannot be combined with container-only options.
 
 ## OCI Container Model
 
@@ -244,8 +237,8 @@ discover the new source, but a NixOS assertion prevents building or deploying
 the system until the lock is refreshed:
 
 ```sh
-sysfu server --containers-only        # refresh everything
-sysfu server --container <name>       # refresh one container
+sysfu nixos-server --containers-only        # refresh everything
+sysfu nixos-server --container <name>       # refresh one container
 ```
 
 The updater evaluates the final merged container option purely (no `--impure`,

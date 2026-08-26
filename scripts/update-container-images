@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Refresh container image digests in hosts/nixos-server/container-images.lock.
+# Refresh registry-backed OCI image digests in a configuration-owned lock file.
 #
 # Reads the final merged OCI container option from the evaluated NixOS config
 # (virtualisation.oci-containers.containers), resolves each registry-backed
@@ -16,7 +16,8 @@ repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$repo_root"
 
-LOCK_FILE=hosts/nixos-server/container-images.lock
+LOCK_FILE=${LOCK_FILE:-hosts/nixos-server/container-images.lock}
+NIXOS_CONFIGURATION=${NIXOS_CONFIGURATION:-nixos-server}
 FLAKE_REF=${FLAKE_REF:-.}
 
 dry_run=false
@@ -39,8 +40,8 @@ usage() {
   cat <<'EOF'
 Usage: scripts/update-container-images [options]
 
-Refreshes the immutable digest for every registry-backed server container in
-hosts/nixos-server/container-images.lock.
+Refreshes immutable digests for registry-backed containers in the selected
+NixOS configuration and lock file.
 
 Options:
   --dry-run   Resolve and report digests without writing the lock file.
@@ -48,8 +49,10 @@ Options:
   -h, --help  Show this help.
 
 Environment:
-  FLAKE_REF        Flake ref to read container definitions from. Defaults to ".".
-  CONTAINER_SELECT Space-separated subset of containers to refresh. When set,
+  NIXOS_CONFIGURATION NixOS configuration to read. Defaults to nixos-server.
+  LOCK_FILE           Lock file to update. Defaults to hosts/nixos-server/container-images.lock.
+  FLAKE_REF           Flake ref to read container definitions from. Defaults to ".".
+  CONTAINER_SELECT    Space-separated subset of containers to refresh. When set,
                    only those containers are resolved; all other lock entries are
                    preserved unchanged. A full refresh (no CONTAINER_SELECT)
                    rebuilds the lock exactly from the configured containers.
@@ -104,7 +107,7 @@ current_lock_type=$(
 )
 
 if [[ "$current_lock_type" != "object" && -n "${CONTAINER_SELECT:-}" ]]; then
-  die "container lock root is not an object; run a full refresh with: sysfu server --containers-only"
+  die "container lock root is not an object; run a full refresh with: sysfu ${NIXOS_CONFIGURATION} --containers-only"
 fi
 
 # Reduce the final merged OCI container option to per-container metadata. The
@@ -112,7 +115,7 @@ fi
 # images to `repository:tag@sha256:<digest>`; imageFile/imageStream containers
 # are marked local and left alone. Evaluation is pure (no --impure, no getEnv).
 containers_json=$(
-  nix eval --json "${FLAKE_REF}#nixosConfigurations.nixos-server.config.virtualisation.oci-containers.containers" --apply '
+  nix eval --json "${FLAKE_REF}#nixosConfigurations.${NIXOS_CONFIGURATION}.config.virtualisation.oci-containers.containers" --apply '
     c: builtins.mapAttrs (name: container:
       if container.imageFile != null || container.imageStream != null then
         { local = true; image = container.image; }
@@ -120,7 +123,7 @@ containers_json=$(
         { local = false; image = container.image; }
     ) c
   '
-) || die "failed to evaluate virtualisation.oci-containers.containers for nixos-server"
+) || die "failed to evaluate virtualisation.oci-containers.containers for ${NIXOS_CONFIGURATION}"
 
 [[ -n "$containers_json" ]] || die "container evaluation returned empty output"
 
