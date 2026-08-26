@@ -1,6 +1,8 @@
 { config, ... }:
 
 let
+  atticCache = "dotfiles";
+  atticEndpoint = "http://192.168.1.3:8080";
   cfg = config.dotfiles;
 in
 {
@@ -19,7 +21,7 @@ in
     substituters = [
       "https://cache.nixos.org/"
       "https://nix-community.cachix.org"
-      "http://nixos-server:8080/dotfiles"
+      "${atticEndpoint}/${atticCache}"
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
@@ -29,6 +31,20 @@ in
     require-sigs = true;
     fallback = false;
     builders-use-substitutes = true;
+  };
+
+  home = _: {
+    programs.attic-client = {
+      enable = true;
+      settings = {
+        default-server = "attic";
+        servers.attic = {
+          endpoint = atticEndpoint;
+          token-file = "${cfg.secretsDir}/attic-token";
+        };
+      };
+      watchStore = [ atticCache ];
+    };
   };
 
   programs.nix-ld.enable = true;

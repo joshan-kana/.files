@@ -8,7 +8,7 @@ let
   serverCfg = config.dotfiles.server;
   cacheRoot = "/var/lib/atticd";
   cachePort = 8080;
-  cacheHost = config.networking.hostName;
+  cacheHost = serverCfg.lan.serverIp;
 in
 {
   users.groups.atticd = { };

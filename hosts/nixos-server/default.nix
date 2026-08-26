@@ -12,7 +12,19 @@
   ];
 
   system = import ../../modules/system;
-  nix = import ../../modules/nix;
+  nix =
+    {
+      config,
+      inputs,
+      ...
+    }:
+    (import ../../modules/nix { inherit config; })
+    // {
+      home-manager.sharedModules = [
+        "${inputs.home-manager}/modules/programs/attic-client.nix"
+      ];
+      users.users.${config.dotfiles.users.primary.name}.linger = true;
+    };
   theme = import ../../modules/theme;
   cli = import ../../modules/cli;
   networking = import ./networking.nix;
