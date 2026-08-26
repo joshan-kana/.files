@@ -64,7 +64,10 @@
       cfg = osConfig.dotfiles;
       toml = pkgs.formats.toml { };
       yaml = pkgs.formats.yaml { };
-      tuicrEnabled = lib.attrByPath [ "cli" "tuicr" "enable" ] null cfg.scopes != false;
+      tuicrEnabled =
+        lib.attrByPath [ "cli" "enable" ] null cfg.scopes != false
+        && lib.attrByPath [ "cli" "git" "enable" ] null cfg.scopes != false
+        && lib.attrByPath [ "cli" "git" "tuicr" "enable" ] null cfg.scopes != false;
       syntaxScope = name: selectors: color: ''
         <dict>
           <key>name</key><string>${name}</string>
