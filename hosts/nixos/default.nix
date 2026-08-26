@@ -54,9 +54,8 @@
   appimage = import ../../modules/appimage.nix;
   ssh = import ../../modules/ssh.nix;
   audio = import ../../modules/audio.nix;
-  virtualisation = import ../../modules/virtualisation.nix;
+  virtualisation = import ../../modules/virtualisation;
   desktop = import ../../modules/desktop;
-  vm = import ../../modules/vm.nix;
 
   # Shared desktop apps are implemented in modules/apps.nix. These additional
   # children intentionally remain on this host because their packages/services

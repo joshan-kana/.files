@@ -5,7 +5,9 @@
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
     ../../modules/options
     ./options.nix
-    (import ../../modules/containers/image-locking.nix { lockFile = ./container-images.lock; })
+    (import ../../modules/virtualisation/containers/image-locking.nix {
+      lockFile = ./container-images.lock;
+    })
     "${modulesPath}/image/repart.nix"
   ];
 
@@ -14,11 +16,23 @@
   theme = import ../../modules/theme;
   cli = import ../../modules/cli.nix;
   networking = import ./networking.nix;
-  containers = import ../../modules/containers;
+  virtualisation = _: {
+    containers =
+      { config, ... }:
+      (import ../../modules/virtualisation/containers { inherit config; })
+      // {
+        virtualisation.oci-containers.backend = "docker";
+      };
+
+    vm =
+      _:
+      (import ../../modules/virtualisation/vm.nix { })
+      // {
+        safety = import ./vm-safety.nix;
+      };
+  };
   apps = import ./apps;
   storage = import ./storage.nix;
-  vm = import ../../modules/vm.nix;
-  vmSafety = import ./vm-safety.nix;
   image = import ./image.nix;
   hardware = import ./hardware.nix;
   maintenance = import ./maintenance.nix;
@@ -30,7 +44,7 @@
 
   dotfiles = {
     profile.name = "nixos-server";
-    scopes.vm.aliases.enable = false;
+    scopes.virtualisation.vm.aliases.enable = false;
     scopes.cli = {
       clipboard.enable = false;
       mpv.enable = false;

@@ -1,10 +1,10 @@
-_: {
-  docker = _: {
-    virtualisation.docker.enable = true;
-  };
+{ config, ... }:
 
-  oci = _: {
-    virtualisation.oci-containers.backend = "docker";
+{
+  virtualisation.docker.enable = true;
+
+  userAccess = _: {
+    users.users.${config.dotfiles.users.primary.name}.extraGroups = [ "docker" ];
   };
 
   # The option-schema hook is statically registered by hosts that use image

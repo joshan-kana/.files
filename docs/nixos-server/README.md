@@ -215,7 +215,7 @@ virtualisation.oci-containers.containers.openclaw = {
 };
 ```
 
-`modules/containers/image-locking.nix` adds an `apply` transformation to the
+`modules/virtualisation/containers/image-locking.nix` adds an `apply` transformation to the
 upstream `virtualisation.oci-containers.containers` option for the server. After every
 container definition across the whole module graph has merged, it appends the
 matching locked digest from `container-images.lock`, producing
@@ -227,15 +227,15 @@ The lock is keyed by container name. Two containers may intentionally follow the
 same `repository:tag` source and still have independent lock records and
 targeted-update behavior.
 
-Image locking is the `containers.imageLocking` semantic child. It is enabled by
+Image locking is the `virtualisation.containers.imageLocking` semantic child. It is enabled by
 default with the server container stack and can be bypassed without disabling
 Docker/OCI containers:
 
 ```nix
-dotfiles.scopes.containers.imageLocking.enable = false;
+dotfiles.scopes.virtualisation.containers.imageLocking.enable = false;
 ```
 
-Disabling `dotfiles.scopes.containers.enable` disables the shared Docker/OCI
+Disabling `dotfiles.scopes.virtualisation.containers.enable` disables the shared Docker/OCI
 runtime as well and also bypasses locking.
 
 If a container's lock entry is missing, stale, or malformed, the module writes a
@@ -281,7 +281,7 @@ image digest does not necessarily undo a completed migration.
 `virtualisation.vmVariant` lets `nixos-rebuild build-vm --flake .#nixos-server`
 produce a test VM from the same host definition.
 
-The overrides exist because the real Pi assumptions do not fit a VM:
+Shared VM sizing and build aliases live under `virtualisation.vm`; the server-specific safety overrides are nested under `virtualisation.vm.safety` because the real Pi assumptions do not fit a VM:
 
 - Snapper and restic are disabled because the VM is just for build/testing and
   should not try to snapshot or back up fake data.

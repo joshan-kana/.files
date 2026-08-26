@@ -18,8 +18,13 @@ let
 
   scopeEnabled = path: lib.attrByPath (path ++ [ "enable" ]) null config.dotfiles.scopes != false;
   enabled =
-    scopeEnabled [ "containers" ]
+    scopeEnabled [ "virtualisation" ]
     && scopeEnabled [
+      "virtualisation"
+      "containers"
+    ]
+    && scopeEnabled [
+      "virtualisation"
       "containers"
       "imageLocking"
     ];

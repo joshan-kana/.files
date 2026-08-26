@@ -20,10 +20,9 @@
   appimage = import ../../modules/appimage.nix;
   ssh = import ../../modules/ssh.nix;
   audio = import ../../modules/audio.nix;
-  virtualisation = import ../../modules/virtualisation.nix;
+  virtualisation = import ../../modules/virtualisation;
   apps = import ../../modules/apps.nix;
   desktop = import ../../modules/desktop;
-  vm = import ../../modules/vm.nix;
   hardware = import ./hardware.nix;
 
   dotfiles.profile.name = "nixos-arm-parallels";

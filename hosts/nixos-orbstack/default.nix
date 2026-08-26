@@ -12,7 +12,9 @@
   theme = import ../../modules/theme;
   cli = import ../../modules/cli.nix;
   networking = import ../../modules/networking.nix;
-  vm = import ../../modules/vm.nix;
+  virtualisation = _: {
+    vm = import ../../modules/virtualisation/vm.nix;
+  };
 
   container = { config, ... }: {
     # OrbStack LXC containers have no Wi-Fi and /etc may be read-only.

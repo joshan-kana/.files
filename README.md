@@ -37,7 +37,7 @@ same system-scope interface is intended for NixOS and future nix-darwin hosts.
 hosts/                  Machines, generated host state, and host-specific policy
 modules/apps.nix        Shared application scopes
 modules/cli.nix         Shared CLI system + Home Manager configuration
-modules/containers/     Shared container runtime and image-locking implementation
+modules/virtualisation/ Shared virtualisation, containers, and VM variants
 modules/desktop/        Desktop environments, display managers, and desktop policy
 modules/options/        Shared dotfiles option schema
 modules/system/         Shared identity/locale/docs/compatibility scopes
@@ -121,7 +121,7 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | --- | --- |
 | Shared CLI | `modules/cli.nix` |
 | Shared applications | `modules/apps.nix` |
-| Shared audio/virtualisation | `modules/audio.nix`, `modules/virtualisation.nix` |
+| Shared audio/virtualisation | `modules/audio.nix`, `modules/virtualisation/` |
 | Shared desktop | `modules/desktop/` |
 | Display managers | `modules/desktop/display-manager/` |
 | Hyprland | `modules/desktop/hyprland/default.nix` |
@@ -238,7 +238,7 @@ semantic scopes:
   nix = import ../../modules/nix.nix;
   cli = import ../../modules/cli.nix;
   networking = import ../../modules/networking.nix;
-  vm = import ../../modules/vm.nix;
+  virtualisation = import ../../modules/virtualisation;
 
   dotfiles.profile.name = "my-host";
 }
