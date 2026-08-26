@@ -27,32 +27,67 @@ there when you want to know what applies to a machine.
 
 ## Layout
 
-The flake uses plain modular Nix. It does not use Snowfall Lib or flake-parts.
-Keep modules coarse and topic-based generally; server applications are the
-exception and each deployed app lives in its own module under
-`hosts/nixos-server/apps/`.
+Configuration is organised by **semantic ownership** rather than by evaluator.
+`lib/semantic-scopes.nix` is a small module-system adapter: a scope contains
+normal system options, function-valued attributes are nested semantic scopes,
+and `home = { ... }: { ... };` switches into a real Home Manager module. The
+same system-scope interface is intended for NixOS and future nix-darwin hosts.
 
 ```text
-hosts/              Real machines and host-specific topic files
-modules/nixos/      Reusable NixOS modules
-modules/home/       Reusable home configuration modules
-overlays/           Package overlays
-desktop/            Desktop-specific Plasma, Hyprland, and Eww files
-scripts/            Helper scripts used by aliases and workflows
+hosts/                    Machines, generated host state, and host-specific policy
+modules/appimage/         Shared AppImage support
+modules/audio/            Shared audio configuration
+modules/cli/              Shared CLI system + Home Manager configuration
+modules/desktop-apps/     Shared desktop application scopes
+modules/desktop/          Desktop environments, display managers, and desktop policy
+modules/networking/       Shared networking configuration
+modules/nix/              Shared Nix configuration
+modules/options/          Shared dotfiles option schema
+modules/ssh/              Shared SSH configuration
+modules/system/           Shared identity/locale/docs/compatibility scopes
+modules/theme/            Shared theme policy and assets
+modules/virtualisation/   Shared virtualisation, containers, and VM variants
+overlays/                 Package overlays
+lib/semantic-scopes.nix   Semantic scope engine
+scripts/                  Helper scripts used by aliases and workflows
 ```
 
-Use this rule when adding code:
+Host entrypoints are root semantic scopes. Keep genuine module-graph dependencies
+(`imports`, option-schema modules, hardware modules) in their static `imports`;
+put runtime configuration under semantic child scopes.
 
-- Put machine-specific behavior in `hosts/<host>/`.
-- Put reused system behavior in `modules/nixos/`.
-- Put reused user/home behavior in `modules/home/`.
-- Keep server-only apps under `hosts/nixos-server/apps/` until another server
-  needs the same code.
+A cross-context feature stays in one scope:
+
+```nix
+git = { config, ... }:
+  let
+    settings = {
+      init.defaultBranch = "main";
+      user = {
+        name = config.dotfiles.users.primary.fullName;
+        email = config.dotfiles.users.primary.email;
+      };
+    };
+  in
+  {
+    programs.git.config = settings;
+
+    home = _: {
+      programs.git.settings = settings;
+    };
+  };
+```
+
+The `home` branch is added through Home Manager `sharedModules`; user identity is
+defined separately under `home-manager.users.<name>`. When NixOS/Home Manager
+(or later nix-darwin/Home Manager) expose equivalent settings for the same
+program, define the shared value once with ordinary Nix `let` bindings and feed
+it into each native option path.
 
 ## Common Options
 
 Shared host values live under `dotfiles.*`, defined in
-`modules/nixos/options/common.nix`.
+`modules/options/default.nix`.
 
 Common options include:
 
@@ -62,12 +97,10 @@ Common options include:
 - `dotfiles.users.primary.email`
 - `dotfiles.users.primary.homeRoot`
 - `dotfiles.paths.repoName`
+- `dotfiles.paths.repoPath`
 - `dotfiles.rebuild.flags`
 - `dotfiles.services.ollama.url`
-- `dotfiles.features.cli.enable`
-- `dotfiles.features.desktop.enable`
-- `dotfiles.cli.disabledPrograms`
-- `dotfiles.cli.disabledAliases`
+- `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
 
 Server-only options live in `hosts/nixos-server/options.nix` and are imported
 only by `hosts/nixos-server/default.nix`.
@@ -86,227 +119,134 @@ dotfiles = {
 Modules derive paths from those values, so changing the user, home root, or repo
 name in one place updates aliases and environment variables together.
 
-## Adding Programs
+## Adding And Editing Programs
 
-Choose the file based on where the program should run.
+Choose the semantic owner, not a separate NixOS/Home Manager layer.
 
 | Where it should apply | Put it here |
 | --- | --- |
-| Every host with CLI enabled | `modules/home/cli.nix` |
-| Every desktop user session | `modules/home/desktop-linux.nix` |
-| Every desktop system | `modules/nixos/desktop-linux.nix` |
-| Every NixOS host | `modules/nixos/base.nix` |
-| x86 desktop only | `hosts/nixos/x86.nix` for system config, `modules/home/x86-desktop.nix` for home config |
-| Parallels desktop only | `hosts/nixos-arm-parallels/` |
-| OrbStack only | `hosts/nixos-orbstack/` |
-| Server only | `hosts/nixos-server/` |
+| Shared CLI | `modules/cli/` |
+| Shared desktop applications | `modules/desktop-apps/` |
+| Shared audio/virtualisation | `modules/audio/`, `modules/virtualisation/` |
+| Shared desktop | `modules/desktop/` |
+| Display managers | `modules/desktop/display-manager/` |
+| Hyprland | `modules/desktop/hyprland/default.nix` |
+| Plasma | `modules/desktop/plasma/default.nix` |
+| x86-only desktop inventory | inline scopes in `hosts/nixos/default.nix` |
+| Parallels only | `hosts/nixos-arm-parallels/` |
+| OrbStack only | `hosts/nixos-orbstack/default.nix` plus generated state |
+| Server app | `hosts/nixos-server/apps/<app>/` |
+| Server networking/storage/hardware | the matching file under `hosts/nixos-server/` |
 
-Home programs usually use `programs.<name>` or `services.<name>` in a
-`modules/home/*.nix` file. System packages, drivers, ports, systemd services,
-virtualisation, and hardware settings usually belong in `modules/nixos/*.nix` or
-`hosts/<host>/*.nix`.
+Inside a semantic scope, write ordinary native options. If the concept also has
+Home Manager configuration, add a `home` module in the same scope. Nested
+function-valued attributes are child scopes and inherit the parent `enable`
+gate. Do not invent app-specific DSL fields when native NixOS/Home Manager
+options already express the configuration.
 
-Examples:
-
-```nix
-# modules/home/cli.nix
-programs.jq.enable = enabled "jq";
-```
-
-```nix
-# modules/nixos/desktop-linux.nix
-environment.systemPackages = with pkgs; [
-  obsidian
-  pavucontrol
-];
-```
+For example, an app-owned helper belongs under that app:
 
 ```nix
-# hosts/nixos/x86.nix
-environment.systemPackages = with pkgs; [
-  brave
-  spotify
-];
+openclaw = { ... }: {
+  virtualisation.oci-containers.containers.openclaw = { ... };
+
+  ollamaMacBridge = { ... }: {
+    services.nginx = { ... };
+    systemd.services.openclaw-ollama-proxy = { ... };
+  };
+};
 ```
 
-## Disabling Shared CLI Items Per Host
+### Plasma generated state
 
-`modules/home/cli.nix` uses the host option
-`dotfiles.cli.disabledPrograms`.
+`modules/desktop/plasma/default.nix` is the small handwritten semantic wrapper.
+Plasma Manager's exported state lives in `modules/desktop/plasma/generated.nix`;
+do not hand-edit that generated file. From the Plasma host, regenerate it with:
 
-Add a shared CLI program like this:
+```sh
+nix run .#update-plasma
+```
+
+The flake app uses the locked plasma-manager `rc2nix`, formats the result with the
+repo's treefmt configuration, and only then replaces the generated file.
+
+### Host-specific scope overrides
+
+A host normally enables a semantic scope simply by importing it. To disable a
+nested scope for one host, mirror its semantic path under `dotfiles.scopes`:
 
 ```nix
-programs.ripgrep.enable = enabled "ripgrep";
+dotfiles.scopes.cli = {
+  mpv.enable = false;
+  tmuxai.enable = false;
+};
 ```
 
-Disable it for one host in that host's `default.nix`:
-
-```nix
-dotfiles.cli.disabledPrograms = [ "ripgrep" ];
-```
-
-Shell aliases in `modules/home/cli.nix` can be disabled the same way with
-`dotfiles.cli.disabledAliases`:
-
-```nix
-dotfiles.cli.disabledAliases = [ "sysvm" ];
-```
-
-## Editing Existing Program Configuration
-
-Use the current location of the program:
-
-- Shell, Git, terminal tools, aliases, Neovim, tmux, zellij, yazi, and other CLI
-  tools: `modules/home/cli.nix`
-- Waybar, Wofi, Rofi, Tofi, Kitty, Alacritty, Firefox, Floorp, Dunst, Avizo,
-  EasyEffects, GTK, and desktop home services: `modules/home/desktop-linux.nix`
-- Desktop system services, fonts, Stylix, PipeWire, Docker, libvirt, desktop
-  packages, firewall ports, boot, SSH, and VPN modules:
-  `modules/nixos/desktop-linux.nix`
-- Plasma home config: `desktop/plasma/plasma-hm.nix`
-- Plasma NixOS config: `desktop/plasma/plasma.nix`
-- Hyprland home config: `desktop/hyprland/hyprland.nix`
-- Hyprland NixOS config: `desktop/hyprland/hyprland-nixos.nix`
-- Server apps and containers: `hosts/nixos-server/apps/<app>.nix`
-- Server networking: `hosts/nixos-server/networking.nix`
-- Server image build: `hosts/nixos-server/image.nix`
-- Host hardware: `hosts/<host>/hardware.nix`
-
-If a program is used by only one host, keep it under that host. Promote it into
-`modules/` only when another host needs the same behavior.
-
-## Programs With System And Home Config
-
-Some tools have both a NixOS side and a home side. Treat those as two halves of
-one feature:
-
-- NixOS side: install system packages, enable system services, open firewall
-  ports, configure drivers, desktop sessions, PAM, udev, Docker, PipeWire, and
-  other machine-level behavior.
-- Home side: configure dotfiles, user services, shell integration, themes,
-  keybindings, browser profiles, editor settings, and per-user program options.
-
-Keep the two halves in the layer they belong to. Import both halves only on hosts
-that need the feature.
-
-Current examples:
-
-- Hyprland system config: `desktop/hyprland/hyprland-nixos.nix`
-- Hyprland home config: `desktop/hyprland/hyprland.nix`
-- Plasma system config: `desktop/plasma/plasma.nix`
-- Plasma home config: `desktop/plasma/plasma-hm.nix`
-- Desktop system baseline: `modules/nixos/desktop-linux.nix`
-- Desktop home baseline: `modules/home/desktop-linux.nix`
-
-For a new reusable feature with both halves, use matching modules:
-
-```text
-modules/nixos/my-feature.nix
-modules/home/my-feature.nix
-```
-
-Import the system half from a host entrypoint:
-
-```nix
-# hosts/nixos/default.nix
-imports = [
-  ../../modules/nixos/my-feature.nix
-];
-```
-
-Import the home half from that host's `default.nix`, next to the system half:
-
-```nix
-# hosts/nixos/default.nix
-home-manager.users.${config.dotfiles.users.primary.name}.imports = [
-  ../../modules/home/my-feature.nix
-];
-```
-
-If the feature should be toggled as a unit, add an option in
-`modules/nixos/options/common.nix`:
-
-```nix
-dotfiles.features.myFeature.enable = lib.mkEnableOption "my feature";
-```
+Aliases belong to their owning scope and merge through native Home Manager
+options. Disabling `cli.mpv`, for example, removes both MPV and its `p` alias.
+Host-specific behavior overrides the native option directly; OrbStack overrides
+`programs.zsh.shellAliases.cpd` in its `hostEnvironment.home` scope rather than
+using an alias override registry.
 
 ### Themes
 
-Stylix is enabled for every NixOS configuration through `modules/nixos/theme.nix`.
+System and Home Manager theme policy live together in `modules/theme/`.
+Desktop-specific target configuration remains with its owning desktop/program
+scope. Keep the theme shared across hosts unless there is a real host-specific
+requirement.
 
-The theme is intentionally shared across all hosts. Do not add per-host theme
-overrides unless the repo policy changes.
+### System + Home Manager settings
 
-The shared theme matches the old main-branch Stylix configuration: Framer from
-`pkgs.base16-schemes`, `wallpaper.png`, Monaspace Neon, Noto Color Emoji, dark
-polarity, and the GoogleDot-Black cursor.
-
-Shared NixOS and Home Manager theme defaults live in `modules/nixos/theme.nix`.
-Desktop app-specific target settings stay in `modules/home/desktop-linux.nix`
-or the relevant `desktop/*` module.
-
-Then guard both halves with the same option:
+When NixOS and Home Manager expose the **same native option path and shape**, use
+a module-shaped `let` value and consume it in both contexts. Keeping the native
+path inside that shared module gives nixd enough schema context for completion
+and hover inside the `let` block itself:
 
 ```nix
-# modules/nixos/my-feature.nix
-{ config, lib, ... }:
+let
+  sharedZshConfig = _: {
+    programs.zsh.enableCompletion = true;
+  };
+in
+{
+  zsh = args: {
+    programs.zsh = (sharedZshConfig args).programs.zsh;
 
-lib.mkIf config.dotfiles.features.myFeature.enable {
-  services.my-feature.enable = true;
+    home = args: {
+      programs.zsh = (sharedZshConfig args).programs.zsh;
+    };
+  };
 }
 ```
 
-```nix
-# modules/home/my-feature.nix
-{ lib, osConfig, ... }:
-
-lib.mkIf osConfig.dotfiles.features.myFeature.enable {
-  programs.my-feature.enable = true;
-}
-```
-
-Enable it per host:
+When the two native modules represent the same data with **different option
+paths or schemas**, keep the common data in an ordinary `let` value and map it
+into each native API explicitly. Git is the canonical example:
 
 ```nix
-# hosts/nixos/default.nix
-dotfiles.features.myFeature.enable = true;
+git = { config, ... }:
+  let
+    settings = {
+      init.defaultBranch = "main";
+      user = {
+        name = config.dotfiles.users.primary.fullName;
+        email = config.dotfiles.users.primary.email;
+      };
+    };
+  in
+  {
+    programs.git.config = settings;
+
+    home = _: {
+      programs.git.settings = settings;
+    };
+  };
 ```
 
-For one-host features, skip the reusable module until another host needs it.
-Place host-specific NixOS config and Home Manager imports in
-`hosts/<host>/default.nix`. Split into host-local topic files only when the
-host entrypoint gets too large.
-
-## Adding A Program To Specific Hosts
-
-For one host, add the configuration directly to that host folder.
-
-For a reusable feature, create or edit a module under `modules/`, then import it
-from the host entrypoints that need it:
-
-```nix
-# hosts/nixos/default.nix
-imports = [
-  ../../modules/nixos/base.nix
-  ../../modules/nixos/desktop-linux.nix
-  ./x86.nix
-];
-```
-
-For a home module, add it to that host's `default.nix` Home Manager import list:
-
-```nix
-# hosts/nixos/default.nix
-home-manager.users.${config.dotfiles.users.primary.name}.imports = [
-  ../../modules/home/base.nix
-  ../../modules/home/cli.nix
-  ../../modules/home/desktop-linux.nix
-];
-```
-
-Do not import desktop modules into OrbStack or the server unless those hosts
-actually need GUI programs.
+Prefer `dotfiles.*` options for reusable host/user/path/service policy that
+should have one typed configuration source across modules. Use local `let`
+values for implementation-local shared program data that does not warrant a
+public dotfiles option.
 
 ## Adding A New Host
 
@@ -318,18 +258,23 @@ hosts/my-host/
 └── hardware.nix
 ```
 
-Import the common option and base modules from `default.nix`, then set the
-minimum host-specific value:
+Keep schema/hardware dependencies in static `imports`, then compose the host from
+semantic scopes:
 
 ```nix
 { ... }:
 
 {
   imports = [
-    ../../modules/nixos/options/common.nix
-    ../../modules/nixos/base.nix
+    ../../modules/options
     ./hardware.nix
   ];
+
+  system = import ../../modules/system;
+  nix = import ../../modules/nix;
+  cli = import ../../modules/cli;
+  networking = import ../../modules/networking;
+  virtualisation = import ../../modules/virtualisation;
 
   dotfiles.profile.name = "my-host";
 }
@@ -351,7 +296,7 @@ my-host = nixosHost {
 
 ## Editing Rebuild Commands
 
-The shell aliases use these environment variables from `modules/nixos/base.nix`:
+The CLI scopes use these environment variables from `modules/cli/`:
 
 - `DOTFILES`
 - `FLK_PROFILE`
@@ -388,7 +333,7 @@ git submodule update --init --recursive
 
 ## Quick commands
 
-Shell aliases are defined in [`modules/home/cli.nix`](modules/home/cli.nix):
+Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### System management
 - `sysup` - Rebuild and switch to new system configuration
