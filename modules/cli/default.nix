@@ -1,7 +1,6 @@
 {
   config,
   inputs,
-  lib,
   pkgs,
   ...
 }:
@@ -186,6 +185,40 @@ in
         };
       };
     };
+
+    delta = _: {
+      home = { config, ... }: {
+        programs.delta = {
+          enableGitIntegration = config.programs.git.enable;
+          options = {
+            navigate = true;
+            line-numbers = true;
+          };
+        };
+      };
+    };
+
+    tuicr = _: {
+      nixpkgs.overlays = [
+        (_final: prev: {
+          tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
+        })
+      ];
+
+      home = _: {
+        home.packages = [ pkgs.tuicr ];
+        programs.git.settings.alias.review = "!tuicr -w";
+        xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+      };
+    };
+
+    lazygit = args: {
+      inherit (lazygitConfig args) programs;
+
+      home = args: {
+        inherit (lazygitConfig args) programs;
+      };
+    };
   };
 
   zsh = args: {
@@ -334,40 +367,6 @@ in
           theme.ui.table.compact = true;
         };
       };
-    };
-  };
-
-  delta = _: {
-    home = { config, ... }: {
-      programs.delta = {
-        enableGitIntegration = config.programs.git.enable;
-        options = {
-          navigate = true;
-          line-numbers = true;
-        };
-      };
-    };
-  };
-
-  tuicr = _: {
-    nixpkgs.overlays = [
-      (_final: prev: {
-        tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
-      })
-    ];
-
-    home = _: {
-      home.packages = [ pkgs.tuicr ];
-      programs.git.settings.alias.review = "!tuicr -w";
-      xdg.configFile."tuicr/config.toml".source = tuicrConfig;
-    };
-  };
-
-  lazygit = args: {
-    inherit (lazygitConfig args) programs;
-
-    home = args: {
-      inherit (lazygitConfig args) programs;
     };
   };
 
