@@ -336,6 +336,7 @@ git submodule update --init --recursive
 Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### System management
+
 - `sysup` - Rebuild and switch to new system configuration
 - `systest` - Test system configuration without switching
 - `sysvm` - Build and run NixOS VM with current config
@@ -343,6 +344,7 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 - `sysedit` - Edit configuration in VSCode
 
 ### Flake updates
+
 - `scripts/flake-update <target> [options] [inputs...]` - Update flake inputs on a dedicated branch, compare the selected target against `main`, and evaluate the rest of the fleet
 - Targets: `desktop`, `linux-desktop`, `nixos`, `server`, `nixos-server`, `orbstack`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
 - Darwin targets are not currently supported because this flake does not expose `darwinConfigurations`
@@ -358,7 +360,9 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 - Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
 
 ### Formatting
-- `nix fmt` - Format all `.nix` files in this repo with treefmt
+
+- `nix fmt` or `fmt` - Apply repository formatting and safe fixes for Nix, Markdown, and Python, plus spelling fixes
+- `nix flake check` or `chk` - Verify repository formatting, ShellCheck, YAML, GitHub Actions, and the existing flake checks without changing files
 - `nix develop` - Enter the development shell and install the repository's pre-commit hooks
 
 ### Validation
@@ -384,18 +388,22 @@ nix build .#nixosConfigurations.nixos-server.config.system.build.toplevel
 ```
 
 ### Editor dev shells
+
 - `nix develop .#vscode` - Nix language tooling (nixd + nixfmt + treefmt + lint tools) and optionally VS Code/VSCodium if available
 
 VS Code config lives in `.vscode/` (recommended extensions, nixd config, and a couple snippets that end blocks with `};`).
 
 Suggested launch commands (so `nixd`/`nixfmt` are on `PATH` for the extension):
+
 - `nix develop .#vscode -c code .` (or `codium .` depending on what nixpkgs provides)
 
 ### Desktop environments
+
 - `h` - Start Hyprland
 - `HI` - Start Hyprland on Intel GPU
 - `HN` - Start Hyprland on NVIDIA GPU
 - `k` - Start KDE Plasma on Wayland
 
 ## Installation
+
 Check Obsidian docs

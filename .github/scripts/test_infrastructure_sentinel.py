@@ -9,7 +9,6 @@ import pathlib
 import unittest
 from unittest import mock
 
-
 SCRIPT = pathlib.Path(__file__).with_name("infrastructure-sentinel.py")
 SPEC = importlib.util.spec_from_file_location("infrastructure_sentinel", SCRIPT)
 assert SPEC and SPEC.loader
@@ -82,10 +81,13 @@ class PullRequestProjectTests(unittest.TestCase):
         metadata = bridge.issue_metadata(client, 12, {})
 
         self.assertEqual(metadata["node_id"], "issue-node")
-        self.assertEqual([call[1] for call in client.calls], [
-            "/repos/joshan-kana/.files/pulls/12",
-            "/repos/joshan-kana/.files/issues/12",
-        ])
+        self.assertEqual(
+            [call[1] for call in client.calls],
+            [
+                "/repos/joshan-kana/.files/pulls/12",
+                "/repos/joshan-kana/.files/issues/12",
+            ],
+        )
 
     def test_pull_request_permission_failure_does_not_fall_back_to_issue_endpoint(self) -> None:
         client = PermissionFailureClient()
@@ -148,14 +150,14 @@ class PullRequestProjectTests(unittest.TestCase):
             "operations": [{"issue": 80, "ensure_project": True, "fields": {"Status": "Review"}}],
         }
         with (
-            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=(project, {})),
-            __import__('unittest').mock.patch.object(bridge, "issue_list", return_value=[]),
-            __import__('unittest').mock.patch.object(
+            __import__("unittest").mock.patch.object(bridge, "project_data", return_value=(project, {})),
+            __import__("unittest").mock.patch.object(bridge, "issue_list", return_value=[]),
+            __import__("unittest").mock.patch.object(
                 bridge,
                 "issue_metadata",
                 return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
             ),
-            __import__('unittest').mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+            __import__("unittest").mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
         ):
             normalized = bridge.normalize_command(command, FakeClient())
         self.assertEqual(normalized[0]["content_type"], "PullRequest")
@@ -169,31 +171,31 @@ class PullRequestProjectTests(unittest.TestCase):
             "operations": [{"issue": 80, "blocked_by": []}],
         }
         with (
-            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=({"fields": {}}, {})),
-            __import__('unittest').mock.patch.object(
+            __import__("unittest").mock.patch.object(bridge, "project_data", return_value=({"fields": {}}, {})),
+            __import__("unittest").mock.patch.object(
                 bridge,
                 "issue_metadata",
                 return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
             ),
-            __import__('unittest').mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+            __import__("unittest").mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
         ):
             with self.assertRaisesRegex(bridge.BridgeError, "only supports project membership/field operations"):
                 bridge.normalize_command(command, FakeClient())
 
     def test_snapshot_exposes_pull_request_project_fields(self) -> None:
         project = {"title": "infrastructure", "fields": {}}
-        project_items = {
-            80: {"id": "project-item-80", "fields": {"Status": "Review"}, "content_type": "PullRequest"}
-        }
-        open_items = [{
-            "number": 80,
-            "title": "docs: update infrastructure docs submodule",
-            "state": "open",
-            "pull_request": {"url": "example"},
-        }]
+        project_items = {80: {"id": "project-item-80", "fields": {"Status": "Review"}, "content_type": "PullRequest"}}
+        open_items = [
+            {
+                "number": 80,
+                "title": "docs: update infrastructure docs submodule",
+                "state": "open",
+                "pull_request": {"url": "example"},
+            }
+        ]
         with (
-            __import__('unittest').mock.patch.object(bridge, "project_data", return_value=(project, project_items)),
-            __import__('unittest').mock.patch.object(bridge, "issue_list", return_value=open_items),
+            __import__("unittest").mock.patch.object(bridge, "project_data", return_value=(project, project_items)),
+            __import__("unittest").mock.patch.object(bridge, "issue_list", return_value=open_items),
         ):
             state = bridge.build_snapshot(FakeClient(), FakeClient(), {})
         self.assertEqual(state["pull_requests"]["80"]["project_item_id"], "project-item-80")
@@ -207,10 +209,13 @@ class RelationshipTests(unittest.TestCase):
 
         self.assertEqual(bridge.parent_issue(client, 12, {}), {"number": 7, "state": "open"})
         self.assertEqual(bridge.sub_issues(client, 7, {}), [{"number": 12, "state": "open"}])
-        self.assertEqual([call[1] for call in client.calls], [
-            "/repos/joshan-kana/.files/issues/12/parent",
-            "/repos/joshan-kana/.files/issues/7/sub_issues?per_page=100&page=1",
-        ])
+        self.assertEqual(
+            [call[1] for call in client.calls],
+            [
+                "/repos/joshan-kana/.files/issues/12/parent",
+                "/repos/joshan-kana/.files/issues/7/sub_issues?per_page=100&page=1",
+            ],
+        )
 
     def test_parent_apply_is_idempotent_and_read_back_verified(self) -> None:
         client = FakeClient()
@@ -226,9 +231,7 @@ class RelationshipTests(unittest.TestCase):
         }
         with (
             mock.patch.object(bridge, "normalize_command", return_value=[operation]),
-            mock.patch.object(bridge, "refresh_project", return_value=(
-                {"id": "project", "fields": {}}, {}
-            )),
+            mock.patch.object(bridge, "refresh_project", return_value=({"id": "project", "fields": {}}, {})),
             mock.patch.object(bridge, "issue_metadata", return_value={"id": 12, "pull_request": None}),
             mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
         ):
@@ -277,7 +280,9 @@ class RelationshipTests(unittest.TestCase):
                 bridge.normalize_command(command, FakeClient())
 
     def test_state_marker_is_upgraded_without_losing_command(self) -> None:
-        old = "before\n\n<!-- infrastructure-sentinel-state:v1\n{}\n-->\n\n<!-- infrastructure-sentinel-command:v1\n{\"request_id\": \"x\"}\n-->"
+        old = (
+            'before\n\n<!-- infrastructure-sentinel-state:v1\n{}\n-->\n\n<!-- infrastructure-sentinel-command:v1\n{"request_id": "x"}\n-->'
+        )
         updated = bridge.replace_state(old, {"version": 2})
         self.assertIn("infrastructure-sentinel-state:v2", updated)
         self.assertIn("infrastructure-sentinel-command:v1", updated)
