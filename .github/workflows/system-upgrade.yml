@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       validate_only:
-        description: Evaluate the existing system-upgrade branch without updating flake inputs
+        description: Check the existing system-upgrade branch without updating flake inputs
         required: false
         default: false
         type: boolean
@@ -20,17 +20,14 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: system-upgrade
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
-  update:
-    name: Update flake inputs
-    if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.validate_only)
+  upgrade:
+    name: Update and validate system upgrade
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    outputs:
-      validate: ${{ steps.prepare.outputs.validate }}
     env:
       GH_TOKEN: ${{ github.token }}
       UPGRADE_BRANCH: system-upgrade
@@ -40,6 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.validate_only)) && env.UPGRADE_BRANCH || github.ref }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -49,6 +47,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Prepare upgrade branch
+        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.validate_only)
         id: prepare
         shell: bash
         run: |
@@ -113,14 +112,7 @@ jobs:
             exit 0
           fi
 
-          if [[ "$branch_exists" == true && -z "$pr_number" ]]; then
-            old_sha="$(git rev-parse "origin/$UPGRADE_BRANCH")"
-            git push \
-              --force-with-lease="refs/heads/$UPGRADE_BRANCH:$old_sha" \
-              origin "HEAD:$UPGRADE_BRANCH"
-          else
-            git push origin "HEAD:$UPGRADE_BRANCH"
-          fi
+          git push origin "HEAD:$UPGRADE_BRANCH"
 
           if [[ -z "$pr_number" ]]; then
             gh pr create \
@@ -128,55 +120,21 @@ jobs:
               --base main \
               --head "$UPGRADE_BRANCH" \
               --title "chore: update Nix flake inputs" \
-              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow evaluates every NixOS configuration before dispatching the native Nix build cache workflow. The PR merges only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
+              --body $'Automated Nix flake update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow checks the flake before dispatching the native Nix build cache workflow. The PR merges only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
           fi
 
           echo "validate=true" >> "$GITHUB_OUTPUT"
 
-  validate:
-    name: Evaluate system upgrade
-    needs: update
-    if: >-
-      always() &&
-      (
-        github.event_name == 'push' ||
-        (github.event_name == 'workflow_dispatch' && inputs.validate_only) ||
-        (needs.update.result == 'success' && needs.update.outputs.validate == 'true')
-      )
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    env:
-      GH_TOKEN: ${{ github.token }}
-
-    steps:
-      - name: Checkout upgrade branch
-        uses: actions/checkout@v4
-        with:
-          ref: system-upgrade
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            accept-flake-config = true
-            experimental-features = nix-command flakes
-
-      - name: Evaluate fleet
+      - name: Check flake and start native builds
+        if: >-
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.validate_only) ||
+          steps.prepare.outputs.validate == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          while IFS= read -r profile; do
-            echo "Evaluating $profile"
-            nix eval --raw ".#nixosConfigurations.$profile.config.system.build.toplevel.drvPath" >/dev/null
-          done < <(
-            nix eval --json .#nixosConfigurations --apply 'configs: builtins.attrNames configs' \
-              | jq -r '.[]'
-          )
-
-      - name: Start native builds
-        shell: bash
-        run: |
+          nix flake check
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
-            --ref system-upgrade \
+            --ref "$UPGRADE_BRANCH" \
             -f auto_merge_system_upgrade=true
