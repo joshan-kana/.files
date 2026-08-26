@@ -10,6 +10,10 @@ let
     core.editor = "nvim";
   };
 
+  sharedZshConfig = _: {
+    programs.zsh.enableCompletion = true;
+  };
+
   evaluated = inputs.nixpkgs.lib.nixosSystem {
     inherit system;
     specialArgs.inputs = {
@@ -17,6 +21,7 @@ let
     };
     modules = [
       inputs.home-manager.nixosModules.home-manager
+      ../modules/options
       ({ lib, pkgs, ... }: {
         networking.hostName = "semantic-test";
         system.stateVersion = "26.05";
@@ -24,6 +29,19 @@ let
         home-manager.useGlobalPkgs = true;
         home-manager.useUserPackages = true;
         home-manager.users.semantic.home.stateVersion = "26.05";
+
+        dotfiles = {
+          profile.name = "semantic-test";
+          users.primary.name = "semantic";
+          scopes.semantic = {
+            externalDisabled.enable = false;
+            sourceDisabled.enable = true;
+            parentOverride = {
+              enable = false;
+              child.enable = true;
+            };
+          };
+        };
 
         environment.variables.SEMANTIC_FORCE = lib.mkForce "outside";
         environment.systemPackages = [ pkgs.coreutils ];
@@ -77,6 +95,38 @@ let
               };
           };
 
+          zsh = args: {
+            programs.zsh = (sharedZshConfig args).programs.zsh;
+
+            home = args: {
+              programs.zsh = (sharedZshConfig args).programs.zsh;
+            };
+          };
+
+          externalDisabled = _: {
+            environment.variables.SEMANTIC_EXTERNAL_DISABLED = "bad";
+            home = _: {
+              home.sessionVariables.SEMANTIC_EXTERNAL_DISABLED = "bad";
+            };
+          };
+
+          sourceDisabled = _: {
+            enable = false;
+            environment.variables.SEMANTIC_SOURCE_REENABLED = "yes";
+            home = _: {
+              home.sessionVariables.SEMANTIC_SOURCE_REENABLED = "yes";
+            };
+          };
+
+          parentOverride = _: {
+            child = _: {
+              environment.variables.SEMANTIC_PARENT_OVERRIDE = "bad";
+              home = _: {
+                home.sessionVariables.SEMANTIC_PARENT_OVERRIDE = "bad";
+              };
+            };
+          };
+
           disabled = _: {
             enable = false;
             environment.variables.SEMANTIC_DISABLED = "bad";
@@ -110,6 +160,16 @@ assert cfg.environment.variables.SEMANTIC_MODULES_PATH != "";
 assert hm.home.sessionVariables.SEMANTIC_OS_HOST == "semantic-test";
 assert !(cfg.environment.variables ? SEMANTIC_DISABLED);
 assert !(cfg.environment.variables ? SEMANTIC_CASCADE);
+assert cfg.programs.zsh.enable;
+assert hm.programs.zsh.enable;
+assert cfg.programs.zsh.enableCompletion;
+assert hm.programs.zsh.enableCompletion;
+assert !(cfg.environment.variables ? SEMANTIC_EXTERNAL_DISABLED);
+assert !(hm.home.sessionVariables ? SEMANTIC_EXTERNAL_DISABLED);
+assert cfg.environment.variables.SEMANTIC_SOURCE_REENABLED == "yes";
+assert hm.home.sessionVariables.SEMANTIC_SOURCE_REENABLED == "yes";
+assert !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE);
+assert !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
 assert builtins.elem "hello" packageNames;
 {
   gitNixosEnabled = cfg.programs.git.enable;
@@ -123,4 +183,16 @@ assert builtins.elem "hello" packageNames;
   homeOsHost = hm.home.sessionVariables.SEMANTIC_OS_HOST;
   disabledAbsent = !(cfg.environment.variables ? SEMANTIC_DISABLED);
   cascadeAbsent = !(cfg.environment.variables ? SEMANTIC_CASCADE);
+  sharedZshNixosEnabled = cfg.programs.zsh.enable;
+  sharedZshHomeEnabled = hm.programs.zsh.enable;
+  sharedZshCompletion = cfg.programs.zsh.enableCompletion && hm.programs.zsh.enableCompletion;
+  externalDisabledAbsent =
+    !(cfg.environment.variables ? SEMANTIC_EXTERNAL_DISABLED)
+    && !(hm.home.sessionVariables ? SEMANTIC_EXTERNAL_DISABLED);
+  sourceDisabledReenabled =
+    cfg.environment.variables.SEMANTIC_SOURCE_REENABLED == "yes"
+    && hm.home.sessionVariables.SEMANTIC_SOURCE_REENABLED == "yes";
+  parentOverrideCascadeAbsent =
+    !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE)
+    && !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
 }

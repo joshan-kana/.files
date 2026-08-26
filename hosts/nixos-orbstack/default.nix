@@ -8,10 +8,10 @@
   ];
 
   system = import ../../modules/system;
-  nix = import ../../modules/nix.nix;
+  nix = import ../../modules/nix;
   theme = import ../../modules/theme;
-  cli = import ../../modules/cli.nix;
-  networking = import ../../modules/networking.nix;
+  cli = import ../../modules/cli;
+  networking = import ../../modules/networking;
   virtualisation = _: {
     vm = import ../../modules/virtualisation/vm.nix;
   };
@@ -63,6 +63,24 @@
       programs.zsh.shellAliases.cpd = ''
         printf "%s" "$(pwd | tr -d "\n")" | pbcopy && echo "Copied path to macOS clipboard"
       '';
+    };
+  };
+
+  compatibility = { lib, ... }: {
+    # Preserve pre-refactor evaluator ownership while shared modules expose
+    # both native NixOS and Home Manager configurations. Remove selectively
+    # in post-merge behavior changes when enabling the new side is desired.
+    programs = {
+      lazygit.enable = lib.mkForce false;
+      starship.enable = lib.mkForce false;
+      neovim.enable = lib.mkForce false;
+    };
+
+    home = { lib, ... }: {
+      programs = {
+        nh.enable = lib.mkForce false;
+        direnv.enable = lib.mkForce false;
+      };
     };
   };
 

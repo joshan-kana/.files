@@ -12,9 +12,9 @@
   ];
 
   system = import ../../modules/system;
-  nix = import ../../modules/nix.nix;
+  nix = import ../../modules/nix;
   theme = import ../../modules/theme;
-  cli = import ../../modules/cli.nix;
+  cli = import ../../modules/cli;
   networking = import ./networking.nix;
   virtualisation = _: {
     containers =
@@ -38,8 +38,24 @@
   maintenance = import ./maintenance.nix;
   access = import ./access.nix;
 
-  compatibility = _: {
+  compatibility = { lib, ... }: {
+    # Preserve pre-refactor evaluator ownership while shared modules expose
+    # both native NixOS and Home Manager configurations. Remove selectively
+    # in post-merge behavior changes when enabling the new side is desired.
     system.stateVersion = "25.05";
+
+    programs = {
+      lazygit.enable = lib.mkForce false;
+      starship.enable = lib.mkForce false;
+      neovim.enable = lib.mkForce false;
+    };
+
+    home = { lib, ... }: {
+      programs = {
+        nh.enable = lib.mkForce false;
+        direnv.enable = lib.mkForce false;
+      };
+    };
   };
 
   dotfiles = {
@@ -62,7 +78,7 @@
       has.enable = false;
       nvd.enable = false;
       nixTree.enable = false;
-      python.enable = false;
+      python3.enable = false;
     };
   };
 }

@@ -73,6 +73,49 @@ let
       }
     ];
   };
+
+  # Module-shaped common fragments intentionally keep native option paths in
+  # the let block so nixd can provide completion/hover there in both the NixOS
+  # and Home Manager contexts. When the native schemas differ, keep shared data
+  # in an ordinary let value instead (as with gitSettings above).
+  nhConfig = _: {
+    programs.nh.flake = repoPath;
+  };
+
+  direnvConfig = _: {
+    programs.direnv = {
+      silent = true;
+      enableZshIntegration = false;
+    };
+  };
+
+  zshConfig = _: {
+    programs.zsh.enableCompletion = true;
+  };
+
+  lazygitConfig = _: {
+    programs.lazygit.settings.git.diffRenderers = [
+      {
+        colorArg = "always";
+        command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
+      }
+    ];
+  };
+
+  starshipConfig = _: {
+    programs.starship.settings = {
+      character.success_symbol = "[➜](bold green) ";
+      character.error_symbol = "[✗](bold red) ";
+      container.disabled = true;
+    };
+  };
+
+  neovimConfig = _: {
+    programs.neovim = {
+      withRuby = false;
+      withPython3 = false;
+    };
+  };
 in
 {
   environment.sessionVariables = {
@@ -82,26 +125,27 @@ in
     NIXOS_REBUILD_FLAGS = cfg.rebuild.flags;
   };
 
-  nh = _: {
-    programs.nh.flake = repoPath;
+  nh = args: {
+    inherit (nhConfig args) programs;
 
-    home = _: {
-      programs.zsh.shellAliases = systemAliases // {
-        inherit (systemCommands) edit;
+    home = args: {
+      programs = (nhConfig args).programs // {
+        zsh.shellAliases = systemAliases // {
+          inherit (systemCommands) edit;
+        };
       };
     };
   };
 
-  direnv = _: {
-    programs.direnv = {
-      silent = true;
-      enableZshIntegration = false;
-    };
+  direnv = args: {
+    inherit (direnvConfig args) programs;
 
-    home = _: {
-      programs.zsh.shellAliases = {
-        da = "direnv allow";
-        dt = "direnv_hook_toggle";
+    home = args: {
+      programs = (direnvConfig args).programs // {
+        zsh.shellAliases = {
+          da = "direnv allow";
+          dt = "direnv_hook_toggle";
+        };
       };
     };
   };
@@ -155,12 +199,14 @@ in
     };
   };
 
-  zsh = _: {
-    programs.zsh.enableBashCompletion = true;
+  zsh = args: {
+    programs.zsh = (zshConfig args).programs.zsh // {
+      enableBashCompletion = true;
+    };
     users.defaultUserShell = pkgs.zsh;
 
-    home = _: {
-      programs.zsh = {
+    home = args: {
+      programs.zsh = (zshConfig args).programs.zsh // {
         autosuggestion.enable = true;
         syntaxHighlighting.enable = true;
         plugins = [
@@ -250,7 +296,7 @@ in
 
   gh = _: {
     environment.systemPackages = [ pkgs.gh ];
-    nixpkgs.overlays = (import ../overlays/gh-dash.nix { }).nixpkgs.overlays;
+    nixpkgs.overlays = (import ../../overlays/gh-dash.nix { }).nixpkgs.overlays;
 
     home = _: {
       programs.gh.extensions = [ pkgs.gh-dash ];
@@ -327,26 +373,20 @@ in
     };
   };
 
-  lazygit = _: {
-    home = _: {
-      programs.lazygit.settings.git.diffRenderers = [
-        {
-          colorArg = "always";
-          command = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; PAGER=cat exec sh -c "$pager"' '';
-        }
-      ];
+  lazygit = args: {
+    inherit (lazygitConfig args) programs;
+
+    home = args: {
+      inherit (lazygitConfig args) programs;
     };
   };
 
-  starship = _: {
-    home = _: {
-      programs.starship = {
+  starship = args: {
+    inherit (starshipConfig args) programs;
+
+    home = args: {
+      programs.starship = (starshipConfig args).programs.starship // {
         enableZshIntegration = true;
-        settings = {
-          character.success_symbol = "[➜](bold green) ";
-          character.error_symbol = "[✗](bold red) ";
-          container.disabled = true;
-        };
       };
     };
   };
@@ -431,14 +471,13 @@ in
     };
   };
 
-  neovim = _: {
+  neovim = args: {
+    inherit (neovimConfig args) programs;
     environment.sessionVariables.EDITOR = "nvim";
 
-    home = _: {
+    home = args: {
       programs = {
-        neovim = {
-          withRuby = false;
-          withPython3 = false;
+        neovim = (neovimConfig args).programs.neovim // {
           extraConfig = ''
             autocmd BufRead * autocmd FileType <buffer> ++once
             \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
@@ -526,7 +565,7 @@ in
     environment.systemPackages = [ pkgs.nix-tree ];
   };
 
-  python = _: {
+  python3 = _: {
     environment.systemPackages = [ pkgs.python3 ];
   };
 

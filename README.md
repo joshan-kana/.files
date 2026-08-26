@@ -34,16 +34,22 @@ and `home = { ... }: { ... };` switches into a real Home Manager module. The
 same system-scope interface is intended for NixOS and future nix-darwin hosts.
 
 ```text
-hosts/                  Machines, generated host state, and host-specific policy
-modules/apps.nix        Shared application scopes
-modules/cli.nix         Shared CLI system + Home Manager configuration
-modules/virtualisation/ Shared virtualisation, containers, and VM variants
-modules/desktop/        Desktop environments, display managers, and desktop policy
-modules/options/        Shared dotfiles option schema
-modules/system/         Shared identity/locale/docs/compatibility scopes
-overlays/               Package overlays
-lib/semantic-scopes.nix Semantic scope engine
-scripts/                Helper scripts used by aliases and workflows
+hosts/                    Machines, generated host state, and host-specific policy
+modules/appimage/         Shared AppImage support
+modules/audio/            Shared audio configuration
+modules/cli/              Shared CLI system + Home Manager configuration
+modules/desktop-apps/     Shared desktop application scopes
+modules/desktop/          Desktop environments, display managers, and desktop policy
+modules/networking/       Shared networking configuration
+modules/nix/              Shared Nix configuration
+modules/options/          Shared dotfiles option schema
+modules/ssh/              Shared SSH configuration
+modules/system/           Shared identity/locale/docs/compatibility scopes
+modules/theme/            Shared theme policy and assets
+modules/virtualisation/   Shared virtualisation, containers, and VM variants
+overlays/                 Package overlays
+lib/semantic-scopes.nix   Semantic scope engine
+scripts/                  Helper scripts used by aliases and workflows
 ```
 
 Host entrypoints are root semantic scopes. Keep genuine module-graph dependencies
@@ -119,9 +125,9 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 
 | Where it should apply | Put it here |
 | --- | --- |
-| Shared CLI | `modules/cli.nix` |
-| Shared applications | `modules/apps.nix` |
-| Shared audio/virtualisation | `modules/audio.nix`, `modules/virtualisation/` |
+| Shared CLI | `modules/cli/` |
+| Shared desktop applications | `modules/desktop-apps/` |
+| Shared audio/virtualisation | `modules/audio/`, `modules/virtualisation/` |
 | Shared desktop | `modules/desktop/` |
 | Display managers | `modules/desktop/display-manager/` |
 | Hyprland | `modules/desktop/hyprland/default.nix` |
@@ -191,26 +197,56 @@ requirement.
 
 ### System + Home Manager settings
 
-Keep native option structure inline so nixd retains completion and hover. Share
-plain values with `let` when the two evaluators should receive the same setting:
+When NixOS and Home Manager expose the **same native option path and shape**, use
+a module-shaped `let` value and consume it in both contexts. Keeping the native
+path inside that shared module gives nixd enough schema context for completion
+and hover inside the `let` block itself:
 
 ```nix
-feature = { ... }:
+let
+  sharedZshConfig = _: {
+    programs.zsh.enableCompletion = true;
+  };
+in
+{
+  zsh = args: {
+    programs.zsh = (sharedZshConfig args).programs.zsh;
+
+    home = args: {
+      programs.zsh = (sharedZshConfig args).programs.zsh;
+    };
+  };
+}
+```
+
+When the two native modules represent the same data with **different option
+paths or schemas**, keep the common data in an ordinary `let` value and map it
+into each native API explicitly. Git is the canonical example:
+
+```nix
+git = { config, ... }:
   let
-    sharedText = "same value";
+    settings = {
+      init.defaultBranch = "main";
+      user = {
+        name = config.dotfiles.users.primary.fullName;
+        email = config.dotfiles.users.primary.email;
+      };
+    };
   in
   {
-    services.example.message = sharedText;
+    programs.git.config = settings;
 
     home = _: {
-      programs.example.message = sharedText;
+      programs.git.settings = settings;
     };
   };
 ```
 
-A free-standing `let` attrset is ordinary Nix and does not itself gain an option
-schema from nixd; the native option paths that consume it still retain their
-normal language support.
+Prefer `dotfiles.*` options for reusable host/user/path/service policy that
+should have one typed configuration source across modules. Use local `let`
+values for implementation-local shared program data that does not warrant a
+public dotfiles option.
 
 ## Adding A New Host
 
@@ -235,9 +271,9 @@ semantic scopes:
   ];
 
   system = import ../../modules/system;
-  nix = import ../../modules/nix.nix;
-  cli = import ../../modules/cli.nix;
-  networking = import ../../modules/networking.nix;
+  nix = import ../../modules/nix;
+  cli = import ../../modules/cli;
+  networking = import ../../modules/networking;
   virtualisation = import ../../modules/virtualisation;
 
   dotfiles.profile.name = "my-host";
@@ -260,7 +296,7 @@ my-host = nixosHost {
 
 ## Editing Rebuild Commands
 
-The CLI scopes use these environment variables from `modules/cli.nix`:
+The CLI scopes use these environment variables from `modules/cli/`:
 
 - `DOTFILES`
 - `FLK_PROFILE`
@@ -297,7 +333,7 @@ git submodule update --init --recursive
 
 ## Quick commands
 
-Shell aliases are defined in [`modules/cli.nix`](modules/cli.nix):
+Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### System management
 - `sysup` - Rebuild and switch to new system configuration

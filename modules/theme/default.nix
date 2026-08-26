@@ -5,7 +5,7 @@
 }:
 
 {
-  nixpkgs.overlays = (import ./monaspace-liga-overlay.nix { }).nixpkgs.overlays;
+  nixpkgs.overlays = (import ../../overlays/monaspace-liga-overlay.nix { }).nixpkgs.overlays;
 
   stylix = {
     enable = true;

@@ -149,7 +149,7 @@ assert_contains "$empty_item_origin" "[string]" "empty definition item lookup"
 assert_not_contains "$empty_item_origin" "requires an item value" "empty definition item lookup"
 invalid_item_origin="$(run_nf "$host" --scope "$hm_scope" --definition-item programs.git.settings does-not-exist)"
 assert_contains "$invalid_item_origin" "<none>" "unknown definition item ID"
-assert_not_contains "$invalid_item_origin" "local/modules/cli.nix" "unknown definition item ID"
+assert_not_contains "$invalid_item_origin" "local/modules/cli/" "unknown definition item ID"
 
 docs_preview="$(NO_COLOR=1 run_nf "$host" --scope "$hm_scope" --preview programs.gh.enable)"
 assert_contains "$docs_preview" "Home Manager: joshan ($hm_scope)" "scoped docs preview"
