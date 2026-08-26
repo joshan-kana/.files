@@ -22,22 +22,22 @@ options="$toggle\n$next\n$prev\n$seekplus\n$seekminus\n$switch"
 
 chosen="$(echo -e "$options" | rofi -show -p "${status^}" -dmenu -selected-row 0)"
 case $chosen in
-    $toggle)
+    "$toggle")
 		playerctl play-pause
         ;;
-    $next)
+    "$next")
 		playerctl next
         ;;
-    $prev)
+    "$prev")
         playerctl previous
         ;;
-    $seekminus)
+    "$seekminus")
 		playerctl position 15-
         ;;
-    $seekplus)
+    "$seekplus")
 		playerctl position 15+
         ;;
-    $switch)
+    "$switch")
         playerctld shift
         ;;
 esac
