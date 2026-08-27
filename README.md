@@ -39,6 +39,7 @@ modules/appimage/         Shared AppImage support
 modules/audio/            Shared audio configuration
 modules/cli/              Shared CLI system + Home Manager configuration
 modules/desktop-apps/     Shared desktop application scopes
+modules/server-apps/      Shared server application scopes
 modules/desktop/          Desktop environments, display managers, and desktop policy
 modules/networking/       Shared networking configuration
 modules/nix/              Shared Nix configuration
@@ -134,10 +135,9 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Hyprland | `modules/desktop/hyprland/default.nix` |
 | Plasma | `modules/desktop/plasma/default.nix` |
 | Host profile defaults | `modules/profiles/default.nix` |
-| x86-only desktop inventory | inline scopes in `hosts/nixos/default.nix` |
 | Parallels only | `hosts/nixos-arm-parallels/` |
 | OrbStack only | `hosts/nixos-orbstack/default.nix` plus generated state |
-| Server app | `hosts/nixos-server/apps/<app>/` |
+| Server applications | `modules/server-apps/` |
 | Server networking/storage/hardware | the matching file under `hosts/nixos-server/` |
 
 Inside a semantic scope, write ordinary native options. If the concept also has

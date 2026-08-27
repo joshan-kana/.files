@@ -146,4 +146,26 @@
       11435
     ];
   };
+  spotify =
+    { lib, options, ... }:
+    lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
+      programs.spicetify.enable = true;
+    };
+
+  discord = _: {
+    environment.systemPackages = [ pkgs.discord ];
+  };
+
+  dropbox = _: {
+    environment.systemPackages = [ pkgs.dropbox ];
+  };
+
+  onlyoffice = _: {
+    environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
+  };
+
+  twingate = _: {
+    services.twingate.enable = true;
+  };
+
 }

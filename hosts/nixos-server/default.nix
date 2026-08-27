@@ -43,7 +43,7 @@
         safety = import ./vm-safety.nix;
       };
   };
-  apps = import ./apps;
+  serverApps = import ../../modules/server-apps;
   storage = import ./storage.nix;
   image = import ./image.nix;
   hardware = import ./hardware.nix;
