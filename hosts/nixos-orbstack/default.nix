@@ -1,8 +1,10 @@
-{ lib, modulesPath, ... }:
+{
+  lib,
+  moduleRegistry,
+  modulesPath,
+  ...
+}:
 
-let
-  modules = import ../../modules;
-in
 {
   imports = [
     ./generated.nix
@@ -16,7 +18,7 @@ in
     services.ollama.url = "http://host.orb.internal:11434/v1";
   };
 
-  inherit (modules)
+  inherit (moduleRegistry)
     system
     nix
     theme
