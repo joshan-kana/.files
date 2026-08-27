@@ -73,10 +73,12 @@
     }:
 
     let
+      shared = moduleRegistry.networking { };
       lan = config.dotfiles.server.lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
     in
-    {
+    shared
+    // {
       # Stable machine identifier required for safe ZFS pool imports.
       networking.hostId = "fa3f98bb";
 
@@ -93,29 +95,24 @@
         iproute2
       ];
 
-      networking.networkmanager.enable = true;
-      networking.networkmanager.ensureProfiles.profiles."wired-static" = {
-        connection = {
-          id = "wired-static";
-          type = "ethernet";
-          "interface-name" = lan.interface;
-          autoconnect = true;
-          "autoconnect-priority" = 100;
+      networkManager =
+        _:
+        lib.recursiveUpdate (shared.networkManager { }) {
+          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
+            connection = {
+              id = "wired-static";
+              type = "ethernet";
+              "interface-name" = lan.interface;
+              autoconnect = true;
+              "autoconnect-priority" = 100;
+            };
+            ipv4 = {
+              method = "manual";
+              address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+            };
+            ipv6.method = "auto";
+          };
         };
-        ipv4 = {
-          method = "manual";
-          address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
-        };
-        ipv6.method = "auto";
-      };
-
-      services.avahi = {
-        enable = true;
-        nssmdns4 = true;
-        openFirewall = true;
-      };
-
-      inherit ((moduleRegistry.networking { })) ssh;
 
       dns =
         {

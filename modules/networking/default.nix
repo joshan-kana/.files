@@ -1,5 +1,15 @@
 _: {
-  networking.networkmanager.enable = true;
+  networkManager = _: {
+    networking.networkmanager.enable = true;
+  };
+
+  mdns = _: {
+    services.avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
+  };
 
   ssh = _: {
     services.openssh = {

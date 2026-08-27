@@ -16,7 +16,10 @@
     secretsDir = "/Users/joshan/.secrets";
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
-    scopes.networking.ssh.enable = false;
+    scopes.networking = {
+      mdns.enable = false;
+      ssh.enable = false;
+    };
   };
 
   inherit (moduleRegistry)
