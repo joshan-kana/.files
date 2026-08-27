@@ -16,9 +16,18 @@
     secretsDir = "/Users/joshan/.secrets";
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
-    scopes.networking = {
-      mdns.enable = false;
-      ssh.enable = false;
+    scopes = {
+      networking = {
+        mdns.enable = false;
+        ssh.enable = false;
+      };
+      virtualisation = {
+        containers.enable = false;
+        libvirt.enable = false;
+        quickemu.enable = false;
+        distrobox.enable = false;
+        bottles.enable = false;
+      };
     };
   };
 
@@ -28,10 +37,8 @@
     theme
     cli
     networking
+    virtualisation
     ;
-  virtualisation = _: {
-    vm = import ../../modules/virtualisation/vm.nix;
-  };
 
   container = { config, ... }: {
     # OrbStack LXC containers have no Wi-Fi and /etc may be read-only.
