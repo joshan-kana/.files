@@ -28,21 +28,26 @@
   theme = import ../../modules/theme;
   cli = import ../../modules/cli;
   networking = import ./networking.nix;
-  virtualisation = _: {
-    containers =
-      { config, ... }:
-      (import ../../modules/virtualisation/containers { inherit config; })
-      // {
-        virtualisation.oci-containers.backend = "docker";
-      };
+  virtualisation =
+    {
+      config,
+      pkgs,
+      ...
+    }:
+    let
+      shared = import ../../modules/virtualisation { inherit config pkgs; };
+    in
+    shared
+    // {
+      containers =
+        { config, ... }:
+        (shared.containers { inherit config; })
+        // {
+          virtualisation.oci-containers.backend = "docker";
+        };
 
-    vm =
-      _:
-      (import ../../modules/virtualisation/vm.nix { })
-      // {
-        safety = import ./vm-safety.nix;
-      };
-  };
+      vm = _: (shared.vm { }) // { safety = import ./vm-safety.nix; };
+    };
   serverApps = import ../../modules/server-apps;
   storage = import ./storage.nix;
   image = import ./image.nix;
@@ -56,7 +61,13 @@
 
   dotfiles = {
     profile.name = "nixos-server";
-    scopes.virtualisation.vm.aliases.enable = false;
+    scopes.virtualisation = {
+      libvirt.enable = false;
+      quickemu.enable = false;
+      distrobox.enable = false;
+      bottles.enable = false;
+      vm.aliases.enable = false;
+    };
     scopes.cli = {
       clipboard.enable = false;
       mpv.enable = false;
