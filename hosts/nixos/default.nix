@@ -60,7 +60,6 @@
   inherit (moduleRegistry)
     networking
     appimage
-    ssh
     audio
     virtualisation
     desktop

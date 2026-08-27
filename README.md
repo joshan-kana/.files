@@ -45,7 +45,6 @@ modules/networking/       Shared networking configuration
 modules/nix/              Shared Nix configuration
 modules/options/          Shared dotfiles option schema
 modules/profiles/         Reusable host profile defaults
-modules/ssh/              Shared SSH configuration
 modules/system/           Shared identity/locale/docs/compatibility scopes
 modules/theme/            Shared theme policy and assets
 modules/virtualisation/   Shared virtualisation, containers, and VM variants

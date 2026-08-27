@@ -28,7 +28,6 @@
     cli
     networking
     appimage
-    ssh
     audio
     virtualisation
     desktopApps
