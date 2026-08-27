@@ -1,9 +1,11 @@
 { inputs, modulesPath, ... }:
 
+let
+  modules = import ../../modules;
+in
 {
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
-    ../../modules/options
     ./options.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
       lockFile = ./container-images.lock;
@@ -11,22 +13,25 @@
     "${modulesPath}/image/repart.nix"
   ];
 
-  system = import ../../modules/system;
+  inherit (modules)
+    system
+    theme
+    cli
+    serverApps
+    ;
   nix =
     {
       config,
       inputs,
       ...
     }:
-    (import ../../modules/nix { inherit config; })
+    (modules.nix { inherit config; })
     // {
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
       ];
       users.users.${config.dotfiles.users.primary.name}.linger = true;
     };
-  theme = import ../../modules/theme;
-  cli = import ../../modules/cli;
   networking = import ./networking.nix;
   virtualisation =
     {
@@ -35,7 +40,7 @@
       ...
     }:
     let
-      shared = import ../../modules/virtualisation { inherit config pkgs; };
+      shared = modules.virtualisation { inherit config pkgs; };
     in
     shared
     // {
@@ -48,7 +53,6 @@
 
       vm = _: (shared.vm { }) // { safety = import ./vm-safety.nix; };
     };
-  serverApps = import ../../modules/server-apps;
   storage = import ./storage.nix;
   image = import ./image.nix;
   hardware = import ./hardware.nix;

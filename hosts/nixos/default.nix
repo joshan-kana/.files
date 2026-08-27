@@ -4,9 +4,11 @@
   ...
 }:
 
+let
+  modules = import ../../modules;
+in
 {
   imports = [
-    ../../modules/options
     inputs.spicetify-nix.nixosModules.spicetify
   ];
 
@@ -21,9 +23,11 @@
     plymouth.enable = false;
   };
 
-  system = import ../../modules/system;
-  nix = import ../../modules/nix;
-  theme = import ../../modules/theme;
+  inherit (modules)
+    system
+    nix
+    theme
+    ;
   cli =
     {
       config,
@@ -32,7 +36,7 @@
       pkgs,
       ...
     }:
-    (import ../../modules/cli {
+    (modules.cli {
       inherit
         config
         inputs
@@ -50,14 +54,15 @@
         environment.systemPackages = [ pkgs.intel-gpu-tools ];
       };
     };
-  networking = import ../../modules/networking;
-  appimage = import ../../modules/appimage;
-  ssh = import ../../modules/ssh;
-  audio = import ../../modules/audio;
-  virtualisation = import ../../modules/virtualisation;
-  desktop = import ../../modules/desktop;
-
-  desktopApps = import ../../modules/desktop-apps;
+  inherit (modules)
+    networking
+    appimage
+    ssh
+    audio
+    virtualisation
+    desktop
+    desktopApps
+    ;
 
   hardware = import ./hardware.nix;
 
