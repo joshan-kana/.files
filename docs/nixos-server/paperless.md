@@ -2,7 +2,7 @@
 
 Paperless-ngx runs natively on `nixos-server`. The Nix configuration is the
 source of truth for service settings and storage paths:
-[`modules/server-apps/paperless/default.nix`](../../modules/server-apps/paperless/default.nix).
+[`modules/server-apps/paperless/`](../../modules/server-apps/paperless/).
 
 ## First run
 

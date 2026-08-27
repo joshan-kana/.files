@@ -15,14 +15,14 @@ This repo contains my NixOS system and home configuration, managed as a flake.
 
 The flake exposes these NixOS configurations:
 
-| Host | Purpose | Entry point |
+| Host | Purpose | Configuration |
 | --- | --- | --- |
-| `nixos` | x86_64 Linux desktop | `hosts/nixos/default.nix` |
-| `nixos-arm-parallels` | aarch64 Linux desktop VM | `hosts/nixos-arm-parallels/default.nix` |
-| `nixos-orbstack` | OrbStack Linux container | `hosts/nixos-orbstack/default.nix` |
-| `nixos-server` | Raspberry Pi server | `hosts/nixos-server/default.nix` |
+| `nixos` | x86_64 Linux desktop | `hosts/nixos/` |
+| `nixos-arm-parallels` | aarch64 Linux desktop VM | `hosts/nixos-arm-parallels/` |
+| `nixos-orbstack` | OrbStack Linux container | `hosts/nixos-orbstack/` |
+| `nixos-server` | Raspberry Pi server | `hosts/nixos-server/` |
 
-Host entrypoints are the source of truth for what each machine imports. Start
+Host directories are the source of truth for what each machine imports. Start
 there when you want to know what applies to a machine.
 
 ## Layout
@@ -54,7 +54,7 @@ lib/semantic-scopes.nix   Semantic scope engine
 scripts/                  Helper scripts used by aliases and workflows
 ```
 
-Host entrypoints are root semantic scopes. Keep genuine module-graph dependencies
+Host configurations are root semantic scopes. Keep genuine module-graph dependencies
 (`imports`, option-schema modules, hardware modules) in their static `imports`;
 put runtime configuration under semantic child scopes.
 
@@ -88,8 +88,7 @@ it into each native option path.
 
 ## Common Options
 
-Shared host values live under `dotfiles.*`, defined in
-`modules/options/default.nix`.
+Shared host values live under `dotfiles.*`, defined in `modules/options/`.
 
 Common options include:
 
@@ -104,8 +103,8 @@ Common options include:
 - `dotfiles.services.ollama.url`
 - `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
 
-Server-only options live in `hosts/nixos-server/options.nix` and are imported
-only by `hosts/nixos-server/default.nix`.
+Server-only options live in `hosts/nixos-server/options.nix` and apply only to
+the `nixos-server` host.
 
 Set host values in the host entrypoint. For example:
 
@@ -132,13 +131,13 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Shared audio/virtualisation | `modules/audio/`, `modules/virtualisation/` |
 | Shared desktop | `modules/desktop/` |
 | Display managers | `modules/desktop/display-manager/` |
-| Hyprland | `modules/desktop/hyprland/default.nix` |
-| Plasma | `modules/desktop/plasma/default.nix` |
-| Host profile defaults | `modules/profiles/default.nix` |
+| Hyprland | `modules/desktop/hyprland/` |
+| Plasma | `modules/desktop/plasma/` |
+| Host profile defaults | `modules/profiles/` |
 | Parallels only | `hosts/nixos-arm-parallels/` |
-| OrbStack only | `hosts/nixos-orbstack/default.nix` plus generated state |
+| OrbStack only | `hosts/nixos-orbstack/` |
 | Server applications | `modules/server-apps/` |
-| Server networking/storage/hardware | the matching file under `hosts/nixos-server/` |
+| Server host policy | `hosts/nixos-server/` |
 
 Inside a semantic scope, write ordinary native options. If the concept also has
 Home Manager configuration, add a `home` module in the same scope. Nested
@@ -161,7 +160,6 @@ openclaw = { ... }: {
 
 ### Plasma generated state
 
-`modules/desktop/plasma/default.nix` is the small handwritten semantic wrapper.
 Plasma Manager's exported state lives in `modules/desktop/plasma/generated.nix`;
 do not hand-edit that generated file. From the Plasma host, regenerate it with:
 
@@ -252,13 +250,8 @@ public dotfiles option.
 
 ## Adding A New Host
 
-Create a new folder under `hosts/`:
-
-```text
-hosts/my-host/
-├── default.nix
-└── hardware.nix
-```
+Create a new folder under `hosts/` and add the host configuration plus any
+required hardware definition.
 
 Keep schema/hardware dependencies in static `imports`, then compose the host from
 semantic scopes:
