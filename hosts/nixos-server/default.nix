@@ -73,23 +73,8 @@
     }:
 
     let
-      serverCfg = config.dotfiles.server;
-      appDataRoot = serverCfg.storage.appData.root;
-      inherit (serverCfg) secretsDir;
-      inherit (serverCfg) lan;
-
+      lan = config.dotfiles.server.lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
-      hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
-
-      dnsService = {
-        user = "adguardhome";
-        group = "appdata-editors";
-        ip = lan.dns.serviceIp;
-        dataDir = "${appDataRoot}/adguard";
-        workDir = "${appDataRoot}/adguard/work";
-        confDir = "${appDataRoot}/adguard/conf";
-        configFile = "${appDataRoot}/adguard/conf/AdGuardHome.yaml";
-      };
     in
     {
       # Stable machine identifier required for safe ZFS pool imports.
@@ -120,14 +105,8 @@
         ipv4 = {
           method = "manual";
           address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
-          address2 = "${dnsService.ip}/${lanPrefixLength}";
-          dns = hostDns;
-          "ignore-auto-dns" = true;
         };
-        ipv6 = {
-          method = "auto";
-          "ignore-auto-dns" = true;
-        };
+        ipv6.method = "auto";
       };
 
       services.avahi = {
@@ -144,112 +123,155 @@
         };
       };
 
-      services.tailscale = {
-        enable = true;
-        openFirewall = true;
-        useRoutingFeatures = "server";
-        authKeyFile = "${secretsDir}/tailscale-oauth-client-secret";
-        authKeyParameters = {
-          ephemeral = true;
-          preauthorized = true;
-        };
-        extraDaemonFlags = [
-          "--state=mem:"
-        ];
-        extraUpFlags = [
-          "--advertise-tags=tag:nixos-server"
-          "--hostname=${config.networking.hostName}"
-          "--advertise-routes=${lan.subnet}"
-          "--accept-dns=false"
-        ];
-        extraSetFlags = [ ];
-      };
+      dns =
+        {
+          config,
+          lib,
+          ...
+        }:
 
-      # Keep the server's ephemeral Tailscale behaviour, but do not make
-      # fresh Tailscale authentication block multi-user boot.
-      #
-      # The daemon still starts during boot. The auth/connect step still runs
-      # automatically, but after multi-user.target so LAN boot is not held up by
-      # Tailscale control-plane/auth latency.
-      systemd.services.tailscaled-autoconnect = {
-        after = lib.mkForce [
-          "tailscaled.service"
-          "multi-user.target"
-        ];
-        before = lib.mkForce [ "shutdown.target" ];
-      };
+        let
+          serverCfg = config.dotfiles.server;
+          appDataRoot = serverCfg.storage.appData.root;
+          inherit (serverCfg) lan;
+          lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
+          hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
-      networking.firewall.allowedTCPPorts = [
-        53 # Local DNS service over TCP
-      ];
-
-      networking.firewall.allowedUDPPorts = [
-        53 # Local DNS service
-      ];
-
-      users.users.${dnsService.user} = {
-        isSystemUser = true;
-        inherit (dnsService) group;
-      };
-
-      systemd.tmpfiles.rules = [
-        "d ${dnsService.dataDir} 2750 ${dnsService.user} ${dnsService.group} - -"
-        "d ${dnsService.workDir} 2750 ${dnsService.user} ${dnsService.group} - -"
-        "d ${dnsService.confDir} 2750 ${dnsService.user} ${dnsService.group} - -"
-        "Z ${dnsService.dataDir} - ${dnsService.user} ${dnsService.group} - -"
-        "z ${dnsService.configFile} 0660 ${dnsService.user} ${dnsService.group} - -"
-      ];
-
-      services.adguardhome = {
-        enable = true;
-
-        # Opens the AdGuard Home web UI port only.
-        # DNS port 53 is still opened manually above.
-        openFirewall = true;
-
-        # Keep UI-edited settings, but force the critical bind settings from Nix.
-        mutableSettings = true;
-
-        # Web UI only on the dedicated LAN DNS service IP.
-        # Port is intentionally omitted because the module default is 3000.
-        host = dnsService.ip;
-
-        extraArgs = [
-          "--work-dir ${dnsService.workDir}"
-          "--config ${dnsService.configFile}"
-        ];
-
-        settings = {
-          dns = {
-            # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
-            bind_hosts = [
-              dnsService.ip
-              "127.0.0.1"
-            ];
+          service = {
+            user = "adguardhome";
+            group = "appdata-editors";
+            ip = lan.dns.serviceIp;
             port = 53;
+            dataDir = "${appDataRoot}/adguard";
+            workDir = "${appDataRoot}/adguard/work";
+            confDir = "${appDataRoot}/adguard/conf";
+            configFile = "${appDataRoot}/adguard/conf/AdGuardHome.yaml";
+          };
+        in
+        {
+          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
+            ipv4 = {
+              address2 = "${service.ip}/${lanPrefixLength}";
+              dns = hostDns;
+              "ignore-auto-dns" = true;
+            };
+            ipv6."ignore-auto-dns" = true;
+          };
+
+          networking.firewall.allowedTCPPorts = [ service.port ];
+          networking.firewall.allowedUDPPorts = [ service.port ];
+
+          users.users.${service.user} = {
+            isSystemUser = true;
+            inherit (service) group;
+          };
+
+          systemd.tmpfiles.rules = [
+            "d ${service.dataDir} 2750 ${service.user} ${service.group} - -"
+            "d ${service.workDir} 2750 ${service.user} ${service.group} - -"
+            "d ${service.confDir} 2750 ${service.user} ${service.group} - -"
+            "Z ${service.dataDir} - ${service.user} ${service.group} - -"
+            "z ${service.configFile} 0660 ${service.user} ${service.group} - -"
+          ];
+
+          services.adguardhome = {
+            enable = true;
+
+            # Opens the AdGuard Home web UI port only.
+            # DNS port 53 is still opened manually above.
+            openFirewall = true;
+
+            # Keep UI-edited settings, but force the critical bind settings from Nix.
+            mutableSettings = true;
+
+            # Web UI only on the dedicated LAN DNS service IP.
+            # Port is intentionally omitted because the module default is 3000.
+            host = service.ip;
+
+            extraArgs = [
+              "--work-dir ${service.workDir}"
+              "--config ${service.configFile}"
+            ];
+
+            settings = {
+              dns = {
+                # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
+                bind_hosts = [
+                  service.ip
+                  "127.0.0.1"
+                ];
+                inherit (service) port;
+              };
+            };
+          };
+
+          systemd.services.adguardhome = {
+            after = [
+              "network-online.target"
+            ];
+            wants = [ "network-online.target" ];
+
+            serviceConfig = {
+              DynamicUser = lib.mkForce false;
+              User = service.user;
+              Group = service.group;
+
+              StateDirectory = lib.mkForce "apps/adguard/conf";
+              StateDirectoryMode = "2750";
+              UMask = lib.mkForce "0007";
+
+              # AdGuard writes runtime databases such as work/data/sessions.db here.
+              ReadWritePaths = [ service.workDir ];
+            };
           };
         };
-      };
 
-      systemd.services.adguardhome = {
-        after = [
-          "network-online.target"
-        ];
-        wants = [ "network-online.target" ];
+      tailscale =
+        {
+          config,
+          lib,
+          ...
+        }:
 
-        serviceConfig = {
-          DynamicUser = lib.mkForce false;
-          User = dnsService.user;
-          Group = dnsService.group;
+        let
+          serverCfg = config.dotfiles.server;
+        in
+        {
+          services.tailscale = {
+            enable = true;
+            openFirewall = true;
+            useRoutingFeatures = "server";
+            authKeyFile = "${serverCfg.secretsDir}/tailscale-oauth-client-secret";
+            authKeyParameters = {
+              ephemeral = true;
+              preauthorized = true;
+            };
+            extraDaemonFlags = [
+              "--state=mem:"
+            ];
+            extraUpFlags = [
+              "--advertise-tags=tag:nixos-server"
+              "--hostname=${config.networking.hostName}"
+              "--advertise-routes=${serverCfg.lan.subnet}"
+              "--accept-dns=false"
+            ];
+            extraSetFlags = [ ];
+          };
 
-          StateDirectory = lib.mkForce "apps/adguard/conf";
-          StateDirectoryMode = "2750";
-          UMask = lib.mkForce "0007";
-
-          # AdGuard writes runtime databases such as work/data/sessions.db here.
-          ReadWritePaths = [ dnsService.workDir ];
+          # Keep the server's ephemeral Tailscale behaviour, but do not make
+          # fresh Tailscale authentication block multi-user boot.
+          #
+          # The daemon still starts during boot. The auth/connect step still runs
+          # automatically, but after multi-user.target so LAN boot is not held up by
+          # Tailscale control-plane/auth latency.
+          systemd.services.tailscaled-autoconnect = {
+            after = lib.mkForce [
+              "tailscaled.service"
+              "multi-user.target"
+            ];
+            before = lib.mkForce [ "shutdown.target" ];
+          };
         };
-      };
     };
   virtualisation =
     {
