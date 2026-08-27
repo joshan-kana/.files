@@ -115,13 +115,7 @@
         openFirewall = true;
       };
 
-      services.openssh = {
-        enable = true;
-        settings = {
-          PasswordAuthentication = false;
-          KbdInteractiveAuthentication = false;
-        };
-      };
+      inherit ((moduleRegistry.networking { })) ssh;
 
       dns =
         {

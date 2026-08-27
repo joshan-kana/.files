@@ -5,7 +5,6 @@
   cli = import ./cli;
   networking = import ./networking;
   appimage = import ./appimage;
-  ssh = import ./ssh;
   audio = import ./audio;
   virtualisation = import ./virtualisation;
   desktop = import ./desktop;
