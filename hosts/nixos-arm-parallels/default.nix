@@ -9,6 +9,8 @@ in
     profiles.desktop.arm
   ];
 
+  dotfiles.profile.name = "nixos-arm-parallels";
+
   boot = {
     loader = {
       systemd-boot.enable = true;
@@ -33,5 +35,4 @@ in
     ;
   hardware = import ./hardware.nix;
 
-  dotfiles.profile.name = "nixos-arm-parallels";
 }
