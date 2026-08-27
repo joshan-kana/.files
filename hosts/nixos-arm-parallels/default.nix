@@ -1,7 +1,13 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
+let
+  profiles = import ../../modules/profiles { inherit lib; };
+in
 {
-  imports = [ ../../modules/options ];
+  imports = [
+    ../../modules/options
+    profiles.desktop.arm
+  ];
 
   boot = {
     loader = {
