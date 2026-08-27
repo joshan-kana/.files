@@ -1,12 +1,13 @@
-{ lib, pkgs, ... }:
+{
+  lib,
+  moduleRegistry,
+  pkgs,
+  ...
+}:
 
-let
-  modules = import ../../modules;
-  profiles = modules.profiles { inherit lib; };
-in
 {
   imports = [
-    profiles.desktop.arm
+    (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
   dotfiles.profile.name = "nixos-arm-parallels";
@@ -20,7 +21,7 @@ in
     plymouth.enable = false;
   };
 
-  inherit (modules)
+  inherit (moduleRegistry)
     system
     nix
     theme

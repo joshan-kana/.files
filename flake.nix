@@ -262,7 +262,10 @@
         in
         nixpkgsInput.lib.nixosSystem {
           inherit system;
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            moduleRegistry = import ./modules;
+          };
           modules = [
             ./modules/options
             stylixInput.nixosModules.stylix

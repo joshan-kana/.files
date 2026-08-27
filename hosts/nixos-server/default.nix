@@ -1,8 +1,10 @@
-{ inputs, modulesPath, ... }:
+{
+  inputs,
+  moduleRegistry,
+  modulesPath,
+  ...
+}:
 
-let
-  modules = import ../../modules;
-in
 {
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
@@ -43,7 +45,7 @@ in
     };
   };
 
-  inherit (modules)
+  inherit (moduleRegistry)
     system
     theme
     cli
@@ -55,7 +57,7 @@ in
       inputs,
       ...
     }:
-    (modules.nix { inherit config; })
+    (moduleRegistry.nix { inherit config; })
     // {
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
@@ -256,7 +258,7 @@ in
       ...
     }:
     let
-      shared = modules.virtualisation { inherit config pkgs; };
+      shared = moduleRegistry.virtualisation { inherit config pkgs; };
     in
     shared
     // {

@@ -1,12 +1,10 @@
 {
   inputs,
+  moduleRegistry,
   pkgs,
   ...
 }:
 
-let
-  modules = import ../../modules;
-in
 {
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
@@ -28,7 +26,7 @@ in
     plymouth.enable = false;
   };
 
-  inherit (modules)
+  inherit (moduleRegistry)
     system
     nix
     theme
@@ -41,7 +39,7 @@ in
       pkgs,
       ...
     }:
-    (modules.cli {
+    (moduleRegistry.cli {
       inherit
         config
         inputs
@@ -59,7 +57,7 @@ in
         environment.systemPackages = [ pkgs.intel-gpu-tools ];
       };
     };
-  inherit (modules)
+  inherit (moduleRegistry)
     networking
     appimage
     ssh
