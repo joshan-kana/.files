@@ -57,37 +57,7 @@
   virtualisation = import ../../modules/virtualisation;
   desktop = import ../../modules/desktop;
 
-  # Shared desktop apps are implemented in modules/desktop-apps/. These additional
-  # children intentionally remain on this host because their packages/services
-  # are part of the x86_64-linux-only desktop inventory.
-  desktopApps =
-    {
-      inputs,
-      pkgs,
-      ...
-    }:
-    (import ../../modules/desktop-apps { inherit inputs pkgs; })
-    // {
-      spotify = _: {
-        programs.spicetify.enable = true;
-      };
-
-      discord = _: {
-        environment.systemPackages = [ pkgs.discord ];
-      };
-
-      dropbox = _: {
-        environment.systemPackages = [ pkgs.dropbox ];
-      };
-
-      onlyoffice = _: {
-        environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
-      };
-
-      twingate = _: {
-        services.twingate.enable = true;
-      };
-    };
+  desktopApps = import ../../modules/desktop-apps;
 
   hardware = import ./hardware.nix;
 

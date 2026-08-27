@@ -205,7 +205,7 @@ the container image.
 
 Containers are declared with normal NixOS OCI-container syntax. Each keeps an
 `image = "repository:tag";` source plus its volumes, ports, environment files,
-and extra options in the relevant `hosts/nixos-server/apps/<app>/default.nix` module:
+and extra options in the relevant `modules/server-apps/<app>/default.nix` module:
 
 ```nix
 virtualisation.oci-containers.containers.openclaw = {
