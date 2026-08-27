@@ -43,6 +43,7 @@ modules/desktop/          Desktop environments, display managers, and desktop po
 modules/networking/       Shared networking configuration
 modules/nix/              Shared Nix configuration
 modules/options/          Shared dotfiles option schema
+modules/profiles/         Reusable host profile defaults
 modules/ssh/              Shared SSH configuration
 modules/system/           Shared identity/locale/docs/compatibility scopes
 modules/theme/            Shared theme policy and assets
@@ -132,6 +133,7 @@ Choose the semantic owner, not a separate NixOS/Home Manager layer.
 | Display managers | `modules/desktop/display-manager/` |
 | Hyprland | `modules/desktop/hyprland/default.nix` |
 | Plasma | `modules/desktop/plasma/default.nix` |
+| Host profile defaults | `modules/profiles/default.nix` |
 | x86-only desktop inventory | inline scopes in `hosts/nixos/default.nix` |
 | Parallels only | `hosts/nixos-arm-parallels/` |
 | OrbStack only | `hosts/nixos-orbstack/default.nix` plus generated state |
