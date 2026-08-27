@@ -4,6 +4,15 @@ let
   modules = import ../../modules;
 in
 {
+  imports = [
+    inputs.nixos-hardware.nixosModules.raspberry-pi-4
+    ./options.nix
+    (import ../../modules/virtualisation/containers/image-locking.nix {
+      lockFile = ./container-images.lock;
+    })
+    "${modulesPath}/image/repart.nix"
+  ];
+
   dotfiles = {
     profile.name = "nixos-server";
     scopes.virtualisation = {
@@ -33,15 +42,6 @@ in
       python3.enable = false;
     };
   };
-
-  imports = [
-    inputs.nixos-hardware.nixosModules.raspberry-pi-4
-    ./options.nix
-    (import ../../modules/virtualisation/containers/image-locking.nix {
-      lockFile = ./container-images.lock;
-    })
-    "${modulesPath}/image/repart.nix"
-  ];
 
   inherit (modules)
     system

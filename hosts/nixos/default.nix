@@ -12,6 +12,11 @@ in
     inputs.spicetify-nix.nixosModules.spicetify
   ];
 
+  dotfiles = {
+    profile.name = "nixos";
+    rebuild.flags = "--impure";
+  };
+
   # Host boot policy. AppImage binfmt support is reusable and lives in its own
   # semantic module below.
   boot = {
@@ -66,8 +71,4 @@ in
 
   hardware = import ./hardware.nix;
 
-  dotfiles = {
-    profile.name = "nixos";
-    rebuild.flags = "--impure";
-  };
 }
