@@ -1,17 +1,21 @@
 { lib, modulesPath, ... }:
 
+let
+  modules = import ../../modules;
+in
 {
   imports = [
-    ../../modules/options
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
   ];
 
-  system = import ../../modules/system;
-  nix = import ../../modules/nix;
-  theme = import ../../modules/theme;
-  cli = import ../../modules/cli;
-  networking = import ../../modules/networking;
+  inherit (modules)
+    system
+    nix
+    theme
+    cli
+    networking
+    ;
   virtualisation = _: {
     vm = import ../../modules/virtualisation/vm.nix;
   };

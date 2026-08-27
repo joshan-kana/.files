@@ -264,6 +264,7 @@
           inherit system;
           specialArgs = { inherit inputs; };
           modules = [
+            ./modules/options
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
             (semantic.rootModule hostScopeWithFile)
