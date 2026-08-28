@@ -96,10 +96,4 @@ assert homeEval.config.programs.git.settings == gitSettings;
 assert homeEval.config.home.sessionVariables.PORTABLE_DARWIN_HOST == "darwin-shaped-host";
 assert homeEval.config.home.sessionVariables.PORTABLE_OS_HOST == "darwin-shaped-host";
 assert homeEval.config.home.sessionVariables.PORTABLE_INPUTS == "portable-inputs";
-{
-  systemGitEnabled = systemEval.config.programs.git.enable;
-  homeGitEnabled = homeEval.config.programs.git.enable;
-  sharedSettings = homeEval.config.programs.git.settings == gitSettings;
-  darwinConfigForwarded = homeEval.config.home.sessionVariables.PORTABLE_DARWIN_HOST;
-  osConfigForwarded = homeEval.config.home.sessionVariables.PORTABLE_OS_HOST;
-}
+true
