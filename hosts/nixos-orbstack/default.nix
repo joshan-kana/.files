@@ -6,6 +6,15 @@
 }:
 
 {
+  inherit (moduleRegistry)
+    system
+    nix
+    theme
+    cli
+    networking
+    virtualisation
+    ;
+
   imports = [
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
@@ -27,15 +36,6 @@
       };
     };
   };
-
-  inherit (moduleRegistry)
-    system
-    nix
-    theme
-    cli
-    networking
-    virtualisation
-    ;
 
   container = { config, ... }: {
     # OrbStack LXC containers have no Wi-Fi and /etc may be read-only.

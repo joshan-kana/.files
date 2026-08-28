@@ -6,6 +6,13 @@
 }:
 
 {
+  inherit (moduleRegistry)
+    system
+    theme
+    cli
+    serverApps
+    ;
+
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
     ./options.nix
@@ -14,6 +21,8 @@
     })
     "${modulesPath}/image/repart.nix"
   ];
+
+  hardware = import ./hardware.nix;
 
   dotfiles = {
     profile.name = "nixos-server";
@@ -46,12 +55,6 @@
     };
   };
 
-  inherit (moduleRegistry)
-    system
-    theme
-    cli
-    serverApps
-    ;
   nix =
     {
       config,
@@ -454,7 +457,6 @@
           );
     };
   image = import ./image.nix;
-  hardware = import ./hardware.nix;
   maintenance =
     { pkgs, ... }:
 
