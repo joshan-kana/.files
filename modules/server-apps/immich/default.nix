@@ -2,8 +2,8 @@
 
 let
   storage = config.dotfiles.server.storage;
-  backupLocation = "${storage.appData.root}/immich/backups";
   mediaLocation = "${storage.dataRoot.path}/immich";
+  backupLocation = "${mediaLocation}/backups";
 in
 {
   services.immich = {
@@ -16,16 +16,12 @@ in
     settings.backup.database.cronExpression = "*/${toString storage.snapshots.intervalMinutes} * * * *";
   };
 
+  services.restic.backups.apps.paths = [ backupLocation ];
+
   systemd = lib.mkIf config.services.immich.enable {
     tmpfiles.rules = [
-      "d ${storage.appData.root}/immich 2770 immich ${storage.appData.group.name} - -"
-      "d ${backupLocation} 2770 immich ${storage.appData.group.name} - -"
+      "d ${backupLocation} 2770 immich ${storage.dataRoot.group.name} - -"
     ];
-
-    services.immich-server.serviceConfig = {
-      BindPaths = [ "${backupLocation}:${mediaLocation}/backups" ];
-      SupplementaryGroups = lib.mkAfter [ storage.appData.group.name ];
-    };
   };
 
   virtualisation.vmVariant.services.immich.enable = lib.mkForce false;
