@@ -51,22 +51,25 @@ let
     scopeModule (lib.filterAttrs (name: _: builtins.hasAttr name expected) args);
 
   scopeOverride =
-    context: path: args:
+    context: path: suffix: args:
     let
       systemConfig = if context == "system" then args.config else args.osConfig or { };
     in
     if path == [ ] || !(systemConfig ? dotfiles.scopes) then
       null
     else
-      lib.attrByPath (path ++ [ "enable" ]) null systemConfig.dotfiles.scopes;
+      lib.attrByPath (path ++ suffix) null systemConfig.dotfiles.scopes;
 
   scopeConfig =
-    context: parentEnabled: path: scopeModule: args:
+    context: parentEnabled: parentChildEnabled: path: scopeModule: args:
     let
       scope = callScope scopeModule args;
-      configuredEnable = scopeOverride context path args;
-      ownEnabled = if configuredEnable != null then configuredEnable else (scope.enable or true);
+      configuredEnable = scopeOverride context path [ "enable" ] args;
+      ownEnabled =
+        if configuredEnable != null then configuredEnable else scope.enable or parentChildEnabled;
       enabled = parentEnabled && ownEnabled;
+      configuredChildEnable = scopeOverride context path [ "children" "enable" ] args;
+      childEnabled = if configuredChildEnable != null then configuredChildEnable else true;
       name = if path == [ ] then null else lib.last path;
       hasHomeContext =
         context == "system" && builtins.hasAttr "home" scope && builtins.isFunction scope.home;
@@ -111,7 +114,7 @@ let
             home-manager.sharedModules = [ (mkScopeModule "home" enabled path scope.home) ];
           };
       childConfigs = lib.mapAttrsToList (
-        childName: child: scopeConfig context enabled (path ++ [ childName ]) child args
+        childName: child: scopeConfig context enabled childEnabled (path ++ [ childName ]) child args
       ) children;
       stateConfig =
         lib.optionalAttrs
@@ -157,7 +160,7 @@ let
           imports = scope.imports or [ ];
           options = scope.options or { };
           disabledModules = scope.disabledModules or [ ];
-          config = scopeConfig context parentEnabled path scopeModule args;
+          config = scopeConfig context parentEnabled true path scopeModule args;
         }
         // lib.optionalAttrs (scope ? _file) { inherit (scope) _file; };
     in

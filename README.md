@@ -101,6 +101,7 @@ Common options include:
 - `dotfiles.rebuild.flags`
 - `dotfiles.services.ollama.url`
 - `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
+- `dotfiles.scopes.<scope>.children.enable` for the default state of immediate child scopes
 
 Server-only options live in `hosts/nixos-server/options.nix` and apply only to
 the `nixos-server` host.
@@ -180,6 +181,20 @@ dotfiles.scopes.cli = {
   tmuxai.enable = false;
 };
 ```
+
+When a host wants only a few children from a shared scope, disable its immediate
+children by default and opt the required children back in:
+
+```nix
+dotfiles.scopes.virtualisation = {
+  children.enable = false;
+  containers.enable = true;
+  vm.enable = true;
+};
+```
+
+An explicit child override wins over `children.enable`, while disabling the
+parent scope still disables its entire subtree.
 
 Aliases belong to their owning scope and merge through native Home Manager
 options. Disabling `cli.mpv`, for example, removes both MPV and its `p` alias.
