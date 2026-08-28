@@ -45,6 +45,30 @@ let
     // {
       description = "resolved semantic scope state";
     };
+
+  unknownScopePaths =
+    path: overrides: resolved:
+    lib.concatMap
+      (
+        name:
+        let
+          childPath = path ++ [ name ];
+        in
+        if !(builtins.hasAttr name resolved) then
+          [ (lib.concatStringsSep "." childPath) ]
+        else
+          unknownScopePaths childPath overrides.${name} resolved.${name}
+      )
+      (
+        builtins.attrNames (
+          builtins.removeAttrs overrides [
+            "enable"
+            "children"
+          ]
+        )
+      );
+
+  unknownScopes = unknownScopePaths [ ] config.dotfiles.scopes config.dotfiles.resolvedScopes;
 in
 {
   options.dotfiles = {
@@ -124,4 +148,13 @@ in
       description = "Effective enable state for semantic scopes after inheritance and overrides.";
     };
   };
+
+  config.assertions = [
+    {
+      assertion = unknownScopes == [ ];
+      message = "Unknown semantic scope overrides: ${
+        lib.concatStringsSep ", " (map (path: "dotfiles.scopes.${path}") unknownScopes)
+      }";
+    }
+  ];
 }
