@@ -22,11 +22,8 @@
         ssh.enable = false;
       };
       virtualisation = {
-        containers.enable = false;
-        libvirt.enable = false;
-        quickemu.enable = false;
-        distrobox.enable = false;
-        bottles.enable = false;
+        children.enable = false;
+        vm.enable = true;
       };
     };
   };

@@ -18,11 +18,12 @@
   dotfiles = {
     profile.name = "nixos-server";
     scopes.virtualisation = {
-      libvirt.enable = false;
-      quickemu.enable = false;
-      distrobox.enable = false;
-      bottles.enable = false;
-      vm.aliases.enable = false;
+      children.enable = false;
+      containers.enable = true;
+      vm = {
+        enable = true;
+        aliases.enable = false;
+      };
     };
     scopes.cli = {
       clipboard.enable = false;
