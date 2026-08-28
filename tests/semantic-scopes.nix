@@ -188,6 +188,14 @@ let
   };
   nestedValidation = scopeValidationAssertion invalidNestedOverride;
   topLevelValidation = scopeValidationAssertion invalidTopLevelOverride;
+  reservedChildEvaluation = lib.evalModules {
+    modules = [
+      (semantic.systemModule "reserved" (_: {
+        children = _: { };
+      }))
+    ];
+  };
+  reservedChildResult = builtins.tryEval (builtins.deepSeq reservedChildEvaluation.config true);
 
   cfg = evaluated.config;
   hm = cfg.home-manager.users.semantic;
@@ -199,6 +207,7 @@ assert lib.hasInfix "dotfiles.scopes.semantic.parentOverride.stale" nestedValida
 assert topLevelValidation != null;
 assert !topLevelValidation.assertion;
 assert lib.hasInfix "dotfiles.scopes.stale" topLevelValidation.message;
+assert !reservedChildResult.success;
 assert cfg.programs.git.enable;
 assert hm.programs.git.enable;
 assert hm.programs.git.settings == gitSettings;
