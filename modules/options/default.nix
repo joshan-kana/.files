@@ -68,7 +68,41 @@ let
         )
       );
 
+  leafChildDefaultPaths =
+    path: overrides: resolved:
+    let
+      semanticChildren = builtins.removeAttrs resolved [ "enable" ];
+      childOverrides = builtins.removeAttrs overrides [
+        "enable"
+        "children"
+      ];
+      nested = lib.concatMap (
+        name:
+        if builtins.hasAttr name resolved then
+          leafChildDefaultPaths (path ++ [ name ]) childOverrides.${name} resolved.${name}
+        else
+          [ ]
+      ) (builtins.attrNames childOverrides);
+    in
+    lib.optionals (overrides.children.enable != null && semanticChildren == { }) [
+      (lib.concatStringsSep "." (
+        path
+        ++ [
+          "children"
+          "enable"
+        ]
+      ))
+    ]
+    ++ nested;
+
   unknownScopes = unknownScopePaths [ ] config.dotfiles.scopes config.dotfiles.resolvedScopes;
+  leafChildDefaults = lib.concatMap (
+    name:
+    if builtins.hasAttr name config.dotfiles.resolvedScopes then
+      leafChildDefaultPaths [ name ] config.dotfiles.scopes.${name} config.dotfiles.resolvedScopes.${name}
+    else
+      [ ]
+  ) (builtins.attrNames config.dotfiles.scopes);
 in
 {
   options.dotfiles = {
@@ -154,6 +188,12 @@ in
       assertion = unknownScopes == [ ];
       message = "Unknown semantic scope overrides: ${
         lib.concatStringsSep ", " (map (path: "dotfiles.scopes.${path}") unknownScopes)
+      }";
+    }
+    {
+      assertion = leafChildDefaults == [ ];
+      message = "Semantic child defaults require child scopes: ${
+        lib.concatStringsSep ", " (map (path: "dotfiles.scopes.${path}") leafChildDefaults)
       }";
     }
   ];

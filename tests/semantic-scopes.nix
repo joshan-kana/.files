@@ -44,6 +44,7 @@ let
               children.enable = false;
               explicitEnabled.enable = true;
             };
+            nested.branch.children.enable = false;
           };
         };
 
@@ -151,6 +152,14 @@ let
             };
           };
 
+          nested = _: {
+            branch = _: {
+              leaf = _: {
+                environment.variables.SEMANTIC_NESTED_CHILD_DEFAULT = "bad";
+              };
+            };
+          };
+
           disabled = _: {
             enable = false;
             environment.variables.SEMANTIC_DISABLED = "bad";
@@ -188,6 +197,16 @@ let
   };
   nestedValidation = scopeValidationAssertion invalidNestedOverride;
   topLevelValidation = scopeValidationAssertion invalidTopLevelOverride;
+  invalidLeafChildDefault = evaluated.extendModules {
+    modules = [
+      {
+        dotfiles.scopes.semantic.childDefaults.implicit.children.enable = false;
+      }
+    ];
+  };
+  leafChildDefaultValidation = lib.findFirst (
+    assertion: lib.hasPrefix "Semantic child defaults require child scopes:" assertion.message
+  ) null invalidLeafChildDefault.config.assertions;
   reservedChildEvaluation = lib.evalModules {
     modules = [
       (semantic.systemModule "reserved" (_: {
@@ -208,6 +227,10 @@ assert topLevelValidation != null;
 assert !topLevelValidation.assertion;
 assert lib.hasInfix "dotfiles.scopes.stale" topLevelValidation.message;
 assert !reservedChildResult.success;
+assert leafChildDefaultValidation != null;
+assert !leafChildDefaultValidation.assertion;
+assert lib.hasInfix "dotfiles.scopes.semantic.childDefaults.implicit.children.enable"
+  leafChildDefaultValidation.message;
 assert cfg.programs.git.enable;
 assert hm.programs.git.enable;
 assert hm.programs.git.settings == gitSettings;
@@ -235,10 +258,13 @@ assert !(cfg.environment.variables ? SEMANTIC_CHILD_DEFAULT);
 assert cfg.environment.variables.SEMANTIC_CHILD_EXPLICIT == "yes";
 assert cfg.environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED == "yes";
 assert !(cfg.environment.variables ? SEMANTIC_CHILD_SOURCE_DISABLED);
+assert !(cfg.environment.variables ? SEMANTIC_NESTED_CHILD_DEFAULT);
 assert !cfg.dotfiles.resolvedScopes.semantic.childDefaults.implicit.enable;
 assert cfg.dotfiles.resolvedScopes.semantic.childDefaults.explicitEnabled.enable;
 assert cfg.dotfiles.resolvedScopes.semantic.childDefaults.sourceEnabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.childDefaults.sourceDisabled.enable;
+assert cfg.dotfiles.resolvedScopes.semantic.nested.branch.enable;
+assert !cfg.dotfiles.resolvedScopes.semantic.nested.branch.leaf.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
 assert cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
