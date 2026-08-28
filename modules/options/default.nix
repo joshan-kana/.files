@@ -3,14 +3,30 @@
 let
   inherit (lib) mkOption types;
 
+  childDefaultType = types.submodule (_: {
+    options.enable = mkOption {
+      type = types.nullOr types.bool;
+      default = null;
+      description = "Optional default enable state for immediate child semantic scopes.";
+    };
+  });
+
   scopeOverrideType =
     (types.submodule (_: {
       freeformType = types.attrsOf scopeOverrideType;
 
-      options.enable = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Optional enable override for this semantic scope.";
+      options = {
+        enable = mkOption {
+          type = types.nullOr types.bool;
+          default = null;
+          description = "Optional enable override for this semantic scope.";
+        };
+
+        children = mkOption {
+          type = childDefaultType;
+          default = { };
+          description = "Defaults applied to immediate child semantic scopes.";
+        };
       };
     }))
     // {

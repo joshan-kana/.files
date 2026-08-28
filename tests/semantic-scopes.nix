@@ -40,6 +40,10 @@ let
               enable = false;
               child.enable = true;
             };
+            childDefaults = {
+              children.enable = false;
+              explicitEnabled.enable = true;
+            };
           };
         };
 
@@ -127,6 +131,26 @@ let
             };
           };
 
+          childDefaults = _: {
+            implicit = _: {
+              environment.variables.SEMANTIC_CHILD_DEFAULT = "bad";
+            };
+
+            explicitEnabled = _: {
+              environment.variables.SEMANTIC_CHILD_EXPLICIT = "yes";
+            };
+
+            sourceEnabled = _: {
+              enable = true;
+              environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED = "yes";
+            };
+
+            sourceDisabled = _: {
+              enable = false;
+              environment.variables.SEMANTIC_CHILD_SOURCE_DISABLED = "bad";
+            };
+          };
+
           disabled = _: {
             enable = false;
             environment.variables.SEMANTIC_DISABLED = "bad";
@@ -170,6 +194,14 @@ assert cfg.environment.variables.SEMANTIC_SOURCE_REENABLED == "yes";
 assert hm.home.sessionVariables.SEMANTIC_SOURCE_REENABLED == "yes";
 assert !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE);
 assert !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
+assert !(cfg.environment.variables ? SEMANTIC_CHILD_DEFAULT);
+assert cfg.environment.variables.SEMANTIC_CHILD_EXPLICIT == "yes";
+assert cfg.environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED == "yes";
+assert !(cfg.environment.variables ? SEMANTIC_CHILD_SOURCE_DISABLED);
+assert !cfg.dotfiles.resolvedScopes.semantic.childDefaults.implicit.enable;
+assert cfg.dotfiles.resolvedScopes.semantic.childDefaults.explicitEnabled.enable;
+assert cfg.dotfiles.resolvedScopes.semantic.childDefaults.sourceEnabled.enable;
+assert !cfg.dotfiles.resolvedScopes.semantic.childDefaults.sourceDisabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
 assert cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
@@ -199,6 +231,10 @@ assert builtins.elem "hello" packageNames;
   parentOverrideCascadeAbsent =
     !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE)
     && !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
+  childDefaultAbsent = !(cfg.environment.variables ? SEMANTIC_CHILD_DEFAULT);
+  childExplicitEnabled = cfg.environment.variables.SEMANTIC_CHILD_EXPLICIT;
+  childSourceEnabled = cfg.environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED;
+  childSourceDisabledAbsent = !(cfg.environment.variables ? SEMANTIC_CHILD_SOURCE_DISABLED);
   resolvedExternalDisabled = cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
   resolvedSourceReenabled = cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
   resolvedParentDisabled = cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
