@@ -43,6 +43,24 @@ let
     "options"
   ];
 
+  reservedChildNames = moduleKeys ++ [
+    "enable"
+    "children"
+  ];
+
+  validateScope =
+    path: scope:
+    let
+      invalidChildren = builtins.filter (
+        name: builtins.hasAttr name scope && builtins.isFunction scope.${name}
+      ) reservedChildNames;
+      scopeName = if path == [ ] then "<root>" else lib.concatStringsSep "." path;
+    in
+    if invalidChildren == [ ] then
+      scope
+    else
+      throw "Semantic scope ${scopeName} uses reserved child scope name(s): ${lib.concatStringsSep ", " invalidChildren}";
+
   callScope =
     scopeModule: args:
     let
@@ -63,7 +81,7 @@ let
   scopeConfig =
     context: parentEnabled: parentChildEnabled: path: scopeModule: args:
     let
-      scope = callScope scopeModule args;
+      scope = validateScope path (callScope scopeModule args);
       configuredEnable = scopeOverride context path [ "enable" ] args;
       ownEnabled =
         if configuredEnable != null then configuredEnable else scope.enable or parentChildEnabled;
@@ -154,7 +172,7 @@ let
       wrapper =
         args:
         let
-          scope = callScope scopeModule args;
+          scope = validateScope path (callScope scopeModule args);
         in
         {
           imports = scope.imports or [ ];
