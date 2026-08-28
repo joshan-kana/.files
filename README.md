@@ -196,6 +196,9 @@ dotfiles.scopes.virtualisation = {
 An explicit child override wins over `children.enable`, while disabling the
 parent scope still disables its entire subtree.
 
+Override paths are strict: an unknown or stale semantic scope path is an
+evaluation error, including beneath a disabled parent scope.
+
 Aliases belong to their owning scope and merge through native Home Manager
 options. Disabling `cli.mpv`, for example, removes both MPV and its `p` alias.
 Host-specific behavior overrides the native option directly; OrbStack overrides

@@ -167,10 +167,38 @@ let
     ];
   };
 
+  scopeValidationAssertion =
+    evaluation:
+    lib.findFirst (
+      assertion: lib.hasPrefix "Unknown semantic scope overrides:" assertion.message
+    ) null evaluation.config.assertions;
+  invalidNestedOverride = evaluated.extendModules {
+    modules = [
+      {
+        dotfiles.scopes.semantic.parentOverride.stale.enable = false;
+      }
+    ];
+  };
+  invalidTopLevelOverride = evaluated.extendModules {
+    modules = [
+      {
+        dotfiles.scopes.stale.enable = false;
+      }
+    ];
+  };
+  nestedValidation = scopeValidationAssertion invalidNestedOverride;
+  topLevelValidation = scopeValidationAssertion invalidTopLevelOverride;
+
   cfg = evaluated.config;
   hm = cfg.home-manager.users.semantic;
   packageNames = map lib.getName cfg.environment.systemPackages;
 in
+assert nestedValidation != null;
+assert !nestedValidation.assertion;
+assert lib.hasInfix "dotfiles.scopes.semantic.parentOverride.stale" nestedValidation.message;
+assert topLevelValidation != null;
+assert !topLevelValidation.assertion;
+assert lib.hasInfix "dotfiles.scopes.stale" topLevelValidation.message;
 assert cfg.programs.git.enable;
 assert hm.programs.git.enable;
 assert hm.programs.git.settings == gitSettings;
@@ -235,6 +263,7 @@ assert builtins.elem "hello" packageNames;
   childExplicitEnabled = cfg.environment.variables.SEMANTIC_CHILD_EXPLICIT;
   childSourceEnabled = cfg.environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED;
   childSourceDisabledAbsent = !(cfg.environment.variables ? SEMANTIC_CHILD_SOURCE_DISABLED);
+  strictScopeValidation = !nestedValidation.assertion && !topLevelValidation.assertion;
   resolvedExternalDisabled = cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
   resolvedSourceReenabled = cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
   resolvedParentDisabled = cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
