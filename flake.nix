@@ -351,10 +351,10 @@
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
           repo-quality = treefmt.config.build.check self;
-          semantic-system-portability = builtins.deepSeq semanticPortabilityTest pkgs.emptyFile;
+          semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          semantic-scopes = builtins.deepSeq semanticTest pkgs.emptyFile;
+          semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }
       );
 

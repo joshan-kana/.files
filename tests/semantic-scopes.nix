@@ -235,36 +235,4 @@ assert cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.child.enable;
 assert builtins.elem "hello" packageNames;
-{
-  gitNixosEnabled = cfg.programs.git.enable;
-  gitHomeEnabled = hm.programs.git.enable;
-  gitSettingsShared = hm.programs.git.settings == gitSettings;
-  importedModule = cfg.environment.variables.SEMANTIC_IMPORTED;
-  optionValue = cfg.environment.variables.SEMANTIC_OPTION;
-  forcedValue = cfg.environment.variables.SEMANTIC_FORCE;
-  childInputs = cfg.environment.variables.SEMANTIC_INPUTS;
-  childSystem = cfg.environment.variables.SEMANTIC_PKGS;
-  homeOsHost = hm.home.sessionVariables.SEMANTIC_OS_HOST;
-  disabledAbsent = !(cfg.environment.variables ? SEMANTIC_DISABLED);
-  cascadeAbsent = !(cfg.environment.variables ? SEMANTIC_CASCADE);
-  sharedZshNixosEnabled = cfg.programs.zsh.enable;
-  sharedZshHomeEnabled = hm.programs.zsh.enable;
-  sharedZshCompletion = cfg.programs.zsh.enableCompletion && hm.programs.zsh.enableCompletion;
-  externalDisabledAbsent =
-    !(cfg.environment.variables ? SEMANTIC_EXTERNAL_DISABLED)
-    && !(hm.home.sessionVariables ? SEMANTIC_EXTERNAL_DISABLED);
-  sourceDisabledReenabled =
-    cfg.environment.variables.SEMANTIC_SOURCE_REENABLED == "yes"
-    && hm.home.sessionVariables.SEMANTIC_SOURCE_REENABLED == "yes";
-  parentOverrideCascadeAbsent =
-    !(cfg.environment.variables ? SEMANTIC_PARENT_OVERRIDE)
-    && !(hm.home.sessionVariables ? SEMANTIC_PARENT_OVERRIDE);
-  childDefaultAbsent = !(cfg.environment.variables ? SEMANTIC_CHILD_DEFAULT);
-  childExplicitEnabled = cfg.environment.variables.SEMANTIC_CHILD_EXPLICIT;
-  childSourceEnabled = cfg.environment.variables.SEMANTIC_CHILD_SOURCE_ENABLED;
-  childSourceDisabledAbsent = !(cfg.environment.variables ? SEMANTIC_CHILD_SOURCE_DISABLED);
-  strictScopeValidation = !nestedValidation.assertion && !topLevelValidation.assertion;
-  resolvedExternalDisabled = cfg.dotfiles.resolvedScopes.semantic.externalDisabled.enable;
-  resolvedSourceReenabled = cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
-  resolvedParentDisabled = cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
-}
+true
