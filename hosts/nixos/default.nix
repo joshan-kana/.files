@@ -6,9 +6,23 @@
 }:
 
 {
+  inherit (moduleRegistry)
+    system
+    nix
+    theme
+    networking
+    appimage
+    audio
+    virtualisation
+    desktop
+    desktopApps
+    ;
+
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
   ];
+
+  hardware = import ./hardware.nix;
 
   dotfiles = {
     profile.name = "nixos";
@@ -26,11 +40,6 @@
     plymouth.enable = false;
   };
 
-  inherit (moduleRegistry)
-    system
-    nix
-    theme
-    ;
   cli =
     {
       config,
@@ -57,15 +66,5 @@
         environment.systemPackages = [ pkgs.intel-gpu-tools ];
       };
     };
-  inherit (moduleRegistry)
-    networking
-    appimage
-    audio
-    virtualisation
-    desktop
-    desktopApps
-    ;
-
-  hardware = import ./hardware.nix;
 
 }
