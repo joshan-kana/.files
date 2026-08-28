@@ -347,6 +347,9 @@
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
         in
         {
+          nixos-eval = builtins.deepSeq (builtins.mapAttrs (
+            _: host: host.config.system.build.bootStage2.drvPath
+          ) self.nixosConfigurations) pkgs.emptyFile;
           repo-quality = treefmt.config.build.check self;
           semantic-system-portability = pkgs.writeText "semantic-system-portability-test.json" (
             builtins.toJSON semanticPortabilityTest
