@@ -32,6 +32,17 @@ let
       children = mkOption childrenOption;
     };
 
+  scopeControlNames = builtins.attrNames (scopeControlOptions true);
+
+  resolvedScopeOptions = {
+    enable = mkOption {
+      type = types.bool;
+      internal = true;
+    };
+  };
+
+  resolvedScopeControlNames = builtins.attrNames resolvedScopeOptions;
+
   scopeOverrideType =
     (types.submodule (_: {
       freeformType = types.attrsOf scopeOverrideType;
@@ -44,11 +55,7 @@ let
   resolvedScopeType =
     (types.submodule (_: {
       freeformType = types.attrsOf resolvedScopeType;
-
-      options.enable = mkOption {
-        type = types.bool;
-        internal = true;
-      };
+      options = resolvedScopeOptions;
     }))
     // {
       description = "resolved semantic scope state";
@@ -119,7 +126,9 @@ in
   inherit
     nixdHostOptions
     nixdOptions
+    resolvedScopeControlNames
     resolvedScopeType
+    scopeControlNames
     scopeOverrideType
     scopeTree
     ;
