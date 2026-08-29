@@ -84,6 +84,7 @@
       inherit (nixpkgs) lib;
 
       semantic = import ./lib/semantic-scopes.nix { inherit lib; };
+      semanticScopeOptions = import ./modules/options/semantic-scopes.nix { inherit lib; };
 
       systems = [
         "x86_64-linux"
@@ -275,6 +276,8 @@
         };
     in
     {
+      lib.semanticScopeOptions = semanticScopeOptions;
+
       formatter = forAllSystems (system: (treefmtFor system false).config.build.wrapper);
 
       devShells = forAllSystems (
@@ -345,6 +348,10 @@
           treefmt = treefmtFor system true;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
+          semanticOptionsTest = import ./tests/semantic-options.nix {
+            inherit inputs;
+            configurations = self.nixosConfigurations;
+          };
         in
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
@@ -352,6 +359,7 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           repo-quality = treefmt.config.build.check self;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
+          semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
