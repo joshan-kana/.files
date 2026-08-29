@@ -19,21 +19,20 @@ let
   system = pkgs.stdenv.hostPlatform.system;
   unstablePkgs = import inputs.nixpkgs {
     inherit system;
-    # mautrix-discord still requires deprecated libolm; the other bridges use goolm.
+    # Current cached mautrix packages still depend on deprecated libolm.
     config.permittedInsecurePackages = [ "olm-3.2.16" ];
   };
   mautrixPkgs = inputs.mautrix-packages.packages.${system};
 
   bridgeManager = unstablePkgs.beeper-bridge-manager;
-  meta = unstablePkgs.mautrix-meta.override { withGoolm = true; };
 
   bridges = {
-    whatsapp = unstablePkgs.mautrix-whatsapp.override { withGoolm = true; };
-    signal = unstablePkgs.mautrix-signal.override { withGoolm = true; };
+    whatsapp = unstablePkgs.mautrix-whatsapp;
+    signal = unstablePkgs.mautrix-signal;
     discord = unstablePkgs.mautrix-discord;
-    facebook = meta;
-    instagram = meta;
-    telegram = mautrixPkgs.mautrix-telegram.override { withGoOlm = true; };
+    facebook = unstablePkgs.mautrix-meta;
+    instagram = unstablePkgs.mautrix-meta;
+    telegram = mautrixPkgs.mautrix-telegram;
   };
 
   bridgeBinaries = {
