@@ -67,6 +67,8 @@
     };
 
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
+
+    mautrix-packages.url = "github:Moraxyc/nur-packages";
   };
 
   outputs =
