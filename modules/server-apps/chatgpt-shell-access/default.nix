@@ -12,9 +12,6 @@ let
   macSshKeyFile = "${secretsDir}/chatgpt-shell-mac";
   sudoSshKeyFile = "${secretsDir}/chatgpt-shell-sudo";
   macKnownHostsFile = "${config.users.users.${primaryUser}.home}/.ssh/known_hosts";
-  sudoAuthorizedKeyFile = pkgs.writeText "chatgpt-shell-sudo-authorized-key" ''
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu chatgpt-shell-sudo
-  '';
 
   tunnelClientVersion = "0.0.11";
   tunnelClientPlatform =
@@ -39,7 +36,11 @@ in
   };
   users.users.${primaryUser}.extraGroups = [ serviceUser ];
 
-  security.pam.sshAgentAuth.authorizedKeysFiles = [ "${sudoAuthorizedKeyFile}" ];
+  security.pam.sshAgentAuth.authorizedKeysFiles = [ "/etc/chatgpt-shell-sudo-authorized-key" ];
+
+  systemd.tmpfiles.rules = [
+    "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
+  ];
 
   security.sudo.extraRules = [
     {
