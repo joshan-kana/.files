@@ -7,34 +7,22 @@ let
 
   unknownScopePaths =
     path: overrides: resolved:
-    lib.concatMap
-      (
-        name:
-        let
-          childPath = path ++ [ name ];
-        in
-        if !(builtins.hasAttr name resolved) then
-          [ (lib.concatStringsSep "." childPath) ]
-        else
-          unknownScopePaths childPath overrides.${name} resolved.${name}
-      )
-      (
-        builtins.attrNames (
-          builtins.removeAttrs overrides [
-            "enable"
-            "children"
-          ]
-        )
-      );
+    lib.concatMap (
+      name:
+      let
+        childPath = path ++ [ name ];
+      in
+      if !(builtins.hasAttr name resolved) then
+        [ (lib.concatStringsSep "." childPath) ]
+      else
+        unknownScopePaths childPath overrides.${name} resolved.${name}
+    ) (builtins.attrNames (builtins.removeAttrs overrides semanticScopes.scopeControlNames));
 
   leafChildDefaultPaths =
     path: overrides: resolved:
     let
-      semanticChildren = builtins.removeAttrs resolved [ "enable" ];
-      childOverrides = builtins.removeAttrs overrides [
-        "enable"
-        "children"
-      ];
+      semanticChildren = builtins.removeAttrs resolved semanticScopes.resolvedScopeControlNames;
+      childOverrides = builtins.removeAttrs overrides semanticScopes.scopeControlNames;
       nested = lib.concatMap (
         name:
         if builtins.hasAttr name resolved then
