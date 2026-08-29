@@ -33,6 +33,12 @@ in
     startAt = "*:0/${toString server.storage.snapshots.intervalMinutes}";
   };
 
+  systemd.tmpfiles.settings."11-paperless-postgresql-backup-access" =
+    lib.mkIf config.services.paperless.enable
+      {
+        "${dataDir}"."a+".argument = "u:postgres:--x";
+      };
+
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
     lib.optionals config.services.paperless.enable
       [ config.services.paperless.port ];
