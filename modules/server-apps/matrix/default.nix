@@ -110,6 +110,7 @@ let
         Group = bridgeUser;
         WorkingDirectory = stateRoot;
         LoadCredential = [ "bbctl.json:${bbctlSecret}" ];
+        ExecCondition = "${bbctlCredentialRunner} whoami";
         ExecStart = "${bridgeManager}/bin/bbctl --config %d/bbctl.json run --no-override-config --custom-startup-command ${binary} sh-${provider}";
         Restart = "always";
         RestartSec = "10s";
