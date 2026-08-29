@@ -14,7 +14,7 @@ let
   stateRoot = "${appDataRoot}/matrix";
   dataRoot = "${stateRoot}/data";
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
-  bbctlSecret = "${serverCfg.secretsDir}/beeper-bbctl.json";
+  bbctlSecret = "${serverCfg.secretsDir}/beeper-bbctl-secret.json";
 
   system = pkgs.stdenv.hostPlatform.system;
   unstablePkgs = import inputs.nixpkgs {
