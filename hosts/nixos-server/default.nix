@@ -59,9 +59,10 @@
     {
       config,
       inputs,
+      pkgs,
       ...
     }:
-    (moduleRegistry.nix { inherit config; })
+    (moduleRegistry.nix { inherit config inputs pkgs; })
     // {
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
