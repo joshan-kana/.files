@@ -27,21 +27,12 @@ let
   bridgeManager = unstablePkgs.beeper-bridge-manager;
 
   bridges = {
-    whatsapp = unstablePkgs.mautrix-whatsapp;
-    signal = unstablePkgs.mautrix-signal;
-    discord = unstablePkgs.mautrix-discord;
-    facebook = unstablePkgs.mautrix-meta;
-    instagram = unstablePkgs.mautrix-meta;
-    telegram = mautrixPkgs.mautrix-telegram;
-  };
-
-  bridgeBinaries = {
-    whatsapp = "${bridges.whatsapp}/bin/mautrix-whatsapp";
-    signal = "${bridges.signal}/bin/mautrix-signal";
-    discord = "${bridges.discord}/bin/mautrix-discord";
-    facebook = "${bridges.facebook}/bin/mautrix-meta";
-    instagram = "${bridges.instagram}/bin/mautrix-instagram";
-    telegram = "${bridges.telegram}/bin/mautrix-telegram";
+    whatsapp = "${unstablePkgs.mautrix-whatsapp}/bin/mautrix-whatsapp";
+    signal = "${unstablePkgs.mautrix-signal}/bin/mautrix-signal";
+    discord = "${unstablePkgs.mautrix-discord}/bin/mautrix-discord";
+    facebook = "${unstablePkgs.mautrix-meta}/bin/mautrix-meta";
+    instagram = "${unstablePkgs.mautrix-meta}/bin/mautrix-instagram";
+    telegram = "${mautrixPkgs.mautrix-telegram}/bin/mautrix-telegram";
   };
 
   bbctlCredentialRunner = pkgs.writeShellScript "bbctl-credential-runner" ''
@@ -146,10 +137,10 @@ in
 
   environment.systemPackages = [ bbctl ];
 
-  whatsapp = mkBridge "whatsapp" bridgeBinaries.whatsapp;
-  signal = mkBridge "signal" bridgeBinaries.signal;
-  discord = mkBridge "discord" bridgeBinaries.discord;
-  instagram = mkBridge "instagram" bridgeBinaries.instagram;
-  facebook = mkBridge "facebook" bridgeBinaries.facebook;
-  telegram = mkBridge "telegram" bridgeBinaries.telegram;
+  whatsapp = mkBridge "whatsapp" bridges.whatsapp;
+  signal = mkBridge "signal" bridges.signal;
+  discord = mkBridge "discord" bridges.discord;
+  instagram = mkBridge "instagram" bridges.instagram;
+  facebook = mkBridge "facebook" bridges.facebook;
+  telegram = mkBridge "telegram" bridges.telegram;
 }
