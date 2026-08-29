@@ -65,6 +65,8 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
   };
 
   outputs =
