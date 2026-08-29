@@ -50,13 +50,23 @@ let
       fi
 
       case "''${1:-}" in
-        login|login-password|logout)
+        login|login-password)
           umask 077
-          exec ${pkgs.coreutils}/bin/env \
+          ${pkgs.coreutils}/bin/env \
             HOME=${stateRoot} \
             XDG_DATA_HOME=${dataRoot} \
             BEEPER_ENV=prod \
             ${bridgeManager}/bin/bbctl --config ${bbctlSecret} "$@"
+          exec ${pkgs.systemd}/bin/systemctl restart matrix-bridges.target
+          ;;
+        logout)
+          umask 077
+          ${pkgs.coreutils}/bin/env \
+            HOME=${stateRoot} \
+            XDG_DATA_HOME=${dataRoot} \
+            BEEPER_ENV=prod \
+            ${bridgeManager}/bin/bbctl --config ${bbctlSecret} "$@"
+          exec ${pkgs.systemd}/bin/systemctl stop matrix-bridges.target
           ;;
       esac
 
@@ -76,11 +86,13 @@ let
   mkBridge = provider: binary: _: {
     systemd.tmpfiles.rules = [
       "d ${bridgeDataRoot}/sh-${provider} 2750 ${bridgeUser} ${appDataGroup} -"
+      "z ${bridgeDataRoot}/sh-${provider}/*.db* 0600 ${bridgeUser} ${appDataGroup} -"
     ];
 
     systemd.services."matrix-bridge-${provider}" = {
       description = "Beeper self-hosted ${provider} Matrix bridge";
-      wantedBy = [ "multi-user.target" ];
+      wantedBy = [ "matrix-bridges.target" ];
+      partOf = [ "matrix-bridges.target" ];
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
       unitConfig.ConditionPathExists = bbctlSecret;
@@ -113,19 +125,17 @@ let
   };
 in
 {
-  nix.settings = {
-    substituters = [ "https://moraxyc.cachix.org" ];
-    trusted-public-keys = [
-      "moraxyc.cachix.org-1:p00BlzhjSZq23aXYuzeUF2uXdE8ikh6tq9aV1seenhQ="
-    ];
-  };
-
   users.groups.${bridgeUser} = { };
   users.users.${bridgeUser} = {
     isSystemUser = true;
     group = bridgeUser;
     extraGroups = [ appDataGroup ];
     home = stateRoot;
+  };
+
+  systemd.targets."matrix-bridges" = {
+    description = "Beeper self-hosted Matrix bridges";
+    wantedBy = [ "multi-user.target" ];
   };
 
   systemd.tmpfiles.rules = [
