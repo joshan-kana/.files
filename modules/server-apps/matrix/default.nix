@@ -17,7 +17,11 @@ let
   bbctlSecret = "${serverCfg.secretsDir}/beeper-bbctl.json";
 
   system = pkgs.stdenv.hostPlatform.system;
-  unstablePkgs = inputs.nixpkgs.legacyPackages.${system};
+  unstablePkgs = import inputs.nixpkgs {
+    inherit system;
+    # mautrix-discord still requires deprecated libolm; the other bridges use goolm.
+    config.permittedInsecurePackages = [ "olm-3.2.16" ];
+  };
   mautrixPkgs = inputs.mautrix-packages.packages.${system};
 
   bridgeManager = unstablePkgs.beeper-bridge-manager;
@@ -26,10 +30,7 @@ let
   bridges = {
     whatsapp = unstablePkgs.mautrix-whatsapp.override { withGoolm = true; };
     signal = unstablePkgs.mautrix-signal.override { withGoolm = true; };
-    discord = unstablePkgs.mautrix-discord.overrideAttrs (_: {
-      buildInputs = [ ];
-      tags = [ "goolm" ];
-    });
+    discord = unstablePkgs.mautrix-discord;
     facebook = meta;
     instagram = meta;
     telegram = mautrixPkgs.mautrix-telegram.override { withGoOlm = true; };
@@ -122,6 +123,13 @@ let
   };
 in
 {
+  nix.settings = {
+    substituters = [ "https://moraxyc.cachix.org" ];
+    trusted-public-keys = [
+      "moraxyc.cachix.org-1:p00BlzhjSZq23aXYuzeUF2uXdE8ikh6tq9aV1seenhQ="
+    ];
+  };
+
   users.groups.${bridgeUser} = { };
   users.users.${bridgeUser} = {
     isSystemUser = true;
