@@ -36,6 +36,7 @@ in
   systemd.tmpfiles.settings."11-paperless-postgresql-backup-access" =
     lib.mkIf config.services.paperless.enable
       {
+        "${server.storage.appData.root}"."a+".argument = "u:postgres:--x";
         "${dataDir}"."a+".argument = "u:postgres:--x";
       };
 
