@@ -8,10 +8,10 @@
       },
       "options": {
         "nixos": {
-          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options"
+          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos"
         },
         "nixos-server": {
-          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options"
+          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos-server"
         },
         "home-manager-unstable": {
           "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"

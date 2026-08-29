@@ -3,48 +3,7 @@
 let
   inherit (lib) mkOption types;
 
-  childDefaultType = types.submodule (_: {
-    options.enable = mkOption {
-      type = types.nullOr types.bool;
-      default = null;
-      description = "Optional default enable state for immediate child semantic scopes.";
-    };
-  });
-
-  scopeOverrideType =
-    (types.submodule (_: {
-      freeformType = types.attrsOf scopeOverrideType;
-
-      options = {
-        enable = mkOption {
-          type = types.nullOr types.bool;
-          default = null;
-          description = "Optional enable override for this semantic scope.";
-        };
-
-        children = mkOption {
-          type = childDefaultType;
-          default = { };
-          description = "Defaults applied to immediate child semantic scopes.";
-        };
-      };
-    }))
-    // {
-      description = "semantic scope override";
-    };
-
-  resolvedScopeType =
-    (types.submodule (_: {
-      freeformType = types.attrsOf resolvedScopeType;
-
-      options.enable = mkOption {
-        type = types.bool;
-        internal = true;
-      };
-    }))
-    // {
-      description = "resolved semantic scope state";
-    };
+  semanticScopes = import ./semantic-scopes.nix { inherit lib; };
 
   unknownScopePaths =
     path: overrides: resolved:
@@ -170,13 +129,13 @@ in
     };
 
     scopes = mkOption {
-      type = types.attrsOf scopeOverrideType;
+      type = types.attrsOf semanticScopes.scopeOverrideType;
       default = { };
       description = "Host-specific enable overrides mirroring the semantic scope tree.";
     };
 
     resolvedScopes = mkOption {
-      type = types.attrsOf resolvedScopeType;
+      type = types.attrsOf semanticScopes.resolvedScopeType;
       default = { };
       internal = true;
       description = "Effective enable state for semantic scopes after inheritance and overrides.";
