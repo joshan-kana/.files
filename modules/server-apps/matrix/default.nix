@@ -6,16 +6,50 @@
 }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
-  appDataGroup = config.dotfiles.server.storage.appData.group.name;
+  serverCfg = config.dotfiles.server;
+  appDataRoot = serverCfg.storage.appData.root;
+  appDataGroup = serverCfg.storage.appData.group.name;
 
   bridgeUser = "matrix-bridge";
   stateRoot = "${appDataRoot}/matrix";
   dataRoot = "${stateRoot}/data";
-  bbctlConfig = "${stateRoot}/config/bbctl.json";
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
+  bbctlSecret = "${serverCfg.secretsDir}/beeper-bbctl.json";
 
-  bridgeManager = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.beeper-bridge-manager;
+  system = pkgs.stdenv.hostPlatform.system;
+  unstablePkgs = inputs.nixpkgs.legacyPackages.${system};
+  mautrixPkgs = inputs.mautrix-packages.packages.${system};
+
+  bridgeManager = unstablePkgs.beeper-bridge-manager;
+  meta = unstablePkgs.mautrix-meta.override { withGoolm = true; };
+
+  bridges = {
+    whatsapp = unstablePkgs.mautrix-whatsapp.override { withGoolm = true; };
+    signal = unstablePkgs.mautrix-signal.override { withGoolm = true; };
+    discord = unstablePkgs.mautrix-discord.overrideAttrs (_: {
+      buildInputs = [ ];
+      tags = [ "goolm" ];
+    });
+    facebook = meta;
+    instagram = meta;
+    telegram = mautrixPkgs.mautrix-telegram.override { withGoOlm = true; };
+  };
+
+  bridgeBinaries = {
+    whatsapp = "${bridges.whatsapp}/bin/mautrix-whatsapp";
+    signal = "${bridges.signal}/bin/mautrix-signal";
+    discord = "${bridges.discord}/bin/mautrix-discord";
+    facebook = "${bridges.facebook}/bin/mautrix-meta";
+    instagram = "${bridges.instagram}/bin/mautrix-instagram";
+    telegram = "${bridges.telegram}/bin/mautrix-telegram";
+  };
+
+  bbctlCredentialRunner = pkgs.writeShellScript "bbctl-credential-runner" ''
+    export HOME=${stateRoot}
+    export XDG_DATA_HOME=${dataRoot}
+    export BEEPER_ENV=prod
+    exec ${bridgeManager}/bin/bbctl --config "$CREDENTIALS_DIRECTORY/bbctl.json" "$@"
+  '';
 
   bbctl = pkgs.writeShellApplication {
     name = "bbctl";
@@ -24,17 +58,31 @@ let
         exec /run/wrappers/bin/sudo "$0" "$@"
       fi
 
-      exec ${pkgs.util-linux}/bin/runuser -u ${bridgeUser} -- \
-        ${pkgs.coreutils}/bin/env \
-          HOME=${stateRoot} \
-          XDG_DATA_HOME=${dataRoot} \
-          BBCTL_CONFIG=${bbctlConfig} \
-          BEEPER_ENV=prod \
-          ${bridgeManager}/bin/bbctl "$@"
+      case "''${1:-}" in
+        login|login-password|logout)
+          umask 077
+          exec ${pkgs.coreutils}/bin/env \
+            HOME=${stateRoot} \
+            XDG_DATA_HOME=${dataRoot} \
+            BEEPER_ENV=prod \
+            ${bridgeManager}/bin/bbctl --config ${bbctlSecret} "$@"
+          ;;
+      esac
+
+      exec ${pkgs.systemd}/bin/systemd-run \
+        --quiet \
+        --pipe \
+        --wait \
+        --collect \
+        --property=User=${bridgeUser} \
+        --property=Group=${bridgeUser} \
+        --property=WorkingDirectory=${stateRoot} \
+        --property=LoadCredential=bbctl.json:${bbctlSecret} \
+        ${bbctlCredentialRunner} "$@"
     '';
   };
 
-  mkBridge = provider: _: {
+  mkBridge = provider: binary: _: {
     systemd.tmpfiles.rules = [
       "d ${bridgeDataRoot}/sh-${provider} 2750 ${bridgeUser} ${appDataGroup} -"
     ];
@@ -44,12 +92,11 @@ let
       wantedBy = [ "multi-user.target" ];
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
-      unitConfig.ConditionPathExists = bbctlConfig;
+      unitConfig.ConditionPathExists = bbctlSecret;
 
       environment = {
         HOME = stateRoot;
         XDG_DATA_HOME = dataRoot;
-        BBCTL_CONFIG = bbctlConfig;
         BEEPER_ENV = "prod";
       };
 
@@ -59,7 +106,8 @@ let
         User = bridgeUser;
         Group = bridgeUser;
         WorkingDirectory = stateRoot;
-        ExecStart = "${bridgeManager}/bin/bbctl run --no-update --no-override-config sh-${provider}";
+        LoadCredential = [ "bbctl.json:${bbctlSecret}" ];
+        ExecStart = "${bridgeManager}/bin/bbctl --config %d/bbctl.json run --no-override-config --custom-startup-command ${binary} sh-${provider}";
         Restart = "always";
         RestartSec = "10s";
         UMask = "0077";
@@ -84,7 +132,6 @@ in
 
   systemd.tmpfiles.rules = [
     "d ${stateRoot} 2750 ${bridgeUser} ${appDataGroup} -"
-    "d ${stateRoot}/config 0700 ${bridgeUser} ${bridgeUser} -"
     "d ${dataRoot} 2750 ${bridgeUser} ${appDataGroup} -"
     "d ${dataRoot}/bbctl 2750 ${bridgeUser} ${appDataGroup} -"
     "d ${bridgeDataRoot} 2750 ${bridgeUser} ${appDataGroup} -"
@@ -92,10 +139,10 @@ in
 
   environment.systemPackages = [ bbctl ];
 
-  whatsapp = mkBridge "whatsapp";
-  signal = mkBridge "signal";
-  discord = mkBridge "discord";
-  instagram = mkBridge "instagram";
-  facebook = mkBridge "facebook";
-  telegram = mkBridge "telegram";
+  whatsapp = mkBridge "whatsapp" bridgeBinaries.whatsapp;
+  signal = mkBridge "signal" bridgeBinaries.signal;
+  discord = mkBridge "discord" bridgeBinaries.discord;
+  instagram = mkBridge "instagram" bridgeBinaries.instagram;
+  facebook = mkBridge "facebook" bridgeBinaries.facebook;
+  telegram = mkBridge "telegram" bridgeBinaries.telegram;
 }
