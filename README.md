@@ -194,7 +194,9 @@ dotfiles.scopes.virtualisation = {
 ```
 
 An explicit child override wins over `children.enable`, while disabling the
-parent scope still disables its entire subtree.
+parent scope still disables its entire subtree. Integrated Home Manager follows
+the host system's `dotfiles.scopes` through `osConfig`; standalone Home Manager
+uses its own `dotfiles.scopes` and resolves the same semantic scope tree locally.
 
 Override paths are strict: an unknown or stale semantic scope path is an
 evaluation error, including beneath a disabled parent scope.
