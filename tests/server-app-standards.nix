@@ -21,4 +21,5 @@ assert lib.elem tailscaleInterface cfg.networking.firewall.trustedInterfaces;
 assert lib.attrByPath [ "allowedTCPPorts" ] [ ] tailscaleFirewall == [ ];
 assert lib.attrByPath [ "allowedUDPPorts" ] [ ] tailscaleFirewall == [ ];
 assert builtins.all hasRequiredPathAssertion requiredSecretUnits;
+assert lib.elem "d ${cfg.dotfiles.server.secretsDir} 0700 root root - -" cfg.systemd.tmpfiles.rules;
 true
