@@ -5,7 +5,7 @@ _: {
   services.gvfs.enable = true;
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
-  xserver = import ./xserver.nix;
+  xserver = import ./xserver;
   displayManager = import ./display-manager;
   hyprland = import ./hyprland;
   plasma = import ./plasma;
