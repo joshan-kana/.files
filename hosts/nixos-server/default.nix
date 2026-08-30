@@ -268,6 +268,10 @@
               "multi-user.target"
             ];
             before = lib.mkForce [ "shutdown.target" ];
+            serviceConfig = {
+              Restart = "on-failure";
+              RestartSec = "10s";
+            };
           };
         };
     };

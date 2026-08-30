@@ -7,6 +7,7 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
+  gatewayPort = 18789;
 
   openclawSecrets = [
     "${server.secretsDir}/openclaw.env"
@@ -165,7 +166,7 @@ let
 
 in
 {
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 18789 ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;
@@ -233,13 +234,13 @@ in
     virtualHosts.openclaw = {
       listen = [
         {
-          addr = "192.168.1.3";
-          port = 18789;
+          addr = server.lan.serverIp;
+          port = gatewayPort;
         }
       ];
 
       locations."/" = {
-        proxyPass = "http://127.0.0.1:18789";
+        proxyPass = "http://127.0.0.1:${toString gatewayPort}";
         proxyWebsockets = true;
         extraConfig = ''
           proxy_set_header Host $host;
@@ -534,7 +535,7 @@ in
           )
         | .gateway.mode = "local"
         | .gateway.bind = "loopback"
-        | .gateway.port = 18789
+        | .gateway.port = ${toString gatewayPort}
         | .gateway.nodes = (.gateway.nodes // {})
         | .gateway.nodes.allowCommands =
             (((.gateway.nodes.allowCommands // []) - ["computer.act"]) + [
@@ -587,7 +588,7 @@ in
         | .gateway.controlUi.allowInsecureAuth = true
         | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
         | .gateway.controlUi.allowedOrigins =
-            ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
+            ((.gateway.controlUi.allowedOrigins // []) + ["http://${server.lan.serverIp}:${toString gatewayPort}"] | unique)
         | .plugins = (.plugins // {})
         | .plugins.allow =
             ((.plugins.allow // []) + ["codex", "openai", "ollama", "matrix", "device-pair", "deepseek"] | unique)
@@ -598,7 +599,7 @@ in
         | .plugins.entries."device-pair".enabled = true
         | .plugins.entries."device-pair".config =
             ((.plugins.entries."device-pair".config // {}) + {
-              "publicUrl": "ws://192.168.1.3:18789"
+              "publicUrl": "ws://${server.lan.serverIp}:${toString gatewayPort}"
             })
       ' "$configFile" > "$tmp"
 
