@@ -484,20 +484,6 @@ in
     };
   };
 
-  tmuxai = _: {
-    home = _: {
-      home.packages = [ pkgs.tmuxai ];
-      home.file.".config/tmuxai/config.yaml".text = ''
-        models:
-          primary:
-            provider: openrouter
-            model: gemma3:12b
-            api_key: XXXXXXXXXXXXXXX
-            base_url: ${dotfiles.services.ollama.url}
-      '';
-    };
-  };
-
   zellij = _: {
     home = _: {
       programs.zellij.enable = true;
