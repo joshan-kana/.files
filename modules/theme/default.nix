@@ -61,10 +61,9 @@
     }:
 
     let
-      inherit (osConfig) dotfiles;
       toml = pkgs.formats.toml { };
       yaml = pkgs.formats.yaml { };
-      tuicrEnabled = dotfiles.resolvedScopes.cli.git.tuicr.enable;
+      tuicrEnabled = osConfig.dotfiles.resolvedScopes.cli.git.tuicr.enable;
       syntaxScope = name: selectors: color: ''
         <dict>
           <key>name</key><string>${name}</string>

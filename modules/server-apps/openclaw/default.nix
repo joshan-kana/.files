@@ -7,26 +7,24 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
-  inherit (server) secretsDir storage;
-  inherit (storage) appData;
 
   openclawSecretFiles = [
-    "${secretsDir}/openclaw.env"
-    "${secretsDir}/server-ai.env"
-    "${secretsDir}/server-zdr-openrouter.env"
-    "${secretsDir}/server-deepseek-openrouter.env"
-    "${secretsDir}/server-free-openrouter.env"
-    "${secretsDir}/server-openai-openrouter.env"
+    "${server.secretsDir}/openclaw.env"
+    "${server.secretsDir}/server-ai.env"
+    "${server.secretsDir}/server-zdr-openrouter.env"
+    "${server.secretsDir}/server-deepseek-openrouter.env"
+    "${server.secretsDir}/server-free-openrouter.env"
+    "${server.secretsDir}/server-openai-openrouter.env"
   ];
 
   appDataEditor = {
-    group = appData.group.name;
-    gid = appData.group.id;
+    group = server.storage.appData.group.name;
+    gid = server.storage.appData.group.id;
   };
 
   openclawHostAdmin = {
     user = "openclaw-admin";
-    privateKeySecretFile = "${secretsDir}/openclaw-host-admin-id_ed25519";
+    privateKeySecretFile = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
@@ -41,8 +39,8 @@ let
   };
 
   openclawGitHub = {
-    apiSecretFile = "${secretsDir}/openclaw-github.env";
-    privateKeySecretFile = "${secretsDir}/openclaw-github-id_ed25519";
+    apiSecretFile = "${server.secretsDir}/openclaw-github.env";
+    privateKeySecretFile = "${server.secretsDir}/openclaw-github-id_ed25519";
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
@@ -212,15 +210,15 @@ in
   ];
 
   systemd.tmpfiles.rules = [
-    "a+ ${appData.root} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
+    "a+ ${server.storage.appData.root} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
-    "d ${appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
-    "d ${appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d ${appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${server.storage.appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
+    "d ${server.storage.appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${server.storage.appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
     "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
 
-    "d ${secretsDir} 0700 root root - -"
-    "Z ${secretsDir} ~0700 root root - -"
+    "d ${server.secretsDir} 0700 root root - -"
+    "Z ${server.secretsDir} ~0700 root root - -"
     "z ${openclawGitHub.apiSecretFile} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecretFile} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecretFile}.pub 0644 root root - -"
@@ -272,7 +270,7 @@ in
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      configFile="${appData.root}/openclaw/openclaw.json"
+      configFile="${server.storage.appData.root}/openclaw/openclaw.json"
 
       if [ ! -f "$configFile" ]; then
         echo "OpenClaw config does not exist yet: $configFile" >&2
@@ -730,10 +728,10 @@ in
   systemd.services.docker-openclaw = {
     unitConfig.AssertPathIsRegular = [
       openclawHostAdmin.privateKeySecretFile
-      "${secretsDir}/server-zdr-openrouter.env"
-      "${secretsDir}/server-deepseek-openrouter.env"
-      "${secretsDir}/server-free-openrouter.env"
-      "${secretsDir}/server-openai-openrouter.env"
+      "${server.secretsDir}/server-zdr-openrouter.env"
+      "${server.secretsDir}/server-deepseek-openrouter.env"
+      "${server.secretsDir}/server-free-openrouter.env"
+      "${server.secretsDir}/server-openai-openrouter.env"
     ];
     after = [
       "configure-openclaw-gateway.service"
@@ -756,8 +754,8 @@ in
       image = "ghcr.io/openclaw/openclaw:latest";
 
       volumes = [
-        "${appData.root}/openclaw:/home/node/.openclaw"
-        "${appData.root}/openclaw-auth:/home/node/.config/openclaw"
+        "${server.storage.appData.root}/openclaw:/home/node/.openclaw"
+        "${server.storage.appData.root}/openclaw-auth:/home/node/.config/openclaw"
         "${openclawHostAdmin.privateKeySecretFile}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
         "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"

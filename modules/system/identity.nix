@@ -6,11 +6,10 @@
 }:
 
 let
-  inherit (config) dotfiles;
-  inherit (dotfiles.users) primary;
+  inherit (config.dotfiles.users) primary;
 in
 {
-  networking.hostName = lib.mkDefault dotfiles.profile.name;
+  networking.hostName = lib.mkDefault config.dotfiles.profile.name;
 
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
@@ -29,8 +28,7 @@ in
   home =
     { lib, osConfig, ... }:
     let
-      inherit (osConfig) dotfiles;
-      inherit (dotfiles.users) primary;
+      inherit (osConfig.dotfiles.users) primary;
     in
     {
       home.username = primary.name;

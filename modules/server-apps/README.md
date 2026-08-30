@@ -25,6 +25,7 @@ Server app modules should describe the complete app-specific system consequence 
 
 - Prefer the native NixOS service module when it cleanly supports the deployment; otherwise use the simplest reliable mechanism.
 - Derive repeated values from one source of truth rather than duplicating configurable ports or paths.
+- Use `inherit` for reused semantic scopes; keep one-off option accesses inline. Keep local bindings for genuine tweakable knobs or derived values, not aliases that only shorten one expression.
 - Keep VM-variant overrides explicit when an app cannot or should not run there.
 
 ## Enforcement

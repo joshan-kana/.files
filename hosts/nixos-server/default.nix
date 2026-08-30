@@ -62,15 +62,12 @@
       pkgs,
       ...
     }:
-    let
-      inherit (config.dotfiles.users) primary;
-    in
     (moduleRegistry.nix { inherit config inputs pkgs; })
     // {
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
       ];
-      users.users.${primary.name}.linger = true;
+      users.users.${config.dotfiles.users.primary.name}.linger = true;
     };
   networking =
     {
@@ -131,20 +128,20 @@
 
         let
           inherit (config.dotfiles) server;
-          inherit (server) lan storage;
-          inherit (storage) appData;
-          lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
-          hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
+          lanPrefixLength = builtins.elemAt (lib.splitString "/" server.lan.subnet) 1;
+          hostDns = "${
+            lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
+          };";
 
           service = {
             user = "adguardhome";
             group = "appdata-editors";
-            ip = lan.dns.serviceIp;
+            ip = server.lan.dns.serviceIp;
             port = 53;
-            dataDir = "${appData.root}/adguard";
-            workDir = "${appData.root}/adguard/work";
-            confDir = "${appData.root}/adguard/conf";
-            configFile = "${appData.root}/adguard/conf/AdGuardHome.yaml";
+            dataDir = "${server.storage.appData.root}/adguard";
+            workDir = "${server.storage.appData.root}/adguard/work";
+            confDir = "${server.storage.appData.root}/adguard/conf";
+            configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
           };
         in
         {
@@ -334,10 +331,8 @@
     let
       inherit (config.dotfiles) server;
       inherit (config.dotfiles.users) primary;
-      inherit (server) storage secretsDir;
-      inherit (storage) appData dataRoot snapshots;
-      inherit (dataRoot) poolName;
-      snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
+      inherit (server) storage;
+      snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
       resticWrapperCommands = lib.pipe config.services.restic.backups [
         (lib.filterAttrs (_: backup: backup.createWrapper))
         lib.attrNames
@@ -347,19 +342,20 @@
     {
       assertions = [
         {
-          assertion = snapshots.intervalMinutes <= 60 && lib.mod 60 snapshots.intervalMinutes == 0;
+          assertion =
+            storage.snapshots.intervalMinutes <= 60 && lib.mod 60 storage.snapshots.intervalMinutes == 0;
           message = "dotfiles.server.storage.snapshots.intervalMinutes must divide one hour evenly.";
         }
       ];
 
       users = {
         groups = {
-          ${appData.group.name}.gid = appData.group.id;
-          ${dataRoot.group.name} = { };
+          ${storage.appData.group.name}.gid = storage.appData.group.id;
+          ${storage.dataRoot.group.name} = { };
         };
         users.${primary.name}.extraGroups = [
-          appData.group.name
-          dataRoot.group.name
+          storage.appData.group.name
+          storage.dataRoot.group.name
         ];
       };
 
@@ -373,15 +369,15 @@
           "btrfs"
           "zfs"
         ];
-        zfs.extraPools = [ poolName ];
+        zfs.extraPools = [ storage.dataRoot.poolName ];
         zfs.forceImportRoot = false;
       };
 
       services.zfs = {
         autoScrub = {
           enable = true;
-          pools = [ poolName ];
-          interval = dataRoot.scrubInterval;
+          pools = [ storage.dataRoot.poolName ];
+          interval = storage.dataRoot.scrubInterval;
         };
         trim.enable = false;
       };
@@ -390,9 +386,9 @@
         enable = true;
         interval = snapshotInterval;
         templates.vault = {
-          frequent_period = snapshots.intervalMinutes;
-          frequently = 60 / snapshots.intervalMinutes;
-          inherit (snapshots.retention)
+          frequent_period = storage.snapshots.intervalMinutes;
+          frequently = 60 / storage.snapshots.intervalMinutes;
+          inherit (storage.snapshots.retention)
             hourly
             daily
             weekly
@@ -401,7 +397,7 @@
           autosnap = true;
           autoprune = true;
         };
-        datasets."${poolName}/data" = {
+        datasets."${storage.dataRoot.poolName}/data" = {
           useTemplate = [ "vault" ];
           recursive = "zfs";
         };
@@ -412,32 +408,32 @@
         cleanupInterval = "1h";
         persistentTimer = true;
         configs.apps = {
-          SUBVOLUME = appData.root;
+          SUBVOLUME = storage.appData.root;
           FSTYPE = "btrfs";
           FREE_LIMIT = config.nix.settings.min-free;
           TIMELINE_CREATE = true;
           TIMELINE_CLEANUP = true;
-          TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
-          TIMELINE_LIMIT_DAILY = snapshots.retention.daily;
-          TIMELINE_LIMIT_WEEKLY = snapshots.retention.weekly;
-          TIMELINE_LIMIT_MONTHLY = snapshots.retention.monthly;
+          TIMELINE_LIMIT_HOURLY = storage.snapshots.retention.hourly;
+          TIMELINE_LIMIT_DAILY = storage.snapshots.retention.daily;
+          TIMELINE_LIMIT_WEEKLY = storage.snapshots.retention.weekly;
+          TIMELINE_LIMIT_MONTHLY = storage.snapshots.retention.monthly;
         };
       };
 
       services.restic.backups.apps = {
         initialize = true;
         repository = "rclone:dropbox:Archives/Backups/nixos-server";
-        passwordFile = "${secretsDir}/restic-password";
-        rcloneConfigFile = "${secretsDir}/rclone.conf";
-        paths = [ appData.root ];
+        passwordFile = "${server.secretsDir}/restic-password";
+        rcloneConfigFile = "${server.secretsDir}/rclone.conf";
+        paths = [ storage.appData.root ];
         exclude = [
-          "${appData.root}/.snapshots"
+          "${storage.appData.root}/.snapshots"
         ];
         pruneOpts = [
-          "--keep-hourly ${toString snapshots.retention.hourly}"
-          "--keep-daily ${toString snapshots.retention.daily}"
-          "--keep-weekly ${toString snapshots.retention.weekly}"
-          "--keep-monthly ${toString snapshots.retention.monthly}"
+          "--keep-hourly ${toString storage.snapshots.retention.hourly}"
+          "--keep-daily ${toString storage.snapshots.retention.daily}"
+          "--keep-weekly ${toString storage.snapshots.retention.weekly}"
+          "--keep-monthly ${toString storage.snapshots.retention.monthly}"
         ];
         timerConfig = {
           OnCalendar = "*:0/30";
@@ -448,9 +444,9 @@
       };
 
       systemd.tmpfiles.rules = [
-        "d ${appData.root} 2770 root ${appData.group.name} - -"
-        "v ${appData.root}/.snapshots 0750 root root - -"
-        "a ${appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
+        "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
+        "v ${storage.appData.root}/.snapshots 0750 root root - -"
+        "a ${storage.appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
       ];
 
       programs.zsh.interactiveShellInit =
@@ -519,11 +515,8 @@
       ...
     }:
 
-    let
-      inherit (config.dotfiles.users) primary;
-    in
     {
-      users.users.${primary.name}.openssh.authorizedKeys.keys = [
+      users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"

@@ -2,25 +2,22 @@
 
 let
   inherit (config.dotfiles) server;
-  inherit (server) lan storage;
-  inherit (lan) serverIp;
-  inherit (storage) appData;
 in
 {
   services.gitea = {
     enable = true;
-    stateDir = "${appData.root}/gitea";
-    group = appData.group.name;
+    stateDir = "${server.storage.appData.root}/gitea";
+    group = server.storage.appData.group.name;
     database.type = "sqlite3";
 
     settings = {
       actions.ENABLED = true;
 
       server = {
-        DOMAIN = serverIp;
-        HTTP_ADDR = serverIp;
+        DOMAIN = server.lan.serverIp;
+        HTTP_ADDR = server.lan.serverIp;
         HTTP_PORT = 3000;
-        SSH_DOMAIN = serverIp;
+        SSH_DOMAIN = server.lan.serverIp;
       };
     };
   };

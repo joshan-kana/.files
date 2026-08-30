@@ -7,11 +7,10 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
-  inherit (server) secretsDir;
   serviceUser = "chatgpt-shell";
-  tunnelSecretFile = "${secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeySecretFile = "${secretsDir}/chatgpt-shell-mac";
-  sudoSshKeySecretFile = "${secretsDir}/chatgpt-shell-sudo";
+  tunnelSecretFile = "${server.secretsDir}/chatgpt-shell-tunnel.env";
+  macSshKeySecretFile = "${server.secretsDir}/chatgpt-shell-mac";
+  sudoSshKeySecretFile = "${server.secretsDir}/chatgpt-shell-sudo";
   macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
   tunnelClientVersion = "0.0.11";
