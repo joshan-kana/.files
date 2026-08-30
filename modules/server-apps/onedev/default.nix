@@ -2,14 +2,16 @@
 
 let
   inherit (config.dotfiles) server;
+  webPort = 6610;
+  sshPort = 6611;
 in
 {
   virtualisation.oci-containers.containers.onedev = {
     image = "1dev/server:latest";
 
     environment = {
-      initial_server_url = "http://${server.lan.serverIp}:6610";
-      initial_ssh_root_url = "ssh://${server.lan.serverIp}:6611";
+      initial_server_url = "http://${server.lan.serverIp}:${toString webPort}";
+      initial_ssh_root_url = "ssh://${server.lan.serverIp}:${toString sshPort}";
     };
 
     volumes = [
@@ -18,8 +20,8 @@ in
     ];
 
     ports = [
-      "${server.lan.serverIp}:6610:6610"
-      "${server.lan.serverIp}:6611:6611"
+      "${server.lan.serverIp}:${toString webPort}:6610"
+      "${server.lan.serverIp}:${toString sshPort}:6611"
     ];
   };
 
