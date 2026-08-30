@@ -30,7 +30,6 @@ let
   searxSecret = "${secretsDir}/searxng.env";
   githubMcpPort = 8082;
   agentMailPort = 8765;
-  agentMailRoot = "${appDataRoot}/agent-mail";
 
   hostAdmin = {
     user = "open-webui-admin";
@@ -310,15 +309,7 @@ in
     };
   };
 
-  virtualisation.oci-containers.containers.agent-mail = {
-    image = "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest";
-    ports = [ "127.0.0.1:${toString agentMailPort}:8765" ];
-    volumes = [ "${agentMailRoot}:/data" ];
-  };
-
   systemd.tmpfiles.rules = [
-    # The Agent Mail image runs as uid/gid 10001 and persists mailbox state in /data.
-    "d ${agentMailRoot} 0700 10001 10001 - -"
     "d /home/${hostAdmin.user}/.ssh 0700 ${hostAdmin.user} users - -"
     "d ${openWebuiStateDir} 0770 open-webui ${appDataGroup} - -"
     "Z ${openWebuiStateDir} - open-webui ${appDataGroup} - -"

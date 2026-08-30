@@ -1,4 +1,5 @@
 _: {
+  agentMail = import ./agent-mail;
   attic = import ./attic;
   chatgptShellAccess = import ./chatgpt-shell-access;
   gitea = import ./gitea;
