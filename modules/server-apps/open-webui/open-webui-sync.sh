@@ -27,6 +27,10 @@ github_secret="$OPEN_WEBUI_GITHUB_SECRET"
 host_admin_key_secret="$OPEN_WEBUI_HOST_ADMIN_KEY_SECRET"
 notification_id="dotfiles-unattended-work"
 
+umask 0077
+sync_tmp_dir="$(mktemp -d)"
+trap 'rm -rf -- "$sync_tmp_dir"' EXIT
+
 usage() {
   cat <<'EOF'
 usage: open-webui-sync {init-secrets|sync|all}
@@ -66,6 +70,39 @@ secret_hex() {
   od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
 }
 
+private_file() {
+  local value="$1" file
+  file="$(mktemp "$sync_tmp_dir/private.XXXXXX")"
+  printf '%s' "$value" >"$file"
+  printf '%s' "$file"
+}
+
+curl_json() {
+  local payload="$1"
+  shift
+  printf '%s' "$payload" | curl "$@" --data-binary @-
+}
+
+curl_bearer() {
+  local token="$1" header status=0
+  shift
+  header="$(mktemp "$sync_tmp_dir/header.XXXXXX")"
+  printf 'Authorization: Bearer %s\n' "$token" >"$header"
+  curl -H "@$header" "$@" || status=$?
+  rm -f "$header"
+  return "$status"
+}
+
+curl_bearer_json() {
+  local token="$1" payload="$2" header status=0
+  shift 2
+  header="$(mktemp "$sync_tmp_dir/header.XXXXXX")"
+  printf 'Authorization: Bearer %s\n' "$token" >"$header"
+  printf '%s' "$payload" | curl -H "@$header" "$@" --data-binary @- || status=$?
+  rm -f "$header"
+  return "$status"
+}
+
 get_value() {
   local file="$1" key="$2"
   [[ -f "$file" ]] || return 0
@@ -74,7 +111,7 @@ get_value() {
 
 set_value() {
   local file="$1" key="$2" value="$3" tmp
-  tmp="$(mktemp)"
+  tmp="$(mktemp "$sync_tmp_dir/secret-env.XXXXXX")"
   [[ ! -f "$file" ]] || grep -v "^${key}=" "$file" >"$tmp" || true
   printf '%s=%s\n' "$key" "$value" >>"$tmp"
   install -m 0400 -o root -g root "$tmp" "$file"
@@ -126,14 +163,15 @@ wait_for() {
 }
 
 computer_login() {
-  local cookies="$1" password="$2"
-  curl -fsS -c "$cookies" -H 'Content-Type: application/json' \
-    -d "$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --arg p "$password" '{username:$u,password:$p}')" \
+  local cookies="$1" password="$2" password_file payload
+  password_file="$(private_file "$password")"
+  payload="$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --rawfile p "$password_file" '{username:$u,password:$p}')"
+  curl_json "$payload" -fsS -c "$cookies" -H 'Content-Type: application/json' \
     "$computer_base/api/auth/login" >/dev/null
 }
 
 computer_setup() {
-  local cookies="$1" password="$2" startup_token response status body
+  local cookies="$1" password="$2" startup_token password_file token_file payload response status body
   computer_login "$cookies" "$password" 2>/dev/null && return 0
 
   startup_token="$(cat "$OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE" 2>/dev/null || true)"
@@ -143,9 +181,11 @@ computer_setup() {
     return 1
   fi
 
-  response="$(curl -sS -c "$cookies" -H 'Content-Type: application/json' \
-    -d "$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --arg p "$password" --arg t "$startup_token" \
-      '{username:$u,password:$p,token:$t,display_name:"Joshan"}')" \
+  password_file="$(private_file "$password")"
+  token_file="$(private_file "$startup_token")"
+  payload="$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --rawfile p "$password_file" --rawfile t "$token_file" \
+    '{username:$u,password:$p,token:$t,display_name:"Joshan"}')"
+  response="$(curl_json "$payload" -sS -c "$cookies" -H 'Content-Type: application/json' \
     -w $'\n%{http_code}' "$computer_base/api/auth/setup")"
   status="${response##*$'\n'}"
   body="${response%$'\n'*}"
@@ -179,19 +219,19 @@ computer_workspace() {
 computer_gateway_key() {
   local cookies="$1" key
   key="$(get_value "$computer_secret" CPTR_GATEWAY_API_KEY)"
-  if [[ -n "$key" ]] && curl -fsS -H "Authorization: Bearer $key" "$computer_base/v1/models" >/dev/null 2>&1; then
+  if [[ -n "$key" ]] && curl_bearer "$key" -fsS "$computer_base/v1/models" >/dev/null 2>&1; then
     printf '%s' "$key"
     return
   fi
 
-  key="$(curl -fsS -b "$cookies" -H 'Content-Type: application/json' \
-    -d '{"name":"open-webui-server"}' "$computer_base/v1/keys" | jq -er '.key')"
+  key="$(curl_json '{"name":"open-webui-server"}' -fsS -b "$cookies" -H 'Content-Type: application/json' \
+    "$computer_base/v1/keys" | jq -er '.key')"
   set_value "$computer_secret" CPTR_GATEWAY_API_KEY "$key"
   printf '%s' "$key"
 }
 
 sync_computer_model() {
-  local cookies="$1" base key model provider prefix gateway existing id payload
+  local cookies="$1" base key model provider prefix gateway existing id key_file payload
   base="$(get_value "$computer_secret" CPTR_MODEL_BASE_URL)"
   key="$(get_value "$computer_secret" CPTR_MODEL_API_KEY)"
   model="$(get_value "$computer_secret" CPTR_MODEL_ID)"
@@ -207,38 +247,40 @@ sync_computer_model() {
     else
       existing="$(curl -fsS -b "$cookies" "$computer_base/api/admin/connections")"
       id="$(printf '%s' "$existing" | jq -r --arg p "$prefix" '.connections[]? | select(.prefix_id==$p) | .id' | head -n1)"
-      payload="$(jq -cn --arg provider "$provider" --arg prefix "$prefix" --arg base "$base" --arg key "$key" --arg model "$model" \
+      key_file="$(private_file "$key")"
+      payload="$(jq -cn --arg provider "$provider" --arg prefix "$prefix" --arg base "$base" --rawfile key "$key_file" --arg model "$model" \
         '{name:"Server worker model",provider:$provider,api_type:"chat_completions",prefix_id:$prefix,base_url:$base,api_key:$key,enabled:true,models:[$model]}')"
       if [[ -n "$id" ]]; then
-        curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' -d "$payload" \
+        curl_json "$payload" -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
           "$computer_base/api/admin/connections/$id" >/dev/null
       else
-        curl -fsS -b "$cookies" -H 'Content-Type: application/json' -d "$payload" \
+        curl_json "$payload" -fsS -b "$cookies" -H 'Content-Type: application/json' \
           "$computer_base/api/admin/connections" >/dev/null
       fi
     fi
   fi
 
   if [[ -n "$gateway" ]]; then
-    curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
-      -d "$(jq -cn --arg model "$gateway" '{config:{"gateway.model":$model}}')" \
+    curl_json "$(jq -cn --arg model "$gateway" '{config:{"gateway.model":$model}}')" \
+      -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
       "$computer_base/api/admin/config" >/dev/null
   fi
 }
 
 computer_tool_server() {
-  local cookies="$1" id="$2" url="$3" auth_type="$4" key="$5" name="$6" current create update
+  local cookies="$1" id="$2" url="$3" auth_type="$4" key="$5" name="$6" current key_file create update
   current="$(curl -fsS -b "$cookies" "$computer_base/api/admin/tools/servers")"
-  create="$(jq -cn --arg id "$id" --arg url "$url" --arg auth "$auth_type" --arg key "$key" --arg name "$name" \
+  key_file="$(private_file "$key")"
+  create="$(jq -cn --arg id "$id" --arg url "$url" --arg auth "$auth_type" --rawfile key "$key_file" --arg name "$name" \
     '{id:$id,type:"mcp",url:$url,path:"",auth_type:$auth,key:(if $key=="" then null else $key end),name:$name,description:"Managed explicitly by joshan-kana/.files",enabled:true}')"
-  update="$(jq -cn --arg url "$url" --arg auth "$auth_type" --arg key "$key" --arg name "$name" \
+  update="$(jq -cn --arg url "$url" --arg auth "$auth_type" --rawfile key "$key_file" --arg name "$name" \
     '{type:"mcp",url:$url,path:"",auth_type:$auth,key:(if $key=="" then null else $key end),name:$name,description:"Managed explicitly by joshan-kana/.files",enabled:true}')"
 
   if jq -e --arg id "$id" 'any(.servers[]?; .id==$id)' <<<"$current" >/dev/null; then
-    curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' -d "$update" \
+    curl_json "$update" -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
       "$computer_base/api/admin/tools/servers/$id" >/dev/null
   else
-    curl -fsS -b "$cookies" -H 'Content-Type: application/json' -d "$create" \
+    curl_json "$create" -fsS -b "$cookies" -H 'Content-Type: application/json' \
       "$computer_base/api/admin/tools/servers" >/dev/null
   fi
 }
@@ -264,8 +306,7 @@ sync_computer() {
   wait_for "$computer_base/api/health" "Open WebUI Computer"
 
   local cookies password
-  cookies="$(mktemp)"
-  trap "rm -f -- $(printf '%q' "$cookies")" EXIT
+  cookies="$(mktemp "$sync_tmp_dir/computer-cookies.XXXXXX")"
   password="$(get_value "$computer_secret" CPTR_ADMIN_PASSWORD)"
   : "${password:?$computer_secret must define CPTR_ADMIN_PASSWORD}"
   computer_setup "$cookies" "$password"
@@ -283,17 +324,17 @@ sync_computer() {
   sync_computer_model "$cookies"
   sync_computer_tools "$cookies"
   rm -f "$cookies"
-  trap - EXIT
 }
 
 openwebui_token() {
-  local email password
+  local email password password_file payload
   email="$(get_value "$open_webui_secret" WEBUI_ADMIN_EMAIL)"
   password="$(get_value "$open_webui_secret" WEBUI_ADMIN_PASSWORD)"
   : "${email:?$open_webui_secret must define WEBUI_ADMIN_EMAIL}"
   : "${password:?$open_webui_secret must define WEBUI_ADMIN_PASSWORD}"
-  curl -fsS -H 'Content-Type: application/json' \
-    -d "$(jq -cn --arg email "$email" --arg password "$password" '{email:$email,password:$password}')" \
+  password_file="$(private_file "$password")"
+  payload="$(jq -cn --arg email "$email" --rawfile password "$password_file" '{email:$email,password:$password}')"
+  curl_json "$payload" -fsS -H 'Content-Type: application/json' \
     "$open_webui_base/api/v1/auths/signin" | jq -er '.token'
 }
 
@@ -309,33 +350,39 @@ computer_headers_json() {
 
 sync_openai_connections() {
   local token="$1" server_key="$2" current entries preserved managed all headers
+  local server_key_file mac_url mac_key mac_key_file managed_file preserved_file all_file payload
   headers="$(computer_headers_json)"
-  managed="$(jq -cn --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}/v1" --arg key "$server_key" --argjson headers "$headers" \
+  server_key_file="$(private_file "$server_key")"
+  managed="$(jq -cn --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}/v1" --rawfile key "$server_key_file" --argjson headers "$headers" \
     '[{url:$url,key:$key,config:{enable:true,prefix_id:"server",provider:"Open WebUI Computer (server)",headers:$headers}}]')"
 
   if [[ -s "$mac_secret" ]]; then
-    local mac_url mac_key
     mac_url="$(get_value "$mac_secret" CPTR_BASE_URL)"
     mac_key="$(get_value "$mac_secret" CPTR_GATEWAY_API_KEY)"
     if [[ -n "$mac_url" && -n "$mac_key" ]]; then
-      managed="$(jq -cn --argjson cur "$managed" --arg url "$mac_url" --arg key "$mac_key" --argjson headers "$headers" \
-        '$cur + [{url:$url,key:$key,config:{enable:true,prefix_id:"mac",provider:"Open WebUI Computer (Mac)",headers:$headers}}]')"
+      mac_key_file="$(private_file "$mac_key")"
+      managed_file="$(private_file "$managed")"
+      managed="$(jq -cn --slurpfile cur "$managed_file" --arg url "$mac_url" --rawfile key "$mac_key_file" --argjson headers "$headers" \
+        '$cur[0] + [{url:$url,key:$key,config:{enable:true,prefix_id:"mac",provider:"Open WebUI Computer (Mac)",headers:$headers}}]')"
     fi
   fi
 
-  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/openai/config")"
+  current="$(curl_bearer "$token" -fsS "$open_webui_base/openai/config")"
   entries="$(printf '%s' "$current" | jq -c '(.OPENAI_API_BASE_URLS//[]) as $u | (.OPENAI_API_KEYS//[]) as $k | (.OPENAI_API_CONFIGS//{}) as $c | [range(0;($u|length)) as $i | {url:$u[$i],key:($k[$i]//""),config:($c[($i|tostring)]//{})}]')"
   preserved="$(printf '%s' "$entries" | jq -c 'map(select(((.config.prefix_id//"")!="server") and ((.config.prefix_id//"")!="mac")))')"
-  all="$(jq -cn --argjson keep "$preserved" --argjson managed "$managed" '$keep+$managed')"
+  preserved_file="$(private_file "$preserved")"
+  managed_file="$(private_file "$managed")"
+  all="$(jq -cn --slurpfile keep "$preserved_file" --slurpfile managed "$managed_file" '$keep[0]+$managed[0]')"
+  all_file="$(private_file "$all")"
+  payload="$(jq -cn --slurpfile wrapped "$all_file" '$wrapped[0] as $e | {ENABLE_OPENAI_API:true,OPENAI_API_BASE_URLS:[$e[].url],OPENAI_API_KEYS:[$e[].key],OPENAI_API_CONFIGS:(reduce range(0;($e|length)) as $i ({}; .[($i|tostring)]=$e[$i].config))}')"
 
-  curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-    -d "$(jq -cn --argjson e "$all" '{ENABLE_OPENAI_API:true,OPENAI_API_BASE_URLS:[$e[].url],OPENAI_API_KEYS:[$e[].key],OPENAI_API_CONFIGS:(reduce range(0;($e|length)) as $i ({}; .[($i|tostring)]=$e[$i].config))}')" \
+  curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
     "$open_webui_base/openai/config/update" >/dev/null
 }
 
 sync_tool_servers() {
-  local token="$1" current preserved managed all github_token
-  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/configs/tool_servers" | jq -c '.TOOL_SERVER_CONNECTIONS//[]')"
+  local token="$1" current preserved managed all github_token github_file managed_file preserved_file all_file payload
+  current="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/configs/tool_servers" | jq -c '.TOOL_SERVER_CONNECTIONS//[]')"
   preserved="$(printf '%s' "$current" | jq -c '
     map(select(((.info // {}).id // "") as $id | (["github","native-sessions","agent-mail"] | index($id) | not)))
   ')"
@@ -343,55 +390,65 @@ sync_tool_servers() {
 
   github_token="$(get_value "$github_secret" GH_TOKEN)"
   : "${github_token:?$github_secret must define GH_TOKEN}"
-  managed="$(jq -cn --arg key "$github_token" --arg url "http://127.0.0.1:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
+  github_file="$(private_file "$github_token")"
+  managed="$(jq -cn --rawfile key "$github_file" --arg url "http://127.0.0.1:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
     '[{url:$url,path:"",type:"mcp",auth_type:"bearer",headers:null,key:$key,config:{enable:true},info:{id:"github",name:"GitHub"}}]')"
 
-  managed="$(jq -cn --argjson cur "$managed" --arg url "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
-    '$cur + [{url:$url,path:"",type:"mcp",auth_type:"none",headers:null,key:"",config:{enable:true},info:{id:"agent-mail",name:"Agent Mail Rust"}}]')"
+  managed_file="$(private_file "$managed")"
+  managed="$(jq -cn --slurpfile cur "$managed_file" --arg url "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
+    '$cur[0] + [{url:$url,path:"",type:"mcp",auth_type:"none",headers:null,key:"",config:{enable:true},info:{id:"agent-mail",name:"Agent Mail Rust"}}]')"
 
-  all="$(jq -cn --argjson keep "$preserved" --argjson managed "$managed" '$keep+$managed')"
-  curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-    -d "$(jq -cn --argjson c "$all" '{TOOL_SERVER_CONNECTIONS:$c}')" \
+  preserved_file="$(private_file "$preserved")"
+  managed_file="$(private_file "$managed")"
+  all="$(jq -cn --slurpfile keep "$preserved_file" --slurpfile managed "$managed_file" '$keep[0]+$managed[0]')"
+  all_file="$(private_file "$all")"
+  payload="$(jq -cn --slurpfile c "$all_file" '{TOOL_SERVER_CONNECTIONS:$c[0]}')"
+  curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
     "$open_webui_base/api/v1/configs/tool_servers" >/dev/null
 }
 
 sync_folders() {
-  local token="$1" folders name
-  folders="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/folders/")"
+  local token="$1" folders name payload
+  folders="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/folders/")"
   for name in 'General' '.files' 'Project Speed' 'Home Automation' 'Research' 'University'; do
     if ! printf '%s' "$folders" | jq -e --arg name "$name" 'any(.[]?; .name==$name)' >/dev/null; then
-      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-        -d "$(jq -cn --arg name "$name" '{name:$name}')" "$open_webui_base/api/v1/folders/" >/dev/null
-      folders="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/folders/")"
+      payload="$(jq -cn --arg name "$name" '{name:$name}')"
+      curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+        "$open_webui_base/api/v1/folders/" >/dev/null
+      folders="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/folders/")"
     fi
   done
 }
 
 sync_prompts() {
   local token="$1" current row command id payload
-  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/prompts/")"
+  current="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/prompts/")"
   while IFS= read -r row; do
     command="$(jq -r '.command' <<<"$row")"
     id="$(jq -r --arg command "$command" '.[]? | select(.command==$command) | .id' <<<"$current" | head -n1)"
     payload="$(jq -c '{command,name,content,tags:(.tags//[]),meta:(.meta//{})}' <<<"$row")"
     if [[ -n "$id" ]]; then
-      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/prompts/id/$id/update" >/dev/null
+      curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+        "$open_webui_base/api/v1/prompts/id/$id/update" >/dev/null
     else
-      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/prompts/create" >/dev/null
+      curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+        "$open_webui_base/api/v1/prompts/create" >/dev/null
     fi
   done < <(jq -c '.[]' "$OPEN_WEBUI_ASSET_ROOT/prompts.json")
 }
 
 sync_skills() {
   local token="$1" current row id payload
-  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/skills/")"
+  current="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/skills/")"
   while IFS= read -r row; do
     id="$(jq -r '.id' <<<"$row")"
     payload="$(jq -c '{id,name,description,content,meta:(.meta//{}),is_active:(.is_active//true)}' <<<"$row")"
     if jq -e --arg id "$id" 'any(.[]?; .id==$id)' <<<"$current" >/dev/null; then
-      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/skills/id/$id/update" >/dev/null
+      curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+        "$open_webui_base/api/v1/skills/id/$id/update" >/dev/null
     else
-      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/skills/create" >/dev/null
+      curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+        "$open_webui_base/api/v1/skills/create" >/dev/null
     fi
   done < <(jq -c '.[]' "$OPEN_WEBUI_ASSET_ROOT/skills.json")
 }
@@ -401,33 +458,38 @@ sync_function() {
   content="$(cat "$source")"
   payload="$(jq -cn --arg id "$id" --arg name "$name" --arg content "$content" '{id:$id,name:$name,content:$content,meta:{description:"Managed explicitly by joshan-kana/.files"}}')"
 
-  if curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id" >/dev/null 2>&1; then
-    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/functions/id/$id/update" >/dev/null
+  if curl_bearer "$token" -fsS "$open_webui_base/api/v1/functions/id/$id" >/dev/null 2>&1; then
+    curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+      "$open_webui_base/api/v1/functions/id/$id/update" >/dev/null
   else
-    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/functions/create" >/dev/null
+    curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+      "$open_webui_base/api/v1/functions/create" >/dev/null
   fi
 
-  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id")"
+  current="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/functions/id/$id")"
   if [[ "$(jq -r '.is_active' <<<"$current")" != true ]]; then
-    curl -fsS -X POST -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id/toggle" >/dev/null
-    current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id")"
+    curl_bearer "$token" -fsS -X POST "$open_webui_base/api/v1/functions/id/$id/toggle" >/dev/null
+    current="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/functions/id/$id")"
   fi
   if [[ "$global" == true && "$(jq -r '.is_global' <<<"$current")" != true ]]; then
-    curl -fsS -X POST -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id/toggle/global" >/dev/null
+    curl_bearer "$token" -fsS -X POST "$open_webui_base/api/v1/functions/id/$id/toggle/global" >/dev/null
   fi
 }
 
 sync_notifications() {
-  local token="$1" url targets payload
+  local token="$1" url targets url_file payload
   url="$(get_value "$open_webui_secret" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)"
   [[ -n "$url" ]] || return 0
-  targets="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/notifications/targets")"
-  payload="$(jq -cn --arg id "$notification_id" --arg url "$url" '{id:$id,type:"webhook",enabled:true,events:["chat.finished","chat.failed"],delivery:"away",config:{url:$url}}')"
+  targets="$(curl_bearer "$token" -fsS "$open_webui_base/api/v1/notifications/targets")"
+  url_file="$(private_file "$url")"
+  payload="$(jq -cn --arg id "$notification_id" --rawfile url "$url_file" '{id:$id,type:"webhook",enabled:true,events:["chat.finished","chat.failed"],delivery:"away",config:{url:$url}}')"
 
   if jq -e --arg id "$notification_id" 'any(.targets[]?; .id==$id)' <<<"$targets" >/dev/null; then
-    curl -fsS -X PUT -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/notifications/targets/$notification_id" >/dev/null
+    curl_bearer_json "$token" "$payload" -fsS -X PUT -H 'Content-Type: application/json' \
+      "$open_webui_base/api/v1/notifications/targets/$notification_id" >/dev/null
   else
-    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/notifications/targets" >/dev/null
+    curl_bearer_json "$token" "$payload" -fsS -H 'Content-Type: application/json' \
+      "$open_webui_base/api/v1/notifications/targets" >/dev/null
   fi
 }
 
