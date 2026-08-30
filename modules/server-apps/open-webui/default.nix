@@ -263,7 +263,7 @@ in
     serviceConfig = {
       Type = "simple";
       DynamicUser = true;
-      ExecStart = "${pkgs.github-mcp-server}/bin/github-mcp-server http --listen-host 127.0.0.1 --port ${toString githubMcpPort} --scope-challenge";
+      ExecStart = "${pkgs.github-mcp-server}/bin/github-mcp-server http --port ${toString githubMcpPort} --scope-challenge";
       Restart = "on-failure";
       RestartSec = "5s";
       NoNewPrivileges = true;
