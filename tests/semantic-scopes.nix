@@ -216,6 +216,160 @@ let
   };
   reservedChildResult = builtins.tryEval (builtins.deepSeq reservedChildEvaluation.config true);
 
+  standaloneHome = inputs.home-manager.lib.homeManagerConfiguration {
+    pkgs = inputs.nixpkgs.legacyPackages.${system};
+    modules = [
+      ../modules/options
+      {
+        dotfiles = {
+          profile.name = "standalone-home";
+          scopes.standalone = {
+            childDefaults = {
+              children.enable = false;
+              explicit.enable = true;
+            };
+            hostDisabled.enable = false;
+            disabled.enable = true;
+          };
+        };
+
+        home = {
+          username = "semantic";
+          homeDirectory = "/home/semantic";
+          stateVersion = "26.05";
+        };
+      }
+      (semantic.homeModules {
+        standalone = _: {
+          imports = [
+            (_: {
+              environment.variables.SEMANTIC_HOME_IMPORTED_SYSTEM_LEAK = "bad";
+            })
+          ];
+          environment.variables.SEMANTIC_HOME_SYSTEM_LEAK = "bad";
+
+          home =
+            { config, lib, ... }:
+            {
+              imports = [
+                (_: {
+                  home.sessionVariables.SEMANTIC_HOME_IMPORTED = "yes";
+                })
+              ];
+
+              options.semanticHomeProbe = lib.mkOption {
+                type = lib.types.str;
+                default = "home-option-ok";
+              };
+
+              config.home.sessionVariables.SEMANTIC_HOME_CONFIG = config.semanticHomeProbe;
+              home.sessionVariables.SEMANTIC_HOME_DIRECT = "yes";
+            };
+
+          nested = _: {
+            environment.variables.SEMANTIC_HOME_NESTED_SYSTEM_LEAK = "bad";
+
+            home = _: {
+              home.sessionVariables.SEMANTIC_HOME_NESTED = "yes";
+            };
+          };
+
+          childDefaults = _: {
+            implicit = _: {
+              home = _: {
+                home.sessionVariables.SEMANTIC_HOME_CHILD_DEFAULT = "bad";
+              };
+            };
+
+            explicit = _: {
+              home = _: {
+                home.sessionVariables.SEMANTIC_HOME_CHILD_EXPLICIT = "yes";
+              };
+            };
+          };
+
+          hostDisabled = _: {
+            home = _: {
+              home.sessionVariables.SEMANTIC_HOME_HOST_DISABLED = "bad";
+            };
+          };
+
+          disabled = _: {
+            enable = false;
+            environment.variables.SEMANTIC_HOME_DISABLED_SYSTEM_LEAK = "bad";
+
+            home = _: {
+              home.sessionVariables.SEMANTIC_HOME_DISABLED = "yes";
+            };
+          };
+
+          systemOnly = _: {
+            environment.variables.SEMANTIC_HOME_SYSTEM_ONLY = "bad";
+          };
+
+          branchlessParent = _: {
+            environment.variables.SEMANTIC_HOME_BRANCHLESS_SYSTEM_LEAK = "bad";
+
+            nestedHome = _: {
+              home = _: {
+                home.sessionVariables.SEMANTIC_HOME_THROUGH_BRANCHLESS = "yes";
+              };
+            };
+          };
+
+          zsh = _: {
+            environment.variables.SEMANTIC_HOME_ZSH_SYSTEM_LEAK = "bad";
+
+            home = _: {
+              programs.zsh.enableCompletion = true;
+            };
+          };
+        };
+      })
+    ];
+  };
+  standaloneHomeCfg = standaloneHome.config;
+
+  integratedOverrideHome = inputs.home-manager.lib.homeManagerConfiguration {
+    pkgs = inputs.nixpkgs.legacyPackages.${system};
+    extraSpecialArgs.osConfig.dotfiles.scopes.integrated = {
+      osDisabled.enable = false;
+      osEnabled.enable = true;
+    };
+    modules = [
+      ../modules/options
+      {
+        dotfiles = {
+          profile.name = "integrated-home";
+          scopes.integrated = {
+            osDisabled.enable = true;
+            osEnabled.enable = false;
+          };
+        };
+
+        home = {
+          username = "semantic";
+          homeDirectory = "/home/semantic";
+          stateVersion = "26.05";
+        };
+      }
+      (semantic.homeModule "integrated" (_: {
+        osDisabled = _: {
+          home = _: {
+            home.sessionVariables.SEMANTIC_HOME_OS_DISABLED = "bad";
+          };
+        };
+
+        osEnabled = _: {
+          home = _: {
+            home.sessionVariables.SEMANTIC_HOME_OS_ENABLED = "yes";
+          };
+        };
+      }))
+    ];
+  };
+  integratedOverrideHomeCfg = integratedOverrideHome.config;
+
   cfg = evaluated.config;
   hm = cfg.home-manager.users.semantic;
   packageNames = map lib.getName cfg.environment.systemPackages;
@@ -270,4 +424,23 @@ assert cfg.dotfiles.resolvedScopes.semantic.sourceDisabled.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.enable;
 assert !cfg.dotfiles.resolvedScopes.semantic.parentOverride.child.enable;
 assert builtins.elem "hello" packageNames;
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_DIRECT == "yes";
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_IMPORTED == "yes";
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_CONFIG == "home-option-ok";
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_NESTED == "yes";
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_THROUGH_BRANCHLESS == "yes";
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_DISABLED == "yes";
+assert !(standaloneHomeCfg.home.sessionVariables ? SEMANTIC_HOME_CHILD_DEFAULT);
+assert standaloneHomeCfg.home.sessionVariables.SEMANTIC_HOME_CHILD_EXPLICIT == "yes";
+assert !(standaloneHomeCfg.home.sessionVariables ? SEMANTIC_HOME_HOST_DISABLED);
+assert !standaloneHomeCfg.dotfiles.resolvedScopes.standalone.childDefaults.implicit.enable;
+assert standaloneHomeCfg.dotfiles.resolvedScopes.standalone.childDefaults.explicit.enable;
+assert !standaloneHomeCfg.dotfiles.resolvedScopes.standalone.hostDisabled.enable;
+assert standaloneHomeCfg.dotfiles.resolvedScopes.standalone.disabled.enable;
+assert standaloneHomeCfg.programs.zsh.enable;
+assert standaloneHomeCfg.programs.zsh.enableCompletion;
+assert !(integratedOverrideHomeCfg.home.sessionVariables ? SEMANTIC_HOME_OS_DISABLED);
+assert integratedOverrideHomeCfg.home.sessionVariables.SEMANTIC_HOME_OS_ENABLED == "yes";
+assert !integratedOverrideHomeCfg.dotfiles.resolvedScopes.integrated.osDisabled.enable;
+assert integratedOverrideHomeCfg.dotfiles.resolvedScopes.integrated.osEnabled.enable;
 true
