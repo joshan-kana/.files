@@ -16,15 +16,15 @@ computer_python="$HOME/.local/share/uv/tools/cptr/bin/python"
 computer_bin="$HOME/.local/bin/cptr"
 computer_port=8000
 server="joshan@192.168.1.3"
-server_env="/root/secrets/open-webui-mac-computer.env"
+server_secret="/root/secrets/open-webui-mac-computer.env"
 
 if [[ ! -x "$computer_python" || ! -x "$computer_bin" ]]; then
   echo "The existing uv-managed Open WebUI Computer is missing." >&2
   exit 1
 fi
 
-computer_version="$($computer_bin --version 2>/dev/null | head -n 1 || true)"
-if [[ "$computer_version" != *"0.9.21"* ]]; then
+computer_version="$("$computer_python" -c 'from importlib.metadata import version; print(version("cptr"))' 2>/dev/null || true)"
+if [[ "$computer_version" != "0.9.21" ]]; then
   echo "Expected the existing cptr 0.9.21 environment; found: ${computer_version:-unknown}" >&2
   exit 1
 fi
@@ -38,7 +38,7 @@ sessionwiki sync >/dev/null
 # Computer's stdio MCP support is optional. Add that extra to the existing uv
 # tool environment only when it is missing; do not create another Computer.
 if ! "$computer_python" -c 'import mcp' >/dev/null 2>&1; then
-  uv tool install --python 3.12 --force 'cptr[mcp]==0.9.21'
+  uv tool install --python 3.12 --force 'cptr[all]==0.9.21'
 fi
 
 # Verify SessionWiki's own read-only MCP server before registering it.
@@ -149,7 +149,7 @@ fi
   printf 'CPTR_BASE_URL=%s\n' "$mac_computer_base"
   printf 'CPTR_GATEWAY_API_KEY=%s\n' "$gateway_key"
 } | ssh -A -o BatchMode=yes "$server" \
-  "sudo install -m 0400 -o root -g root /dev/stdin '$server_env' && sudo open-webui-sync sync"
+  "sudo install -m 0400 -o root -g root /dev/stdin '$server_secret' && sudo open-webui-sync sync"
 
 printf 'Mac Computer registered: %s\n' "$mac_computer_base"
 printf 'SessionWiki MCP registered locally in Mac Computer: %s mcp\n' "$sessionwiki_bin"

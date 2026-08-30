@@ -3,8 +3,8 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# Defaults also let this script initialize secrets before the new NixOS
-# generation is activated. The Nix-installed wrapper exports evaluated values.
+# Defaults keep direct invocations predictable; the Nix-installed wrapper
+# exports the evaluated server values.
 OPEN_WEBUI_SERVER_IP="${OPEN_WEBUI_SERVER_IP:-192.168.1.3}"
 OPEN_WEBUI_SECRETS_DIR="${OPEN_WEBUI_SECRETS_DIR:-/root/secrets}"
 OPEN_WEBUI_ASSET_ROOT="${OPEN_WEBUI_ASSET_ROOT:-$script_dir}"
@@ -13,26 +13,31 @@ OPEN_WEBUI_PORT="${OPEN_WEBUI_PORT:-8081}"
 OPEN_WEBUI_COMPUTER_PORT="${OPEN_WEBUI_COMPUTER_PORT:-8000}"
 OPEN_WEBUI_GITHUB_MCP_PORT="${OPEN_WEBUI_GITHUB_MCP_PORT:-8082}"
 OPEN_WEBUI_AGENT_MAIL_PORT="${OPEN_WEBUI_AGENT_MAIL_PORT:-8765}"
-OPEN_WEBUI_GITHUB_ENV="${OPEN_WEBUI_GITHUB_ENV:-${OPEN_WEBUI_SECRETS_DIR}/open-webui-github.env}"
+OPEN_WEBUI_GITHUB_SECRET="${OPEN_WEBUI_GITHUB_SECRET:-${OPEN_WEBUI_SECRETS_DIR}/open-webui-github.env}"
+OPEN_WEBUI_HOST_ADMIN_KEY_SECRET="${OPEN_WEBUI_HOST_ADMIN_KEY_SECRET:-${OPEN_WEBUI_SECRETS_DIR}/open-webui-host-admin-id_ed25519}"
 
 open_webui_base="http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_PORT}"
 computer_base="http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}"
-open_webui_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui.env"
-searx_env="${OPEN_WEBUI_SECRETS_DIR}/searxng.env"
-computer_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui-computer.env"
-mac_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui-mac-computer.env"
-github_env="$OPEN_WEBUI_GITHUB_ENV"
+open_webui_secret="${OPEN_WEBUI_SECRETS_DIR}/open-webui.env"
+searx_secret="${OPEN_WEBUI_SECRETS_DIR}/searxng.env"
+computer_secret="${OPEN_WEBUI_SECRETS_DIR}/open-webui-computer.env"
+mac_secret="${OPEN_WEBUI_SECRETS_DIR}/open-webui-mac-computer.env"
+github_secret="$OPEN_WEBUI_GITHUB_SECRET"
+host_admin_key_secret="$OPEN_WEBUI_HOST_ADMIN_KEY_SECRET"
 notification_id="dotfiles-unattended-work"
 
 usage() {
   cat <<'EOF'
 usage: open-webui-sync {init-secrets|sync|all}
 
-  init-secrets  Create missing stable Open WebUI/SearXNG/Computer setup
+  init-secrets  Create missing stable Open WebUI/SearXNG/Computer/host-key
                 secrets. Existing values are never rotated.
   sync          Reconcile the intentionally managed application settings after
                 Open WebUI and Computer are running. Unrelated settings remain.
   all           Run init-secrets, then sync.
+
+Required GitHub access is read from /root/secrets/open-webui-github.env
+and must define GH_TOKEN.
 
 Optional server Computer model policy lives only in
 /root/secrets/open-webui-computer.env:
@@ -82,18 +87,31 @@ ensure_value() {
 
 init_secrets() {
   require_root
-  install -d -m 0700 -o root -g root "$OPEN_WEBUI_SECRETS_DIR"
-  touch "$open_webui_env" "$searx_env" "$computer_env"
-  chmod 0600 "$open_webui_env" "$searx_env" "$computer_env"
+  [[ -d "$OPEN_WEBUI_SECRETS_DIR" ]] || {
+    echo "$OPEN_WEBUI_SECRETS_DIR is missing; activate the server configuration first." >&2
+    return 1
+  }
 
-  ensure_value "$open_webui_env" WEBUI_SECRET_KEY "$(secret_hex)"
-  ensure_value "$open_webui_env" WEBUI_ADMIN_EMAIL "${OPEN_WEBUI_ADMIN_EMAIL:-joshan@localhost}"
-  ensure_value "$open_webui_env" WEBUI_ADMIN_PASSWORD "$(secret_hex)"
-  ensure_value "$searx_env" SEARX_SECRET_KEY "$(secret_hex)"
-  ensure_value "$computer_env" CPTR_ADMIN_PASSWORD "$(secret_hex)"
+  touch "$open_webui_secret" "$searx_secret" "$computer_secret"
+  chown root:root "$open_webui_secret" "$searx_secret" "$computer_secret"
+  chmod 0600 "$open_webui_secret" "$searx_secret" "$computer_secret"
 
-  chmod 0400 "$open_webui_env" "$searx_env" "$computer_env"
+  ensure_value "$open_webui_secret" WEBUI_SECRET_KEY "$(secret_hex)"
+  ensure_value "$open_webui_secret" WEBUI_ADMIN_EMAIL "${OPEN_WEBUI_ADMIN_EMAIL:-joshan@localhost}"
+  ensure_value "$open_webui_secret" WEBUI_ADMIN_PASSWORD "$(secret_hex)"
+  ensure_value "$searx_secret" SEARX_SECRET_KEY "$(secret_hex)"
+  ensure_value "$computer_secret" CPTR_ADMIN_PASSWORD "$(secret_hex)"
+
+  if [[ ! -e "$host_admin_key_secret" ]]; then
+    ssh-keygen -q -t ed25519 -N '' -C open-webui-host-admin@nixos-server -f "$host_admin_key_secret"
+    rm -f "$host_admin_key_secret.pub"
+  fi
+
+  chown root:root "$host_admin_key_secret"
+  chmod 0400 "$open_webui_secret" "$searx_secret" "$computer_secret" "$host_admin_key_secret"
   echo "Initialized missing Open WebUI secrets without rotating existing values."
+  [[ -s "$github_secret" ]] || \
+    echo "NOTE: provision $github_secret with GH_TOKEN before running sync." >&2
 }
 
 wait_for() {
@@ -121,7 +139,7 @@ computer_setup() {
     | grep -Eo 'token=[0-9a-f]{64}' | tail -n 1 | cut -d= -f2 || true)"
   if [[ -z "$startup_token" ]]; then
     echo "Computer cannot be logged in with its managed secret and no first-run token is available." >&2
-    echo "Restore $computer_env or reset the Computer account deliberately." >&2
+    echo "Restore $computer_secret or reset the Computer account deliberately." >&2
     return 1
   fi
 
@@ -141,7 +159,7 @@ computer_workspace() {
 
 computer_gateway_key() {
   local cookies="$1" key
-  key="$(get_value "$computer_env" CPTR_GATEWAY_API_KEY)"
+  key="$(get_value "$computer_secret" CPTR_GATEWAY_API_KEY)"
   if [[ -n "$key" ]] && curl -fsS -H "Authorization: Bearer $key" "$computer_base/v1/models" >/dev/null 2>&1; then
     printf '%s' "$key"
     return
@@ -149,18 +167,18 @@ computer_gateway_key() {
 
   key="$(curl -fsS -b "$cookies" -H 'Content-Type: application/json' \
     -d '{"name":"open-webui-server"}' "$computer_base/v1/keys" | jq -er '.key')"
-  set_value "$computer_env" CPTR_GATEWAY_API_KEY "$key"
+  set_value "$computer_secret" CPTR_GATEWAY_API_KEY "$key"
   printf '%s' "$key"
 }
 
 sync_computer_model() {
   local cookies="$1" base key model provider prefix gateway existing id payload
-  base="$(get_value "$computer_env" CPTR_MODEL_BASE_URL)"
-  key="$(get_value "$computer_env" CPTR_MODEL_API_KEY)"
-  model="$(get_value "$computer_env" CPTR_MODEL_ID)"
-  provider="$(get_value "$computer_env" CPTR_MODEL_PROVIDER)"
-  prefix="$(get_value "$computer_env" CPTR_MODEL_PREFIX)"
-  gateway="$(get_value "$computer_env" CPTR_GATEWAY_MODEL)"
+  base="$(get_value "$computer_secret" CPTR_MODEL_BASE_URL)"
+  key="$(get_value "$computer_secret" CPTR_MODEL_API_KEY)"
+  model="$(get_value "$computer_secret" CPTR_MODEL_ID)"
+  provider="$(get_value "$computer_secret" CPTR_MODEL_PROVIDER)"
+  prefix="$(get_value "$computer_secret" CPTR_MODEL_PREFIX)"
+  gateway="$(get_value "$computer_secret" CPTR_GATEWAY_MODEL)"
   provider="${provider:-openai}"
   prefix="${prefix:-server-worker}"
 
@@ -208,14 +226,11 @@ computer_tool_server() {
 
 sync_computer_tools() {
   local cookies="$1" github_token
-  github_token="$(get_value "$github_env" GH_TOKEN)"
-  if [[ -n "$github_token" ]]; then
-    computer_tool_server "$cookies" github \
-      "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
-      bearer "$github_token" "GitHub"
-  else
-    echo "GitHub MCP has no GH_TOKEN in $github_env; Computer GitHub tool remains unmanaged." >&2
-  fi
+  github_token="$(get_value "$github_secret" GH_TOKEN)"
+  : "${github_token:?$github_secret must define GH_TOKEN}"
+  computer_tool_server "$cookies" github \
+    "http://127.0.0.1:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
+    bearer "$github_token" "GitHub"
 
   computer_tool_server "$cookies" agent_mail \
     "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
@@ -223,8 +238,8 @@ sync_computer_tools() {
 }
 
 sync_computer() {
-  [[ -f "$computer_env" ]] || {
-    echo "$computer_env is missing; run: sudo open-webui-sync init-secrets" >&2
+  [[ -f "$computer_secret" ]] || {
+    echo "$computer_secret is missing; run: sudo open-webui-sync init-secrets" >&2
     return 1
   }
   wait_for "$computer_base/api/health" "Open WebUI Computer"
@@ -232,8 +247,8 @@ sync_computer() {
   local cookies password
   cookies="$(mktemp)"
   trap 'rm -f "$cookies"' EXIT
-  password="$(get_value "$computer_env" CPTR_ADMIN_PASSWORD)"
-  : "${password:?$computer_env must define CPTR_ADMIN_PASSWORD}"
+  password="$(get_value "$computer_secret" CPTR_ADMIN_PASSWORD)"
+  : "${password:?$computer_secret must define CPTR_ADMIN_PASSWORD}"
   computer_setup "$cookies" "$password"
 
   computer_workspace "$cookies" "/home/$OPEN_WEBUI_PRIMARY_USER/.files" ".files"
@@ -254,10 +269,10 @@ sync_computer() {
 
 openwebui_token() {
   local email password
-  email="$(get_value "$open_webui_env" WEBUI_ADMIN_EMAIL)"
-  password="$(get_value "$open_webui_env" WEBUI_ADMIN_PASSWORD)"
-  : "${email:?$open_webui_env must define WEBUI_ADMIN_EMAIL}"
-  : "${password:?$open_webui_env must define WEBUI_ADMIN_PASSWORD}"
+  email="$(get_value "$open_webui_secret" WEBUI_ADMIN_EMAIL)"
+  password="$(get_value "$open_webui_secret" WEBUI_ADMIN_PASSWORD)"
+  : "${email:?$open_webui_secret must define WEBUI_ADMIN_EMAIL}"
+  : "${password:?$open_webui_secret must define WEBUI_ADMIN_PASSWORD}"
   curl -fsS -H 'Content-Type: application/json' \
     -d "$(jq -cn --arg email "$email" --arg password "$password" '{email:$email,password:$password}')" \
     "$open_webui_base/api/v1/auths/signin" | jq -er '.token'
@@ -279,10 +294,10 @@ sync_openai_connections() {
   managed="$(jq -cn --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}/v1" --arg key "$server_key" --argjson headers "$headers" \
     '[{url:$url,key:$key,config:{enable:true,prefix_id:"server",provider:"Open WebUI Computer (server)",headers:$headers}}]')"
 
-  if [[ -s "$mac_env" ]]; then
+  if [[ -s "$mac_secret" ]]; then
     local mac_url mac_key
-    mac_url="$(get_value "$mac_env" CPTR_BASE_URL)"
-    mac_key="$(get_value "$mac_env" CPTR_GATEWAY_API_KEY)"
+    mac_url="$(get_value "$mac_secret" CPTR_BASE_URL)"
+    mac_key="$(get_value "$mac_secret" CPTR_GATEWAY_API_KEY)"
     if [[ -n "$mac_url" && -n "$mac_key" ]]; then
       managed="$(jq -cn --argjson cur "$managed" --arg url "$mac_url" --arg key "$mac_key" --argjson headers "$headers" \
         '$cur + [{url:$url,key:$key,config:{enable:true,prefix_id:"mac",provider:"Open WebUI Computer (Mac)",headers:$headers}}]')"
@@ -307,13 +322,10 @@ sync_tool_servers() {
   ')"
   managed='[]'
 
-  github_token="$(get_value "$github_env" GH_TOKEN)"
-  if [[ -n "$github_token" ]]; then
-    managed="$(jq -cn --arg key "$github_token" --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
-      '[{url:$url,path:"",type:"mcp",auth_type:"bearer",headers:null,key:$key,config:{enable:true},info:{id:"github",name:"GitHub"}}]')"
-  else
-    echo "GitHub MCP has no GH_TOKEN in $github_env; leaving that managed connection absent." >&2
-  fi
+  github_token="$(get_value "$github_secret" GH_TOKEN)"
+  : "${github_token:?$github_secret must define GH_TOKEN}"
+  managed="$(jq -cn --arg key "$github_token" --arg url "http://127.0.0.1:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
+    '[{url:$url,path:"",type:"mcp",auth_type:"bearer",headers:null,key:$key,config:{enable:true},info:{id:"github",name:"GitHub"}}]')"
 
   managed="$(jq -cn --argjson cur "$managed" --arg url "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
     '$cur + [{url:$url,path:"",type:"mcp",auth_type:"none",headers:null,key:"",config:{enable:true},info:{id:"agent-mail",name:"Agent Mail Rust"}}]')"
@@ -388,7 +400,7 @@ sync_function() {
 
 sync_notifications() {
   local token="$1" url targets payload
-  url="$(get_value "$open_webui_env" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)"
+  url="$(get_value "$open_webui_secret" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)"
   [[ -n "$url" ]] || return 0
   targets="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/notifications/targets")"
   payload="$(jq -cn --arg id "$notification_id" --arg url "$url" '{id:$id,type:"webhook",enabled:true,events:["chat.finished","chat.failed"],delivery:"away",config:{url:$url}}')"
@@ -404,7 +416,7 @@ sync_openwebui() {
   wait_for "$open_webui_base/api/config" "Open WebUI"
   local token server_key
   token="$(openwebui_token)"
-  server_key="$(get_value "$computer_env" CPTR_GATEWAY_API_KEY)"
+  server_key="$(get_value "$computer_secret" CPTR_GATEWAY_API_KEY)"
   : "${server_key:?Computer gateway key is missing; sync Computer first}"
 
   sync_openai_connections "$token" "$server_key"
@@ -420,8 +432,12 @@ sync_openwebui() {
 
 sync_all() {
   require_root
-  [[ -f "$open_webui_env" && -f "$searx_env" && -f "$computer_env" ]] || {
-    echo "Required setup secrets are missing; run: sudo open-webui-sync init-secrets" >&2
+  [[ -f "$open_webui_secret" && -f "$searx_secret" && -f "$computer_secret" && -f "$github_secret" ]] || {
+    echo "Required Open WebUI secrets are missing; run init-secrets and provision $github_secret." >&2
+    return 1
+  }
+  [[ -n "$(get_value "$github_secret" GH_TOKEN)" ]] || {
+    echo "$github_secret must define GH_TOKEN." >&2
     return 1
   }
   wait_for "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mail/" "Agent Mail Rust"
@@ -429,9 +445,9 @@ sync_all() {
   sync_openwebui
   echo "Open WebUI managed application settings are synchronized."
 
-  [[ -n "$(get_value "$computer_env" CPTR_MODEL_ID)" ]] || \
+  [[ -n "$(get_value "$computer_secret" CPTR_MODEL_ID)" ]] || \
     echo "NOTE: no server Computer model is managed yet; configure one before autonomous-server validation." >&2
-  [[ -n "$(get_value "$open_webui_env" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)" ]] || \
+  [[ -n "$(get_value "$open_webui_secret" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)" ]] || \
     echo "NOTE: unattended notification delivery is not configured yet." >&2
 }
 

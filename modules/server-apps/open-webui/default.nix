@@ -28,6 +28,7 @@ let
   searxSecret = "${secretsDir}/searxng.env";
   githubMcpPort = 8082;
   agentMailPort = 8765;
+  agentMailRoot = "${appDataRoot}/agent-mail";
 
   hostAdmin = {
     user = "open-webui-admin";
@@ -62,6 +63,7 @@ let
       gnused
       jq
       systemd
+      openssh
     ];
     text = ''
       export OPEN_WEBUI_SERVER_IP=${lib.escapeShellArg serverIp}
@@ -72,7 +74,8 @@ let
       export OPEN_WEBUI_COMPUTER_PORT=${toString computerPort}
       export OPEN_WEBUI_GITHUB_MCP_PORT=${toString githubMcpPort}
       export OPEN_WEBUI_AGENT_MAIL_PORT=${toString agentMailPort}
-      export OPEN_WEBUI_GITHUB_ENV=${lib.escapeShellArg githubSecret}
+      export OPEN_WEBUI_GITHUB_SECRET=${lib.escapeShellArg githubSecret}
+      export OPEN_WEBUI_HOST_ADMIN_KEY_SECRET=${lib.escapeShellArg hostAdmin.privateKeySecret}
 
       ${builtins.readFile ./open-webui-sync.sh}
     '';
@@ -96,6 +99,11 @@ let
   };
 in
 {
+  users.users.open-webui = {
+    isSystemUser = true;
+    group = appDataGroup;
+  };
+
   users.users.${hostAdmin.user} = {
     isNormalUser = true;
     createHome = true;
@@ -157,10 +165,14 @@ in
   systemd.services.open-webui = {
     unitConfig.AssertPathExists = [ openWebuiSecret ];
     serviceConfig = {
-      SupplementaryGroups = lib.mkAfter [ appDataGroup ];
-      # DynamicUser implies ProtectSystem=strict. The native module points its
-      # application directories at stateDir but only its built-in StateDirectory
-      # is writable automatically, so allow just our backed-up state path.
+      # The native module hardcodes StateDirectory=open-webui even when stateDir
+      # points elsewhere. A static user keeps ownership of our backed-up custom
+      # state path stable across boots while retaining the native sandbox.
+      DynamicUser = lib.mkForce false;
+      User = "open-webui";
+      Group = appDataGroup;
+      StateDirectory = lib.mkForce "";
+      ProtectSystem = "strict";
       ReadWritePaths = [ openWebuiStateDir ];
     };
   };
@@ -247,10 +259,11 @@ in
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
+    environment.GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions,users";
     serviceConfig = {
       Type = "simple";
       DynamicUser = true;
-      ExecStart = "${pkgs.github-mcp-server}/bin/github-mcp-server http --listen-host ${serverIp} --port ${toString githubMcpPort} --scope-challenge";
+      ExecStart = "${pkgs.github-mcp-server}/bin/github-mcp-server http --listen-host 127.0.0.1 --port ${toString githubMcpPort} --scope-challenge";
       Restart = "on-failure";
       RestartSec = "5s";
       NoNewPrivileges = true;
@@ -268,9 +281,18 @@ in
     };
   };
 
+  virtualisation.oci-containers.containers.agent-mail = {
+    image = "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest";
+    ports = [ "127.0.0.1:${toString agentMailPort}:8765" ];
+    volumes = [ "${agentMailRoot}:/data" ];
+  };
+
   systemd.tmpfiles.rules = [
+    # The Agent Mail image runs as uid/gid 10001 and persists mailbox state in /data.
+    "d ${agentMailRoot} 0700 10001 10001 - -"
     "d /home/${hostAdmin.user}/.ssh 0700 ${hostAdmin.user} users - -"
-    "d ${openWebuiStateDir} 2770 root ${appDataGroup} - -"
+    "d ${openWebuiStateDir} 0770 open-webui ${appDataGroup} - -"
+    "Z ${openWebuiStateDir} - open-webui ${appDataGroup} - -"
     "d ${computerRoot} 0700 ${primaryUser} users - -"
     "d ${computerStateDir} 0700 ${primaryUser} users - -"
   ];
@@ -284,6 +306,5 @@ in
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
     openWebuiPort
     computerPort
-    githubMcpPort
   ];
 }
