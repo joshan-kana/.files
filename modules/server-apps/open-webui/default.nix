@@ -126,6 +126,8 @@ in
       # Timers provide a durable, upstream-owned restart-recovery primitive for
       # agent workflows. A relaxed poll interval keeps idle load low on the Pi.
       ENABLE_SUBAGENTS = "True";
+      # Open WebUI 0.11.0 ignores this; 0.11.1+ exposes the optional approval UI.
+      # Pre-enable it so the normal nixpkgs upgrade activates it without a package override.
       ENABLE_TOOL_PERMISSIONS = "True";
       TIMER_POLL_INTERVAL = "15";
 
