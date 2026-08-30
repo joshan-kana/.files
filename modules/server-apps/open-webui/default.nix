@@ -20,6 +20,7 @@ let
   computerRoot = "${server.storage.appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
   computerSetupTokenFile = "/run/open-webui-computer/setup-token";
+  computerGithubSecret = "${server.secretsDir}/open-webui-github.env";
 
   searxPort = 8888;
   searxSecret = "${server.secretsDir}/searxng.env";
@@ -209,9 +210,13 @@ in
       UV_CACHE_DIR = "/var/cache/open-webui-computer/uv";
       UV_PYTHON_DOWNLOADS = "never";
     };
-    unitConfig.AssertPathExists = [ hostAdmin.privateKeySecret ];
+    unitConfig.AssertPathExists = [
+      computerGithubSecret
+      hostAdmin.privateKeySecret
+    ];
     serviceConfig = {
       Type = "simple";
+      EnvironmentFile = computerGithubSecret;
       User = primaryUser;
       Group = "users";
       WorkingDirectory = "/home/${primaryUser}";
