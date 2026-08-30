@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   xwaylandEnabled = true;
@@ -92,8 +97,8 @@ in
           "tray"
         ];
         "hyprland/workspaces" = {
-          on-scroll-up = "hyprctl dispatch workspace e+1";
-          on-scroll-down = "hyprctl dispatch workspace e-1";
+          on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'";
+          on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'";
         };
         mpris = {
           interval = 1;
@@ -174,328 +179,317 @@ in
   home = _: {
     home.shellAliases = aliases;
 
-    wayland.windowManager.hyprland = {
-      xwayland.enable = xwaylandEnabled;
-      extraConfig = ''
-        #
-        # Me first try at setting up Hyprland (yayyy)
-        #
-        # Please note not all available settings / options are set here.
-        # For a full list, see the wiki
-        #
-        #
-        # See https://wiki.hyprland.org/Configuring/Monitors/
-        # monitor=,preferred,auto,auto
-        # monitor = HDMI-A-1, 3840x2160@60, 0x0, 1.5
-        # monitor = eDP-1, 1920x1080@60, 0x0, 1.0
+    wayland.windowManager.hyprland =
+      let
+        lua = lib.generators.mkLuaInline;
+        mod = keys: lua ''mainMod .. " + ${keys}"'';
+        bind = keys: dispatcher: {
+          _args = [
+            keys
+            (lua dispatcher)
+          ];
+        };
+        bindWith = keys: dispatcher: flags: {
+          _args = [
+            keys
+            (lua dispatcher)
+            flags
+          ];
+        };
+        modBind = keys: dispatcher: bind (mod keys) dispatcher;
+        modBindWith =
+          keys: dispatcher: flags:
+          bindWith (mod keys) dispatcher flags;
+        exec = command: ''hl.dsp.exec_cmd("${command}")'';
+      in
+      {
+        xwayland.enable = xwaylandEnabled;
+        configType = "lua";
 
-        # Using nwg-display to configure monitors
-        source = ~/.config/hypr/monitors.conf
+        settings = {
+          mainMod._var = "SUPER";
 
-        # Unscale xwayland
-        xwayland {
-            force_zero_scaling = true
-        }
+          config = {
+            xwayland.force_zero_scaling = true;
 
-        # See https://wiki.hyprland.org/Configuring/Keywords/ for more
+            input = {
+              kb_layout = "us";
+              kb_variant = "";
+              kb_model = "";
+              kb_options = "";
+              kb_rules = "";
+              repeat_rate = 35;
+              repeat_delay = 225;
+              follow_mouse = 1;
+              accel_profile = "flat";
+              sensitivity = 0.5;
 
-        # Execute your favorite apps at launch
-        # exec-once = waybar & hyprpaper & firefox
+              touchpad = {
+                natural_scroll = true;
+                scroll_factor = 0.2;
+                tap_to_click = true;
+                tap_and_drag = true;
+              };
+            };
 
-        # Wallpaper daemon
-        exec-once = awww init && awww img ~/.config/home-manager/wallpaper.png
+            general = {
+              gaps_in = 5;
+              gaps_out = 15;
+              border_size = 0;
+              layout = "dwindle";
+              allow_tearing = false;
+            };
 
-        # Status bar
-        exec-once = waybar
-        # Applets
-        # NetworkManager
-        exec-once = nm-applet --indicator
+            decoration = {
+              rounding = 10;
 
-        # Notification daemon
-        exec-once = dunst
+              blur = {
+                enabled = true;
+                size = 3;
+                passes = 1;
+              };
 
-        # OSD
-        exec-once = avizo-service
+              shadow = {
+                enabled = true;
+                range = 30;
+                render_power = 3;
+              };
+            };
 
-        # Clipboard daemon
-        exec-once = wl-paste --type text --watch cliphist store #Stores only text data
+            animations.enabled = true;
+            dwindle.preserve_split = true;
+            master.new_status = "slave";
 
-        exec-once = wl-paste --type image --watch cliphist store #Stores only image data
+            misc = {
+              force_default_wallpaper = 0;
+              disable_hyprland_logo = true;
+              disable_splash_rendering = true;
+              enable_swallow = true;
+              swallow_regex = "^(kitty)$";
+              focus_on_activate = true;
+            };
+          };
 
-        # Playerctld: to track media players
-        exec-once = playerctld daemon
+          curve = {
+            _args = [
+              "myBezier"
+              {
+                type = "bezier";
+                points = [
+                  [
+                    0.05
+                    0.9
+                  ]
+                  [
+                    0.1
+                    1.05
+                  ]
+                ];
+              }
+            ];
+          };
 
-        # Dropbox
-        exec-once = dropbox
-
-        # Polkit
-        exec-once = ${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1
-
-        # Source a file (multi-file configs)
-        # source = ~/.config/hypr/myColors.conf
-
-        # Some default env vars.
-        # env = XCURSOR_SIZE,30
-
-        # Telling Hyprland which GPU to use
-        # env = WLR_DRM_DEVICES,/dev/dri/card0:/dev/dri/card1
-
-        # Run on Nvidia GPU
-        # env = WLR_DRM_DEVICES,/dev/dri/card1
-
-        # Run on Intel GPU
-        # env = WLR_DRM_DEVICES,/dev/dri/card0
-
-        # For all categories, see https://wiki.hyprland.org/Configuring/Variables/
-        input {
-            kb_layout = us
-            kb_variant =
-            kb_model =
-            kb_options =
-            kb_rules =
-
-            # key repeat rate
-            repeat_rate = 35
-
-            # key repeat delay
-            repeat_delay = 225
-
-            follow_mouse = 1
-
-            accel_profile = flat
-
-            touchpad {
-                natural_scroll = true
-                scroll_factor = 0.2
-                tap-to-click = true
-                tap-and-drag = true
+          animation = [
+            {
+              leaf = "windows";
+              enabled = true;
+              speed = 4;
+              bezier = "myBezier";
             }
-
-            sensitivity = 0.5 # -1.0 - 1.0, 0 means no modification.
-        }
-
-        general {
-            # See https://wiki.hyprland.org/Configuring/Variables/ for more
-
-            gaps_in = 5
-            gaps_out = 15
-            border_size = 0
-            layout = dwindle
-
-            # Please see https://wiki.hyprland.org/Configuring/Tearing/ before you turn this on
-            allow_tearing = false
-        }
-
-        decoration {
-            # See https://wiki.hyprland.org/Configuring/Variables/ for more
-
-            rounding = 10
-
-            blur {
-                enabled = true
-                size = 3
-                passes = 1
+            {
+              leaf = "windowsOut";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
+              style = "popin 80%";
             }
-
-            # add drop shadows behind windows for depth effect
-            shadow {
-              enabled = true
-              range = 30
-              render_power = 3
+            {
+              leaf = "border";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
             }
-        }
+            {
+              leaf = "borderangle";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
+            }
+            {
+              leaf = "fade";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
+            }
+            {
+              leaf = "workspaces";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
+            }
+            {
+              leaf = "specialWorkspace";
+              enabled = true;
+              speed = 4;
+              bezier = "default";
+              style = "slidefadevert 20%";
+            }
+          ];
 
-        animations {
-            enabled = yes
+          gesture = {
+            fingers = 3;
+            direction = "horizontal";
+            action = "workspace";
+          };
 
-            # Some default animations, see https://wiki.hyprland.org/Configuring/Animations/ for more
+          device = {
+            name = "epic-mouse-v1";
+            sensitivity = -0.5;
+          };
 
-            bezier = myBezier, 0.05, 0.9, 0.1, 1.05
+          window_rule = {
+            match.class = "polkit-kde-authentication-agent-1";
+            float = true;
+            center = true;
+            size = [
+              500
+              250
+            ];
+          };
 
-            animation = windows, 1, 4, myBezier
-            animation = windowsOut, 1, 4, default, popin 80%
-            animation = border, 1, 4, default
-            animation = borderangle, 1, 4, default
-            animation = fade, 1, 4, default
-            animation = workspaces, 1, 4, default
-            animation = specialWorkspace, 1, 4, default, slidefadevert 20%
-        }
+          on = {
+            _args = [
+              "hyprland.start"
+              (lua ''
+                function()
+                  hl.exec_cmd("awww init && awww img ~/.config/home-manager/wallpaper.png")
+                  hl.exec_cmd("waybar")
+                  hl.exec_cmd("nm-applet --indicator")
+                  hl.exec_cmd("dunst")
+                  hl.exec_cmd("avizo-service")
+                  hl.exec_cmd("wl-paste --type text --watch cliphist store")
+                  hl.exec_cmd("wl-paste --type image --watch cliphist store")
+                  hl.exec_cmd("playerctld daemon")
+                  hl.exec_cmd("dropbox")
+                  hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
+                end
+              '')
+            ];
+          };
 
-        dwindle {
-            # See https://wiki.hyprland.org/Configuring/Dwindle-Layout/ for more
-            preserve_split = yes # you probably want this
-        }
+          bind = [
+            # Favourite apps
+            (modBind "ALT + 1" (exec "kitty"))
+            (modBind "ALT + 2" (exec "spotify"))
+            (modBind "ALT + 3" (exec "brave"))
+            (modBind "ALT + 4" (exec "floorp"))
+            (modBind "ALT + 5" (exec "thunderbird"))
+            (modBind "ALT + 6" (exec "code"))
+            (modBind "ALT + 7" (exec "obsidian --disable-gpu"))
+            (modBind "ALT + E" (exec "nautilus"))
+            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer"))
+            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx"))
 
-        master {
-            # See https://wiki.hyprland.org/Configuring/Master-Layout/ for more
-            new_status = slave
-        }
+            # Applets and launchers
+            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch"))
+            (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
+            (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
 
-        # gesture: 3 finger swipe horizontal to move workspaces horizontally
-        gesture = 3, horizontal, workspace
+            # Window management
+            (modBind "Q" "hl.dsp.window.close()")
+            (modBind "M" "hl.dsp.exit()")
+            (modBind "SHIFT + F" "hl.dsp.window.float()")
+            (modBind "SHIFT + P" "hl.dsp.window.pin()")
+            (modBind "P" "hl.dsp.window.pseudo()")
+            (modBind "J" ''hl.dsp.layout("togglesplit")'')
+            (modBind "F" ''hl.dsp.window.fullscreen({ mode = "maximized" })'')
+            (modBindWith "mouse:272" "hl.dsp.window.drag()" { mouse = true; })
+            (modBindWith "mouse:273" "hl.dsp.window.resize()" { mouse = true; })
 
-        misc {
-            # See https://wiki.hyprland.org/Configuring/Variables/ for more
-            force_default_wallpaper = 0 # Set to 0 to disable the anime mascot wallpapers
-            disable_hyprland_logo = true # Set to true to disable the hyprland logo on the lockscreen
-            disable_splash_rendering = true # Set to true to disable the splash screen rendering
-            enable_swallow =  true
-            swallow_regex = ^(kitty)$
+            # Focus
+            (modBind "A" ''hl.dsp.focus({ direction = "l" })'')
+            (modBind "D" ''hl.dsp.focus({ direction = "r" })'')
+            (modBind "W" ''hl.dsp.focus({ direction = "u" })'')
+            (modBind "S" ''hl.dsp.focus({ direction = "d" })'')
 
-            # Allow apps to focus when requested to (E.G. by a notification or signing in via the browser)
-            focus_on_activate = true
-        }
+            # Workspaces
+            (modBind "1" ''hl.dsp.focus({ workspace = "1" })'')
+            (modBind "2" ''hl.dsp.focus({ workspace = "2" })'')
+            (modBind "3" ''hl.dsp.focus({ workspace = "3" })'')
+            (modBind "4" ''hl.dsp.focus({ workspace = "4" })'')
+            (modBind "5" ''hl.dsp.focus({ workspace = "5" })'')
+            (modBind "6" ''hl.dsp.focus({ workspace = "6" })'')
+            (modBind "7" ''hl.dsp.focus({ workspace = "7" })'')
+            (modBind "8" ''hl.dsp.focus({ workspace = "8" })'')
+            (modBind "9" ''hl.dsp.focus({ workspace = "9" })'')
+            (modBind "0" ''hl.dsp.focus({ workspace = "10" })'')
 
-        # Example per-device config
-        # See https://wiki.hyprland.org/Configuring/Keywords/#executing for more
-        device {
-            name = epic-mouse-v1
-            sensitivity = -0.5
-        }
+            (modBind "SHIFT + 1" ''hl.dsp.window.move({ workspace = "1", follow = false })'')
+            (modBind "SHIFT + 2" ''hl.dsp.window.move({ workspace = "2", follow = false })'')
+            (modBind "SHIFT + 3" ''hl.dsp.window.move({ workspace = "3", follow = false })'')
+            (modBind "SHIFT + 4" ''hl.dsp.window.move({ workspace = "4", follow = false })'')
+            (modBind "SHIFT + 5" ''hl.dsp.window.move({ workspace = "5", follow = false })'')
+            (modBind "SHIFT + 6" ''hl.dsp.window.move({ workspace = "6", follow = false })'')
+            (modBind "SHIFT + 7" ''hl.dsp.window.move({ workspace = "7", follow = false })'')
+            (modBind "SHIFT + 8" ''hl.dsp.window.move({ workspace = "8", follow = false })'')
+            (modBind "SHIFT + 9" ''hl.dsp.window.move({ workspace = "9", follow = false })'')
+            (modBind "SHIFT + 0" ''hl.dsp.window.move({ workspace = "10", follow = false })'')
 
-        # Example windowrule v1
-        # windowrule = float, ^(kitty)$
-        # Example windowrule v2
-        # windowrulev2 = float,class:^(kitty)$,title:^(kitty)$
-        # See https://wiki.hyprland.org/Configuring/Window-Rules/ for more
-        #
-        # Make Polkit (KDE) always be floating, centred and a fixed size
-        # must add class: before program name
-        windowrule = float on, match:class = polkit-kde-authentication-agent-1
-        windowrule = center on, match:class = polkit-kde-authentication-agent-1
-        windowrule = size 500 250, match:class = polkit-kde-authentication-agent-1
+            (modBindWith "SHIFT + D" "hl.dsp.window.resize({ x = 50, y = 0, relative = true })" {
+              repeating = true;
+            })
+            (modBindWith "SHIFT + A" "hl.dsp.window.resize({ x = -50, y = 0, relative = true })" {
+              repeating = true;
+            })
+            (modBindWith "SHIFT + W" "hl.dsp.window.resize({ x = 0, y = -50, relative = true })" {
+              repeating = true;
+            })
+            (modBindWith "SHIFT + S" "hl.dsp.window.resize({ x = 0, y = 50, relative = true })" {
+              repeating = true;
+            })
 
+            (modBind "X" ''hl.dsp.workspace.toggle_special("magic")'')
+            (modBind "SHIFT + X" ''hl.dsp.window.move({ workspace = "special:magic", follow = true })'')
+            (modBind "mouse_down" ''hl.dsp.focus({ workspace = "e+1" })'')
+            (modBind "mouse_up" ''hl.dsp.focus({ workspace = "e-1" })'')
+            (modBind "CTRL + A" ''hl.dsp.focus({ workspace = "e-1" })'')
+            (modBind "CTRL + D" ''hl.dsp.focus({ workspace = "e+1" })'')
 
-        # BINDINGS (Keyboard Shortcuts)
-        # See https://wiki.hyprland.org/Configuring/Keywords/ for more
-        $mainMod = SUPER
-        # Extra info: https://wiki.hyprland.org/Configuring/Binds/
+            # Media keys
+            (bindWith "XF86AudioRaiseVolume" (exec "volumectl + 5") { repeating = true; })
+            (bindWith "XF86AudioLowerVolume" (exec "volumectl - 5") { repeating = true; })
+            (bind "XF86AudioMute" (exec "volumectl %"))
+            (modBind "ALT + X" (exec "playerctl play-pause"))
+            (modBind "ALT + C" (exec "playerctl next"))
+            (modBind "ALT + Z" (exec "playerctl previous"))
+            (modBindWith "ALT + D" (exec "playerctl position 10+") { repeating = true; })
+            (modBindWith "ALT + S" (exec "playerctl position 10-") { repeating = true; })
+            (modBind "ALT + W" (exec "playerctl shuffle toggle"))
+            (modBind "ALT + F" (exec "playerctld shift"))
 
+            # Brightness
+            (bindWith "XF86MonBrightnessUp" (exec "lightctl + 5") { repeating = true; })
+            (bindWith "XF86MonBrightnessDown" (exec "lightctl - 5") { repeating = true; })
 
-        # Favourite Apps
-        bind = $mainMod ALT, 1, exec, kitty
-        bind = $mainMod ALT, 2, exec, spotify
-        bind = $mainMod ALT, 3, exec, brave
-        bind = $mainMod ALT, 4, exec, floorp
-        bind = $mainMod ALT, 5, exec, thunderbird
-        bind = $mainMod ALT, 6, exec, code
-        bind = $mainMod ALT, 7, exec, obsidian --disable-gpu
-        bind = $mainMod ALT, E, exec, nautilus
-        bind = $mainMod SHIFT, V, exec, ${config.dotfiles.paths.repoPath}/scripts/volume_mixer
-        bind = $mainMod ALT, V, exec, ${config.dotfiles.paths.repoPath}/scripts/audio_fx
+            (modBind "L" (exec "swaylock"))
+            (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
+            (modBind "Escape" ''hl.dsp.submap("passthru")'')
+          ];
+        };
 
-        # Applets and launchers
-        bind = $mainMod, SPACE, exec, ${config.dotfiles.paths.repoPath}/scripts/app_launch
-        bind = $mainMod, V, exec, cliphist list | tofi | cliphist decode | wl-copy
-        bind = ALT, SPACE, exec, ~/repos/rofi-desktop/scripts/rofi-desktop.sh
+        submaps.passthru.settings.bind = [
+          (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
+        ];
 
-        # Window management
-        bind = $mainMod, Q, killactive,
-        bind = $mainMod, M, exit,
-        bind = $mainMod_SHIFT, F, togglefloating,
-        bind = $mainMod SHIFT, P, pin
-        bind = $mainMod, P, pseudo, # dwindle
-        bind = $mainMod, J, layoutmsg, togglesplit
-        # Fullscreen
-        bind = $mainMod,f,fullscreen,1
-
-        # Move/resize windows with mainMod + LMB/RMB and dragging
-        bindm = $mainMod, mouse:272, movewindow
-        bindm = $mainMod, mouse:273, resizewindow
-
-        # Move focus with mainMod + WASD
-        bind = $mainMod, A, movefocus, l
-        bind = $mainMod, D, movefocus, r
-        bind = $mainMod, W, movefocus, u
-        bind = $mainMod, S, movefocus, d
-
-        # Workspace management
-        # Switch workspaces with mainMod + [0-9]
-        bind = $mainMod, 1, workspace, 1
-        bind = $mainMod, 2, workspace, 2
-        bind = $mainMod, 3, workspace, 3
-        bind = $mainMod, 4, workspace, 4
-        bind = $mainMod, 5, workspace, 5
-        bind = $mainMod, 6, workspace, 6
-        bind = $mainMod, 8, workspace, 8
-        bind = $mainMod, 7, workspace, 7
-        bind = $mainMod, 9, workspace, 9
-        bind = $mainMod, 0, workspace, 10
-
-        # Move active window to a workspace with mainMod + SHIFT + [0-9]
-        bind = $mainMod SHIFT, 1, movetoworkspacesilent, 1
-        bind = $mainMod SHIFT, 2, movetoworkspacesilent, 2
-        bind = $mainMod SHIFT, 3, movetoworkspacesilent, 3
-        bind = $mainMod SHIFT, 4, movetoworkspacesilent, 4
-        bind = $mainMod SHIFT, 5, movetoworkspacesilent, 5
-        bind = $mainMod SHIFT, 6, movetoworkspacesilent, 6
-        bind = $mainMod SHIFT, 7, movetoworkspacesilent, 7
-        bind = $mainMod SHIFT, 8, movetoworkspacesilent, 8
-        bind = $mainMod SHIFT, 9, movetoworkspacesilent, 9
-        bind = $mainMod SHIFT, 0, movetoworkspacesilent, 10
-
-        # Resize active window with arrow keys
-        binde = $mainMod SHIFT, D, resizeactive, 50 0
-        binde = $mainMod SHIFT, A, resizeactive, -50 0
-        binde = $mainMod SHIFT, W, resizeactive, 0 -50
-        binde = $mainMod SHIFT, S, resizeactive, 0 50
-
-        # Example special workspace (scratchpad)
-        bind = $mainMod, X, togglespecialworkspace, magic
-        bind = $mainMod SHIFT, X, movetoworkspace, special:magic
-
-        # Movement between workspaces
-        # Scroll through existing workspaces with mainMod + scroll
-        bind = $mainMod, mouse_down, workspace, e+1
-        bind = $mainMod, mouse_up, workspace, e-1
-        # Change workspace with arrow keys
-        bind = $mainMod CTRL, A, workspace, e-1
-        bind = $mainMod CTRL, D, workspace, e+1
-
-
-        # Media Keys
-        binde=, XF86AudioRaiseVolume, exec, volumectl + 5
-        binde=, XF86AudioLowerVolume, exec, volumectl - 5
-        bind=, XF86AudioMute, exec, volumectl %
-
-        # Play/Pause
-        bind = $mainMod ALT, X, exec, playerctl play-pause
-
-        # Skip
-        # Forward
-        bind = $mainMod ALT, C, exec, playerctl next
-        # Previous
-        bind = $mainMod ALT, Z, exec, playerctl previous
-
-        # Seek
-        # Forward
-        binde = $mainMod ALT, D, exec, playerctl position 10+
-        # Backwards
-        binde = $mainMod ALT, S, exec, playerctl position 10-
-
-        # Shuffle
-        bind = $mainMod ALT, W, exec, playerctl shuffle toggle
-
-        # Switch source
-        bind = $mainMod ALT, F, exec, playerctld shift
-
-        # Monitor Brightness
-        binde=, XF86MonBrightnessUp, exec, lightctl + 5
-        binde=, XF86MonBrightnessDown, exec, lightctl - 5
-
-        # Lock screen (swaylock)
-        bind = $mainMod, L, exec, swaylock
-
-        # Edit config in vscode
-        bind = $mainMod SHIFT, E, exec, code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace
-
-        # Passthrough Super key to a VM
-        bind = $mainMod, Escape, submap, passthru
-        submap = passthru
-        bind = $mainMod SHIFT, Escape, submap, reset
-        submap = reset
-
-      '';
-    };
+        # nwg-displays writes ~/.config/hypr/monitors.lua for Hyprland 0.55+.
+        extraConfig = ''
+          local configHome = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")
+          local monitorsFile = io.open(configHome .. "/hypr/monitors.lua", "r")
+          if monitorsFile then
+            monitorsFile:close()
+            require("monitors")
+          end
+        '';
+      };
   };
 }
