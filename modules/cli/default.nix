@@ -35,6 +35,7 @@ let
       inherit (primary) email;
     };
     init.defaultBranch = "main";
+    pull.rebase = true;
   };
   gitSigningFormat = "openpgp";
   toml = pkgs.formats.toml { };
