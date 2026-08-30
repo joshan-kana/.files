@@ -1,0 +1,44 @@
+[
+  {
+    "command": "docs-read",
+    "name": "Read infrastructure docs",
+    "content": "Read the relevant canonical infrastructure documentation before acting. Treat docs/infrastructure-docs as authoritative for documented infrastructure state, especially NETWORKING.md for IP addresses, ports, access paths, and networking policy. Summarize only the facts that materially affect the current task, call out any conflict between code and docs, and do not modify anything.",
+    "tags": ["infrastructure", "docs"]
+  },
+  {
+    "command": "docs-suggest",
+    "name": "Suggest infrastructure doc updates",
+    "content": "Inspect the current implementation and the relevant canonical infrastructure documentation, then propose the smallest documentation changes needed to keep them aligned. Do not edit files. Avoid duplicating canonical networking tables or repeating details that should be linked instead.",
+    "tags": ["infrastructure", "docs"]
+  },
+  {
+    "command": "docs-sync",
+    "name": "Synchronize infrastructure docs",
+    "content": "Synchronize the canonical infrastructure documentation with the implemented state. Edit the infrastructure-docs repository directly, validate the changes, commit and push them there, then update the .files infrastructure-docs submodule pointer on the current feature branch and validate that the referenced documentation commit is pushed. Keep NETWORKING.md canonical for IPs, ports, DNS names, access paths, and network policy; do not duplicate those tables elsewhere.",
+    "tags": ["infrastructure", "docs"]
+  },
+  {
+    "command": "compact",
+    "name": "Compact working context",
+    "content": "Produce a compact continuation handoff for this conversation. Preserve decisions, constraints, exact names and identifiers, branches/PRs/issues, important commands or paths, validation results, unresolved blockers, and the next concrete action. Remove repetition and conversational filler. Do not change implementation state.",
+    "tags": ["workflow", "context"]
+  },
+  {
+    "command": "full",
+    "name": "Full-detail response",
+    "content": "For the current request, respond in full-detail mode. Include the reasoning needed to make the result auditable, exact commands/paths where useful, important tradeoffs, and validation evidence. Do not add filler or repeat already-settled context.",
+    "tags": ["workflow"]
+  },
+  {
+    "command": "review",
+    "name": "Independent implementation review",
+    "content": "Perform an independent review of the current implementation or pull request. Re-read the governing issue/requirements, inspect the actual diff rather than trusting the implementation summary, check correctness, security, data persistence, upgrade/rollback behavior, idempotency, failure modes, tests, and documentation. Return concrete findings ordered by severity with file/line or component references and a specific fix. If there are no actionable findings, say so explicitly.",
+    "tags": ["workflow", "review"]
+  },
+  {
+    "command": "check",
+    "name": "Run validation checks",
+    "content": "Run the applicable validation and quality checks for the current work and report the evidence. Treat check as non-mutating: warn about failures and inconsistencies, but do not edit files merely to silence checks unless the current task explicitly asks you to fix the findings. Include the exact failing check and relevant output when something is wrong.",
+    "tags": ["workflow", "validation"]
+  }
+]

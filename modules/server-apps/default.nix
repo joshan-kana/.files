@@ -1,4 +1,5 @@
 _: {
+  agentMail = import ./agent-mail;
   attic = import ./attic;
   chatgptShellAccess = import ./chatgpt-shell-access;
   gitea = import ./gitea;
@@ -10,5 +11,6 @@ _: {
   n8n = import ./n8n;
   onedev = import ./onedev;
   openclaw = import ./openclaw;
+  openWebui = import ./open-webui;
   paperless = import ./paperless;
 }

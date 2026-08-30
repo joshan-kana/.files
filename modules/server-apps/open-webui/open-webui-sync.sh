@@ -1,0 +1,444 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# Defaults also let this script initialize secrets before the new NixOS
+# generation is activated. The Nix-installed wrapper exports evaluated values.
+OPEN_WEBUI_SERVER_IP="${OPEN_WEBUI_SERVER_IP:-192.168.1.3}"
+OPEN_WEBUI_SECRETS_DIR="${OPEN_WEBUI_SECRETS_DIR:-/root/secrets}"
+OPEN_WEBUI_ASSET_ROOT="${OPEN_WEBUI_ASSET_ROOT:-$script_dir}"
+OPEN_WEBUI_PRIMARY_USER="${OPEN_WEBUI_PRIMARY_USER:-joshan}"
+OPEN_WEBUI_PORT="${OPEN_WEBUI_PORT:-8081}"
+OPEN_WEBUI_COMPUTER_PORT="${OPEN_WEBUI_COMPUTER_PORT:-8000}"
+OPEN_WEBUI_GITHUB_MCP_PORT="${OPEN_WEBUI_GITHUB_MCP_PORT:-8082}"
+OPEN_WEBUI_AGENT_MAIL_PORT="${OPEN_WEBUI_AGENT_MAIL_PORT:-8765}"
+OPEN_WEBUI_GITHUB_ENV="${OPEN_WEBUI_GITHUB_ENV:-${OPEN_WEBUI_SECRETS_DIR}/open-webui-github.env}"
+
+open_webui_base="http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_PORT}"
+computer_base="http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}"
+open_webui_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui.env"
+searx_env="${OPEN_WEBUI_SECRETS_DIR}/searxng.env"
+computer_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui-computer.env"
+mac_env="${OPEN_WEBUI_SECRETS_DIR}/open-webui-mac-computer.env"
+github_env="$OPEN_WEBUI_GITHUB_ENV"
+notification_id="dotfiles-unattended-work"
+
+usage() {
+  cat <<'EOF'
+usage: open-webui-sync {init-secrets|sync|all}
+
+  init-secrets  Create missing stable Open WebUI/SearXNG/Computer setup
+                secrets. Existing values are never rotated.
+  sync          Reconcile the intentionally managed application settings after
+                Open WebUI and Computer are running. Unrelated settings remain.
+  all           Run init-secrets, then sync.
+
+Optional server Computer model policy lives only in
+/root/secrets/open-webui-computer.env:
+  CPTR_MODEL_BASE_URL=...
+  CPTR_MODEL_API_KEY=...
+  CPTR_MODEL_ID=...
+  CPTR_MODEL_PROVIDER=openai        # optional
+  CPTR_MODEL_PREFIX=server-worker   # optional
+  CPTR_GATEWAY_MODEL=...            # optional explicit gateway choice
+
+Optional unattended notifications use:
+  OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL=...
+in /root/secrets/open-webui.env.
+EOF
+}
+
+require_root() {
+  if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+    echo "open-webui-sync must run as root (use sudo)." >&2
+    exit 1
+  fi
+}
+
+secret_hex() {
+  od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
+}
+
+get_value() {
+  local file="$1" key="$2"
+  [[ -f "$file" ]] || return 0
+  sed -n "s/^${key}=//p" "$file" | tail -n 1
+}
+
+set_value() {
+  local file="$1" key="$2" value="$3" tmp
+  tmp="$(mktemp)"
+  [[ ! -f "$file" ]] || grep -v "^${key}=" "$file" >"$tmp" || true
+  printf '%s=%s\n' "$key" "$value" >>"$tmp"
+  install -m 0400 -o root -g root "$tmp" "$file"
+  rm -f "$tmp"
+}
+
+ensure_value() {
+  local file="$1" key="$2" value="$3"
+  [[ -n "$(get_value "$file" "$key")" ]] || set_value "$file" "$key" "$value"
+}
+
+init_secrets() {
+  require_root
+  install -d -m 0700 -o root -g root "$OPEN_WEBUI_SECRETS_DIR"
+  touch "$open_webui_env" "$searx_env" "$computer_env"
+  chmod 0600 "$open_webui_env" "$searx_env" "$computer_env"
+
+  ensure_value "$open_webui_env" WEBUI_SECRET_KEY "$(secret_hex)"
+  ensure_value "$open_webui_env" WEBUI_ADMIN_EMAIL "${OPEN_WEBUI_ADMIN_EMAIL:-joshan@localhost}"
+  ensure_value "$open_webui_env" WEBUI_ADMIN_PASSWORD "$(secret_hex)"
+  ensure_value "$searx_env" SEARX_SECRET_KEY "$(secret_hex)"
+  ensure_value "$computer_env" CPTR_ADMIN_PASSWORD "$(secret_hex)"
+
+  chmod 0400 "$open_webui_env" "$searx_env" "$computer_env"
+  echo "Initialized missing Open WebUI secrets without rotating existing values."
+}
+
+wait_for() {
+  local url="$1" name="$2"
+  for _ in $(seq 1 60); do
+    curl -fsS "$url" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "$name did not become healthy at $url" >&2
+  return 1
+}
+
+computer_login() {
+  local cookies="$1" password="$2"
+  curl -fsS -c "$cookies" -H 'Content-Type: application/json' \
+    -d "$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --arg p "$password" '{username:$u,password:$p}')" \
+    "$computer_base/api/auth/login" >/dev/null
+}
+
+computer_setup() {
+  local cookies="$1" password="$2" startup_token
+  computer_login "$cookies" "$password" 2>/dev/null && return 0
+
+  startup_token="$(journalctl -u open-webui-computer.service --no-pager -o cat 2>/dev/null \
+    | grep -Eo 'token=[0-9a-f]{64}' | tail -n 1 | cut -d= -f2 || true)"
+  if [[ -z "$startup_token" ]]; then
+    echo "Computer cannot be logged in with its managed secret and no first-run token is available." >&2
+    echo "Restore $computer_env or reset the Computer account deliberately." >&2
+    return 1
+  fi
+
+  curl -fsS -c "$cookies" -H 'Content-Type: application/json' \
+    -d "$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --arg p "$password" --arg t "$startup_token" \
+      '{username:$u,password:$p,token:$t,display_name:"Joshan"}')" \
+    "$computer_base/api/auth/setup" >/dev/null
+}
+
+computer_workspace() {
+  local cookies="$1" workspace="$2" name="$3" encoded
+  encoded="$(jq -rn --arg value "$workspace" '$value|@uri')"
+  curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
+    -d "$(jq -cn --arg name "$name" '{name:$name}')" \
+    "$computer_base/api/state/workspace?path=$encoded" >/dev/null
+}
+
+computer_gateway_key() {
+  local cookies="$1" key
+  key="$(get_value "$computer_env" CPTR_GATEWAY_API_KEY)"
+  if [[ -n "$key" ]] && curl -fsS -H "Authorization: Bearer $key" "$computer_base/v1/models" >/dev/null 2>&1; then
+    printf '%s' "$key"
+    return
+  fi
+
+  key="$(curl -fsS -b "$cookies" -H 'Content-Type: application/json' \
+    -d '{"name":"open-webui-server"}' "$computer_base/v1/keys" | jq -er '.key')"
+  set_value "$computer_env" CPTR_GATEWAY_API_KEY "$key"
+  printf '%s' "$key"
+}
+
+sync_computer_model() {
+  local cookies="$1" base key model provider prefix gateway existing id payload
+  base="$(get_value "$computer_env" CPTR_MODEL_BASE_URL)"
+  key="$(get_value "$computer_env" CPTR_MODEL_API_KEY)"
+  model="$(get_value "$computer_env" CPTR_MODEL_ID)"
+  provider="$(get_value "$computer_env" CPTR_MODEL_PROVIDER)"
+  prefix="$(get_value "$computer_env" CPTR_MODEL_PREFIX)"
+  gateway="$(get_value "$computer_env" CPTR_GATEWAY_MODEL)"
+  provider="${provider:-openai}"
+  prefix="${prefix:-server-worker}"
+
+  if [[ -n "$base$key$model" ]]; then
+    if [[ -z "$base" || -z "$key" || -z "$model" ]]; then
+      echo "Partial CPTR_MODEL_* configuration; skipping server Computer model connection." >&2
+    else
+      existing="$(curl -fsS -b "$cookies" "$computer_base/api/admin/connections")"
+      id="$(printf '%s' "$existing" | jq -r --arg p "$prefix" '.connections[]? | select(.prefix_id==$p) | .id' | head -n1)"
+      payload="$(jq -cn --arg provider "$provider" --arg prefix "$prefix" --arg base "$base" --arg key "$key" --arg model "$model" \
+        '{name:"Server worker model",provider:$provider,api_type:"chat_completions",prefix_id:$prefix,base_url:$base,api_key:$key,enabled:true,models:[$model]}')"
+      if [[ -n "$id" ]]; then
+        curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' -d "$payload" \
+          "$computer_base/api/admin/connections/$id" >/dev/null
+      else
+        curl -fsS -b "$cookies" -H 'Content-Type: application/json' -d "$payload" \
+          "$computer_base/api/admin/connections" >/dev/null
+      fi
+    fi
+  fi
+
+  if [[ -n "$gateway" ]]; then
+    curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
+      -d "$(jq -cn --arg model "$gateway" '{config:{"gateway.model":$model}}')" \
+      "$computer_base/api/admin/config" >/dev/null
+  fi
+}
+
+computer_tool_server() {
+  local cookies="$1" id="$2" url="$3" auth_type="$4" key="$5" name="$6" current create update
+  current="$(curl -fsS -b "$cookies" "$computer_base/api/admin/tools/servers")"
+  create="$(jq -cn --arg id "$id" --arg url "$url" --arg auth "$auth_type" --arg key "$key" --arg name "$name" \
+    '{id:$id,type:"mcp",url:$url,path:"",auth_type:$auth,key:(if $key=="" then null else $key end),name:$name,description:"Managed explicitly by joshan-kana/.files",enabled:true}')"
+  update="$(jq -cn --arg url "$url" --arg auth "$auth_type" --arg key "$key" --arg name "$name" \
+    '{type:"mcp",url:$url,path:"",auth_type:$auth,key:(if $key=="" then null else $key end),name:$name,description:"Managed explicitly by joshan-kana/.files",enabled:true}')"
+
+  if jq -e --arg id "$id" 'any(.servers[]?; .id==$id)' <<<"$current" >/dev/null; then
+    curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' -d "$update" \
+      "$computer_base/api/admin/tools/servers/$id" >/dev/null
+  else
+    curl -fsS -b "$cookies" -H 'Content-Type: application/json' -d "$create" \
+      "$computer_base/api/admin/tools/servers" >/dev/null
+  fi
+}
+
+sync_computer_tools() {
+  local cookies="$1" github_token
+  github_token="$(get_value "$github_env" GH_TOKEN)"
+  if [[ -n "$github_token" ]]; then
+    computer_tool_server "$cookies" github \
+      "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
+      bearer "$github_token" "GitHub"
+  else
+    echo "GitHub MCP has no GH_TOKEN in $github_env; Computer GitHub tool remains unmanaged." >&2
+  fi
+
+  computer_tool_server "$cookies" agent_mail \
+    "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
+    none "" "Agent Mail Rust"
+}
+
+sync_computer() {
+  [[ -f "$computer_env" ]] || {
+    echo "$computer_env is missing; run: sudo open-webui-sync init-secrets" >&2
+    return 1
+  }
+  wait_for "$computer_base/api/health" "Open WebUI Computer"
+
+  local cookies password
+  cookies="$(mktemp)"
+  trap 'rm -f "$cookies"' EXIT
+  password="$(get_value "$computer_env" CPTR_ADMIN_PASSWORD)"
+  : "${password:?$computer_env must define CPTR_ADMIN_PASSWORD}"
+  computer_setup "$cookies" "$password"
+
+  computer_workspace "$cookies" "/home/$OPEN_WEBUI_PRIMARY_USER/.files" ".files"
+  computer_workspace "$cookies" "/home/$OPEN_WEBUI_PRIMARY_USER" "nixos-server"
+
+  # Persist only intentional Computer application settings. Computer owns them
+  # after this explicit sync; they are not re-applied by systemd on every boot.
+  curl -fsS -b "$cookies" -X PUT -H 'Content-Type: application/json' \
+    -d "$(jq -cn '{config:{"web.enabled":true,"web.search_provider":"searxng","web.searxng_base_url":"http://127.0.0.1:8888","browser.enabled":true,"browser.provider":"local","browser.auto_launch":true,"browser.tab_default_mode":"chrome","browser.tab_chrome_source":"managed"}}')" \
+    "$computer_base/api/admin/config" >/dev/null
+
+  computer_gateway_key "$cookies" >/dev/null
+  sync_computer_model "$cookies"
+  sync_computer_tools "$cookies"
+  rm -f "$cookies"
+  trap - EXIT
+}
+
+openwebui_token() {
+  local email password
+  email="$(get_value "$open_webui_env" WEBUI_ADMIN_EMAIL)"
+  password="$(get_value "$open_webui_env" WEBUI_ADMIN_PASSWORD)"
+  : "${email:?$open_webui_env must define WEBUI_ADMIN_EMAIL}"
+  : "${password:?$open_webui_env must define WEBUI_ADMIN_PASSWORD}"
+  curl -fsS -H 'Content-Type: application/json' \
+    -d "$(jq -cn --arg email "$email" --arg password "$password" '{email:$email,password:$password}')" \
+    "$open_webui_base/api/v1/auths/signin" | jq -er '.token'
+}
+
+computer_headers_json() {
+  jq -cn '{
+    "X-OpenWebUI-Chat-Id":"{{CHAT_ID}}",
+    "X-OpenWebUI-Message-Id":"{{MESSAGE_ID}}",
+    "X-OpenWebUI-User-Message-Id":"{{USER_MESSAGE_ID}}",
+    "X-OpenWebUI-User-Message-Parent-Id":"{{USER_MESSAGE_PARENT_ID}}",
+    "X-OpenWebUI-Task":"{{TASK}}"
+  }'
+}
+
+sync_openai_connections() {
+  local token="$1" server_key="$2" current entries preserved managed all headers
+  headers="$(computer_headers_json)"
+  managed="$(jq -cn --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_COMPUTER_PORT}/v1" --arg key "$server_key" --argjson headers "$headers" \
+    '[{url:$url,key:$key,config:{enable:true,prefix_id:"server",provider:"Open WebUI Computer (server)",headers:$headers}}]')"
+
+  if [[ -s "$mac_env" ]]; then
+    local mac_url mac_key
+    mac_url="$(get_value "$mac_env" CPTR_BASE_URL)"
+    mac_key="$(get_value "$mac_env" CPTR_GATEWAY_API_KEY)"
+    if [[ -n "$mac_url" && -n "$mac_key" ]]; then
+      managed="$(jq -cn --argjson cur "$managed" --arg url "$mac_url" --arg key "$mac_key" --argjson headers "$headers" \
+        '$cur + [{url:$url,key:$key,config:{enable:true,prefix_id:"mac",provider:"Open WebUI Computer (Mac)",headers:$headers}}]')"
+    fi
+  fi
+
+  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/openai/config")"
+  entries="$(printf '%s' "$current" | jq -c '(.OPENAI_API_BASE_URLS//[]) as $u | (.OPENAI_API_KEYS//[]) as $k | (.OPENAI_API_CONFIGS//{}) as $c | [range(0;($u|length)) as $i | {url:$u[$i],key:($k[$i]//""),config:($c[($i|tostring)]//{})}]')"
+  preserved="$(printf '%s' "$entries" | jq -c 'map(select(((.config.prefix_id//"")!="server") and ((.config.prefix_id//"")!="mac")))')"
+  all="$(jq -cn --argjson keep "$preserved" --argjson managed "$managed" '$keep+$managed')"
+
+  curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+    -d "$(jq -cn --argjson e "$all" '{ENABLE_OPENAI_API:true,OPENAI_API_BASE_URLS:[$e[].url],OPENAI_API_KEYS:[$e[].key],OPENAI_API_CONFIGS:(reduce range(0;($e|length)) as $i ({}; .[($i|tostring)]=$e[$i].config))}')" \
+    "$open_webui_base/openai/config/update" >/dev/null
+}
+
+sync_tool_servers() {
+  local token="$1" current preserved managed all github_token
+  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/configs/tool_servers" | jq -c '.TOOL_SERVER_CONNECTIONS//[]')"
+  preserved="$(printf '%s' "$current" | jq -c '
+    map(select(((.info // {}).id // "") as $id | (["github","native-sessions","agent-mail"] | index($id) | not)))
+  ')"
+  managed='[]'
+
+  github_token="$(get_value "$github_env" GH_TOKEN)"
+  if [[ -n "$github_token" ]]; then
+    managed="$(jq -cn --arg key "$github_token" --arg url "http://${OPEN_WEBUI_SERVER_IP}:${OPEN_WEBUI_GITHUB_MCP_PORT}/mcp" \
+      '[{url:$url,path:"",type:"mcp",auth_type:"bearer",headers:null,key:$key,config:{enable:true},info:{id:"github",name:"GitHub"}}]')"
+  else
+    echo "GitHub MCP has no GH_TOKEN in $github_env; leaving that managed connection absent." >&2
+  fi
+
+  managed="$(jq -cn --argjson cur "$managed" --arg url "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mcp/" \
+    '$cur + [{url:$url,path:"",type:"mcp",auth_type:"none",headers:null,key:"",config:{enable:true},info:{id:"agent-mail",name:"Agent Mail Rust"}}]')"
+
+  all="$(jq -cn --argjson keep "$preserved" --argjson managed "$managed" '$keep+$managed')"
+  curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+    -d "$(jq -cn --argjson c "$all" '{TOOL_SERVER_CONNECTIONS:$c}')" \
+    "$open_webui_base/api/v1/configs/tool_servers" >/dev/null
+}
+
+sync_folders() {
+  local token="$1" folders name
+  folders="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/folders/")"
+  for name in 'General' '.files' 'Project Speed' 'Home Automation' 'Research' 'University'; do
+    if ! printf '%s' "$folders" | jq -e --arg name "$name" 'any(.[]?; .name==$name)' >/dev/null; then
+      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+        -d "$(jq -cn --arg name "$name" '{name:$name}')" "$open_webui_base/api/v1/folders/" >/dev/null
+      folders="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/folders/")"
+    fi
+  done
+}
+
+sync_prompts() {
+  local token="$1" current row command id payload
+  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/prompts/")"
+  while IFS= read -r row; do
+    command="$(jq -r '.command' <<<"$row")"
+    id="$(jq -r --arg command "$command" '.[]? | select(.command==$command) | .id' <<<"$current" | head -n1)"
+    payload="$(jq -c '{command,name,content,tags:(.tags//[]),meta:(.meta//{})}' <<<"$row")"
+    if [[ -n "$id" ]]; then
+      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/prompts/id/$id/update" >/dev/null
+    else
+      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/prompts/create" >/dev/null
+    fi
+  done < <(jq -c '.[]' "$OPEN_WEBUI_ASSET_ROOT/prompts.json")
+}
+
+sync_skills() {
+  local token="$1" current row id payload
+  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/skills/")"
+  while IFS= read -r row; do
+    id="$(jq -r '.id' <<<"$row")"
+    payload="$(jq -c '{id,name,description,content,meta:(.meta//{}),is_active:(.is_active//true)}' <<<"$row")"
+    if jq -e --arg id "$id" 'any(.[]?; .id==$id)' <<<"$current" >/dev/null; then
+      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/skills/id/$id/update" >/dev/null
+    else
+      curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/skills/create" >/dev/null
+    fi
+  done < <(jq -c '.[]' "$OPEN_WEBUI_ASSET_ROOT/skills.json")
+}
+
+sync_function() {
+  local token="$1" id="$2" name="$3" source="$4" global="$5" content payload current
+  content="$(cat "$source")"
+  payload="$(jq -cn --arg id "$id" --arg name "$name" --arg content "$content" '{id:$id,name:$name,content:$content,meta:{description:"Managed explicitly by joshan-kana/.files"}}')"
+
+  if curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id" >/dev/null 2>&1; then
+    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/functions/id/$id/update" >/dev/null
+  else
+    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/functions/create" >/dev/null
+  fi
+
+  current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id")"
+  if [[ "$(jq -r '.is_active' <<<"$current")" != true ]]; then
+    curl -fsS -X POST -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id/toggle" >/dev/null
+    current="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id")"
+  fi
+  if [[ "$global" == true && "$(jq -r '.is_global' <<<"$current")" != true ]]; then
+    curl -fsS -X POST -H "Authorization: Bearer $token" "$open_webui_base/api/v1/functions/id/$id/toggle/global" >/dev/null
+  fi
+}
+
+sync_notifications() {
+  local token="$1" url targets payload
+  url="$(get_value "$open_webui_env" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)"
+  [[ -n "$url" ]] || return 0
+  targets="$(curl -fsS -H "Authorization: Bearer $token" "$open_webui_base/api/v1/notifications/targets")"
+  payload="$(jq -cn --arg id "$notification_id" --arg url "$url" '{id:$id,type:"webhook",enabled:true,events:["chat.finished","chat.failed"],delivery:"away",config:{url:$url}}')"
+
+  if jq -e --arg id "$notification_id" 'any(.targets[]?; .id==$id)' <<<"$targets" >/dev/null; then
+    curl -fsS -X PUT -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/notifications/targets/$notification_id" >/dev/null
+  else
+    curl -fsS -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "$payload" "$open_webui_base/api/v1/notifications/targets" >/dev/null
+  fi
+}
+
+sync_openwebui() {
+  wait_for "$open_webui_base/api/config" "Open WebUI"
+  local token server_key
+  token="$(openwebui_token)"
+  server_key="$(get_value "$computer_env" CPTR_GATEWAY_API_KEY)"
+  : "${server_key:?Computer gateway key is missing; sync Computer first}"
+
+  sync_openai_connections "$token" "$server_key"
+  sync_tool_servers "$token"
+  sync_folders "$token"
+  sync_prompts "$token"
+  sync_skills "$token"
+  sync_function "$token" restart_recovery_filter "Restart Recovery Marker" "$OPEN_WEBUI_ASSET_ROOT/functions/restart_recovery_filter.py" true
+  sync_function "$token" restart_recovery_event "Restart Recovery" "$OPEN_WEBUI_ASSET_ROOT/functions/restart_recovery_event.py" false
+  sync_function "$token" compact_answer_filter "Compact Answer" "$OPEN_WEBUI_ASSET_ROOT/functions/compact_answer_filter.py" true
+  sync_notifications "$token"
+}
+
+sync_all() {
+  require_root
+  [[ -f "$open_webui_env" && -f "$searx_env" && -f "$computer_env" ]] || {
+    echo "Required setup secrets are missing; run: sudo open-webui-sync init-secrets" >&2
+    return 1
+  }
+  wait_for "http://127.0.0.1:${OPEN_WEBUI_AGENT_MAIL_PORT}/mail/" "Agent Mail Rust"
+  sync_computer
+  sync_openwebui
+  echo "Open WebUI managed application settings are synchronized."
+
+  [[ -n "$(get_value "$computer_env" CPTR_MODEL_ID)" ]] || \
+    echo "NOTE: no server Computer model is managed yet; configure one before autonomous-server validation." >&2
+  [[ -n "$(get_value "$open_webui_env" OPEN_WEBUI_NOTIFICATION_WEBHOOK_URL)" ]] || \
+    echo "NOTE: unattended notification delivery is not configured yet." >&2
+}
+
+case "${1:---help}" in
+  init-secrets) init_secrets ;;
+  sync) sync_all ;;
+  all) init_secrets; sync_all ;;
+  -h|--help|help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

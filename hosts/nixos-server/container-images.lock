@@ -1,4 +1,8 @@
 {
+  "agent-mail": {
+    "digest": "sha256:1685ff317ae8adc824c21bc20227b11f0381c08f3f8f8062f1af722e24ba99c0",
+    "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
+  },
   "home-assistant": {
     "digest": "sha256:d8922685169707fd91e8b9729902d975f06157d005e422874d201e0261dda196",
     "source": "ghcr.io/home-assistant/home-assistant:stable"
