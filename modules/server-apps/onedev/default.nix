@@ -1,9 +1,9 @@
 { config, lib, ... }:
 
 let
-  serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.storage.appData.root;
-  serverIp = serverCfg.lan.serverIp;
+  inherit (config.dotfiles) server;
+  appDataRoot = server.storage.appData.root;
+  serverIp = server.lan.serverIp;
 in
 {
   virtualisation.oci-containers.containers.onedev = {

@@ -5,11 +5,11 @@
 }:
 
 let
-  serverCfg = config.dotfiles.server;
+  inherit (config.dotfiles) server;
   cacheRoot = "/var/lib/atticd";
   cachePort = 8080;
-  atticSecretFile = "${serverCfg.secretsDir}/attic.env";
-  cacheHost = serverCfg.lan.serverIp;
+  atticSecretFile = "${server.secretsDir}/attic.env";
+  cacheHost = server.lan.serverIp;
 in
 {
   users.groups.atticd = { };
@@ -47,5 +47,5 @@ in
     serviceConfig.DynamicUser = lib.mkForce false;
   };
 
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ cachePort ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ cachePort ];
 }

@@ -6,15 +6,15 @@
 }:
 
 let
-  serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.storage.appData.root;
-  appDataGroup = serverCfg.storage.appData.group.name;
+  inherit (config.dotfiles) server;
+  appDataRoot = server.storage.appData.root;
+  appDataGroup = server.storage.appData.group.name;
 
   bridgeUser = "matrix-bridge";
   stateRoot = "${appDataRoot}/matrix";
   dataRoot = "${stateRoot}/data";
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
-  bbctlSecretFile = "${serverCfg.secretsDir}/beeper-bbctl-secret.json";
+  bbctlSecretFile = "${server.secretsDir}/beeper-bbctl-secret.json";
 
   system = pkgs.stdenv.hostPlatform.system;
   unstablePkgs = import inputs.nixpkgs {

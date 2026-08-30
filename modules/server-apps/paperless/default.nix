@@ -1,7 +1,7 @@
 { config, lib, ... }:
 
 let
-  server = config.dotfiles.server;
+  inherit (config.dotfiles) server;
   dataDir = "${server.storage.appData.root}/paperless";
 in
 {

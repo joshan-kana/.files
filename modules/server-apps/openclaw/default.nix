@@ -6,9 +6,9 @@
 
 let
   primaryUser = config.dotfiles.users.primary.name;
-  serverCfg = config.dotfiles.server;
-  inherit (serverCfg) secretsDir;
-  appDataRoot = serverCfg.storage.appData.root;
+  inherit (config.dotfiles) server;
+  inherit (server) secretsDir;
+  appDataRoot = server.storage.appData.root;
 
   openclawSecretFiles = [
     "${secretsDir}/openclaw.env"
@@ -20,8 +20,8 @@ let
   ];
 
   appDataEditor = {
-    group = serverCfg.storage.appData.group.name;
-    gid = serverCfg.storage.appData.group.id;
+    group = server.storage.appData.group.name;
+    gid = server.storage.appData.group.id;
   };
 
   openclawHostAdmin = {
@@ -167,7 +167,7 @@ let
 
 in
 {
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ 18789 ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 18789 ];
 
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;

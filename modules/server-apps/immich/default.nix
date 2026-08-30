@@ -1,15 +1,15 @@
 { config, lib, ... }:
 
 let
-  serverCfg = config.dotfiles.server;
-  inherit (serverCfg) storage;
+  inherit (config.dotfiles) server;
+  inherit (server) storage;
   mediaLocation = "${storage.dataRoot.path}/immich";
   backupLocation = "${mediaLocation}/backups";
 in
 {
   services.immich = {
     enable = true;
-    host = serverCfg.lan.serverIp;
+    host = server.lan.serverIp;
     openFirewall = false;
     inherit mediaLocation;
     group = storage.dataRoot.group.name;
@@ -17,7 +17,7 @@ in
     settings.backup.database.cronExpression = "*/${toString storage.snapshots.intervalMinutes} * * * *";
   };
 
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts =
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
     lib.optionals config.services.immich.enable
       [ config.services.immich.port ];
 

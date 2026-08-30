@@ -5,8 +5,8 @@
 }:
 
 let
-  serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.storage.appData.root;
+  inherit (config.dotfiles) server;
+  appDataRoot = server.storage.appData.root;
 in
 {
   hardware.bluetooth = {
@@ -16,7 +16,7 @@ in
 
   environment.systemPackages = [ pkgs.bluez ];
 
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
     8123
     21064 # HomeKit main bridge
     21065 # HomeKit Bambu camera bridge
