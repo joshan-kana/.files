@@ -170,6 +170,22 @@
         "type": "github"
       }
     },
+    "computer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786945049,
+        "narHash": "sha256-A7aRepvuj1h8CMLZiBtk5vpP+D2DxLlt/reXgUSqI0c=",
+        "owner": "open-webui",
+        "repo": "computer",
+        "rev": "f9d1d8cdaf7e034b8fa19619063a6be931b9ee97",
+        "type": "github"
+      },
+      "original": {
+        "owner": "open-webui",
+        "repo": "computer",
+        "type": "github"
+      }
+    },
     "determinate-nix": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -886,6 +902,7 @@
     },
     "root": {
       "inputs": {
+        "computer": "computer",
         "determinate-nix": "determinate-nix",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",

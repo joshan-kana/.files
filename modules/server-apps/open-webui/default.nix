@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -15,7 +16,8 @@ let
   openWebuiStateDir = "${server.storage.appData.root}/open-webui";
   openWebuiSecret = "${server.secretsDir}/open-webui.env";
 
-  computerVersion = "0.9.21";
+  computerVersion =
+    (builtins.fromTOML (builtins.readFile "${inputs.computer}/pyproject.toml")).project.version;
   computerPort = 8000;
   computerRoot = "${server.storage.appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
@@ -56,7 +58,7 @@ let
     export CPTR_STARTUP_TOKEN="$setupToken"
 
     exec ${pkgs.uv}/bin/uvx \
-      --python ${pkgs.python312}/bin/python \
+      --python ${pkgs.python3}/bin/python \
       --from 'cptr[all]==${computerVersion}' \
       python -m uvicorn cptr.app:application \
       --host ${lib.escapeShellArg serverIp} \
