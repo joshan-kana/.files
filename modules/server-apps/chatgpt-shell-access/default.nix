@@ -8,9 +8,9 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   serviceUser = "chatgpt-shell";
-  tunnelSecretFile = "${server.secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeySecretFile = "${server.secretsDir}/chatgpt-shell-mac";
-  sudoSshKeySecretFile = "${server.secretsDir}/chatgpt-shell-sudo";
+  tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
+  macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
+  sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
   tunnelClientVersion = "0.0.11";
@@ -62,9 +62,9 @@ in
     wants = [ "network-online.target" ];
 
     unitConfig.AssertPathExists = [
-      tunnelSecretFile
-      macSshKeySecretFile
-      sudoSshKeySecretFile
+      tunnelSecret
+      macSshKeySecret
+      sudoSshKeySecret
       macKnownHostsFile
     ];
 
@@ -100,10 +100,10 @@ in
       User = serviceUser;
       RuntimeDirectory = "chatgpt-shell-access";
       RuntimeDirectoryMode = "0770";
-      EnvironmentFile = tunnelSecretFile;
+      EnvironmentFile = tunnelSecret;
       LoadCredential = [
-        "chatgpt-shell-mac:${macSshKeySecretFile}"
-        "chatgpt-shell-sudo:${sudoSshKeySecretFile}"
+        "chatgpt-shell-mac:${macSshKeySecret}"
+        "chatgpt-shell-sudo:${sudoSshKeySecret}"
         "chatgpt-shell-known-hosts:${macKnownHostsFile}"
       ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''

@@ -13,7 +13,7 @@ let
   stateRoot = "${appData.root}/matrix";
   dataRoot = "${stateRoot}/data";
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
-  bbctlSecretFile = "${server.secretsDir}/beeper-bbctl-secret.json";
+  bbctlSecret = "${server.secretsDir}/beeper-bbctl-secret.json";
 
   inherit (pkgs.stdenv.hostPlatform) system;
   unstablePkgs = import inputs.nixpkgs {
@@ -55,7 +55,7 @@ let
             HOME=${stateRoot} \
             XDG_DATA_HOME=${dataRoot} \
             BEEPER_ENV=prod \
-            ${bridgeManager}/bin/bbctl --config ${bbctlSecretFile} "$@"
+            ${bridgeManager}/bin/bbctl --config ${bbctlSecret} "$@"
           exec ${pkgs.systemd}/bin/systemctl restart matrix-bridges.target
           ;;
         logout)
@@ -64,7 +64,7 @@ let
             HOME=${stateRoot} \
             XDG_DATA_HOME=${dataRoot} \
             BEEPER_ENV=prod \
-            ${bridgeManager}/bin/bbctl --config ${bbctlSecretFile} "$@"
+            ${bridgeManager}/bin/bbctl --config ${bbctlSecret} "$@"
           exec ${pkgs.systemd}/bin/systemctl stop matrix-bridges.target
           ;;
       esac
@@ -77,7 +77,7 @@ let
         --property=User=${bridgeUser} \
         --property=Group=${bridgeUser} \
         --property=WorkingDirectory=${stateRoot} \
-        --property=LoadCredential=bbctl.json:${bbctlSecretFile} \
+        --property=LoadCredential=bbctl.json:${bbctlSecret} \
         ${bbctlCredentialRunner} "$@"
     '';
   };
@@ -94,7 +94,7 @@ let
       partOf = [ "matrix-bridges.target" ];
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
-      unitConfig.AssertPathExists = bbctlSecretFile;
+      unitConfig.AssertPathExists = bbctlSecret;
 
       environment = {
         HOME = stateRoot;
@@ -108,7 +108,7 @@ let
         User = bridgeUser;
         Group = bridgeUser;
         WorkingDirectory = stateRoot;
-        LoadCredential = [ "bbctl.json:${bbctlSecretFile}" ];
+        LoadCredential = [ "bbctl.json:${bbctlSecret}" ];
         ExecCondition = "${pkgs.jq}/bin/jq -e '(.environments.prod.access_token? // \"\") | startswith(\"syt_\") or startswith(\"bat_\")' %d/bbctl.json";
         ExecStart = "${bridgeManager}/bin/bbctl --config %d/bbctl.json run --no-override-config --custom-startup-command ${binary} sh-${provider}";
         Restart = "always";

@@ -3,7 +3,7 @@
 let
   inherit (config.dotfiles) server;
   hostPort = 5678;
-  n8nSecretFile = "${server.secretsDir}/n8n.env";
+  n8nSecret = "${server.secretsDir}/n8n.env";
 in
 {
   virtualisation.oci-containers.containers.n8n = {
@@ -15,8 +15,8 @@ in
     environment = {
       GENERIC_TIMEZONE = config.time.timeZone;
     };
-    environmentFiles = [ n8nSecretFile ];
+    environmentFiles = [ n8nSecret ];
   };
 
-  systemd.services.docker-n8n.unitConfig.AssertPathExists = n8nSecretFile;
+  systemd.services.docker-n8n.unitConfig.AssertPathExists = n8nSecret;
 }

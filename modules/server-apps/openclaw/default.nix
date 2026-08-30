@@ -8,7 +8,7 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
 
-  openclawSecretFiles = [
+  openclawSecrets = [
     "${server.secretsDir}/openclaw.env"
     "${server.secretsDir}/server-ai.env"
     "${server.secretsDir}/server-zdr-openrouter.env"
@@ -24,7 +24,7 @@ let
 
   openclawHostAdmin = {
     user = "openclaw-admin";
-    privateKeySecretFile = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
+    privateKeySecret = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
@@ -39,8 +39,8 @@ let
   };
 
   openclawGitHub = {
-    apiSecretFile = "${server.secretsDir}/openclaw-github.env";
-    privateKeySecretFile = "${server.secretsDir}/openclaw-github-id_ed25519";
+    apiSecret = "${server.secretsDir}/openclaw-github.env";
+    privateKeySecret = "${server.secretsDir}/openclaw-github-id_ed25519";
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
@@ -74,13 +74,13 @@ let
 
       case "$operation" in
         gh)
-          [ -r ${openclawGitHub.apiSecretFile} ] ||
-            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiSecretFile}"
+          [ -r ${openclawGitHub.apiSecret} ] ||
+            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiSecret}"
 
           unset GH_TOKEN
           # shellcheck disable=SC1091
-          source ${openclawGitHub.apiSecretFile}
-          : "''${GH_TOKEN:?${openclawGitHub.apiSecretFile} must define GH_TOKEN}"
+          source ${openclawGitHub.apiSecret}
+          : "''${GH_TOKEN:?${openclawGitHub.apiSecret} must define GH_TOKEN}"
 
           exec "''${primaryEnv[@]}" \
             GH_TOKEN="$GH_TOKEN" \
@@ -98,8 +98,8 @@ let
               ;;
           esac
 
-          [ -r ${openclawGitHub.privateKeySecretFile} ] ||
-            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeySecretFile}"
+          [ -r ${openclawGitHub.privateKeySecret} ] ||
+            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeySecret}"
 
           agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
@@ -107,7 +107,7 @@ let
 
           eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
 
-          ssh-add ${openclawGitHub.privateKeySecretFile} >/dev/null 2>&1 ||
+          ssh-add ${openclawGitHub.privateKeySecret} >/dev/null 2>&1 ||
             die "Failed to load the OpenClaw GitHub SSH key"
 
           publicIdentity="$agentDir/id_ed25519.pub"
@@ -189,7 +189,7 @@ in
   system.activationScripts.openclawHostAdminAuthorizedKeys = {
     deps = [ "users" ];
     text = ''
-      keyFile="${openclawHostAdmin.privateKeySecretFile}.pub"
+      keyFile="${openclawHostAdmin.privateKeySecret}.pub"
       home="/home/${openclawHostAdmin.user}"
 
       if [ -f "$keyFile" ]; then
@@ -219,11 +219,11 @@ in
 
     "d ${server.secretsDir} 0700 root root - -"
     "Z ${server.secretsDir} ~0700 root root - -"
-    "z ${openclawGitHub.apiSecretFile} 0400 root root - -"
-    "z ${openclawGitHub.privateKeySecretFile} 0400 root root - -"
-    "z ${openclawGitHub.privateKeySecretFile}.pub 0644 root root - -"
-    "z ${openclawHostAdmin.privateKeySecretFile} 0400 ${toString openclawContainerUser.uid} root - -"
-    "z ${openclawHostAdmin.privateKeySecretFile}.pub 0644 root root - -"
+    "z ${openclawGitHub.apiSecret} 0400 root root - -"
+    "z ${openclawGitHub.privateKeySecret} 0400 root root - -"
+    "z ${openclawGitHub.privateKeySecret}.pub 0644 root root - -"
+    "z ${openclawHostAdmin.privateKeySecret} 0400 ${toString openclawContainerUser.uid} root - -"
+    "z ${openclawHostAdmin.privateKeySecret}.pub 0644 root root - -"
   ];
 
   services.nginx = {
@@ -727,7 +727,7 @@ in
 
   systemd.services.docker-openclaw = {
     unitConfig.AssertPathIsRegular = [
-      openclawHostAdmin.privateKeySecretFile
+      openclawHostAdmin.privateKeySecret
       "${server.secretsDir}/server-zdr-openrouter.env"
       "${server.secretsDir}/server-deepseek-openrouter.env"
       "${server.secretsDir}/server-free-openrouter.env"
@@ -741,8 +741,8 @@ in
     wants = [ "nginx.service" ];
   };
 
-  systemd.services.docker-openclaw.unitConfig.AssertPathExists = openclawSecretFiles ++ [
-    openclawHostAdmin.privateKeySecretFile
+  systemd.services.docker-openclaw.unitConfig.AssertPathExists = openclawSecrets ++ [
+    openclawHostAdmin.privateKeySecret
   ];
 
   # Server OCI containers. Images are declared as plain upstream `repository:tag`
@@ -756,7 +756,7 @@ in
       volumes = [
         "${server.storage.appData.root}/openclaw:/home/node/.openclaw"
         "${server.storage.appData.root}/openclaw-auth:/home/node/.config/openclaw"
-        "${openclawHostAdmin.privateKeySecretFile}:${openclawHostAdmin.privateKeyMountPath}:ro"
+        "${openclawHostAdmin.privateKeySecret}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
         "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
         "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
@@ -770,7 +770,7 @@ in
         NODE_OPTIONS = "--dns-result-order=ipv4first";
         OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
-      environmentFiles = openclawSecretFiles;
+      environmentFiles = openclawSecrets;
 
       extraOptions = [
         "--network=host"

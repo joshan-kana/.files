@@ -8,7 +8,7 @@ let
   inherit (config.dotfiles) server;
   cacheRoot = "/var/lib/atticd";
   cachePort = 8080;
-  atticSecretFile = "${server.secretsDir}/attic.env";
+  atticSecret = "${server.secretsDir}/attic.env";
   cacheHost = server.lan.serverIp;
 in
 {
@@ -20,7 +20,7 @@ in
 
   services.atticd = {
     enable = true;
-    environmentFile = atticSecretFile;
+    environmentFile = atticSecret;
     settings = {
       listen = "0.0.0.0:${toString cachePort}";
       api-endpoint = "http://${cacheHost}:${toString cachePort}/";
@@ -41,7 +41,7 @@ in
     after = [ "zfs-mount.service" ];
     requires = [ "zfs-mount.service" ];
     unitConfig = {
-      AssertPathExists = atticSecretFile;
+      AssertPathExists = atticSecret;
       AssertPathIsMountPoint = cacheRoot;
     };
     serviceConfig.DynamicUser = lib.mkForce false;
