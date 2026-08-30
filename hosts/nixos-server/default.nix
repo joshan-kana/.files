@@ -37,7 +37,6 @@
     scopes.cli = {
       clipboard.enable = false;
       mpv.enable = false;
-      tmuxai.enable = false;
       ollama.enable = false;
       cava.enable = false;
       ncmpcpp.enable = false;
