@@ -228,7 +228,7 @@
             repo-quality = {
               enable = true;
               name = "Repository formatting and linting";
-              entry = "${lib.getExe pkgs.nix} build --no-link .#checks.${system}.repo-quality";
+              entry = "nix build --no-link .#checks.${system}.repo-quality";
               files = "\\.(nix|md|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
@@ -309,7 +309,7 @@
             exec ${lib.getExe treefmt.config.build.wrapper} "$@"
           '';
           checkRepo = pkgs.writeShellScriptBin "chk" ''
-            exec ${lib.getExe pkgs.nix} flake check "$@"
+            exec nix flake check "$@"
           '';
 
           commonTools =
