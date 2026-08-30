@@ -218,7 +218,6 @@ in
     "d ${server.storage.appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
     "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
 
-    "Z ${server.secretsDir} ~0700 root root - -"
     "z ${openclawGitHub.apiSecret} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecret} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecret}.pub 0644 root root - -"
