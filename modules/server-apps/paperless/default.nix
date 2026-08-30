@@ -2,8 +2,7 @@
 
 let
   inherit (config.dotfiles) server;
-  inherit (server) storage;
-  inherit (storage) appData dataRoot;
+  inherit (server.storage) appData dataRoot;
   dataDir = "${appData.root}/paperless";
 in
 {
