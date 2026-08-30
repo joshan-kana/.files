@@ -356,7 +356,6 @@ in
         home.shellAliases = aliases;
         programs.git = {
           settings = gitSettings;
-          ignores = [ ".cptr/" ];
           signing.format = gitSigningFormat;
         };
       };
