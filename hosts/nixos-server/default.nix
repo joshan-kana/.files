@@ -448,6 +448,7 @@
       };
 
       systemd.tmpfiles.rules = [
+        "d ${server.secretsDir} 0700 root root - -"
         "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
         "v ${storage.appData.root}/.snapshots 0750 root root - -"
         "a ${storage.appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
