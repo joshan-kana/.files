@@ -232,6 +232,7 @@ in
       CPTR_DATA_DIR = computerStateDir;
       CPTR_LOG_LEVEL = "WARNING";
       ENABLE_CHAT_RECONCILE_ON_STARTUP = "true";
+      LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
       SEARXNG_BASE_URL = searxBaseUrl;
       UV_CACHE_DIR = computerUvCacheDir;
       UV_PYTHON_DOWNLOADS = "never";
