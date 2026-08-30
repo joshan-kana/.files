@@ -304,7 +304,6 @@ in
   ];
 
   environment.systemPackages = [
-    hostCommand
     nativeSessionMirror
     openWebuiSync
   ];
