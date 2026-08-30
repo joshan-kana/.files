@@ -5,9 +5,11 @@
 }:
 
 let
-  primaryUser = config.dotfiles.users.primary.name;
+  inherit (config.dotfiles) server;
+  inherit (config.dotfiles.users) primary;
+  inherit (server) secretsDir;
+  primaryUser = primary.name;
   serviceUser = "chatgpt-shell";
-  secretsDir = config.dotfiles.server.secretsDir;
   tunnelSecretFile = "${secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecretFile = "${secretsDir}/chatgpt-shell-mac";
   sudoSshKeySecretFile = "${secretsDir}/chatgpt-shell-sudo";

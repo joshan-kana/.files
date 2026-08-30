@@ -16,7 +16,7 @@ let
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
   bbctlSecretFile = "${server.secretsDir}/beeper-bbctl-secret.json";
 
-  system = pkgs.stdenv.hostPlatform.system;
+  inherit (pkgs.stdenv.hostPlatform) system;
   unstablePkgs = import inputs.nixpkgs {
     inherit system;
     # Current cached mautrix packages still depend on deprecated libolm.

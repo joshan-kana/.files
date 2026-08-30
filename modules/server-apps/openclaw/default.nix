@@ -5,8 +5,9 @@
 }:
 
 let
-  primaryUser = config.dotfiles.users.primary.name;
   inherit (config.dotfiles) server;
+  inherit (config.dotfiles.users) primary;
+  primaryUser = primary.name;
   inherit (server) secretsDir;
   appDataRoot = server.storage.appData.root;
 

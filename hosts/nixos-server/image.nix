@@ -5,7 +5,8 @@
 }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
+  inherit (config.dotfiles) server;
+  appDataRoot = server.storage.appData.root;
 
   firmwareTree = pkgs.runCommand "nixos-server-rpi-firmware" { } ''
         mkdir -p "$out"

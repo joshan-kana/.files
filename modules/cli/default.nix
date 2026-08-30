@@ -6,12 +6,13 @@
 }:
 
 let
-  cfg = config.dotfiles;
-  repoPath = cfg.paths.repoPath;
+  inherit (config) dotfiles;
+  inherit (dotfiles.users) primary;
+  repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
     edit = "if command -v code >/dev/null 2>&1; then code \"$DOTFILES/edit_config.code-workspace\"; else \${EDITOR:-nvim} \"$DOTFILES\"; fi";
-    flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${cfg.profile.name}";
+    flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${dotfiles.profile.name}";
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
   };
@@ -33,8 +34,8 @@ let
   };
   gitSettings = {
     user = {
-      name = cfg.users.primary.fullName;
-      email = cfg.users.primary.email;
+      name = primary.fullName;
+      inherit (primary) email;
     };
     init.defaultBranch = "main";
   };
@@ -51,7 +52,7 @@ let
     transparent_background = false;
     review_watch_interval_ms = 1000;
     no_update_check = true;
-    username = cfg.users.primary.fullName;
+    username = primary.fullName;
     comment_types = [
       {
         id = "issue";
@@ -118,9 +119,9 @@ in
 {
   environment.sessionVariables = {
     DOTFILES = repoPath;
-    FLK_PROFILE = cfg.profile.name;
-    OLLAMA_URL = cfg.services.ollama.url;
-    NIXOS_REBUILD_FLAGS = cfg.rebuild.flags;
+    FLK_PROFILE = dotfiles.profile.name;
+    OLLAMA_URL = dotfiles.services.ollama.url;
+    NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
 
   nh = args: {
@@ -395,7 +396,7 @@ in
             provider: openrouter
             model: gemma3:12b
             api_key: XXXXXXXXXXXXXXX
-            base_url: ${cfg.services.ollama.url}
+            base_url: ${dotfiles.services.ollama.url}
       '';
     };
   };

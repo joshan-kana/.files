@@ -79,7 +79,7 @@
 
     let
       shared = moduleRegistry.networking { };
-      lan = config.dotfiles.server.lan;
+      inherit (config.dotfiles.server) lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
     in
     shared
@@ -127,9 +127,9 @@
         }:
 
         let
-          serverCfg = config.dotfiles.server;
-          appDataRoot = serverCfg.storage.appData.root;
-          inherit (serverCfg) lan;
+          inherit (config.dotfiles) server;
+          inherit (server) lan;
+          appDataRoot = server.storage.appData.root;
           lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
           hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
@@ -230,7 +230,7 @@
         }:
 
         let
-          serverCfg = config.dotfiles.server;
+          inherit (config.dotfiles) server;
         in
         {
           networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
@@ -239,7 +239,7 @@
             enable = true;
             openFirewall = true;
             useRoutingFeatures = "server";
-            authKeyFile = "${serverCfg.secretsDir}/tailscale-oauth-client-secret";
+            authKeyFile = "${server.secretsDir}/tailscale-oauth-client-secret";
             authKeyParameters = {
               ephemeral = true;
               preauthorized = true;
@@ -250,7 +250,7 @@
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
-              "--advertise-routes=${serverCfg.lan.subnet}"
+              "--advertise-routes=${server.lan.subnet}"
               "--accept-dns=false"
             ];
             extraSetFlags = [ ];
@@ -329,11 +329,12 @@
     }:
 
     let
-      cfg = config.dotfiles.server.storage;
-      inherit (cfg) snapshots;
-      appDataRoot = cfg.appData.root;
-      pool = cfg.dataRoot.poolName;
-      secretsDir = config.dotfiles.server.secretsDir;
+      inherit (config.dotfiles) server;
+      inherit (config.dotfiles.users) primary;
+      inherit (server) storage secretsDir;
+      inherit (storage) snapshots;
+      appDataRoot = storage.appData.root;
+      pool = storage.dataRoot.poolName;
       snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
       resticWrapperCommands = lib.pipe config.services.restic.backups [
         (lib.filterAttrs (_: backup: backup.createWrapper))
@@ -351,12 +352,12 @@
 
       users = {
         groups = {
-          ${cfg.appData.group.name}.gid = cfg.appData.group.id;
-          ${cfg.dataRoot.group.name} = { };
+          ${storage.appData.group.name}.gid = storage.appData.group.id;
+          ${storage.dataRoot.group.name} = { };
         };
-        users.${config.dotfiles.users.primary.name}.extraGroups = [
-          cfg.appData.group.name
-          cfg.dataRoot.group.name
+        users.${primary.name}.extraGroups = [
+          storage.appData.group.name
+          storage.dataRoot.group.name
         ];
       };
 
@@ -378,7 +379,7 @@
         autoScrub = {
           enable = true;
           pools = [ pool ];
-          interval = cfg.dataRoot.scrubInterval;
+          interval = storage.dataRoot.scrubInterval;
         };
         trim.enable = false;
       };
@@ -445,7 +446,7 @@
       };
 
       systemd.tmpfiles.rules = [
-        "d ${appDataRoot} 2770 root ${cfg.appData.group.name} - -"
+        "d ${appDataRoot} 2770 root ${storage.appData.group.name} - -"
         "v ${appDataRoot}/.snapshots 0750 root root - -"
         "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
       ];
@@ -517,7 +518,8 @@
     }:
 
     let
-      primaryUser = config.dotfiles.users.primary.name;
+      inherit (config.dotfiles.users) primary;
+      primaryUser = primary.name;
     in
     {
       users.users.${primaryUser}.openssh.authorizedKeys.keys = [

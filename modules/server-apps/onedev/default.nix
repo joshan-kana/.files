@@ -2,8 +2,9 @@
 
 let
   inherit (config.dotfiles) server;
+  inherit (server) lan;
   appDataRoot = server.storage.appData.root;
-  serverIp = server.lan.serverIp;
+  inherit (lan) serverIp;
 in
 {
   virtualisation.oci-containers.containers.onedev = {

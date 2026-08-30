@@ -2,7 +2,8 @@
 
 let
   inherit (config.dotfiles) server;
-  serverIp = server.lan.serverIp;
+  inherit (server) lan;
+  inherit (lan) serverIp;
 in
 {
   services.gitea = {
