@@ -8,6 +8,7 @@
 let
   atticCache = "dotfiles";
   atticEndpoint = "http://192.168.1.3:8080";
+  nixBuilderSecret = "${config.dotfiles.server.secretsDir or config.dotfiles.secretsDir}/nix-builder";
 in
 {
   nixpkgs.config.allowUnfree = true;
@@ -40,6 +41,30 @@ in
     require-sigs = true;
     fallback = false;
     builders-use-substitutes = true;
+  };
+
+  builders = _: {
+    nix = {
+      distributedBuilds = true;
+      buildMachines = [
+        {
+          hostName = "Joshans-MacBook-Pro.local";
+          protocol = "ssh-ng";
+          sshUser = config.dotfiles.users.primary.name;
+          sshKey = nixBuilderSecret;
+          system = "aarch64-darwin";
+          maxJobs = 12;
+        }
+        {
+          hostName = "Joshans-MacBook-Pro.local:32222";
+          protocol = "ssh-ng";
+          sshUser = "nixos";
+          sshKey = nixBuilderSecret;
+          system = "aarch64-linux";
+          maxJobs = 12;
+        }
+      ];
+    };
   };
 
   home = _: {
