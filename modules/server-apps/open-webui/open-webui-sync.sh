@@ -11,6 +11,7 @@ OPEN_WEBUI_ASSET_ROOT="${OPEN_WEBUI_ASSET_ROOT:-$script_dir}"
 OPEN_WEBUI_PRIMARY_USER="${OPEN_WEBUI_PRIMARY_USER:-joshan}"
 OPEN_WEBUI_PORT="${OPEN_WEBUI_PORT:-8081}"
 OPEN_WEBUI_COMPUTER_PORT="${OPEN_WEBUI_COMPUTER_PORT:-8000}"
+OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE="${OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE:-/run/open-webui-computer/setup-token}"
 OPEN_WEBUI_GITHUB_MCP_PORT="${OPEN_WEBUI_GITHUB_MCP_PORT:-8082}"
 OPEN_WEBUI_AGENT_MAIL_PORT="${OPEN_WEBUI_AGENT_MAIL_PORT:-8765}"
 OPEN_WEBUI_GITHUB_SECRET="${OPEN_WEBUI_GITHUB_SECRET:-${OPEN_WEBUI_SECRETS_DIR}/open-webui-github.env}"
@@ -132,21 +133,39 @@ computer_login() {
 }
 
 computer_setup() {
-  local cookies="$1" password="$2" startup_token
+  local cookies="$1" password="$2" startup_token response status body
   computer_login "$cookies" "$password" 2>/dev/null && return 0
 
-  startup_token="$(journalctl -u open-webui-computer.service --no-pager -o cat 2>/dev/null \
-    | grep -Eo 'token=[0-9a-f]{64}' | tail -n 1 | cut -d= -f2 || true)"
+  startup_token="$(cat "$OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE" 2>/dev/null || true)"
   if [[ -z "$startup_token" ]]; then
-    echo "Computer cannot be logged in with its managed secret and no first-run token is available." >&2
-    echo "Restore $computer_secret or reset the Computer account deliberately." >&2
+    echo "Computer cannot be logged in with its managed secret and its current first-run token is unavailable." >&2
+    echo "Restore $computer_secret or restart Computer and retry setup deliberately." >&2
     return 1
   fi
 
-  curl -fsS -c "$cookies" -H 'Content-Type: application/json' \
+  response="$(curl -sS -c "$cookies" -H 'Content-Type: application/json' \
     -d "$(jq -cn --arg u "$OPEN_WEBUI_PRIMARY_USER" --arg p "$password" --arg t "$startup_token" \
       '{username:$u,password:$p,token:$t,display_name:"Joshan"}')" \
-    "$computer_base/api/auth/setup" >/dev/null
+    -w $'\n%{http_code}' "$computer_base/api/auth/setup")"
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+
+  case "$status" in
+    200) return 0 ;;
+    400)
+      if jq -e '.error == "already set up"' <<<"$body" >/dev/null 2>&1; then
+        echo "Computer is already initialized but CPTR_ADMIN_PASSWORD does not match the managed account." >&2
+        echo "Restore $computer_secret or reset the Computer account deliberately." >&2
+      else
+        echo "Computer first-run setup was rejected with HTTP 400." >&2
+      fi
+      ;;
+    403)
+      echo "Computer rejected its current first-run token; restart Computer and retry." >&2
+      ;;
+    *) echo "Computer first-run setup failed with HTTP $status." >&2 ;;
+  esac
+  return 1
 }
 
 computer_workspace() {
@@ -246,7 +265,7 @@ sync_computer() {
 
   local cookies password
   cookies="$(mktemp)"
-  trap 'rm -f "$cookies"' EXIT
+  trap "rm -f -- $(printf '%q' "$cookies")" EXIT
   password="$(get_value "$computer_secret" CPTR_ADMIN_PASSWORD)"
   : "${password:?$computer_secret must define CPTR_ADMIN_PASSWORD}"
   computer_setup "$cookies" "$password"

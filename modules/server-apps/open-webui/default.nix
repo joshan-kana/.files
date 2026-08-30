@@ -22,6 +22,8 @@ let
   computerRoot = "${appDataRoot}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
   computerUvCacheDir = "/var/cache/open-webui-computer/uv";
+  computerRuntimeDir = "/run/open-webui-computer";
+  computerSetupTokenFile = "${computerRuntimeDir}/setup-token";
 
   searxPort = 8888;
   searxBaseUrl = "http://127.0.0.1:${toString searxPort}";
@@ -54,6 +56,23 @@ let
     '';
   };
 
+  computerStart = pkgs.writeShellScript "open-webui-computer-start" ''
+    set -euo pipefail
+    umask 0077
+
+    setupToken="$(${pkgs.coreutils}/bin/od -An -N32 -tx1 /dev/urandom | ${pkgs.coreutils}/bin/tr -d ' \n')"
+    printf '%s\n' "$setupToken" > ${lib.escapeShellArg computerSetupTokenFile}
+    ${pkgs.coreutils}/bin/chmod 0400 ${lib.escapeShellArg computerSetupTokenFile}
+    export CPTR_STARTUP_TOKEN="$setupToken"
+
+    exec ${pkgs.uv}/bin/uvx \
+      --python ${pkgs.python312}/bin/python \
+      --from 'cptr[all]==${computerVersion}' \
+      python -m uvicorn cptr.app:application \
+      --host ${lib.escapeShellArg serverIp} \
+      --port ${toString computerPort}
+  '';
+
   openWebuiSync = pkgs.writeShellApplication {
     name = "open-webui-sync";
     runtimeInputs = with pkgs; [
@@ -72,6 +91,7 @@ let
       export OPEN_WEBUI_PRIMARY_USER=${lib.escapeShellArg primaryUser}
       export OPEN_WEBUI_PORT=${toString openWebuiPort}
       export OPEN_WEBUI_COMPUTER_PORT=${toString computerPort}
+      export OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE=${lib.escapeShellArg computerSetupTokenFile}
       export OPEN_WEBUI_GITHUB_MCP_PORT=${toString githubMcpPort}
       export OPEN_WEBUI_AGENT_MAIL_PORT=${toString agentMailPort}
       export OPEN_WEBUI_GITHUB_SECRET=${lib.escapeShellArg githubSecret}
@@ -238,6 +258,7 @@ in
       CPTR_LOG_LEVEL = "WARNING";
       ENABLE_CHAT_RECONCILE_ON_STARTUP = "true";
       LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+      CPTR_PORT = toString computerPort;
       SEARXNG_BASE_URL = searxBaseUrl;
       UV_CACHE_DIR = computerUvCacheDir;
       UV_PYTHON_DOWNLOADS = "never";
@@ -250,7 +271,9 @@ in
       WorkingDirectory = "/home/${primaryUser}";
       CacheDirectory = "open-webui-computer";
       CacheDirectoryMode = "0700";
-      ExecStart = "${pkgs.uv}/bin/uvx --python ${pkgs.python312}/bin/python --from cptr[all]==${computerVersion} cptr run --host ${serverIp} --port ${toString computerPort} --headless";
+      RuntimeDirectory = "open-webui-computer";
+      RuntimeDirectoryMode = "0700";
+      ExecStart = computerStart;
       LoadCredential = "host-admin-key:${hostAdmin.privateKeySecret}";
       Restart = "on-failure";
       RestartSec = "5s";
