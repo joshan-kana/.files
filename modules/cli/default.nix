@@ -293,6 +293,7 @@ in
       aliases = {
         gs = "git status";
         gl = "git log";
+        gb = "git branch -a";
         gd = "git diff";
         ga = "git add";
         gc = "git commit -m";
