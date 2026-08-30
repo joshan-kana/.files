@@ -126,6 +126,7 @@ in
       # Timers provide a durable, upstream-owned restart-recovery primitive for
       # agent workflows. A relaxed poll interval keeps idle load low on the Pi.
       ENABLE_SUBAGENTS = "True";
+      ENABLE_TOOL_PERMISSIONS = "True";
       TIMER_POLL_INTERVAL = "15";
 
       # Keep disposable model caches out of the backed-up application state.
