@@ -1,27 +1,27 @@
 { config, lib, ... }:
 
 let
-  serverCfg = config.dotfiles.server;
-  appDataRoot = serverCfg.storage.appData.root;
-  serverIp = serverCfg.lan.serverIp;
+  inherit (config.dotfiles) server;
+  webPort = 6610;
+  sshPort = 6611;
 in
 {
   virtualisation.oci-containers.containers.onedev = {
     image = "1dev/server:latest";
 
     environment = {
-      initial_server_url = "http://${serverIp}:6610";
-      initial_ssh_root_url = "ssh://${serverIp}:6611";
+      initial_server_url = "http://${server.lan.serverIp}:${toString webPort}";
+      initial_ssh_root_url = "ssh://${server.lan.serverIp}:${toString sshPort}";
     };
 
     volumes = [
-      "${appDataRoot}/onedev:/opt/onedev"
+      "${server.storage.appData.root}/onedev:/opt/onedev"
       "/var/run/docker.sock:/var/run/docker.sock"
     ];
 
     ports = [
-      "${serverIp}:6610:6610"
-      "${serverIp}:6611:6611"
+      "${server.lan.serverIp}:${toString webPort}:6610"
+      "${server.lan.serverIp}:${toString sshPort}:6611"
     ];
   };
 

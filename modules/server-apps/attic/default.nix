@@ -5,10 +5,11 @@
 }:
 
 let
-  serverCfg = config.dotfiles.server;
+  inherit (config.dotfiles) server;
   cacheRoot = "/var/lib/atticd";
   cachePort = 8080;
-  cacheHost = serverCfg.lan.serverIp;
+  atticSecret = "${server.secretsDir}/attic.env";
+  cacheHost = server.lan.serverIp;
 in
 {
   users.groups.atticd = { };
@@ -19,7 +20,7 @@ in
 
   services.atticd = {
     enable = true;
-    environmentFile = "${serverCfg.secretsDir}/attic.env";
+    environmentFile = atticSecret;
     settings = {
       listen = "0.0.0.0:${toString cachePort}";
       api-endpoint = "http://${cacheHost}:${toString cachePort}/";
@@ -39,10 +40,12 @@ in
   systemd.services.atticd = {
     after = [ "zfs-mount.service" ];
     requires = [ "zfs-mount.service" ];
-    unitConfig.AssertPathIsMountPoint = cacheRoot;
+    unitConfig = {
+      AssertPathExists = atticSecret;
+      AssertPathIsMountPoint = cacheRoot;
+    };
     serviceConfig.DynamicUser = lib.mkForce false;
   };
 
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ cachePort ];
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ cachePort ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ cachePort ];
 }

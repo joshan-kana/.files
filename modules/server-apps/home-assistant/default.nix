@@ -5,7 +5,8 @@
 }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
+  inherit (config.dotfiles) server;
+  inherit (server.storage) appData;
 in
 {
   hardware.bluetooth = {
@@ -15,14 +16,14 @@ in
 
   environment.systemPackages = [ pkgs.bluez ];
 
-  networking.firewall.allowedTCPPorts = [
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
     8123
     21064 # HomeKit main bridge
     21065 # HomeKit Bambu camera bridge
   ];
 
   services.restic.backups.apps.exclude = [
-    "${appDataRoot}/home-assistant/www/media/ha-bambulab"
+    "${appData.root}/home-assistant/www/media/ha-bambulab"
   ];
 
   systemd.services.docker-home-assistant = {
@@ -40,7 +41,7 @@ in
     image = "ghcr.io/home-assistant/home-assistant:stable";
 
     volumes = [
-      "${appDataRoot}/home-assistant:/config"
+      "${appData.root}/home-assistant:/config"
       "/run/dbus:/run/dbus:ro"
     ];
 
@@ -56,7 +57,7 @@ in
     wantedBy = [ "multi-user.target" ];
     serviceConfig.Type = "oneshot";
     script = ''
-      file=/var/lib/apps/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+      file=${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
       [ -f "$file" ] || exit 0
 
       ${pkgs.gnused}/bin/sed -n \
@@ -73,6 +74,6 @@ in
 
   systemd.paths.breville-airactive3d-3speed = {
     wantedBy = [ "paths.target" ];
-    pathConfig.PathChanged = "/var/lib/apps/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    pathConfig.PathChanged = "${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
   };
 }

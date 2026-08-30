@@ -10,7 +10,7 @@ storage integration; this document only records the stable operational model.
 | --- | --- | --- |
 | `/srv/vault/media-library` | Existing photo/video archive indexed as an external library | Vault ZFS mirror + snapshots |
 | `/srv/vault/immich` | Immich-managed uploads and generated media | Vault ZFS mirror + snapshots |
-| `/var/lib/apps/immich/backups` | Immich logical PostgreSQL dumps | app-data snapshots + restic |
+| `/srv/vault/immich/backups` | Immich logical PostgreSQL dumps | Vault snapshots + restic |
 
 External-library files stay in place. Immich stores its index and application
 state in PostgreSQL and writes generated content to its managed storage. It may
@@ -18,8 +18,8 @@ modify or delete an external-library file only when an Immich action requests it
 and filesystem permissions allow it.
 
 PostgreSQL, Redis, and machine-learning state use the native NixOS defaults.
-Database dumps are kept separately under app data so application state can be
-restored independently of the bulk media.
+Database dumps are kept alongside Immich-managed Vault data and are also included
+in the apps restic backup so application state can be restored independently.
 
 ## First run
 
@@ -44,7 +44,7 @@ systemctl status immich-server.service immich-machine-learning.service \
   postgresql.service redis-immich.service --no-pager
 journalctl -fu immich-server.service
 zpool status -x vault
-ls -lh /var/lib/apps/immich/backups
+ls -lh /srv/vault/immich/backups
 ```
 
 The initial library scan can be CPU-intensive while thumbnails, metadata,
@@ -54,7 +54,7 @@ search, faces, and video jobs are populated. This is expected.
 
 The Vault protects both source and Immich-managed media with ZFS redundancy and
 snapshots. Immich creates logical PostgreSQL dumps under
-`/var/lib/apps/immich/backups`; the Nix configuration defines their cadence and
+`/srv/vault/immich/backups`; the Nix configuration defines their cadence and
 the surrounding snapshot/backup policy.
 
 A complete Immich recovery needs:

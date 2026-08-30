@@ -1,15 +1,15 @@
 { config, ... }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
+  inherit (config.dotfiles) server;
 in
 {
-  networking.firewall.allowedTCPPorts = [ 5580 ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 5580 ];
 
   virtualisation.oci-containers.containers.matter-server = {
     image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
 
-    volumes = [ "${appDataRoot}/matter-server:/data" ];
+    volumes = [ "${server.storage.appData.root}/matter-server:/data" ];
 
     extraOptions = [
       "--network=host"

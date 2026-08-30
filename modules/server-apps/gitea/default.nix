@@ -1,29 +1,28 @@
 { config, lib, ... }:
 
 let
-  serverCfg = config.dotfiles.server;
-  serverIp = serverCfg.lan.serverIp;
+  inherit (config.dotfiles) server;
 in
 {
   services.gitea = {
     enable = true;
-    stateDir = "${serverCfg.storage.appData.root}/gitea";
-    group = serverCfg.storage.appData.group.name;
+    stateDir = "${server.storage.appData.root}/gitea";
+    group = server.storage.appData.group.name;
     database.type = "sqlite3";
 
     settings = {
       actions.ENABLED = true;
 
       server = {
-        DOMAIN = serverIp;
-        HTTP_ADDR = serverIp;
+        DOMAIN = server.lan.serverIp;
+        HTTP_ADDR = server.lan.serverIp;
         HTTP_PORT = 3000;
-        SSH_DOMAIN = serverIp;
+        SSH_DOMAIN = server.lan.serverIp;
       };
     };
   };
 
-  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts =
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
     lib.optionals config.services.gitea.enable
       [ config.services.gitea.settings.server.HTTP_PORT ];
 

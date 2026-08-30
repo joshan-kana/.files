@@ -5,13 +5,13 @@
 }:
 
 let
-  primaryUser = config.dotfiles.users.primary.name;
+  inherit (config.dotfiles) server;
+  inherit (config.dotfiles.users) primary;
   serviceUser = "chatgpt-shell";
-  secretsDir = config.dotfiles.server.secretsDir;
-  tunnelEnvironmentFile = "${secretsDir}/chatgpt-shell-tunnel.env";
-  macSshKeyFile = "${secretsDir}/chatgpt-shell-mac";
-  sudoSshKeyFile = "${secretsDir}/chatgpt-shell-sudo";
-  macKnownHostsFile = "${config.users.users.${primaryUser}.home}/.ssh/known_hosts";
+  tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
+  macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
+  sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
+  macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
   tunnelClientVersion = "0.0.11";
   tunnelClientPlatform =
@@ -34,7 +34,7 @@ in
     isSystemUser = true;
     group = serviceUser;
   };
-  users.users.${primaryUser}.extraGroups = [ serviceUser ];
+  users.users.${primary.name}.extraGroups = [ serviceUser ];
 
   security.pam.sshAgentAuth.authorizedKeysFiles = [ "/etc/chatgpt-shell-sudo-authorized-key" ];
 
@@ -45,7 +45,7 @@ in
   security.sudo.extraRules = [
     {
       users = [ serviceUser ];
-      runAs = primaryUser;
+      runAs = primary.name;
       commands = [
         {
           command = "${pkgs.bash}/bin/bash";
@@ -61,10 +61,10 @@ in
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
 
-    unitConfig.ConditionPathExists = [
-      tunnelEnvironmentFile
-      macSshKeyFile
-      sudoSshKeyFile
+    unitConfig.AssertPathExists = [
+      tunnelSecret
+      macSshKeySecret
+      sudoSshKeySecret
       macKnownHostsFile
     ];
 
@@ -90,9 +90,9 @@ in
       MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${
         pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
       }/bin/python3 ${./chatgpt-shell-access.py}";
-      CHATGPT_SHELL_LOCAL_USER = primaryUser;
+      CHATGPT_SHELL_LOCAL_USER = primary.name;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
-      CHATGPT_SHELL_MAC_SSH_TARGET = "${primaryUser}@Joshans-MacBook-Pro.local";
+      CHATGPT_SHELL_MAC_SSH_TARGET = "${primary.name}@Joshans-MacBook-Pro.local";
     };
 
     serviceConfig = {
@@ -100,16 +100,16 @@ in
       User = serviceUser;
       RuntimeDirectory = "chatgpt-shell-access";
       RuntimeDirectoryMode = "0770";
-      EnvironmentFile = tunnelEnvironmentFile;
+      EnvironmentFile = tunnelSecret;
       LoadCredential = [
-        "chatgpt-shell-mac:${macSshKeyFile}"
-        "chatgpt-shell-sudo:${sudoSshKeyFile}"
+        "chatgpt-shell-mac:${macSshKeySecret}"
+        "chatgpt-shell-sudo:${sudoSshKeySecret}"
         "chatgpt-shell-known-hosts:${macKnownHostsFile}"
       ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
         rm -f "$SSH_AUTH_SOCK"
-        /run/wrappers/bin/sudo -n -H -u ${primaryUser} -- ${pkgs.bash}/bin/bash -c \
+        /run/wrappers/bin/sudo -n -H -u ${primary.name} -- ${pkgs.bash}/bin/bash -c \
           'exec ${pkgs.openssh}/bin/ssh-agent -D -a "$1"' _ "$SSH_AUTH_SOCK" >/dev/null &
         for _ in $(seq 1 100); do
           [ -S "$SSH_AUTH_SOCK" ] && break
@@ -117,7 +117,7 @@ in
         done
         [ -S "$SSH_AUTH_SOCK" ]
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
-          /run/wrappers/bin/sudo -n -H -u ${primaryUser} -- ${pkgs.bash}/bin/bash -c \
+          /run/wrappers/bin/sudo -n -H -u ${primary.name} -- ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
         exec ${
           pkgs.runCommand "tunnel-client-${tunnelClientVersion}"
