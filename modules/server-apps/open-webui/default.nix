@@ -41,7 +41,7 @@ let
         -o BatchMode=yes \
         -o IdentitiesOnly=yes \
         -o StrictHostKeyChecking=accept-new \
-        -o UserKnownHostsFile=${lib.escapeShellArg "${computerRoot}/host-admin-known-hosts"} \
+        -o UserKnownHostsFile=/run/open-webui-computer/host-admin-known-hosts \
         ${hostAdmin.user}@127.0.0.1 "$@"
     '';
   };
