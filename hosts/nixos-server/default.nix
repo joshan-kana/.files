@@ -233,6 +233,8 @@
           serverCfg = config.dotfiles.server;
         in
         {
+          networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
+
           services.tailscale = {
             enable = true;
             openFirewall = true;

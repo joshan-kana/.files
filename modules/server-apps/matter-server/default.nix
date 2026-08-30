@@ -1,10 +1,11 @@
 { config, ... }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
+  serverCfg = config.dotfiles.server;
+  appDataRoot = serverCfg.storage.appData.root;
 in
 {
-  networking.firewall.allowedTCPPorts = [ 5580 ];
+  networking.firewall.interfaces.${serverCfg.lan.interface}.allowedTCPPorts = [ 5580 ];
 
   virtualisation.oci-containers.containers.matter-server = {
     image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
