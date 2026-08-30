@@ -139,7 +139,7 @@ if [[ -z "$selected_mac_ip" ]]; then
 fi
 mac_computer_base="http://${selected_mac_ip}:${computer_port}/v1"
 
-gateway_key="$(security find-generic-password -w -s com.joshan.cptr.gateway)"
+gateway_key="$(security find-generic-password -w -s com.joshan.cptr.gateway 2>/dev/null || true)"
 if [[ -z "$gateway_key" ]]; then
   echo "Mac Computer gateway key is missing from login Keychain service com.joshan.cptr.gateway." >&2
   exit 1
