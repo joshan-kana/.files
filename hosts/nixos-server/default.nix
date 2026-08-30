@@ -62,12 +62,15 @@
       pkgs,
       ...
     }:
+    let
+      inherit (config.dotfiles.users) primary;
+    in
     (moduleRegistry.nix { inherit config inputs pkgs; })
     // {
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
       ];
-      users.users.${config.dotfiles.users.primary.name}.linger = true;
+      users.users.${primary.name}.linger = true;
     };
   networking =
     {
@@ -128,8 +131,8 @@
 
         let
           inherit (config.dotfiles) server;
-          inherit (server) lan;
-          appDataRoot = server.storage.appData.root;
+          inherit (server) lan storage;
+          inherit (storage) appData;
           lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
           hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
 
@@ -138,10 +141,10 @@
             group = "appdata-editors";
             ip = lan.dns.serviceIp;
             port = 53;
-            dataDir = "${appDataRoot}/adguard";
-            workDir = "${appDataRoot}/adguard/work";
-            confDir = "${appDataRoot}/adguard/conf";
-            configFile = "${appDataRoot}/adguard/conf/AdGuardHome.yaml";
+            dataDir = "${appData.root}/adguard";
+            workDir = "${appData.root}/adguard/work";
+            confDir = "${appData.root}/adguard/conf";
+            configFile = "${appData.root}/adguard/conf/AdGuardHome.yaml";
           };
         in
         {
@@ -332,9 +335,8 @@
       inherit (config.dotfiles) server;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage secretsDir;
-      inherit (storage) snapshots;
-      appDataRoot = storage.appData.root;
-      pool = storage.dataRoot.poolName;
+      inherit (storage) appData dataRoot snapshots;
+      inherit (dataRoot) poolName;
       snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
       resticWrapperCommands = lib.pipe config.services.restic.backups [
         (lib.filterAttrs (_: backup: backup.createWrapper))
@@ -352,12 +354,12 @@
 
       users = {
         groups = {
-          ${storage.appData.group.name}.gid = storage.appData.group.id;
-          ${storage.dataRoot.group.name} = { };
+          ${appData.group.name}.gid = appData.group.id;
+          ${dataRoot.group.name} = { };
         };
         users.${primary.name}.extraGroups = [
-          storage.appData.group.name
-          storage.dataRoot.group.name
+          appData.group.name
+          dataRoot.group.name
         ];
       };
 
@@ -371,15 +373,15 @@
           "btrfs"
           "zfs"
         ];
-        zfs.extraPools = [ pool ];
+        zfs.extraPools = [ poolName ];
         zfs.forceImportRoot = false;
       };
 
       services.zfs = {
         autoScrub = {
           enable = true;
-          pools = [ pool ];
-          interval = storage.dataRoot.scrubInterval;
+          pools = [ poolName ];
+          interval = dataRoot.scrubInterval;
         };
         trim.enable = false;
       };
@@ -399,7 +401,7 @@
           autosnap = true;
           autoprune = true;
         };
-        datasets."${pool}/data" = {
+        datasets."${poolName}/data" = {
           useTemplate = [ "vault" ];
           recursive = "zfs";
         };
@@ -410,7 +412,7 @@
         cleanupInterval = "1h";
         persistentTimer = true;
         configs.apps = {
-          SUBVOLUME = appDataRoot;
+          SUBVOLUME = appData.root;
           FSTYPE = "btrfs";
           FREE_LIMIT = config.nix.settings.min-free;
           TIMELINE_CREATE = true;
@@ -427,9 +429,9 @@
         repository = "rclone:dropbox:Archives/Backups/nixos-server";
         passwordFile = "${secretsDir}/restic-password";
         rcloneConfigFile = "${secretsDir}/rclone.conf";
-        paths = [ appDataRoot ];
+        paths = [ appData.root ];
         exclude = [
-          "${appDataRoot}/.snapshots"
+          "${appData.root}/.snapshots"
         ];
         pruneOpts = [
           "--keep-hourly ${toString snapshots.retention.hourly}"
@@ -446,9 +448,9 @@
       };
 
       systemd.tmpfiles.rules = [
-        "d ${appDataRoot} 2770 root ${storage.appData.group.name} - -"
-        "v ${appDataRoot}/.snapshots 0750 root root - -"
-        "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
+        "d ${appData.root} 2770 root ${appData.group.name} - -"
+        "v ${appData.root}/.snapshots 0750 root root - -"
+        "a ${appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
       ];
 
       programs.zsh.interactiveShellInit =
@@ -519,10 +521,9 @@
 
     let
       inherit (config.dotfiles.users) primary;
-      primaryUser = primary.name;
     in
     {
-      users.users.${primaryUser}.openssh.authorizedKeys.keys = [
+      users.users.${primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"

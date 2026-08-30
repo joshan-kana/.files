@@ -2,7 +2,7 @@
 
 let
   inherit (config.dotfiles) server;
-  appDataRoot = server.storage.appData.root;
+  inherit (server.storage) appData;
 in
 {
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 5580 ];
@@ -10,7 +10,7 @@ in
   virtualisation.oci-containers.containers.matter-server = {
     image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
 
-    volumes = [ "${appDataRoot}/matter-server:/data" ];
+    volumes = [ "${appData.root}/matter-server:/data" ];
 
     extraOptions = [
       "--network=host"

@@ -2,7 +2,7 @@
 
 let
   inherit (config.dotfiles) server;
-  appDataRoot = server.storage.appData.root;
+  inherit (server.storage) appData;
   hostPort = 5678;
   n8nSecretFile = "${server.secretsDir}/n8n.env";
 in
@@ -10,7 +10,7 @@ in
   virtualisation.oci-containers.containers.n8n = {
     image = "docker.n8n.io/n8nio/n8n:latest";
 
-    volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
+    volumes = [ "${appData.root}/n8n:/home/node/.n8n" ];
     ports = [ "${server.lan.serverIp}:${toString hostPort}:5678" ];
 
     environment = {

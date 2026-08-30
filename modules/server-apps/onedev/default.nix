@@ -2,9 +2,9 @@
 
 let
   inherit (config.dotfiles) server;
-  inherit (server) lan;
-  appDataRoot = server.storage.appData.root;
+  inherit (server) lan storage;
   inherit (lan) serverIp;
+  inherit (storage) appData;
 in
 {
   virtualisation.oci-containers.containers.onedev = {
@@ -16,7 +16,7 @@ in
     };
 
     volumes = [
-      "${appDataRoot}/onedev:/opt/onedev"
+      "${appData.root}/onedev:/opt/onedev"
       "/var/run/docker.sock:/var/run/docker.sock"
     ];
 

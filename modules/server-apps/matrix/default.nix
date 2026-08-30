@@ -7,11 +7,10 @@
 
 let
   inherit (config.dotfiles) server;
-  appDataRoot = server.storage.appData.root;
-  appDataGroup = server.storage.appData.group.name;
+  inherit (server.storage) appData;
 
   bridgeUser = "matrix-bridge";
-  stateRoot = "${appDataRoot}/matrix";
+  stateRoot = "${appData.root}/matrix";
   dataRoot = "${stateRoot}/data";
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
   bbctlSecretFile = "${server.secretsDir}/beeper-bbctl-secret.json";
@@ -85,8 +84,8 @@ let
 
   mkBridge = provider: binary: _: {
     systemd.tmpfiles.rules = [
-      "d ${bridgeDataRoot}/sh-${provider} 2750 ${bridgeUser} ${appDataGroup} -"
-      "z ${bridgeDataRoot}/sh-${provider}/*.db* 0600 ${bridgeUser} ${appDataGroup} -"
+      "d ${bridgeDataRoot}/sh-${provider} 2750 ${bridgeUser} ${appData.group.name} -"
+      "z ${bridgeDataRoot}/sh-${provider}/*.db* 0600 ${bridgeUser} ${appData.group.name} -"
     ];
 
     systemd.services."matrix-bridge-${provider}" = {
@@ -130,7 +129,7 @@ in
   users.users.${bridgeUser} = {
     isSystemUser = true;
     group = bridgeUser;
-    extraGroups = [ appDataGroup ];
+    extraGroups = [ appData.group.name ];
     home = stateRoot;
   };
 
@@ -140,10 +139,10 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    "d ${stateRoot} 2750 ${bridgeUser} ${appDataGroup} -"
-    "d ${dataRoot} 2750 ${bridgeUser} ${appDataGroup} -"
-    "d ${dataRoot}/bbctl 2750 ${bridgeUser} ${appDataGroup} -"
-    "d ${bridgeDataRoot} 2750 ${bridgeUser} ${appDataGroup} -"
+    "d ${stateRoot} 2750 ${bridgeUser} ${appData.group.name} -"
+    "d ${dataRoot} 2750 ${bridgeUser} ${appData.group.name} -"
+    "d ${dataRoot}/bbctl 2750 ${bridgeUser} ${appData.group.name} -"
+    "d ${bridgeDataRoot} 2750 ${bridgeUser} ${appData.group.name} -"
   ];
 
   environment.systemPackages = [ bbctl ];

@@ -7,9 +7,8 @@
 let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
-  primaryUser = primary.name;
-  inherit (server) secretsDir;
-  appDataRoot = server.storage.appData.root;
+  inherit (server) secretsDir storage;
+  inherit (storage) appData;
 
   openclawSecretFiles = [
     "${secretsDir}/openclaw.env"
@@ -21,8 +20,8 @@ let
   ];
 
   appDataEditor = {
-    group = server.storage.appData.group.name;
-    gid = server.storage.appData.group.id;
+    group = appData.group.name;
+    gid = appData.group.id;
   };
 
   openclawHostAdmin = {
@@ -70,8 +69,8 @@ let
       [ "$(${pkgs.coreutils}/bin/id -u)" -eq 0 ] ||
         die "openclaw-repository-host must run as root"
 
-      primaryEnv=(runuser -u ${primaryUser} -- env -i HOME=/home/${primaryUser}
-        USER=${primaryUser} LOGNAME=${primaryUser} PATH="$PATH")
+      primaryEnv=(runuser -u ${primary.name} -- env -i HOME=/home/${primary.name}
+        USER=${primary.name} LOGNAME=${primary.name} PATH="$PATH")
 
       operation="''${1:-}"; [ "$#" -eq 0 ] || shift
 
@@ -94,8 +93,8 @@ let
           repository="''${1:-}"; [ "$#" -eq 0 ] || shift
 
           case "$repository" in
-            files) checkout=/home/${primaryUser}/.files ;;
-            infrastructure-docs) checkout=/home/${primaryUser}/.files/docs/infrastructure-docs ;;
+            files) checkout=/home/${primary.name}/.files ;;
+            infrastructure-docs) checkout=/home/${primary.name}/.files/docs/infrastructure-docs ;;
             *)
               die "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>"
               ;;
@@ -106,7 +105,7 @@ let
 
           agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
-          install -d -m 0700 -o ${primaryUser} -g users "$agentDir"
+          install -d -m 0700 -o ${primary.name} -g users "$agentDir"
 
           eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
 
@@ -114,7 +113,7 @@ let
             die "Failed to load the OpenClaw GitHub SSH key"
 
           publicIdentity="$agentDir/id_ed25519.pub"
-          ssh-add -L | install -m 0644 -o ${primaryUser} -g users /dev/stdin "$publicIdentity" ||
+          ssh-add -L | install -m 0644 -o ${primary.name} -g users /dev/stdin "$publicIdentity" ||
             die "Failed to write the OpenClaw GitHub public identity"
 
           gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
@@ -213,12 +212,12 @@ in
   ];
 
   systemd.tmpfiles.rules = [
-    "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
+    "a+ ${appData.root} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
-    "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
-    "d ${appDataRoot}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d ${appDataRoot}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d /run/openclaw-github-cli 0700 ${primaryUser} users - -"
+    "d ${appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
+    "d ${appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
 
     "d ${secretsDir} 0700 root root - -"
     "Z ${secretsDir} ~0700 root root - -"
@@ -250,7 +249,7 @@ in
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
           proxy_set_header X-Forwarded-Host $host;
-          proxy_set_header X-Forwarded-User ${primaryUser};
+          proxy_set_header X-Forwarded-User ${primary.name};
 
           # OpenClaw ships script-src 'self' only, which blocks the Vite/rolldown
           # bundle's runtime eval()-based dynamic imports and prevents
@@ -273,7 +272,7 @@ in
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      configFile="${appDataRoot}/openclaw/openclaw.json"
+      configFile="${appData.root}/openclaw/openclaw.json"
 
       if [ ! -f "$configFile" ]; then
         echo "OpenClaw config does not exist yet: $configFile" >&2
@@ -757,8 +756,8 @@ in
       image = "ghcr.io/openclaw/openclaw:latest";
 
       volumes = [
-        "${appDataRoot}/openclaw:/home/node/.openclaw"
-        "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
+        "${appData.root}/openclaw:/home/node/.openclaw"
+        "${appData.root}/openclaw-auth:/home/node/.config/openclaw"
         "${openclawHostAdmin.privateKeySecretFile}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
         "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"

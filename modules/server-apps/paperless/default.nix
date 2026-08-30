@@ -2,15 +2,17 @@
 
 let
   inherit (config.dotfiles) server;
-  dataDir = "${server.storage.appData.root}/paperless";
+  inherit (server) storage;
+  inherit (storage) appData dataRoot;
+  dataDir = "${appData.root}/paperless";
 in
 {
   services.paperless = {
     enable = true;
     address = server.lan.serverIp;
     inherit dataDir;
-    mediaDir = "${server.storage.dataRoot.path}/paperless/media";
-    consumptionDir = "${server.storage.dataRoot.path}/paperless/consume";
+    mediaDir = "${dataRoot.path}/paperless/media";
+    consumptionDir = "${dataRoot.path}/paperless/consume";
     database.createLocally = true;
     configureTika = true;
 
@@ -23,7 +25,7 @@ in
   };
 
   users.users = lib.mkIf config.services.paperless.enable {
-    ${config.services.paperless.user}.extraGroups = [ server.storage.appData.group.name ];
+    ${config.services.paperless.user}.extraGroups = [ appData.group.name ];
   };
 
   services.postgresqlBackup = lib.mkIf config.services.paperless.enable {
@@ -36,7 +38,7 @@ in
   systemd.tmpfiles.settings."11-paperless-postgresql-backup-access" =
     lib.mkIf config.services.paperless.enable
       {
-        "${server.storage.appData.root}"."a+".argument = "u:postgres:--x";
+        "${appData.root}"."a+".argument = "u:postgres:--x";
         "${dataDir}"."a+".argument = "u:postgres:--x";
       };
 

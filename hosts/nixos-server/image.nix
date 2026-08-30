@@ -5,8 +5,7 @@
 }:
 
 let
-  inherit (config.dotfiles) server;
-  appDataRoot = server.storage.appData.root;
+  inherit (config.dotfiles.server.storage) appData;
 
   firmwareTree = pkgs.runCommand "nixos-server-rpi-firmware" { } ''
         mkdir -p "$out"
@@ -73,10 +72,10 @@ in
           Format = "btrfs";
           Label = "NIXOS";
           Subvolumes = [
-            appDataRoot
+            appData.root
           ];
           MakeDirectories = [
-            appDataRoot
+            appData.root
           ];
         };
       };
