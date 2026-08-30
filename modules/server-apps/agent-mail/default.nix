@@ -1,13 +1,17 @@
 { config, ... }:
 
 let
-  appDataRoot = config.dotfiles.server.storage.appData.root;
-  agentMailRoot = "${appDataRoot}/agent-mail";
+  inherit (config.dotfiles) server;
+  agentMailRoot = "${server.storage.appData.root}/agent-mail";
+  agentMailPort = 8765;
 in
 {
   virtualisation.oci-containers.containers.agent-mail = {
     image = "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest";
-    ports = [ "127.0.0.1:8765:8765" ];
+    ports = [
+      "127.0.0.1:${toString agentMailPort}:8765"
+      "${server.lan.serverIp}:${toString agentMailPort}:8765"
+    ];
     volumes = [ "${agentMailRoot}:/data" ];
   };
 
@@ -16,4 +20,6 @@ in
   systemd.tmpfiles.rules = [
     "d ${agentMailRoot} 0700 10001 10001 - -"
   ];
+
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ agentMailPort ];
 }
