@@ -79,12 +79,6 @@
       Host *
         ForwardAgent yes
     '';
-
-    home = _: {
-      programs.zsh.shellAliases.cpd = ''
-        printf "%s" "$(pwd | tr -d "\n")" | pbcopy && echo "Copied path to macOS clipboard"
-      '';
-    };
   };
 
 }
