@@ -6,51 +6,41 @@
 }:
 
 let
-  primaryUser = config.dotfiles.users.primary.name;
   inherit (config.dotfiles) server;
-  inherit (server) secretsDir;
-  appDataRoot = server.storage.appData.root;
+  primaryUser = config.dotfiles.users.primary.name;
   appDataGroup = server.storage.appData.group.name;
   serverIp = server.lan.serverIp;
 
   openWebuiPort = 8081;
-  openWebuiStateDir = "${appDataRoot}/open-webui";
-  openWebuiSecret = "${secretsDir}/open-webui.env";
+  openWebuiStateDir = "${server.storage.appData.root}/open-webui";
+  openWebuiSecret = "${server.secretsDir}/open-webui.env";
 
   computerVersion = "0.9.21";
   computerPort = 8000;
-  computerRoot = "${appDataRoot}/open-webui-computer";
+  computerRoot = "${server.storage.appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
-  computerUvCacheDir = "/var/cache/open-webui-computer/uv";
-  computerRuntimeDir = "/run/open-webui-computer";
-  computerSetupTokenFile = "${computerRuntimeDir}/setup-token";
+  computerSetupTokenFile = "/run/open-webui-computer/setup-token";
 
   searxPort = 8888;
-  searxBaseUrl = "http://127.0.0.1:${toString searxPort}";
-  searxSecret = "${secretsDir}/searxng.env";
-  githubMcpPort = 8082;
-  agentMailPort = 8765;
+  searxSecret = "${server.secretsDir}/searxng.env";
 
   hostAdmin = {
     user = "open-webui-admin";
-    privateKeySecret = "${secretsDir}/open-webui-host-admin-id_ed25519";
+    privateKeySecret = "${server.secretsDir}/open-webui-host-admin-id_ed25519";
   };
-  githubSecret = "${secretsDir}/open-webui-github.env";
 
   hostCommand = pkgs.writeShellApplication {
     name = "open-webui-host";
     runtimeInputs = [ pkgs.openssh ];
     text = ''
       : "''${CREDENTIALS_DIRECTORY:?CREDENTIALS_DIRECTORY is not set}"
-      key="$CREDENTIALS_DIRECTORY/host-admin-key"
-      knownHosts="${computerRoot}/host-admin-known-hosts"
 
       exec ssh \
-        -i "$key" \
+        -i "$CREDENTIALS_DIRECTORY/host-admin-key" \
         -o BatchMode=yes \
         -o IdentitiesOnly=yes \
         -o StrictHostKeyChecking=accept-new \
-        -o UserKnownHostsFile="$knownHosts" \
+        -o UserKnownHostsFile=${lib.escapeShellArg "${computerRoot}/host-admin-known-hosts"} \
         ${hostAdmin.user}@127.0.0.1 "$@"
     '';
   };
@@ -71,62 +61,19 @@ let
       --host ${lib.escapeShellArg serverIp} \
       --port ${toString computerPort}
   '';
-
-  openWebuiSync = pkgs.writeShellApplication {
-    name = "open-webui-sync";
-    runtimeInputs = with pkgs; [
-      coreutils
-      curl
-      gnugrep
-      gnused
-      jq
-      systemd
-      openssh
-    ];
-    text = ''
-      export OPEN_WEBUI_SERVER_IP=${lib.escapeShellArg serverIp}
-      export OPEN_WEBUI_SECRETS_DIR=${lib.escapeShellArg secretsDir}
-      export OPEN_WEBUI_ASSET_ROOT=${lib.escapeShellArg (toString ./.)}
-      export OPEN_WEBUI_PRIMARY_USER=${lib.escapeShellArg primaryUser}
-      export OPEN_WEBUI_PORT=${toString openWebuiPort}
-      export OPEN_WEBUI_COMPUTER_PORT=${toString computerPort}
-      export OPEN_WEBUI_COMPUTER_SETUP_TOKEN_FILE=${lib.escapeShellArg computerSetupTokenFile}
-      export OPEN_WEBUI_GITHUB_MCP_PORT=${toString githubMcpPort}
-      export OPEN_WEBUI_AGENT_MAIL_PORT=${toString agentMailPort}
-      export OPEN_WEBUI_GITHUB_SECRET=${lib.escapeShellArg githubSecret}
-      export OPEN_WEBUI_HOST_ADMIN_KEY_SECRET=${lib.escapeShellArg hostAdmin.privateKeySecret}
-
-      ${builtins.readFile ./open-webui-sync.sh}
-    '';
-  };
-
-  # Optional convenience only: mirrors SessionWiki transcripts into the Open
-  # WebUI sidebar. Native discovery/resume does not depend on this helper, so it
-  # can be removed without touching Computer, SessionWiki MCP, or Agent Mail.
-  nativeSessionMirror = pkgs.writeShellApplication {
-    name = "open-webui-native-session-mirror";
-    runtimeInputs = with pkgs; [
-      openssh
-      python3
-    ];
-    text = ''
-      export OPEN_WEBUI_URL=${lib.escapeShellArg "http://${serverIp}:${toString openWebuiPort}"}
-      export OPEN_WEBUI_ENV=${lib.escapeShellArg openWebuiSecret}
-      export OPEN_WEBUI_NATIVE_MIRROR_STATE=${lib.escapeShellArg "${openWebuiStateDir}/native-session-mirror.json"}
-      exec ${pkgs.python3}/bin/python ${./open-webui-native-session-mirror.py} "$@"
-    '';
-  };
 in
 {
-  users.users.open-webui = {
-    isSystemUser = true;
-    group = appDataGroup;
-  };
+  users.users = {
+    open-webui = {
+      isSystemUser = true;
+      group = appDataGroup;
+    };
 
-  users.users.${hostAdmin.user} = {
-    isNormalUser = true;
-    createHome = true;
-    hashedPassword = "!";
+    ${hostAdmin.user} = {
+      isNormalUser = true;
+      createHome = true;
+      hashedPassword = "!";
+    };
   };
 
   security.sudo.extraRules = [
@@ -153,14 +100,13 @@ in
       set -euo pipefail
       tmp="$(${pkgs.coreutils}/bin/mktemp)"
       trap '${pkgs.coreutils}/bin/rm -f "$tmp"' EXIT
+
       ${pkgs.openssh}/bin/ssh-keygen -y -f "$CREDENTIALS_DIRECTORY/host-admin-key" |
         ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " open-webui-host-admin@nixos-server" }' > "$tmp"
       ${pkgs.coreutils}/bin/install -m 0600 -o ${hostAdmin.user} -g users "$tmp" "/home/${hostAdmin.user}/.ssh/authorized_keys"
     '';
   };
 
-  # The native module owns Open WebUI lifecycle, migrations, DynamicUser,
-  # runtime hardening and the firewall. We only choose its data/secrets policy.
   services.open-webui = {
     enable = true;
     stateDir = openWebuiStateDir;
@@ -169,14 +115,19 @@ in
     environmentFile = openWebuiSecret;
     environment = {
       WEBUI_URL = "http://${serverIp}:${toString openWebuiPort}";
-      WEBUI_ADMIN_NAME = "Joshan";
-      ENABLE_PLUGINS = "True";
       ENABLE_WEB_SEARCH = "True";
       WEB_SEARCH_ENGINE = "searxng";
       WEB_SEARCH_RESULT_COUNT = "5";
       WEB_SEARCH_CONCURRENT_REQUESTS = "5";
-      SEARXNG_QUERY_URL = "${searxBaseUrl}/search?q=<query>";
+      SEARXNG_QUERY_URL = "http://127.0.0.1:${toString searxPort}/search?q=<query>";
       ENABLE_USER_WEBHOOKS = "True";
+
+      # Timers provide a durable, upstream-owned restart-recovery primitive for
+      # agent workflows. A relaxed poll interval keeps idle load low on the Pi.
+      ENABLE_SUBAGENTS = "True";
+      TIMER_POLL_INTERVAL = "15";
+
+      # Keep disposable model caches out of the backed-up application state.
       HF_HOME = "/var/cache/open-webui/huggingface";
       SENTENCE_TRANSFORMERS_HOME = "/var/cache/open-webui/sentence-transformers";
       RAG_EMBEDDING_MODEL_AUTO_UPDATE = "False";
@@ -188,8 +139,7 @@ in
     unitConfig.AssertPathExists = [ openWebuiSecret ];
     serviceConfig = {
       # The native module hardcodes StateDirectory=open-webui even when stateDir
-      # points elsewhere. A static user keeps ownership of our backed-up custom
-      # state path stable across boots while retaining the native sandbox.
+      # points elsewhere. Keep a stable uid for our backed-up custom state path.
       DynamicUser = lib.mkForce false;
       User = "open-webui";
       Group = appDataGroup;
@@ -201,8 +151,6 @@ in
     };
   };
 
-  # SearXNG is purely a local backend for Open WebUI/Computer, so keep it on
-  # loopback and let the native NixOS module own its process/config lifecycle.
   services.searx = {
     enable = true;
     environmentFile = searxSecret;
@@ -223,9 +171,8 @@ in
 
   systemd.services.searx-init.unitConfig.AssertPathExists = [ searxSecret ];
 
-  # Computer has no native NixOS service. Pin it through uvx and keep only its
-  # durable state under appData; the exact-version Python environment is a
-  # disposable systemd cache rather than another managed install tree.
+  # Computer has no native NixOS service. Pin it through uvx, keep durable state
+  # under appData, and use only upstream application state for one-time setup.
   systemd.services.open-webui-computer = {
     description = "Open WebUI Computer server worker";
     wantedBy = [ "multi-user.target" ];
@@ -246,6 +193,7 @@ in
       coreutils
       curl
       git
+      gh
       jq
       nix
       openssh
@@ -257,9 +205,8 @@ in
       CPTR_LOG_LEVEL = "WARNING";
       ENABLE_CHAT_RECONCILE_ON_STARTUP = "true";
       LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
-      CPTR_PORT = toString computerPort;
-      SEARXNG_BASE_URL = searxBaseUrl;
-      UV_CACHE_DIR = computerUvCacheDir;
+      SEARXNG_BASE_URL = "http://127.0.0.1:${toString searxPort}";
+      UV_CACHE_DIR = "/var/cache/open-webui-computer/uv";
       UV_PYTHON_DOWNLOADS = "never";
     };
     unitConfig.AssertPathExists = [ hostAdmin.privateKeySecret ];
@@ -280,46 +227,12 @@ in
     };
   };
 
-  # github-mcp-server is packaged by nixpkgs but has no native service module.
-  # It stores no PAT: Open WebUI supplies bearer credentials per connection.
-  systemd.services.github-mcp-server = {
-    description = "GitHub MCP Server (Streamable HTTP)";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    environment.GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions,users";
-    serviceConfig = {
-      Type = "simple";
-      DynamicUser = true;
-      ExecStart = "${pkgs.github-mcp-server}/bin/github-mcp-server http --port ${toString githubMcpPort} --scope-challenge";
-      Restart = "on-failure";
-      RestartSec = "5s";
-      NoNewPrivileges = true;
-      PrivateTmp = true;
-      ProtectHome = true;
-      ProtectSystem = "strict";
-      ProtectKernelTunables = true;
-      ProtectKernelModules = true;
-      ProtectControlGroups = true;
-      RestrictAddressFamilies = [
-        "AF_INET"
-        "AF_INET6"
-        "AF_UNIX"
-      ];
-    };
-  };
-
   systemd.tmpfiles.rules = [
     "d /home/${hostAdmin.user}/.ssh 0700 ${hostAdmin.user} users - -"
     "d ${openWebuiStateDir} 0770 open-webui ${appDataGroup} - -"
     "Z ${openWebuiStateDir} - open-webui ${appDataGroup} - -"
     "d ${computerRoot} 0700 ${primaryUser} users - -"
     "d ${computerStateDir} 0700 ${primaryUser} users - -"
-  ];
-
-  environment.systemPackages = [
-    nativeSessionMirror
-    openWebuiSync
   ];
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
