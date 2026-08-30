@@ -207,6 +207,9 @@ in
     environment = {
       CPTR_DATA_DIR = computerStateDir;
       CPTR_LOG_LEVEL = "WARNING";
+      # Gateway-created .cptr exports bypass Computer's auto-ignore helper.
+      # Git ignores them globally, so never edit workspace .gitignore files.
+      CPTR_AUTO_GITIGNORE_DOT_CPTR = "false";
       ENABLE_CHAT_RECONCILE_ON_STARTUP = "true";
       LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
       SEARXNG_BASE_URL = "http://127.0.0.1:${toString searxPort}";
