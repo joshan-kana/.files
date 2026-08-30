@@ -113,7 +113,7 @@
       ) repoToolExcludedDirs;
 
       treefmtFor =
-        system: includeChecks:
+        system:
         let
           pkgs = pkgsFor system;
           markdownOptions = [
@@ -138,17 +138,6 @@
             };
             rumdl-check.enable = true;
             rumdl-format.enable = true;
-            statix = {
-              enable = true;
-              disabled-lints = [ "repeated_keys" ];
-            };
-            typos = {
-              enable = true;
-              configFile = toString typosConfig;
-              includes = [ "*.md" ];
-            };
-          }
-          // lib.optionalAttrs includeChecks {
             shellcheck = {
               enable = true;
               includes = [
@@ -161,14 +150,21 @@
                 "*.nix"
                 "*.py"
               ];
-              severity = "warning";
+            };
+            statix = {
+              enable = true;
+              disabled-lints = [ "repeated_keys" ];
+            };
+            typos = {
+              enable = true;
+              configFile = toString typosConfig;
+              includes = [ "*.md" ];
             };
             yamllint = {
               enable = true;
               settings = {
                 extends = "default";
                 rules = {
-                  comments.min-spaces-from-content = 1;
                   document-start = "disable";
                   line-length = "disable";
                   truthy.check-keys = false;
@@ -181,31 +177,22 @@
             excludes = treefmtExcludes;
 
             formatter = {
-              deadnix.priority = 1;
-              statix.priority = 2;
-              nixfmt.priority = 3;
+              statix.priority = 1;
+              nixfmt.priority = 2;
 
-              ruff-check = {
-                options = [
-                  "--isolated"
-                  "--select"
-                  "E4,E7,E9,F,I"
-                ];
-                priority = 1;
-              };
-              ruff-format.priority = 2;
+              ruff-check.options = [
+                "--isolated"
+                "--select"
+                "E4,E7,E9,F,I"
+              ];
+              ruff-format.priority = 1;
 
-              rumdl-format = {
-                options = markdownOptions;
-                priority = 1;
-              };
+              rumdl-format.options = markdownOptions;
               rumdl-check = {
                 options = markdownOptions;
                 priority = 2;
               };
-              typos.priority = 3;
-            }
-            // lib.optionalAttrs includeChecks {
+              typos.priority = 1;
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
@@ -229,7 +216,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(nix|md|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -282,13 +269,13 @@
     {
       lib.semanticScopeOptions = semanticScopeOptions;
 
-      formatter = forAllSystems (system: (treefmtFor system false).config.build.wrapper);
+      formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
 
       devShells = forAllSystems (
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system false;
+          treefmt = treefmtFor system;
           preCommit = preCommitFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
             name = "nf";
@@ -349,7 +336,7 @@
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system true;
+          treefmt = treefmtFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -379,7 +366,7 @@
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system false;
+          treefmt = treefmtFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
           updatePlasma =
