@@ -8,18 +8,17 @@
 
 let
   inherit (config.dotfiles) server;
-  primaryUser = config.dotfiles.users.primary.name;
-  appDataGroup = server.storage.appData.group.name;
-  serverIp = server.lan.serverIp;
+  inherit (config.dotfiles.users) primary;
+  inherit (server.storage) appData;
 
   openWebuiPort = 8081;
-  openWebuiStateDir = "${server.storage.appData.root}/open-webui";
+  openWebuiStateDir = "${appData.root}/open-webui";
   openWebuiSecret = "${server.secretsDir}/open-webui.env";
 
   computerVersion =
     (builtins.fromTOML (builtins.readFile "${inputs.computer}/pyproject.toml")).project.version;
   computerPort = 8000;
-  computerRoot = "${server.storage.appData.root}/open-webui-computer";
+  computerRoot = "${appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
   computerSetupTokenFile = "/run/open-webui-computer/setup-token";
   computerGithubSecret = "${server.secretsDir}/open-webui-github.env";
@@ -31,6 +30,7 @@ let
     user = "open-webui-admin";
     privateKeySecret = "${server.secretsDir}/open-webui-host-admin-id_ed25519";
   };
+  hostAdminSshDir = "${config.users.users.${hostAdmin.user}.home}/.ssh";
 
   hostCommand = pkgs.writeShellApplication {
     name = "open-webui-host";
@@ -61,15 +61,17 @@ let
       --python ${pkgs.python3}/bin/python \
       --from 'cptr[all]==${computerVersion}' \
       python -m uvicorn cptr.app:application \
-      --host ${lib.escapeShellArg serverIp} \
+      --host ${lib.escapeShellArg server.lan.serverIp} \
       --port ${toString computerPort}
   '';
 in
 {
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.openWebui.enable = lib.mkForce false;
+
   users.users = {
     open-webui = {
       isSystemUser = true;
-      group = appDataGroup;
+      group = appData.group.name;
     };
 
     ${hostAdmin.user} = {
@@ -106,18 +108,18 @@ in
 
       ${pkgs.openssh}/bin/ssh-keygen -y -f "$CREDENTIALS_DIRECTORY/host-admin-key" |
         ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " open-webui-host-admin@nixos-server" }' > "$tmp"
-      ${pkgs.coreutils}/bin/install -m 0600 -o ${hostAdmin.user} -g users "$tmp" "/home/${hostAdmin.user}/.ssh/authorized_keys"
+      ${pkgs.coreutils}/bin/install -m 0600 -o ${hostAdmin.user} -g users "$tmp" "${hostAdminSshDir}/authorized_keys"
     '';
   };
 
   services.open-webui = {
     enable = true;
     stateDir = openWebuiStateDir;
-    host = serverIp;
+    host = server.lan.serverIp;
     port = openWebuiPort;
     environmentFile = openWebuiSecret;
     environment = {
-      WEBUI_URL = "http://${serverIp}:${toString openWebuiPort}";
+      WEBUI_URL = "http://${server.lan.serverIp}:${toString openWebuiPort}";
       ENABLE_WEB_SEARCH = "True";
       WEB_SEARCH_ENGINE = "searxng";
       WEB_SEARCH_RESULT_COUNT = "5";
@@ -148,7 +150,7 @@ in
       # points elsewhere. Keep a stable uid for our backed-up custom state path.
       DynamicUser = lib.mkForce false;
       User = "open-webui";
-      Group = appDataGroup;
+      Group = appData.group.name;
       StateDirectory = lib.mkForce "";
       CacheDirectory = "open-webui";
       CacheDirectoryMode = "0700";
@@ -210,7 +212,7 @@ in
       CPTR_DATA_DIR = computerStateDir;
       CPTR_LOG_LEVEL = "WARNING";
       # Gateway-created .cptr exports bypass Computer's auto-ignore helper.
-      # Git ignores them globally, so never edit workspace .gitignore files.
+      # Workspace repos ignore them privately via .git/info/exclude, so never edit tracked .gitignore files.
       CPTR_AUTO_GITIGNORE_DOT_CPTR = "false";
       ENABLE_CHAT_RECONCILE_ON_STARTUP = "true";
       LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
@@ -225,9 +227,9 @@ in
     serviceConfig = {
       Type = "simple";
       EnvironmentFile = computerGithubSecret;
-      User = primaryUser;
+      User = primary.name;
       Group = "users";
-      WorkingDirectory = "/home/${primaryUser}";
+      WorkingDirectory = config.users.users.${primary.name}.home;
       CacheDirectory = "open-webui-computer";
       CacheDirectoryMode = "0700";
       RuntimeDirectory = "open-webui-computer";
@@ -241,11 +243,11 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    "d /home/${hostAdmin.user}/.ssh 0700 ${hostAdmin.user} users - -"
-    "d ${openWebuiStateDir} 0770 open-webui ${appDataGroup} - -"
-    "Z ${openWebuiStateDir} - open-webui ${appDataGroup} - -"
-    "d ${computerRoot} 0700 ${primaryUser} users - -"
-    "d ${computerStateDir} 0700 ${primaryUser} users - -"
+    "d ${hostAdminSshDir} 0700 ${hostAdmin.user} users - -"
+    "d ${openWebuiStateDir} 0770 open-webui ${appData.group.name} - -"
+    "Z ${openWebuiStateDir} - open-webui ${appData.group.name} - -"
+    "d ${computerRoot} 0700 ${primary.name} users - -"
+    "d ${computerStateDir} 0700 ${primary.name} users - -"
   ];
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [

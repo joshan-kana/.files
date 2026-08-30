@@ -1,11 +1,14 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 let
   inherit (config.dotfiles) server;
-  agentMailRoot = "${server.storage.appData.root}/agent-mail";
+  inherit (server.storage) appData;
+  agentMailRoot = "${appData.root}/agent-mail";
   agentMailPort = 8765;
 in
 {
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.agentMail.enable = lib.mkForce false;
+
   virtualisation.oci-containers.containers.agent-mail = {
     image = "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest";
     cmd = [
