@@ -376,8 +376,8 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### Formatting
 
-- `nix fmt` or `fmt` - Apply repository formatting and safe fixes for Nix, Markdown, and Python, plus spelling fixes
-- `nix flake check` or `chk` - Verify repository formatting, ShellCheck, YAML, GitHub Actions, and the existing flake checks without changing files
+- `nix fmt` or `fmt` - Fix and validate the repository
+- `nix flake check` or `chk` - Check the repository
 - `nix develop` - Enter the development shell and install the repository's pre-commit hooks
 
 ### Validation
