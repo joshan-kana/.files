@@ -11,14 +11,13 @@ in
     cmd = [
       "serve"
       "--no-tui"
-      "--allowed-host"
-      "${server.lan.serverIp}:${toString agentMailPort}"
     ];
-    ports = [
-      "127.0.0.1:${toString agentMailPort}:8765"
-      "${server.lan.serverIp}:${toString agentMailPort}:8765"
-    ];
+    environment = {
+      HTTP_HOST = server.lan.serverIp;
+      HTTP_PORT = toString agentMailPort;
+    };
     volumes = [ "${agentMailRoot}:/data" ];
+    extraOptions = [ "--network=host" ];
   };
 
   # The upstream image runs as uid/gid 10001 and keeps all durable mailbox
