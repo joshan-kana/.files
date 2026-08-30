@@ -689,7 +689,7 @@ in
   };
 
   cava = _: {
-    home = { config, ... }: {
+    home = _: {
       programs.cava.settings = {
         general.lower_cutoff_freq = 20;
         general.upper_cutoff_freq = 20000;
@@ -698,16 +698,6 @@ in
         general.bar_width = 1;
         general.bar_spacing = 0;
         output.channels = "mono";
-        color.gradient = 1;
-        color.gradient_count = 8;
-        color.gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
-        color.gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
-        color.gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
-        color.gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
-        color.gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
-        color.gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
-        color.gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
-        color.gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
       };
     };
   };
