@@ -356,12 +356,17 @@
             inherit inputs;
             configurations = self.nixosConfigurations;
           };
+          serverAppStandardsTest = import ./tests/server-app-standards.nix {
+            inherit inputs;
+            configuration = self.nixosConfigurations.nixos-server;
+          };
         in
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
           repo-quality = treefmt.config.build.check self;
+          server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }

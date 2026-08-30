@@ -1,26 +1,32 @@
 { config, lib, ... }:
 
 let
-  storage = config.dotfiles.server.storage;
-  mediaLocation = "${storage.dataRoot.path}/immich";
+  inherit (config.dotfiles) server;
+  inherit (server) storage;
+  inherit (storage) dataRoot;
+  mediaLocation = "${dataRoot.path}/immich";
   backupLocation = "${mediaLocation}/backups";
 in
 {
   services.immich = {
     enable = true;
-    host = config.dotfiles.server.lan.serverIp;
-    openFirewall = true;
+    host = server.lan.serverIp;
+    openFirewall = false;
     inherit mediaLocation;
-    group = storage.dataRoot.group.name;
+    group = dataRoot.group.name;
 
     settings.backup.database.cronExpression = "*/${toString storage.snapshots.intervalMinutes} * * * *";
   };
+
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
+    lib.optionals config.services.immich.enable
+      [ config.services.immich.port ];
 
   services.restic.backups.apps.paths = [ backupLocation ];
 
   systemd = lib.mkIf config.services.immich.enable {
     tmpfiles.rules = [
-      "d ${backupLocation} 2770 immich ${storage.dataRoot.group.name} - -"
+      "d ${backupLocation} 2770 immich ${dataRoot.group.name} - -"
     ];
   };
 

@@ -5,19 +5,27 @@
 }:
 
 let
-  primaryUser = config.dotfiles.users.primary.name;
-  serverCfg = config.dotfiles.server;
-  inherit (serverCfg) secretsDir;
-  appDataRoot = serverCfg.storage.appData.root;
+  inherit (config.dotfiles) server;
+  inherit (config.dotfiles.users) primary;
+  gatewayPort = 18789;
+
+  openclawSecrets = [
+    "${server.secretsDir}/openclaw.env"
+    "${server.secretsDir}/server-ai.env"
+    "${server.secretsDir}/server-zdr-openrouter.env"
+    "${server.secretsDir}/server-deepseek-openrouter.env"
+    "${server.secretsDir}/server-free-openrouter.env"
+    "${server.secretsDir}/server-openai-openrouter.env"
+  ];
 
   appDataEditor = {
-    group = serverCfg.storage.appData.group.name;
-    gid = serverCfg.storage.appData.group.id;
+    group = server.storage.appData.group.name;
+    gid = server.storage.appData.group.id;
   };
 
   openclawHostAdmin = {
     user = "openclaw-admin";
-    privateKeyPath = "${secretsDir}/openclaw-host-admin-id_ed25519";
+    privateKeySecret = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
     privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
@@ -32,8 +40,8 @@ let
   };
 
   openclawGitHub = {
-    apiEnvPath = "${secretsDir}/openclaw-github.env";
-    privateKeyPath = "${secretsDir}/openclaw-github-id_ed25519";
+    apiSecret = "${server.secretsDir}/openclaw-github.env";
+    privateKeySecret = "${server.secretsDir}/openclaw-github-id_ed25519";
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
@@ -60,20 +68,20 @@ let
       [ "$(${pkgs.coreutils}/bin/id -u)" -eq 0 ] ||
         die "openclaw-repository-host must run as root"
 
-      primaryEnv=(runuser -u ${primaryUser} -- env -i HOME=/home/${primaryUser}
-        USER=${primaryUser} LOGNAME=${primaryUser} PATH="$PATH")
+      primaryEnv=(runuser -u ${primary.name} -- env -i HOME=/home/${primary.name}
+        USER=${primary.name} LOGNAME=${primary.name} PATH="$PATH")
 
       operation="''${1:-}"; [ "$#" -eq 0 ] || shift
 
       case "$operation" in
         gh)
-          [ -r ${openclawGitHub.apiEnvPath} ] ||
-            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiEnvPath}"
+          [ -r ${openclawGitHub.apiSecret} ] ||
+            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiSecret}"
 
           unset GH_TOKEN
           # shellcheck disable=SC1091
-          source ${openclawGitHub.apiEnvPath}
-          : "''${GH_TOKEN:?${openclawGitHub.apiEnvPath} must define GH_TOKEN}"
+          source ${openclawGitHub.apiSecret}
+          : "''${GH_TOKEN:?${openclawGitHub.apiSecret} must define GH_TOKEN}"
 
           exec "''${primaryEnv[@]}" \
             GH_TOKEN="$GH_TOKEN" \
@@ -84,27 +92,27 @@ let
           repository="''${1:-}"; [ "$#" -eq 0 ] || shift
 
           case "$repository" in
-            files) checkout=/home/${primaryUser}/.files ;;
-            infrastructure-docs) checkout=/home/${primaryUser}/.files/docs/infrastructure-docs ;;
+            files) checkout=/home/${primary.name}/.files ;;
+            infrastructure-docs) checkout=/home/${primary.name}/.files/docs/infrastructure-docs ;;
             *)
               die "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>"
               ;;
           esac
 
-          [ -r ${openclawGitHub.privateKeyPath} ] ||
-            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeyPath}"
+          [ -r ${openclawGitHub.privateKeySecret} ] ||
+            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeySecret}"
 
           agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
-          install -d -m 0700 -o ${primaryUser} -g users "$agentDir"
+          install -d -m 0700 -o ${primary.name} -g users "$agentDir"
 
           eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
 
-          ssh-add ${openclawGitHub.privateKeyPath} >/dev/null 2>&1 ||
+          ssh-add ${openclawGitHub.privateKeySecret} >/dev/null 2>&1 ||
             die "Failed to load the OpenClaw GitHub SSH key"
 
           publicIdentity="$agentDir/id_ed25519.pub"
-          ssh-add -L | install -m 0644 -o ${primaryUser} -g users /dev/stdin "$publicIdentity" ||
+          ssh-add -L | install -m 0644 -o ${primary.name} -g users /dev/stdin "$publicIdentity" ||
             die "Failed to write the OpenClaw GitHub public identity"
 
           gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
@@ -158,7 +166,7 @@ let
 
 in
 {
-  networking.firewall.allowedTCPPorts = [ 18789 ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
   users.users.${openclawHostAdmin.user} = {
     isNormalUser = true;
@@ -182,7 +190,7 @@ in
   system.activationScripts.openclawHostAdminAuthorizedKeys = {
     deps = [ "users" ];
     text = ''
-      keyFile="${openclawHostAdmin.privateKeyPath}.pub"
+      keyFile="${openclawHostAdmin.privateKeySecret}.pub"
       home="/home/${openclawHostAdmin.user}"
 
       if [ -f "$keyFile" ]; then
@@ -203,20 +211,20 @@ in
   ];
 
   systemd.tmpfiles.rules = [
-    "a+ ${appDataRoot} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
+    "a+ ${server.storage.appData.root} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
 
-    "d ${appDataRoot}/admin-tools 0755 root ${appDataEditor.group} - -"
-    "d ${appDataRoot}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d ${appDataRoot}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d /run/openclaw-github-cli 0700 ${primaryUser} users - -"
+    "d ${server.storage.appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
+    "d ${server.storage.appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${server.storage.appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
 
-    "d ${secretsDir} 0700 root root - -"
-    "Z ${secretsDir} ~0700 root root - -"
-    "z ${openclawGitHub.apiEnvPath} 0400 root root - -"
-    "z ${openclawGitHub.privateKeyPath} 0400 root root - -"
-    "z ${openclawGitHub.privateKeyPath}.pub 0644 root root - -"
-    "z ${openclawHostAdmin.privateKeyPath} 0400 ${toString openclawContainerUser.uid} root - -"
-    "z ${openclawHostAdmin.privateKeyPath}.pub 0644 root root - -"
+    "d ${server.secretsDir} 0700 root root - -"
+    "Z ${server.secretsDir} ~0700 root root - -"
+    "z ${openclawGitHub.apiSecret} 0400 root root - -"
+    "z ${openclawGitHub.privateKeySecret} 0400 root root - -"
+    "z ${openclawGitHub.privateKeySecret}.pub 0644 root root - -"
+    "z ${openclawHostAdmin.privateKeySecret} 0400 ${toString openclawContainerUser.uid} root - -"
+    "z ${openclawHostAdmin.privateKeySecret}.pub 0644 root root - -"
   ];
 
   services.nginx = {
@@ -226,13 +234,13 @@ in
     virtualHosts.openclaw = {
       listen = [
         {
-          addr = "192.168.1.3";
-          port = 18789;
+          addr = server.lan.serverIp;
+          port = gatewayPort;
         }
       ];
 
       locations."/" = {
-        proxyPass = "http://127.0.0.1:18789";
+        proxyPass = "http://127.0.0.1:${toString gatewayPort}";
         proxyWebsockets = true;
         extraConfig = ''
           proxy_set_header Host $host;
@@ -240,7 +248,7 @@ in
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
           proxy_set_header X-Forwarded-Host $host;
-          proxy_set_header X-Forwarded-User ${primaryUser};
+          proxy_set_header X-Forwarded-User ${primary.name};
 
           # OpenClaw ships script-src 'self' only, which blocks the Vite/rolldown
           # bundle's runtime eval()-based dynamic imports and prevents
@@ -263,7 +271,7 @@ in
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      configFile="${appDataRoot}/openclaw/openclaw.json"
+      configFile="${server.storage.appData.root}/openclaw/openclaw.json"
 
       if [ ! -f "$configFile" ]; then
         echo "OpenClaw config does not exist yet: $configFile" >&2
@@ -527,7 +535,7 @@ in
           )
         | .gateway.mode = "local"
         | .gateway.bind = "loopback"
-        | .gateway.port = 18789
+        | .gateway.port = ${toString gatewayPort}
         | .gateway.nodes = (.gateway.nodes // {})
         | .gateway.nodes.allowCommands =
             (((.gateway.nodes.allowCommands // []) - ["computer.act"]) + [
@@ -580,7 +588,7 @@ in
         | .gateway.controlUi.allowInsecureAuth = true
         | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
         | .gateway.controlUi.allowedOrigins =
-            ((.gateway.controlUi.allowedOrigins // []) + ["http://192.168.1.3:18789"] | unique)
+            ((.gateway.controlUi.allowedOrigins // []) + ["http://${server.lan.serverIp}:${toString gatewayPort}"] | unique)
         | .plugins = (.plugins // {})
         | .plugins.allow =
             ((.plugins.allow // []) + ["codex", "openai", "ollama", "matrix", "device-pair", "deepseek"] | unique)
@@ -591,7 +599,7 @@ in
         | .plugins.entries."device-pair".enabled = true
         | .plugins.entries."device-pair".config =
             ((.plugins.entries."device-pair".config // {}) + {
-              "publicUrl": "ws://192.168.1.3:18789"
+              "publicUrl": "ws://${server.lan.serverIp}:${toString gatewayPort}"
             })
       ' "$configFile" > "$tmp"
 
@@ -719,13 +727,6 @@ in
   };
 
   systemd.services.docker-openclaw = {
-    unitConfig.AssertPathIsRegular = [
-      openclawHostAdmin.privateKeyPath
-      "${secretsDir}/server-zdr-openrouter.env"
-      "${secretsDir}/server-deepseek-openrouter.env"
-      "${secretsDir}/server-free-openrouter.env"
-      "${secretsDir}/server-openai-openrouter.env"
-    ];
     after = [
       "configure-openclaw-gateway.service"
       "nginx.service"
@@ -733,6 +734,10 @@ in
     requires = [ "configure-openclaw-gateway.service" ];
     wants = [ "nginx.service" ];
   };
+
+  systemd.services.docker-openclaw.unitConfig.AssertPathExists = openclawSecrets ++ [
+    openclawHostAdmin.privateKeySecret
+  ];
 
   # Server OCI containers. Images are declared as plain upstream `repository:tag`
   # sources; the global `container-image-locking.nix` module appends the matching
@@ -743,9 +748,9 @@ in
       image = "ghcr.io/openclaw/openclaw:latest";
 
       volumes = [
-        "${appDataRoot}/openclaw:/home/node/.openclaw"
-        "${appDataRoot}/openclaw-auth:/home/node/.config/openclaw"
-        "${openclawHostAdmin.privateKeyPath}:${openclawHostAdmin.privateKeyMountPath}:ro"
+        "${server.storage.appData.root}/openclaw:/home/node/.openclaw"
+        "${server.storage.appData.root}/openclaw-auth:/home/node/.config/openclaw"
+        "${openclawHostAdmin.privateKeySecret}:${openclawHostAdmin.privateKeyMountPath}:ro"
         "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
         "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
         "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
@@ -759,14 +764,7 @@ in
         NODE_OPTIONS = "--dns-result-order=ipv4first";
         OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
       };
-      environmentFiles = [
-        "${secretsDir}/openclaw.env"
-        "${secretsDir}/server-ai.env"
-        "${secretsDir}/server-zdr-openrouter.env"
-        "${secretsDir}/server-deepseek-openrouter.env"
-        "${secretsDir}/server-free-openrouter.env"
-        "${secretsDir}/server-openai-openrouter.env"
-      ];
+      environmentFiles = openclawSecrets;
 
       extraOptions = [
         "--network=host"

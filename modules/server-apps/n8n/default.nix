@@ -1,22 +1,22 @@
 { config, ... }:
 
 let
-  serverCfg = config.dotfiles.server;
-  inherit (serverCfg) secretsDir;
-  appDataRoot = serverCfg.storage.appData.root;
+  inherit (config.dotfiles) server;
+  hostPort = 5678;
+  n8nSecret = "${server.secretsDir}/n8n.env";
 in
 {
-  networking.firewall.allowedTCPPorts = [ 5678 ];
-
   virtualisation.oci-containers.containers.n8n = {
     image = "docker.n8n.io/n8nio/n8n:latest";
 
-    volumes = [ "${appDataRoot}/n8n:/home/node/.n8n" ];
-    ports = [ "5678:5678" ];
+    volumes = [ "${server.storage.appData.root}/n8n:/home/node/.n8n" ];
+    ports = [ "${server.lan.serverIp}:${toString hostPort}:5678" ];
 
     environment = {
       GENERIC_TIMEZONE = config.time.timeZone;
     };
-    environmentFiles = [ "${secretsDir}/n8n.env" ];
+    environmentFiles = [ n8nSecret ];
   };
+
+  systemd.services.docker-n8n.unitConfig.AssertPathExists = n8nSecret;
 }

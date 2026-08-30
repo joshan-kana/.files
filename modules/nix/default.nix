@@ -8,7 +8,6 @@
 let
   atticCache = "dotfiles";
   atticEndpoint = "http://192.168.1.3:8080";
-  cfg = config.dotfiles;
 in
 {
   nixpkgs.config.allowUnfree = true;
@@ -18,7 +17,7 @@ in
   nix.settings = {
     trusted-users = [
       "root"
-      cfg.users.primary.name
+      config.dotfiles.users.primary.name
     ];
     eval-cores = 0;
     experimental-features = [
@@ -50,7 +49,7 @@ in
         default-server = "attic";
         servers.attic = {
           endpoint = atticEndpoint;
-          token-file = "${cfg.secretsDir}/attic-token";
+          token-file = "${config.dotfiles.secretsDir}/attic-token";
         };
       };
       watchStore = [ atticCache ];

@@ -79,7 +79,7 @@
 
     let
       shared = moduleRegistry.networking { };
-      lan = config.dotfiles.server.lan;
+      inherit (config.dotfiles.server) lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
     in
     shared
@@ -127,21 +127,21 @@
         }:
 
         let
-          serverCfg = config.dotfiles.server;
-          appDataRoot = serverCfg.storage.appData.root;
-          inherit (serverCfg) lan;
-          lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
-          hostDns = "${lib.concatStringsSep ";" ([ lan.dns.serviceIp ] ++ lan.dns.fallbackServers)};";
+          inherit (config.dotfiles) server;
+          lanPrefixLength = builtins.elemAt (lib.splitString "/" server.lan.subnet) 1;
+          hostDns = "${
+            lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
+          };";
 
           service = {
             user = "adguardhome";
             group = "appdata-editors";
-            ip = lan.dns.serviceIp;
+            ip = server.lan.dns.serviceIp;
             port = 53;
-            dataDir = "${appDataRoot}/adguard";
-            workDir = "${appDataRoot}/adguard/work";
-            confDir = "${appDataRoot}/adguard/conf";
-            configFile = "${appDataRoot}/adguard/conf/AdGuardHome.yaml";
+            dataDir = "${server.storage.appData.root}/adguard";
+            workDir = "${server.storage.appData.root}/adguard/work";
+            confDir = "${server.storage.appData.root}/adguard/conf";
+            configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
           };
         in
         {
@@ -230,14 +230,16 @@
         }:
 
         let
-          serverCfg = config.dotfiles.server;
+          inherit (config.dotfiles) server;
         in
         {
+          networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
+
           services.tailscale = {
             enable = true;
             openFirewall = true;
             useRoutingFeatures = "server";
-            authKeyFile = "${serverCfg.secretsDir}/tailscale-oauth-client-secret";
+            authKeyFile = "${server.secretsDir}/tailscale-oauth-client-secret";
             authKeyParameters = {
               ephemeral = true;
               preauthorized = true;
@@ -248,7 +250,7 @@
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
-              "--advertise-routes=${serverCfg.lan.subnet}"
+              "--advertise-routes=${server.lan.subnet}"
               "--accept-dns=false"
             ];
             extraSetFlags = [ ];
@@ -266,6 +268,10 @@
               "multi-user.target"
             ];
             before = lib.mkForce [ "shutdown.target" ];
+            serviceConfig = {
+              Restart = "on-failure";
+              RestartSec = "10s";
+            };
           };
         };
     };
@@ -327,12 +333,10 @@
     }:
 
     let
-      cfg = config.dotfiles.server.storage;
-      inherit (cfg) snapshots;
-      appDataRoot = cfg.appData.root;
-      pool = cfg.dataRoot.poolName;
-      secretsDir = config.dotfiles.server.secretsDir;
-      snapshotInterval = "*:0/${toString snapshots.intervalMinutes}";
+      inherit (config.dotfiles) server;
+      inherit (config.dotfiles.users) primary;
+      inherit (server) storage;
+      snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
       resticWrapperCommands = lib.pipe config.services.restic.backups [
         (lib.filterAttrs (_: backup: backup.createWrapper))
         lib.attrNames
@@ -342,19 +346,20 @@
     {
       assertions = [
         {
-          assertion = snapshots.intervalMinutes <= 60 && lib.mod 60 snapshots.intervalMinutes == 0;
+          assertion =
+            storage.snapshots.intervalMinutes <= 60 && lib.mod 60 storage.snapshots.intervalMinutes == 0;
           message = "dotfiles.server.storage.snapshots.intervalMinutes must divide one hour evenly.";
         }
       ];
 
       users = {
         groups = {
-          ${cfg.appData.group.name}.gid = cfg.appData.group.id;
-          ${cfg.dataRoot.group.name} = { };
+          ${storage.appData.group.name}.gid = storage.appData.group.id;
+          ${storage.dataRoot.group.name} = { };
         };
-        users.${config.dotfiles.users.primary.name}.extraGroups = [
-          cfg.appData.group.name
-          cfg.dataRoot.group.name
+        users.${primary.name}.extraGroups = [
+          storage.appData.group.name
+          storage.dataRoot.group.name
         ];
       };
 
@@ -368,15 +373,15 @@
           "btrfs"
           "zfs"
         ];
-        zfs.extraPools = [ pool ];
+        zfs.extraPools = [ storage.dataRoot.poolName ];
         zfs.forceImportRoot = false;
       };
 
       services.zfs = {
         autoScrub = {
           enable = true;
-          pools = [ pool ];
-          interval = cfg.dataRoot.scrubInterval;
+          pools = [ storage.dataRoot.poolName ];
+          interval = storage.dataRoot.scrubInterval;
         };
         trim.enable = false;
       };
@@ -385,9 +390,9 @@
         enable = true;
         interval = snapshotInterval;
         templates.vault = {
-          frequent_period = snapshots.intervalMinutes;
-          frequently = 60 / snapshots.intervalMinutes;
-          inherit (snapshots.retention)
+          frequent_period = storage.snapshots.intervalMinutes;
+          frequently = 60 / storage.snapshots.intervalMinutes;
+          inherit (storage.snapshots.retention)
             hourly
             daily
             weekly
@@ -396,7 +401,7 @@
           autosnap = true;
           autoprune = true;
         };
-        datasets."${pool}/data" = {
+        datasets."${storage.dataRoot.poolName}/data" = {
           useTemplate = [ "vault" ];
           recursive = "zfs";
         };
@@ -407,32 +412,32 @@
         cleanupInterval = "1h";
         persistentTimer = true;
         configs.apps = {
-          SUBVOLUME = appDataRoot;
+          SUBVOLUME = storage.appData.root;
           FSTYPE = "btrfs";
           FREE_LIMIT = config.nix.settings.min-free;
           TIMELINE_CREATE = true;
           TIMELINE_CLEANUP = true;
-          TIMELINE_LIMIT_HOURLY = snapshots.retention.hourly;
-          TIMELINE_LIMIT_DAILY = snapshots.retention.daily;
-          TIMELINE_LIMIT_WEEKLY = snapshots.retention.weekly;
-          TIMELINE_LIMIT_MONTHLY = snapshots.retention.monthly;
+          TIMELINE_LIMIT_HOURLY = storage.snapshots.retention.hourly;
+          TIMELINE_LIMIT_DAILY = storage.snapshots.retention.daily;
+          TIMELINE_LIMIT_WEEKLY = storage.snapshots.retention.weekly;
+          TIMELINE_LIMIT_MONTHLY = storage.snapshots.retention.monthly;
         };
       };
 
       services.restic.backups.apps = {
         initialize = true;
         repository = "rclone:dropbox:Archives/Backups/nixos-server";
-        passwordFile = "${secretsDir}/restic-password";
-        rcloneConfigFile = "${secretsDir}/rclone.conf";
-        paths = [ appDataRoot ];
+        passwordFile = "${server.secretsDir}/restic-password";
+        rcloneConfigFile = "${server.secretsDir}/rclone.conf";
+        paths = [ storage.appData.root ];
         exclude = [
-          "${appDataRoot}/.snapshots"
+          "${storage.appData.root}/.snapshots"
         ];
         pruneOpts = [
-          "--keep-hourly ${toString snapshots.retention.hourly}"
-          "--keep-daily ${toString snapshots.retention.daily}"
-          "--keep-weekly ${toString snapshots.retention.weekly}"
-          "--keep-monthly ${toString snapshots.retention.monthly}"
+          "--keep-hourly ${toString storage.snapshots.retention.hourly}"
+          "--keep-daily ${toString storage.snapshots.retention.daily}"
+          "--keep-weekly ${toString storage.snapshots.retention.weekly}"
+          "--keep-monthly ${toString storage.snapshots.retention.monthly}"
         ];
         timerConfig = {
           OnCalendar = "*:0/30";
@@ -443,9 +448,9 @@
       };
 
       systemd.tmpfiles.rules = [
-        "d ${appDataRoot} 2770 root ${cfg.appData.group.name} - -"
-        "v ${appDataRoot}/.snapshots 0750 root root - -"
-        "a ${appDataRoot}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
+        "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
+        "v ${storage.appData.root}/.snapshots 0750 root root - -"
+        "a ${storage.appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
       ];
 
       programs.zsh.interactiveShellInit =
@@ -514,11 +519,8 @@
       ...
     }:
 
-    let
-      primaryUser = config.dotfiles.users.primary.name;
-    in
     {
-      users.users.${primaryUser}.openssh.authorizedKeys.keys = [
+      users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"

@@ -84,8 +84,8 @@ datasets until they are explicitly removed.
 
 Immich uses `/srv/vault/immich` as its managed media root and indexes the
 existing `/srv/vault/media-library` in place as an external library. Its logical
-database dumps live under `/var/lib/apps/immich/backups`, where the existing
-Snapper and restic policies protect them. See [Native Immich](immich.md) for
+database dumps live under `/srv/vault/immich/backups`, where Vault snapshots
+and the apps restic backup protect them. See [Native Immich](immich.md) for
 deployment and first-run setup.
 
 Paperless uses `/srv/vault/paperless` for its document media and consume
