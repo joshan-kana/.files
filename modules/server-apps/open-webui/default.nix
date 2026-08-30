@@ -158,6 +158,9 @@ in
       WEB_SEARCH_CONCURRENT_REQUESTS = "5";
       SEARXNG_QUERY_URL = "${searxBaseUrl}/search?q=<query>";
       ENABLE_USER_WEBHOOKS = "True";
+      HF_HOME = "/var/cache/open-webui/huggingface";
+      SENTENCE_TRANSFORMERS_HOME = "/var/cache/open-webui/sentence-transformers";
+      RAG_EMBEDDING_MODEL_AUTO_UPDATE = "False";
     };
     openFirewall = false;
   };
@@ -172,6 +175,8 @@ in
       User = "open-webui";
       Group = appDataGroup;
       StateDirectory = lib.mkForce "";
+      CacheDirectory = "open-webui";
+      CacheDirectoryMode = "0700";
       ProtectSystem = "strict";
       ReadWritePaths = [ openWebuiStateDir ];
     };
