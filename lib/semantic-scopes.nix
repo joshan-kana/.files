@@ -68,20 +68,37 @@ let
     in
     scopeModule (lib.filterAttrs (name: _: builtins.hasAttr name expected) args);
 
+  hasHomeBranch = scope: builtins.hasAttr "home" scope && builtins.isFunction scope.home;
+
+  scopeForContext =
+    context: projectHomeBranches: path: scope: args:
+    if context == "home" && projectHomeBranches then
+      if hasHomeBranch scope then validateScope path (callScope scope.home args) else { }
+    else
+      scope;
+
   scopeOverride =
     context: path: suffix: args:
     let
-      systemConfig = if context == "system" then args.config else args.osConfig or { };
+      osConfig = args.osConfig or null;
+      hostConfig =
+        if context == "system" then
+          args.config
+        else if builtins.isAttrs osConfig && osConfig ? dotfiles.scopes then
+          osConfig
+        else
+          args.config;
     in
-    if path == [ ] || !(systemConfig ? dotfiles.scopes) then
+    if path == [ ] || !(hostConfig ? dotfiles.scopes) then
       null
     else
-      lib.attrByPath (path ++ suffix) null systemConfig.dotfiles.scopes;
+      lib.attrByPath (path ++ suffix) null hostConfig.dotfiles.scopes;
 
   scopeConfig =
-    context: parentEnabled: parentChildEnabled: path: scopeModule: args:
+    context: projectHomeBranches: parentEnabled: parentChildEnabled: path: scopeModule: args:
     let
       scope = validateScope path (callScope scopeModule args);
+      contextScope = scopeForContext context projectHomeBranches path scope args;
       configuredEnable = scopeOverride context path [ "enable" ] args;
       ownEnabled =
         if configuredEnable != null then configuredEnable else scope.enable or parentChildEnabled;
@@ -89,15 +106,18 @@ let
       configuredChildEnable = scopeOverride context path [ "children" "enable" ] args;
       childEnabled = if configuredChildEnable != null then configuredChildEnable else true;
       name = if path == [ ] then null else lib.last path;
-      hasHomeContext =
-        context == "system" && builtins.hasAttr "home" scope && builtins.isFunction scope.home;
+      homeBranch = hasHomeBranch scope;
       candidates = builtins.removeAttrs scope (
-        moduleKeys ++ [ "enable" ] ++ lib.optional hasHomeContext "home"
+        moduleKeys ++ [ "enable" ] ++ lib.optional homeBranch "home"
       );
       children = lib.filterAttrs (_: value: builtins.isFunction value) candidates;
-      directConfig = builtins.removeAttrs scope (
-        [ "enable" ] ++ builtins.attrNames children ++ moduleKeys ++ lib.optional hasHomeContext "home"
-      );
+      directConfig =
+        if context == "home" && projectHomeBranches then
+          builtins.removeAttrs contextScope ([ "enable" ] ++ moduleKeys)
+        else
+          builtins.removeAttrs scope (
+            [ "enable" ] ++ builtins.attrNames children ++ moduleKeys ++ lib.optional homeBranch "home"
+          );
       nativeMatches =
         if name == null then
           [ ]
@@ -124,21 +144,23 @@ let
       homeConfig =
         lib.optionalAttrs
           (
-            hasHomeContext
+            context == "system"
+            && homeBranch
             && builtins.hasAttr "home-manager" args.options
             && builtins.hasAttr "sharedModules" args.options.home-manager
           )
           {
-            home-manager.sharedModules = [ (mkScopeModule "home" enabled path scope.home) ];
+            # This is already the selected Home Manager branch, so do not project again.
+            home-manager.sharedModules = [
+              (mkScopeModule "home" false enabled path scope.home)
+            ];
           };
       childConfigs = lib.mapAttrsToList (
-        childName: child: scopeConfig context enabled childEnabled (path ++ [ childName ]) child args
+        childName: child:
+        scopeConfig context projectHomeBranches enabled childEnabled (path ++ [ childName ]) child args
       ) children;
       stateConfig =
-        lib.optionalAttrs
-          (
-            context == "system" && path != [ ] && lib.hasAttrByPath [ "dotfiles" "resolvedScopes" ] args.options
-          )
+        lib.optionalAttrs (path != [ ] && lib.hasAttrByPath [ "dotfiles" "resolvedScopes" ] args.options)
           {
             dotfiles.resolvedScopes = lib.setAttrByPath (path ++ [ "enable" ]) enabled;
           };
@@ -148,7 +170,7 @@ let
         stateConfig
         (lib.mkIf enabled (
           lib.mkMerge [
-            (scope.config or { })
+            (contextScope.config or { })
             nativeEnable
             directConfig
             homeConfig
@@ -159,7 +181,7 @@ let
     );
 
   mkScopeModule =
-    context: parentEnabled: path: scopeModule:
+    context: projectHomeBranches: parentEnabled: path: scopeModule:
     let
       expected = lib.functionArgs scopeModule;
       wrapperArgs =
@@ -173,21 +195,22 @@ let
         args:
         let
           scope = validateScope path (callScope scopeModule args);
+          contextScope = scopeForContext context projectHomeBranches path scope args;
         in
         {
-          imports = scope.imports or [ ];
-          options = scope.options or { };
-          disabledModules = scope.disabledModules or [ ];
-          config = scopeConfig context parentEnabled true path scopeModule args;
+          imports = contextScope.imports or [ ];
+          options = contextScope.options or { };
+          disabledModules = contextScope.disabledModules or [ ];
+          config = scopeConfig context projectHomeBranches parentEnabled true path scopeModule args;
         }
         // lib.optionalAttrs (scope ? _file) { inherit (scope) _file; };
     in
     lib.setFunctionArgs wrapper wrapperArgs;
 in
 rec {
-  rootModule = scope: mkScopeModule "system" true [ ] scope;
-  systemModule = name: scope: mkScopeModule "system" true [ name ] scope;
-  homeModule = name: scope: mkScopeModule "home" true [ name ] scope;
+  rootModule = scope: mkScopeModule "system" false true [ ] scope;
+  systemModule = name: scope: mkScopeModule "system" false true [ name ] scope;
+  homeModule = name: scope: mkScopeModule "home" true true [ name ] scope;
   systemModules = scopes: { imports = builtins.attrValues (builtins.mapAttrs systemModule scopes); };
   homeModules = scopes: { imports = builtins.attrValues (builtins.mapAttrs homeModule scopes); };
 }
