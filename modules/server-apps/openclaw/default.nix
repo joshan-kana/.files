@@ -726,13 +726,6 @@ in
   };
 
   systemd.services.docker-openclaw = {
-    unitConfig.AssertPathIsRegular = [
-      openclawHostAdmin.privateKeySecret
-      "${server.secretsDir}/server-zdr-openrouter.env"
-      "${server.secretsDir}/server-deepseek-openrouter.env"
-      "${server.secretsDir}/server-free-openrouter.env"
-      "${server.secretsDir}/server-openai-openrouter.env"
-    ];
     after = [
       "configure-openclaw-gateway.service"
       "nginx.service"
