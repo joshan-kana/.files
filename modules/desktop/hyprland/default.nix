@@ -2,8 +2,14 @@
 
 let
   xwaylandEnabled = true;
+  aliases = {
+    h = "start-hyprland";
+    HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
+    HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
+  };
 in
 {
+  environment.shellAliases = aliases;
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
@@ -166,11 +172,7 @@ in
   };
 
   home = _: {
-    programs.zsh.shellAliases = {
-      h = "start-hyprland";
-      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
-      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
-    };
+    home.shellAliases = aliases;
 
     wayland.windowManager.hyprland = {
       xwayland.enable = xwaylandEnabled;

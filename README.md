@@ -199,11 +199,12 @@ parent scope still disables its entire subtree.
 Override paths are strict: an unknown or stale semantic scope path is an
 evaluation error, including beneath a disabled parent scope.
 
-Aliases belong to their owning scope and merge through native Home Manager
-options. Disabling `cli.mpv`, for example, removes both MPV and its `p` alias.
-Host-specific behavior overrides the native option directly; OrbStack overrides
-`programs.zsh.shellAliases.cpd` in its `hostEnvironment.home` scope rather than
-using an alias override registry.
+Aliases belong to their owning semantic scope. Simple aliases that are portable
+across shells are authored once and applied through both `environment.shellAliases`
+and `home.shellAliases`, keeping system and standalone Home Manager consumers in
+sync without duplicating program configuration. Shell-specific aliases, functions,
+and completions stay under their native shell options. Disabling `cli.mpv`, for
+example, removes both MPV and its `p` alias.
 
 ### Themes
 

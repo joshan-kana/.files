@@ -1,4 +1,10 @@
-{ inputs, ... }: {
+{ inputs, ... }:
+
+let
+  aliases.k = "startplasma-wayland";
+in
+{
+  environment.shellAliases = aliases;
   services.desktopManager.plasma6.enable = true;
   environment.sessionVariables.KWIN_FORCE_SW_CURSOR = "1";
 
@@ -8,7 +14,7 @@
       ./generated.nix
     ];
 
+    home.shellAliases = aliases;
     programs.plasma.enable = true;
-    programs.zsh.shellAliases.k = "startplasma-wayland";
   };
 }

@@ -11,7 +11,6 @@ let
   repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
-    edit = "if command -v code >/dev/null 2>&1; then code \"$DOTFILES/edit_config.code-workspace\"; else \${EDITOR:-nvim} \"$DOTFILES\"; fi";
     flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${dotfiles.profile.name}";
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
@@ -19,8 +18,6 @@ let
   systemAliases = {
     syscd = systemCommands.cd;
     scd = systemCommands.cd;
-    sysedit = systemCommands.edit;
-    sedit = systemCommands.edit;
     sysfu = systemCommands.flakeUpdate;
     sfu = systemCommands.flakeUpdate;
     sysbld = systemCommands.rebuild "build";
@@ -115,199 +112,286 @@ let
       withPython3 = false;
     };
   };
-in
-{
-  environment.sessionVariables = {
+  sessionVariables = {
     DOTFILES = repoPath;
     FLK_PROFILE = dotfiles.profile.name;
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
+in
+{
+  environment.sessionVariables = sessionVariables;
 
-  nh = args: {
-    inherit (nhConfig args) programs;
-
-    home = args: {
-      programs = (nhConfig args).programs // {
-        zsh.shellAliases = systemAliases // {
-          inherit (systemCommands) edit;
-        };
-      };
-    };
+  home = _: {
+    home.sessionVariables = sessionVariables;
   };
 
-  direnv = args: {
-    inherit (direnvConfig args) programs;
-
-    home = args: {
-      programs = (direnvConfig args).programs // {
-        zsh.shellAliases = {
-          da = "direnv allow";
-          dt = "direnv_hook_toggle";
-        };
+  nh =
+    args:
+    let
+      aliases = systemAliases // {
+        edit = "edit-config";
+        sedit = "edit-config";
+        sysedit = "edit-config";
       };
-    };
-  };
-
-  clipboard = { lib, ... }: {
-    home = _: {
-      programs.zsh.shellAliases.cpd = lib.mkDefault ''
-        printf "%s" "$(pwd | tr -d "\n")" | wl-copy && echo "Copied path!"
+      editConfig = pkgs.writeShellApplication {
+        name = "edit-config";
+        text = ''
+          if command -v code >/dev/null 2>&1; then
+            code "$DOTFILES/edit_config.code-workspace"
+          else
+            "''${EDITOR:-nvim}" "$DOTFILES"
+          fi
+        '';
+      };
+      completion = ''
+        _sysfu() {
+          _arguments -C \
+            '(-h --help)'{-h,--help}'[show help]' \
+            '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
+            '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
+            '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
+            "*:flake input:(''${(j:|:)flake_inputs})"
+        }
+        compdef _sysfu sysfu
       '';
-    };
-  };
+    in
+    {
+      environment.shellAliases = aliases;
+      environment.systemPackages = [ editConfig ];
+      programs = (nhConfig args).programs // {
+        zsh.interactiveShellInit = completion;
+      };
 
-  ollama = _: {
-    home = _: {
-      programs.zsh.shellAliases.ollama = "docker exec -it ollama ollama";
-    };
-  };
-
-  git = _: {
-    programs.git.config = gitSettings // {
-      gpg.format = gitSigningFormat;
-    };
-
-    home = _: {
-      programs = {
-        git = {
-          settings = gitSettings;
-          signing.format = gitSigningFormat;
-        };
-        zsh.shellAliases = {
-          gs = "git status";
-          gl = "git log";
-          gd = "git diff";
-          ga = "git add";
-          gc = "git commit -m";
-          gca = "git commit -a -m";
-          gpl = "git pull";
-          gph = "git push";
+      home = args: {
+        home.packages = [ editConfig ];
+        home.shellAliases = aliases;
+        programs = (nhConfig args).programs // {
+          zsh.initContent = completion;
         };
       };
     };
 
-    delta = _: {
-      home = { config, ... }: {
-        programs.delta = {
-          enableGitIntegration = config.programs.git.enable;
-          options = {
-            navigate = true;
-            line-numbers = true;
+  direnv =
+    args:
+    let
+      aliases.da = "direnv allow";
+      zshAliases.dt = "direnv_hook_toggle";
+      hook = ''
+        _direnv_hook() {
+          trap -- ''' SIGINT
+          eval "$("${pkgs.direnv}/bin/direnv" export zsh)"
+          trap - SIGINT
+        }
+
+        direnv_hook_disable() {
+          typeset -ag precmd_functions
+          if (( ''${precmd_functions[(I)_direnv_hook]} )); then
+            precmd_functions=(''${precmd_functions:#_direnv_hook})
+          fi
+          typeset -ag chpwd_functions
+          if (( ''${chpwd_functions[(I)_direnv_hook]} )); then
+            chpwd_functions=(''${chpwd_functions#_direnv_hook})
+          fi
+        }
+
+        direnv_hook_enable() {
+          typeset -ag precmd_functions
+          if (( ! ''${precmd_functions[(I)_direnv_hook]} )); then
+            precmd_functions=(_direnv_hook $precmd_functions)
+          fi
+          typeset -ag chpwd_functions
+          if (( ! ''${chpwd_functions[(I)_direnv_hook]} )); then
+            chpwd_functions=(_direnv_hook $chpwd_functions)
+          fi
+        }
+
+        direnv_hook_toggle() {
+          typeset -ag precmd_functions
+          if (( ''${precmd_functions[(I)_direnv_hook]} )); then
+            direnv_hook_disable
+          else
+            direnv_hook_enable
+          fi
+        }
+
+        direnv_hook_enable
+      '';
+    in
+    {
+      environment.shellAliases = aliases;
+      programs = (direnvConfig args).programs // {
+        zsh = {
+          shellAliases = zshAliases;
+          interactiveShellInit = hook;
+        };
+      };
+
+      home = args: {
+        home.shellAliases = aliases;
+        programs = (direnvConfig args).programs // {
+          zsh = {
+            shellAliases = zshAliases;
+            initContent = hook;
           };
         };
       };
     };
 
-    tuicr = _: {
-      nixpkgs.overlays = [
-        (_final: prev: {
-          tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
-        })
-      ];
-
-      home = _: {
-        home.packages = [ pkgs.tuicr ];
-        programs.git.settings.alias.review = "!tuicr -w";
-        xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+  clipboard =
+    { lib, pkgs, ... }:
+    let
+      aliases = {
+        cpd = "copy-path";
       };
-    };
-
-    lazygit = args: {
-      inherit (lazygitConfig args) programs;
-
-      home = args: {
-        inherit (lazygitConfig args) programs;
-      };
-    };
-  };
-
-  zsh = args: {
-    programs.zsh = (zshConfig args).programs.zsh // {
-      enableBashCompletion = true;
-    };
-    users.defaultUserShell = pkgs.zsh;
-
-    home = args: {
-      programs.zsh = (zshConfig args).programs.zsh // {
-        autosuggestion.enable = true;
-        syntaxHighlighting.enable = true;
-        plugins = [
-          {
-            name = "zsh-fzf-tab";
-            file = "share/fzf-tab/fzf-tab.plugin.zsh";
-            src = pkgs.zsh-fzf-tab;
-          }
-        ];
-        shellAliases = {
-          bk = "cd ..";
-          sz = "du -sh";
-        };
-        initContent = ''
-          bindkey "^[[1;5D" backward-word
-          bindkey "^[[1;5C" forward-word
-          bindkey "^H" backward-kill-word
-          bindkey "^[[3;3~" kill-word
-
-          autoload -U edit-command-line
-          zle -N edit-command-line
-          bindkey '^xe' edit-command-line
-          bindkey '^x^e' edit-command-line
-
-          _sysfu() {
-            _arguments -C \
-              '(-h --help)'{-h,--help}'[show help]' \
-              '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
-              '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
-              '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
-              "*:flake input:(''${(j:|:)flake_inputs})"
-          }
-          compdef _sysfu sysfu
-
-          bindkey -v '^?' backward-delete-char
-
-          _direnv_hook() {
-            trap -- ''' SIGINT
-            eval "$("${pkgs.direnv}/bin/direnv" export zsh)"
-            trap - SIGINT
-          }
-
-          direnv_hook_disable() {
-            typeset -ag precmd_functions
-            if (( ''${precmd_functions[(I)_direnv_hook]} )); then
-              precmd_functions=(''${precmd_functions:#_direnv_hook})
-            fi
-            typeset -ag chpwd_functions
-            if (( ''${chpwd_functions[(I)_direnv_hook]} )); then
-              chpwd_functions=(''${chpwd_functions#_direnv_hook})
-            fi
-          }
-
-          direnv_hook_enable() {
-            typeset -ag precmd_functions
-            if (( ! ''${precmd_functions[(I)_direnv_hook]} )); then
-              precmd_functions=(_direnv_hook $precmd_functions)
-            fi
-            typeset -ag chpwd_functions
-            if (( ! ''${chpwd_functions[(I)_direnv_hook]} )); then
-              chpwd_functions=(_direnv_hook $chpwd_functions)
-            fi
-          }
-
-          direnv_hook_toggle() {
-            typeset -ag precmd_functions
-            if (( ''${precmd_functions[(I)_direnv_hook]} )); then
-              direnv_hook_disable
-            else
-              direnv_hook_enable
-            fi
-          }
-
-          direnv_hook_enable
+      copyPath = pkgs.writeShellApplication {
+        name = "copy-path";
+        runtimeInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.wl-clipboard ];
+        text = ''
+          if command -v pbcopy >/dev/null 2>&1; then
+            printf "%s" "$PWD" | pbcopy
+            echo "Copied path to macOS clipboard"
+          elif command -v wl-copy >/dev/null 2>&1; then
+            printf "%s" "$PWD" | wl-copy
+            echo "Copied path!"
+          else
+            echo "copy-path: no supported clipboard command found" >&2
+            exit 1
+          fi
         '';
       };
+    in
+    {
+      environment.systemPackages = [ copyPath ];
+      environment.shellAliases = aliases;
+
+      home = _: {
+        home.packages = [ copyPath ];
+        home.shellAliases = aliases;
+      };
     };
-  };
+
+  ollama =
+    _:
+    let
+      aliases = {
+        ollama = "docker exec -it ollama ollama";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+
+      home = _: {
+        home.shellAliases = aliases;
+      };
+    };
+
+  git =
+    _:
+    let
+      aliases = {
+        gs = "git status";
+        gl = "git log";
+        gd = "git diff";
+        ga = "git add";
+        gc = "git commit -m";
+        gca = "git commit -a -m";
+        gpl = "git pull";
+        gph = "git push";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      programs.git.config = gitSettings // {
+        gpg.format = gitSigningFormat;
+      };
+
+      home = _: {
+        home.shellAliases = aliases;
+        programs.git = {
+          settings = gitSettings;
+          signing.format = gitSigningFormat;
+        };
+      };
+
+      delta = _: {
+        home = { config, ... }: {
+          programs.delta = {
+            enableGitIntegration = config.programs.git.enable;
+            options = {
+              navigate = true;
+              line-numbers = true;
+            };
+          };
+        };
+      };
+
+      tuicr = _: {
+        nixpkgs.overlays = [
+          (_final: prev: {
+            tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
+          })
+        ];
+
+        home = _: {
+          home.packages = [ pkgs.tuicr ];
+          programs.git.settings.alias.review = "!tuicr -w";
+          xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+        };
+      };
+
+      lazygit = args: {
+        inherit (lazygitConfig args) programs;
+
+        home = args: {
+          inherit (lazygitConfig args) programs;
+        };
+      };
+    };
+
+  zsh =
+    args:
+    let
+      aliases = {
+        bk = "cd ..";
+        sz = "du -sh";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      programs.zsh = (zshConfig args).programs.zsh // {
+        enableBashCompletion = true;
+      };
+      users.defaultUserShell = pkgs.zsh;
+
+      home = args: {
+        home.shellAliases = aliases;
+        programs.zsh = (zshConfig args).programs.zsh // {
+          autosuggestion.enable = true;
+          syntaxHighlighting.enable = true;
+          plugins = [
+            {
+              name = "zsh-fzf-tab";
+              file = "share/fzf-tab/fzf-tab.plugin.zsh";
+              src = pkgs.zsh-fzf-tab;
+            }
+          ];
+          initContent = ''
+            bindkey "^[[1;5D" backward-word
+            bindkey "^[[1;5C" forward-word
+            bindkey "^H" backward-kill-word
+            bindkey "^[[3;3~" kill-word
+
+            autoload -U edit-command-line
+            zle -N edit-command-line
+            bindkey '^xe' edit-command-line
+            bindkey '^x^e' edit-command-line
+
+            bindkey -v '^?' backward-delete-char
+          '';
+        };
+      };
+    };
 
   yazi = _: {
     programs.yazi.enable = true;
@@ -317,59 +401,70 @@ in
     };
   };
 
-  gh = _: {
-    environment.systemPackages = [ pkgs.gh ];
-    nixpkgs.overlays = (import ../../overlays/gh-dash.nix { }).nixpkgs.overlays;
+  gh =
+    _:
+    let
+      aliases = {
+        dh = "gh dash";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      environment.systemPackages = [
+        pkgs.gh
+        pkgs.gh-dash
+      ];
+      nixpkgs.overlays = (import ../../overlays/gh-dash.nix { }).nixpkgs.overlays;
 
-    home = _: {
-      programs.gh.extensions = [ pkgs.gh-dash ];
-      programs.zsh.shellAliases.dh = "gh dash";
-      xdg.configFile."gh-dash/config.yml" = {
-        source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
-          defaults = {
-            view = "issues";
-            layout = {
-              issues = {
-                repo.hidden = true;
-                creator.hidden = true;
-                reactions.hidden = true;
-                comments.hidden = true;
-                updatedAt.hidden = true;
-                createdAt.hidden = true;
-              };
-              projects = {
-                enabled = true;
-                fields = [
-                  {
-                    name = "Status";
-                    width = 12;
-                  }
-                  {
-                    name = "Priority";
-                    width = 10;
-                  }
-                  {
-                    name = "Area";
-                    width = 14;
-                  }
-                  {
-                    name = "Kind";
-                    width = 12;
-                  }
-                ];
+      home = _: {
+        home.shellAliases = aliases;
+        programs.gh.extensions = [ pkgs.gh-dash ];
+        xdg.configFile."gh-dash/config.yml" = {
+          source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+            defaults = {
+              view = "issues";
+              layout = {
+                issues = {
+                  repo.hidden = true;
+                  creator.hidden = true;
+                  reactions.hidden = true;
+                  comments.hidden = true;
+                  updatedAt.hidden = true;
+                  createdAt.hidden = true;
+                };
+                projects = {
+                  enabled = true;
+                  fields = [
+                    {
+                      name = "Status";
+                      width = 12;
+                    }
+                    {
+                      name = "Priority";
+                      width = 10;
+                    }
+                    {
+                      name = "Area";
+                      width = 14;
+                    }
+                    {
+                      name = "Kind";
+                      width = 12;
+                    }
+                  ];
+                };
               };
             };
+            include = [ "stylix.yml" ];
+            pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
+            repoPaths = {
+              "joshan-kana/.files" = repoPath;
+            };
+            theme.ui.table.compact = true;
           };
-          include = [ "stylix.yml" ];
-          pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
-          repoPaths = {
-            "joshan-kana/.files" = repoPath;
-          };
-          theme.ui.table.compact = true;
         };
       };
     };
-  };
 
   starship = args: {
     inherit (starshipConfig args) programs;
@@ -434,18 +529,24 @@ in
     };
   };
 
-  eza = _: {
-    home = _: {
-      programs = {
-        eza.enable = true;
-        zsh.shellAliases = {
-          l = "eza -a";
-          ll = "eza -lah";
-          ls = "eza";
-        };
+  eza =
+    _:
+    let
+      aliases = {
+        l = "eza -a";
+        ll = "eza -lah";
+        ls = "eza";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      environment.systemPackages = [ pkgs.eza ];
+
+      home = _: {
+        home.shellAliases = aliases;
+        programs.eza.enable = true;
       };
     };
-  };
 
   htop = _: {
     environment.systemPackages = [ pkgs.htop ];
@@ -461,31 +562,45 @@ in
     };
   };
 
-  neovim = args: {
-    inherit (neovimConfig args) programs;
-    environment.sessionVariables.EDITOR = "nvim";
+  neovim =
+    args:
+    let
+      aliases = {
+        v = "nvim";
+      };
+    in
+    {
+      inherit (neovimConfig args) programs;
+      environment.shellAliases = aliases;
+      environment.sessionVariables.EDITOR = "nvim";
 
-    home = args: {
-      programs = {
-        neovim = (neovimConfig args).programs.neovim // {
+      home = args: {
+        home.shellAliases = aliases;
+        programs.neovim = (neovimConfig args).programs.neovim // {
           extraConfig = ''
             autocmd BufRead * autocmd FileType <buffer> ++once
             \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
           '';
         };
-        zsh.shellAliases.v = "nvim";
       };
     };
-  };
 
-  mpv = _: {
-    home = _: {
-      programs = {
-        mpv.scripts = with pkgs; [ mpvScripts.mpris ];
-        zsh.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
+  mpv =
+    _:
+    let
+      aliases = {
+        p = "mpv --audio-pitch-correction=no --loop=yes";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      environment.systemPackages = [ pkgs.mpv ];
+
+      home = _: {
+        home.shellAliases = aliases;
+        programs.mpv.scripts = with pkgs; [ mpvScripts.mpris ];
       };
     };
-  };
 
   vim = _: {
     environment.systemPackages = [ pkgs.vim ];
@@ -499,13 +614,21 @@ in
     environment.systemPackages = [ pkgs.lshw ];
   };
 
-  fastfetch = _: {
-    environment.systemPackages = [ pkgs.fastfetch ];
+  fastfetch =
+    _:
+    let
+      aliases = {
+        neofetch = "fastfetch";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      environment.systemPackages = [ pkgs.fastfetch ];
 
-    home = _: {
-      programs.zsh.shellAliases.neofetch = "fastfetch";
+      home = _: {
+        home.shellAliases = aliases;
+      };
     };
-  };
 
   tree = _: {
     environment.systemPackages = [ pkgs.tree ];
