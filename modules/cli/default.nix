@@ -642,6 +642,10 @@ in
     environment.systemPackages = [ pkgs.stow ];
   };
 
+  systemdManagerTui = _: {
+    environment.systemPackages = [ pkgs.systemd-manager-tui ];
+  };
+
   youtubeTui = _: {
     environment.systemPackages = [ pkgs.youtube-tui ];
   };
