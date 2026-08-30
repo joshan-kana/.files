@@ -20,7 +20,6 @@ let
   computerPort = 8000;
   computerRoot = "${appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
-  computerSetupTokenFile = "/run/open-webui-computer/setup-token";
   computerGithubSecret = "${server.secretsDir}/open-webui-github.env";
 
   searxPort = 8888;
@@ -53,8 +52,8 @@ let
     umask 0077
 
     setupToken="$(${pkgs.coreutils}/bin/od -An -N32 -tx1 /dev/urandom | ${pkgs.coreutils}/bin/tr -d ' \n')"
-    printf '%s\n' "$setupToken" > ${lib.escapeShellArg computerSetupTokenFile}
-    ${pkgs.coreutils}/bin/chmod 0400 ${lib.escapeShellArg computerSetupTokenFile}
+    printf '%s\n' "$setupToken" > "$RUNTIME_DIRECTORY/setup-token"
+    ${pkgs.coreutils}/bin/chmod 0400 "$RUNTIME_DIRECTORY/setup-token"
     export CPTR_STARTUP_TOKEN="$setupToken"
 
     exec ${pkgs.uv}/bin/uvx \
