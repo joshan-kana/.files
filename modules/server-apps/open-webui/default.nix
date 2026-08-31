@@ -149,6 +149,7 @@ in
       StateDirectory = lib.mkForce "";
       CacheDirectory = "open-webui";
       CacheDirectoryMode = "0700";
+      UnsetEnvironment = [ "SENTENCE_TRANSFORMERS_HOME" ];
       ProtectSystem = "strict";
       ReadWritePaths = [ openWebuiStateDir ];
     };
