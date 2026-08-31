@@ -74,7 +74,7 @@
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
     computer = {
-      url = "github:open-webui/computer";
+      url = "file+https://pypi.org/pypi/cptr/json";
       flake = false;
     };
   };

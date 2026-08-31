@@ -15,8 +15,7 @@ let
   openWebuiStateDir = "${appData.root}/open-webui";
   openWebuiSecret = "${server.secretsDir}/open-webui.env";
 
-  computerVersion =
-    (builtins.fromTOML (builtins.readFile "${inputs.computer}/pyproject.toml")).project.version;
+  computerVersion = (builtins.fromJSON (builtins.readFile inputs.computer)).info.version;
   computerPort = 8000;
   computerRoot = "${appData.root}/open-webui-computer";
   computerStateDir = "${computerRoot}/state";
