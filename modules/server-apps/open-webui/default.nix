@@ -28,8 +28,8 @@ let
   hostAdmin = {
     user = "open-webui-admin";
     privateKeySecret = "${server.secretsDir}/open-webui-host-admin-id_ed25519";
+    runtimeDirectory = "open-webui-host-admin";
   };
-  hostAdminSshDir = "${config.users.users.${hostAdmin.user}.home}/.ssh";
 
   hostCommand = pkgs.writeShellApplication {
     name = "open-webui-host";
@@ -74,11 +74,14 @@ in
     };
 
     ${hostAdmin.user} = {
-      isNormalUser = true;
-      createHome = true;
+      isSystemUser = true;
+      group = hostAdmin.user;
+      shell = pkgs.bashInteractive;
       hashedPassword = "!";
     };
   };
+
+  users.groups.${hostAdmin.user} = { };
 
   security.sudo.extraRules = [
     {
@@ -98,6 +101,8 @@ in
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      RuntimeDirectory = hostAdmin.runtimeDirectory;
+      RuntimeDirectoryMode = "0755";
       LoadCredential = "host-admin-key:${hostAdmin.privateKeySecret}";
     };
     script = ''
@@ -106,10 +111,12 @@ in
       trap '${pkgs.coreutils}/bin/rm -f "$tmp"' EXIT
 
       ${pkgs.openssh}/bin/ssh-keygen -y -f "$CREDENTIALS_DIRECTORY/host-admin-key" |
-        ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " open-webui-host-admin@nixos-server" }' > "$tmp"
-      ${pkgs.coreutils}/bin/install -m 0600 -o ${hostAdmin.user} -g users "$tmp" "${hostAdminSshDir}/authorized_keys"
+        ${pkgs.gawk}/bin/awk '{ print "restrict,from=\"127.0.0.1,::1\" " $1 " " $2 " open-webui-host-admin@nixos-server" }' > "$tmp"
+      ${pkgs.coreutils}/bin/install -m 0444 "$tmp" "$RUNTIME_DIRECTORY/${hostAdmin.user}"
     '';
   };
+
+  services.openssh.authorizedKeysFiles = [ "/run/${hostAdmin.runtimeDirectory}/%u" ];
 
   services.open-webui = {
     enable = true;
@@ -239,7 +246,6 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    "d ${hostAdminSshDir} 0700 ${hostAdmin.user} users - -"
     "d ${openWebuiStateDir} 0770 open-webui ${appData.group.name} - -"
     "Z ${openWebuiStateDir} - open-webui ${appData.group.name} - -"
     "d ${computerRoot} 0700 ${primary.name} users - -"
