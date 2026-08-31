@@ -11,10 +11,6 @@ let
     "chatgpt-shell-access"
     "docker-n8n"
     "docker-openclaw"
-    "open-webui"
-    "open-webui-computer"
-    "open-webui-host-admin-key"
-    "searx-init"
   ]
   ++ lib.filter (lib.hasPrefix "matrix-bridge-") (builtins.attrNames cfg.systemd.services);
 
