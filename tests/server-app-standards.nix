@@ -12,6 +12,7 @@ let
     "docker-n8n"
     "docker-openclaw"
   ]
+  ++ lib.filter (lib.hasPrefix "docker-plane-") (builtins.attrNames cfg.systemd.services)
   ++ lib.filter (lib.hasPrefix "matrix-bridge-") (builtins.attrNames cfg.systemd.services);
 
   hasRequiredPathAssertion =

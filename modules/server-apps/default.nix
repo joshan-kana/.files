@@ -10,4 +10,5 @@ _: {
   onedev = import ./onedev;
   openclaw = import ./openclaw;
   paperless = import ./paperless;
+  plane = import ./plane;
 }

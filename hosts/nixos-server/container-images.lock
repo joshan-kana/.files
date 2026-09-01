@@ -18,5 +18,57 @@
   "openclaw": {
     "digest": "sha256:2f5ce8848a1a69b3c460622e566cb9395da9fd18d7ef7b038cd8e2c4f195decf",
     "source": "ghcr.io/openclaw/openclaw:latest"
+  },
+  "plane-admin": {
+    "digest": "sha256:6e1bb1d800d3c7ce84a09f810d5588db8613b35d4464e722a1bec12556ca0ebb",
+    "source": "makeplane/plane-admin:stable"
+  },
+  "plane-api": {
+    "digest": "sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef",
+    "source": "makeplane/plane-backend:stable"
+  },
+  "plane-beat-worker": {
+    "digest": "sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef",
+    "source": "makeplane/plane-backend:stable"
+  },
+  "plane-db": {
+    "digest": "sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6",
+    "source": "postgres:15.7-alpine"
+  },
+  "plane-live": {
+    "digest": "sha256:cbb630ccaea24bb9998040cb45c11619a7501e8b6c75d449df2f8fd9b9cddbd0",
+    "source": "makeplane/plane-live:stable"
+  },
+  "plane-migrator": {
+    "digest": "sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef",
+    "source": "makeplane/plane-backend:stable"
+  },
+  "plane-minio": {
+    "digest": "sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+    "source": "minio/minio:latest"
+  },
+  "plane-mq": {
+    "digest": "sha256:611107e29cce05c2acd968325d5dcbde7e2fee404970f1ead75fdb22be2821b3",
+    "source": "rabbitmq:3.13.6-management-alpine"
+  },
+  "plane-proxy": {
+    "digest": "sha256:47e651c56749c287710cc26f82dc5d1046a2af76a332aa048ab7adb881cc4cd0",
+    "source": "makeplane/plane-proxy:stable"
+  },
+  "plane-redis": {
+    "digest": "sha256:10328d00120dc14fbc87b2ed61b7677ddbb0d011e705361b4788329a0ec69a93",
+    "source": "valkey/valkey:7.2.11-alpine"
+  },
+  "plane-space": {
+    "digest": "sha256:f8f842f05f41a16e9fe8c4f5e17a3bb175338ccdc094620e58ae49764ffbd671",
+    "source": "makeplane/plane-space:stable"
+  },
+  "plane-web": {
+    "digest": "sha256:22fd2434fb8d6658439f669ab72f999ce0773abe587663da21a77d70bd63ff61",
+    "source": "makeplane/plane-frontend:stable"
+  },
+  "plane-worker": {
+    "digest": "sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef",
+    "source": "makeplane/plane-backend:stable"
   }
 }
