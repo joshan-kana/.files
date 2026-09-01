@@ -89,8 +89,8 @@ jobs:
         accept-flake-config = true
         experimental-features = nix-command flakes
         build-dir = /nix/build
-        extra-substituters = https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
-        extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+        extra-substituters = https://install.determinate.systems https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
+        extra-trusted-public-keys = cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 
     steps:
       - name: Checkout
