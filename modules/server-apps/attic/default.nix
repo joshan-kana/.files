@@ -10,6 +10,7 @@ let
   cachePort = 8080;
   atticSecret = "${server.secretsDir}/attic.env";
   cacheHost = server.lan.serverIp;
+  tailnetHost = config.networking.hostName;
 in
 {
   users.groups.atticd = { };
@@ -27,6 +28,8 @@ in
       allowed-hosts = [
         cacheHost
         "${cacheHost}:${toString cachePort}"
+        tailnetHost
+        "${tailnetHost}:${toString cachePort}"
       ];
       chunking = {
         nar-size-threshold = 0;
