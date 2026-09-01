@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nix-build-cache-${{ github.event.pull_request.number || github.ref }}
+  group: nix-build-cache-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -21,10 +21,27 @@ jobs:
     name: Discover NixOS configurations
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: read
+      statuses: write
     outputs:
       matrix: ${{ steps.configurations.outputs.matrix }}
 
     steps:
+      - name: Mark system upgrade build check pending
+        if: inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=pending \
+            -f context="Nix build cache" \
+            -f description="Building and publishing all NixOS configurations" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            >/dev/null
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -79,18 +96,17 @@ jobs:
       matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
 
     env:
-      ATTIC_ENDPOINT: ${{ vars.ATTIC_ENDPOINT }}
+      ATTIC_ENDPOINT: http://nixos-server:8080
       ATTIC_PUBLIC_KEY: ${{ vars.ATTIC_PUBLIC_KEY }}
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
-      USE_ATTIC: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       NIX_CONFIG: |
         accept-flake-config = true
         experimental-features = nix-command flakes
         build-dir = /nix/build
-        extra-substituters = https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
-        extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
+        extra-substituters = https://install.determinate.systems https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
+        extra-trusted-public-keys = cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 
     steps:
       - name: Checkout
@@ -106,7 +122,6 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       - name: Join tailnet
-        if: env.USE_ATTIC == 'true'
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ env.TS_OAUTH_CLIENT_ID }}
@@ -114,7 +129,6 @@ jobs:
           tags: tag:ci
 
       - name: Enable Attic
-        if: env.USE_ATTIC == 'true'
         shell: bash
         run: |
           nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
@@ -136,7 +150,6 @@ jobs:
             | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
-        if: env.USE_ATTIC == 'true'
         timeout-minutes: 90
         shell: bash
         run: |
@@ -151,20 +164,46 @@ jobs:
           path: ${{ runner.temp }}/built-paths.txt
           if-no-files-found: ignore
 
+  report-system-upgrade:
+    name: Report system upgrade build check
+    needs:
+      - discover
+      - build
+    if: always() && inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+
+    steps:
+      - name: Complete PR build check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          state=failure
+          description="One or more NixOS builds or Attic publications failed"
+          if [[ "${{ needs.discover.result }}" == success && "${{ needs.build.result }}" == success ]]; then
+            state=success
+            description="All NixOS builds and Attic publications passed"
+          fi
+
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$state" \
+            -f context="Nix build cache" \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            >/dev/null
+
+          [[ "$state" == success ]]
+
   merge-system-upgrade:
-    name: Merge system upgrade
-    needs: build
-    if: >-
-      (
-        github.event_name == 'pull_request' &&
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        github.event.pull_request.head.ref == 'system-upgrade' &&
-        github.event.pull_request.base.ref == 'main'
-      ) || (
-        github.event_name == 'workflow_dispatch' &&
-        inputs.auto_merge_system_upgrade &&
-        github.ref_name == 'system-upgrade'
-      )
+    name: Enable system upgrade auto-merge
+    needs: report-system-upgrade
+    if: inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
     runs-on: ubuntu-24.04
     permissions:
       actions: write
@@ -242,6 +281,7 @@ jobs:
 
           gh pr merge "$pr_url" \
             --repo "$REPOSITORY" \
+            --auto \
             --squash \
             --delete-branch \
             --match-head-commit "$head_sha"
