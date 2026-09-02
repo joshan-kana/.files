@@ -5,64 +5,41 @@ cd "$(git rev-parse --show-toplevel)"
 
 state=$(nix eval --no-update-lock-file --json .#nixosConfigurations --apply '
   configs: builtins.mapAttrs (_: cfg:
-    let lockFile = cfg.config.dotfiles.containerImageLockFile or null;
+    let
+      lockFile = cfg.config.dotfiles.containerImageLockFile or null;
+      containers = builtins.filterAttrs (_: x: x.imageFile == null && x.imageStream == null)
+        cfg.config.virtualisation.oci-containers.containers;
     in if lockFile == null then null else {
       inherit lockFile;
-      platform = {
-        os = cfg.pkgs.go.GOOS;
-        architecture = cfg.pkgs.go.GOARCH;
-      };
-      containers = builtins.mapAttrs (_: x: {
-        inherit (x) image;
-        local = x.imageFile != null || x.imageStream != null;
-      }) cfg.config.virtualisation.oci-containers.containers;
+      platform = { os = cfg.pkgs.go.GOOS; architecture = cfg.pkgs.go.GOARCH; };
+      containers = builtins.mapAttrs (_: x: builtins.head (builtins.split "@" x.image)) containers;
     }
   ) configs
-')
-
-state=$(jq -c '
-  with_entries(select(.value != null))
-  | map_values(.containers |= (
-      with_entries(select(.value.local == false))
-      | map_values(.image | split("@")[0])
-    ))
-' <<<"$state")
+' | jq -c 'with_entries(select(.value != null))')
 
 if [[ ${1:-} == --list ]]; then
   jq -r 'to_entries[] | .key as $config | .value.containers | keys[] | $config + "/" + .' <<<"$state"
   exit 0
 fi
 
-for selection in "$@"; do
-  config=${selection%%/*}
-  name=${selection#*/}
-  if [[ "$config" == "$selection" ]] || ! jq -e --arg config "$config" --arg name "$name" \
-    '.[$config].containers[$name] != null' <<<"$state" >/dev/null; then
-    echo "error: unknown container: $selection" >&2
-    exit 1
-  fi
-done
-
-selected=null
-if (($#)); then
-  selected=$(printf '%s\n' "$@" | jq -Rsc 'split("\n") | map(select(length > 0))')
-fi
-
+selected=$(jq -cn --args '$ARGS.positional' -- "$@")
 targets=$(jq -c --argjson selected "$selected" '[
   to_entries[] as $config
-  | $config.value.containers
-  | to_entries[]
+  | $config.value.containers | to_entries[]
   | {
       id: ($config.key + "/" + .key),
-      config: $config.key,
-      name: .key,
-      source: .value,
-      os: $config.value.platform.os,
-      architecture: $config.value.platform.architecture
-    } as $target
-  | select($selected == null or ($selected | index($target.id)))
-  | $target
+      config: $config.key, name: .key, source: .value,
+      os: $config.value.platform.os, architecture: $config.value.platform.architecture
+    }
+  | .id as $id | select(($selected | length) == 0 or ($selected | index($id)))
 ]' <<<"$state")
+
+unknown=$(jq -nr --argjson selected "$selected" --argjson targets "$targets" \
+  '$selected - ($targets | map(.id)) | .[]')
+[[ -z "$unknown" ]] || {
+  printf 'error: unknown container: %s\n' "$unknown" >&2
+  exit 1
+}
 
 if (($#)); then
   mapfile -t configs < <(jq -r 'map(.config) | unique[]' <<<"$targets")
@@ -79,8 +56,7 @@ for config in "${configs[@]}"; do
 done
 
 work_dir=$(mktemp -d)
-lock_tmp=""
-trap 'rm -rf "$work_dir"; [[ -z "$lock_tmp" ]] || rm -f "$lock_tmp"' EXIT
+trap 'rm -rf "$work_dir"; rm -f "${lock_tmp:-}"' EXIT
 
 resolve_source() {
   local index=$1 source=$2 manifest digest metadata
