@@ -9,6 +9,10 @@ state=$(nix eval --no-update-lock-file --json .#nixosConfigurations --apply '
     let lockFile = cfg.config.dotfiles.containerImageLockFile or null;
     in if lockFile == null then null else {
       inherit lockFile;
+      platform = {
+        os = cfg.pkgs.go.GOOS;
+        architecture = cfg.pkgs.go.GOARCH;
+      };
       containers = builtins.mapAttrs (_: x: {
         inherit (x) image;
         local = x.imageFile != null || x.imageStream != null;
@@ -62,6 +66,8 @@ for config in "${configs[@]}"; do
     exit 1
   }
 
+  os=$(jq -r --arg config "$config" '.[$config].platform.os' <<<"$state")
+  architecture=$(jq -r --arg config "$config" '.[$config].platform.architecture' <<<"$state")
   current_lock=$(jq -S . "$lock_file")
   if (($#)); then new_lock=$current_lock; else new_lock='{}'; fi
 
@@ -77,15 +83,16 @@ for config in "${configs[@]}"; do
     }
 
     if jq -e '(.manifests | type) == "array"' "$manifest" >/dev/null 2>&1; then
-      jq -e '[.manifests[].platform | select(.os == "linux" and .architecture == "arm64")] | length > 0' \
+      jq -e --arg os "$os" --arg architecture "$architecture" \
+        '[.manifests[].platform | select(.os == $os and .architecture == $architecture)] | length > 0' \
         "$manifest" >/dev/null || {
-        echo "error: $source has no linux/arm64 image" >&2
+        echo "error: $source has no $os/$architecture image" >&2
         exit 1
       }
     else
       platform=$(skopeo inspect --no-tags "docker://$source@$digest" | jq -r '.Os + "/" + .Architecture')
-      [[ "$platform" == "linux/arm64" ]] || {
-        echo "error: $source is $platform, not linux/arm64" >&2
+      [[ "$platform" == "$os/$architecture" ]] || {
+        echo "error: $source is $platform, not $os/$architecture" >&2
         exit 1
       }
     fi
