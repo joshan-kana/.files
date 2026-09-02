@@ -376,7 +376,6 @@
               diffutils
               git
               jq
-              nix
               skopeo
             ];
             text = ''
@@ -390,7 +389,6 @@
             name = "system-upgrade";
             runtimeInputs = [
               pkgs.git
-              pkgs.nix
               updateContainerLock
             ];
             text = ''
