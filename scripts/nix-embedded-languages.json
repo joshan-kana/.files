@@ -1,0 +1,502 @@
+{
+  "bash": {
+    "aliases": [
+      "bash",
+      "sh",
+      "shell"
+    ],
+    "extension": "sh",
+    "languageId": "shellscript",
+    "grammar": "bash",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "shfmt",
+        "-i",
+        "2"
+      ]
+    },
+    "linter": "shellcheck",
+    "lsp": [
+      {
+        "name": "bash-language-server",
+        "command": [
+          "bash-language-server",
+          "start"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "python": {
+    "aliases": [
+      "python",
+      "py"
+    ],
+    "extension": "py",
+    "languageId": "python",
+    "grammar": "python",
+    "formatter": {
+      "kind": "ruff"
+    },
+    "linter": "ruff",
+    "lsp": [
+      {
+        "name": "basedpyright",
+        "command": [
+          "basedpyright-langserver",
+          "--stdio"
+        ],
+        "features": [
+          "semantic"
+        ]
+      },
+      {
+        "name": "ruff",
+        "command": [
+          "ruff",
+          "server"
+        ],
+        "features": [
+          "hover",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "lua": {
+    "aliases": [
+      "lua"
+    ],
+    "extension": "lua",
+    "languageId": "lua",
+    "grammar": "lua",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "stylua",
+        "-"
+      ]
+    },
+    "lsp": [
+      {
+        "name": "lua-language-server",
+        "command": [
+          "lua-language-server"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "javascript": {
+    "aliases": [
+      "javascript",
+      "js",
+      "node"
+    ],
+    "extension": "js",
+    "languageId": "javascript",
+    "grammar": "javascript",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "typescript-language-server",
+        "command": [
+          "typescript-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic"
+        ]
+      }
+    ]
+  },
+  "typescript": {
+    "aliases": [
+      "typescript",
+      "ts"
+    ],
+    "extension": "ts",
+    "languageId": "typescript",
+    "grammar": "typescript",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "typescript-language-server",
+        "command": [
+          "typescript-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic"
+        ]
+      }
+    ]
+  },
+  "json": {
+    "aliases": [
+      "json"
+    ],
+    "extension": "json",
+    "languageId": "json",
+    "grammar": "json",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "vscode-json-language-server",
+        "command": [
+          "vscode-json-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "jsonc": {
+    "aliases": [
+      "jsonc"
+    ],
+    "extension": "jsonc",
+    "languageId": "jsonc",
+    "grammar": "json",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "vscode-json-language-server",
+        "command": [
+          "vscode-json-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "yaml": {
+    "aliases": [
+      "yaml",
+      "yml"
+    ],
+    "extension": "yaml",
+    "languageId": "yaml",
+    "grammar": "yaml",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "yaml-language-server",
+        "command": [
+          "yaml-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "toml": {
+    "aliases": [
+      "toml"
+    ],
+    "extension": "toml",
+    "languageId": "toml",
+    "grammar": "toml",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "taplo",
+        "format",
+        "-"
+      ]
+    },
+    "lsp": [
+      {
+        "name": "taplo",
+        "command": [
+          "taplo",
+          "lsp",
+          "stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "rust": {
+    "aliases": [
+      "rust",
+      "rs"
+    ],
+    "extension": "rs",
+    "languageId": "rust",
+    "grammar": "rust",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "rustfmt",
+        "--emit",
+        "stdout"
+      ]
+    },
+    "lsp": [
+      {
+        "name": "rust-analyzer",
+        "command": [
+          "rust-analyzer"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "go": {
+    "aliases": [
+      "go",
+      "golang"
+    ],
+    "extension": "go",
+    "languageId": "go",
+    "grammar": "go",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "gofumpt"
+      ]
+    },
+    "lsp": [
+      {
+        "name": "gopls",
+        "command": [
+          "gopls"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "fish": {
+    "aliases": [
+      "fish"
+    ],
+    "extension": "fish",
+    "languageId": "fish",
+    "grammar": "fish",
+    "formatter": {
+      "kind": "command",
+      "command": [
+        "fish_indent"
+      ]
+    },
+    "lsp": [
+      {
+        "name": "fish-lsp",
+        "command": [
+          "fish-lsp",
+          "start"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "ruby": {
+    "aliases": [
+      "ruby",
+      "rb"
+    ],
+    "extension": "rb",
+    "languageId": "ruby",
+    "grammar": "ruby",
+    "lsp": [
+      {
+        "name": "solargraph",
+        "command": [
+          "solargraph",
+          "stdio"
+        ],
+        "features": [
+          "semantic"
+        ]
+      }
+    ]
+  },
+  "sql": {
+    "aliases": [
+      "sql"
+    ],
+    "extension": "sql",
+    "languageId": "sql",
+    "grammar": "sql",
+    "lsp": [
+      {
+        "name": "sqls",
+        "command": [
+          "sqls"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "c": {
+    "aliases": [
+      "c"
+    ],
+    "extension": "c",
+    "languageId": "c",
+    "grammar": "c",
+    "formatter": {
+      "kind": "clang-format"
+    },
+    "lsp": [
+      {
+        "name": "clangd",
+        "command": [
+          "clangd"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "cpp": {
+    "aliases": [
+      "cpp",
+      "c++",
+      "cc",
+      "cxx"
+    ],
+    "extension": "cpp",
+    "languageId": "cpp",
+    "grammar": "cpp",
+    "formatter": {
+      "kind": "clang-format"
+    },
+    "lsp": [
+      {
+        "name": "clangd",
+        "command": [
+          "clangd"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "css": {
+    "aliases": [
+      "css"
+    ],
+    "extension": "css",
+    "languageId": "css",
+    "grammar": "css",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "vscode-css-language-server",
+        "command": [
+          "vscode-css-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "html": {
+    "aliases": [
+      "html"
+    ],
+    "extension": "html",
+    "languageId": "html",
+    "grammar": "html",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "vscode-html-language-server",
+        "command": [
+          "vscode-html-language-server",
+          "--stdio"
+        ],
+        "features": [
+          "semantic",
+          "codeAction"
+        ]
+      }
+    ]
+  },
+  "markdown": {
+    "aliases": [
+      "markdown",
+      "md"
+    ],
+    "extension": "md",
+    "languageId": "markdown",
+    "grammar": "markdown",
+    "formatter": {
+      "kind": "prettier"
+    },
+    "lsp": [
+      {
+        "name": "marksman",
+        "command": [
+          "marksman",
+          "server"
+        ],
+        "features": [
+          "semantic"
+        ]
+      }
+    ]
+  },
+  "java": {
+    "aliases": [
+      "java"
+    ],
+    "extension": "java",
+    "languageId": "java",
+    "grammar": "java"
+  }
+}

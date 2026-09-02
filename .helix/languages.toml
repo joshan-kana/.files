@@ -1,0 +1,8 @@
+[language-server.nix-embedded]
+command = "nix-embedded-lsp"
+required-root-patterns = ["kakehashi.toml", "flake.nix", ".git"]
+
+[[language]]
+name = "nix"
+language-servers = ["nix-embedded"]
+auto-format = true

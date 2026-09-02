@@ -1,0 +1,21 @@
+[languages._]
+autoInstall = false
+
+[languages.nix.bridge._self]
+enabled = true
+
+[languages.nix.layers.aggregation._]
+priorities = ["host", "native"]
+
+[languages.nix.bridge._self.aggregation._]
+priorities = ["nix-embedded-specialist", "nixd"]
+
+[languageServers.nix-embedded-specialist]
+cmd = ["nix-embedded-host-lsp"]
+languages = ["nix"]
+workspaceMarkers = ["flake.nix", ".git"]
+
+[languageServers.nixd]
+cmd = ["nixd"]
+languages = ["nix"]
+workspaceMarkers = ["flake.nix", ".git"]

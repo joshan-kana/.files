@@ -66,6 +66,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Kakehashi: editor-agnostic embedded-language LSP routing.
+    kakehashi = {
+      url = "github:atusy/kakehashi";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
     mautrix-packages.url = "github:Moraxyc/nur-packages";
@@ -82,6 +88,7 @@
       stylix-stable,
       treefmt-nix,
       pre-commit-hooks,
+      kakehashi,
       ...
     }@inputs:
     let
@@ -112,10 +119,23 @@
         dir: lib.escapeShellArg ":(exclude)${dir}**"
       ) repoToolExcludedDirs;
 
+      nixEmbeddedFor =
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        import ./scripts/nix-embedded.nix {
+          inherit lib pkgs;
+          kakehashiPackage = kakehashi.packages.${system}.default.overrideAttrs (_: {
+            doCheck = false;
+          });
+        };
+
       treefmtFor =
         system:
         let
           pkgs = pkgsFor system;
+          embedded = nixEmbeddedFor system;
           markdownOptions = [
             "--disable"
             "MD013,MD057"
@@ -146,9 +166,12 @@
                 "tests/**"
               ];
               excludes = [
+                "*.json"
                 "*.md"
                 "*.nix"
                 "*.py"
+                "*.pyc"
+                "*.toml"
               ];
             };
             statix = {
@@ -179,6 +202,8 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+              nix-embedded = embedded.formatter;
+              nixfmt-final = embedded.finalNixfmtFormatter;
 
               ruff-check.options = [
                 "--isolated"
@@ -276,6 +301,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = nixEmbeddedFor system;
           preCommit = preCommitFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
             name = "nf";
@@ -313,6 +339,8 @@
             ++ [
               checkRepo
               formatRepo
+              embedded.package
+              embedded.lspPackage
               repoOptionsFzf
               treefmt.config.build.wrapper
             ];
@@ -337,6 +365,12 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = nixEmbeddedFor system;
+          formatting = treefmt.config.build.check self;
+          embeddedLint = embedded.lintCheck {
+            src = self;
+            excludes = repoToolExcludedDirs;
+          };
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -352,7 +386,12 @@
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
-          repo-quality = treefmt.config.build.check self;
+          repo-quality = pkgs.runCommand "repo-quality" { } ''
+            mkdir -p "$out"
+            ln -s ${formatting} "$out/formatting"
+            ln -s ${embeddedLint} "$out/embedded-lint"
+          '';
+          nix-embedded-lsp = embedded.lspCheck;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
@@ -367,6 +406,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = nixEmbeddedFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
           updateContainerLock = pkgs.writeShellApplication {
@@ -473,6 +513,16 @@
             type = "app";
             program = lib.getExe updateContainerLock;
             meta.description = "Refresh immutable OCI container image digests";
+          };
+          nix-embedded = {
+            type = "app";
+            program = lib.getExe embedded.package;
+            meta.description = "Format or lint annotated languages embedded in Nix strings";
+          };
+          nix-embedded-lsp = {
+            type = "app";
+            program = lib.getExe embedded.lspPackage;
+            meta.description = "Serve Nix and embedded languages through Kakehashi";
           };
         }
         // lib.optionalAttrs (updatePlasma != null) {
