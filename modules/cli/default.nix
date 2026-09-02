@@ -11,7 +11,7 @@ let
   repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
-    flakeUpdate = "${repoPath}/scripts/flake-update";
+    flakeUpdate = ''nix run "$DOTFILES#system-upgrade" --'';
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
   };
@@ -145,31 +145,16 @@ in
           fi
         '';
       };
-      completion = ''
-        _sysfu() {
-          _arguments -C \
-            '(-h --help)'{-h,--help}'[show help]' \
-            '--containers-only[refresh only container locks]' \
-            '--container[refresh one container]:container:' \
-            '--no-containers[skip container locks]' \
-            '1:nixosConfiguration:'
-        }
-        compdef _sysfu sysfu
-      '';
     in
     {
       environment.shellAliases = aliases;
       environment.systemPackages = [ editConfig ];
-      programs = (nhConfig args).programs // {
-        zsh.interactiveShellInit = completion;
-      };
+      inherit ((nhConfig args)) programs;
 
       home = args: {
         home.packages = [ editConfig ];
         home.shellAliases = aliases;
-        programs = (nhConfig args).programs // {
-          zsh.initContent = completion;
-        };
+        inherit ((nhConfig args)) programs;
       };
     };
 

@@ -238,13 +238,6 @@
           nixpkgsInput ? nixpkgs,
           homeManagerInput ? home-manager,
           stylixInput ? stylix,
-          upgradeInputs ? [
-            "nixpkgs"
-            "home-manager"
-            "stylix"
-          ],
-          extraUpgradeInputs ? [ ],
-          containerLock ? null,
           extraModules ? [ ],
         }:
         let
@@ -257,27 +250,20 @@
           hostScopeWithFile = lib.setFunctionArgs (args: (hostScope args) // { _file = toString hostFile; }) (
             lib.functionArgs hostScope
           );
-          configuration = nixpkgsInput.lib.nixosSystem {
-            inherit system;
-            specialArgs = {
-              inherit inputs;
-              moduleRegistry = import ./modules;
-            };
-            modules = [
-              ./modules/options
-              stylixInput.nixosModules.stylix
-              homeManagerInput.nixosModules.home-manager
-              (semantic.rootModule hostScopeWithFile)
-            ]
-            ++ extraModules;
-          };
         in
-        configuration
-        // {
-          upgrade = {
-            inputs = upgradeInputs ++ extraUpgradeInputs;
-            inherit containerLock;
+        nixpkgsInput.lib.nixosSystem {
+          inherit system;
+          specialArgs = {
+            inherit inputs;
+            moduleRegistry = import ./modules;
           };
+          modules = [
+            ./modules/options
+            stylixInput.nixosModules.stylix
+            homeManagerInput.nixosModules.home-manager
+            (semantic.rootModule hostScopeWithFile)
+          ]
+          ++ extraModules;
         };
     in
     {
@@ -339,15 +325,6 @@
             inherit (preCommit) shellHook;
           };
 
-          system-upgrade = pkgs.mkShell {
-            packages = with pkgs; [
-              git
-              jq
-              nix
-              skopeo
-            ];
-          };
-
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
             inherit (preCommit) shellHook;
@@ -392,6 +369,81 @@
           treefmt = treefmtFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
+          serverContainers =
+            self.nixosConfigurations.nixos-server.config.virtualisation.oci-containers.containers;
+          registryContainers = lib.filterAttrs (
+            _name: container: container.imageFile == null && container.imageStream == null
+          ) serverContainers;
+          containerSources = lib.mapAttrs (
+            _name: container: builtins.head (lib.splitString "@" container.image)
+          ) registryContainers;
+          containerSourcesFile = pkgs.writeText "container-sources.json" (builtins.toJSON containerSources);
+
+          updateContainerLock = pkgs.writeShellApplication {
+            name = "update-container-lock";
+            runtimeInputs = with pkgs; [
+              coreutils
+              diffutils
+              git
+              jq
+              skopeo
+            ];
+            text = ''
+              export CONTAINER_SOURCES_FILE=${containerSourcesFile}
+              export CONTAINER_LOCK_FILE=hosts/nixos-server/container-images.lock
+              ${builtins.readFile ./scripts/update-container-lock}
+            '';
+          };
+
+          systemUpgrade = pkgs.writeShellApplication {
+            name = "system-upgrade";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.nix
+              updateContainerLock
+            ];
+            text = ''
+              repo="$(git rev-parse --show-toplevel)"
+              cd "$repo"
+
+              inputs=()
+              containers=()
+              while (($#)); do
+                case "$1" in
+                  --container)
+                    [[ $# -ge 2 ]] || {
+                      echo "error: --container requires a name" >&2
+                      exit 1
+                    }
+                    containers+=("$2")
+                    shift 2
+                    ;;
+                  --container=*)
+                    containers+=("''${1#--container=}")
+                    shift
+                    ;;
+                  --*)
+                    echo "error: unknown option: $1" >&2
+                    exit 1
+                    ;;
+                  *)
+                    inputs+=("$1")
+                    shift
+                    ;;
+                esac
+              done
+
+              if ((''${#inputs[@]})); then
+                nix flake update "''${inputs[@]}"
+              else
+                nix flake update
+              fi
+
+              update-container-lock "''${containers[@]}"
+              nix flake check --no-update-lock-file
+            '';
+          };
+
           updatePlasma =
             if plasmaRc2nix == null then
               null
@@ -418,7 +470,19 @@
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
-        lib.optionalAttrs (updatePlasma != null) {
+        {
+          system-upgrade = {
+            type = "app";
+            program = lib.getExe systemUpgrade;
+            meta.description = "Update Nix inputs and container locks, then check the flake";
+          };
+          update-container-lock = {
+            type = "app";
+            program = lib.getExe updateContainerLock;
+            meta.description = "Refresh immutable OCI container image digests";
+          };
+        }
+        // lib.optionalAttrs (updatePlasma != null) {
           update-plasma = {
             type = "app";
             program = lib.getExe updatePlasma;
@@ -436,20 +500,11 @@
         nixos = nixosHost {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
-          extraUpgradeInputs = [
-            "spicetify-nix"
-            "plasma-manager"
-            "zen-browser"
-          ];
         };
 
         nixos-arm-parallels = nixosHost {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-arm-parallels;
-          extraUpgradeInputs = [
-            "plasma-manager"
-            "zen-browser"
-          ];
         };
 
         nixos-orbstack = nixosHost {
@@ -463,15 +518,6 @@
           stylixInput = stylix-stable;
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-server;
-          upgradeInputs = [
-            "nixpkgs-stable"
-            "home-manager-stable"
-            "stylix-stable"
-            "nixos-hardware"
-            # cli.tuicr is intentionally sourced from unstable nixpkgs.
-            "nixpkgs"
-          ];
-          containerLock = "hosts/nixos-server/container-images.lock";
         };
       };
     };

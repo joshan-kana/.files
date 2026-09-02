@@ -75,10 +75,7 @@ in
         ${concatStringsSep "\n" (map (name: "  - ${name}") (attrNames invalidContainers))}
 
         Run:
-          sysfu ${config.dotfiles.profile.name} --containers-only
-
-        Or refresh selected containers with:
-          sysfu ${config.dotfiles.profile.name} --container <name>
+          nix run .#update-container-lock
       '';
     }
   ];
