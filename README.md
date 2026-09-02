@@ -360,8 +360,8 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### Flake updates
 
-- `nix run .#system-upgrade` - update all flake inputs and containers, then run `nix flake check`
-- `nix run .#system-upgrade -- <input>... [--container <configuration>/<container>]...` - select flake inputs and/or containers; repeat `--container` as needed
+- `nix run .#system-upgrade` - interactively select any combination of flake inputs and containers, then run `nix flake check`
+- `nix run .#system-upgrade -- --all` - update every flake input and container non-interactively
 - `nix run .#update-container-lock -- [<configuration>/<container>...]` - refresh all containers, or only the named containers
 
 ### Formatting

@@ -384,47 +384,61 @@
           systemUpgrade = pkgs.writeShellApplication {
             name = "system-upgrade";
             runtimeInputs = [
+              pkgs.fzf
               pkgs.git
+              pkgs.jq
               updateContainerLock
             ];
             text = ''
-              repo="$(git rev-parse --show-toplevel)"
-              cd "$repo"
+              cd "$(git rev-parse --show-toplevel)"
+
+              case "$#:''${1-}" in
+                0:)
+                  selections=$(
+                    {
+                      printf 'all\tUpdate all inputs and containers\n'
+                      printf 'all-inputs\tUpdate all inputs\n'
+                      printf 'all-containers\tUpdate all containers\n'
+                      nix flake metadata --json --no-update-lock-file \
+                        | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
+                      update-container-lock --list | jq -Rr '["container", .] | @tsv'
+                    } | fzf \
+                      --multi \
+                      --no-sort \
+                      --layout=reverse \
+                      --delimiter=$'\t' \
+                      --with-nth=2 \
+                      --header='Tab: select multiple • Enter: upgrade'
+                  ) || exit 0
+                  ;;
+                1:--all) selections=$'all\t*' ;;
+                *) echo "usage: system-upgrade [--all]" >&2; exit 1 ;;
+              esac
 
               inputs=()
               containers=()
-              while (($#)); do
-                case "$1" in
-                  --container)
-                    [[ $# -ge 2 ]] || {
-                      echo "error: --container requires a name" >&2
-                      exit 1
-                    }
-                    containers+=("$2")
-                    shift 2
-                    ;;
-                  --container=*)
-                    containers+=("''${1#--container=}")
-                    shift
-                    ;;
-                  --*)
-                    echo "error: unknown option: $1" >&2
-                    exit 1
-                    ;;
-                  *)
-                    inputs+=("$1")
-                    shift
-                    ;;
+              while IFS=$'\t' read -r kind name; do
+                case "$kind" in
+                  all) inputs=("*"); containers=("*"); break ;;
+                  all-inputs) inputs=("*") ;;
+                  all-containers) containers=("*") ;;
+                  input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
+                  container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
                 esac
-              done
+              done <<<"$selections"
 
-              if ((''${#inputs[@]})); then
-                nix flake update "''${inputs[@]}"
-              else
+              if [[ ''${inputs[0]-} == "*" ]]; then
                 nix flake update
+              elif ((''${#inputs[@]})); then
+                nix flake update "''${inputs[@]}"
               fi
 
-              update-container-lock "''${containers[@]}"
+              if [[ ''${containers[0]-} == "*" ]]; then
+                update-container-lock
+              elif ((''${#containers[@]})); then
+                update-container-lock "''${containers[@]}"
+              fi
+
               nix flake check --no-update-lock-file
             '';
           };

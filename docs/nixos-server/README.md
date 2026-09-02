@@ -164,14 +164,15 @@ unrelated flake input changes do not restart the hosted containers.
    is available, and rewrites the lock atomically.
 
 ```sh
-nix run .#update-container-lock -- [<container>...]
+nix run .#update-container-lock -- [<configuration>/<container>...]
 ```
 
-The `system-upgrade` app combines flake and container updates with validation:
+The `system-upgrade` app opens a multi-select picker for flake inputs and
+containers, then validates the result. Automation can explicitly update everything:
 
 ```sh
 nix run .#system-upgrade
-nix run .#system-upgrade -- <input>... [--container <configuration>/<container>]...
+nix run .#system-upgrade -- --all
 ```
 
 A full container refresh rebuilds the lock from the currently configured registry
