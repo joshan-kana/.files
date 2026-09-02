@@ -164,21 +164,18 @@ unrelated flake input changes do not restart the hosted containers.
    is available, and rewrites the lock atomically.
 
 ```sh
-nix run .#update-container-lock              # refresh every container
-nix run .#update-container-lock -- n8n       # refresh selected containers
+nix run .#update-container-lock -- [<container>...]
 ```
 
 The `system-upgrade` app combines flake and container updates with validation:
 
 ```sh
-nix run .#system-upgrade                     # all flake inputs + all containers
-nix run .#system-upgrade -- nixpkgs          # selected flake inputs + all containers
-nix run .#system-upgrade -- nixpkgs --container n8n
+nix run .#system-upgrade
+nix run .#system-upgrade -- <input>... [--container <container>]...
 ```
 
-`sysfu` and `sfu` are shell aliases for `system-upgrade`. A full container
-refresh rebuilds the lock from the currently configured registry containers;
-a selected refresh preserves unselected lock entries.
+A full container refresh rebuilds the lock from the currently configured registry
+containers; a selected refresh preserves unselected lock entries.
 
 ## OCI Container Model
 

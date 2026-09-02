@@ -360,12 +360,9 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 
 ### Flake updates
 
-- `nix run .#system-upgrade` - update every flake input and container lock, then run `nix flake check`
-- `nix run .#system-upgrade -- nixpkgs home-manager` - update only the named flake inputs, then refresh all container locks and check the flake
-- `nix run .#system-upgrade -- nixpkgs --container n8n` - update selected flake inputs and only the named container lock entries
-- `nix run .#update-container-lock` - refresh every container image digest without updating flake inputs
-- `nix run .#update-container-lock -- n8n onedev` - refresh only the named container image digests
-- `sysfu` and `sfu` are shell aliases for the `system-upgrade` app
+- `nix run .#system-upgrade` - update all flake inputs and containers, then run `nix flake check`
+- `nix run .#system-upgrade -- <input>... [--container <container>]...` - select flake inputs and/or containers; repeat `--container` as needed
+- `nix run .#update-container-lock -- [<container>...]` - refresh all containers, or only the named containers
 
 ### Formatting
 
