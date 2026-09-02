@@ -11,7 +11,7 @@ let
   repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
-    flakeUpdate = "${repoPath}/scripts/nix-flake-update ${repoPath} ${dotfiles.profile.name}";
+    flakeUpdate = "nix run ${repoPath}#system-upgrade --";
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
   };
@@ -145,31 +145,16 @@ in
           fi
         '';
       };
-      completion = ''
-        _sysfu() {
-          _arguments -C \
-            '(-h --help)'{-h,--help}'[show help]' \
-            '--input-ref[pin one input to a specific flake ref]:input=flake-ref:' \
-            '--nixpkgs-ref[pin nixpkgs to a revision, branch, or flake ref]:rev-or-ref:' \
-            '--choose-nixpkgs-ref[choose from recent nixpkgs commits on a branch]:branch:(nixos-unstable nixos-25.05 nixos-24.11)' \
-            "*:flake input:(''${(j:|:)flake_inputs})"
-        }
-        compdef _sysfu sysfu
-      '';
     in
     {
       environment.shellAliases = aliases;
       environment.systemPackages = [ editConfig ];
-      programs = (nhConfig args).programs // {
-        zsh.interactiveShellInit = completion;
-      };
+      inherit ((nhConfig args)) programs;
 
       home = args: {
         home.packages = [ editConfig ];
         home.shellAliases = aliases;
-        programs = (nhConfig args).programs // {
-          zsh.initContent = completion;
-        };
+        inherit ((nhConfig args)) programs;
       };
     };
 

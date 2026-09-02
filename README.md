@@ -355,24 +355,14 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 - `sysup` - Rebuild and switch to new system configuration
 - `systest` - Test system configuration without switching
 - `sysvm` - Build and run NixOS VM with current config
-- `sysfu` - Preview flake updates with validation and nvd diff
+- `sysfu` / `sfu` - Shell aliases for `nix run "$DOTFILES#system-upgrade" --`
 - `sysedit` - Edit configuration in VSCode
 
 ### Flake updates
 
-- `scripts/flake-update <target> [options] [inputs...]` - Update flake inputs on a dedicated branch, compare the selected target against `main`, and evaluate the rest of the fleet
-- Targets: `desktop`, `linux-desktop`, `nixos`, `server`, `nixos-server`, `orbstack`, `nixos-arm-parallels`, `nixos-orbstack`, `all`
-- Darwin targets are not currently supported because this flake does not expose `darwinConfigurations`
-- The script creates or switches to `system-upgrade` unless `UPDATE_BRANCH` is set
-- The script allows pre-existing `flake.lock` worktree or index changes by default, so iterative update/fix/rerun cycles work; set `ALLOW_DIRTY_LOCK=0` to reject them
-- Run this on a machine or remote builder that can build the selected target
-- Non-target profiles are evaluated too; local-path availability errors are reported and skipped, but normal evaluation failures stop the update
-- Run `sysfu` with no arguments to open the interactive selector; the first menu item chooses which `nixosConfiguration` to upgrade
-- Use `--list-nixpkgs-commits [branch]` to print recent nixpkgs commits, for example `sysfu --list-nixpkgs-commits nixos-unstable`
-- Use `--nixpkgs-ref <rev-or-ref>` to test a specific nixpkgs commit, branch, or flake ref, for example `scripts/flake-update nixos --nixpkgs-ref nixos-25.05`
-- Use `--choose-nixpkgs-ref [branch]` to choose from recent nixpkgs commits, for example `sysfu --choose-nixpkgs-ref nixos-unstable`
-- Use `--input-ref <input>=<flake-ref>` to pin another input explicitly, for example `scripts/flake-update nixos --input-ref home-manager=github:nix-community/home-manager/release-25.05`
-- Dependency inspection helpers after an update: `nix-tree result` and `nix why-depends result /nix/store/...-package`
+- `nix run .#system-upgrade` - interactively select any combination of flake inputs and containers, then run `nix flake check`
+- `nix run .#system-upgrade -- --all` - update every flake input and container non-interactively
+- `nix run .#update-container-lock -- [<configuration>/<container>...]` - refresh all containers, or only the named containers
 
 ### Formatting
 
