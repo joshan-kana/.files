@@ -158,42 +158,25 @@ revision of Nixpkgs (and hence the native service versions) is controlled by
 unrelated flake input changes do not restart the hosted containers.
 
 3. Hosted container image updates:
-   The server containers are pinned to immutable digests recorded in the
-   generated JSON file `hosts/nixos-server/container-images.lock`.
-   `scripts/update-container-images` resolves each configured `repository:tag`
-   to its current manifest index digest, proves a `linux/arm64` image is
-   available, and rewrites the lock atomically. A container restarts only when
-   its own locked digest (or its service definition) changes.
+   The server containers are pinned to immutable digests recorded in
+   `hosts/nixos-server/container-images.lock`. The `update-container-lock` flake
+   app resolves each configured `repository:tag`, verifies a `linux/arm64` image
+   is available, and rewrites the lock atomically.
 
 ```sh
-scripts/update-container-images
-git add hosts/nixos-server/container-images.lock
-git commit -m "chore(server): refresh container image digests"
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
+nix run .#update-container-lock -- [<configuration>/<container>...]
 ```
 
-`sysfu server` (the interactive `scripts/flake-update` wrapper) updates the flake
-inputs and, for the server target, refreshes the container lock as part of the
-same workflow. Container-specific options:
+The `system-upgrade` app opens a multi-select picker for flake inputs and
+containers, then validates the result. Automation can explicitly update everything:
 
-- `sysfu server` — full flake update and a full container lock refresh.
-- `sysfu server --containers-only` — refresh only the container lock; skip the
-  flake input update.
-- `sysfu server --container <name>` — refresh only the named container(s);
-  repeatable, and **skips the flake input update** unless flake inputs are also
-  supplied. Unselected entries are preserved.
-- `sysfu server --no-containers` — run the normal flake update but leave
-  container images untouched.
+```sh
+nix run .#system-upgrade
+nix run .#system-upgrade -- --all
+```
 
-A **full** container refresh rebuilds the lock exactly from the currently
-configured containers: removed containers disappear and stale keys cannot
-survive. A **selected** refresh (`--container <name>` / `CONTAINER_SELECT`)
-resolves only the named containers and preserves every other lock entry
-unchanged. Container options are rejected on non-server targets, and
-`--no-containers` cannot be combined with `--containers-only` or `--container`.
-A selected flake-input update (such as `sysfu server nixpkgs-stable`) refreshes
-the container lock only if a container option is explicitly given, so a narrow
-flake update does not unexpectedly move every container.
+A full container refresh rebuilds the lock from the currently configured registry
+containers; a selected refresh preserves unselected lock entries.
 
 ## OCI Container Model
 
@@ -244,14 +227,13 @@ discover the new source, but a NixOS assertion prevents building or deploying
 the system until the lock is refreshed:
 
 ```sh
-sysfu server --containers-only        # refresh everything
-sysfu server --container <name>       # refresh one container
+nix run .#update-container-lock
 ```
 
-The updater evaluates the final merged container option purely (no `--impure`,
-no environment bypass) and reduces it to small per-container metadata before
-resolving digests with skopeo. Locally built or streamed images (`imageFile` /
-`imageStream`) are left unchanged and need no lock entry.
+The updater evaluates the final merged OCI-container option after any flake
+update, then resolves the requested registry digests with Skopeo. Locally built
+or streamed images (`imageFile` / `imageStream`) are left unchanged and need no
+lock entry.
 
 This is reproducible: the exact container image digest is data stored in
 `container-images.lock`, which is reviewed and committed like `flake.lock`. For

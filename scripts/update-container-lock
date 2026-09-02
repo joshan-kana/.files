@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+state=$(nix eval --no-update-lock-file --json .#nixosConfigurations --apply '
+  configs: builtins.mapAttrs (_: cfg:
+    let
+      lockFile = cfg.config.dotfiles.containerImageLockFile or null;
+      containers = builtins.filterAttrs (_: x: x.imageFile == null && x.imageStream == null)
+        cfg.config.virtualisation.oci-containers.containers;
+    in if lockFile == null then null else {
+      inherit lockFile;
+      platform = { os = cfg.pkgs.go.GOOS; architecture = cfg.pkgs.go.GOARCH; };
+      containers = builtins.mapAttrs (_: x: builtins.head (builtins.split "@" x.image)) containers;
+    }
+  ) configs
+' | jq -c 'with_entries(select(.value != null))')
+
+if [[ ${1:-} == --list ]]; then
+  jq -r 'to_entries[] | .key as $config | .value.containers | keys[] | $config + "/" + .' <<<"$state"
+  exit 0
+fi
+
+selected=$(jq -cn --args '$ARGS.positional' -- "$@")
+targets=$(jq -c --argjson selected "$selected" '[
+  to_entries[] as $config
+  | $config.value.containers | to_entries[]
+  | {
+      id: ($config.key + "/" + .key),
+      config: $config.key, name: .key, source: .value,
+      os: $config.value.platform.os, architecture: $config.value.platform.architecture
+    }
+  | .id as $id | select(($selected | length) == 0 or ($selected | index($id)))
+]' <<<"$state")
+
+unknown=$(jq -nr --argjson selected "$selected" --argjson targets "$targets" \
+  '$selected - ($targets | map(.id)) | .[]')
+[[ -z "$unknown" ]] || {
+  printf 'error: unknown container: %s\n' "$unknown" >&2
+  exit 1
+}
+
+if (($#)); then
+  mapfile -t configs < <(jq -r 'map(.config) | unique[]' <<<"$targets")
+else
+  mapfile -t configs < <(jq -r 'keys[]' <<<"$state")
+fi
+
+for config in "${configs[@]}"; do
+  lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
+  [[ -f "$lock_file" ]] || {
+    echo "error: container lock not found for $config: $lock_file" >&2
+    exit 1
+  }
+done
+
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"; rm -f "${lock_tmp:-}"' EXIT
+
+resolve_source() {
+  local index=$1 source=$2 manifest digest metadata
+  manifest="$work_dir/$index.manifest.json"
+
+  skopeo inspect --raw "docker://$source" >"$manifest" || return
+  digest=$(skopeo manifest-digest "$manifest") || return
+  [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+    echo "error: $source returned malformed digest: $digest" >&2
+    return 1
+  }
+
+  if jq -e '(.manifests | type) == "array"' "$manifest" >/dev/null 2>&1; then
+    jq -c --arg source "$source" --arg digest "$digest" \
+      '{source: $source, digest: $digest, platforms: [.manifests[].platform | {os, architecture}]}' \
+      "$manifest" >"$work_dir/$index.result.json"
+  else
+    metadata=$(skopeo inspect --no-tags "docker://$source@$digest") || return
+    jq -c --arg source "$source" --arg digest "$digest" \
+      '{source: $source, digest: $digest, platforms: [{os: .Os, architecture: .Architecture}]}' \
+      <<<"$metadata" >"$work_dir/$index.result.json"
+  fi
+}
+
+mapfile -t sources < <(jq -r 'map(.source) | unique[]' <<<"$targets")
+active=0
+failed=false
+for index in "${!sources[@]}"; do
+  resolve_source "$index" "${sources[$index]}" &
+  active=$((active + 1))
+  if ((active == 4)); then
+    wait -n || failed=true
+    active=$((active - 1))
+    [[ "$failed" == false ]] || break
+  fi
+done
+while ((active)); do
+  wait -n || failed=true
+  active=$((active - 1))
+done
+[[ "$failed" == false ]] || exit 1
+
+resolved='{}'
+if ((${#sources[@]})); then
+  resolved=$(jq -s 'map({key: .source, value: .}) | from_entries' "$work_dir"/*.result.json)
+fi
+
+errors=$(jq -r --argjson resolved "$resolved" '
+  .[] as $target
+  | $resolved[$target.source] as $image
+  | select([
+      $image.platforms[]
+      | select(.os == $target.os and .architecture == $target.architecture)
+    ] | length == 0)
+  | "\($target.id): \($target.source) has no \($target.os)/\($target.architecture) image"
+' <<<"$targets")
+[[ -z "$errors" ]] || {
+  printf 'error: container platform validation failed:\n%s\n' "$errors" >&2
+  exit 1
+}
+
+for config in "${configs[@]}"; do
+  lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
+  current_lock=$(jq -S . "$lock_file")
+  updates=$(jq -c --arg config "$config" --argjson resolved "$resolved" '
+    [.[] | select(.config == $config) | {
+      key: .name,
+      value: {source: .source, digest: $resolved[.source].digest}
+    }] | from_entries
+  ' <<<"$targets")
+
+  if (($#)); then
+    new_lock=$(jq -S --argjson updates "$updates" '. + $updates' <<<"$current_lock")
+  else
+    new_lock=$(jq -S . <<<"$updates")
+  fi
+  [[ "$new_lock" == "$current_lock" ]] && continue
+
+  lock_tmp=$(mktemp "${lock_file}.tmp.XXXXXX")
+  printf '%s\n' "$new_lock" >"$lock_tmp"
+  chmod 0644 "$lock_tmp"
+  mv "$lock_tmp" "$lock_file"
+  lock_tmp=""
+
+  echo "Updated $lock_file:"
+  diff -u <(printf '%s\n' "$current_lock") <(printf '%s\n' "$new_lock") || true
+done

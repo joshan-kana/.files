@@ -369,6 +369,73 @@
           treefmt = treefmtFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
+          updateContainerLock = pkgs.writeShellApplication {
+            name = "update-container-lock";
+            runtimeInputs = with pkgs; [
+              coreutils
+              diffutils
+              git
+              jq
+              skopeo
+            ];
+            text = builtins.readFile ./scripts/update-container-lock;
+          };
+
+          systemUpgrade = pkgs.writeShellApplication {
+            name = "system-upgrade";
+            runtimeInputs = [
+              pkgs.fzf
+              pkgs.git
+              pkgs.jq
+              updateContainerLock
+            ];
+            text = ''
+              cd "$(git rev-parse --show-toplevel)"
+
+              case "$#:''${1-}" in
+                0:)
+                  selections=$(
+                    {
+                      printf 'all\tUpdate all inputs and containers\n'
+                      printf 'all-inputs\tUpdate all inputs\n'
+                      printf 'all-containers\tUpdate all containers\n'
+                      nix flake metadata --json --no-update-lock-file \
+                        | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
+                      update-container-lock --list | jq -Rr '["container", .] | @tsv'
+                    } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
+                      --header='Tab: select multiple • Enter: upgrade'
+                  ) || exit 0
+                  ;;
+                1:--all) selections=$'all\t*' ;;
+                *) echo "usage: system-upgrade [--all]" >&2; exit 1 ;;
+              esac
+
+              inputs=()
+              containers=()
+              while IFS=$'\t' read -r kind name; do
+                case "$kind" in
+                  all) inputs=("*"); containers=("*"); break ;;
+                  all-inputs) inputs=("*") ;;
+                  all-containers) containers=("*") ;;
+                  input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
+                  container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
+                esac
+              done <<<"$selections"
+
+              if ((''${#inputs[@]})); then
+                [[ ''${inputs[0]} == "*" ]] && inputs=()
+                nix flake update "''${inputs[@]}"
+              fi
+
+              if ((''${#containers[@]})); then
+                [[ ''${containers[0]} == "*" ]] && containers=()
+                update-container-lock "''${containers[@]}"
+              fi
+
+              nix flake check --no-update-lock-file
+            '';
+          };
+
           updatePlasma =
             if plasmaRc2nix == null then
               null
@@ -395,7 +462,19 @@
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
-        lib.optionalAttrs (updatePlasma != null) {
+        {
+          system-upgrade = {
+            type = "app";
+            program = lib.getExe systemUpgrade;
+            meta.description = "Update Nix inputs and container locks, then check the flake";
+          };
+          update-container-lock = {
+            type = "app";
+            program = lib.getExe updateContainerLock;
+            meta.description = "Refresh immutable OCI container image digests";
+          };
+        }
+        // lib.optionalAttrs (updatePlasma != null) {
           update-plasma = {
             type = "app";
             program = lib.getExe updatePlasma;
