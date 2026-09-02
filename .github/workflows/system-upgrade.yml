@@ -118,7 +118,7 @@ jobs:
           fi
 
           nix run .#system-upgrade -- --all
-          git add flake.lock hosts/nixos-server/container-images.lock
+          git add -u
           if ! git diff --cached --quiet; then
             git commit -m "upgrade system"
           fi
