@@ -402,12 +402,7 @@
                       nix flake metadata --json --no-update-lock-file \
                         | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
                       update-container-lock --list | jq -Rr '["container", .] | @tsv'
-                    } | fzf \
-                      --multi \
-                      --no-sort \
-                      --layout=reverse \
-                      --delimiter=$'\t' \
-                      --with-nth=2 \
+                    } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
                       --header='Tab: select multiple • Enter: upgrade'
                   ) || exit 0
                   ;;
@@ -427,15 +422,13 @@
                 esac
               done <<<"$selections"
 
-              if [[ ''${inputs[0]-} == "*" ]]; then
-                nix flake update
-              elif ((''${#inputs[@]})); then
+              if ((''${#inputs[@]})); then
+                [[ ''${inputs[0]} == "*" ]] && inputs=()
                 nix flake update "''${inputs[@]}"
               fi
 
-              if [[ ''${containers[0]-} == "*" ]]; then
-                update-container-lock
-              elif ((''${#containers[@]})); then
+              if ((''${#containers[@]})); then
+                [[ ''${containers[0]} == "*" ]] && containers=()
                 update-container-lock "''${containers[@]}"
               fi
 
