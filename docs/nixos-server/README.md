@@ -232,10 +232,10 @@ the system until the lock is refreshed:
 nix run .#update-container-lock
 ```
 
-Nix packages the updater with the registry sources derived from the final merged
-OCI-container option. The runtime then resolves only the requested registry
-digests with Skopeo. Locally built or streamed images (`imageFile` /
-`imageStream`) are left unchanged and need no lock entry.
+The updater evaluates the final merged OCI-container option after any flake
+update, then resolves the requested registry digests with Skopeo. Locally built
+or streamed images (`imageFile` / `imageStream`) are left unchanged and need no
+lock entry.
 
 This is reproducible: the exact container image digest is data stored in
 `container-images.lock`, which is reviewed and committed like `flake.lock`. For

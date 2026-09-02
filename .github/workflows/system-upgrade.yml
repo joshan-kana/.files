@@ -57,7 +57,9 @@ jobs:
         run: |
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
-            printf '%s' "$DOCKERHUB_TOKEN" | docker login docker.io --username "$DOCKERHUB_USERNAME" --password-stdin
+            for registry in docker.io docker.n8n.io; do
+              printf '%s' "$DOCKERHUB_TOKEN" | docker login "$registry" --username "$DOCKERHUB_USERNAME" --password-stdin
+            done
           fi
           echo "REGISTRY_AUTH_FILE=$HOME/.docker/config.json" >> "$GITHUB_ENV"
 
