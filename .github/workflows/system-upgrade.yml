@@ -17,6 +17,7 @@ on:
 permissions:
   actions: write
   contents: write
+  packages: read
   pull-requests: write
   statuses: write
 
@@ -45,7 +46,20 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
+            access-tokens = github.com=${{ github.token }}
             experimental-features = nix-command flakes
+
+      - name: Authenticate container registries
+        if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.validate_only)
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
+            printf '%s' "$DOCKERHUB_TOKEN" | docker login docker.io --username "$DOCKERHUB_USERNAME" --password-stdin
+          fi
+          echo "REGISTRY_AUTH_FILE=$HOME/.docker/config.json" >> "$GITHUB_ENV"
 
       - name: Prepare upgrade branch
         if: github.event_name != 'push' && !(github.event_name == 'workflow_dispatch' && inputs.validate_only)
@@ -101,7 +115,11 @@ jobs:
             git switch -c "$UPGRADE_BRANCH" origin/main
           fi
 
-          nix develop --no-update-lock-file .#system-upgrade --command scripts/flake-update all
+          nix run .#system-upgrade
+          git add flake.lock hosts/nixos-server/container-images.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "upgrade system"
+          fi
 
           if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
             echo "No flake updates are available."
@@ -116,7 +134,7 @@ jobs:
               --base main \
               --head "$UPGRADE_BRANCH" \
               --title "chore: upgrade system" \
-              --body $'Automated Nix input and container image update.\n\nThe `system-upgrade` branch is intentionally persistent and editable so compatibility fixes can be committed normally when upstream changes require them. The System upgrade workflow reports flake validation and native build status directly on this PR. GitHub auto-merge is enabled only after every build and Attic publication succeeds.\n\nMerging does not deploy any host.'
+              --body "Automated Nix and container image updates."
           fi
 
           echo "validate=true" >> "$GITHUB_OUTPUT"
@@ -145,9 +163,11 @@ jobs:
               >/dev/null
           }
 
-          report_status pending "Evaluating upgraded flake"
+          report_status pending "Validating system upgrade"
           trap 'report_status failure "Flake validation or build dispatch failed"' ERR
-          nix flake check
+          if [[ "$GITHUB_EVENT_NAME" == "push" || ("$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.validate_only }}" == "true") ]]; then
+            nix flake check
+          fi
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref "$UPGRADE_BRANCH" \
