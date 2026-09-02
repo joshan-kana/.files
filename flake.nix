@@ -395,6 +395,7 @@
               case "$#:''${1-}" in
                 0:)
                   selections=$(
+                    set +o pipefail
                     {
                       printf 'all\tUpdate all inputs and containers\n'
                       printf 'all-inputs\tUpdate all inputs\n'
