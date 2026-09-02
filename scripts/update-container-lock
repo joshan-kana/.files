@@ -4,7 +4,7 @@ set -euo pipefail
 repo=$(git rev-parse --show-toplevel)
 cd "$repo"
 
-: "${CONTAINER_SOURCES_FILE:?missing CONTAINER_SOURCES_FILE}"
+: "${NIXOS_CONFIGURATION:?missing NIXOS_CONFIGURATION}"
 : "${CONTAINER_LOCK_FILE:?missing CONTAINER_LOCK_FILE}"
 
 lock_file=$CONTAINER_LOCK_FILE
@@ -13,13 +13,22 @@ lock_file=$CONTAINER_LOCK_FILE
   exit 1
 }
 
+containers=$(nix eval --no-update-lock-file --json \
+  ".#nixosConfigurations.${NIXOS_CONFIGURATION}.config.virtualisation.oci-containers.containers" \
+  --apply 'c: builtins.mapAttrs (_: x: { inherit (x) image; local = x.imageFile != null || x.imageStream != null; }) c')
+
+sources=$(jq -c '
+  with_entries(select(.value.local == false))
+  | map_values(.image | split("@")[0])
+' <<<"$containers")
+
 current_lock=$(jq -S . "$lock_file")
 if (($#)); then
   new_lock=$current_lock
   names=("$@")
 else
   new_lock='{}'
-  mapfile -t names < <(jq -r 'keys[]' "$CONTAINER_SOURCES_FILE")
+  mapfile -t names < <(jq -r 'keys[]' <<<"$sources")
 fi
 
 ((${#names[@]})) || {
@@ -32,7 +41,7 @@ lock_tmp=""
 trap 'rm -rf "$work_dir"; [[ -z "$lock_tmp" ]] || rm -f "$lock_tmp"' EXIT
 
 for name in "${names[@]}"; do
-  source=$(jq -er --arg name "$name" '.[$name]' "$CONTAINER_SOURCES_FILE") || {
+  source=$(jq -er --arg name "$name" '.[$name]' <<<"$sources") || {
     echo "error: unknown container: $name" >&2
     exit 1
   }

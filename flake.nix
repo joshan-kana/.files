@@ -369,16 +369,6 @@
           treefmt = treefmtFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
-          serverContainers =
-            self.nixosConfigurations.nixos-server.config.virtualisation.oci-containers.containers;
-          registryContainers = lib.filterAttrs (
-            _name: container: container.imageFile == null && container.imageStream == null
-          ) serverContainers;
-          containerSources = lib.mapAttrs (
-            _name: container: builtins.head (lib.splitString "@" container.image)
-          ) registryContainers;
-          containerSourcesFile = pkgs.writeText "container-sources.json" (builtins.toJSON containerSources);
-
           updateContainerLock = pkgs.writeShellApplication {
             name = "update-container-lock";
             runtimeInputs = with pkgs; [
@@ -386,10 +376,11 @@
               diffutils
               git
               jq
+              nix
               skopeo
             ];
             text = ''
-              export CONTAINER_SOURCES_FILE=${containerSourcesFile}
+              export NIXOS_CONFIGURATION=nixos-server
               export CONTAINER_LOCK_FILE=hosts/nixos-server/container-images.lock
               ${builtins.readFile ./scripts/update-container-lock}
             '';
