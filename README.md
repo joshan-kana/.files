@@ -355,17 +355,17 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 - `sysup` - Rebuild and switch to new system configuration
 - `systest` - Test system configuration without switching
 - `sysvm` - Build and run NixOS VM with current config
-- `sysfu` / `sfu` - Update system locks on the shared `system-upgrade` branch
+- `sysfu` / `sfu` - Shell aliases for `nix run "$DOTFILES#system-upgrade" --`
 - `sysedit` - Edit configuration in VSCode
 
 ### Flake updates
 
-- `sysfu` / `sfu` - update the current `$FLK_PROFILE` on `system-upgrade`, run `nix flake check`, and commit changed locks as `upgrade system`
-- `sysfu all` - update every flake input and every managed container image lock
-- `sysfu <nixosConfiguration>` - update only that configuration's declared flake inputs and managed container lock
-- `--containers-only`, `--container <name>`, and `--no-containers` narrow container updates when needed
-
-`scripts/flake-update` is the single implementation behind both aliases. Configuration-specific input groups and container-lock paths are declared beside each `nixosConfiguration` in `flake.nix`.
+- `nix run .#system-upgrade` - update every flake input and container lock, then run `nix flake check`
+- `nix run .#system-upgrade -- nixpkgs home-manager` - update only the named flake inputs, then refresh all container locks and check the flake
+- `nix run .#system-upgrade -- nixpkgs --container n8n` - update selected flake inputs and only the named container lock entries
+- `nix run .#update-container-lock` - refresh every container image digest without updating flake inputs
+- `nix run .#update-container-lock -- n8n onedev` - refresh only the named container image digests
+- `sysfu` and `sfu` are shell aliases for the `system-upgrade` app
 
 ### Formatting
 
