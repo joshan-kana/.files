@@ -24,7 +24,6 @@ in
     environmentFile = atticSecret;
     settings = {
       listen = "0.0.0.0:${toString cachePort}";
-      api-endpoint = "http://${cacheHost}:${toString cachePort}/";
       allowed-hosts = [
         cacheHost
         "${cacheHost}:${toString cachePort}"
