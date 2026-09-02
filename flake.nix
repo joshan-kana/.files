@@ -378,11 +378,7 @@
               jq
               skopeo
             ];
-            text = ''
-              export NIXOS_CONFIGURATION=nixos-server
-              export CONTAINER_LOCK_FILE=hosts/nixos-server/container-images.lock
-              ${builtins.readFile ./scripts/update-container-lock}
-            '';
+            text = builtins.readFile ./scripts/update-container-lock;
           };
 
           systemUpgrade = pkgs.writeShellApplication {

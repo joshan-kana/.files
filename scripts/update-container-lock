@@ -4,89 +4,105 @@ set -euo pipefail
 repo=$(git rev-parse --show-toplevel)
 cd "$repo"
 
-: "${NIXOS_CONFIGURATION:?missing NIXOS_CONFIGURATION}"
-: "${CONTAINER_LOCK_FILE:?missing CONTAINER_LOCK_FILE}"
+state=$(nix eval --no-update-lock-file --json .#nixosConfigurations --apply '
+  configs: builtins.mapAttrs (_: cfg:
+    let lockFile = cfg.config.dotfiles.containerImageLockFile or null;
+    in if lockFile == null then null else {
+      inherit lockFile;
+      containers = builtins.mapAttrs (_: x: {
+        inherit (x) image;
+        local = x.imageFile != null || x.imageStream != null;
+      }) cfg.config.virtualisation.oci-containers.containers;
+    }
+  ) configs
+')
 
-lock_file=$CONTAINER_LOCK_FILE
-[[ -f "$lock_file" ]] || {
-  echo "error: container lock not found: $lock_file" >&2
-  exit 1
-}
+state=$(jq -c '
+  with_entries(select(.value != null))
+  | map_values(.containers |= (
+      with_entries(select(.value.local == false))
+      | map_values(.image | split("@")[0])
+    ))
+' <<<"$state")
 
-containers=$(nix eval --no-update-lock-file --json \
-  ".#nixosConfigurations.${NIXOS_CONFIGURATION}.config.virtualisation.oci-containers.containers" \
-  --apply 'c: builtins.mapAttrs (_: x: { inherit (x) image; local = x.imageFile != null || x.imageStream != null; }) c')
-
-sources=$(jq -c '
-  with_entries(select(.value.local == false))
-  | map_values(.image | split("@")[0])
-' <<<"$containers")
-
-current_lock=$(jq -S . "$lock_file")
-if (($#)); then
-  new_lock=$current_lock
-  names=("$@")
-else
-  new_lock='{}'
-  mapfile -t names < <(jq -r 'keys[]' <<<"$sources")
+if [[ ${1:-} == --list ]]; then
+  jq -r 'to_entries[] | .key as $config | .value.containers | keys[] | $config + "/" + .' <<<"$state"
+  exit 0
 fi
 
-((${#names[@]})) || {
-  echo "error: no registry-backed containers are configured" >&2
-  exit 1
-}
+for selection in "$@"; do
+  config=${selection%%/*}
+  name=${selection#*/}
+  if [[ "$config" == "$selection" ]] || ! jq -e --arg config "$config" --arg name "$name" \
+    '.[$config].containers[$name] != null' <<<"$state" >/dev/null; then
+    echo "error: unknown container: $selection" >&2
+    exit 1
+  fi
+done
 
+mapfile -t configs < <(jq -r 'keys[]' <<<"$state")
 work_dir=$(mktemp -d)
 lock_tmp=""
 trap 'rm -rf "$work_dir"; [[ -z "$lock_tmp" ]] || rm -f "$lock_tmp"' EXIT
 
-for name in "${names[@]}"; do
-  source=$(jq -er --arg name "$name" '.[$name]' <<<"$sources") || {
-    echo "error: unknown container: $name" >&2
-    exit 1
-  }
-
-  manifest="$work_dir/${name//[^a-zA-Z0-9_.-]/_}.json"
-  skopeo inspect --raw "docker://$source" >"$manifest"
-  digest=$(skopeo manifest-digest "$manifest")
-
-  [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
-    echo "error: $name returned malformed digest: $digest" >&2
-    exit 1
-  }
-
-  if jq -e '(.manifests | type) == "array"' "$manifest" >/dev/null 2>&1; then
-    jq -e '[.manifests[].platform | select(.os == "linux" and .architecture == "arm64")] | length > 0' \
-      "$manifest" >/dev/null || {
-      echo "error: $source has no linux/arm64 image" >&2
-      exit 1
-    }
+for config in "${configs[@]}"; do
+  names=()
+  if (($#)); then
+    for selection in "$@"; do
+      [[ ${selection%%/*} == "$config" ]] && names+=("${selection#*/}")
+    done
+    ((${#names[@]})) || continue
   else
-    platform=$(skopeo inspect --no-tags "docker://$source@$digest" | jq -r '.Os + "/" + .Architecture')
-    [[ "$platform" == "linux/arm64" ]] || {
-      echo "error: $source is $platform, not linux/arm64" >&2
-      exit 1
-    }
+    mapfile -t names < <(jq -r --arg config "$config" '.[$config].containers | keys[]' <<<"$state")
   fi
 
-  new_lock=$(jq -c \
-    --arg name "$name" \
-    --arg source "$source" \
-    --arg digest "$digest" \
-    '. + {($name): {source: $source, digest: $digest}}' <<<"$new_lock")
+  lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
+  [[ -f "$lock_file" ]] || {
+    echo "error: container lock not found for $config: $lock_file" >&2
+    exit 1
+  }
+
+  current_lock=$(jq -S . "$lock_file")
+  if (($#)); then new_lock=$current_lock; else new_lock='{}'; fi
+
+  for name in "${names[@]}"; do
+    source=$(jq -r --arg config "$config" --arg name "$name" '.[$config].containers[$name]' <<<"$state")
+    manifest="$work_dir/${config//[^a-zA-Z0-9_.-]/_}-${name//[^a-zA-Z0-9_.-]/_}.json"
+    skopeo inspect --raw "docker://$source" >"$manifest"
+    digest=$(skopeo manifest-digest "$manifest")
+
+    [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+      echo "error: $config/$name returned malformed digest: $digest" >&2
+      exit 1
+    }
+
+    if jq -e '(.manifests | type) == "array"' "$manifest" >/dev/null 2>&1; then
+      jq -e '[.manifests[].platform | select(.os == "linux" and .architecture == "arm64")] | length > 0' \
+        "$manifest" >/dev/null || {
+        echo "error: $source has no linux/arm64 image" >&2
+        exit 1
+      }
+    else
+      platform=$(skopeo inspect --no-tags "docker://$source@$digest" | jq -r '.Os + "/" + .Architecture')
+      [[ "$platform" == "linux/arm64" ]] || {
+        echo "error: $source is $platform, not linux/arm64" >&2
+        exit 1
+      }
+    fi
+
+    new_lock=$(jq -c --arg name "$name" --arg source "$source" --arg digest "$digest" \
+      '. + {($name): {source: $source, digest: $digest}}' <<<"$new_lock")
+  done
+
+  new_lock=$(jq -S . <<<"$new_lock")
+  [[ "$new_lock" == "$current_lock" ]] && continue
+
+  lock_tmp=$(mktemp "${lock_file}.tmp.XXXXXX")
+  printf '%s\n' "$new_lock" >"$lock_tmp"
+  chmod 0644 "$lock_tmp"
+  mv "$lock_tmp" "$lock_file"
+  lock_tmp=""
+
+  echo "Updated $lock_file:"
+  diff -u <(printf '%s\n' "$current_lock") <(printf '%s\n' "$new_lock") || true
 done
-
-new_lock=$(jq -S . <<<"$new_lock")
-if [[ "$new_lock" == "$current_lock" ]]; then
-  echo "Container lock is up to date."
-  exit 0
-fi
-
-lock_tmp=$(mktemp "${lock_file}.tmp.XXXXXX")
-printf '%s\n' "$new_lock" >"$lock_tmp"
-chmod 0644 "$lock_tmp"
-mv "$lock_tmp" "$lock_file"
-lock_tmp=""
-
-echo "Updated $lock_file:"
-diff -u <(printf '%s\n' "$current_lock") <(printf '%s\n' "$new_lock") || true

@@ -1,6 +1,7 @@
 { lockFile }:
 {
   config,
+  inputs,
   lib,
   ...
 }:
@@ -61,10 +62,20 @@ let
   ) registryContainers;
 in
 {
+  options.dotfiles.containerImageLockFile = lib.mkOption {
+    type = lib.types.nullOr lib.types.str;
+    default = null;
+    internal = true;
+  };
+
   # Extend the upstream OCI-container option without replacing its schema.
   options.virtualisation.oci-containers.containers = lib.mkOption {
     apply = applyLocks;
   };
+
+  config.dotfiles.containerImageLockFile = lib.mkIf enabled (
+    lib.removePrefix "${inputs.self.outPath}/" (toString lockFile)
+  );
 
   config.assertions = lib.optionals enabled [
     {

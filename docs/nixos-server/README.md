@@ -171,7 +171,7 @@ The `system-upgrade` app combines flake and container updates with validation:
 
 ```sh
 nix run .#system-upgrade
-nix run .#system-upgrade -- <input>... [--container <container>]...
+nix run .#system-upgrade -- <input>... [--container <configuration>/<container>]...
 ```
 
 A full container refresh rebuilds the lock from the currently configured registry

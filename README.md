@@ -361,8 +361,8 @@ Shell aliases are defined in [`modules/cli/`](modules/cli/):
 ### Flake updates
 
 - `nix run .#system-upgrade` - update all flake inputs and containers, then run `nix flake check`
-- `nix run .#system-upgrade -- <input>... [--container <container>]...` - select flake inputs and/or containers; repeat `--container` as needed
-- `nix run .#update-container-lock -- [<container>...]` - refresh all containers, or only the named containers
+- `nix run .#system-upgrade -- <input>... [--container <configuration>/<container>]...` - select flake inputs and/or containers; repeat `--container` as needed
+- `nix run .#update-container-lock -- [<configuration>/<container>...]` - refresh all containers, or only the named containers
 
 ### Formatting
 
