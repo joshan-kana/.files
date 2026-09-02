@@ -11,7 +11,7 @@ let
   repoPath = dotfiles.paths.repoPath;
   systemCommands = {
     cd = "cd $DOTFILES";
-    flakeUpdate = ''nix run "$DOTFILES#system-upgrade" --'';
+    flakeUpdate = "nix run ${repoPath}#system-upgrade --";
     rebuild =
       action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
   };
