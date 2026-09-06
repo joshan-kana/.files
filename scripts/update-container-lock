@@ -7,7 +7,7 @@ state=$(nix eval --no-update-lock-file --json .#nixosConfigurations --apply '
   configs: builtins.mapAttrs (_: cfg:
     let
       lockFile = cfg.config.dotfiles.containerImageLockFile or null;
-      containers = builtins.filterAttrs (_: x: x.imageFile == null && x.imageStream == null)
+      containers = cfg.pkgs.lib.filterAttrs (_: x: x.imageFile == null && x.imageStream == null)
         cfg.config.virtualisation.oci-containers.containers;
     in if lockFile == null then null else {
       inherit lockFile;
