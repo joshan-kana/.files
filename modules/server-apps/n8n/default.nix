@@ -7,7 +7,7 @@ let
 in
 {
   virtualisation.oci-containers.containers.n8n = {
-    image = "docker.n8n.io/n8nio/n8n:latest";
+    image = "docker.io/n8nio/n8n:latest";
 
     volumes = [ "${server.storage.appData.root}/n8n:/home/node/.n8n" ];
     ports = [ "${server.lan.serverIp}:${toString hostPort}:5678" ];
