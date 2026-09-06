@@ -1,4 +1,10 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  inputs,
+  pkgs,
+  ...
+}:
 
 let
   inherit (config.dotfiles) server;
@@ -10,6 +16,7 @@ in
 {
   services.immich = {
     enable = true;
+    package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.immich;
     host = server.lan.serverIp;
     openFirewall = false;
     inherit mediaLocation;
