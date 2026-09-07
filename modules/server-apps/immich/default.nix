@@ -32,9 +32,15 @@ in
   services.restic.backups.apps.paths = [ backupLocation ];
 
   systemd = lib.mkIf config.services.immich.enable {
-    tmpfiles.rules = [
-      "d ${backupLocation} 2770 immich ${dataRoot.group.name} - -"
-    ];
+    services.immich-server.serviceConfig.UMask = lib.mkForce "0007";
+
+    tmpfiles = {
+      settings.immich."${mediaLocation}".e.mode = lib.mkForce "2770";
+
+      rules = [
+        "d ${backupLocation} 2770 immich ${dataRoot.group.name} - -"
+      ];
+    };
   };
 
   virtualisation.vmVariant.services.immich.enable = lib.mkForce false;
