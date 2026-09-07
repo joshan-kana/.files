@@ -139,6 +139,10 @@
         themes.stylix.src = syntaxTheme;
       };
 
+      home.sessionVariables = lib.mkIf config.programs.bat.enable {
+        MANPAGER = "${lib.getExe config.programs.bat.package} -plman";
+      };
+
       programs.delta.options = with config.lib.stylix.colors.withHashtag; {
         minus-style = "syntax ${base01}";
         minus-emph-style = "${base08} ${base02} bold";
