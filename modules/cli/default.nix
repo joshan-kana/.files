@@ -679,4 +679,10 @@ in
     };
   };
 
+  codex = _: {
+    home = _: {
+      programs.codex.enable = true;
+    };
+  };
+
 }
