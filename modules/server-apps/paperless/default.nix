@@ -24,7 +24,10 @@ in
   };
 
   users.users = lib.mkIf config.services.paperless.enable {
-    ${config.services.paperless.user}.extraGroups = [ appData.group.name ];
+    ${config.services.paperless.user}.extraGroups = [
+      appData.group.name
+      dataRoot.group.name
+    ];
   };
 
   services.postgresqlBackup = lib.mkIf config.services.paperless.enable {
@@ -40,6 +43,31 @@ in
         "${appData.root}"."a+".argument = "u:postgres:--x";
         "${dataDir}"."a+".argument = "u:postgres:--x";
       };
+
+  systemd.services = lib.mkIf config.services.paperless.enable (
+    lib.genAttrs
+      [
+        "paperless-consumer"
+        "paperless-scheduler"
+        "paperless-task-queue"
+        "paperless-web"
+      ]
+      (_: {
+        serviceConfig.UMask = lib.mkForce "0007";
+      })
+  );
+
+  systemd.tmpfiles.settings."10-paperless" = lib.mkIf config.services.paperless.enable {
+    "${config.services.paperless.mediaDir}".d = {
+      group = lib.mkForce dataRoot.group.name;
+      mode = "2770";
+    };
+
+    "${config.services.paperless.consumptionDir}".d = {
+      group = lib.mkForce dataRoot.group.name;
+      mode = "2770";
+    };
+  };
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
     lib.optionals config.services.paperless.enable
