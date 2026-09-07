@@ -177,6 +177,9 @@ in
   };
 
   home = _: {
+    # disable hyprpaper target to prevent crash loops
+    stylix.targets.hyprland.hyprpaper.enable = false;
+
     home.shellAliases = aliases;
 
     wayland.windowManager.hyprland =
