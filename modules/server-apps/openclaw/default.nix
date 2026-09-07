@@ -203,7 +203,6 @@ in
   };
 
   environment.systemPackages = with pkgs; [
-    acl
     curl
     docker
     gh
@@ -211,8 +210,6 @@ in
   ];
 
   systemd.tmpfiles.rules = [
-    "a+ ${server.storage.appData.root} - - - - u:${toString openclawContainerUser.uid}:rwx,g:${appDataEditor.group}:rwx,d:u:${toString openclawContainerUser.uid}:rwx,d:g:${appDataEditor.group}:rwx"
-
     "d ${server.storage.appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
     "d ${server.storage.appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
     "d ${server.storage.appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
