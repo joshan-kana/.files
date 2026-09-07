@@ -13,7 +13,11 @@ in
 {
   nixpkgs.config.allowUnfree = true;
 
-  nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
+
+  environment.systemPackages = [
+    inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-manual-manpages-only
+  ];
 
   nix.settings = {
     trusted-users = [
