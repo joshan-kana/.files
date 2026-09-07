@@ -535,8 +535,9 @@ in
         | .gateway.bind = "loopback"
         | .gateway.port = ${toString gatewayPort}
         | .gateway.nodes = (.gateway.nodes // {})
-        | .gateway.nodes.allowCommands =
-            (((.gateway.nodes.allowCommands // []) - ["computer.act"]) + [
+        | .gateway.nodes.commands = (.gateway.nodes.commands // {})
+        | .gateway.nodes.commands.allow =
+            (((.gateway.nodes.commands.allow // []) - ["computer.act"]) + [
               "camera.snap",
               "camera.clip",
               "screen.record",
@@ -545,8 +546,8 @@ in
               "reminders.add",
               "health.summary"
             ] | unique)
-        | .gateway.nodes.denyCommands =
-            ((.gateway.nodes.denyCommands // []) - [
+        | .gateway.nodes.commands.deny =
+            ((.gateway.nodes.commands.deny // []) - [
               "camera.snap",
               "camera.clip",
               "screen.record",
@@ -583,8 +584,6 @@ in
             }
           }
         | del(.gateway.auth.token)
-        | .gateway.controlUi.allowInsecureAuth = true
-        | .gateway.controlUi.dangerouslyDisableDeviceAuth = true
         | .gateway.controlUi.allowedOrigins =
             ((.gateway.controlUi.allowedOrigins // []) + ["http://${server.lan.serverIp}:${toString gatewayPort}"] | unique)
         | .plugins = (.plugins // {})
