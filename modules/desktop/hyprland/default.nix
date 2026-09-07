@@ -365,7 +365,7 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("awww init && awww img ~/.config/home-manager/wallpaper.png")
+                  hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
                   hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
                   hl.exec_cmd("dunst")
