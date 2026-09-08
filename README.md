@@ -201,6 +201,27 @@ uses its own `dotfiles.scopes` and resolves the same semantic scope tree locally
 Override paths are strict: an unknown or stale semantic scope path is an
 evaluation error, including beneath a disabled parent scope.
 
+Edit an existing shared semantic child with `editScope`. Nested attrsets mirror
+the semantic tree; the leaf stays module-shaped so nixd keeps native completion
+and hover:
+
+```nix
+serverApps = editScope moduleRegistry.serverApps {
+  immich = _: {
+    services.immich.host = "127.0.0.1";
+  };
+
+  homeAssistant = { inherited, ... }: {
+    virtualisation.oci-containers.containers.home-assistant.volumes =
+      inherited.virtualisation.oci-containers.containers.home-assistant.volumes
+      ++ [ "/host:/host" ];
+  };
+};
+```
+
+Plain assignments replace values; use `inherited` only when deriving from the
+shared value. Disable scopes with `dotfiles.scopes.<path>.enable = false`.
+
 Aliases belong to their owning semantic scope. Simple aliases that are portable
 across shells are authored once and applied through both `environment.shellAliases`
 and `home.shellAliases`, keeping system and standalone Home Manager consumers in

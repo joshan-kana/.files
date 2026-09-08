@@ -18,6 +18,53 @@ let
     environment.variables.SEMANTIC_CALLABLE_PKGS = args.pkgs.stdenv.hostPlatform.system;
   }) { pkgs = false; };
 
+  editedScope =
+    semantic.editScope
+      (_: {
+        app = _: {
+          environment.variables.SEMANTIC_EDIT_REPLACE = "shared";
+          environment.systemPackages = [ inputs.nixpkgs.legacyPackages.${system}.coreutils ];
+          systemd.services.semantic-edit-test = {
+            after = [
+              "remove.service"
+              "keep.service"
+            ];
+            script = "echo shared";
+          };
+        };
+
+        branch = _: {
+          leaf = _: {
+            environment.variables.SEMANTIC_EDIT_NESTED = "shared";
+          };
+        };
+      })
+      {
+        app =
+          {
+            inherited,
+            lib,
+            pkgs,
+            ...
+          }:
+          {
+            environment.variables.SEMANTIC_EDIT_REPLACE = "host";
+            environment.systemPackages = inherited.environment.systemPackages ++ [ pkgs.hello ];
+            systemd.services.semantic-edit-test.after =
+              builtins.filter (unit: unit != "remove.service") inherited.systemd.services.semantic-edit-test.after
+              ++ [ "add.service" ];
+            systemd.services.semantic-edit-test.script =
+              lib.replaceStrings [ "shared" ] [ "host" ]
+                inherited.systemd.services.semantic-edit-test.script;
+          };
+
+        branch = {
+          leaf = _: {
+            environment.variables.SEMANTIC_EDIT_NESTED = "host";
+          };
+        };
+      };
+
   evaluated = inputs.nixpkgs.lib.nixosSystem {
     inherit system;
     specialArgs.inputs = {
@@ -55,6 +102,7 @@ let
         environment.variables.SEMANTIC_FORCE = lib.mkForce "outside";
         environment.systemPackages = [ pkgs.coreutils ];
       })
+      (semantic.systemModule "edited" editedScope)
       (semantic.systemModule "semantic" (
         {
           config,
@@ -410,6 +458,15 @@ assert cfg.programs.zsh.enableCompletion;
 assert !builtins.isFunction callableChild;
 assert lib.isFunction callableChild;
 assert cfg.environment.variables.SEMANTIC_CALLABLE_PKGS == system;
+assert cfg.environment.variables.SEMANTIC_EDIT_REPLACE == "host";
+assert cfg.environment.variables.SEMANTIC_EDIT_NESTED == "host";
+assert builtins.elem "hello" packageNames;
+assert
+  cfg.systemd.services.semantic-edit-test.after == [
+    "keep.service"
+    "add.service"
+  ];
+assert lib.hasInfix "echo host" cfg.systemd.services.semantic-edit-test.script;
 assert hm.programs.zsh.enableCompletion;
 assert !(cfg.environment.variables ? SEMANTIC_EXTERNAL_DISABLED);
 assert !(hm.home.sessionVariables ? SEMANTIC_EXTERNAL_DISABLED);
