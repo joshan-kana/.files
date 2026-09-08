@@ -89,10 +89,9 @@ let
       )
     );
 
-  nixdOptions =
-    configurations:
+  nixdOptionsForTree =
+    tree:
     let
-      tree = scopeTree configurations;
       childScopes = semanticChildren tree;
     in
     if childScopes == { } then
@@ -119,8 +118,11 @@ let
         ];
       }).options;
 
+  nixdOptions = configurations: nixdOptionsForTree (scopeTree configurations);
+
   nixdHostOptions =
-    configurations: host: lib.recursiveUpdate host.options (nixdOptions configurations);
+    _configurations: host:
+    lib.recursiveUpdate host.options (nixdOptionsForTree host.config.dotfiles.resolvedScopes);
 in
 {
   inherit

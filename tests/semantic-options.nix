@@ -9,6 +9,8 @@ let
   tree = semanticScopeOptions.scopeTree configurations;
   options = semanticScopeOptions.nixdOptions configurations;
   hostOptions = semanticScopeOptions.nixdHostOptions configurations (builtins.head hosts);
+  nixosHostOptions = semanticScopeOptions.nixdHostOptions configurations configurations.nixos;
+  serverHostOptions = semanticScopeOptions.nixdHostOptions configurations configurations.nixos-server;
   scopes = options.dotfiles.scopes.type.getSubOptions [ ];
 
   visibleOptions =
@@ -50,12 +52,28 @@ let
 
   rootOptions = visibleOptions scopes;
   hostScopes = hostOptions.dotfiles.scopes.type.getSubOptions [ ];
+  nixosHostScopes = visibleOptions (nixosHostOptions.dotfiles.scopes.type.getSubOptions [ ]);
+  serverHostScopes = visibleOptions (serverHostOptions.dotfiles.scopes.type.getSubOptions [ ]);
+  nixosResolvedScopes = semanticChildren configurations.nixos.config.dotfiles.resolvedScopes;
+  serverResolvedScopes = semanticChildren configurations.nixos-server.config.dotfiles.resolvedScopes;
   rootChildren = semanticChildren tree;
 in
 assert hosts != [ ];
 assert rootChildren != { };
 assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames rootOptions);
-assert sameNames (builtins.attrNames rootOptions) (builtins.attrNames (visibleOptions hostScopes));
+assert sameNames (builtins.attrNames (
+  semanticChildren (builtins.head hosts).config.dotfiles.resolvedScopes
+)) (builtins.attrNames (visibleOptions hostScopes));
+assert sameNames (builtins.attrNames nixosResolvedScopes) (builtins.attrNames nixosHostScopes);
+assert sameNames (builtins.attrNames serverResolvedScopes) (builtins.attrNames serverHostScopes);
+assert builtins.all (name: validateScope nixosResolvedScopes.${name} nixosHostScopes.${name}) (
+  builtins.attrNames nixosResolvedScopes
+);
+assert builtins.all (name: validateScope serverResolvedScopes.${name} serverHostScopes.${name}) (
+  builtins.attrNames serverResolvedScopes
+);
+assert !(nixosHostScopes ? serverApps);
+assert serverHostScopes ? serverApps;
 assert builtins.all (name: builtins.hasAttr name hostOptions) (
   builtins.attrNames (builtins.head hosts).options
 );
