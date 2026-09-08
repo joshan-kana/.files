@@ -14,6 +14,10 @@ let
     programs.zsh.enableCompletion = true;
   };
 
+  callableChild = lib.setFunctionArgs (args: {
+    environment.variables.SEMANTIC_CALLABLE_PKGS = args.pkgs.stdenv.hostPlatform.system;
+  }) { pkgs = false; };
+
   evaluated = inputs.nixpkgs.lib.nixosSystem {
     inherit system;
     specialArgs.inputs = {
@@ -107,6 +111,8 @@ let
               programs.zsh = (sharedZshConfig args).programs.zsh;
             };
           };
+
+          callable = callableChild;
 
           externalDisabled = _: {
             environment.variables.SEMANTIC_EXTERNAL_DISABLED = "bad";
@@ -401,6 +407,9 @@ assert !(cfg.environment.variables ? SEMANTIC_CASCADE);
 assert cfg.programs.zsh.enable;
 assert hm.programs.zsh.enable;
 assert cfg.programs.zsh.enableCompletion;
+assert !builtins.isFunction callableChild;
+assert lib.isFunction callableChild;
+assert cfg.environment.variables.SEMANTIC_CALLABLE_PKGS == system;
 assert hm.programs.zsh.enableCompletion;
 assert !(cfg.environment.variables ? SEMANTIC_EXTERNAL_DISABLED);
 assert !(hm.home.sessionVariables ? SEMANTIC_EXTERNAL_DISABLED);

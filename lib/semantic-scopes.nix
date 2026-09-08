@@ -52,7 +52,7 @@ let
     path: scope:
     let
       invalidChildren = builtins.filter (
-        name: builtins.hasAttr name scope && builtins.isFunction scope.${name}
+        name: builtins.hasAttr name scope && lib.isFunction scope.${name}
       ) reservedChildNames;
       scopeName = if path == [ ] then "<root>" else lib.concatStringsSep "." path;
     in
@@ -68,7 +68,7 @@ let
     in
     scopeModule (lib.filterAttrs (name: _: builtins.hasAttr name expected) args);
 
-  hasHomeBranch = scope: builtins.hasAttr "home" scope && builtins.isFunction scope.home;
+  hasHomeBranch = scope: builtins.hasAttr "home" scope && lib.isFunction scope.home;
 
   scopeForContext =
     context: projectHomeBranches: path: scope: args:
@@ -110,7 +110,7 @@ let
       candidates = builtins.removeAttrs scope (
         moduleKeys ++ [ "enable" ] ++ lib.optional homeBranch "home"
       );
-      children = lib.filterAttrs (_: value: builtins.isFunction value) candidates;
+      children = lib.filterAttrs (_: value: lib.isFunction value) candidates;
       directConfig =
         if context == "home" && projectHomeBranches then
           builtins.removeAttrs contextScope ([ "enable" ] ++ moduleKeys)
