@@ -135,12 +135,6 @@ in
           ];
           description = "Fallback DNS servers for the NixOS host when the local DNS service is unavailable.";
         };
-
-        macvlanHostShimIp = mkOption {
-          type = types.str;
-          default = "192.168.1.5";
-          description = "Host-side macvlan shim address used while the LAN DNS service runs in Docker.";
-        };
       };
     };
   };
