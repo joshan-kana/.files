@@ -180,6 +180,26 @@ let
       ++ childConfigs
     );
 
+  extendScope =
+    scope: additions:
+    let
+      invalid = builtins.attrNames (lib.filterAttrs (_: value: !lib.isFunction value) additions);
+    in
+    if invalid != [ ] then
+      throw "Semantic scope extensions must be scope functions: ${lib.concatStringsSep ", " invalid}"
+    else
+      lib.setFunctionArgs (
+        args:
+        let
+          inherited = callScope scope args;
+          overlap = builtins.attrNames (builtins.intersectAttrs inherited additions);
+        in
+        if overlap != [ ] then
+          throw "Semantic scope extension already exists: ${lib.concatStringsSep ", " overlap}"
+        else
+          inherited // additions
+      ) (lib.functionArgs scope);
+
   editScope =
     scope: edits:
     lib.setFunctionArgs (
@@ -254,7 +274,10 @@ let
     lib.setFunctionArgs wrapper wrapperArgs;
 in
 rec {
-  inherit editScope;
+  inherit
+    editScope
+    extendScope
+    ;
 
   rootModule = scope: mkScopeModule "system" false true [ ] scope;
   systemModule = name: scope: mkScopeModule "system" false true [ name ] scope;

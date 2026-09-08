@@ -222,6 +222,10 @@ serverApps = editScope moduleRegistry.serverApps {
 Plain assignments replace values; use `inherited` only when deriving from the
 shared value. Disable scopes with `dotfiles.scopes.<path>.enable = false`.
 
+Add genuinely host-local semantic children with `extendScope`. Extensions are
+strict: every addition must be a scope function and cannot replace an inherited
+name. Use `editScope` for existing children and `extendScope` only for new ones.
+
 Aliases belong to their owning semantic scope. Simple aliases that are portable
 across shells are authored once and applied through both `environment.shellAliases`
 and `home.shellAliases`, keeping system and standalone Home Manager consumers in

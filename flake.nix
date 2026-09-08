@@ -255,7 +255,10 @@
           inherit system;
           specialArgs = {
             inherit inputs;
-            inherit (semantic) editScope;
+            inherit (semantic)
+              editScope
+              extendScope
+              ;
             moduleRegistry = import ./modules;
           };
           modules = [
