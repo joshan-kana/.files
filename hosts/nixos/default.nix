@@ -1,4 +1,5 @@
 {
+  extendScope,
   inputs,
   moduleRegistry,
   pkgs,
@@ -40,31 +41,15 @@
     plymouth.enable = false;
   };
 
-  cli =
-    {
-      config,
-      inputs,
-      lib,
-      pkgs,
-      ...
-    }:
-    (moduleRegistry.cli {
-      inherit
-        config
-        inputs
-        lib
-        pkgs
-        ;
-    })
-    // {
-      nvtop = _: {
-        nixpkgs.overlays = (import ../../overlays/nvtop-overlay.nix { }).nixpkgs.overlays;
-        environment.systemPackages = [ pkgs.nvtopPackages.full ];
-      };
-
-      intelGpuTools = _: {
-        environment.systemPackages = [ pkgs.intel-gpu-tools ];
-      };
+  cli = extendScope moduleRegistry.cli {
+    nvtop = _: {
+      nixpkgs.overlays = (import ../../overlays/nvtop-overlay.nix { }).nixpkgs.overlays;
+      environment.systemPackages = [ pkgs.nvtopPackages.full ];
     };
+
+    intelGpuTools = _: {
+      environment.systemPackages = [ pkgs.intel-gpu-tools ];
+    };
+  };
 
 }
