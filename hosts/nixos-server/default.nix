@@ -1,4 +1,5 @@
 {
+  editScope,
   inputs,
   moduleRegistry,
   modulesPath,
@@ -274,55 +275,34 @@
           };
         };
     };
-  virtualisation =
-    {
-      config,
-      pkgs,
-      ...
-    }:
-    let
-      shared = moduleRegistry.virtualisation { inherit config pkgs; };
-    in
-    shared
-    // {
-      containers =
-        { config, ... }:
-        (shared.containers { inherit config; })
-        // {
-          virtualisation.oci-containers.backend = "docker";
-        };
-
-      vm =
-        _:
-        (shared.vm { })
-        // {
-          safety =
-            { lib, ... }:
-
-            {
-              virtualisation.vmVariant = {
-                services.restic.backups = lib.mkForce { };
-                services.snapper.configs = lib.mkForce { };
-
-                # VM builds do not have the real Vault pool or LAN interface used by the
-                # production Raspberry Pi deployment.
-                systemd.services.docker-network-adguard = lib.mkForce { };
-
-                systemd.services.docker-adguard = {
-                  after = lib.mkForce [ "docker.service" ];
-                  requires = lib.mkForce [ "docker.service" ];
-                };
-
-                virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
-                virtualisation.oci-containers.containers.adguard.ports = [
-                  "53:53/tcp"
-                  "53:53/udp"
-                  "3000:3000/tcp"
-                ];
-              };
-            };
-        };
+  virtualisation = editScope moduleRegistry.virtualisation {
+    containers = _: {
+      virtualisation.oci-containers.backend = "docker";
     };
+
+    vm = { lib, ... }: {
+      virtualisation.vmVariant = {
+        services.restic.backups = lib.mkForce { };
+        services.snapper.configs = lib.mkForce { };
+
+        # VM builds do not have the real Vault pool or LAN interface used by the
+        # production Raspberry Pi deployment.
+        systemd.services.docker-network-adguard = lib.mkForce { };
+
+        systemd.services.docker-adguard = {
+          after = lib.mkForce [ "docker.service" ];
+          requires = lib.mkForce [ "docker.service" ];
+        };
+
+        virtualisation.oci-containers.containers.adguard.extraOptions = lib.mkForce [ ];
+        virtualisation.oci-containers.containers.adguard.ports = [
+          "53:53/tcp"
+          "53:53/udp"
+          "3000:3000/tcp"
+        ];
+      };
+    };
+  };
   storage =
     {
       config,
