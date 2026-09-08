@@ -18,6 +18,47 @@ let
     environment.variables.SEMANTIC_CALLABLE_PKGS = args.pkgs.stdenv.hostPlatform.system;
   }) { pkgs = false; };
 
+  extendBase = { pkgs, ... }: {
+    existing = _: {
+      environment.variables.SEMANTIC_EXTEND_EXISTING = pkgs.stdenv.hostPlatform.system;
+    };
+  };
+
+  extendedScope = semantic.extendScope extendBase {
+    hostOnlyDisabled = _: {
+      environment.variables.SEMANTIC_EXTEND_DISABLED = "bad";
+    };
+
+    hostOnlyEnabled = { pkgs, ... }: {
+      environment.variables.SEMANTIC_EXTEND_ENABLED = pkgs.stdenv.hostPlatform.system;
+
+      home = _: {
+        home.sessionVariables.SEMANTIC_EXTEND_HOME = "yes";
+      };
+    };
+
+    hostOnlyCustomArg = { semanticExtensionMarker, ... }: {
+      environment.variables.SEMANTIC_EXTEND_CUSTOM_ARG = semanticExtensionMarker;
+    };
+  };
+
+  extendCollision = builtins.tryEval (
+    builtins.deepSeq ((semantic.extendScope (_: { existing = _: { }; }) { existing = _: { }; })
+      { }
+    ) true
+  );
+  extendInvalid = builtins.tryEval (semantic.extendScope (_: { }) { invalid = { }; });
+  extendReservedEvaluation = lib.evalModules {
+    modules = [
+      (semantic.systemModule "reserved-extension" (semantic.extendScope (_: { }) { enable = _: { }; }))
+    ];
+  };
+  extendReserved = builtins.tryEval (builtins.deepSeq extendReservedEvaluation.config true);
+
+  editUnknown = builtins.tryEval (
+    builtins.deepSeq ((semantic.editScope (_: { existing = _: { }; }) { typo = _: { }; }) { }) true
+  );
+
   editedScope =
     semantic.editScope
       (_: {
@@ -67,8 +108,9 @@ let
 
   evaluated = inputs.nixpkgs.lib.nixosSystem {
     inherit system;
-    specialArgs.inputs = {
-      marker = "from-inputs";
+    specialArgs = {
+      inputs.marker = "from-inputs";
+      semanticExtensionMarker = "from-extension-special-arg";
     };
     modules = [
       inputs.home-manager.nixosModules.home-manager
@@ -84,18 +126,26 @@ let
         dotfiles = {
           profile.name = "semantic-test";
           users.primary.name = "semantic";
-          scopes.semantic = {
-            externalDisabled.enable = false;
-            sourceDisabled.enable = true;
-            parentOverride = {
-              enable = false;
-              child.enable = true;
+          scopes = {
+            semantic = {
+              externalDisabled.enable = false;
+              sourceDisabled.enable = true;
+              parentOverride = {
+                enable = false;
+                child.enable = true;
+              };
+              childDefaults = {
+                children.enable = false;
+                explicitEnabled.enable = true;
+              };
+              nested.branch.children.enable = false;
             };
-            childDefaults = {
+            extended = {
               children.enable = false;
-              explicitEnabled.enable = true;
+              existing.enable = true;
+              hostOnlyEnabled.enable = true;
+              hostOnlyCustomArg.enable = true;
             };
-            nested.branch.children.enable = false;
           };
         };
 
@@ -103,6 +153,7 @@ let
         environment.systemPackages = [ pkgs.coreutils ];
       })
       (semantic.systemModule "edited" editedScope)
+      (semantic.systemModule "extended" extendedScope)
       (semantic.systemModule "semantic" (
         {
           config,
@@ -458,6 +509,18 @@ assert cfg.programs.zsh.enableCompletion;
 assert !builtins.isFunction callableChild;
 assert lib.isFunction callableChild;
 assert cfg.environment.variables.SEMANTIC_CALLABLE_PKGS == system;
+assert (lib.functionArgs extendedScope) ? pkgs;
+assert !extendCollision.success;
+assert !extendInvalid.success;
+assert !extendReserved.success;
+assert cfg.environment.variables.SEMANTIC_EXTEND_CUSTOM_ARG == "from-extension-special-arg";
+assert cfg.environment.variables.SEMANTIC_EXTEND_EXISTING == system;
+assert !(cfg.environment.variables ? SEMANTIC_EXTEND_DISABLED);
+assert cfg.environment.variables.SEMANTIC_EXTEND_ENABLED == system;
+assert !cfg.dotfiles.resolvedScopes.extended.hostOnlyDisabled.enable;
+assert cfg.dotfiles.resolvedScopes.extended.hostOnlyEnabled.enable;
+assert hm.home.sessionVariables.SEMANTIC_EXTEND_HOME == "yes";
+assert !editUnknown.success;
 assert cfg.environment.variables.SEMANTIC_EDIT_REPLACE == "host";
 assert cfg.environment.variables.SEMANTIC_EDIT_NESTED == "host";
 assert builtins.elem "hello" packageNames;
