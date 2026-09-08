@@ -180,6 +180,52 @@ let
       ++ childConfigs
     );
 
+  editScope =
+    scope: edits:
+    lib.setFunctionArgs (
+      args:
+      let
+        inherited = callScope scope args;
+      in
+      inherited
+      // builtins.mapAttrs (
+        name: edit:
+        let
+          child = inherited.${name} or (throw "Unknown semantic scope edit target '${name}'.");
+        in
+        if !lib.isFunction child then
+          throw "Semantic scope edit target '${name}' is not a child scope."
+        else if builtins.isAttrs edit then
+          editScope child edit
+        else if lib.isFunction edit then
+          lib.setFunctionArgs
+            (
+              childArgs:
+              let
+                previous = callScope child childArgs;
+              in
+              lib.recursiveUpdate previous (
+                callScope edit (
+                  childArgs
+                  // {
+                    inherited = previous;
+                    inherit lib;
+                  }
+                )
+              )
+            )
+            (
+              (lib.functionArgs child)
+              // builtins.removeAttrs (lib.functionArgs edit) [
+                "inherited"
+                "lib"
+              ]
+            )
+        else
+          throw "Semantic scope edit '${name}' must be a nested scope set or editor function."
+      ) edits
+    ) (lib.functionArgs scope);
+
   mkScopeModule =
     context: projectHomeBranches: parentEnabled: path: scopeModule:
     let
@@ -208,6 +254,8 @@ let
     lib.setFunctionArgs wrapper wrapperArgs;
 in
 rec {
+  inherit editScope;
+
   rootModule = scope: mkScopeModule "system" false true [ ] scope;
   systemModule = name: scope: mkScopeModule "system" false true [ name ] scope;
   homeModule = name: scope: mkScopeModule "home" true true [ name ] scope;
