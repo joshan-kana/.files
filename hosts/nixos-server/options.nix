@@ -98,8 +98,14 @@ in
     lan = {
       interface = mkOption {
         type = types.str;
+        default = "br0";
+        description = "Logical LAN interface for the server.";
+      };
+
+      physicalInterface = mkOption {
+        type = types.str;
         default = "end0";
-        description = "Primary wired LAN interface for the server.";
+        description = "Physical wired interface backing the LAN bridge.";
       };
 
       subnet = mkOption {

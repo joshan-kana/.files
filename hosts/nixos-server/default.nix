@@ -81,6 +81,7 @@
       shared = moduleRegistry.networking { };
       inherit (config.dotfiles.server) lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
+      zerotierPackage = pkgs.zerotierone.override { enableUnfree = true; };
     in
     shared
     // {
@@ -103,19 +104,37 @@
       networkManager =
         _:
         lib.recursiveUpdate (shared.networkManager { }) {
-          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
-            connection = {
-              id = "wired-static";
-              type = "ethernet";
-              "interface-name" = lan.interface;
-              autoconnect = true;
-              "autoconnect-priority" = 100;
+          networking.networkmanager.ensureProfiles.profiles = {
+            "lan-bridge" = {
+              connection = {
+                id = "lan-bridge";
+                type = "bridge";
+                "interface-name" = lan.interface;
+                autoconnect = true;
+                "autoconnect-priority" = 100;
+                "autoconnect-ports" = 1;
+              };
+              bridge.stp = false;
+              ipv4 = {
+                method = "manual";
+                address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+              };
+              ipv6.method = "auto";
             };
-            ipv4 = {
-              method = "manual";
-              address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+
+            "wired-static" = {
+              connection = {
+                id = "wired-static";
+                type = "ethernet";
+                "interface-name" = lan.physicalInterface;
+                autoconnect = true;
+                controller = lan.interface;
+                "port-type" = "bridge";
+              };
+              ipv4.method = "disabled";
+              ipv6.method = "disabled";
             };
-            ipv6.method = "auto";
+
           };
         };
 
@@ -145,7 +164,7 @@
           };
         in
         {
-          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
+          networking.networkmanager.ensureProfiles.profiles."lan-bridge" = {
             ipv4 = {
               address2 = "${service.ip}/${lanPrefixLength}";
               dns = hostDns;
@@ -221,6 +240,24 @@
             };
           };
         };
+
+      zerotier = _: {
+        services.zerotierone = {
+          enable = true;
+          package = zerotierPackage;
+        };
+
+        # The persistent ZeroTier membership is restored at boot, so wait until
+        # NetworkManager has created the LAN bridge before the TAP can appear.
+        systemd.services.zerotierone.after = [ "network-online.target" ];
+
+        # OpenTofu writes devicemap so only home-l2 is named zt-home-l2. Attach
+        # that exact TAP to the LAN bridge; unrelated ZeroTier networks stay
+        # outside the physical broadcast domain.
+        services.udev.extraRules = ''
+          ACTION=="add", SUBSYSTEM=="net", KERNEL=="zt-home-l2", RUN+="${lib.getExe' pkgs.iproute2 "ip"} link set dev %k master ${lan.interface}"
+        '';
+      };
 
       tailscale =
         {
@@ -396,7 +433,10 @@
         repository = "rclone:dropbox:Archives/Backups/nixos-server";
         passwordFile = "${server.secretsDir}/restic-password";
         rcloneConfigFile = "${server.secretsDir}/rclone.conf";
-        paths = [ storage.appData.root ];
+        paths = [
+          storage.appData.root
+          "/var/lib/zerotier-one"
+        ];
         exclude = [
           "${storage.appData.root}/.snapshots"
         ];
