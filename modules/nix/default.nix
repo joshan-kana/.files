@@ -43,7 +43,7 @@ in
       "dotfiles:U1NE7k5WM7I0l3losIw3VhG4eUGZAxsSvkw6br7p2iA="
     ];
     require-sigs = true;
-    fallback = false;
+    fallback = true;
     builders-use-substitutes = true;
   };
 
