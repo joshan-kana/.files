@@ -8,15 +8,15 @@
     "source": "ghcr.io/home-assistant-libs/python-matter-server:stable"
   },
   "n8n": {
-    "digest": "sha256:307d6065be25619aa24cfc63a7c2f04ca56d084a08c05c8e9f189a89f353b1ec",
+    "digest": "sha256:7406a977895d0158ab0f5b2a3dc66de636711f36c06f0e2e2b1c391fc91f8ec3",
     "source": "docker.io/n8nio/n8n:latest"
   },
   "onedev": {
-    "digest": "sha256:9d9dc1afc6c54c6ee474163ed137b30d47d49535d8769caf601b55dc4a0d4204",
+    "digest": "sha256:561aac3ff3e9e4eb705d46263e2702d6cfb343441e1e9e2825238da6aa3f0249",
     "source": "1dev/server:latest"
   },
   "openclaw": {
-    "digest": "sha256:a8604855b76cd613cbaa45d6db093dc017b09a2faea5dc9cee023fb7ac262250",
+    "digest": "sha256:6cb72e1599b3b76e2ea3dcc2f4dd7f112247367fbecadfcdee8caa7423f4989b",
     "source": "ghcr.io/openclaw/openclaw:latest"
   }
 }
