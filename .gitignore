@@ -18,3 +18,9 @@ rclone.conf
 
 # direnv
 .direnv/
+
+# OpenTofu local working state. The ZeroTier state backend lives under
+# /var/lib/zerotier-one and is covered by the encrypted server backup.
+**/.terraform/
+*.tfstate
+*.tfstate.*

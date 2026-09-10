@@ -1,0 +1,184 @@
+terraform {
+  required_version = ">= 1.10.0"
+
+  required_providers {
+    local = {
+      source  = "hashicorp/local"
+      version = "2.9.0"
+    }
+
+    restapi = {
+      source  = "Mastercard/restapi"
+      version = "3.0.0"
+    }
+  }
+
+  backend "local" {
+    path = "/var/lib/zerotier-one/opentofu.tfstate"
+  }
+}
+
+variable "controller_node_id" {
+  description = "Ten-character ZeroTier node ID of the self-hosted controller."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{10}$", var.controller_node_id))
+    error_message = "controller_node_id must be a ten-character lowercase hexadecimal ZeroTier node ID."
+  }
+}
+
+variable "controller_token" {
+  description = "Local ZeroTier service API token from authtoken.secret."
+  type        = string
+  sensitive   = true
+}
+
+variable "members" {
+  description = "Additional ZeroTier members to authorize on the home L2 network."
+  type = map(object({
+    node_id            = string
+    authorized         = optional(bool, true)
+    active_bridge      = optional(bool, false)
+    no_auto_assign_ips = optional(bool, false)
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for member in values(var.members) : can(regex("^[0-9a-f]{10}$", member.node_id))
+    ])
+    error_message = "Each member node_id must be a ten-character lowercase hexadecimal ZeroTier node ID."
+  }
+}
+
+locals {
+  network_id = "${var.controller_node_id}000001"
+}
+
+provider "restapi" {
+  uri                  = "http://127.0.0.1:9993"
+  write_returns_object = true
+
+  headers = {
+    Content-Type = "application/json"
+    X-ZT1-Auth   = var.controller_token
+  }
+}
+
+resource "restapi_object" "home_l2" {
+  path         = "/controller/network"
+  create_path  = "/controller/network/${local.network_id}"
+  read_path    = "/controller/network/{id}"
+  update_path  = "/controller/network/{id}"
+  destroy_path = "/controller/network/{id}"
+
+  id_attribute            = "id"
+  create_method           = "POST"
+  update_method           = "POST"
+  destroy_method          = "DELETE"
+  ignore_server_additions = true
+
+  data = jsonencode({
+    name            = "home-l2"
+    private         = true
+    enableBroadcast = true
+    ipAssignmentPools = [
+      {
+        ipRangeStart = "192.168.1.201"
+        ipRangeEnd   = "192.168.1.239"
+      }
+    ]
+    routes = [
+      {
+        target = "192.168.0.0/23"
+        via    = null
+      }
+    ]
+    v4AssignMode = {
+      zt = true
+    }
+  })
+}
+
+resource "restapi_object" "server_bridge_member" {
+  path         = "/controller/network/${restapi_object.home_l2.id}/member"
+  create_path  = "/controller/network/${restapi_object.home_l2.id}/member/${var.controller_node_id}"
+  read_path    = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+  update_path  = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+  destroy_path = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+
+  id_attribute            = "id"
+  create_method           = "POST"
+  update_method           = "POST"
+  destroy_method          = "DELETE"
+  ignore_server_additions = true
+
+  data = jsonencode({
+    authorized      = true
+    activeBridge    = true
+    noAutoAssignIps = true
+  })
+
+}
+
+resource "local_file" "zerotier_devicemap" {
+  filename        = "/var/lib/zerotier-one/devicemap"
+  content         = "${local.network_id}=zt-home-l2\n"
+  file_permission = "0600"
+
+  depends_on = [restapi_object.home_l2]
+}
+
+resource "restapi_object" "server_join" {
+  path         = "/network"
+  create_path  = "/network/${restapi_object.home_l2.id}"
+  read_path    = "/network/{id}"
+  update_path  = "/network/{id}"
+  destroy_path = "/network/{id}"
+
+  id_attribute            = "id"
+  create_method           = "POST"
+  update_method           = "POST"
+  destroy_method          = "DELETE"
+  ignore_server_additions = true
+
+  data = jsonencode({
+    allowManaged = false
+    allowGlobal  = false
+    allowDefault = false
+    allowDNS     = false
+  })
+
+  depends_on = [
+    local_file.zerotier_devicemap,
+    restapi_object.server_bridge_member,
+  ]
+}
+
+resource "restapi_object" "member" {
+  for_each = var.members
+
+  path         = "/controller/network/${restapi_object.home_l2.id}/member"
+  create_path  = "/controller/network/${restapi_object.home_l2.id}/member/${each.value.node_id}"
+  read_path    = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+  update_path  = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+  destroy_path = "/controller/network/${restapi_object.home_l2.id}/member/{id}"
+
+  id_attribute            = "id"
+  create_method           = "POST"
+  update_method           = "POST"
+  destroy_method          = "DELETE"
+  ignore_server_additions = true
+
+  data = jsonencode({
+    authorized      = each.value.authorized
+    activeBridge    = each.value.active_bridge
+    noAutoAssignIps = each.value.no_auto_assign_ips
+  })
+}
+
+output "network_id" {
+  description = "Stable ZeroTier network ID generated by the self-hosted controller."
+  value       = local.network_id
+}
