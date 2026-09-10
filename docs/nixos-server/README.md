@@ -7,6 +7,8 @@ Raspberry Pi home server documentation.
 - `flake.nix`: declares the `nixos-server` host target.
 - `docs/nixos-server/nixos-server-install.md`: end-to-end install, restore,
   and day-two operations guide.
+- `docs/nixos-server/zerotier-l2.md`: self-hosted ZeroTier controller, L2 bridge,
+  OpenTofu management, client rollout, validation, and rollback.
 - `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
   users, SSH, caches, and host-level services.
 - `profiles/nixos-server/hosted-stack.nix`: hosted applications and their

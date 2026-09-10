@@ -63,6 +63,12 @@ Each app gets a plain child directory, for example:
 Future container apps should store mutable data under `/var/lib/apps` so the
 normal backup and restore flow includes them automatically.
 
+The ZeroTier controller is the exception to the app-data layout. Its persistent
+identity, controller database, network membership, and OpenTofu state live under
+`/var/lib/zerotier-one` and are included directly in the encrypted restic backup.
+Unlike the server's ephemeral Tailscale identity, this state must be restored when
+replacing the ZeroTier controller.
+
 Large files stored under `/srv/vault` use local recursive ZFS snapshots and are
 not included in this restic repository. See [Vault ZFS Storage](vault-storage.md)
 for health checks, snapshot verification, and full-rebuild import instructions.
@@ -98,6 +104,7 @@ Secrets are split into two buckets:
 | OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
 | OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
+| ZeroTier controller identity and state | `/var/lib/zerotier-one` | Encrypted restic backup |
 | Tailscale first-boot auth key | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
 | Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
 | Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
