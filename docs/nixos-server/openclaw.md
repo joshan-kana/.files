@@ -68,34 +68,37 @@ Mac Ollama path is currently reachable.
 
 The selection policy is:
 
-1. Prefer the LAN path at home by resolving `Joshans-MacBook-Pro.local` and
-   writing the resolved numeric LAN IP into nginx config.
-2. Fall back to the Mac's Tailscale address, `100.87.66.20`, when the LAN path
-   is not reachable.
+1. Resolve `Joshans-MacBook-Pro.local` through mDNS and write the resolved
+   numeric address into nginx config when Ollama is reachable.
+2. Use the normal LAN advertisement while the Mac is home and the ZeroTier
+   `home-l2` advertisement while the Mac is away.
+3. Return HTTP 503 from the local proxy when the Mac or Ollama is unavailable.
 
-This keeps OpenClaw stable because the provider base URL never changes, even
-when the Mac moves between LAN and Tailscale paths.
+This keeps OpenClaw stable because the provider base URL never changes while
+avoiding any dependency on a fixed Tailscale or ZeroTier client address.
 
 ## Why nginx Uses Numeric Upstreams
 
-The generated nginx include at `/run/openclaw-ollama-proxy.conf` should contain a
-numeric upstream such as:
+The generated nginx include at `/run/openclaw-ollama-proxy.conf` contains a
+numeric upstream while the Mac is reachable, for example:
 
 ```text
-proxy_pass http://192.168.1.108:11434;
+proxy_pass http://192.168.1.x:11434;
 ```
 
-or:
+It should never contain a `.local` hostname or a fixed overlay-network client
+address. nginx resolves normal hostnames during config load/reload, so a `.local`
+upstream can make nginx fail to start or reload when mDNS is unavailable or the
+Mac is off.
+
+When no discovered Ollama endpoint is reachable, the include contains:
 
 ```text
-proxy_pass http://100.87.66.20:11434;
+return 503;
 ```
 
-It should not contain a `.local` hostname. nginx resolves normal hostnames during
-config load/reload, so a `.local` upstream can make nginx fail to start or reload
-when mDNS is unavailable or the Mac is off. A numeric fallback keeps nginx
-healthy. If the Mac or Ollama is unavailable, Ollama requests can fail with a
-backend/proxy error, but nginx itself remains running.
+This keeps nginx healthy and makes unavailability explicit without persisting a
+stale or hard-coded remote address.
 
 ## Polling Timer
 
@@ -104,16 +107,15 @@ backend/proxy error, but nginx itself remains running.
 
 The oneshot service:
 
-1. resolves the Mac's mDNS name to a LAN IP,
-2. checks the LAN Ollama `/api/tags` endpoint,
-3. checks the Tailscale Ollama `/api/tags` endpoint if LAN fails,
-4. writes `/run/openclaw-ollama-proxy.conf` only when the selected upstream
-   changes, and
-5. reloads nginx only after a config change.
+1. resolves the Mac's mDNS name to an IPv4 address,
+2. checks the discovered Ollama `/api/tags` endpoint,
+3. writes either a numeric `proxy_pass` or `return 503` to
+   `/run/openclaw-ollama-proxy.conf`, and
+4. reloads nginx only after the generated config changes.
 
 This keeps the Raspberry Pi 4 work small: each poll does a short mDNS lookup and
-one or two short HTTP checks, and nginx is not reloaded when the selected
-upstream is unchanged.
+one short HTTP check, and nginx is not reloaded when the generated config is
+unchanged.
 
 ## Verification
 
@@ -133,7 +135,8 @@ Expected healthy state:
 - `systemctl --failed` reports `0 loaded units listed`.
 - `openclaw-ollama-proxy.timer` is active and has a populated `NEXT` run.
 - `nginx.service` is active.
-- `/run/openclaw-ollama-proxy.conf` contains a numeric IP, not `.local`.
+- `/run/openclaw-ollama-proxy.conf` contains either a numeric `proxy_pass` or
+  `return 503`, never `.local` or a fixed overlay client address.
 - `http://127.0.0.1:11434/api/tags` returns the Mac Ollama models when the Mac
   and Ollama are reachable.
 - OpenClaw lists the Ollama models through the `ollama` provider.

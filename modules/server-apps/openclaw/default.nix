@@ -644,47 +644,23 @@ in
         tmp="$(mktemp /run/openclaw-ollama-proxy.conf.XXXXXX)"
         trap 'rm -f "$tmp"' EXIT
 
-        lan_host="Joshans-MacBook-Pro.local"
+        mac_host="Joshans-MacBook-Pro.local"
         port="11434"
-        tailscale="http://100.87.66.20:11434"
-        selected=""
 
-        lan_ip="$(
-          timeout 2s avahi-resolve-host-name -4 "$lan_host" 2>/dev/null \
+        mac_ip="$(
+          timeout 2s avahi-resolve-host-name -4 "$mac_host" 2>/dev/null \
             | awk '{ print $2; exit }' \
             || true
         )"
 
-        if [ -n "$lan_ip" ] \
-          && curl -fsS --connect-timeout 1 --max-time 2 "http://$lan_ip:$port/api/tags" >/dev/null 2>&1; then
-          selected="http://$lan_ip:$port"
-          echo "Using LAN Ollama upstream: $selected"
-        elif curl -fsS --connect-timeout 1 --max-time 2 "$tailscale/api/tags" >/dev/null 2>&1; then
-          selected="$tailscale"
-          echo "Using Tailscale Ollama upstream: $selected"
+        if [ -n "$mac_ip" ] \
+          && curl -fsS --connect-timeout 1 --max-time 2 "http://$mac_ip:$port/api/tags" >/dev/null 2>&1; then
+          printf 'proxy_pass http://%s:%s;\n' "$mac_ip" "$port" > "$tmp"
+          echo "Using discovered Ollama upstream: http://$mac_ip:$port"
+        else
+          printf 'return 503;\n' > "$tmp"
+          echo "No reachable Ollama endpoint; proxy will return HTTP 503"
         fi
-
-        if [ -z "$selected" ] && [ -s "$conf" ]; then
-          current="$(cat "$conf")"
-          case "$current" in
-            *".local"*)
-              selected="$tailscale"
-              echo "Existing proxy config used mDNS; replacing with numeric fallback: $selected"
-              ;;
-            *)
-              echo "No reachable Ollama endpoint; keeping existing proxy config:"
-              cat "$conf"
-              exit 0
-              ;;
-          esac
-        fi
-
-        if [ -z "$selected" ]; then
-          selected="$tailscale"
-          echo "No reachable Ollama endpoint yet; writing numeric fallback: $selected"
-        fi
-
-        printf 'proxy_pass %s;\n' "$selected" > "$tmp"
 
         old="$(cat "$conf" 2>/dev/null || true)"
         new="$(cat "$tmp")"

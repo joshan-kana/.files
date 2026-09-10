@@ -172,18 +172,23 @@ must not accept a ZeroTier default route or DNS configuration.
 
 ## Validation Status
 
-The configuration and control plane can be validated without changing the live
-LAN, but that does not prove Bonjour end to end. Before marking this rollout
-complete, validate all three runtime boundaries:
+Live validation completed on 2026-09-11:
 
-1. the current ZeroTier client on the current macOS release, including managed
-   address/route behaviour;
-2. the first `end0` to `br0` cutover on `nixos-server` with a recovery path;
-3. bidirectional mDNS/DNS-SD between the remote Mac and a physical-LAN device.
+- `nixos-server` generation 176 persists `br0` with `end0` and `zt-home-l2`
+  forwarding beneath it.
+- The self-hosted `home-l2` network reports `OK`, and a second OpenTofu plan is
+  clean.
+- ZeroTier 1.16.2 on macOS 26.2 build 25C56 installs the managed `/23` route
+  without replacing the normal default route.
+- macOS mDNSResponder advertises the ZeroTier-managed address on `feth645`.
+- A DNS-SD browse scoped to `feth645` discovers physical-LAN AirPlay services.
+- A DNS-SD service registered only on `feth645` is discovered by Avahi on
+  `nixos-server`; the Linux bridge FDB also learns the Mac's `feth645` MAC on
+  `zt-home-l2`.
 
-Do not treat `zerotier-cli listnetworks` reporting `OK` as sufficient mDNS
-validation. Verify actual `.local` resolution and DNS-SD discovery across the
-bridge in both directions.
+Do not treat `zerotier-cli listnetworks` reporting `OK` alone as sufficient
+mDNS validation. Future macOS or ZeroTier upgrades should repeat actual
+`.local`/DNS-SD checks across the bridge.
 
 ## macOS Validation Gate
 
@@ -201,8 +206,9 @@ Before enabling managed ZeroTier configuration on the Mac:
 6. Confirm Tailscale continues to reach normal tailnet peers.
 
 There is an upstream ZeroTier report for macOS 26.2 where enabling managed
-configuration can install an invalid loopback default route. Treat this as a
-hard deployment gate until the installed client is verified on the Mac.
+configuration can install an invalid loopback default route. The current Mac
+passed this gate with ZeroTier 1.16.2 on macOS 26.2 build 25C56 on 2026-09-11.
+Repeat the route check after client or macOS upgrades.
 
 Once ZeroTier provides the Mac's remote home-LAN path, disable acceptance of
 the `192.168.1.0/24` Tailscale subnet route on that Mac. Tailscale can remain
