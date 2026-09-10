@@ -1,5 +1,6 @@
 members = {
   macbook = {
-    node_id = "0123456789"
+    node_id       = "0123456789"
+    active_bridge = false
   }
 }

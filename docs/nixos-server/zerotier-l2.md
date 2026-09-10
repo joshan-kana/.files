@@ -152,10 +152,16 @@ For a normal desktop member:
 ```hcl
 members = {
   macbook = {
-    node_id = "0123456789"
+    node_id       = "0123456789"
+    active_bridge = false
   }
 }
 ```
+
+Keep `active_bridge = false` for ordinary desktop clients. `activeBridge`
+permits a member to bridge additional Ethernet MAC addresses behind itself; the
+intended topology has exactly one such member, `nixos-server`. Only enable it
+for another deliberately configured Layer-2 bridge.
 
 The node ID is not an authentication secret. Never commit `identity.secret`,
 the local service API token, or OpenTofu state.
@@ -163,6 +169,21 @@ the local service API token, or OpenTofu state.
 After the member is authorized, join the generated network from the client.
 Normal desktop clients should accept managed private routes and addresses, but
 must not accept a ZeroTier default route or DNS configuration.
+
+## Validation Status
+
+The configuration and control plane can be validated without changing the live
+LAN, but that does not prove Bonjour end to end. Before marking this rollout
+complete, validate all three runtime boundaries:
+
+1. the current ZeroTier client on the current macOS release, including managed
+   address/route behaviour;
+2. the first `end0` to `br0` cutover on `nixos-server` with a recovery path;
+3. bidirectional mDNS/DNS-SD between the remote Mac and a physical-LAN device.
+
+Do not treat `zerotier-cli listnetworks` reporting `OK` as sufficient mDNS
+validation. Verify actual `.local` resolution and DNS-SD discovery across the
+bridge in both directions.
 
 ## macOS Validation Gate
 
