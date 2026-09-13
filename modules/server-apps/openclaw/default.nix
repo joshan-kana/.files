@@ -571,8 +571,12 @@ in
         | .gateway.trustedProxies = ["127.0.0.1", "::1"]
         | .gateway.auth = {
             "mode": "trusted-proxy",
+            "identityScopes": {
+              "${primary.name}": ["operator.admin"]
+            },
             "trustedProxy": {
               "userHeader": "x-forwarded-user",
+              "allowUsers": ["${primary.name}"],
               "requiredHeaders": [
                 "x-forwarded-proto",
                 "x-forwarded-host"
