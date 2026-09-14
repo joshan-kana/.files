@@ -275,6 +275,29 @@ in
   git =
     _:
     let
+      stash = pkgs.writeShellApplication {
+        name = "git-stash-editor";
+        runtimeInputs = [ pkgs.git ];
+        text = ''
+          if [ "$#" -gt 0 ]; then
+            exec git stash "$@"
+          fi
+
+          message_file="$(mktemp)"
+          trap 'rm -f "$message_file"' EXIT
+
+          editor="$(git var GIT_EDITOR)"
+          eval "$editor \"\$message_file\""
+
+          message="$(git stripspace --strip-comments < "$message_file")"
+          if [ -z "$message" ]; then
+            echo "Aborting stash due to empty message." >&2
+            exit 1
+          fi
+
+          exec git stash push -m "$message"
+        '';
+      };
       aliases = {
         gs = "git status";
         gl = "git log";
@@ -283,17 +306,20 @@ in
         ga = "git add";
         gc = "git commit";
         gca = "git commit -a";
+        gst = "git-stash-editor";
         gpl = "git pull";
         gph = "git push";
       };
     in
     {
+      environment.systemPackages = [ stash ];
       environment.shellAliases = aliases;
       programs.git.config = gitSettings // {
         gpg.format = gitSigningFormat;
       };
 
       home = _: {
+        home.packages = [ stash ];
         home.shellAliases = aliases;
         programs.git = {
           settings = gitSettings;
