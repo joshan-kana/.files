@@ -250,7 +250,9 @@
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
-              "--advertise-routes=${server.lan.subnet}"
+              # Site 1 4via6 mapping for 192.168.1.0/24 keeps the home LAN
+              # addressable even when a remote network uses the same IPv4 subnet.
+              "--advertise-routes=${server.lan.subnet},fd7a:115c:a1e0:b1a:0:1:c0a8:100/120"
               "--accept-dns=false"
             ];
             extraSetFlags = [ ];

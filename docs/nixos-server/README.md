@@ -74,9 +74,11 @@ The server joins Tailscale as an ephemeral tagged subnet router:
 tag:nixos-server
 ```
 
-It advertises `192.168.1.0/24`. Tailnet policy should auto-approve that route
-for `tag:nixos-server`. The Tailscale `100.x` address is disposable; use LAN
-URLs such as `http://192.168.1.3:8123` through the subnet route for stable access.
+It advertises `192.168.1.0/24` and the site-1 4via6 mapping
+`fd7a:115c:a1e0:b1a:0:1:c0a8:100/120`. Tailnet policy should auto-approve both
+routes for `tag:nixos-server`. 4via6 gives every home-LAN IPv4 device a
+collision-proof MagicDNS name such as `192-168-1-3-via-1`, even when the remote
+network also uses `192.168.1.0/24`.
 
 ## Install
 

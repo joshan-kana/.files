@@ -114,6 +114,9 @@ Create the Tailscale OAuth client on the user's machine:
     "routes": {
       "192.168.1.0/24": [
         "tag:nixos-server"
+      ],
+      "fd7a:115c:a1e0:b1a:0:1:c0a8:100/120": [
+        "tag:nixos-server"
       ]
     }
   }
@@ -132,10 +135,14 @@ printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tai
 
 The OAuth client ID is not needed for direct node registration with `tailscale up`.
 The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
-`192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
+`192.168.1.0/24` plus its site-1 4via6 mapping
+`fd7a:115c:a1e0:b1a:0:1:c0a8:100/120`, and relies on the policy above to approve
+both routes automatically. The 4via6 route gives the home LAN collision-proof
+MagicDNS names such as `192-168-1-3-via-1`.
 The Tailscale `100.x` address is disposable and may change after a reboot,
-maintenance window, or rebuild. Use the LAN address through the approved subnet
-route for stable service access, for example `http://192.168.1.3:8123`.
+maintenance window, or rebuild. Use the 4via6 MagicDNS name for collision-proof
+remote access, for example `192-168-1-3-via-1`; the ordinary LAN address remains
+available for direct local access.
 
 Authorize Dropbox with rclone on the user's machine.
 
