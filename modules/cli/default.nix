@@ -281,8 +281,8 @@ in
         gb = "git branch -a";
         gd = "git diff";
         ga = "git add";
-        gc = "git commit -m";
-        gca = "git commit -a -m";
+        gc = "git commit";
+        gca = "git commit -a";
         gpl = "git pull";
         gph = "git push";
       };
