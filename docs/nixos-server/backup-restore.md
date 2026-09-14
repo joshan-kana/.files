@@ -68,8 +68,8 @@ not included in this restic repository. See [Vault ZFS Storage](vault-storage.md
 for health checks, snapshot verification, and full-rebuild import instructions.
 
 Tailscale is a native service and uses its own state outside `/var/lib/apps`.
-Normal replacement installs enrol with `/root/secrets/tailscale-oauth-client-secret` instead
-of restoring an old Tailscale machine identity.
+Normal replacement installs enrol with the OAuth client credentials in `/root/secrets`
+instead of restoring an old Tailscale machine identity.
 
 ## Restic Repository
 
@@ -98,7 +98,8 @@ Secrets are split into two buckets:
 | OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
 | OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
 | OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
-| Tailscale first-boot auth key | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
+| Tailscale OAuth client ID | `/root/secrets/tailscale-oauth-client-id` | Separate encrypted copy |
+| Tailscale OAuth client secret | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
 | Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
 | Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
 

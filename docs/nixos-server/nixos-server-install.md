@@ -65,6 +65,7 @@ The bootstrap bundle should contain:
 $SECRETS_DIR/
   restic-password
   rclone.conf
+  tailscale-oauth-client-id
   tailscale-oauth-client-secret
   n8n.env
   openclaw.env
@@ -93,8 +94,9 @@ Required contents:
 
 - `restic-password`: restic repository password
 - `rclone.conf`: rclone config with a Dropbox remote named `dropbox`
-- `tailscale-oauth-client-secret`: Tailscale OAuth client secret used by the
-  NixOS Tailscale service to join as an ephemeral tagged subnet router
+- `tailscale-oauth-client-id`: Tailscale OAuth client ID used for API cleanup
+- `tailscale-oauth-client-secret`: Tailscale OAuth client secret used for API cleanup
+  and ephemeral node registration
 - `n8n.env`: runtime environment for the `n8n` container
 - `openclaw.env`: runtime environment for the OpenClaw container
 
@@ -121,16 +123,16 @@ Create the Tailscale OAuth client on the user's machine:
 ```
 
 3. Go to `Settings` -> `Trust credentials` / `OAuth clients`.
-4. Create an OAuth client with `auth_keys` write scope.
+4. Create an OAuth client with `auth_keys` and `devices:core` write scopes.
 5. Restrict the OAuth client to `tag:nixos-server`.
-6. Copy the OAuth client secret into the secrets directory:
+6. Copy the OAuth client ID and secret into the secrets directory:
 
 ```sh
+printf '%s\n' 'paste-the-tailscale-oauth-client-id-here' > "$SECRETS_DIR/tailscale-oauth-client-id" &&
 printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tailscale-oauth-client-secret" &&
-  chmod 600 "$SECRETS_DIR/tailscale-oauth-client-secret"
+  chmod 600 "$SECRETS_DIR/tailscale-oauth-client-id" "$SECRETS_DIR/tailscale-oauth-client-secret"
 ```
 
-The OAuth client ID is not needed for direct node registration with `tailscale up`.
 The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
 `192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
 The Tailscale `100.x` address is disposable and may change after a reboot,
