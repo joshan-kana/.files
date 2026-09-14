@@ -91,6 +91,7 @@ URLs such as `http://192.168.1.3:8123` through the subnet route for stable acces
 5. Create `/root/secrets` files:
    - `restic-password`
    - `rclone.conf`
+   - `tailscale-oauth-client-id`
    - `tailscale-oauth-client-secret`
    - `n8n.env`
    - `openclaw.env`
@@ -119,7 +120,8 @@ Special cases:
   restore pieces of `17e0cc66_openclaw_assistant/`.
 - Twingate is not restored. Tailscale replaces it. The server joins as an
   ephemeral tagged subnet router, advertises the LAN route, and uses the
-  OAuth client secret in `/root/secrets/tailscale-oauth-client-secret`.
+  OAuth client credentials in `/root/secrets/tailscale-oauth-client-id` and
+  `/root/secrets/tailscale-oauth-client-secret`.
 - Home Assistant's `secrets.yaml` is restored as part of
   `/var/lib/home-assistant/`.
 

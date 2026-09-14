@@ -226,6 +226,7 @@
         {
           config,
           lib,
+          pkgs,
           ...
         }:
 
@@ -268,6 +269,29 @@
               "multi-user.target"
             ];
             before = lib.mkForce [ "shutdown.target" ];
+            preStart = ''
+              if ${config.services.tailscale.package}/bin/tailscale status --json 2>/dev/null |
+                ${pkgs.jq}/bin/jq -e '.BackendState == "Running"' >/dev/null; then
+                exit 0
+              fi
+
+              token="$(${pkgs.curl}/bin/curl -fsS --max-time 5 \
+                --data-urlencode "client_id=$(cat ${server.secretsDir}/tailscale-oauth-client-id)" \
+                --data-urlencode "client_secret=$(cat ${server.secretsDir}/tailscale-oauth-client-secret)" \
+                --data-urlencode "scope=devices:core" \
+                --data-urlencode "tags=tag:nixos-server" \
+                https://api.tailscale.com/api/v2/oauth/token | \
+                ${pkgs.jq}/bin/jq -er .access_token)"
+
+              ${pkgs.curl}/bin/curl -fsS --max-time 5 -u "$token:" \
+                'https://api.tailscale.com/api/v2/tailnet/-/devices?isEphemeral=true&tags=tag%3Anixos-server' | \
+                ${pkgs.jq}/bin/jq -r \
+                  '.devices[] | select(.hostname == "${config.networking.hostName}") | .nodeId' | \
+                while read -r id; do
+                  ${pkgs.curl}/bin/curl -fsS --max-time 5 -X DELETE -u "$token:" \
+                    "https://api.tailscale.com/api/v2/device/$id" >/dev/null
+                done
+            '';
             serviceConfig = {
               Restart = "on-failure";
               RestartSec = "10s";
