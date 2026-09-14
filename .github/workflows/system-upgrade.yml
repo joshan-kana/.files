@@ -105,8 +105,11 @@ jobs:
             fi
 
             if [[ -n "$pr_number" ]]; then
+              if ! git merge-base --is-ancestor origin/main "origin/$UPGRADE_BRANCH"; then
+                gh pr update-branch "$pr_number" --repo "$GITHUB_REPOSITORY" --rebase
+                git fetch origin "$UPGRADE_BRANCH"
+              fi
               git switch -C "$UPGRADE_BRANCH" "origin/$UPGRADE_BRANCH"
-              git merge --no-edit origin/main
             else
               git switch -C "$UPGRADE_BRANCH" origin/main
             fi

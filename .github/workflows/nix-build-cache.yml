@@ -243,7 +243,7 @@ jobs:
           refresh_and_revalidate() {
             local old_head new_head
             old_head="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
-            gh pr update-branch "$pr_url" --repo "$REPOSITORY"
+            gh pr update-branch "$pr_url" --repo "$REPOSITORY" --rebase
 
             new_head="$old_head"
             for _ in {1..30}; do
@@ -271,7 +271,7 @@ jobs:
           fi
 
           # Re-read main immediately before merging. If it moved since the comparison,
-          # update the PR and validate the new combined head instead of merging stale CI.
+          # rebase the PR and validate the new head instead of merging stale CI.
           latest_base="$(gh api "repos/$REPOSITORY/branches/main" --jq .commit.sha)"
           if [[ "$latest_base" != "$base_sha" ]]; then
             echo "main moved during the merge check; refreshing system-upgrade first."
