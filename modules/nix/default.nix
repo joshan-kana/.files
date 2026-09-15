@@ -56,6 +56,7 @@ in
           protocol = "ssh-ng";
           sshUser = config.dotfiles.users.primary.name;
           sshKey = nixBuilderSecret;
+          publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUltSDMwckd3cm82d0V2UTltQkhoZ1k3TExtbTdjam9ibXcrSUJ2NjdRanEK";
           system = "aarch64-darwin";
           maxJobs = 12;
         }
@@ -64,6 +65,7 @@ in
           protocol = "ssh-ng";
           sshUser = config.dotfiles.users.primary.name;
           sshKey = nixBuilderSecret;
+          publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUM3bFdSS3h5cXFJWXhSckJ6cU83eU9vcVBKTWQ5R2ZQSU9oUnpMMEpGVUcK";
           system = "aarch64-linux";
           maxJobs = 12;
         }
