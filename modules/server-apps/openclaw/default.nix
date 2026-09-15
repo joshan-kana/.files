@@ -40,7 +40,7 @@ let
   };
 
   openclawGitHub = {
-    apiSecret = "${server.secretsDir}/openclaw-github.env";
+    apiSecret = "${server.secretsDir}/github-self-hosted-agents.env";
     privateKeySecret = "${server.secretsDir}/openclaw-github-id_ed25519";
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl

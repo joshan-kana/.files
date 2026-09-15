@@ -11,6 +11,7 @@ let
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
+  githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
   tunnelClientVersion = "0.0.11";
@@ -55,6 +56,10 @@ in
     }
   ];
 
+  security.sudo.extraConfig = ''
+    Defaults:${serviceUser} env_keep += "GH_TOKEN"
+  '';
+
   systemd.services.chatgpt-shell-access = {
     description = "ChatGPT shell access through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
@@ -65,6 +70,7 @@ in
       tunnelSecret
       macSshKeySecret
       sudoSshKeySecret
+      githubSecret
       macKnownHostsFile
     ];
 
@@ -73,6 +79,7 @@ in
       coreutils
       curl
       gawk
+      gh
       git
       gnugrep
       gnused
@@ -100,7 +107,10 @@ in
       User = serviceUser;
       RuntimeDirectory = "chatgpt-shell-access";
       RuntimeDirectoryMode = "0770";
-      EnvironmentFile = tunnelSecret;
+      EnvironmentFile = [
+        tunnelSecret
+        githubSecret
+      ];
       LoadCredential = [
         "chatgpt-shell-mac:${macSshKeySecret}"
         "chatgpt-shell-sudo:${sudoSshKeySecret}"
