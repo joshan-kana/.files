@@ -14,20 +14,7 @@ let
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
-  tunnelClientVersion = "0.0.11";
-  tunnelClientPlatform =
-    {
-      "aarch64-linux" = {
-        asset = "linux-arm64";
-        hash = "sha256-2LukeypyN5mjcrC4fX5NaTBAk9OiiDcjcxX+VAbZfnc=";
-      };
-      "x86_64-linux" = {
-        asset = "linux-amd64";
-        hash = "sha256-Ka3+XBOZ37n9qTg/IwwyQ1WRL1DcNuLkFrHxMiMXs8Q=";
-      };
-    }
-    .${pkgs.stdenv.hostPlatform.system}
-      or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
+  tunnelClient = import ../openai-tunnel-client.nix { inherit pkgs; };
 in
 {
   users.groups.${serviceUser} = { };
@@ -129,22 +116,7 @@ in
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
           /run/wrappers/bin/sudo -n -H -u ${primary.name} -- ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
-        exec ${
-          pkgs.runCommand "tunnel-client-${tunnelClientVersion}"
-            {
-              nativeBuildInputs = [ pkgs.unzip ];
-            }
-            ''
-              mkdir -p "$out/bin"
-              unzip -j ${
-                pkgs.fetchurl {
-                  url = "https://persistent.oaistatic.com/tunnel-client/v${tunnelClientVersion}/tunnel-client-v${tunnelClientVersion}-${tunnelClientPlatform.asset}.zip";
-                  inherit (tunnelClientPlatform) hash;
-                }
-              } tunnel-client -d "$out/bin"
-              chmod +x "$out/bin/tunnel-client"
-            ''
-        }/bin/tunnel-client run --log.level=info --log.format=struct-text
+        exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";
       RestartSec = "2s";

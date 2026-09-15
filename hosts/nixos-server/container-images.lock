@@ -1,6 +1,6 @@
 {
   "agent-mail": {
-    "digest": "sha256:1685ff317ae8adc824c21bc20227b11f0381c08f3f8f8062f1af722e24ba99c0",
+    "digest": "sha256:43181ac35adc3e03caebcd65df11dceb7269b94f9ae47d1da1c8caf76f3cf43a",
     "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
   },
   "home-assistant": {
@@ -10,6 +10,10 @@
   "matter-server": {
     "digest": "sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a",
     "source": "ghcr.io/home-assistant-libs/python-matter-server:stable"
+  },
+  "mcp-gateway": {
+    "digest": "sha256:89c3df1d31ed3c9eeabe720f26b632d03abf53fba8b041e2542b2f2d0c2832c7",
+    "source": "ghcr.io/ibm/mcp-context-forge:v1.0.9"
   },
   "n8n": {
     "digest": "sha256:b73045abaddb40cb4024e86eea1b1f69093501a7339f685a4cd486b7743d23ae",

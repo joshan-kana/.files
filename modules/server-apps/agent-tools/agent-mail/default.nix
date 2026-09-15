@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, ... }:
 
 let
   inherit (config.dotfiles) server;
@@ -7,8 +7,6 @@ let
   agentMailPort = 8765;
 in
 {
-  virtualisation.vmVariant.dotfiles.scopes.serverApps.agentMail.enable = lib.mkForce false;
-
   virtualisation.oci-containers.containers.agent-mail = {
     image = "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest";
     cmd = [
@@ -26,7 +24,7 @@ in
   # The upstream image runs as uid/gid 10001 and keeps all durable mailbox
   # state below /data.
   systemd.tmpfiles.rules = [
-    "d ${agentMailRoot} 0700 10001 10001 - -"
+    "d ${agentMailRoot} 0700 agent-tools agent-tools - -"
   ];
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ agentMailPort ];

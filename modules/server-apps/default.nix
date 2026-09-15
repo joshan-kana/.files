@@ -1,7 +1,6 @@
 _: {
-  agentMail = import ./agent-mail;
+  agentTools = import ./agent-tools;
   attic = import ./attic;
-  chatgptShellAccess = import ./chatgpt-shell-access;
   gitea = import ./gitea;
   homeAssistant = import ./home-assistant;
   hermesAgent = import ./hermes-agent;
