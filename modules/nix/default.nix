@@ -60,9 +60,9 @@ in
           maxJobs = 12;
         }
         {
-          hostName = "Joshans-MacBook-Pro.local:32222";
+          hostName = "Joshans-MacBook-Pro.local:32223";
           protocol = "ssh-ng";
-          sshUser = "nixos";
+          sshUser = config.dotfiles.users.primary.name;
           sshKey = nixBuilderSecret;
           system = "aarch64-linux";
           maxJobs = 12;

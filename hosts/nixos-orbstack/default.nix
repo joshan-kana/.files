@@ -1,4 +1,5 @@
 {
+  editScope,
   lib,
   moduleRegistry,
   modulesPath,
@@ -8,12 +9,38 @@
 {
   inherit (moduleRegistry)
     system
-    nix
     theme
     cli
-    networking
     virtualisation
     ;
+
+  networking = editScope moduleRegistry.networking {
+    ssh = { lib, ... }: {
+      services.openssh = {
+        enable = lib.mkForce true;
+        ports = [ 32223 ];
+      };
+    };
+  };
+
+  nix = editScope moduleRegistry.nix {
+    builders =
+      {
+        config,
+        inherited,
+        lib,
+        ...
+      }:
+      {
+        nix.buildMachines = lib.filter (
+          builder: builder.hostName != "Joshans-MacBook-Pro.local:32223"
+        ) inherited.nix.buildMachines;
+
+        users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEER0NqlNCN0MYwBhWKNnk8iNSApeiDPiXDziS5aU5jz nix-builder"
+        ];
+      };
+  };
 
   imports = [
     ./generated.nix
@@ -26,10 +53,7 @@
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     scopes = {
-      networking = {
-        mdns.enable = false;
-        ssh.enable = false;
-      };
+      networking.mdns.enable = false;
       virtualisation = {
         children.enable = false;
         vm.enable = true;
