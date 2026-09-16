@@ -247,6 +247,7 @@
             };
             extraDaemonFlags = [
               "--state=mem:"
+              "--statedir=/var/lib/tailscale"
             ];
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
@@ -297,6 +298,36 @@
               RestartSec = "10s";
             };
           };
+
+          calendarSync =
+            { config, ... }:
+            let
+              inherit (config.dotfiles) server;
+              webhookPath = "youtrack-calendar-a5c05b8c08849e7c2f7c";
+            in
+            {
+              systemd.services.tailscale-funnel-youtrack-calendar = {
+                description = "Expose the YouTrack calendar sync webhook through Tailscale Funnel";
+                after = [
+                  "tailscaled-autoconnect.service"
+                  "docker-n8n.service"
+                ];
+                wants = [ "docker-n8n.service" ];
+                wantedBy = [ "tailscaled-autoconnect.service" ];
+                script = ''
+                  ${config.services.tailscale.package}/bin/tailscale funnel \
+                    --bg \
+                    --yes \
+                    --https=443 \
+                    --set-path=/webhook/${webhookPath} \
+                    http://${server.lan.serverIp}:5678/webhook/${webhookPath}
+                '';
+                serviceConfig = {
+                  Type = "oneshot";
+                  RemainAfterExit = true;
+                };
+              };
+            };
         };
     };
   virtualisation = editScope moduleRegistry.virtualisation {
