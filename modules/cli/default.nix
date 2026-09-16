@@ -304,6 +304,7 @@ in
         gb = "git branch -a";
         gd = "git diff";
         ga = "git add";
+        grt = "git restore";
         gc = "git commit";
         gca = "git commit -a";
         gst = "git-stash-editor";
