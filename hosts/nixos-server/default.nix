@@ -30,12 +30,10 @@
     scopes.virtualisation = {
       children.enable = false;
       containers.enable = true;
-      vm = {
-        enable = true;
-        aliases.enable = false;
-      };
+      vm.enable = true;
     };
     scopes.cli = {
+      systemCommands.vm.enable = false;
       clipboard.enable = false;
       mpv.enable = false;
       ollama.enable = false;

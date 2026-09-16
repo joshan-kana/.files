@@ -9,26 +9,6 @@ let
   inherit (config) dotfiles;
   inherit (dotfiles.users) primary;
   repoPath = dotfiles.paths.repoPath;
-  systemCommands = {
-    cd = "cd $DOTFILES";
-    flakeUpdate = "nix run ${repoPath}#system-upgrade --";
-    rebuild =
-      action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
-  };
-  systemAliases = {
-    syscd = systemCommands.cd;
-    scd = systemCommands.cd;
-    sysfu = systemCommands.flakeUpdate;
-    sfu = systemCommands.flakeUpdate;
-    sysbld = systemCommands.rebuild "build";
-    sbld = systemCommands.rebuild "build";
-    sysboot = systemCommands.rebuild "boot";
-    sboot = systemCommands.rebuild "boot";
-    sysup = systemCommands.rebuild "switch";
-    sup = systemCommands.rebuild "switch";
-    systest = systemCommands.rebuild "test";
-    stest = systemCommands.rebuild "test";
-  };
   gitSettings = {
     user = {
       name = primary.fullName;
@@ -128,10 +108,28 @@ in
     home.sessionVariables = sessionVariables;
   };
 
-  nh =
-    args:
+  systemCommands =
+    _:
     let
-      aliases = systemAliases // {
+      commands = {
+        cd = "cd $DOTFILES";
+        flakeUpdate = "nix run ${repoPath}#system-upgrade --";
+        rebuild =
+          action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+      };
+      aliases = {
+        syscd = commands.cd;
+        scd = commands.cd;
+        sysfu = commands.flakeUpdate;
+        sfu = commands.flakeUpdate;
+        sysbld = commands.rebuild "build";
+        sbld = commands.rebuild "build";
+        sysboot = commands.rebuild "boot";
+        sboot = commands.rebuild "boot";
+        sysup = commands.rebuild "switch";
+        sup = commands.rebuild "switch";
+        systest = commands.rebuild "test";
+        stest = commands.rebuild "test";
         edit = "edit-config";
         sedit = "edit-config";
         sysedit = "edit-config";
@@ -150,14 +148,45 @@ in
     {
       environment.shellAliases = aliases;
       environment.systemPackages = [ editConfig ];
-      inherit ((nhConfig args)) programs;
 
-      home = args: {
+      home = _: {
         home.packages = [ editConfig ];
         home.shellAliases = aliases;
-        inherit ((nhConfig args)) programs;
       };
+
+      vm =
+        { pkgs, ... }:
+        let
+          aliases = {
+            sysvm = "build-vm";
+            svm = "build-vm";
+          };
+          buildVm = pkgs.writeShellApplication {
+            name = "build-vm";
+            text = ''
+              read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
+              sudo nixos-rebuild --flake "$DOTFILES#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
+            '';
+          };
+        in
+        {
+          environment.shellAliases = aliases;
+          environment.systemPackages = [ buildVm ];
+
+          home = _: {
+            home.shellAliases = aliases;
+            home.packages = [ buildVm ];
+          };
+        };
     };
+
+  nh = args: {
+    inherit ((nhConfig args)) programs;
+
+    home = args: {
+      inherit ((nhConfig args)) programs;
+    };
+  };
 
   direnv =
     args:
