@@ -36,6 +36,7 @@ let
     };
     init.defaultBranch = "main";
     pull.rebase = true;
+    commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
   toml = pkgs.formats.toml { };
