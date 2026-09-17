@@ -85,6 +85,11 @@ The full repository URI used by NixOS is:
 rclone:dropbox:Archives/Backups/nixos-server
 ```
 
+Scheduled backups expect this repository to already exist. Initialize a new
+repository explicitly with `sudo restic-apps init`; replacement installs reuse
+the existing repository and must keep its existing restic password so backups
+and restores can open it.
+
 ## What About Secrets?
 
 Secrets are split into two buckets:
