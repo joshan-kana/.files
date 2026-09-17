@@ -348,6 +348,16 @@ ssh "joshan@$SERVER" '
   '
 ```
 
+For a brand-new deployment with no existing restic repository, initialize it
+once after the secrets are installed:
+
+```sh
+ssh -t "joshan@$SERVER" 'sudo restic-apps init'
+```
+
+Do not run `restic-apps init` when replacing a server that already has backups.
+Reuse the existing repository and its existing `restic-password` instead.
+
 ## Restore Mutable App Data
 
 For a replacement NixOS server with an existing restic backup, restore the app
