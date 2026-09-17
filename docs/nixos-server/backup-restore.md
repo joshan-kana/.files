@@ -6,7 +6,7 @@ NixOS manages the normal backup/rollback machinery:
 
 - `services.snapper`: creates local `/var/lib/apps` snapshots every 15 minutes.
 - `services.restic.backups.apps`: backs up app data to Dropbox every
-  30 minutes.
+  30 minutes and clears stale restic repository locks before each run.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
   explicit persistent storage.
 
