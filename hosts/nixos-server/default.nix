@@ -445,13 +445,10 @@
       };
 
       services.restic.backups.apps = {
-        initialize = true;
         repository = "rclone:dropbox:Archives/Backups/nixos-server";
         backupPrepareCommand = ''
           #!${pkgs.runtimeShell}
-          if ${pkgs.restic}/bin/restic cat config --no-lock >/dev/null 2>&1; then
-            ${pkgs.restic}/bin/restic unlock
-          fi
+          ${pkgs.restic}/bin/restic unlock
         '';
         passwordFile = "${server.secretsDir}/restic-password";
         rcloneConfigFile = "${server.secretsDir}/rclone.conf";
