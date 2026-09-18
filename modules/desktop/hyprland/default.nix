@@ -55,7 +55,7 @@ in
     home = _: {
       programs.rofi = {
         package = pkgs.rofi;
-        terminal = "kitty";
+        settings.terminal = "kitty";
         plugins = with pkgs; [ rofi-calc ];
       };
     };

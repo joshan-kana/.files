@@ -265,6 +265,7 @@
             ./modules/options
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
+            ./overlays/libreoffice.nix
             (semantic.rootModule hostScopeWithFile)
           ]
           ++ extraModules;
