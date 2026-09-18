@@ -58,6 +58,7 @@
         children.enable = false;
         vm.enable = true;
       };
+      cli.codex.enable = false;
     };
   };
 
