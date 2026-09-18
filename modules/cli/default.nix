@@ -462,7 +462,10 @@ in
 
       home = _: {
         home.shellAliases = aliases;
-        programs.gh.extensions = [ pkgs.gh-dash ];
+        programs.gh.extensions = [
+          pkgs.gh-dash
+          pkgs.gh-stack
+        ];
         xdg.configFile."gh-dash/config.yml" = {
           source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
             defaults = {
