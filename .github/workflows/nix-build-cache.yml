@@ -43,7 +43,7 @@ jobs:
             >/dev/null
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -110,7 +110,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Expand Nix store
         uses: wimpysworld/nothing-but-nix@v10
@@ -158,7 +158,7 @@ jobs:
 
       - name: Upload build-path report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: built-path-${{ matrix.profile }}
           path: ${{ runner.temp }}/built-paths.txt
