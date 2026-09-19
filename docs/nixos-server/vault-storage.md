@@ -16,7 +16,7 @@ Mirroring and snapshots are not offsite backups.
 
 ## Physical Setup And Safety
 
-Connect both drives to USB 3.x ports with the verified USB 3.0 cables. Pool creation is a one-time, explicit operation because it erases both
+Connect both drives to USB 3.x ports with the verified USB 3.x cables. Pool creation is a one-time, explicit operation because it erases both
 drives. Normal NixOS activation only enables ZFS import, scrubs, and snapshots;
 it never wipes disks or creates the pool.
 
