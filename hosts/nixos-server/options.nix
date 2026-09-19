@@ -47,10 +47,18 @@ in
           description = "Name of the ZFS pool used for bulk server storage.";
         };
 
-        group.name = mkOption {
-          type = types.str;
-          default = "server-data";
-          description = "Group allowed to collaborate on bulk server data.";
+        group = {
+          name = mkOption {
+            type = types.str;
+            default = "server-data";
+            description = "Group allowed to collaborate on bulk server data.";
+          };
+
+          id = mkOption {
+            type = types.ints.positive;
+            default = 990;
+            description = "Fixed numeric ID for the bulk server data group.";
+          };
         };
 
         scrubInterval = mkOption {

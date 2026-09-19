@@ -380,12 +380,28 @@
       users = {
         groups = {
           ${storage.appData.group.name}.gid = storage.appData.group.id;
-          ${storage.dataRoot.group.name} = { };
+          ${storage.dataRoot.group.name}.gid = storage.dataRoot.group.id;
+          atticd.gid = 999;
+          matrix-bridge.gid = 996;
         };
-        users.${primary.name}.extraGroups = [
-          storage.appData.group.name
-          storage.dataRoot.group.name
-        ];
+
+        users = {
+          ${primary.name}.extraGroups = [
+            storage.appData.group.name
+            storage.dataRoot.group.name
+          ];
+
+          adguardhome.uid = 999;
+          atticd.uid = 998;
+          hermes.uid = 994;
+          matrix-bridge.uid = 992;
+        }
+        // lib.optionalAttrs config.services.gitea.enable {
+          gitea.uid = 995;
+        }
+        // lib.optionalAttrs config.services.immich.enable {
+          immich.uid = 993;
+        };
       };
 
       environment.systemPackages = with pkgs; [
@@ -595,9 +611,10 @@
       home = _: {
         programs.ssh = {
           enable = true;
-          matchBlocks."github.com" = {
-            identityFile = "${config.dotfiles.secretsDir}/id_ed25519";
-            identitiesOnly = true;
+          enableDefaultConfig = false;
+          settings."github.com" = {
+            IdentityFile = "${config.dotfiles.secretsDir}/id_ed25519";
+            IdentitiesOnly = true;
           };
         };
       };
