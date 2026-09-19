@@ -3,6 +3,7 @@ _: {
   chatgptShellAccess = import ./chatgpt-shell-access;
   gitea = import ./gitea;
   homeAssistant = import ./home-assistant;
+  hermesAgent = import ./hermes-agent;
   immich = import ./immich;
   matrix = import ./matrix;
   matterServer = import ./matter-server;
