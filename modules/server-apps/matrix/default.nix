@@ -125,8 +125,9 @@ let
   };
 in
 {
-  users.groups.${bridgeUser} = { };
+  users.groups.${bridgeUser}.gid = 996;
   users.users.${bridgeUser} = {
+    uid = 992;
     isSystemUser = true;
     group = bridgeUser;
     extraGroups = [ appData.group.name ];

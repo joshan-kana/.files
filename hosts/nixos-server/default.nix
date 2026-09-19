@@ -157,6 +157,7 @@
           networking.firewall.allowedUDPPorts = [ service.port ];
 
           users.users.${service.user} = {
+            uid = 999;
             isSystemUser = true;
             inherit (service) group;
           };
@@ -385,32 +386,12 @@
         groups = {
           ${storage.appData.group.name}.gid = storage.appData.group.id;
           ${storage.dataRoot.group.name}.gid = storage.dataRoot.group.id;
-          atticd.gid = 999;
-          matrix-bridge.gid = 996;
-          redis-immich.gid = 993;
         };
 
-        users = {
-          ${primary.name}.extraGroups = [
-            storage.appData.group.name
-            storage.dataRoot.group.name
-          ];
-
-          adguardhome.uid = 999;
-          atticd.uid = 998;
-          hermes.uid = 994;
-          matrix-bridge.uid = 992;
-          redis-immich = {
-            uid = 989;
-            group = "redis-immich";
-          };
-        }
-        // lib.optionalAttrs config.services.gitea.enable {
-          gitea.uid = 995;
-        }
-        // lib.optionalAttrs config.services.immich.enable {
-          immich.uid = 993;
-        };
+        users.${primary.name}.extraGroups = [
+          storage.appData.group.name
+          storage.dataRoot.group.name
+        ];
       };
 
       environment.systemPackages = with pkgs; [

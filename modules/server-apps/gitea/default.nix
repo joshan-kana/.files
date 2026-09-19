@@ -4,6 +4,10 @@ let
   inherit (config.dotfiles) server;
 in
 {
+  users.users = lib.mkIf config.services.gitea.enable {
+    gitea.uid = 995;
+  };
+
   services.gitea = {
     enable = true;
     stateDir = "${server.storage.appData.root}/gitea";
