@@ -47,10 +47,8 @@ it runs on.
 ## AdGuard Shim
 
 Docker macvlan networks isolate the parent host from the container. The second
-macvlan address on the host lets the Pi itself and host-networked Home
-Assistant reach AdGuard. The macvlan parent interface is detected at runtime
-from the default IPv4 route, so the config does not depend on whether the Pi
-Ethernet interface is named `end0`, `eth0`, or something else.
+macvlan address on the host lets host-networked services reach AdGuard. The
+macvlan parent interface is detected at runtime from the default IPv4 route.
 
 The server networking configuration creates:
 
@@ -75,24 +73,8 @@ URLs such as `http://192.168.1.3:8123` through the subnet route for stable acces
 
 ## Install
 
-1. Boot the OptiPlex from the NixOS installer with the Vault HDDs disconnected.
-2. Wipe and partition only the internal NVMe, create the `BOOT` and `ROOT` filesystems, and create `/var/lib/apps` as a Btrfs subvolume.
-3. Install the `nixos-server` flake target and boot from the NVMe.
-4. Copy or clone this repo to `/home/joshan/.files`, keeping Git metadata so
-   later `git pull` updates work on the server.
-   Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
-   after copying/cloning so `docs/infrastructure-docs` is present.
-5. Install the backup-recovery files from the external recovery store under
-   `/var/lib/backup-credentials`: the recovery `rclone.conf` and the
-   `nixos-server` secrets-repository password.
-6. Restore `/root/secrets` and `/home/joshan/.secrets` from
-   `rclone:dropbox:Archives/Backups/secrets/nixos-server`.
-7. Restore app data into `/var/lib/...` using the mapping below.
-8. Apply the system:
-
-```sh
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
-```
+Use [NixOS Server Install Guide](nixos-server-install.md) for bare-metal install
+and full-system recovery.
 
 ## Restore Map
 
@@ -260,12 +242,13 @@ image digest does not necessarily undo a completed migration.
 `virtualisation.vmVariant` lets `nixos-rebuild build-vm --flake .#nixos-server`
 produce a test VM from the same host definition.
 
-Shared VM sizing and build aliases live under `virtualisation.vm`; the server-specific safety overrides are nested under `virtualisation.vm.safety` because the real Pi assumptions do not fit a VM:
+Shared VM sizing and build aliases live under `virtualisation.vm`; the
+server-specific safety overrides are nested under `virtualisation.vm.safety`:
 
 - Snapper and restic are disabled because the VM is just for build/testing and
   should not try to snapshot or back up fake data.
 - The AdGuard macvlan unit is disabled because a QEMU VM does not have the
-  real LAN interface used by the Pi deployment.
+  server's physical LAN interface.
 - AdGuard falls back from a dedicated macvlan IP to normal published ports so
   the service can still start inside the VM.
 
