@@ -6,6 +6,7 @@ Server app modules should describe the complete app-specific system consequence 
 
 - Enabled apps are expected to run. Missing required runtime secrets should fail the service with a systemd assertion rather than silently skip it.
 - Secrets remain runtime files under `config.dotfiles.server.secretsDir`; Nix evaluation and builds must not read or probe them.
+- Register each required runtime secret path in `dotfiles.secrets.requiredFiles` from the same local path value used by the app. This declares provisioning demand without coupling the app to a secret provider.
 - Name secret-path values for what they are (for example `n8nSecret`). Optional credentials should only gate the optional feature that consumes them.
 
 ## Networking

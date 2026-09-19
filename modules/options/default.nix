@@ -52,6 +52,8 @@ let
   ) (builtins.attrNames config.dotfiles.scopes);
 in
 {
+  imports = [ ./secrets.nix ];
+
   options.dotfiles = {
     profile.name = mkOption {
       type = types.str;

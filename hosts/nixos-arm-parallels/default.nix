@@ -12,6 +12,7 @@
     nix
     theme
     cli
+    secrets
     networking
     appimage
     audio

@@ -54,136 +54,20 @@ Set these variables on the user's machine:
 ```sh
 export REPO_DIR="$HOME/.files"
 export BUILD_HOST="orb"
-export SECRETS_DIR="$HOME/.secrets"
 ```
 
-## Secrets Bundle
+## Runtime Secrets
 
-The bootstrap bundle should contain:
+Runtime secret values are stored in Doppler and materialized as local files
+after boot. The image contains the Doppler tooling and secret requirements, but
+it contains neither secret values nor Service Tokens.
 
-```text
-$SECRETS_DIR/
-  restic-password
-  rclone.conf
-  tailscale-oauth-client-id
-  tailscale-oauth-client-secret
-  n8n.env
-  openclaw.env
-  id_ed25519
-  id_ed25519.pub
-```
+See `docs/nixos-server/doppler-secrets.md` for the scope model, one-time
+migration, token locations, and recovery procedure.
 
-Run this on the user's machine before copying files to the Pi.
-
-### If secrets do not exist (first run only)
-
-Run this only on the first install if the secrets bundle does not already
-exist:
-
-```sh
-mkdir -p "$SECRETS_DIR" &&
-  chmod 700 "$SECRETS_DIR" &&
-  cp "$HOME/.ssh/id_ed25519" "$SECRETS_DIR/" &&
-  cp "$HOME/.ssh/id_ed25519.pub" "$SECRETS_DIR/" &&
-  openssl rand -base64 32 > "$SECRETS_DIR/restic-password" &&
-  touch "$SECRETS_DIR/n8n.env" "$SECRETS_DIR/openclaw.env" &&
-  chmod 600 "$SECRETS_DIR/"*
-```
-
-Required contents:
-
-- `restic-password`: restic repository password
-- `rclone.conf`: rclone config with a Dropbox remote named `dropbox`
-- `tailscale-oauth-client-id`: Tailscale OAuth client ID used for API cleanup
-- `tailscale-oauth-client-secret`: Tailscale OAuth client secret used for API cleanup
-  and ephemeral node registration
-- `n8n.env`: runtime environment for the `n8n` container
-- `openclaw.env`: runtime environment for the OpenClaw container
-
-Create the Tailscale OAuth client on the user's machine:
-
-1. Open the Tailscale admin console.
-2. Configure the tailnet policy before creating the OAuth client:
-
-```json
-{
-  "tagOwners": {
-    "tag:nixos-server": [
-      "autogroup:admin"
-    ]
-  },
-  "autoApprovers": {
-    "routes": {
-      "192.168.1.0/24": [
-        "tag:nixos-server"
-      ]
-    }
-  }
-}
-```
-
-3. Go to `Settings` -> `Trust credentials` / `OAuth clients`.
-4. Create an OAuth client with `auth_keys` and `devices:core` write scopes.
-5. Restrict the OAuth client to `tag:nixos-server`.
-6. Copy the OAuth client ID and secret into the secrets directory:
-
-```sh
-printf '%s\n' 'paste-the-tailscale-oauth-client-id-here' > "$SECRETS_DIR/tailscale-oauth-client-id" &&
-printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tailscale-oauth-client-secret" &&
-  chmod 600 "$SECRETS_DIR/tailscale-oauth-client-id" "$SECRETS_DIR/tailscale-oauth-client-secret"
-```
-
-The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
-`192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
-The Tailscale `100.x` address is disposable and may change after a reboot,
-maintenance window, or rebuild. Use the LAN address through the approved subnet
-route for stable service access, for example `http://192.168.1.3:8123`.
-
-Authorize Dropbox with rclone on the user's machine.
-
-In the rclone prompts:
-
-1. choose `n` for a new remote
-2. name the remote exactly `dropbox`
-3. choose Dropbox as the storage provider
-4. allow browser authorization when prompted
-5. finish and save the remote
-
-Copy the finished rclone config into the secrets directory:
-
-```sh
-nix shell nixpkgs#rclone -c rclone config
-cp "$HOME/.config/rclone/rclone.conf" "$SECRETS_DIR/rclone.conf" &&
-  chmod 600 "$SECRETS_DIR/rclone.conf"
-```
-
-Create the Dropbox folder used by restic:
-
-```sh
-nix shell nixpkgs#rclone -c rclone mkdir dropbox:Archives/Backups/nixos-server
-```
-
-Test the remote:
-
-```sh
-nix shell nixpkgs#rclone -c rclone lsd dropbox:Archives/Backups
-```
-
-If the authorization has to be done for a headless machine, use rclone's remote
-authorization flow from a machine with a browser:
-
-```sh
-nix shell nixpkgs#rclone -c rclone authorize dropbox
-```
-
-Paste the returned token into `rclone config` when it asks for remote
-authorization, then copy the resulting `rclone.conf` into `SECRETS_DIR`.
-
-`n8n.env` should at least contain a durable encryption key:
-
-```text
-N8N_ENCRYPTION_KEY=replace-this-with-a-long-random-value
-```
+Keep recovery copies of the read-only Service Tokens in Bitwarden. Do not
+recreate or rotate the underlying application credentials merely because a
+server is being rebuilt.
 
 ## Build The SD Card Image
 
@@ -306,46 +190,63 @@ Immediately change the temporary first-boot password:
 passwd
 ```
 
-## Copy Repo And Secrets
+## Copy Repo And Provision Secrets
 
-Copy the local repo and secrets bundle to the server, then install the GitHub SSH
-key for authentication:
+Copy the local repository to the server. Runtime secrets are fetched from
+Doppler rather than copied from a Mac secret bundle.
 
 ```sh
 export SERVER="192.168.1.3"
 
-ssh "joshan@$SERVER" '
-  rm -rf /tmp/.secrets &&
-  mkdir -p /tmp/.secrets /home/joshan/.files
-' &&
+ssh "joshan@$SERVER" 'mkdir -p /home/joshan/.files' &&
   nix shell nixpkgs#rsync -c sh -eu -c '
     rsync -ah --delete --info=progress2 \
       --exclude /result \
       --exclude /.direnv \
       "$REPO_DIR"/ \
       "joshan@$SERVER:/home/joshan/.files/"
-
-    rsync -ah --delete --info=progress2 \
-      "$SECRETS_DIR"/ \
-      "joshan@$SERVER:/tmp/.secrets/"
-  ' &&
-  ssh -t "joshan@$SERVER" '
-    set -e
-
-    sudo install -d -m 700 /root/secrets
-    sudo cp -a /tmp/.secrets/. /root/secrets/
-    sudo chown -R root:root /root/secrets
-    sudo chmod 700 /root/secrets
-    sudo find /root/secrets -type f -exec chmod 600 {} +
-
-    sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh
-    sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
-    sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
-    sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts
-    sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
-
-    rm -rf /tmp/.secrets /tmp/github-known-hosts
   '
+```
+
+Install the `nixos-server` system read-only Service Token from Bitwarden
+without placing it in shell history:
+
+```sh
+ssh -t "joshan@$SERVER" '
+  set -e
+  read -rsp "System Doppler token: " DOPPLER_TOKEN
+  printf "\n"
+  sudo install -d -m 700 /var/lib/doppler-secrets
+  printf "DOPPLER_TOKEN=%s\n" "$DOPPLER_TOKEN" |
+    sudo install -m 600 -o root -g root /dev/stdin /var/lib/doppler-secrets/system.env
+  unset DOPPLER_TOKEN
+  sudo systemctl start doppler-secrets-system
+'
+```
+
+Install the server user read-only token separately:
+
+```sh
+ssh -t "joshan@$SERVER" '
+  set -e
+  read -rsp "User Doppler token: " DOPPLER_TOKEN
+  printf "\n"
+  install -d -m 700 "$HOME/.config/doppler-secrets"
+  printf "DOPPLER_TOKEN=%s\n" "$DOPPLER_TOKEN" |
+    install -m 600 /dev/stdin "$HOME/.config/doppler-secrets/user.env"
+  unset DOPPLER_TOKEN
+  systemctl --user start doppler-secrets-user
+'
+```
+
+Verify the services and filenames without printing secret contents:
+
+```sh
+ssh "joshan@$SERVER" '
+  systemctl status doppler-secrets-system --no-pager
+  systemctl --user status doppler-secrets-user --no-pager
+  sudo find /root/secrets -maxdepth 1 -type f -printf "%f\n" | sort
+'
 ```
 
 For a brand-new deployment with no existing restic repository, initialize it

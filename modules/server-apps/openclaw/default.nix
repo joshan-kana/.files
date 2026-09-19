@@ -166,6 +166,12 @@ let
 
 in
 {
+  dotfiles.secrets.requiredFiles = openclawSecrets ++ [
+    openclawHostAdmin.privateKeySecret
+    openclawGitHub.apiSecret
+    openclawGitHub.privateKeySecret
+  ];
+
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
   users.users.${openclawHostAdmin.user} = {
@@ -190,12 +196,13 @@ in
   system.activationScripts.openclawHostAdminAuthorizedKeys = {
     deps = [ "users" ];
     text = ''
-      keyFile="${openclawHostAdmin.privateKeySecret}.pub"
+      keyFile="${openclawHostAdmin.privateKeySecret}"
       home="/home/${openclawHostAdmin.user}"
 
       if [ -f "$keyFile" ]; then
         ${pkgs.coreutils}/bin/install -d -m 0700 -o ${openclawHostAdmin.user} -g users "$home/.ssh"
-        ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " openclaw-host-admin@nixos-server" }' "$keyFile" > "$home/.ssh/authorized_keys"
+        ${pkgs.openssh}/bin/ssh-keygen -y -f "$keyFile" |
+          ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " openclaw-host-admin@nixos-server" }' > "$home/.ssh/authorized_keys"
         ${pkgs.coreutils}/bin/chown ${openclawHostAdmin.user}:users "$home/.ssh/authorized_keys"
         ${pkgs.coreutils}/bin/chmod 0600 "$home/.ssh/authorized_keys"
       fi

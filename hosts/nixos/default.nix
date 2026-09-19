@@ -11,6 +11,7 @@
     system
     nix
     theme
+    secrets
     networking
     appimage
     audio

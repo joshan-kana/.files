@@ -11,6 +11,7 @@
     system
     theme
     cli
+    secrets
     virtualisation
     ;
 
@@ -49,7 +50,6 @@
 
   dotfiles = {
     profile.name = "nixos-orbstack";
-    secretsDir = "/Users/joshan/.secrets";
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     scopes = {

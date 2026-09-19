@@ -3,6 +3,7 @@
   nix = import ./nix;
   theme = import ./theme;
   cli = import ./cli;
+  secrets = import ./secrets;
   networking = import ./networking;
   appimage = import ./appimage;
   audio = import ./audio;

@@ -51,8 +51,8 @@ sudo docker exec openclaw openclaw-repository git infrastructure-docs status --s
 - Complete deployment: run `sudo nixos-rebuild switch --rollback` or boot the
   previous generation.
 
-This rollback does not modify Joshan's existing
-`/root/secrets/id_ed25519` key.
+This rollback does not modify the primary user's own GitHub SSH identity.
+OpenClaw uses its dedicated GitHub and host-admin credentials instead.
 
 ## Ollama Proxy
 

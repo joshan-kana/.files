@@ -11,6 +11,8 @@ let
   nixBuilderSecret = "${config.dotfiles.server.secretsDir or config.dotfiles.secretsDir}/nix-builder";
 in
 {
+  dotfiles.secrets.requiredFiles = [ "${config.dotfiles.secretsDir}/attic-token" ];
+
   nixpkgs.config.allowUnfree = true;
 
   nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
@@ -48,6 +50,8 @@ in
   };
 
   builders = _: {
+    dotfiles.secrets.requiredFiles = [ nixBuilderSecret ];
+
     nix = {
       distributedBuilds = true;
       buildMachines = [

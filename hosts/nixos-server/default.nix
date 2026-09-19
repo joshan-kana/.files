@@ -1,4 +1,5 @@
 {
+  config,
   editScope,
   inputs,
   moduleRegistry,
@@ -11,6 +12,7 @@
     system
     theme
     cli
+    secrets
     serverApps
     ;
 
@@ -50,6 +52,20 @@
       nvd.enable = false;
       nixTree.enable = false;
       python3.enable = false;
+    };
+
+    secrets = {
+      requiredFiles = [
+        "${config.dotfiles.server.secretsDir}/rclone.conf"
+        "${config.dotfiles.server.secretsDir}/restic-password"
+        "${config.dotfiles.server.secretsDir}/tailscale-oauth-client-id"
+        "${config.dotfiles.server.secretsDir}/tailscale-oauth-client-secret"
+      ];
+      mutableFiles = [ "${config.dotfiles.server.secretsDir}/rclone.conf" ];
+      doppler.system = {
+        enable = true;
+        targetDir = config.dotfiles.server.secretsDir;
+      };
     };
   };
 

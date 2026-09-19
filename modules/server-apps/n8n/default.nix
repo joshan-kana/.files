@@ -6,6 +6,8 @@ let
   n8nSecret = "${server.secretsDir}/n8n.env";
 in
 {
+  dotfiles.secrets.requiredFiles = [ n8nSecret ];
+
   virtualisation.oci-containers.containers.n8n = {
     image = "docker.io/n8nio/n8n:latest";
 

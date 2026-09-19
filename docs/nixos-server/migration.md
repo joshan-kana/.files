@@ -29,7 +29,7 @@ keeping one-off parser scripts in this repo.
 
 1. Install NixOS with the server image.
 2. Copy the local repo to `/home/joshan/.files`.
-3. Install `/root/secrets`.
+3. Provision `/root/secrets` from Doppler.
 4. Extract and stage the Home Assistant backup at `/var/lib/restore/ha-backup`.
 5. Restore app data into `/var/lib/apps/...`.
 6. Switch the profile.
@@ -38,10 +38,11 @@ keeping one-off parser scripts in this repo.
 
 Run this from the user's machine after the NixOS server has booted and SSH works:
 
+Complete the Doppler bootstrap in `docs/nixos-server/doppler-secrets.md` first so the required runtime secret files already exist.
+
 ```sh
 export SERVER="192.168.1.3"
 export REPO_DIR="$HOME/.files"
-export SECRETS_DIR="$HOME/.secrets"
 export HA_BACKUP_ARCHIVE="$HOME/Downloads/home_assistant_main_backup.tar"
 export HA_BACKUP_DIR="$(dirname "$HA_BACKUP_ARCHIVE")/extracted-home-assistant-backup"
 export STAGE_DIR="/var/lib/restore/ha-backup"
@@ -58,9 +59,9 @@ rm -rf "$HA_BACKUP_DIR" &&
     done
   ' sh {} + &&
   ssh -t "joshan@$SERVER" "
-    sudo rm -rf '$STAGE_DIR' /tmp/.secrets &&
+    sudo rm -rf '$STAGE_DIR' &&
     sudo install -d -m 0750 -o joshan -g users '$STAGE_DIR' &&
-    mkdir -p /tmp/.secrets /home/joshan/.files
+    mkdir -p /home/joshan/.files
   " &&
   nix shell nixpkgs#rsync -c sh -eu -c '
     rsync -ah --delete --info=progress2 \
@@ -68,10 +69,6 @@ rm -rf "$HA_BACKUP_DIR" &&
       --exclude /.direnv \
       "$REPO_DIR"/ \
       "joshan@$SERVER:/home/joshan/.files/"
-
-    rsync -ah --delete --info=progress2 \
-      "$SECRETS_DIR"/ \
-      "joshan@$SERVER:/tmp/.secrets/"
 
     rsync -ah --delete --partial --append-verify --info=progress2 \
       -e "ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=60" \
@@ -94,18 +91,6 @@ rm -rf "$HA_BACKUP_DIR" &&
       docker-n8n.service \
       docker-openclaw.service \
       2>/dev/null || true
-
-    sudo install -d -m 700 /root/secrets
-    sudo cp -a /tmp/.secrets/. /root/secrets/
-    sudo chown -R root:root /root/secrets
-    sudo chmod 700 /root/secrets
-    sudo find /root/secrets -type f -exec chmod 600 {} +
-
-    sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh
-    sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
-    sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
-    sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts
-    sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
 
     sudo install -d -m 0750 \
       "$APP_DATA_ROOT/home-assistant" \
@@ -134,7 +119,6 @@ rm -rf "$HA_BACKUP_DIR" &&
     restore_dir "$STAGE_DIR/homeassistant/data/.config/openclaw" "$APP_DATA_ROOT/openclaw-auth"
 
     sudo chown -R root:root "$APP_DATA_ROOT"
-    rm -rf /tmp/.secrets /tmp/github-known-hosts
     sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
   '
 ```

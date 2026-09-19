@@ -125,6 +125,9 @@ let
   };
 in
 {
+  dotfiles.secrets.requiredFiles = [ bbctlSecret ];
+  dotfiles.secrets.mutableFiles = [ bbctlSecret ];
+
   users.groups.${bridgeUser} = { };
   users.users.${bridgeUser} = {
     isSystemUser = true;

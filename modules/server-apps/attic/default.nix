@@ -13,6 +13,8 @@ let
   tailnetHost = config.networking.hostName;
 in
 {
+  dotfiles.secrets.requiredFiles = [ atticSecret ];
+
   users.groups.atticd = { };
   users.users.atticd = {
     isSystemUser = true;

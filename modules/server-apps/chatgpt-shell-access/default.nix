@@ -30,6 +30,13 @@ let
       or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
 in
 {
+  dotfiles.secrets.requiredFiles = [
+    tunnelSecret
+    macSshKeySecret
+    sudoSshKeySecret
+    githubSecret
+  ];
+
   users.groups.${serviceUser} = { };
   users.users.${serviceUser} = {
     isSystemUser = true;

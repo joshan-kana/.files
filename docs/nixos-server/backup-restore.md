@@ -99,18 +99,19 @@ Secrets are split into two buckets:
 | Home Assistant `secrets.yaml` | `/var/lib/apps/home-assistant/secrets.yaml` | Snapper and restic |
 | AdGuard admin hash/config secrets | `/var/lib/apps/adguard/conf` | Snapper and restic |
 | n8n credentials database | `/var/lib/apps/n8n` | Snapper and restic |
-| n8n runtime secrets | `/root/secrets/n8n.env` | Separate encrypted copy |
+| n8n runtime secrets | `/root/secrets/n8n.env` | Doppler plus local last-known-good cache |
 | OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
 | OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
-| OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
-| Tailscale OAuth client ID | `/root/secrets/tailscale-oauth-client-id` | Separate encrypted copy |
-| Tailscale OAuth client secret | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
-| Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
-| Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
+| OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Doppler plus local last-known-good cache |
+| Tailscale OAuth client ID | `/root/secrets/tailscale-oauth-client-id` | Doppler plus local last-known-good cache |
+| Tailscale OAuth client secret | `/root/secrets/tailscale-oauth-client-secret` | Doppler plus local last-known-good cache |
+| Dropbox/rclone config | `/root/secrets/rclone.conf` | Doppler bootstrap plus mutable local copy |
+| Restic repository password | `/root/secrets/restic-password` | Doppler plus local last-known-good cache |
 
 The `/root/secrets` files are the keys needed before restic can restore
-anything. Keep copies in a password manager, `sops-nix`, or an encrypted archive
-whose password is stored somewhere you can reach after the Pi dies.
+anything. Doppler is the runtime source of truth; Bitwarden holds recovery
+copies of the scoped read-only Doppler Service Tokens. See
+[`doppler-secrets.md`](doppler-secrets.md) for bootstrap and recovery.
 
 ## Fast Local App-Data Restore
 
