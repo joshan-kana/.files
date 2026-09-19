@@ -139,7 +139,9 @@ Reboot from the internal NVMe with the Vault HDDs still disconnected. Then check
 the filesystems, network, restored backups, and failed units:
 
 ```sh
-findmnt / /boot /var/lib/apps
+findmnt -T /
+findmnt -T /boot
+findmnt -T /var/lib/apps
 lsblk -f
 ip -br addr
 sudo restic-secrets snapshots --latest 1
@@ -156,3 +158,5 @@ sudo chown -R joshan:users /home/joshan/.files /home/joshan/.secrets
 
 After the base system is healthy, connect the Vault HDDs and follow
 [Vault ZFS Storage](vault-storage.md) to import and verify the existing pool.
+Then restore the PostgreSQL-backed application databases using
+[Backup And Restore](backup-restore.md#postgresql-application-databases).
