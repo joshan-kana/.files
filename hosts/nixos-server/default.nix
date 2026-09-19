@@ -98,19 +98,23 @@
       networkManager =
         _:
         lib.recursiveUpdate (shared.networkManager { }) {
-          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
-            connection = {
-              id = "wired-static";
-              type = "ethernet";
-              "interface-name" = lan.interface;
-              autoconnect = true;
-              "autoconnect-priority" = 100;
+          networking.networkmanager = {
+            settings.main."ignore-carrier" = "*";
+            ensureProfiles.profiles."wired-static" = {
+              connection = {
+                id = "wired-static";
+                type = "ethernet";
+                "interface-name" = lan.interface;
+                autoconnect = true;
+                "autoconnect-priority" = 100;
+              };
+              ipv4 = {
+                method = "manual";
+                address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+                "may-fail" = false;
+              };
+              ipv6.method = "auto";
             };
-            ipv4 = {
-              method = "manual";
-              address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
-            };
-            ipv6.method = "auto";
           };
         };
 

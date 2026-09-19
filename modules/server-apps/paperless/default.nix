@@ -52,13 +52,8 @@ in
         "paperless-task-queue"
         "paperless-web"
       ]
-      (name: {
-        serviceConfig = {
-          UMask = lib.mkForce "0007";
-        }
-        // lib.optionalAttrs (name == "paperless-web") {
-          RestartSec = "2s";
-        };
+      (_: {
+        serviceConfig.UMask = lib.mkForce "0007";
       })
   );
 
