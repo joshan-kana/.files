@@ -1,6 +1,6 @@
 # Home Assistant Migration
 
-This document describes the one-time migration from an exported Home Assistant OS backup into the NixOS server app-data layout.
+This document describes the one-time migration from an exported Home Assistant OS backup into the NixOS server app-data layout. It is a historical migration procedure, not the normal machine-recovery path; current secret recovery uses the dedicated Restic repository documented in `backup-restore.md`.
 
 ## Source Backup
 

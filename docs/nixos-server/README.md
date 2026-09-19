@@ -88,15 +88,13 @@ URLs such as `http://192.168.1.3:8123` through the subnet route for stable acces
    later `git pull` updates work on the server.
    Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
    after copying/cloning so `docs/infrastructure-docs` is present.
-5. Create `/root/secrets` files:
-   - `restic-password`
-   - `rclone.conf`
-   - `tailscale-oauth-client-id`
-   - `tailscale-oauth-client-secret`
-   - `n8n.env`
-   - `openclaw.env`
-6. Restore app data into `/var/lib/...` using the mapping below.
-7. Apply the system:
+5. Install the backup-recovery files from the external recovery store under
+   `/var/lib/backup-credentials`: the recovery `rclone.conf` and the
+   `nixos-server` secrets-repository password.
+6. Restore `/root/secrets` and `/home/joshan/.secrets` from
+   `rclone:dropbox:Archives/Backups/secrets/nixos-server`.
+7. Restore app data into `/var/lib/...` using the mapping below.
+8. Apply the system:
 
 ```sh
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
@@ -255,10 +253,13 @@ image digest does not necessarily undo a completed migration.
 ## Rollback And Backup
 
 - Fast local rollback: Snapper snapshots `/var/lib` every 15 minutes.
-- Offsite backup: restic sends `/var/lib/...` app data to Dropbox every 30
-  minutes.
-- Bootstrap secrets in `/root/secrets` are not part of that restic backup and
-  should live in a password manager or separate encrypted archive.
+- App-data offsite backup: restic sends `/var/lib/...` app data to Dropbox every
+  30 minutes.
+- Secret offsite backup: restic snapshots `/root/secrets` and
+  `/home/joshan/.secrets` to the dedicated encrypted secrets repository every
+  15 minutes.
+- The external recovery store keeps only the break-glass backup credentials:
+  the recovery `rclone.conf` and the secrets-repository password.
 
 ## VM Variant
 

@@ -1,5 +1,26 @@
 # Backup And Restore
 
+## Quick Recovery Guide
+
+| Problem | First move |
+| --- | --- |
+| NixOS change broke the server | `sudo nixos-rebuild switch --rollback` |
+| One app is broken | Use local Snapper first |
+| Secret is missing/bad | `sudo restic-secrets snapshots` |
+| Local app data is gone | `sudo restic-apps snapshots` |
+| Whole server was lost | Restore secrets, then app data |
+| Vault file is missing/bad | Use the ZFS section below |
+
+Before restoring anything, list snapshots and stop the service that writes to
+the affected data. If the machine still works, restore to `/tmp` first.
+
+```sh
+sudo restic-secrets snapshots
+sudo restic-apps snapshots
+sudo snapper -c apps list
+systemctl --failed --no-pager
+```
+
 ## What Nix Manages
 
 NixOS manages the normal backup/rollback machinery:
@@ -7,6 +28,8 @@ NixOS manages the normal backup/rollback machinery:
 - `services.snapper`: creates local `/var/lib/apps` snapshots every 15 minutes.
 - `services.restic.backups.apps`: backs up app data to Dropbox every
   30 minutes and clears stale restic repository locks before each run.
+- `services.restic.backups.secrets`: backs up `/root/secrets` and the primary
+  user's `.secrets` directory to Dropbox every 15 minutes.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
   explicit persistent storage.
 
@@ -17,7 +40,7 @@ are for setup checks, “did it work?” verification, and emergency restore.
 
 Use the least destructive option that solves the problem:
 
-1. Identify whether the affected path is under `/var/lib/apps` or `/srv/vault`.
+1. Identify whether the affected path is app data, runtime secrets, or Vault data.
 2. Stop the service or container that writes to it.
 3. List the available snapshots and inspect the intended snapshot.
 4. Copy the affected files to a temporary location and compare them.
@@ -35,7 +58,8 @@ There are two kinds of state:
 | Thing | Where it lives | How to roll back |
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
-| Container app data | `/var/lib/apps` | Restore a Snapper snapshot or restic backup |
+| Container app data | `/var/lib/apps` | Restore a Snapper snapshot or `restic-apps` backup |
+| Runtime secrets | `/root/secrets`, `/home/joshan/.secrets` | Restore with `restic-secrets` |
 | Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
@@ -90,27 +114,59 @@ repository explicitly with `sudo restic-apps init`; replacement installs reuse
 the existing repository and must keep its existing restic password so backups
 and restores can open it.
 
-## What About Secrets?
+## Secret Backup And Recovery
 
-Secrets are split into two buckets:
+Runtime secrets are backed up every 15 minutes to
+`rclone:dropbox:Archives/Backups/secrets/nixos-server`:
 
-| Secret | Where it lives | Backed up how |
-| --- | --- | --- |
-| Home Assistant `secrets.yaml` | `/var/lib/apps/home-assistant/secrets.yaml` | Snapper and restic |
-| AdGuard admin hash/config secrets | `/var/lib/apps/adguard/conf` | Snapper and restic |
-| n8n credentials database | `/var/lib/apps/n8n` | Snapper and restic |
-| n8n runtime secrets | `/root/secrets/n8n.env` | Separate encrypted copy |
-| OpenClaw app config/passwords | `/var/lib/apps/openclaw` | Snapper and restic |
-| OpenClaw auth profile secrets | `/var/lib/apps/openclaw-auth` | Snapper and restic |
-| OpenClaw env passwords/tokens | `/root/secrets/openclaw.env` | Separate encrypted copy |
-| Tailscale OAuth client ID | `/root/secrets/tailscale-oauth-client-id` | Separate encrypted copy |
-| Tailscale OAuth client secret | `/root/secrets/tailscale-oauth-client-secret` | Separate encrypted copy |
-| Dropbox/rclone config | `/root/secrets/rclone.conf` | Separate encrypted copy |
-| Restic repository password | `/root/secrets/restic-password` | Separate encrypted copy |
+```text
+/root/secrets
+/home/joshan/.secrets
+```
 
-The `/root/secrets` files are the keys needed before restic can restore
-anything. Keep copies in a password manager, `sops-nix`, or an encrypted archive
-whose password is stored somewhere you can reach after the Pi dies.
+Keep recovery copies of these two bootstrap files in an external recovery store:
+
+```text
+/var/lib/backup-credentials/rclone.conf
+/var/lib/backup-credentials/secrets-restic-password
+```
+
+The recovery `rclone.conf` can be old; its refresh token can obtain a new access
+token.
+
+Restore one secret to `/tmp` first:
+
+```sh
+secret=/root/secrets/n8n.env
+restore_dir="$(mktemp -d)"
+
+sudo restic-secrets restore latest \
+  --target "$restore_dir" \
+  --include "$secret"
+
+sudo ls -l "$restore_dir$secret"
+```
+
+After inspection, stop the consuming service and restore the file. For a
+root-owned server secret:
+
+```sh
+sudo install -m 600 -o root -g root \
+  "$restore_dir$secret" "$secret"
+```
+
+For a primary-user secret, use `-o joshan -g users` instead.
+
+After total machine loss, install the two bootstrap files under
+`/var/lib/backup-credentials`, then restore secrets before app data:
+
+```sh
+sudo restic-secrets restore latest --target /
+sudo restic-apps restore latest --target / --include /var/lib/apps
+```
+
+Initial setup/migration is in
+[NixOS Server Install Guide](nixos-server-install.md).
 
 ## Fast Local App-Data Restore
 
@@ -259,32 +315,26 @@ files or using a temporary clone whenever possible.
 
 ## Offsite Restore From Dropbox
 
-Use this if the local disk is lost or the local snapshots are not enough.
+Use this if local app snapshots are gone or not enough.
 
-List encrypted backup points:
+List snapshots:
 
 ```sh
-sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
-  restic -r rclone:dropbox:Archives/Backups/nixos-server \
-  --password-file /root/secrets/restic-password snapshots
+sudo restic-apps snapshots
 ```
 
-Restore all container app data on a replacement server:
+Restore all app data:
 
 ```sh
-sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
-  restic -r rclone:dropbox:Archives/Backups/nixos-server \
-  --password-file /root/secrets/restic-password restore latest \
+sudo restic-apps restore latest \
   --target / \
   --include /var/lib/apps
 ```
 
-Restore one app if only that app is broken:
+Restore one app, using n8n as the example:
 
 ```sh
-sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
-  restic -r rclone:dropbox:Archives/Backups/nixos-server \
-  --password-file /root/secrets/restic-password restore latest \
+sudo restic-apps restore latest \
   --target / \
   --include /var/lib/apps/n8n
 ```
