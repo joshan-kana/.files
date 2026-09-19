@@ -2,7 +2,6 @@
   editScope,
   inputs,
   moduleRegistry,
-  modulesPath,
   ...
 }:
 
@@ -15,16 +14,13 @@
     ;
 
   imports = [
-    inputs.nixos-hardware.nixosModules.raspberry-pi-4
     inputs.hermes-agent.nixosModules.default
     ./options.nix
+    ./hardware.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
       lockFile = ./container-images.lock;
     })
-    "${modulesPath}/image/repart.nix"
   ];
-
-  hardware = import ./hardware.nix;
 
   dotfiles = {
     profile.name = "nixos-server";
@@ -543,7 +539,6 @@
             ''
           );
     };
-  image = import ./image.nix;
   maintenance =
     { pkgs, ... }:
 
@@ -566,10 +561,6 @@
 
       nix.settings = {
         min-free = minFree;
-        substituters = [ "https://nixos-raspberrypi.cachix.org" ];
-        trusted-public-keys = [
-          "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
-        ];
       };
 
       services.journald.extraConfig = ''

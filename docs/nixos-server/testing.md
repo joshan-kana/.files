@@ -1,100 +1,102 @@
 # Server Test Notes
 
-These checks were run before installing on the Raspberry Pi.
+Use these checks when changing or reinstalling the physical `nixos-server`
+host. Evaluation and build validation are repository checks; hardware and
+storage checks are completed on the OptiPlex before production cutover.
 
-## Evaluation
+## Repository Evaluation
 
 From the macOS worktree:
 
 ```sh
-nix eval --impure .#nixosConfigurations.nixos-server.config.system.name
-nix eval --impure .#nixosConfigurations.nixos-server.config.system.nixos.release
-nix eval --impure .#nixosConfigurations.nixos-server.config.boot.kernelPackages.kernel.version
-nix eval --impure .#nixosConfigurations.nixos-server.config.nixpkgs.hostPlatform.system
-nix eval --impure .#nixosConfigurations.nixos-server.config.services.restic.backups.home-assistant.repository
+nix fmt
+
+git diff --check
+
+nix flake show
+nix eval .#nixosConfigurations.nixos-server.config.nixpkgs.hostPlatform.system
+nix eval .#nixosConfigurations.nixos-server.config.system.build.toplevel.drvPath
+nix eval .#nixosConfigurations.nixos-server.config.fileSystems --json
+nix eval .#nixosConfigurations.nixos-server.config.boot.initrd.availableKernelModules --json
 ```
 
-Expected results:
+Expected server platform:
 
 ```text
-"nixos-server"
-"26.05"
-"6.18.34"
-"aarch64-linux"
-"rclone:dropbox:Archives/Backups/nixos-server"
+"x86_64-linux"
 ```
 
-The configured substituters were also evaluated:
+The filesystem evaluation must resolve the root and EFI mounts through
+`/dev/disk/by-label/ROOT` and `/dev/disk/by-label/BOOT`.
+
+## Build Validation
+
+Build the production closure on an x86_64 Linux builder:
 
 ```sh
-nix eval --impure --json .#nixosConfigurations.nixos-server.config.nix.settings.substituters
+nix build .#nixosConfigurations.nixos-server.config.system.build.toplevel --no-link
 ```
 
-Expected result:
-
-```json
-["https://cache.nixos.org/","https://nix-community.cachix.org","https://nixos-raspberrypi.cachix.org"]
-```
-
-## Binary Cache Check
-
-The kernel was tested with local builds disabled:
+Run the full repository validation before review:
 
 ```sh
-orb sh -lc 'cd /Users/joshan/.files-nixos-server && nix build .#nixosConfigurations.nixos-server.config.boot.kernelPackages.kernel --no-link --option max-jobs 0 --option fallback false --option substituters "https://cache.nixos.org/ https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org" --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="'
+nix flake check
 ```
 
-This fetched `linux-6.18.34` from `https://cache.nixos.org`.
+The container lock must also be valid for `linux/amd64`; the repository's
+`update-container-lock` command derives the required platform from the host
+configuration.
 
-## VM Build
+## Pre-install Hardware Check
 
-The macOS host cannot build Linux VM derivations directly, so the VM build was
-run inside the local OrbStack NixOS machine:
+From the NixOS installer on the OptiPlex:
 
 ```sh
-orb sh -lc 'cd /Users/joshan/.files-nixos-server && nixos-rebuild build-vm --flake .#nixos-server'
+lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
+lspci -nnk
+ip -br link
 ```
 
-This completed successfully and produced a runnable VM:
-
-```text
-run-nixos-server-vm
-```
-
-## Real Pi Target Build
-
-The real Raspberry Pi target was also built from OrbStack without producing a
-local `result` symlink:
+After mounting the target `ROOT` and `BOOT` filesystems under `/mnt`, compare a
+fresh hardware scan with `hosts/nixos-server/hardware.nix`:
 
 ```sh
-orb sh -lc 'cd /Users/joshan/.files-nixos-server && nix build .#nixosConfigurations.nixos-server.config.system.build.toplevel --no-link'
+sudo nixos-generate-config --root /mnt
+cat /mnt/etc/nixos/hardware-configuration.nix
 ```
 
-This completed successfully and built the production system closure, including
-the Snapper and restic units.
+Generated filesystem UUIDs are not copied into the repository. Keep the
+label-based mounts from the committed hardware configuration.
 
-## Real Pi Boot Validation
+## First-boot Validation
 
-The flashed image has been tested on the Raspberry Pi 4. UART output confirmed
-that U-Boot loaded `extlinux`, the generic cached kernel, the initrd, and the
-board device tree from the FAT `FIRMWARE` partition.
-
-The final boot fix was to keep boot files on `/boot`, mount the Btrfs top-level
-as `/`, and let the repart image module use its default `/nix/store` prefix.
-Setting a custom store prefix placed store paths in the wrong location and made
-`initrd-find-nixos-closure.service` fail.
-
-Successful first-boot signs:
+Boot with the external Vault HDDs still disconnected and verify:
 
 ```sh
-ssh-keygen -R 192.168.1.3 >/dev/null 2>&1 || true
-ssh joshan@192.168.1.3 true
-```
-
-Useful post-boot checks:
-
-```sh
-findmnt / /boot /var/lib
+findmnt / /boot /var/lib/apps
 lsblk -f
+ip -br link
 systemctl is-system-running || true
+systemctl --failed --no-pager
 ```
+
+Confirm the wired interface matches `dotfiles.server.lan.interface` before
+moving the production addresses to the OptiPlex.
+
+## Vault Import Validation
+
+After the Pi has exported `vault` cleanly and is powered down, connect both Vault
+HDDs and inspect before importing:
+
+```sh
+lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
+sudo zpool import
+sudo zpool import vault
+zpool status -x vault
+zpool status vault
+zfs list -r vault
+zfs list -t snapshot -r vault
+findmnt /srv/vault /var/lib/atticd
+```
+
+Do not recreate, format, or wipe either Vault member during migration.
