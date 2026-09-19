@@ -52,7 +52,7 @@ sudo docker exec openclaw openclaw-repository git infrastructure-docs status --s
   previous generation.
 
 This rollback does not modify Joshan's existing
-`/root/secrets/id_ed25519` key.
+`/home/joshan/.secrets/id_ed25519` key.
 
 ## Ollama Proxy
 

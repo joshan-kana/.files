@@ -592,6 +592,16 @@
     }:
 
     {
+      home = _: {
+        programs.ssh = {
+          enable = true;
+          matchBlocks."github.com" = {
+            identityFile = "${config.dotfiles.secretsDir}/id_ed25519";
+            identitiesOnly = true;
+          };
+        };
+      };
+
       users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"

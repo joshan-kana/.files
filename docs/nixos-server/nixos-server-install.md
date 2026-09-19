@@ -66,7 +66,7 @@ sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
   --password-file /mnt/var/lib/backup-credentials/secrets-restic-password \
   restore latest --target /mnt
 
-sudo test -f /mnt/root/secrets/id_ed25519
+sudo test -f /mnt/home/joshan/.secrets/id_ed25519
 sudo test -d /mnt/home/joshan/.secrets
 ```
 
@@ -100,7 +100,7 @@ Clone the repository using the restored GitHub SSH key:
 
 ```sh
 sudo env \
-  GIT_SSH_COMMAND='ssh -i /mnt/root/secrets/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new' \
+  GIT_SSH_COMMAND='ssh -i /mnt/home/joshan/.secrets/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new' \
   git clone --recurse-submodules \
   git@github.com:joshan-kana/.files.git \
   /mnt/home/joshan/.files
