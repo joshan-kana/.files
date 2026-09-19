@@ -356,7 +356,15 @@
       inherit (config.dotfiles) server;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage;
+      backupCredentialsDir = "/var/lib/backup-credentials";
+      backupRcloneConfig = "${backupCredentialsDir}/rclone.conf";
+      secretsBackupPassword = "${backupCredentialsDir}/secrets-restic-password";
+      secretsBackupRepository = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
       snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
+      resticUnlock = ''
+        #!${pkgs.runtimeShell}
+        ${pkgs.restic}/bin/restic unlock
+      '';
       resticWrapperCommands = lib.pipe config.services.restic.backups [
         (lib.filterAttrs (_: backup: backup.createWrapper))
         lib.attrNames
@@ -445,35 +453,73 @@
         };
       };
 
-      services.restic.backups.apps = {
-        repository = "rclone:dropbox:Archives/Backups/nixos-server";
-        backupPrepareCommand = ''
-          #!${pkgs.runtimeShell}
-          ${pkgs.restic}/bin/restic unlock
-        '';
-        passwordFile = "${server.secretsDir}/restic-password";
-        rcloneConfigFile = "${server.secretsDir}/rclone.conf";
-        paths = [ storage.appData.root ];
-        exclude = [
-          "${storage.appData.root}/.snapshots"
-        ];
-        pruneOpts = [
-          "--keep-hourly ${toString storage.snapshots.retention.hourly}"
-          "--keep-daily ${toString storage.snapshots.retention.daily}"
-          "--keep-weekly ${toString storage.snapshots.retention.weekly}"
-          "--keep-monthly ${toString storage.snapshots.retention.monthly}"
-        ];
-        timerConfig = {
-          OnCalendar = "*:0/30";
-          Persistent = true;
-          RandomizedDelaySec = "5m";
+      services.restic.backups = {
+        apps = {
+          repository = "rclone:dropbox:Archives/Backups/nixos-server";
+          backupPrepareCommand = resticUnlock;
+          passwordFile = "${server.secretsDir}/restic-password";
+          rcloneConfigFile = backupRcloneConfig;
+          paths = [ storage.appData.root ];
+          exclude = [
+            "${storage.appData.root}/.snapshots"
+          ];
+          pruneOpts = [
+            "--keep-hourly ${toString storage.snapshots.retention.hourly}"
+            "--keep-daily ${toString storage.snapshots.retention.daily}"
+            "--keep-weekly ${toString storage.snapshots.retention.weekly}"
+            "--keep-monthly ${toString storage.snapshots.retention.monthly}"
+          ];
+          timerConfig = {
+            OnCalendar = "*:0/30";
+            Persistent = true;
+            RandomizedDelaySec = "5m";
+          };
+          checkOpts = [ "--read-data-subset=1G" ];
         };
-        checkOpts = [ "--read-data-subset=1G" ];
+
+        secrets = {
+          repository = secretsBackupRepository;
+          backupPrepareCommand = resticUnlock;
+          passwordFile = secretsBackupPassword;
+          rcloneConfigFile = backupRcloneConfig;
+          paths = [
+            server.secretsDir
+            config.dotfiles.secretsDir
+          ];
+          timerConfig = {
+            OnCalendar = "*:0/15";
+            Persistent = true;
+            RandomizedDelaySec = "2m";
+          };
+        };
+
+        secrets-maintenance = {
+          repository = secretsBackupRepository;
+          passwordFile = secretsBackupPassword;
+          rcloneConfigFile = backupRcloneConfig;
+          paths = [ ];
+          pruneOpts = [
+            "--keep-within 1d"
+            "--keep-hourly ${toString storage.snapshots.retention.hourly}"
+            "--keep-daily ${toString storage.snapshots.retention.daily}"
+            "--keep-weekly ${toString storage.snapshots.retention.weekly}"
+            "--keep-monthly ${toString storage.snapshots.retention.monthly}"
+          ];
+          checkOpts = [ "--read-data" ];
+          createWrapper = false;
+          timerConfig = {
+            OnCalendar = "daily";
+            Persistent = true;
+            RandomizedDelaySec = "1h";
+          };
+        };
       };
 
       systemd.tmpfiles.rules = [
+        "d ${backupCredentialsDir} 0700 root root - -"
         "d ${server.secretsDir} 0700 root root - -"
         "Z ${server.secretsDir} ~0700 root root - -"
+        "d ${config.dotfiles.secretsDir} 0700 ${primary.name} users - -"
         "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
         "a+ ${storage.appData.root} - - - - u:${primary.name}:rwx,g:${storage.appData.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.appData.group.name}:rwx"
         "a+ ${storage.dataRoot.path} - - - - u:${primary.name}:rwx,g:${storage.dataRoot.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.dataRoot.group.name}:rwx"

@@ -54,56 +54,77 @@ Set these variables on the user's machine:
 ```sh
 export REPO_DIR="$HOME/.files"
 export BUILD_HOST="orb"
-export SECRETS_DIR="$HOME/.secrets"
 ```
 
-## Secrets Bundle
+## Backup Recovery Kit
 
-The bootstrap bundle should contain:
+Normal replacement installs do not need a manually maintained copy of every
+runtime secret. The external recovery store keeps only the two bootstrap files
+needed to reach the encrypted secrets repository:
 
 ```text
-$SECRETS_DIR/
-  restic-password
-  rclone.conf
-  tailscale-oauth-client-id
-  tailscale-oauth-client-secret
-  n8n.env
-  openclaw.env
-  id_ed25519
-  id_ed25519.pub
+rclone.conf
+secrets-restic-password
 ```
 
-Run this on the user's machine before copying files to the Pi.
+The recovery `rclone.conf` must contain a Dropbox remote named `dropbox`. Its
+long-lived refresh token is the durable credential; the cached access token may
+be expired. Rclone refreshes that access token when the config is used, so the
+external recovery copy does not need to track normal token refreshes.
 
-### If secrets do not exist (first run only)
+The secrets repository is:
 
-Run this only on the first install if the secrets bundle does not already
-exist:
+```text
+rclone:dropbox:Archives/Backups/secrets/nixos-server
+```
+
+It contains the current backed-up state of:
+
+```text
+/root/secrets
+/home/joshan/.secrets
+```
+
+On a replacement machine, install the two recovery files under
+`/var/lib/backup-credentials`, restore the secrets repository, then restore the
+larger app-data repository. Do not maintain a second full plaintext secrets
+bundle on another machine.
+
+### First-time recovery-kit creation
+
+This is only needed if no external recovery kit exists yet. Configure Dropbox
+with a remote named exactly `dropbox`:
 
 ```sh
-mkdir -p "$SECRETS_DIR" &&
-  chmod 700 "$SECRETS_DIR" &&
-  cp "$HOME/.ssh/id_ed25519" "$SECRETS_DIR/" &&
-  cp "$HOME/.ssh/id_ed25519.pub" "$SECRETS_DIR/" &&
-  openssl rand -base64 32 > "$SECRETS_DIR/restic-password" &&
-  touch "$SECRETS_DIR/n8n.env" "$SECRETS_DIR/openclaw.env" &&
-  chmod 600 "$SECRETS_DIR/"*
+nix shell nixpkgs#rclone -c rclone config
 ```
 
-Required contents:
+Use browser authorization when prompted. Keep Full Dropbox access if the backup
+repositories must remain under `Archives/Backups/`. Save a recovery copy of the
+resulting `rclone.conf` in the external recovery store.
 
-- `restic-password`: restic repository password
-- `rclone.conf`: rclone config with a Dropbox remote named `dropbox`
-- `tailscale-oauth-client-id`: Tailscale OAuth client ID used for API cleanup
-- `tailscale-oauth-client-secret`: Tailscale OAuth client secret used for API cleanup
-  and ephemeral node registration
-- `n8n.env`: runtime environment for the `n8n` container
-- `openclaw.env`: runtime environment for the OpenClaw container
+Generate a unique password for the `nixos-server` secrets repository and save
+that password in the same external recovery kit. Do not reuse the application
+data repository password.
 
-Create the Tailscale OAuth client on the user's machine:
+For the one-time migration from an existing live server, install those two
+bootstrap files locally, initialize `restic-secrets`, and take the first backup
+as described in `backup-restore.md`. After that first snapshot, replacement
+installs recover the runtime secret directories from Restic instead of manually
+reconstructing them.
 
-1. Open the Tailscale admin console.
-2. Configure the tailnet policy before creating the OAuth client:
+A truly new deployment with no previous secrets repository must create its
+runtime credentials once before taking that first snapshot. That is initial
+service provisioning, not part of the normal disaster-recovery path.
+
+### First-time runtime-secret provisioning
+
+For a genuinely new server with no secrets snapshot to restore, create
+`/root/secrets` with mode `0700` and put the required service credentials there
+before taking the first secrets backup. At minimum, preserve the existing
+service-specific filenames expected by the NixOS configuration.
+
+For Tailscale, configure the tailnet policy before creating the OAuth client:
 
 ```json
 {
@@ -122,68 +143,20 @@ Create the Tailscale OAuth client on the user's machine:
 }
 ```
 
-3. Go to `Settings` -> `Trust credentials` / `OAuth clients`.
-4. Create an OAuth client with `auth_keys` and `devices:core` write scopes.
-5. Restrict the OAuth client to `tag:nixos-server`.
-6. Copy the OAuth client ID and secret into the secrets directory:
-
-```sh
-printf '%s\n' 'paste-the-tailscale-oauth-client-id-here' > "$SECRETS_DIR/tailscale-oauth-client-id" &&
-printf '%s\n' 'paste-the-tailscale-oauth-client-secret-here' > "$SECRETS_DIR/tailscale-oauth-client-secret" &&
-  chmod 600 "$SECRETS_DIR/tailscale-oauth-client-id" "$SECRETS_DIR/tailscale-oauth-client-secret"
-```
-
-The server joins Tailscale as an ephemeral node using `tag:nixos-server`, advertises
-`192.168.1.0/24`, and relies on the policy above to approve that subnet automatically.
-The Tailscale `100.x` address is disposable and may change after a reboot,
-maintenance window, or rebuild. Use the LAN address through the approved subnet
-route for stable service access, for example `http://192.168.1.3:8123`.
-
-Authorize Dropbox with rclone on the user's machine.
-
-In the rclone prompts:
-
-1. choose `n` for a new remote
-2. name the remote exactly `dropbox`
-3. choose Dropbox as the storage provider
-4. allow browser authorization when prompted
-5. finish and save the remote
-
-Copy the finished rclone config into the secrets directory:
-
-```sh
-nix shell nixpkgs#rclone -c rclone config
-cp "$HOME/.config/rclone/rclone.conf" "$SECRETS_DIR/rclone.conf" &&
-  chmod 600 "$SECRETS_DIR/rclone.conf"
-```
-
-Create the Dropbox folder used by restic:
-
-```sh
-nix shell nixpkgs#rclone -c rclone mkdir dropbox:Archives/Backups/nixos-server
-```
-
-Test the remote:
-
-```sh
-nix shell nixpkgs#rclone -c rclone lsd dropbox:Archives/Backups
-```
-
-If the authorization has to be done for a headless machine, use rclone's remote
-authorization flow from a machine with a browser:
-
-```sh
-nix shell nixpkgs#rclone -c rclone authorize dropbox
-```
-
-Paste the returned token into `rclone config` when it asks for remote
-authorization, then copy the resulting `rclone.conf` into `SECRETS_DIR`.
-
-`n8n.env` should at least contain a durable encryption key:
+In the Tailscale admin console, create an OAuth client with `auth_keys` and
+`devices:core` write scopes, restrict it to `tag:nixos-server`, and install the
+client ID and secret as:
 
 ```text
-N8N_ENCRYPTION_KEY=replace-this-with-a-long-random-value
+/root/secrets/tailscale-oauth-client-id
+/root/secrets/tailscale-oauth-client-secret
 ```
+
+`n8n.env` must contain a durable `N8N_ENCRYPTION_KEY`, and other enabled services
+must have the runtime files required by their modules. Keep all files under
+`/root/secrets` mode `0600`. Once the initial set is complete, take the first
+`restic-secrets` snapshot; future replacement installs restore these files from
+that repository instead of provisioning them again.
 
 ## Build The SD Card Image
 
@@ -306,57 +279,79 @@ Immediately change the temporary first-boot password:
 passwd
 ```
 
-## Copy Repo And Secrets
+## Copy Repo And Bootstrap Credentials
 
-Copy the local repo and secrets bundle to the server, then install the GitHub SSH
-key for authentication:
+Copy the repository to the server. Retrieve the recovery `rclone.conf` and the
+`nixos-server` secrets-repository password from the external recovery store into temporary local files first;
+do not paste either value into shell history.
 
 ```sh
 export SERVER="192.168.1.3"
+export RECOVERY_RCLONE_CONFIG="/path/to/temporary/rclone.conf"
+export SECRETS_RESTIC_PASSWORD_FILE="/path/to/temporary/secrets-restic-password"
 
-ssh "joshan@$SERVER" '
-  rm -rf /tmp/.secrets &&
-  mkdir -p /tmp/.secrets /home/joshan/.files
-' &&
-  nix shell nixpkgs#rsync -c sh -eu -c '
-    rsync -ah --delete --info=progress2 \
-      --exclude /result \
-      --exclude /.direnv \
-      "$REPO_DIR"/ \
-      "joshan@$SERVER:/home/joshan/.files/"
-
-    rsync -ah --delete --info=progress2 \
-      "$SECRETS_DIR"/ \
-      "joshan@$SERVER:/tmp/.secrets/"
-  ' &&
-  ssh -t "joshan@$SERVER" '
-    set -e
-
-    sudo install -d -m 700 /root/secrets
-    sudo cp -a /tmp/.secrets/. /root/secrets/
-    sudo chown -R root:root /root/secrets
-    sudo chmod 700 /root/secrets
-    sudo find /root/secrets -type f -exec chmod 600 {} +
-
-    sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh
-    sudo install -m 600 -o joshan -g users /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
-    sudo install -m 644 -o joshan -g users /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
-    sudo -u joshan ssh-keyscan github.com > /tmp/github-known-hosts
-    sudo install -m 644 -o joshan -g users /tmp/github-known-hosts /home/joshan/.ssh/known_hosts
-
-    rm -rf /tmp/.secrets /tmp/github-known-hosts
-  '
+ssh "joshan@$SERVER" 'mkdir -p /home/joshan/.files' &&
+nix shell nixpkgs#rsync -c rsync -ah --delete --info=progress2 \
+  --exclude /result \
+  --exclude /.direnv \
+  "$REPO_DIR"/ \
+  "joshan@$SERVER:/home/joshan/.files/" &&
+scp "$RECOVERY_RCLONE_CONFIG" "$SECRETS_RESTIC_PASSWORD_FILE" \
+  "joshan@$SERVER:/tmp/" &&
+ssh -t "joshan@$SERVER" '
+  set -e
+  sudo install -d -m 700 /var/lib/backup-credentials
+  sudo install -m 600 -o root -g root /tmp/rclone.conf \
+    /var/lib/backup-credentials/rclone.conf
+  sudo install -m 600 -o root -g root /tmp/secrets-restic-password \
+    /var/lib/backup-credentials/secrets-restic-password
+  rm -f /tmp/rclone.conf /tmp/secrets-restic-password
+'
 ```
 
-For a brand-new deployment with no existing restic repository, initialize it
-once after the secrets are installed:
+Apply the system configuration so the `restic-secrets` wrapper is available:
 
 ```sh
-ssh -t "joshan@$SERVER" 'sudo restic-apps init'
+ssh -t "joshan@$SERVER" \
+  'sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server'
 ```
 
-Do not run `restic-apps init` when replacing a server that already has backups.
-Reuse the existing repository and its existing `restic-password` instead.
+Verify the secret repository before changing live secret paths:
+
+```sh
+ssh -t "joshan@$SERVER" 'sudo restic-secrets snapshots'
+```
+
+For a replacement server, restore the latest secret snapshot directly to its
+recorded absolute paths:
+
+```sh
+ssh -t "joshan@$SERVER" '
+  sudo restic-secrets restore latest --target /
+
+  sudo install -d -m 700 -o joshan -g users /home/joshan/.ssh
+  sudo install -m 600 -o joshan -g users \
+    /root/secrets/id_ed25519 /home/joshan/.ssh/id_ed25519
+  sudo install -m 644 -o joshan -g users \
+    /root/secrets/id_ed25519.pub /home/joshan/.ssh/id_ed25519.pub
+'
+```
+
+For the first deployment of the secrets-backup scheme, initialize the empty
+repository once instead of restoring it:
+
+```sh
+ssh -t "joshan@$SERVER" 'sudo restic-secrets init'
+```
+
+Then trigger the first backup and verify that a snapshot exists:
+
+```sh
+ssh -t "joshan@$SERVER" '
+  sudo systemctl start restic-backups-secrets.service
+  sudo restic-secrets snapshots
+'
+```
 
 ## Restore Mutable App Data
 
@@ -366,7 +361,7 @@ names need to be listed here:
 
 ```sh
 ssh -t "joshan@$SERVER" '
-  sudo env RCLONE_CONFIG=/root/secrets/rclone.conf \
+  sudo env RCLONE_CONFIG=/var/lib/backup-credentials/rclone.conf \
     restic -r rclone:dropbox:Archives/Backups/nixos-server \
     --password-file /root/secrets/restic-password \
     restore latest \
