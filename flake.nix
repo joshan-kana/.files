@@ -14,6 +14,15 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    # Hermes Agent: native NixOS service/module.
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Prebuilt AI agent packages.
+    llm-agents.url = "github:numtide/llm-agents.nix";
+
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";

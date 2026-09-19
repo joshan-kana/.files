@@ -16,6 +16,7 @@
 
   imports = [
     inputs.nixos-hardware.nixosModules.raspberry-pi-4
+    inputs.hermes-agent.nixosModules.default
     ./options.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
       lockFile = ./container-images.lock;
