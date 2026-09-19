@@ -10,44 +10,12 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   hermesUser = "hermes";
-  hermesState = "${server.storage.appData.root}/hermes";
-  hermesHome = "${hermesState}/.hermes";
   hermesSecret = "${server.secretsDir}/hermes.env";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   primaryHome = "${primary.homeRoot}/${primary.name}";
-  primaryGroup = config.users.users.${primary.name}.group;
   mappedHome = "/run/hermes-home";
 
-  bindfsArgs = [
-    "-f"
-    "--map=${primary.name}/${hermesUser}"
-    "--create-for-user=${primary.name}"
-    "--create-for-group=${primaryGroup}"
-    primaryHome
-    mappedHome
-  ];
-
   hermesPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.hermes-agent;
-
-  hermesHomeUnmount = pkgs.writeShellScript "hermes-home-unmount" ''
-    if ${pkgs.util-linux}/bin/mountpoint -q ${mappedHome}; then
-      exec ${pkgs.fuse3}/bin/fusermount3 -u ${mappedHome}
-    fi
-  '';
-
-  hermesHomeReady = pkgs.writeShellScript "hermes-home-ready" ''
-    attempts=0
-    while [ "$attempts" -lt 100 ]; do
-      if ${pkgs.util-linux}/bin/mountpoint -q ${mappedHome}; then
-        exit 0
-      fi
-      attempts=$((attempts + 1))
-      ${pkgs.coreutils}/bin/sleep 0.1
-    done
-
-    echo "Timed out waiting for ${mappedHome} to become a mount point" >&2
-    exit 1
-  '';
 
   hermesGh = pkgs.writeShellApplication {
     name = "gh";
@@ -81,20 +49,10 @@ let
   '';
 
   hermesServiceCli = pkgs.writeShellScriptBin "hermes-service-cli" ''
-    export HOME=${hermesState}
-    export HERMES_HOME=${hermesHome}
-    export PATH=${
-      lib.makeBinPath (
-        [
-          hermesPackage
-          pkgs.bash
-          pkgs.coreutils
-          pkgs.git
-          hermesSudo
-        ]
-        ++ hermesExtraPackages
-      )
-    }
+    export HOME=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.HOME}
+    export HERMES_HOME=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.HERMES_HOME}
+    export HERMES_MANAGED=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.HERMES_MANAGED}
+    export PATH=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.PATH}
     exec ${hermesPackage}/bin/hermes "$@"
   '';
 
@@ -125,7 +83,7 @@ in
     createUser = true;
     user = hermesUser;
     group = server.storage.appData.group.name;
-    stateDir = hermesState;
+    stateDir = "${server.storage.appData.root}/hermes";
 
     extraPackages = hermesExtraPackages ++ [ hermesSudo ];
 
@@ -179,35 +137,24 @@ in
     }
   ];
 
-  systemd.tmpfiles.rules = [
-    "d ${mappedHome} 0700 root root - -"
-  ];
-
-  systemd.services.hermes-home = {
-    description = "Hermes mapped primary home";
-    before = [ "hermes-agent.service" ];
-
-    unitConfig.AssertPathExists = primaryHome;
-
-    serviceConfig = {
-      Type = "simple";
-      ExecStartPre = [ hermesHomeUnmount ];
-      ExecStart = "${pkgs.bindfs}/bin/bindfs ${lib.escapeShellArgs bindfsArgs}";
-      ExecStartPost = [ hermesHomeReady ];
-      ExecStop = [ hermesHomeUnmount ];
-      Restart = "on-failure";
-      RestartSec = "1s";
-    };
+  fileSystems.${mappedHome} = {
+    device = primaryHome;
+    fsType = "fuse.bindfs";
+    options = [
+      "map=${primary.name}/${hermesUser}"
+      "create-for-user=${primary.name}"
+      "create-for-group=${config.users.users.${primary.name}.group}"
+    ];
   };
 
   systemd.services.hermes-agent = {
-    requires = [ "hermes-home.service" ];
-    after = [ "hermes-home.service" ];
-
-    unitConfig.AssertPathExists = [
-      hermesSecret
-      githubSecret
-    ];
+    unitConfig = {
+      AssertPathExists = [
+        hermesSecret
+        githubSecret
+      ];
+      RequiresMountsFor = [ mappedHome ];
+    };
 
     serviceConfig = {
       BindPaths = [ "${mappedHome}:${primaryHome}" ];
