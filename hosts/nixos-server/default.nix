@@ -383,6 +383,7 @@
           ${storage.dataRoot.group.name}.gid = storage.dataRoot.group.id;
           atticd.gid = 999;
           matrix-bridge.gid = 996;
+          redis-immich.gid = 993;
         };
 
         users = {
@@ -395,6 +396,10 @@
           atticd.uid = 998;
           hermes.uid = 994;
           matrix-bridge.uid = 992;
+          redis-immich = {
+            uid = 989;
+            group = "redis-immich";
+          };
         }
         // lib.optionalAttrs config.services.gitea.enable {
           gitea.uid = 995;
