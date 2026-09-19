@@ -30,8 +30,8 @@ The system disk uses stable filesystem labels:
 - Boot a current x86_64 NixOS installer in UEFI mode.
 - The current internal disk is `/dev/nvme0n1` and contains the previous Windows
   installation. The procedure below destroys that installation.
-- Keep the Raspberry Pi and its SD card unchanged until the replacement server
-  has passed live validation.
+- Keep the current server unchanged until the replacement server has passed
+  live validation.
 
 Before modifying the disk, verify the target:
 
@@ -244,6 +244,20 @@ Intel CPU microcode configuration, and the `ROOT` and `BOOT` filesystem mounts.
 A fresh `nixos-generate-config --root /mnt` scan is used to check detected
 hardware before installation.
 
+## Pre-seed App Data
+
+Restore the latest app-data snapshot while the current server is still running.
+This transfers the bulk of `/var/lib/apps` before the longer NixOS installation:
+
+```sh
+sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
+  nix --extra-experimental-features "nix-command flakes" shell \
+  nixpkgs#restic nixpkgs#rclone -c restic \
+  -r rclone:dropbox:Archives/Backups/nixos-server \
+  --password-file /mnt/root/secrets/restic-password \
+  restore latest --target /mnt --include /var/lib/apps
+```
+
 ## Install The Flake
 
 Clone the deployment branch with the restored GitHub SSH key:
@@ -283,85 +297,96 @@ sudo nixos-install \
 
 Do not connect or import the Vault drives during this step.
 
-## First Boot
+## Final App-Data Cutover
 
-1. Reboot from the internal NVMe with the Vault HDDs still disconnected.
-2. Confirm `/` comes from `ROOT` and `/boot` comes from `BOOT`.
-3. Confirm the wired interface name and static network profile.
-4. Restore application data.
-5. Only after the base host is validated, follow
-   [Vault ZFS Storage](vault-storage.md) to move/import the existing pool.
+Before the replacement host boots, stop services on the old server that write to
+`/var/lib/apps`, take a final app-data backup, and leave those services stopped.
+For Paperless, create a final PostgreSQL dump before the Restic backup.
 
-Fix the staged checkout ownership after the configured user exists:
+On the old server:
 
 ```sh
-sudo chown -R joshan:users /home/joshan/.files
+sudo systemctl stop \
+  paperless-consumer.service \
+  paperless-scheduler.service \
+  paperless-task-queue.service \
+  paperless-web.service
+
+sudo systemctl start postgresqlBackup-paperless.service
+sudo systemctl show postgresqlBackup-paperless.service \
+  -p Result -p ExecMainStatus --no-pager
+
+sudo systemctl stop \
+  adguardhome.service \
+  gitea.service \
+  hermes-agent.service \
+  docker-home-assistant.service \
+  docker-matter-server.service \
+  docker-n8n.service \
+  docker-onedev.service \
+  docker-openclaw.service \
+  immich-server.service \
+  immich-machine-learning.service \
+  redis-immich.service \
+  breville-airactive3d-3speed.path \
+  matrix-bridge-discord.service \
+  matrix-bridge-facebook.service \
+  matrix-bridge-instagram.service \
+  matrix-bridge-signal.service \
+  matrix-bridge-telegram.service \
+  matrix-bridge-whatsapp.service
+
+sudo systemctl start restic-backups-apps.service
+sudo systemctl show restic-backups-apps.service \
+  -p Result -p ExecMainStatus --no-pager
+sudo restic-apps snapshots --latest 1
 ```
 
-Useful checks:
+Apply the final snapshot to the pre-seeded app data from the installer. The
+`--delete` flag removes files under `/var/lib/apps` that no longer exist in the
+final snapshot:
+
+```sh
+sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
+  nix --extra-experimental-features "nix-command flakes" shell \
+  nixpkgs#restic nixpkgs#rclone -c restic \
+  -r rclone:dropbox:Archives/Backups/nixos-server \
+  --password-file /mnt/root/secrets/restic-password \
+  restore latest --target /mnt --include /var/lib/apps --delete
+```
+
+The old server remains the rollback source, but its application services stay
+stopped after the final backup so its state cannot diverge from the restored
+copy.
+
+## First Boot
+
+1. Shut down the old server before the replacement host joins the LAN as
+   `192.168.1.3`.
+2. Reboot the OptiPlex from the internal NVMe with the Vault HDDs still
+   disconnected.
+3. Confirm `/` comes from `ROOT` and `/boot` comes from `BOOT`.
+4. Confirm `enp0s31f6` owns the static server address and SSH access works.
+5. Fix the restored home-directory ownership if required:
+
+```sh
+sudo chown -R joshan:users /home/joshan/.files /home/joshan/.secrets
+```
+
+Verify the base system and restored state:
 
 ```sh
 findmnt / /boot /var/lib/apps
 lsblk -f
-ip -br link
+ip -br addr show enp0s31f6
+sudo restic-secrets snapshots --latest 1
+sudo restic-apps snapshots --latest 1
 systemctl is-system-running || true
 systemctl --failed --no-pager
 ```
 
-## Verify Restored Secrets
-
-The secrets snapshot is already restored under `/root/secrets` and
-`/home/joshan/.secrets`. Verify the configured wrapper can read the repository:
-
-```sh
-ssh -t "joshan@$SERVER" 'sudo restic-secrets snapshots'
-```
-
-## Restore Mutable App Data
-
-For a replacement NixOS server with an existing restic backup, restore the app
-data root directly. The restic repository contains `/var/lib/apps`, so no app
-names need to be listed here:
-
-```sh
-ssh -t "$SERVER" '
-  sudo env RCLONE_CONFIG=/var/lib/backup-credentials/rclone.conf \
-    restic -r rclone:dropbox:Archives/Backups/nixos-server \
-    --password-file /root/secrets/restic-password \
-    restore latest \
-    --target / \
-    --include /var/lib/apps
-'
-```
-
-For a one-time HAOS backup migration, use `docs/nixos-server/migration.md`.
-
-## First Rebuild
-
-After restoring the application data, run the first rebuild
-with the target configuration's binary caches passed
-as extra Nix options. The command evaluates the substituters and signing keys
-from the `nixos-server` configuration:
-
-```sh
-cd /home/joshan/.files
-
-substituters="$(
-  nix eval --raw .#nixosConfigurations.nixos-server \
-    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.substituters)'
-)"
-trusted_public_keys="$(
-  nix eval --raw .#nixosConfigurations.nixos-server \
-    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys)'
-)"
-
-sudo nixos-rebuild switch --flake .#nixos-server \
-  --option extra-substituters "$substituters" \
-  --option extra-trusted-public-keys "$trusted_public_keys"
-```
-
-Normal later rebuilds use the Nix settings already installed by the system and
-do not need these bootstrap options.
+Only after the base host is validated, connect the Vault HDDs and follow
+[Vault ZFS Storage](vault-storage.md) to import and verify the existing pool.
 
 ## Verify The System
 
