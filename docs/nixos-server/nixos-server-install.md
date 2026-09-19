@@ -94,8 +94,6 @@ sudo nixos-generate-config --root /mnt
 cat /mnt/etc/nixos/hardware-configuration.nix
 ```
 
-The committed configuration owns the `ROOT` and `BOOT` filesystem mounts.
-
 ## Install NixOS
 
 Clone the repository using the restored GitHub SSH key:
