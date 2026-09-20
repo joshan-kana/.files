@@ -2,7 +2,6 @@
   editScope,
   inputs,
   moduleRegistry,
-  modulesPath,
   ...
 }:
 
@@ -15,16 +14,13 @@
     ;
 
   imports = [
-    inputs.nixos-hardware.nixosModules.raspberry-pi-4
     inputs.hermes-agent.nixosModules.default
     ./options.nix
+    ./hardware.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
       lockFile = ./container-images.lock;
     })
-    "${modulesPath}/image/repart.nix"
   ];
-
-  hardware = import ./hardware.nix;
 
   dotfiles = {
     profile.name = "nixos-server";
@@ -102,19 +98,23 @@
       networkManager =
         _:
         lib.recursiveUpdate (shared.networkManager { }) {
-          networking.networkmanager.ensureProfiles.profiles."wired-static" = {
-            connection = {
-              id = "wired-static";
-              type = "ethernet";
-              "interface-name" = lan.interface;
-              autoconnect = true;
-              "autoconnect-priority" = 100;
+          networking.networkmanager = {
+            settings.main."ignore-carrier" = "*";
+            ensureProfiles.profiles."wired-static" = {
+              connection = {
+                id = "wired-static";
+                type = "ethernet";
+                "interface-name" = lan.interface;
+                autoconnect = true;
+                "autoconnect-priority" = 100;
+              };
+              ipv4 = {
+                method = "manual";
+                address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
+                "may-fail" = false;
+              };
+              ipv6.method = "auto";
             };
-            ipv4 = {
-              method = "manual";
-              address1 = "${lan.serverIp}/${lanPrefixLength},${lan.gateway}";
-            };
-            ipv6.method = "auto";
           };
         };
 
@@ -384,8 +384,9 @@
       users = {
         groups = {
           ${storage.appData.group.name}.gid = storage.appData.group.id;
-          ${storage.dataRoot.group.name} = { };
+          ${storage.dataRoot.group.name}.gid = storage.dataRoot.group.id;
         };
+
         users.${primary.name}.extraGroups = [
           storage.appData.group.name
           storage.dataRoot.group.name
@@ -543,7 +544,6 @@
             ''
           );
     };
-  image = import ./image.nix;
   maintenance =
     { pkgs, ... }:
 
@@ -566,10 +566,6 @@
 
       nix.settings = {
         min-free = minFree;
-        substituters = [ "https://nixos-raspberrypi.cachix.org" ];
-        trusted-public-keys = [
-          "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
-        ];
       };
 
       services.journald.extraConfig = ''
@@ -601,6 +597,17 @@
     }:
 
     {
+      home = _: {
+        programs.ssh = {
+          enable = true;
+          enableDefaultConfig = false;
+          settings."github.com" = {
+            IdentityFile = "${config.dotfiles.secretsDir}/id_ed25519";
+            IdentitiesOnly = true;
+          };
+        };
+      };
+
       users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4kCJGHE5VF6YL3Y2almpG/0cl7+h2mMrSRONRXIhZr Shortcuts on Joshan’s iPhone"

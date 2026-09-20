@@ -52,7 +52,7 @@ sudo docker exec openclaw openclaw-repository git infrastructure-docs status --s
   previous generation.
 
 This rollback does not modify Joshan's existing
-`/root/secrets/id_ed25519` key.
+`/home/joshan/.secrets/id_ed25519` key.
 
 ## Ollama Proxy
 
@@ -111,9 +111,8 @@ The oneshot service:
    changes, and
 5. reloads nginx only after a config change.
 
-This keeps the Raspberry Pi 4 work small: each poll does a short mDNS lookup and
-one or two short HTTP checks, and nginx is not reloaded when the selected
-upstream is unchanged.
+Each poll does a short mDNS lookup and one or two short HTTP checks, and nginx
+is not reloaded when the selected upstream is unchanged.
 
 ## Verification
 
@@ -140,8 +139,8 @@ Expected healthy state:
 
 ## Operational Notes
 
-The Mac runs Ollama; the Raspberry Pi 4 only hosts the OpenClaw gateway and the
-local proxy. When the Mac is asleep, off, or Ollama is stopped, the local proxy
+The Mac runs Ollama; the NixOS server hosts the OpenClaw gateway and the local
+proxy. When the Mac is asleep, off, or Ollama is stopped, the local proxy
 can return a backend error. That is expected. The important property is that
 nginx and OpenClaw remain healthy and the polling timer picks up the Mac again
 when Ollama becomes reachable.
