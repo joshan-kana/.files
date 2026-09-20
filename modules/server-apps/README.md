@@ -19,6 +19,7 @@ Server app modules should describe the complete app-specific system consequence 
 - Persistent service configuration/state belongs under `config.dotfiles.server.storage.appData.root` unless a dedicated mount or upstream requirement justifies another path.
 - Bulk user data belongs under `config.dotfiles.server.storage.dataRoot.path`.
 - App-specific users, groups, permissions, tmpfiles, backups, firewall rules, and runtime glue belong with the app. Shared infrastructure stays in its shared module.
+- Express persistent application ownership with service user/group names. Userborn preserves those filesystem identities across system generations, and its identity database is part of the server recovery backup.
 - Prefer declarative systemd/tmpfiles ownership and permissions over startup `mkdir`/`chown` scripts.
 
 ## Module shape

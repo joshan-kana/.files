@@ -361,6 +361,7 @@
       secretsBackupPassword = "${backupCredentialsDir}/secrets-restic-password";
       secretsBackupRepository = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
       snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
+      userbornState = "/var/lib/userborn";
       resticUnlock = ''
         #!${pkgs.runtimeShell}
         ${pkgs.restic}/bin/restic unlock
@@ -404,6 +405,11 @@
         ];
         zfs.extraPools = [ storage.dataRoot.poolName ];
         zfs.forceImportRoot = false;
+      };
+
+      services.userborn = {
+        enable = true;
+        passwordFilesLocation = userbornState;
       };
 
       services.zfs = {
@@ -485,6 +491,7 @@
           paths = [
             server.secretsDir
             config.dotfiles.secretsDir
+            userbornState
           ];
           timerConfig = {
             OnCalendar = "*:0/15";

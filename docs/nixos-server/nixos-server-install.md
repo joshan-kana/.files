@@ -83,6 +83,7 @@ It contains the current backed-up state of:
 ```text
 /root/secrets
 /home/joshan/.secrets
+/var/lib/userborn
 ```
 
 On a replacement machine, install the two recovery files under
