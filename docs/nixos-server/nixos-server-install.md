@@ -425,4 +425,6 @@ Those paths are covered by Snapper snapshots and the restic Dropbox backup.
 The external Vault pool is restored separately after a full SD-card rebuild.
 Follow [Vault ZFS Storage](vault-storage.md) to import and verify it; do not run
 the destructive pool-creation step again. Vault data is locally snapshotted but
-is not included in the app-data restic backup.
+is not included in the app-data restic backup. Then restore the PostgreSQL-backed
+application databases using
+[Backup And Restore](backup-restore.md#postgresql-application-databases).
