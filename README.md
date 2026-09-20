@@ -20,7 +20,7 @@ The flake exposes these NixOS configurations:
 | `nixos` | x86_64 Linux desktop | `hosts/nixos/` |
 | `nixos-arm-parallels` | aarch64 Linux desktop VM | `hosts/nixos-arm-parallels/` |
 | `nixos-orbstack` | OrbStack Linux container | `hosts/nixos-orbstack/` |
-| `nixos-server` | Raspberry Pi server | `hosts/nixos-server/` |
+| `nixos-server` | Dell OptiPlex 7010 SFF server | `hosts/nixos-server/` |
 
 Host directories are the source of truth for what each machine imports. Start
 there when you want to know what applies to a machine.

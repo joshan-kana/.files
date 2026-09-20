@@ -1,33 +1,49 @@
-{ lib, pkgs, ... }:
+# Hardware detected on the Dell OptiPlex 7010 SFF with nixos-generate-config.
+# Filesystems intentionally use stable labels so reinstalling does not bake
+# partition UUIDs into the repository.
+{
+  config,
+  lib,
+  modulesPath,
+  ...
+}:
 
 {
-  hardware.enableRedistributableFirmware = true;
-
-  boot.loader.grub.enable = false;
-  boot.loader.generic-extlinux-compatible.enable = true;
-  boot.loader.generic-extlinux-compatible.configurationLimit = lib.mkDefault 10;
-  # Headless Pi server: keep a tiny serial-console rescue window without
-  # slowing normal unattended boots.
-  boot.loader.timeout = lib.mkDefault 1;
-  boot.kernelPackages = lib.mkForce pkgs.linuxPackages;
-
-  boot.initrd.availableKernelModules = [
-    "xhci_pci"
-    "usbhid"
-    "usb_storage"
-    "uas"
-    "sd_mod"
-    "sdhci"
-    "sdhci_pci"
-    "sdhci_iproc"
-    "sdhci_brcmstb"
-    "mmc_block"
-    "bcm2835_dma"
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
   ];
+
+  hardware.enableRedistributableFirmware = true;
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+
+  boot = {
+    initrd.availableKernelModules = [
+      "xhci_pci"
+      "ahci"
+      "nvme"
+      "usbhid"
+      "usb_storage"
+      "sd_mod"
+    ];
+    initrd.kernelModules = [ ];
+    kernelModules = [ "kvm-intel" ];
+    extraModulePackages = [ ];
+
+    loader = {
+      systemd-boot = {
+        enable = true;
+        configurationLimit = 10;
+      };
+      efi.canTouchEfiVariables = true;
+      timeout = 1;
+    };
+
+    supportedFilesystems = [ "btrfs" ];
+  };
 
   fileSystems = {
     "/" = {
-      device = "/dev/disk/by-label/NIXOS";
+      device = "/dev/disk/by-label/ROOT";
       fsType = "btrfs";
       options = [
         "compress=zstd"
@@ -36,22 +52,21 @@
     };
 
     "/boot" = {
-      device = "/dev/disk/by-label/FIRMWARE";
+      device = "/dev/disk/by-label/BOOT";
       fsType = "vfat";
+      options = [
+        "fmask=0022"
+        "dmask=0022"
+      ];
     };
-
   };
 
   swapDevices = [ ];
+
   zramSwap = {
     enable = true;
     memoryPercent = 100;
   };
 
-  boot.supportedFilesystems = [ "btrfs" ];
-  boot.growPartition = true;
-
-  nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
-
-  fileSystems."/".autoResize = true;
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 }

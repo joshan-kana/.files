@@ -8,12 +8,6 @@
     # Stable Nixpkgs for server hosts where predictable updates matter more.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # NixOS hardware profiles, including Raspberry Pi 4 defaults.
-    nixos-hardware = {
-      url = "github:NixOS/nixos-hardware";
-      inputs.nixpkgs.follows = "nixpkgs-stable";
-    };
-
     # Hermes Agent: native NixOS service/module.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
@@ -524,7 +518,7 @@
           nixpkgsInput = nixpkgs-stable;
           homeManagerInput = home-manager-stable;
           stylixInput = stylix-stable;
-          system = "aarch64-linux";
+          system = "x86_64-linux";
           hostModule = ./hosts/nixos-server;
         };
       };

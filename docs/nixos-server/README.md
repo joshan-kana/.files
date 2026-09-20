@@ -1,36 +1,31 @@
 # NixOS Server Guide
 
-Raspberry Pi home server documentation.
+Dell OptiPlex 7010 SFF home server documentation.
 
 ## Files
 
-- `flake.nix`: declares the `nixos-server` host target.
-- `docs/nixos-server/nixos-server-install.md`: end-to-end install, restore,
-  and day-two operations guide.
-- `profiles/nixos-server/configuration_nixos-server.nix`: host networking,
-  users, SSH, caches, and host-level services.
-- `profiles/nixos-server/hosted-stack.nix`: hosted applications and their
-  supporting runtime wiring, including app containers, backups,
-  Snapper, and the AdGuard macvlan network.
-- `profiles/nixos-server/hardware-configuration.nix`: this server's disk and
-  filesystem layout.
-- `profiles/nixos-server/image.nix`: the Raspberry Pi SD card image
-  definition with the `FIRMWARE` boot partition, a 12 GiB seed image, and a
-  Btrfs root layout that grows to the full card on first boot.
-- [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth networking notes from the external infrastructure docs repo.
+- `flake.nix`: declares the `nixos-server` x86_64 host target.
+- `hosts/nixos-server/default.nix`: server host policy and composition.
+- `hosts/nixos-server/hardware.nix`: OptiPlex hardware, boot, and label-based filesystem configuration.
+- `hosts/nixos-server/options.nix`: server-only configuration inputs.
+- `hosts/nixos-server/container-images.lock`: immutable OCI image locks.
+- `docs/nixos-server/nixos-server-install.md`: bare-metal install and recovery procedure.
+- [`docs/infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md): source-of-truth network plan.
 
-## Hardware Sources
+## Hardware Configuration
 
-`nixos-hardware.nixosModules.raspberry-pi-4` and
-`profiles/nixos-server/hardware-configuration.nix` serve different purposes:
+The committed hardware configuration is based on `nixos-generate-config` output
+from the OptiPlex. Generated kernel/initrd modules and Intel microcode settings
+are retained, while filesystem mounts deliberately use stable labels instead of
+partition UUIDs:
 
-- `nixos-hardware.nixosModules.raspberry-pi-4`: Raspberry Pi 4 defaults shared
-  by many machines, such as board-specific firmware and platform behavior.
-- `profiles/nixos-server/hardware-configuration.nix`: this server's own disk
-  labels, Btrfs subvolumes, boot layout, and kernel choice.
+- `ROOT`: Btrfs root filesystem.
+- `BOOT`: FAT32 EFI system partition mounted at `/boot`.
 
-The split keeps board defaults separate from machine-specific storage
-assumptions.
+`/var/lib/apps` is a Btrfs subvolume on the root filesystem so the existing
+Snapper configuration continues to snapshot application state independently.
+The external `vault` ZFS pool remains separate and is imported without
+recreating or formatting either member disk.
 
 ## Network Layout
 
@@ -52,12 +47,10 @@ it runs on.
 ## AdGuard Shim
 
 Docker macvlan networks isolate the parent host from the container. The second
-macvlan address on the host lets the Pi itself and host-networked Home
-Assistant reach AdGuard. The macvlan parent interface is detected at runtime
-from the default IPv4 route, so the config does not depend on whether the Pi
-Ethernet interface is named `end0`, `eth0`, or something else.
+macvlan address on the host lets host-networked services reach AdGuard. The
+macvlan parent interface is detected at runtime from the default IPv4 route.
 
-That is why `hosted-stack.nix` creates:
+The server networking configuration creates:
 
 - container IP `192.168.1.2` for AdGuard itself
 - host shim IP `192.168.1.5` on `adguard-shim`
@@ -80,25 +73,8 @@ URLs such as `http://192.168.1.3:8123` through the subnet route for stable acces
 
 ## Install
 
-1. Build the `nixos-server` SD image from this repo on an `aarch64-linux`
-   machine.
-2. Flash the resulting image to the microSD card.
-3. Boot the Pi, SSH in, and immediately change the temporary first-boot password.
-4. Copy or clone this repo to `/home/joshan/.files`, keeping Git metadata so
-   later `git pull` updates work on the server.
-   Use `git clone --recurse-submodules` or run `git submodule update --init --recursive`
-   after copying/cloning so `docs/infrastructure-docs` is present.
-5. Install the backup-recovery files from the external recovery store under
-   `/var/lib/backup-credentials`: the recovery `rclone.conf` and the
-   `nixos-server` secrets-repository password.
-6. Restore `/root/secrets` and `/home/joshan/.secrets` from
-   `rclone:dropbox:Archives/Backups/secrets/nixos-server`.
-7. Restore app data into `/var/lib/...` using the mapping below.
-8. Apply the system:
-
-```sh
-sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
-```
+Use [NixOS Server Install Guide](nixos-server-install.md) for bare-metal install
+and full-system recovery.
 
 ## Restore Map
 
@@ -160,7 +136,7 @@ unrelated flake input changes do not restart the hosted containers.
 3. Hosted container image updates:
    The server containers are pinned to immutable digests recorded in
    `hosts/nixos-server/container-images.lock`. The `update-container-lock` flake
-   app resolves each configured `repository:tag`, verifies a `linux/arm64` image
+   app resolves each configured `repository:tag`, verifies an image for the target host platform
    is available, and rewrites the lock atomically.
 
 ```sh
@@ -266,12 +242,13 @@ image digest does not necessarily undo a completed migration.
 `virtualisation.vmVariant` lets `nixos-rebuild build-vm --flake .#nixos-server`
 produce a test VM from the same host definition.
 
-Shared VM sizing and build aliases live under `virtualisation.vm`; the server-specific safety overrides are nested under `virtualisation.vm.safety` because the real Pi assumptions do not fit a VM:
+Shared VM sizing and build aliases live under `virtualisation.vm`; the
+server-specific safety overrides are nested under `virtualisation.vm.safety`:
 
 - Snapper and restic are disabled because the VM is just for build/testing and
   should not try to snapshot or back up fake data.
 - The AdGuard macvlan unit is disabled because a QEMU VM does not have the
-  real LAN interface used by the Pi deployment.
+  server's physical LAN interface.
 - AdGuard falls back from a dedicated macvlan IP to normal published ports so
   the service can still start inside the VM.
 

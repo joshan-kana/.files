@@ -1,6 +1,6 @@
 # Vault ZFS Storage
 
-Vault is the Raspberry Pi server's large local-data layer. Two backed-up 2 TB
+Vault is the server's large local-data layer. Two backed-up 2 TB
 LaCie USB HDDs form a ZFS mirror named `vault`, with about 2 TB usable capacity
 and continued availability after one drive fails.
 
@@ -8,7 +8,7 @@ The storage layers deliberately remain separate:
 
 | Path | Storage | Protection |
 | --- | --- | --- |
-| `/var/lib/apps` | Btrfs on the SD card | Local Snapper snapshots and offsite restic/Dropbox backups |
+| `/var/lib/apps` | Btrfs on the internal NVMe | Local Snapper snapshots and offsite restic/Dropbox backups |
 | `/srv/vault` | Mirrored LaCie USB HDDs | Local recursive Sanoid/ZFS snapshots only |
 
 `/srv/vault` is not included in the restic/Dropbox backup in this change.
@@ -16,8 +16,7 @@ Mirroring and snapshots are not offsite backups.
 
 ## Physical Setup And Safety
 
-Connect both drives to the Pi's blue USB 3.0 ports with the verified USB 3.0
-cables. Pool creation is a one-time, explicit operation because it erases both
+Connect both drives to USB 3.x ports with the verified USB 3.x cables. Pool creation is a one-time, explicit operation because it erases both
 drives. Normal NixOS activation only enables ZFS import, scrubs, and snapshots;
 it never wipes disks or creates the pool.
 
@@ -115,7 +114,7 @@ for offsite pruning.
 
 ## Full Rebuild And Pool Import
 
-After rebuilding the SD card, keep the LaCie drives connected. Apply the NixOS
+After rebuilding the server NVMe, reconnect the LaCie drives. Apply the NixOS
 configuration, inspect importable pools, then import Vault if it was not imported
 automatically. Do not run the pool-creation script again.
 
