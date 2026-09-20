@@ -8,7 +8,7 @@
 | One app is broken | Use local Snapper first |
 | Secret is missing/bad | `sudo restic-secrets snapshots` |
 | Local app data is gone | `sudo restic-apps snapshots` |
-| Whole server was lost | Restore secrets, then app data |
+| Whole server was lost | Restore secrets, app data, then application databases |
 | Vault file is missing/bad | Use the ZFS section below |
 
 Before restoring anything, list snapshots and stop the service that writes to
@@ -169,6 +169,64 @@ sudo restic-apps restore latest --target / --include /var/lib/apps
 
 Initial setup/migration is in
 [NixOS Server Install Guide](nixos-server-install.md).
+
+## PostgreSQL Application Databases
+
+Paperless and Immich keep their live PostgreSQL databases outside
+`/var/lib/apps`. Their database dumps are backed up with the normal app-data
+backup and must be restored after a full reinstall.
+
+Stop the writers and automatic Paperless database backup first:
+
+```sh
+sudo systemctl stop \
+  paperless-web.service \
+  paperless-consumer.service \
+  paperless-scheduler.service \
+  paperless-task-queue.service \
+  immich-server.service \
+  postgresqlBackup-paperless.timer
+```
+
+Choose the app-data snapshot to recover and restore its database dumps to a
+temporary directory:
+
+```sh
+snapshot=<snapshot-id>
+restore_dir="$(mktemp -d)"
+
+sudo restic-apps restore "$snapshot" \
+  --target "$restore_dir" \
+  --include /var/lib/apps/paperless/backups/paperless.sql.gz \
+  --include /srv/vault/immich/backups
+```
+
+Verify the selected dumps with `gzip -t`. Do not use an incomplete Immich
+`*.tmp` file.
+
+The Paperless dump creates the database itself:
+
+```sh
+paperless_dump="$restore_dir/var/lib/apps/paperless/backups/paperless.sql.gz"
+sudo gzip -t "$paperless_dump"
+sudo -u postgres dropdb --if-exists --force paperless
+sudo gzip -cd "$paperless_dump" | \
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres
+```
+
+The Immich dump expects an empty `immich` database:
+
+```sh
+immich_dump=<path-to-complete-immich-sql.gz>
+sudo gzip -t "$immich_dump"
+sudo -u postgres dropdb --if-exists --force immich
+sudo -u postgres createdb --owner=immich immich
+sudo gzip -cd "$immich_dump" | \
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -d immich
+```
+
+Start the applications again and verify their state before allowing the normal
+backup timers to continue.
 
 ## Fast Local App-Data Restore
 
