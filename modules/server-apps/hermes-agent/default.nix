@@ -76,8 +76,6 @@ let
   '';
 in
 {
-  users.users.${hermesUser}.uid = 994;
-
   services.hermes-agent = {
     enable = true;
     package = hermesPackage;

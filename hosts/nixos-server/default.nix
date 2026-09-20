@@ -157,7 +157,6 @@
           networking.firewall.allowedUDPPorts = [ service.port ];
 
           users.users.${service.user} = {
-            uid = 999;
             isSystemUser = true;
             inherit (service) group;
           };

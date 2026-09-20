@@ -13,9 +13,8 @@ let
   tailnetHost = config.networking.hostName;
 in
 {
-  users.groups.atticd.gid = 999;
+  users.groups.atticd = { };
   users.users.atticd = {
-    uid = 998;
     isSystemUser = true;
     group = "atticd";
   };

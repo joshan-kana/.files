@@ -68,7 +68,13 @@ sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
 
 sudo test -f /mnt/home/joshan/.secrets/id_ed25519
 sudo test -d /mnt/home/joshan/.secrets
+sudo test -f /mnt/var/lib/userborn/passwd
+sudo test -f /mnt/var/lib/userborn/group
+sudo test -f /mnt/var/lib/userborn/shadow
 ```
+
+The secrets snapshot carries `/var/lib/userborn`, including the account database
+used to retain filesystem user/group identities across reinstalls.
 
 Restore the latest application-data snapshot before the system build:
 

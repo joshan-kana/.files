@@ -14,17 +14,6 @@ let
   backupLocation = "${mediaLocation}/backups";
 in
 {
-  users = lib.mkIf config.services.immich.enable {
-    groups.redis-immich.gid = 993;
-    users = {
-      immich.uid = 993;
-      redis-immich = {
-        uid = 989;
-        group = "redis-immich";
-      };
-    };
-  };
-
   services.immich = {
     enable = true;
     package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.immich;
