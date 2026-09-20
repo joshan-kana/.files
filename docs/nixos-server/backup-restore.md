@@ -28,8 +28,9 @@ NixOS manages the normal backup/rollback machinery:
 - `services.snapper`: creates local `/var/lib/apps` snapshots every 15 minutes.
 - `services.restic.backups.apps`: backs up app data to Dropbox every
   30 minutes and clears stale restic repository locks before each run.
-- `services.restic.backups.secrets`: backs up `/root/secrets` and the primary
-  user's `.secrets` directory to Dropbox every 15 minutes.
+- `services.restic.backups.secrets`: backs up `/root/secrets`, the primary
+  user's `.secrets` directory, and Userborn's account database to Dropbox every
+  15 minutes.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
   explicit persistent storage.
 
@@ -59,7 +60,7 @@ There are two kinds of state:
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
 | Container app data | `/var/lib/apps` | Restore a Snapper snapshot or `restic-apps` backup |
-| Runtime secrets | `/root/secrets`, `/home/joshan/.secrets` | Restore with `restic-secrets` |
+| Runtime secrets and account state | `/root/secrets`, `/home/joshan/.secrets`, `/var/lib/userborn` | Restore with `restic-secrets` |
 | Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
@@ -122,6 +123,7 @@ Runtime secrets are backed up every 15 minutes to
 ```text
 /root/secrets
 /home/joshan/.secrets
+/var/lib/userborn
 ```
 
 Keep recovery copies of these two bootstrap files in an external recovery store:
