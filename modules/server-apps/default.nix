@@ -1,6 +1,6 @@
 _: {
+  agentTools = import ./agent-tools;
   attic = import ./attic;
-  chatgptShellAccess = import ./chatgpt-shell-access;
   gitea = import ./gitea;
   homeAssistant = import ./home-assistant;
   hermesAgent = import ./hermes-agent;
@@ -10,5 +10,6 @@ _: {
   n8n = import ./n8n;
   onedev = import ./onedev;
   openclaw = import ./openclaw;
+  openWebui = import ./open-webui;
   paperless = import ./paperless;
 }
