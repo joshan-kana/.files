@@ -93,7 +93,7 @@ in
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
-      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${
+      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${
         pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
       }/bin/python3 ${./chatgpt-shell-access.py}";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;

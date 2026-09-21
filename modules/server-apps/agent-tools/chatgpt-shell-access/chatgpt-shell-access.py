@@ -1,7 +1,5 @@
 import asyncio
-import logging
 import os
-import re
 import shlex
 import signal
 import time
@@ -15,11 +13,9 @@ from mcp.server import MCPServer
 MAX_OUTPUT_BYTES = 512 * 1024
 OUTPUT_HEAD_BYTES = 64 * 1024
 OUTPUT_TAIL_BYTES = MAX_OUTPUT_BYTES - OUTPUT_HEAD_BYTES
-MAX_FILE_BYTES = 4 * 1024 * 1024
 MAX_JOBS = 64
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
-FINISHED_TTL_SECONDS = 60 * 60
 CANCEL_GRACE_SECONDS = 2.0
 Host = Literal["nixos-server", "mac"]
 
@@ -60,64 +56,44 @@ _ALLOWED_ENV = {
 }
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-logger = logging.getLogger("chatgpt-shell")
 mcp = MCPServer("chatgpt-shell")
 
 
-class BoundedOutput:
-    def __init__(self) -> None:
-        self._data = bytearray()
-        self._head = bytearray()
-        self._tail = bytearray()
-        self._total = 0
-        self._truncated = False
+@dataclass
+class OutputBuffer:
+    data: bytearray = field(default_factory=bytearray)
+    omitted: int = 0
 
     def append(self, chunk: bytes) -> None:
-        if not chunk:
-            return
-        if not self._truncated:
-            combined_size = len(self._data) + len(chunk)
-            if combined_size <= MAX_OUTPUT_BYTES:
-                self._data.extend(chunk)
-                self._total = combined_size
-                return
-            combined = bytes(self._data) + chunk
-            self._head.extend(combined[:OUTPUT_HEAD_BYTES])
-            self._tail.extend(combined[-OUTPUT_TAIL_BYTES:])
-            self._data.clear()
-            self._total = len(combined)
-            self._truncated = True
-            return
-
-        self._total += len(chunk)
-        self._tail[:] = (bytes(self._tail) + chunk)[-OUTPUT_TAIL_BYTES:]
+        combined = self.data + chunk
+        if self.omitted or len(combined) > MAX_OUTPUT_BYTES:
+            self.omitted += max(0, len(combined) - MAX_OUTPUT_BYTES)
+            self.data[:] = combined[:OUTPUT_HEAD_BYTES] + combined[-OUTPUT_TAIL_BYTES:]
+        else:
+            self.data[:] = combined
 
     def drain(self) -> tuple[str, bool, int]:
-        if self._truncated:
-            omitted = self._total - len(self._head) - len(self._tail)
-            marker = f"\n... {omitted} bytes omitted ...\n".encode()
-            raw = bytes(self._head) + marker + bytes(self._tail)
-        else:
-            omitted = 0
-            raw = bytes(self._data)
+        raw = bytes(self.data)
+        omitted = self.omitted
+        self.data.clear()
+        self.omitted = 0
 
-        truncated = self._truncated
-        self.__init__()
-        return raw.decode(errors="replace"), truncated, omitted
+        if omitted:
+            marker = f"\n... {omitted} bytes omitted ...\n".encode()
+            raw = raw[:OUTPUT_HEAD_BYTES] + marker + raw[OUTPUT_HEAD_BYTES:]
+        return raw.decode(errors="replace"), bool(omitted), omitted
 
 
 @dataclass
 class Job:
     request_id: str
     host: Host
-    output: BoundedOutput = field(default_factory=BoundedOutput)
+    output: OutputBuffer = field(default_factory=OutputBuffer)
     started_at: float = field(default_factory=time.monotonic)
     started_event: asyncio.Event = field(default_factory=asyncio.Event)
     process: asyncio.subprocess.Process | None = None
     task: asyncio.Task[None] | None = None
     target_pid: int | None = None
-    status: str = "starting"
     exit_code: int | None = None
     error: str | None = None
     completed_at: float | None = None
@@ -134,10 +110,10 @@ def _validate_wait_seconds(wait_seconds: float) -> float:
     return value
 
 
-def _validate_absolute_path(path: str, name: str) -> str:
-    if "\0" in path or not PurePosixPath(path).is_absolute():
-        raise ValueError(f"{name} must be an absolute path")
-    return path
+def _validate_cwd(cwd: str | None) -> str | None:
+    if cwd is not None and ("\0" in cwd or not PurePosixPath(cwd).is_absolute()):
+        raise ValueError("cwd must be an absolute path")
+    return cwd
 
 
 def _build_argv(host: Host, script: str) -> list[str]:
@@ -152,7 +128,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
     return [*SSH, f"exec /bin/zsh -lc {shlex.quote(script)}"]
 
 
-def _command_script(host: Host, command: str, cwd: str | None, marker: str) -> str:
+def _command_script(command: str, cwd: str | None, marker: str) -> str:
     return "\n".join(
         [
             f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"",
@@ -171,13 +147,6 @@ async def _read_output(job: Job, marker: str) -> None:
         if line.startswith(marker_bytes):
             try:
                 job.target_pid = int(line[len(marker_bytes) :].strip())
-                job.status = "running"
-                logger.info(
-                    "request=%s host=%s pid=%s started",
-                    job.request_id,
-                    job.host,
-                    job.target_pid,
-                )
             except ValueError:
                 job.output.append(line)
             job.started_event.set()
@@ -211,7 +180,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
     marker = f"__CHATGPT_SHELL_PID_{job.request_id}__="
     try:
         job.process = await asyncio.create_subprocess_exec(
-            *_build_argv(job.host, _command_script(job.host, command, cwd, marker)),
+            *_build_argv(job.host, _command_script(command, cwd, marker)),
             stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -223,36 +192,26 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         job.exit_code = await job.process.wait()
         await writer
         await reader
-        job.status = "cancelled" if job.cancel_requested else "completed"
     except Exception as exc:
-        job.status = "cancelled" if job.cancel_requested else "failed"
         job.error = str(exc)
     finally:
         job.completed_at = time.monotonic()
         job.started_event.set()
-        logger.info(
-            "request=%s host=%s pid=%s status=%s exit=%s duration_ms=%s",
-            job.request_id,
-            job.host,
-            job.target_pid,
-            job.status,
-            job.exit_code,
-            round((job.completed_at - job.started_at) * 1000),
-        )
-
-
-def _prune_jobs() -> None:
-    now = time.monotonic()
-    for request_id, job in list(jobs.items()):
-        if job.completed_at is not None and now - job.completed_at >= FINISHED_TTL_SECONDS:
-            jobs.pop(request_id, None)
 
 
 def _payload(job: Job) -> dict[str, object]:
     output, truncated, omitted = job.output.drain()
     end = job.completed_at or time.monotonic()
+    if job.completed_at is None:
+        status = "running"
+    elif job.cancel_requested:
+        status = "cancelled"
+    elif job.error:
+        status = "failed"
+    else:
+        status = "completed"
     payload: dict[str, object] = {
-        "status": job.status if job.completed_at is not None else "running",
+        "status": status,
         "host": job.host,
         "duration_ms": round((end - job.started_at) * 1000),
         "output": output,
@@ -285,21 +244,10 @@ async def _result(job: Job, wait_seconds: float) -> dict[str, object]:
     return payload
 
 
-async def _run_quiet(host: Host, script: str) -> None:
-    process = await asyncio.create_subprocess_exec(
-        *_build_argv(host, script),
-        stdin=asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.DEVNULL,
-        env=COMMAND_ENV,
-        start_new_session=True,
-    )
-    await asyncio.wait_for(process.wait(), timeout=5)
-
-
 async def _signal_target(job: Job, sig: str) -> None:
     if job.target_pid is None:
         return
+
     script = f"""
 kill_tree() {{
   parent="$1"
@@ -312,43 +260,17 @@ kill_tree() {{
 kill_tree {job.target_pid}
 """
     try:
-        await _run_quiet(job.host, script)
+        process = await asyncio.create_subprocess_exec(
+            *_build_argv(job.host, script),
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+            env=COMMAND_ENV,
+            start_new_session=True,
+        )
+        await asyncio.wait_for(process.wait(), timeout=5)
     except Exception:
         pass
-
-
-async def _capture(
-    host: Host,
-    script: str,
-    stdin: bytes | None = None,
-) -> tuple[int, bytes, str]:
-    process = await asyncio.create_subprocess_exec(
-        *_build_argv(host, script),
-        stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env=COMMAND_ENV,
-        start_new_session=True,
-    )
-    stdout, stderr = await process.communicate(stdin)
-    return process.returncode, stdout, stderr.decode(errors="replace")
-
-
-def _validate_patch_text(patch: str) -> None:
-    if "\0" in patch:
-        raise ValueError("patch must be text")
-    if len(re.findall(r"^diff --git ", patch, flags=re.MULTILINE)) > 1:
-        raise ValueError("file_patch accepts a patch for one file only")
-    if "@@" not in patch:
-        raise ValueError("patch must contain at least one unified diff hunk")
-
-
-def _normalise_diff_headers(path: str, diff: bytes) -> bytes:
-    lines = diff.splitlines(keepends=True)
-    if len(lines) >= 2 and lines[0].startswith(b"--- ") and lines[1].startswith(b"+++ "):
-        lines[0] = f"--- {path}\n".encode()
-        lines[1] = f"+++ {path}\n".encode()
-    return b"".join(lines)
 
 
 @mcp.tool()
@@ -359,18 +281,12 @@ async def shell_exec(
     wait_seconds: float = WAIT_SECONDS,
     stdin: str | None = None,
 ) -> dict[str, object]:
-    """Run a non-interactive command. Long-running commands continue as tracked jobs."""
-    _prune_jobs()
-    if cwd is not None:
-        cwd = _validate_absolute_path(cwd, "cwd")
+    """Run a non-interactive command; pass command data through stdin. Long jobs stay tracked."""
+    cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)
 
     if len(jobs) >= MAX_JOBS:
-        finished = min(
-            (job for job in jobs.values() if job.completed_at is not None),
-            key=lambda job: job.completed_at or 0,
-            default=None,
-        )
+        finished = next((job for job in jobs.values() if job.completed_at is not None), None)
         if finished is None:
             raise RuntimeError("too many active jobs")
         jobs.pop(finished.request_id, None)
@@ -388,7 +304,6 @@ async def shell_result(
     wait_seconds: float = WAIT_SECONDS,
 ) -> dict[str, object]:
     """Return new output and current state for a tracked background command."""
-    _prune_jobs()
     job = jobs.get(request_id)
     if job is None:
         raise ValueError("unknown or expired request_id")
@@ -398,7 +313,6 @@ async def shell_result(
 @mcp.tool()
 async def shell_cancel(request_id: str) -> dict[str, object]:
     """Cancel a tracked command and its target process tree."""
-    _prune_jobs()
     job = jobs.get(request_id)
     if job is None:
         raise ValueError("unknown or expired request_id")
@@ -425,121 +339,6 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
     payload = _payload(job)
     jobs.pop(request_id, None)
     return payload
-
-
-@mcp.tool()
-async def file_patch(
-    host: Host,
-    path: str,
-    patch: str,
-    expected_sha256: str | None = None,
-) -> dict[str, object]:
-    """Atomically apply one unified diff to one existing text file."""
-    path = _validate_absolute_path(path, "path")
-    _validate_patch_text(patch)
-    if expected_sha256 is not None and not re.fullmatch(r"[0-9a-fA-F]{64}", expected_sha256):
-        raise ValueError("expected_sha256 must be a 64-character hexadecimal SHA-256")
-
-    target = shlex.quote(path)
-    expected = shlex.quote(expected_sha256.lower()) if expected_sha256 else '""'
-    meta = f"__CHATGPT_FILE_PATCH_{uuid.uuid4().hex}__"
-    script = f"""
-target={target}
-expected={expected}
-meta={shlex.quote(meta)}
-if [ -L "$target" ]; then
-  echo "refusing to patch a symlink" >&2
-  exit 65
-fi
-if [ ! -f "$target" ]; then
-  echo "file does not exist or is not a regular file" >&2
-  exit 66
-fi
-size=$(wc -c < "$target" | tr -d ' ')
-if [ "$size" -gt {MAX_FILE_BYTES} ]; then
-  echo "file exceeds {MAX_FILE_BYTES} byte edit limit" >&2
-  exit 67
-fi
-if [ "$size" -gt 0 ]; then
-  encoding=$(file -b --mime-encoding "$target")
-  case "$encoding" in
-    us-ascii|utf-8) ;;
-    *) echo "file_patch only supports UTF-8 text files" >&2; exit 68 ;;
-  esac
-fi
-sha256() {{
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{{print $1}}'
-  else
-    shasum -a 256 "$1" | awk '{{print $1}}'
-  fi
-}}
-dir=$(dirname "$target")
-base=$(basename "$target")
-old=$(mktemp "$dir/.$base.chatgpt-shell-old.XXXXXX") || exit
-new=$(mktemp "$dir/.$base.chatgpt-shell-new.XXXXXX") || exit
-trap 'rm -f "$old" "$new"' EXIT HUP INT TERM
-rm -f "$old" "$new"
-cp -p "$target" "$old" || exit
-old_sha=$(sha256 "$old") || exit
-if [ -n "$expected" ] && [ "$old_sha" != "$expected" ]; then
-  echo "file changed since it was read" >&2
-  exit 73
-fi
-cp -p "$old" "$new" || exit
-patch -s -f -F 0 "$new" || exit
-if cmp -s "$old" "$new"; then
-  echo "patch produced no changes" >&2
-  exit 74
-fi
-if [ -L "$target" ] || ! cmp -s "$old" "$target"; then
-  echo "file changed while patch was being prepared" >&2
-  exit 73
-fi
-new_sha=$(sha256 "$new") || exit
-bytes=$(wc -c < "$new" | tr -d ' ')
-mv -f "$new" "$target" || exit
-printf '%s\\n' "$meta"
-printf 'old_sha256=%s\\n' "$old_sha"
-printf 'new_sha256=%s\\n' "$new_sha"
-printf 'bytes_written=%s\\n' "$bytes"
-printf '%s\\n' "$meta"
-diff -u "$old" "$target"
-rc=$?
-[ "$rc" -le 1 ] || exit "$rc"
-"""
-    returncode, stdout, stderr = await _capture(host, script, patch.encode())
-    if returncode:
-        raise ValueError(stderr.strip() or f"failed to patch {path}")
-
-    marker = f"{meta}\n".encode()
-    parts = stdout.split(marker, 2)
-    if len(parts) != 3:
-        raise RuntimeError("file_patch did not return expected metadata")
-
-    metadata = {}
-    for line in parts[1].decode().splitlines():
-        key, separator, value = line.partition("=")
-        if separator:
-            metadata[key] = value
-
-    diff_output = BoundedOutput()
-    diff_output.append(_normalise_diff_headers(path, parts[2]))
-    diff, truncated, omitted = diff_output.drain()
-
-    result: dict[str, object] = {
-        "status": "applied",
-        "host": host,
-        "path": path,
-        "old_sha256": metadata["old_sha256"],
-        "new_sha256": metadata["new_sha256"],
-        "bytes_written": int(metadata["bytes_written"]),
-        "diff": diff,
-        "diff_truncated": truncated,
-    }
-    if omitted:
-        result["omitted_diff_bytes"] = omitted
-    return result
 
 
 if __name__ == "__main__":
