@@ -78,7 +78,7 @@
       flake = false;
     };
 
-    tunnel-client-checksums = {
+    openai-tunnel = {
       url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
       flake = false;
     };

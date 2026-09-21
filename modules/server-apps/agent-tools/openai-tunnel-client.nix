@@ -12,7 +12,7 @@ let
   pattern = "([0-9a-f]{64})  tunnel-client-runtime-v([0-9]+\\.[0-9]+\\.[0-9]+)-${assetPlatform}\\.zip";
   matches = lib.filter (match: match != null) (
     map (line: builtins.match pattern line) (
-      lib.splitString "\n" (builtins.readFile inputs.tunnel-client-checksums)
+      lib.splitString "\n" (builtins.readFile inputs.openai-tunnel)
     )
   );
   match =
