@@ -194,13 +194,17 @@ async def _read_output(job: Job, marker: str) -> None:
 async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -> None:
     if stdin is None or process.stdin is None:
         return
-    process.stdin.write(stdin.encode())
-    await process.stdin.drain()
-    process.stdin.close()
     try:
-        await process.stdin.wait_closed()
+        process.stdin.write(stdin.encode())
+        await process.stdin.drain()
     except (BrokenPipeError, ConnectionResetError):
         pass
+    finally:
+        process.stdin.close()
+        try:
+            await process.stdin.wait_closed()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
 
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
@@ -456,11 +460,13 @@ if [ "$size" -gt {MAX_FILE_BYTES} ]; then
   echo "file exceeds {MAX_FILE_BYTES} byte edit limit" >&2
   exit 67
 fi
-encoding=$(file -b --mime-encoding "$target")
-case "$encoding" in
-  us-ascii|utf-8) ;;
-  *) echo "file_patch only supports UTF-8 text files" >&2; exit 68 ;;
-esac
+if [ "$size" -gt 0 ]; then
+  encoding=$(file -b --mime-encoding "$target")
+  case "$encoding" in
+    us-ascii|utf-8) ;;
+    *) echo "file_patch only supports UTF-8 text files" >&2; exit 68 ;;
+  esac
+fi
 sha256() {{
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | awk '{{print $1}}'
