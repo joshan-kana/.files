@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   pkgs,
   ...
 }:
@@ -14,7 +15,7 @@ let
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
-  tunnelClient = import ../openai-tunnel-client.nix { inherit pkgs; };
+  tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
 in
 {
   users.groups.${serviceUser} = { };

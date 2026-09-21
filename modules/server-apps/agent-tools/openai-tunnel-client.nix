@@ -1,20 +1,33 @@
-{ pkgs }:
+{ inputs, pkgs }:
 
 let
-  version = "0.0.11";
-  platform =
+  inherit (pkgs) lib;
+  assetPlatform =
     {
-      "aarch64-linux" = {
-        asset = "linux-arm64";
-        hash = "sha256-2LukeypyN5mjcrC4fX5NaTBAk9OiiDcjcxX+VAbZfnc=";
-      };
-      "x86_64-linux" = {
-        asset = "linux-amd64";
-        hash = "sha256-Ka3+XBOZ37n9qTg/IwwyQ1WRL1DcNuLkFrHxMiMXs8Q=";
-      };
+      "aarch64-linux" = "linux-arm64";
+      "x86_64-linux" = "linux-amd64";
     }
     .${pkgs.stdenv.hostPlatform.system}
       or (throw "Unsupported tunnel-client platform: ${pkgs.stdenv.hostPlatform.system}");
+  pattern = "([0-9a-f]{64})  tunnel-client-runtime-v([0-9]+\\.[0-9]+\\.[0-9]+)-${assetPlatform}\\.zip";
+  matches = lib.filter (match: match != null) (
+    map (line: builtins.match pattern line) (
+      lib.splitString "\n" (builtins.readFile inputs.tunnel-client-checksums)
+    )
+  );
+  match =
+    if builtins.length matches == 1 then
+      builtins.head matches
+    else
+      throw "Missing tunnel-client checksum for ${assetPlatform}";
+  checksum = builtins.elemAt match 0;
+  version = builtins.elemAt match 1;
+  assetName = "tunnel-client-runtime-v${version}-${assetPlatform}.zip";
+  hash = builtins.convertHash {
+    hash = checksum;
+    hashAlgo = "sha256";
+    toHashFormat = "sri";
+  };
 in
 pkgs.runCommand "tunnel-client-${version}"
   {
@@ -24,9 +37,10 @@ pkgs.runCommand "tunnel-client-${version}"
     mkdir -p "$out/bin"
     unzip -j ${
       pkgs.fetchurl {
-        url = "https://persistent.oaistatic.com/tunnel-client/v${version}/tunnel-client-v${version}-${platform.asset}.zip";
-        inherit (platform) hash;
+        url = "https://github.com/openai/tunnel-client/releases/download/v${version}/${assetName}";
+        inherit hash;
       }
-    } tunnel-client -d "$out/bin"
+    } tunnel-client-runtime -d "$out/bin"
+    mv "$out/bin/tunnel-client-runtime" "$out/bin/tunnel-client"
     chmod +x "$out/bin/tunnel-client"
   ''

@@ -913,6 +913,7 @@
         "stylix": "stylix",
         "stylix-stable": "stylix-stable",
         "treefmt-nix": "treefmt-nix_2",
+        "tunnel-client-checksums": "tunnel-client-checksums",
         "zen-browser": "zen-browser"
       }
     },
@@ -1247,6 +1248,18 @@
         "owner": "numtide",
         "repo": "treefmt-nix",
         "type": "github"
+      }
+    },
+    "tunnel-client-checksums": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-86FAM9g51dA+tTn6er2KVfHpBGBrzBkm41T8Z84Ak5U=",
+        "type": "file",
+        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
       }
     },
     "uv2nix": {

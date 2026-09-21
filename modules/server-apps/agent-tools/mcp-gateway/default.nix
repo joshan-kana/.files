@@ -9,6 +9,7 @@ let
 
   gatewayRoot = "${appData.root}/mcp-gateway";
   gatewayPort = 4444;
+  gatewayUrl = "http://${server.lan.serverIp}:${toString gatewayPort}";
   gatewaySecret = "${server.secretsDir}/mcp-gateway.env";
 in
 {
@@ -18,17 +19,16 @@ in
       HOST = server.lan.serverIp;
       PORT = toString gatewayPort;
       DATABASE_URL = "sqlite:////data/mcp.db";
+      APP_DOMAIN = gatewayUrl;
 
       MCPGATEWAY_UI_ENABLED = "true";
-      AUTO_REFRESH_SERVERS = "true";
       MCPGATEWAY_ADMIN_API_ENABLED = "true";
-
-      AUTH_REQUIRED = "true";
-      MCP_CLIENT_AUTH_ENABLED = "true";
-      MCP_REQUIRE_AUTH = "true";
-      REQUIRE_STRONG_SECRETS = "true";
-      LEGACY_API_ENABLED = "false";
+      AUTO_REFRESH_SERVERS = "true";
       SECURE_COOKIES = "false";
+      # This host has one ContextForge deployment; UI cookie mode must not invalidate API tokens.
+      VALIDATE_TOKEN_ENVIRONMENT = "false";
+
+      SSRF_ALLOW_LOCALHOST = "true";
       SSRF_ALLOWED_NETWORKS = builtins.toJSON [ "${server.lan.serverIp}/32" ];
 
       MCPGATEWAY_A2A_ENABLED = "false";
@@ -38,7 +38,7 @@ in
     volumes = [ "${gatewayRoot}:/data" ];
     extraOptions = [
       "--network=host"
-      "--health-cmd=python3 -c \"import httpx,sys;sys.exit(0 if httpx.get('http://${server.lan.serverIp}:${toString gatewayPort}/ready',timeout=5).status_code==200 else 1)\""
+      "--health-cmd=python3 -c \"import httpx,sys;sys.exit(0 if httpx.get('${gatewayUrl}/ready',timeout=5).status_code==200 else 1)\""
     ];
   };
 

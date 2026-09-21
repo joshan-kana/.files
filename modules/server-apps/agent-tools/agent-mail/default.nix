@@ -14,18 +14,14 @@ in
       "--no-tui"
     ];
     environment = {
-      HTTP_HOST = server.lan.serverIp;
+      HTTP_HOST = "127.0.0.1";
       HTTP_PORT = toString agentMailPort;
     };
     volumes = [ "${agentMailRoot}:/data" ];
     extraOptions = [ "--network=host" ];
   };
 
-  # The upstream image runs as uid/gid 10001 and keeps all durable mailbox
-  # state below /data.
   systemd.tmpfiles.rules = [
     "d ${agentMailRoot} 0700 agent-tools agent-tools - -"
   ];
-
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ agentMailPort ];
 }

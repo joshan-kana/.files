@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -7,20 +8,20 @@
 
 let
   inherit (config.dotfiles) server;
+  inherit (config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway) enable;
 
   serviceUser = "chatgpt-shared-tools";
   tunnelSecret = "${server.secretsDir}/chatgpt-shared-tools.env";
   gatewayPort = config.virtualisation.oci-containers.containers.mcp-gateway.environment.PORT;
   gatewayUrl = "http://${server.lan.serverIp}:${gatewayPort}";
-  tunnelClient = import ../openai-tunnel-client.nix { inherit pkgs; };
-  mcpGatewayEnabled = config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway.enable;
+  tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
 
   start = pkgs.writeShellScript "chatgpt-shared-tools-start" ''
     set -euo pipefail
     : "''${MCPGATEWAY_BEARER_TOKEN:?MCPGATEWAY_BEARER_TOKEN is not set}"
     : "''${MCPGATEWAY_SERVER_ID:?MCPGATEWAY_SERVER_ID is not set}"
 
-    for _ in {1..300}; do
+    for _ in {1..60}; do
       if ${pkgs.curl}/bin/curl --fail --silent "${gatewayUrl}/ready" >/dev/null; then
         break
       fi
@@ -39,13 +40,13 @@ let
   '';
 in
 {
-  users.groups.${serviceUser} = lib.mkIf mcpGatewayEnabled { };
-  users.users.${serviceUser} = lib.mkIf mcpGatewayEnabled {
+  users.groups.${serviceUser} = lib.mkIf enable { };
+  users.users.${serviceUser} = lib.mkIf enable {
     isSystemUser = true;
     group = serviceUser;
   };
 
-  systemd.services.chatgpt-shared-tools = lib.mkIf mcpGatewayEnabled {
+  systemd.services.chatgpt-shared-tools = lib.mkIf enable {
     description = "Shared agent MCP tools through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
     after = [

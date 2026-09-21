@@ -77,6 +77,11 @@
       url = "file+https://pypi.org/pypi/cptr/json";
       flake = false;
     };
+
+    tunnel-client-checksums = {
+      url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
+      flake = false;
+    };
   };
 
   outputs =
