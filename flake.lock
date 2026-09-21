@@ -170,6 +170,18 @@
         "type": "github"
       }
     },
+    "computer": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-ibmgy69pVD0Iho0hvgBNX1Cj5DsbnXA+J26m5tetMK4=",
+        "type": "file",
+        "url": "https://pypi.org/pypi/cptr/json"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://pypi.org/pypi/cptr/json"
+      }
+    },
     "determinate-nix": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -790,6 +802,18 @@
         "type": "github"
       }
     },
+    "openai-tunnel": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-86FAM9g51dA+tTn6er2KVfHpBGBrzBkm41T8Z84Ak5U=",
+        "type": "file",
+        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
+      }
+    },
     "plasma-manager": {
       "inputs": {
         "home-manager": [
@@ -886,6 +910,7 @@
     },
     "root": {
       "inputs": {
+        "computer": "computer",
         "determinate-nix": "determinate-nix",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",
@@ -894,6 +919,7 @@
         "mautrix-packages": "mautrix-packages",
         "nixpkgs": "nixpkgs_4",
         "nixpkgs-stable": "nixpkgs-stable",
+        "openai-tunnel": "openai-tunnel",
         "plasma-manager": "plasma-manager",
         "pre-commit-hooks": "pre-commit-hooks",
         "spicetify-nix": "spicetify-nix",

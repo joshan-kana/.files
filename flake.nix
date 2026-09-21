@@ -72,6 +72,16 @@
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
     mautrix-packages.url = "github:Moraxyc/nur-packages";
+
+    computer = {
+      url = "file+https://pypi.org/pypi/cptr/json";
+      flake = false;
+    };
+
+    openai-tunnel = {
+      url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
+      flake = false;
+    };
   };
 
   outputs =
