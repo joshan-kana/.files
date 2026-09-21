@@ -331,7 +331,7 @@ in
       aliases = {
         gs = "git status";
         gl = "git log";
-        gb = "git branch -a";
+        gb = "git branch -avv";
         gw = "git switch";
         gou = "git checkout";
         gd = "git diff";
