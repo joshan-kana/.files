@@ -10,7 +10,6 @@ let
 
   serviceUser = "chatgpt-shared-tools";
   tunnelSecret = "${server.secretsDir}/chatgpt-shared-tools.env";
-  sharedServerIdFile = "/run/mcp-gateway/shared-agent-tools.id";
   gatewayPort = config.virtualisation.oci-containers.containers.mcp-gateway.environment.PORT;
   gatewayUrl = "http://${server.lan.serverIp}:${gatewayPort}";
   tunnelClient = import ../openai-tunnel-client.nix { inherit pkgs; };
@@ -20,8 +19,24 @@ let
     set -euo pipefail
     : "''${MCPGATEWAY_BEARER_TOKEN:?MCPGATEWAY_BEARER_TOKEN is not set}"
 
-    serverId="$(cat ${lib.escapeShellArg sharedServerIdFile})"
-    test -n "$serverId"
+    serverId=""
+    for _ in {1..60}; do
+      if servers="$(${pkgs.curl}/bin/curl --fail --silent \
+        --header "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
+        "${gatewayUrl}/v1/servers?include_pagination=false")"; then
+        serverId="$(printf '%s' "$servers" | ${pkgs.jq}/bin/jq -r \
+          'first(.[] | select(.name == "shared-agent-tools") | .id) // empty')"
+        if [ -n "$serverId" ]; then
+          break
+        fi
+      fi
+      ${pkgs.coreutils}/bin/sleep 1
+    done
+
+    if [ -z "$serverId" ]; then
+      echo "ContextForge virtual server 'shared-agent-tools' was not found" >&2
+      exit 1
+    fi
 
     export MCP_SERVER_URL="url=${gatewayUrl}/servers/$serverId/mcp"
     export MCPGATEWAY_AUTH="Bearer $MCPGATEWAY_BEARER_TOKEN"
@@ -46,18 +61,11 @@ in
     after = [
       "network-online.target"
       "docker-mcp-gateway.service"
-      "mcp-gateway-sync.service"
     ];
-    requires = [ "mcp-gateway-sync.service" ];
-    wants = [
-      "network-online.target"
-      "docker-mcp-gateway.service"
-    ];
+    requires = [ "docker-mcp-gateway.service" ];
+    wants = [ "network-online.target" ];
 
-    unitConfig.AssertPathExists = [
-      tunnelSecret
-      sharedServerIdFile
-    ];
+    unitConfig.AssertPathExists = tunnelSecret;
 
     environment.HEALTH_LISTEN_ADDR = "127.0.0.1:18793";
 
