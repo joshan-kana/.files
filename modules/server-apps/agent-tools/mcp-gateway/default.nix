@@ -36,7 +36,10 @@ in
     };
     environmentFiles = [ gatewaySecret ];
     volumes = [ "${gatewayRoot}:/data" ];
-    extraOptions = [ "--network=host" ];
+    extraOptions = [
+      "--network=host"
+      "--health-cmd=python3 -c \"import httpx,sys;sys.exit(0 if httpx.get('http://${server.lan.serverIp}:${toString gatewayPort}/ready',timeout=5).status_code==200 else 1)\""
+    ];
   };
 
   systemd.tmpfiles.rules = [
