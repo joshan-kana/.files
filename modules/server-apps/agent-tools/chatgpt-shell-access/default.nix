@@ -66,14 +66,23 @@ in
       bash
       coreutils
       curl
+      diffutils
+      file
+      findutils
       gawk
       gh
       git
       gnugrep
+      gnupatch
       gnused
+      iproute2
       jq
       nix
       openssh
+      procps
+      psmisc
+      python3
+      ripgrep
       rsync
       systemd
       util-linux
