@@ -14,8 +14,9 @@ in
       "--no-tui"
     ];
     environment = {
-      HTTP_HOST = "127.0.0.1";
+      HTTP_HOST = "0.0.0.0";
       HTTP_PORT = toString agentMailPort;
+      HTTP_ALLOWED_HOSTS = server.lan.serverIp;
     };
     volumes = [ "${agentMailRoot}:/data" ];
     extraOptions = [ "--network=host" ];
@@ -24,4 +25,6 @@ in
   systemd.tmpfiles.rules = [
     "d ${agentMailRoot} 0700 agent-tools agent-tools - -"
   ];
+
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ agentMailPort ];
 }
