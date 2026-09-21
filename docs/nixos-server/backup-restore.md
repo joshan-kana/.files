@@ -60,7 +60,7 @@ There are two kinds of state:
 | --- | --- | --- |
 | NixOS config | Git repo | Check out an older commit and rebuild |
 | Container app data | `/var/lib/apps` | Restore a Snapper snapshot or `restic-apps` backup |
-| Runtime secrets and account state | `/root/secrets`, `/home/joshan/.secrets`, `/var/lib/userborn` | Restore with `restic-secrets` |
+| Runtime secrets and account state | `/root/secrets`, `/home/joshan/.secrets`, `/etc/passwd`, `/etc/group`, `/etc/shadow` | Restore with `restic-secrets` |
 | Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
@@ -123,7 +123,9 @@ Runtime secrets are backed up every 15 minutes to
 ```text
 /root/secrets
 /home/joshan/.secrets
-/var/lib/userborn
+/etc/passwd
+/etc/group
+/etc/shadow
 ```
 
 Keep recovery copies of these two bootstrap files in an external recovery store:
