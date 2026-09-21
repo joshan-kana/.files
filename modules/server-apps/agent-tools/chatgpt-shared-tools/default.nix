@@ -18,27 +18,17 @@ let
   start = pkgs.writeShellScript "chatgpt-shared-tools-start" ''
     set -euo pipefail
     : "''${MCPGATEWAY_BEARER_TOKEN:?MCPGATEWAY_BEARER_TOKEN is not set}"
+    : "''${MCPGATEWAY_SERVER_ID:?MCPGATEWAY_SERVER_ID is not set}"
 
-    serverId=""
-    for _ in {1..60}; do
-      if servers="$(${pkgs.curl}/bin/curl --fail --silent \
-        --header "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
-        "${gatewayUrl}/v1/servers?include_pagination=false")"; then
-        serverId="$(printf '%s' "$servers" | ${pkgs.jq}/bin/jq -r \
-          'first(.[] | select(.name == "shared-agent-tools") | .id) // empty')"
-        if [ -n "$serverId" ]; then
-          break
-        fi
+    for _ in {1..300}; do
+      if ${pkgs.curl}/bin/curl --fail --silent "${gatewayUrl}/ready" >/dev/null; then
+        break
       fi
       ${pkgs.coreutils}/bin/sleep 1
     done
+    ${pkgs.curl}/bin/curl --fail --silent "${gatewayUrl}/ready" >/dev/null
 
-    if [ -z "$serverId" ]; then
-      echo "ContextForge virtual server 'shared-agent-tools' was not found" >&2
-      exit 1
-    fi
-
-    export MCP_SERVER_URL="url=${gatewayUrl}/servers/$serverId/mcp"
+    export MCP_SERVER_URL="url=${gatewayUrl}/servers/$MCPGATEWAY_SERVER_ID/mcp"
     export MCPGATEWAY_AUTH="Bearer $MCPGATEWAY_BEARER_TOKEN"
     export MCP_EXTRA_HEADERS="Authorization: env:MCPGATEWAY_AUTH"
     export MCP_DISCOVERY_EXTRA_HEADERS="Authorization: env:MCPGATEWAY_AUTH"
