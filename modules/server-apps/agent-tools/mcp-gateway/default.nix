@@ -13,7 +13,7 @@ let
 in
 {
   virtualisation.oci-containers.containers.mcp-gateway = {
-    image = "ghcr.io/ibm/mcp-context-forge:v1.0.9";
+    image = "ghcr.io/ibm/mcp-context-forge:v1.0.10";
     environment = {
       HOST = server.lan.serverIp;
       PORT = toString gatewayPort;
