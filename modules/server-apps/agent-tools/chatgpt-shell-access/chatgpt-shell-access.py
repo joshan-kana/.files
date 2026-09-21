@@ -25,6 +25,7 @@ Host = Literal["nixos-server", "mac"]
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
+COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 LOCAL = [
     "/run/wrappers/bin/sudo",
     "-n",
@@ -141,22 +142,24 @@ def _validate_absolute_path(path: str, name: str) -> str:
 
 def _build_argv(host: Host, script: str) -> list[str]:
     if host == "nixos-server":
-        return [*LOCAL, script]
+        environment = "\n".join(
+            [
+                f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH",
+                f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}",
+            ]
+        )
+        return [*LOCAL, f"{environment}\n{script}"]
     return [*SSH, f"exec /bin/zsh -lc {shlex.quote(script)}"]
 
 
 def _command_script(host: Host, command: str, cwd: str | None, marker: str) -> str:
-    lines = []
-    if host == "nixos-server":
-        lines.append(f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}")
-    lines.extend(
+    return "\n".join(
         [
             f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"",
             f"cd -- {shlex.quote(cwd)} || exit 125" if cwd else 'cd -- "$HOME" || exit 125',
             command,
         ]
     )
-    return "\n".join(lines)
 
 
 async def _read_output(job: Job, marker: str) -> None:
@@ -296,10 +299,11 @@ async def _signal_target(job: Job, sig: str) -> None:
     script = f"""
 kill_tree() {{
   parent="$1"
-  for child in $(pgrep -P "$parent" 2>/dev/null); do
+  children=$(pgrep -P "$parent" 2>/dev/null || true)
+  kill -s {sig} "$parent" 2>/dev/null || true
+  for child in $children; do
     kill_tree "$child"
   done
-  kill -s {sig} "$parent" 2>/dev/null || true
 }}
 kill_tree {job.target_pid}
 """
