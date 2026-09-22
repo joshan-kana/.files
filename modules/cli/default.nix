@@ -305,19 +305,59 @@ in
   jujutsu =
     _:
     let
+      review = pkgs.writeShellApplication {
+        name = "jj-review";
+        runtimeInputs = [
+          pkgs.gh
+          pkgs.git
+          pkgs.jujutsu
+        ];
+        text = ''
+          revision="''${1:-@}"
+          if (( $# > 1 )); then
+            echo "usage: jr [revision]" >&2
+            exit 2
+          fi
+
+          change_id="$(jj log -r "$revision" --no-graph -T 'change_id.short(12)')"
+          title="$(jj log -r "$revision" --no-graph -T 'description.first_line()')"
+          if [[ -z "$title" ]]; then
+            echo "jj-review: change has no description; run 'j describe' first" >&2
+            exit 1
+          fi
+
+          bookmark="jj/$change_id"
+          base="$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)"
+          jj bookmark set --allow-backwards "$bookmark" -r "$revision"
+          jj git push --bookmark "$bookmark"
+
+          if url="$(gh pr view "$bookmark" --json url --jq .url 2>/dev/null)"; then
+            printf '%s\n' "$url"
+          else
+            gh pr create --draft --base "$base" --head "$bookmark" --fill
+          fi
+        '';
+      };
       aliases = {
         j = "jj";
         jpl = "jj git fetch && jj rebase -d 'trunk()'";
         js = "jj st";
         jd = "jj diff";
         jl = "jj log";
+        jr = "jj-review";
       };
     in
     {
-      environment.systemPackages = [ pkgs.jujutsu ];
+      environment.systemPackages = [
+        pkgs.jujutsu
+        review
+      ];
       environment.shellAliases = aliases;
 
       home = _: {
+        home.packages = [
+          review
+        ];
         home.shellAliases = aliases;
         programs.jujutsu = {
           enable = true;
