@@ -100,6 +100,7 @@ Common options include:
 - `dotfiles.paths.repoPath`
 - `dotfiles.rebuild.flags`
 - `dotfiles.defaults.terminal`
+- `dotfiles.defaults.editor`
 - `dotfiles.services.ollama.url`
 - `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
 - `dotfiles.scopes.<scope>.children.enable` for the default state of immediate child scopes
