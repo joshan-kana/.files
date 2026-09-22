@@ -302,6 +302,26 @@ in
       };
     };
 
+  jujutsu =
+    _:
+    let
+      aliases = {
+        j = "jj";
+      };
+    in
+    {
+      environment.systemPackages = [ pkgs.jujutsu ];
+      environment.shellAliases = aliases;
+
+      home = _: {
+        home.shellAliases = aliases;
+        programs.jujutsu = {
+          enable = true;
+          settings.user = gitSettings.user;
+        };
+      };
+    };
+
   git =
     _:
     let
