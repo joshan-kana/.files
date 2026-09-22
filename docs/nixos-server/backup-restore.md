@@ -57,7 +57,7 @@ There are two kinds of state:
 | --- | --- | --- |
 | NixOS config | Git repository | Check out an older commit and rebuild |
 | Container app data | Configured app-data root | Restore a Snapper snapshot or `restic-apps` backup |
-| Runtime secrets and account state | Configured server secret backup | Restore with `restic-secrets` |
+| Runtime secrets and account state | Shared backup scope plus server extensions | Restore with `restic-secrets` |
 | Large Vault data | Configured ZFS data root | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
@@ -92,9 +92,10 @@ and restores can open it.
 
 ## Secret Backup And Recovery
 
-The server secret backup protects its runtime secrets, primary-user secrets,
-and account state. Exact protected paths, repository settings, schedules, and
-bootstrap credential locations are defined by the Nix configuration.
+The server extends the shared secret-backup scope to protect its runtime secrets,
+primary-user secrets, and account state. Exact protected paths, repository
+settings, schedules, and bootstrap credential locations are defined by the Nix
+configuration.
 
 Keep the required bootstrap material in an external recovery store. Restore it
 to the locations defined by the current configuration before attempting repository

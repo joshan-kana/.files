@@ -50,6 +50,30 @@
     };
   };
 
+  backups = editScope moduleRegistry.backups {
+    secrets =
+      {
+        config,
+        inherited,
+        ...
+      }:
+      {
+        services.restic.backups.secrets.paths = [
+          config.dotfiles.server.secretsDir
+        ]
+        ++ inherited.services.restic.backups.secrets.paths
+        ++ [
+          "/etc/passwd"
+          "/etc/group"
+          "/etc/shadow"
+        ];
+
+        systemd.tmpfiles.rules = inherited.systemd.tmpfiles.rules ++ [
+          "d ${config.dotfiles.server.secretsDir} 0700 root root - -"
+          "Z ${config.dotfiles.server.secretsDir} ~0700 root root - -"
+        ];
+      };
+  };
   nix =
     {
       config,
@@ -357,20 +381,12 @@
       inherit (config.dotfiles.backups) retention;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage;
-      backupCredentialsDir = "/var/lib/backup-credentials";
-      backupRcloneConfig = "${backupCredentialsDir}/rclone.conf";
-      secretsBackupPassword = "${backupCredentialsDir}/secrets-restic-password";
-      secretsBackupRepository = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
+      backupRcloneConfig = "/var/lib/backup-credentials/rclone.conf";
       snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
       resticUnlock = ''
         #!${pkgs.runtimeShell}
         ${pkgs.restic}/bin/restic unlock
       '';
-      resticWrapperCommands = lib.pipe config.services.restic.backups [
-        (lib.filterAttrs (_: backup: backup.createWrapper))
-        lib.attrNames
-        (map (name: "restic-${name}"))
-      ];
     in
     {
       assertions = [
@@ -393,11 +409,7 @@
         ];
       };
 
-      environment.systemPackages = with pkgs; [
-        acl
-        restic
-        rclone
-      ];
+      environment.systemPackages = with pkgs; [ acl ];
 
       boot = {
         supportedFilesystems = [
@@ -480,68 +492,15 @@
           };
           checkOpts = [ "--read-data-subset=1G" ];
         };
-
-        secrets = {
-          repository = secretsBackupRepository;
-          backupPrepareCommand = resticUnlock;
-          passwordFile = secretsBackupPassword;
-          rcloneConfigFile = backupRcloneConfig;
-          paths = [
-            server.secretsDir
-            config.dotfiles.secretsDir
-            "/etc/passwd"
-            "/etc/group"
-            "/etc/shadow"
-          ];
-          timerConfig = {
-            OnCalendar = "*:0/15";
-            Persistent = true;
-            RandomizedDelaySec = "2m";
-          };
-        };
-
-        secrets-maintenance = {
-          repository = secretsBackupRepository;
-          passwordFile = secretsBackupPassword;
-          rcloneConfigFile = backupRcloneConfig;
-          paths = [ ];
-          pruneOpts = [
-            "--keep-within 1d"
-            "--keep-hourly ${toString retention.hourly}"
-            "--keep-daily ${toString retention.daily}"
-            "--keep-weekly ${toString retention.weekly}"
-            "--keep-monthly ${toString retention.monthly}"
-          ];
-          checkOpts = [ "--read-data" ];
-          createWrapper = false;
-          timerConfig = {
-            OnCalendar = "daily";
-            Persistent = true;
-            RandomizedDelaySec = "1h";
-          };
-        };
       };
 
       systemd.tmpfiles.rules = [
-        "d ${backupCredentialsDir} 0700 root root - -"
-        "d ${server.secretsDir} 0700 root root - -"
-        "Z ${server.secretsDir} ~0700 root root - -"
-        "d ${config.dotfiles.secretsDir} 0700 ${primary.name} users - -"
         "d ${storage.appData.root} 2770 root ${storage.appData.group.name} - -"
         "a+ ${storage.appData.root} - - - - u:${primary.name}:rwx,g:${storage.appData.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.appData.group.name}:rwx"
         "a+ ${storage.dataRoot.path} - - - - u:${primary.name}:rwx,g:${storage.dataRoot.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.dataRoot.group.name}:rwx"
         "v ${storage.appData.root}/.snapshots 0750 root root - -"
         "a ${storage.appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
       ];
-
-      programs.zsh.interactiveShellInit =
-        lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ])
-          (
-            lib.mkAfter ''
-              autoload -Uz _restic
-              compdef _restic ${lib.escapeShellArgs resticWrapperCommands}
-            ''
-          );
     };
   maintenance =
     { pkgs, ... }:
