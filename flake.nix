@@ -335,16 +335,10 @@
               treefmt.config.build.wrapper
             ];
 
-          vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
           default = pkgs.mkShell {
             packages = commonTools;
-            inherit (preCommit) shellHook;
-          };
-
-          vscode = pkgs.mkShell {
-            packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
             inherit (preCommit) shellHook;
           };
         }
@@ -480,7 +474,6 @@
                 '';
               };
 
-          vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
           system-upgrade = {
@@ -499,12 +492,6 @@
             type = "app";
             program = lib.getExe updatePlasma;
             meta.description = "Regenerate Plasma Manager configuration with pinned rc2nix and treefmt";
-          };
-        }
-        // lib.optionalAttrs (vscodePkg != null) {
-          code = {
-            type = "app";
-            program = lib.getExe vscodePkg;
           };
         }
       );

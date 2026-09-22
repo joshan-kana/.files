@@ -417,15 +417,12 @@ nix build .#nixosConfigurations.nixos-orbstack.config.system.build.toplevel
 nix build .#nixosConfigurations.nixos-server.config.system.build.toplevel
 ```
 
-### Editor dev shells
+### Editor tooling
 
-- `nix develop .#vscode` - Nix language tooling (nixd + nixfmt + treefmt + lint tools) and optionally VS Code/VSCodium if available
+- `nix develop` - Nix language tooling (nixd + nixfmt + treefmt + lint tools)
+- `.editorconfig` - editor-agnostic whitespace and indentation defaults
 
-VS Code config lives in `.vscode/` (recommended extensions, nixd config, and a couple snippets that end blocks with `};`).
-
-Suggested launch commands (so `nixd`/`nixfmt` are on `PATH` for the extension):
-
-- `nix develop .#vscode -c code .` (or `codium .` depending on what nixpkgs provides)
+The repository formatter remains authoritative: use `nix fmt` to apply the canonical formatting and lint-fix pipeline. Editors with Nix language-server support can use `nixd` and `nixfmt` from the development shell.
 
 ### Desktop environments
 

@@ -138,7 +138,7 @@ in
         name = "edit-config";
         text = ''
           if command -v code >/dev/null 2>&1; then
-            code "$DOTFILES/edit_config.code-workspace"
+            code "$DOTFILES"
           else
             "''${EDITOR:-nvim}" "$DOTFILES"
           fi

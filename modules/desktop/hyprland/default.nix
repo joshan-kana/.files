@@ -475,7 +475,7 @@ in
             (bindWith "XF86MonBrightnessDown" (exec "lightctl - 5") { repeating = true; })
 
             (modBind "L" (exec "swaylock"))
-            (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
+            (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}"))
             (modBind "Escape" ''hl.dsp.submap("passthru")'')
           ];
         };
