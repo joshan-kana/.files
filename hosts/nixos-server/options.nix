@@ -68,38 +68,10 @@ in
         };
       };
 
-      snapshots = {
-        intervalMinutes = mkOption {
-          type = types.ints.positive;
-          default = 15;
-          description = "Minutes between local filesystem snapshots.";
-        };
-
-        retention = {
-          hourly = mkOption {
-            type = types.ints.unsigned;
-            default = 48;
-            description = "Number of hourly local snapshots to retain.";
-          };
-
-          daily = mkOption {
-            type = types.ints.unsigned;
-            default = 14;
-            description = "Number of daily local snapshots to retain.";
-          };
-
-          weekly = mkOption {
-            type = types.ints.unsigned;
-            default = 8;
-            description = "Number of weekly local snapshots to retain.";
-          };
-
-          monthly = mkOption {
-            type = types.ints.unsigned;
-            default = 12;
-            description = "Number of monthly local snapshots to retain.";
-          };
-        };
+      snapshots.intervalMinutes = mkOption {
+        type = types.ints.positive;
+        default = 15;
+        description = "Minutes between local filesystem snapshots.";
       };
     };
 
