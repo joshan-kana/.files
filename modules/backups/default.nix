@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   ...
@@ -10,11 +9,13 @@ let
   backupCredentialsDir = "/var/lib/backup-credentials";
 
   # Collect generated `restic-<name>` wrapper commands so Zsh completion can be attached to them.
-  resticWrapperCommands = lib.pipe config.services.restic.backups [
-    (lib.filterAttrs (_: backup: backup.createWrapper))
-    lib.attrNames
-    (map (name: "restic-${name}"))
-  ];
+  resticWrapperCommandsFor =
+    backups:
+    lib.pipe backups [
+      (lib.filterAttrs (_: backup: backup.createWrapper))
+      lib.attrNames
+      (map (name: "restic-${name}"))
+    ];
 in
 {
   environment.systemPackages = with pkgs; [
@@ -27,15 +28,26 @@ in
     "d ${backupCredentialsDir} 0700 root root - -"
   ];
 
-  # Register Restic's completion function for every generated backup wrapper command.
-  programs.zsh.interactiveShellInit =
-    lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ])
-      (
+  home =
+    {
+      config,
+      lib,
+      osConfig,
+      ...
+    }:
+
+    let
+      resticWrapperCommands = resticWrapperCommandsFor osConfig.services.restic.backups;
+    in
+    {
+      # Register Restic wrapper completions after Home Manager initializes Zsh completion.
+      programs.zsh.initContent = lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ]) (
         lib.mkAfter ''
           autoload -Uz _restic
           compdef _restic ${lib.escapeShellArgs resticWrapperCommands}
         ''
       );
+    };
 
   secrets =
     {
