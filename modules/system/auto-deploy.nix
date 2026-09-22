@@ -16,7 +16,10 @@
         name = "origin";
         url = "git@github.com:joshan-kana/.files.git";
 
-        auth.ssh_deploy_key_path = "${config.dotfiles.secretsDir}/comin-github";
+        auth = {
+          username = "git";
+          ssh_deploy_key_path = "${config.dotfiles.secretsDir}/comin-github";
+        };
         branches.testing.name = "";
       }
     ];
