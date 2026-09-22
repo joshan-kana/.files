@@ -305,19 +305,42 @@ in
   jujutsu =
     _:
     let
+      prView = pkgs.writeShellApplication {
+        name = "jj-pr-view";
+        runtimeInputs = [
+          pkgs.gh
+          pkgs.jujutsu
+        ];
+        text = ''
+          bookmark="$(jj log -r @ --no-graph -T 'bookmarks.map(|b| b.name()).join(" ")')"
+          if [[ -z "$bookmark" ]]; then
+            echo "jj-pr-view: current change has no bookmark" >&2
+            exit 1
+          fi
+
+          exec gh pr view "$bookmark" "$@"
+        '';
+      };
       aliases = {
         j = "jj";
         jpl = "jj git fetch && jj rebase -d 'trunk()'";
         js = "jj st";
         jd = "jj diff";
         jl = "jj log";
+        jpr = "jj-pr-view";
       };
     in
     {
-      environment.systemPackages = [ pkgs.jujutsu ];
+      environment.systemPackages = [
+        pkgs.jujutsu
+        prView
+      ];
       environment.shellAliases = aliases;
 
       home = _: {
+        home.packages = [
+          prView
+        ];
         home.shellAliases = aliases;
         programs.jujutsu = {
           enable = true;
