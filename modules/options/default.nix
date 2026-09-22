@@ -136,6 +136,12 @@ in
       description = "Additional flags passed to nixos-rebuild aliases.";
     };
 
+    defaults.terminal = mkOption {
+      type = types.str;
+      default = "kitty";
+      description = "Default terminal executable used by desktop integrations.";
+    };
+
     services.ollama.url = mkOption {
       type = types.str;
       default = "http://localhost:11434/v1";
