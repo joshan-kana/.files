@@ -7,6 +7,7 @@
 
 let
   inherit (config) dotfiles;
+  inherit (dotfiles.defaults) editor;
   inherit (dotfiles.users) primary;
   repoPath = dotfiles.paths.repoPath;
   gitSettings = {
@@ -96,6 +97,8 @@ let
   };
   sessionVariables = {
     DOTFILES = repoPath;
+    EDITOR = editor;
+    VISUAL = editor;
     FLK_PROFILE = dotfiles.profile.name;
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
@@ -140,7 +143,7 @@ in
           if command -v code >/dev/null 2>&1; then
             code "$DOTFILES/edit_config.code-workspace"
           else
-            "''${EDITOR:-nvim}" "$DOTFILES"
+            "''${EDITOR:-${editor}}" "$DOTFILES"
           fi
         '';
       };
@@ -711,7 +714,6 @@ in
     {
       inherit (neovimConfig args) programs;
       environment.shellAliases = aliases;
-      environment.sessionVariables.EDITOR = "nvim";
 
       home = args: {
         home.shellAliases = aliases;
