@@ -1,6 +1,12 @@
-{ inputs, ... }:
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 
 let
+  terminal = config.dotfiles.defaults.terminal;
   aliases.k = "startplasma-wayland";
 in
 {
@@ -15,6 +21,12 @@ in
     ];
 
     home.shellAliases = aliases;
-    programs.plasma.enable = true;
+    programs.plasma = {
+      enable = true;
+      configFile.kdeglobals.General = {
+        TerminalApplication = lib.mkForce terminal;
+        TerminalService = lib.mkForce "${terminal}.desktop";
+      };
+    };
   };
 }

@@ -7,6 +7,7 @@
 
 let
   xwaylandEnabled = true;
+  terminal = config.dotfiles.defaults.terminal;
   aliases = {
     h = "start-hyprland";
     HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
@@ -55,7 +56,7 @@ in
     home = _: {
       programs.rofi = {
         package = pkgs.rofi;
-        settings.terminal = "kitty";
+        settings.terminal = terminal;
         plugins = with pkgs; [ rofi-calc ];
       };
     };
@@ -268,7 +269,7 @@ in
               disable_hyprland_logo = true;
               disable_splash_rendering = true;
               enable_swallow = true;
-              swallow_regex = "^(kitty)$";
+              swallow_regex = "^(${lib.escapeRegex terminal})$";
               focus_on_activate = true;
             };
           };
@@ -382,7 +383,7 @@ in
 
           bind = [
             # Favourite apps
-            (modBind "ALT + 1" (exec "kitty"))
+            (modBind "ALT + 1" (exec terminal))
             (modBind "ALT + 2" (exec "spotify"))
             (modBind "ALT + 3" (exec "brave"))
             (modBind "ALT + 4" (exec "floorp"))

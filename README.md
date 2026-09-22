@@ -99,6 +99,7 @@ Common options include:
 - `dotfiles.paths.repoName`
 - `dotfiles.paths.repoPath`
 - `dotfiles.rebuild.flags`
+- `dotfiles.defaults.terminal`
 - `dotfiles.services.ollama.url`
 - `dotfiles.scopes.<scope>.enable` for host-specific semantic scope overrides
 - `dotfiles.scopes.<scope>.children.enable` for the default state of immediate child scopes
@@ -118,7 +119,9 @@ dotfiles = {
 ```
 
 Modules derive paths from those values, so changing the user, home root, or repo
-name in one place updates aliases and environment variables together.
+name in one place updates aliases and environment variables together. Default-program
+options similarly provide one source of truth for integrations that need to launch or
+identify the same application across desktop environments.
 
 ## Adding And Editing Programs
 
