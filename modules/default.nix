@@ -10,6 +10,7 @@
   desktop = import ./desktop;
   desktopApps = import ./desktop-apps;
   serverApps = import ./server-apps;
+  backups = import ./backups;
 
   profiles = import ./profiles;
 }
