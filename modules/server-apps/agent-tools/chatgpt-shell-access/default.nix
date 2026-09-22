@@ -1,6 +1,7 @@
 {
   config,
   inputs,
+  lib,
   pkgs,
   ...
 }:
@@ -13,7 +14,45 @@ let
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
-  macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+  knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+  remoteTargets = {
+    mac = {
+      sshTarget = "${primary.name}@Joshans-MacBook-Pro.local";
+      credential = macSshKeySecret;
+      shell = "/bin/zsh";
+      sudo = false;
+    };
+  };
+  remoteTargetConfig = lib.mapAttrs (name: target: {
+    ssh_target = target.sshTarget;
+    credential = "chatgpt-shell-${name}";
+    inherit (target) shell sudo;
+  }) remoteTargets;
+  shellPackages = with pkgs; [
+    bash
+    coreutils
+    curl
+    diffutils
+    file
+    findutils
+    gawk
+    gh
+    git
+    gnugrep
+    gnupatch
+    gnused
+    iproute2
+    jq
+    nix
+    openssh
+    procps
+    psmisc
+    python3
+    ripgrep
+    rsync
+    systemd
+    util-linux
+  ];
 
   tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
 in
@@ -56,38 +95,24 @@ in
 
     unitConfig.AssertPathExists = [
       tunnelSecret
-      macSshKeySecret
       sudoSshKeySecret
       githubSecret
-      macKnownHostsFile
-    ];
+      knownHostsFile
+    ]
+    ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets;
 
-    path = with pkgs; [
-      bash
-      coreutils
-      curl
-      gawk
-      gh
-      git
-      gnugrep
-      gnused
-      jq
-      nix
-      openssh
-      rsync
-      systemd
-      util-linux
-    ];
+    path = shellPackages;
 
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
-      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID -u OPENAI_API_KEY ${
+      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${
         pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
       }/bin/python3 ${./chatgpt-shell-access.py}";
+      CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_USER = primary.name;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
-      CHATGPT_SHELL_MAC_SSH_TARGET = "${primary.name}@Joshans-MacBook-Pro.local";
+      CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
     };
 
     serviceConfig = {
@@ -99,11 +124,12 @@ in
         tunnelSecret
         githubSecret
       ];
-      LoadCredential = [
-        "chatgpt-shell-mac:${macSshKeySecret}"
-        "chatgpt-shell-sudo:${sudoSshKeySecret}"
-        "chatgpt-shell-known-hosts:${macKnownHostsFile}"
-      ];
+      LoadCredential =
+        lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
+        ++ [
+          "chatgpt-shell-sudo:${sudoSshKeySecret}"
+          "chatgpt-shell-known-hosts:${knownHostsFile}"
+        ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
         rm -f "$SSH_AUTH_SOCK"

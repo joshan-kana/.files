@@ -1,18 +1,37 @@
 import asyncio
+import json
 import os
 import shlex
+import signal
+import time
 import uuid
-from typing import Literal
+from dataclasses import dataclass, field
+from pathlib import PurePosixPath
+from typing import Literal, get_args
 
 from mcp.server import MCPServer
 
 MAX_OUTPUT_BYTES = 512 * 1024
+OUTPUT_HEAD_BYTES = 64 * 1024
+OUTPUT_TAIL_BYTES = MAX_OUTPUT_BYTES - OUTPUT_HEAD_BYTES
 MAX_JOBS = 64
-WAIT_SECONDS = 10
+WAIT_SECONDS = 10.0
+MAX_WAIT_SECONDS = 30.0
+CANCEL_GRACE_SECONDS = 2.0
 Host = Literal["nixos-server", "mac"]
+
+
+@dataclass(frozen=True)
+class RemoteTarget:
+    ssh_target: str
+    credential: str
+    shell: str
+    sudo: bool
+
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
+COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 LOCAL = [
     "/run/wrappers/bin/sudo",
     "-n",
@@ -30,75 +49,314 @@ SSH = [
     "-oIdentitiesOnly=yes",
     "-oStrictHostKeyChecking=yes",
     f"-oUserKnownHostsFile={CREDENTIALS}/chatgpt-shell-known-hosts",
-    "-i",
-    f"{CREDENTIALS}/chatgpt-shell-mac",
-    os.environ["CHATGPT_SHELL_MAC_SSH_TARGET"],
 ]
-COMMAND_ENV = os.environ.copy()
-for key in ("CREDENTIALS_DIRECTORY", "CONTROL_PLANE_API_KEY", "CONTROL_PLANE_TUNNEL_ID", "OPENAI_API_KEY"):
-    COMMAND_ENV.pop(key, None)
+REMOTE_TARGETS = {name: RemoteTarget(**target) for name, target in json.loads(os.environ["CHATGPT_SHELL_REMOTE_TARGETS"]).items()}
+if set(REMOTE_TARGETS) != set(get_args(Host)) - {"nixos-server"}:
+    raise RuntimeError("configured remote targets do not match the Host type")
+
+_ALLOWED_ENV = {
+    "GH_TOKEN",
+    "LANG",
+    "LANGUAGE",
+    "NIX_CONFIG",
+    "NIX_PATH",
+    "PATH",
+    "SSH_AUTH_SOCK",
+    "TZ",
+}
+COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
 
 mcp = MCPServer("chatgpt-shell")
-jobs: dict[str, asyncio.Task[dict[str, object]]] = {}
 
 
-async def _run(host: Host, command: str) -> dict[str, object]:
-    argv = (
-        [*LOCAL, f'export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}\ncd -- "$HOME" || exit\n{command}']
-        if host == "nixos-server"
-        else [*SSH, f"exec /bin/zsh -lc {shlex.quote(command)}"]
+@dataclass
+class OutputBuffer:
+    data: bytearray = field(default_factory=bytearray)
+    omitted: int = 0
+
+    def append(self, chunk: bytes) -> None:
+        combined = self.data + chunk
+        if self.omitted or len(combined) > MAX_OUTPUT_BYTES:
+            self.omitted += max(0, len(combined) - MAX_OUTPUT_BYTES)
+            self.data[:] = combined[:OUTPUT_HEAD_BYTES] + combined[-OUTPUT_TAIL_BYTES:]
+        else:
+            self.data[:] = combined
+
+    def drain(self) -> tuple[str, bool, int]:
+        raw = bytes(self.data)
+        omitted = self.omitted
+        self.data.clear()
+        self.omitted = 0
+
+        if omitted:
+            marker = f"\n... {omitted} bytes omitted ...\n".encode()
+            raw = raw[:OUTPUT_HEAD_BYTES] + marker + raw[OUTPUT_HEAD_BYTES:]
+        return raw.decode(errors="replace"), bool(omitted), omitted
+
+
+@dataclass
+class Job:
+    request_id: str
+    host: Host
+    output: OutputBuffer = field(default_factory=OutputBuffer)
+    started_at: float = field(default_factory=time.monotonic)
+    started_event: asyncio.Event = field(default_factory=asyncio.Event)
+    process: asyncio.subprocess.Process | None = None
+    task: asyncio.Task[None] | None = None
+    target_pid: int | None = None
+    exit_code: int | None = None
+    error: str | None = None
+    completed_at: float | None = None
+    cancel_requested: bool = False
+
+
+jobs: dict[str, Job] = {}
+
+
+def _validate_wait_seconds(wait_seconds: float) -> float:
+    value = float(wait_seconds)
+    if not 0 <= value <= MAX_WAIT_SECONDS:
+        raise ValueError(f"wait_seconds must be between 0 and {MAX_WAIT_SECONDS:g}")
+    return value
+
+
+def _validate_cwd(cwd: str | None) -> str | None:
+    if cwd is not None and ("\0" in cwd or not PurePosixPath(cwd).is_absolute()):
+        raise ValueError("cwd must be an absolute path")
+    return cwd
+
+
+def _build_argv(host: Host, script: str) -> list[str]:
+    if host == "nixos-server":
+        environment = "\n".join(
+            [
+                f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH",
+                f"export SSH_AUTH_SOCK={shlex.quote(SUDO_AGENT)}",
+            ]
+        )
+        return [*LOCAL, f"{environment}\n{script}"]
+    target = REMOTE_TARGETS[host]
+    return [
+        *SSH,
+        f"-oForwardAgent={'yes' if target.sudo else 'no'}",
+        "-i",
+        f"{CREDENTIALS}/{target.credential}",
+        target.ssh_target,
+        f"exec {target.shell} -lc {shlex.quote(script)}",
+    ]
+
+
+def _command_script(command: str, cwd: str | None, marker: str) -> str:
+    return "\n".join(
+        [
+            f"printf '%s%s\\n' {shlex.quote(marker)} \"$$\"",
+            f"cd -- {shlex.quote(cwd)} || exit 125" if cwd else 'cd -- "$HOME" || exit 125',
+            command,
+        ]
     )
+
+
+async def _read_output(job: Job, marker: str) -> None:
+    assert job.process is not None
+    assert job.process.stdout is not None
+    marker_bytes = marker.encode()
+
+    while line := await job.process.stdout.readline():
+        if line.startswith(marker_bytes):
+            try:
+                job.target_pid = int(line[len(marker_bytes) :].strip())
+            except ValueError:
+                job.output.append(line)
+            job.started_event.set()
+            break
+        job.output.append(line)
+    else:
+        job.started_event.set()
+        return
+
+    while chunk := await job.process.stdout.read(64 * 1024):
+        job.output.append(chunk)
+
+
+async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -> None:
+    if stdin is None or process.stdin is None:
+        return
     try:
-        process = await asyncio.create_subprocess_exec(
-            *argv,
+        process.stdin.write(stdin.encode())
+        await process.stdin.drain()
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+    finally:
+        process.stdin.close()
+        try:
+            await process.stdin.wait_closed()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+
+async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
+    marker = f"__CHATGPT_SHELL_PID_{job.request_id}__="
+    try:
+        job.process = await asyncio.create_subprocess_exec(
+            *_build_argv(job.host, _command_script(command, cwd, marker)),
+            stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             env=COMMAND_ENV,
+            start_new_session=True,
         )
-        output = bytearray()
-        truncated = False
-        while chunk := await process.stdout.read(64 * 1024):
-            remaining = MAX_OUTPUT_BYTES - len(output)
-            output.extend(chunk[:remaining])
-            truncated |= len(chunk) > remaining
-        return {
-            "status": "completed",
-            "exit_code": await process.wait(),
-            "output": output.decode(errors="replace"),
-            "output_truncated": truncated,
-        }
+        reader = asyncio.create_task(_read_output(job, marker))
+        writer = asyncio.create_task(_write_stdin(job.process, stdin))
+        job.exit_code = await job.process.wait()
+        await writer
+        await reader
     except Exception as exc:
-        return {"status": "failed", "error": str(exc)}
+        job.error = str(exc)
+    finally:
+        job.completed_at = time.monotonic()
+        job.started_event.set()
 
 
-async def _result(request_id: str) -> dict[str, object]:
+def _payload(job: Job) -> dict[str, object]:
+    output, truncated, omitted = job.output.drain()
+    end = job.completed_at or time.monotonic()
+    if job.completed_at is None:
+        status = "running"
+    elif job.cancel_requested:
+        status = "cancelled"
+    elif job.error:
+        status = "failed"
+    else:
+        status = "completed"
+    payload: dict[str, object] = {
+        "status": status,
+        "host": job.host,
+        "duration_ms": round((end - job.started_at) * 1000),
+        "output": output,
+        "output_truncated": truncated,
+    }
+    if omitted:
+        payload["omitted_bytes"] = omitted
+    if job.target_pid is not None:
+        payload["pid"] = job.target_pid
+    if job.completed_at is None:
+        payload["request_id"] = job.request_id
+    if job.exit_code is not None:
+        payload["exit_code"] = job.exit_code
+    if job.error is not None:
+        payload["error"] = job.error
+    return payload
+
+
+async def _result(job: Job, wait_seconds: float) -> dict[str, object]:
+    await job.started_event.wait()
+    if job.task is not None and not job.task.done() and wait_seconds:
+        try:
+            await asyncio.wait_for(asyncio.shield(job.task), timeout=wait_seconds)
+        except TimeoutError:
+            pass
+
+    payload = _payload(job)
+    if job.completed_at is not None:
+        jobs.pop(job.request_id, None)
+    return payload
+
+
+async def _signal_target(job: Job, sig: str) -> None:
+    if job.target_pid is None:
+        return
+
+    script = f"""
+kill_tree() {{
+  parent="$1"
+  children=$(pgrep -P "$parent" 2>/dev/null || true)
+  kill -s {sig} "$parent" 2>/dev/null || true
+  for child in $children; do
+    kill_tree "$child"
+  done
+}}
+kill_tree {job.target_pid}
+"""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *_build_argv(job.host, script),
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+            env=COMMAND_ENV,
+            start_new_session=True,
+        )
+        await asyncio.wait_for(process.wait(), timeout=5)
+    except Exception:
+        pass
+
+
+@mcp.tool()
+async def shell_exec(
+    host: Host,
+    command: str,
+    cwd: str | None = None,
+    wait_seconds: float = WAIT_SECONDS,
+    stdin: str | None = None,
+) -> dict[str, object]:
+    """Run a non-interactive command; pass command data through stdin. Long jobs stay tracked."""
+    cwd = _validate_cwd(cwd)
+    wait_seconds = _validate_wait_seconds(wait_seconds)
+
+    if len(jobs) >= MAX_JOBS:
+        finished = next((job for job in jobs.values() if job.completed_at is not None), None)
+        if finished is None:
+            raise RuntimeError("too many active jobs")
+        jobs.pop(finished.request_id, None)
+
+    request_id = uuid.uuid4().hex
+    job = Job(request_id=request_id, host=host)
+    jobs[request_id] = job
+    job.task = asyncio.create_task(_run(job, command, cwd, stdin))
+    return await _result(job, wait_seconds)
+
+
+@mcp.tool()
+async def shell_result(
+    request_id: str,
+    wait_seconds: float = WAIT_SECONDS,
+) -> dict[str, object]:
+    """Return new output and current state for a tracked background command."""
     job = jobs.get(request_id)
     if job is None:
         raise ValueError("unknown or expired request_id")
-    if not (await asyncio.wait({job}, timeout=WAIT_SECONDS))[0]:
-        return {"status": "running", "request_id": request_id}
+    return await _result(job, _validate_wait_seconds(wait_seconds))
+
+
+@mcp.tool()
+async def shell_cancel(request_id: str) -> dict[str, object]:
+    """Cancel a tracked command and its target process tree."""
+    job = jobs.get(request_id)
+    if job is None:
+        raise ValueError("unknown or expired request_id")
+    if job.completed_at is not None:
+        payload = _payload(job)
+        jobs.pop(request_id, None)
+        return payload
+
+    job.cancel_requested = True
+    await _signal_target(job, "TERM")
+    if job.task is not None and not job.task.done():
+        try:
+            await asyncio.wait_for(asyncio.shield(job.task), timeout=CANCEL_GRACE_SECONDS)
+        except TimeoutError:
+            await _signal_target(job, "KILL")
+
+    if job.task is not None and not job.task.done() and job.process is not None:
+        try:
+            os.killpg(job.process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        await job.task
+
+    payload = _payload(job)
     jobs.pop(request_id, None)
-    return job.result()
-
-
-@mcp.tool()
-async def shell_exec(host: Host, command: str) -> dict[str, object]:
-    """Run a command; long-running commands continue in the background."""
-    if len(jobs) >= MAX_JOBS:
-        finished = next((key for key, job in jobs.items() if job.done()), None)
-        if finished is None:
-            raise RuntimeError("too many active jobs")
-        jobs.pop(finished)
-
-    request_id = uuid.uuid4().hex
-    jobs[request_id] = asyncio.create_task(_run(host, command))
-    return await _result(request_id)
-
-
-@mcp.tool()
-async def shell_result(request_id: str) -> dict[str, object]:
-    """Retrieve a background command started by shell_exec."""
-    return await _result(request_id)
+    return payload
 
 
 if __name__ == "__main__":
