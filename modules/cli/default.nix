@@ -354,6 +354,24 @@ in
           fi
         '';
       };
+      tuicrReview = pkgs.writeShellApplication {
+        name = "jj-tuicr-review";
+        runtimeInputs = [
+          pkgs.gh
+          pkgs.jujutsu
+          pkgs.tuicr
+        ];
+        text = ''
+          bookmark="$(jj log -r @ --no-graph -T 'bookmarks.map(|b| b.name()).join(" ")')"
+          if [[ -z "$bookmark" ]]; then
+            echo "jj-tuicr-review: current change has no bookmark" >&2
+            exit 1
+          fi
+
+          url="$(gh pr view "$bookmark" --json url --jq .url)"
+          exec tuicr pr "$url"
+        '';
+      };
       aliases = {
         j = "jj";
         jpl = "jj git fetch && jj rebase -d 'trunk()'";
@@ -362,6 +380,7 @@ in
         jl = "jj log";
         jpr = "jj-pr-view";
         jr = "jj-review";
+        jtr = "jj-tuicr-review";
       };
     in
     {
@@ -369,6 +388,7 @@ in
         pkgs.jujutsu
         prView
         review
+        tuicrReview
       ];
       environment.shellAliases = aliases;
 
@@ -376,6 +396,7 @@ in
         home.packages = [
           prView
           review
+          tuicrReview
         ];
         home.shellAliases = aliases;
         programs.jujutsu = {
