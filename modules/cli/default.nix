@@ -350,7 +350,7 @@ in
           if url="$(gh pr view "$bookmark" --json url --jq .url 2>/dev/null)"; then
             printf '%s\n' "$url"
           else
-            gh pr create --draft --base "$base" --head "$bookmark" --fill
+            gh pr create --base "$base" --head "$bookmark" --fill
           fi
         '';
       };
