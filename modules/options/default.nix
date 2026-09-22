@@ -64,6 +64,32 @@ in
       description = "Absolute directory containing primary-user secrets.";
     };
 
+    backups.retention = {
+      hourly = mkOption {
+        type = types.ints.unsigned;
+        default = 48;
+        description = "Number of hourly recovery points to retain.";
+      };
+
+      daily = mkOption {
+        type = types.ints.unsigned;
+        default = 14;
+        description = "Number of daily recovery points to retain.";
+      };
+
+      weekly = mkOption {
+        type = types.ints.unsigned;
+        default = 8;
+        description = "Number of weekly recovery points to retain.";
+      };
+
+      monthly = mkOption {
+        type = types.ints.unsigned;
+        default = 12;
+        description = "Number of monthly recovery points to retain.";
+      };
+    };
+
     users.primary = {
       name = mkOption {
         type = types.str;

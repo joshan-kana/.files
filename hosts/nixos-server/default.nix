@@ -354,6 +354,7 @@
 
     let
       inherit (config.dotfiles) server;
+      inherit (config.dotfiles.backups) retention;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage;
       backupCredentialsDir = "/var/lib/backup-credentials";
@@ -424,7 +425,7 @@
         templates.vault = {
           frequent_period = storage.snapshots.intervalMinutes;
           frequently = 60 / storage.snapshots.intervalMinutes;
-          inherit (storage.snapshots.retention)
+          inherit (retention)
             hourly
             daily
             weekly
@@ -449,10 +450,10 @@
           FREE_LIMIT = config.nix.settings.min-free;
           TIMELINE_CREATE = true;
           TIMELINE_CLEANUP = true;
-          TIMELINE_LIMIT_HOURLY = storage.snapshots.retention.hourly;
-          TIMELINE_LIMIT_DAILY = storage.snapshots.retention.daily;
-          TIMELINE_LIMIT_WEEKLY = storage.snapshots.retention.weekly;
-          TIMELINE_LIMIT_MONTHLY = storage.snapshots.retention.monthly;
+          TIMELINE_LIMIT_HOURLY = retention.hourly;
+          TIMELINE_LIMIT_DAILY = retention.daily;
+          TIMELINE_LIMIT_WEEKLY = retention.weekly;
+          TIMELINE_LIMIT_MONTHLY = retention.monthly;
         };
       };
 
@@ -467,10 +468,10 @@
             "${storage.appData.root}/.snapshots"
           ];
           pruneOpts = [
-            "--keep-hourly ${toString storage.snapshots.retention.hourly}"
-            "--keep-daily ${toString storage.snapshots.retention.daily}"
-            "--keep-weekly ${toString storage.snapshots.retention.weekly}"
-            "--keep-monthly ${toString storage.snapshots.retention.monthly}"
+            "--keep-hourly ${toString retention.hourly}"
+            "--keep-daily ${toString retention.daily}"
+            "--keep-weekly ${toString retention.weekly}"
+            "--keep-monthly ${toString retention.monthly}"
           ];
           timerConfig = {
             OnCalendar = "*:0/30";
@@ -506,10 +507,10 @@
           paths = [ ];
           pruneOpts = [
             "--keep-within 1d"
-            "--keep-hourly ${toString storage.snapshots.retention.hourly}"
-            "--keep-daily ${toString storage.snapshots.retention.daily}"
-            "--keep-weekly ${toString storage.snapshots.retention.weekly}"
-            "--keep-monthly ${toString storage.snapshots.retention.monthly}"
+            "--keep-hourly ${toString retention.hourly}"
+            "--keep-daily ${toString retention.daily}"
+            "--keep-weekly ${toString retention.weekly}"
+            "--keep-monthly ${toString retention.monthly}"
           ];
           checkOpts = [ "--read-data" ];
           createWrapper = false;
