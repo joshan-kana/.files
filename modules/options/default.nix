@@ -142,6 +142,12 @@ in
       description = "Default terminal executable used by desktop integrations.";
     };
 
+    defaults.editor = mkOption {
+      type = types.str;
+      default = "nvim";
+      description = "Default editor executable used by command-line tools.";
+    };
+
     services.ollama.url = mkOption {
       type = types.str;
       default = "http://localhost:11434/v1";
