@@ -14,7 +14,20 @@ let
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
-  macKnownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+  knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+  remoteTargets = {
+    mac = {
+      sshTarget = "${primary.name}@Joshans-MacBook-Pro.local";
+      credential = macSshKeySecret;
+      shell = "/bin/zsh";
+      sudo = false;
+    };
+  };
+  remoteTargetConfig = lib.mapAttrs (name: target: {
+    ssh_target = target.sshTarget;
+    credential = "chatgpt-shell-${name}";
+    inherit (target) shell sudo;
+  }) remoteTargets;
   shellPackages = with pkgs; [
     bash
     coreutils
@@ -82,11 +95,11 @@ in
 
     unitConfig.AssertPathExists = [
       tunnelSecret
-      macSshKeySecret
       sudoSshKeySecret
       githubSecret
-      macKnownHostsFile
-    ];
+      knownHostsFile
+    ]
+    ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets;
 
     path = shellPackages;
 
@@ -99,7 +112,7 @@ in
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_USER = primary.name;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
-      CHATGPT_SHELL_MAC_SSH_TARGET = "${primary.name}@Joshans-MacBook-Pro.local";
+      CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
     };
 
     serviceConfig = {
@@ -111,11 +124,12 @@ in
         tunnelSecret
         githubSecret
       ];
-      LoadCredential = [
-        "chatgpt-shell-mac:${macSshKeySecret}"
-        "chatgpt-shell-sudo:${sudoSshKeySecret}"
-        "chatgpt-shell-known-hosts:${macKnownHostsFile}"
-      ];
+      LoadCredential =
+        lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
+        ++ [
+          "chatgpt-shell-sudo:${sudoSshKeySecret}"
+          "chatgpt-shell-known-hosts:${knownHostsFile}"
+        ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
         rm -f "$SSH_AUTH_SOCK"

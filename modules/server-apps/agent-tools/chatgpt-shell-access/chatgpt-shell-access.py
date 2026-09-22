@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import shlex
 import signal
@@ -6,7 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
-from typing import Literal
+from typing import Literal, get_args
 
 from mcp.server import MCPServer
 
@@ -18,6 +19,15 @@ WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
 Host = Literal["nixos-server", "mac"]
+
+
+@dataclass(frozen=True)
+class RemoteTarget:
+    ssh_target: str
+    credential: str
+    shell: str
+    sudo: bool
+
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
@@ -39,10 +49,10 @@ SSH = [
     "-oIdentitiesOnly=yes",
     "-oStrictHostKeyChecking=yes",
     f"-oUserKnownHostsFile={CREDENTIALS}/chatgpt-shell-known-hosts",
-    "-i",
-    f"{CREDENTIALS}/chatgpt-shell-mac",
-    os.environ["CHATGPT_SHELL_MAC_SSH_TARGET"],
 ]
+REMOTE_TARGETS = {name: RemoteTarget(**target) for name, target in json.loads(os.environ["CHATGPT_SHELL_REMOTE_TARGETS"]).items()}
+if set(REMOTE_TARGETS) != set(get_args(Host)) - {"nixos-server"}:
+    raise RuntimeError("configured remote targets do not match the Host type")
 
 _ALLOWED_ENV = {
     "GH_TOKEN",
@@ -125,7 +135,15 @@ def _build_argv(host: Host, script: str) -> list[str]:
             ]
         )
         return [*LOCAL, f"{environment}\n{script}"]
-    return [*SSH, f"exec /bin/zsh -lc {shlex.quote(script)}"]
+    target = REMOTE_TARGETS[host]
+    return [
+        *SSH,
+        f"-oForwardAgent={'yes' if target.sudo else 'no'}",
+        "-i",
+        f"{CREDENTIALS}/{target.credential}",
+        target.ssh_target,
+        f"exec {target.shell} -lc {shlex.quote(script)}",
+    ]
 
 
 def _command_script(command: str, cwd: str | None, marker: str) -> str:
