@@ -194,10 +194,11 @@ references each key through an environment-backed SecretRef in
 
 ### Listing Models
 
-Use the Control UI for normal provider and model inspection. A plain host
-`openclaw` invocation does not inherit the gateway's state paths or secret
-environment, so it is not an equivalent diagnostic context. Service failures
-and provider startup errors are available through
+Use the Control UI for normal provider and model inspection. The OpenClaw
+package is kept on the gateway service PATH rather than installed globally on
+the host. A separately invoked CLI would also need the gateway's state paths and
+secret environment to be an equivalent diagnostic context. Service failures and
+provider startup errors are available through
 `journalctl -u openclaw-gateway.service`.
 
 ### Switching Models
