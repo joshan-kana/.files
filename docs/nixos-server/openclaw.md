@@ -4,21 +4,28 @@ This page documents the OpenClaw runtime wiring on the NixOS server.
 
 ## Local Gateway
 
-OpenClaw runs on the NixOS server and is exposed through nginx. The server keeps
-OpenClaw's app state under `/var/lib/apps/openclaw` and its auth/profile state
-under `/var/lib/apps/openclaw-auth`.
+OpenClaw runs natively as `openclaw-gateway.service` on the NixOS server and
+is exposed through nginx. The service uses the OpenClaw package from the pinned
+`llm-agents` flake, which is available through the configured public Numtide
+binary cache.
 
-The OpenClaw container is configured from
-`profiles/nixos-server/hosted-stack.nix`. OpenClaw's mutable config is written to
-`/var/lib/apps/openclaw/openclaw.json` on the host and mounted into the
-container.
+The server keeps OpenClaw's app state under `/var/lib/apps/openclaw` and its
+auth/profile state under `/var/lib/apps/openclaw-auth`. Mutable application
+configuration remains at `/var/lib/apps/openclaw/openclaw.json`;
+`configure-openclaw-gateway.service` applies the host-owned networking,
+provider, trusted-proxy, and tool-policy settings before the gateway starts.
+
+The native service runs as `joshan:appdata-editors`. Keeping the existing UID
+preserves the state created by the former container deployment and keeps a NixOS
+generation rollback compatible with the same state tree.
 
 ## Host and repository access
 
-The Docker Gateway reaches the host through `openclaw-host`, which connects over
-loopback SSH as `openclaw-admin`. Repository operations use
-`openclaw-repository`, which reuses that transport and runs Git and GitHub CLI as
-`joshan`.
+The native Gateway already runs on the host. Privileged host commands still use
+`openclaw-host`, which connects over loopback SSH as `openclaw-admin`.
+Keeping that helper avoids granting the normal `joshan` login blanket
+passwordless sudo. Repository operations use `openclaw-repository`, which
+reuses that transport and runs Git and GitHub CLI as `joshan`.
 
 ```sh
 openclaw-repository git files <git arguments...>
@@ -36,9 +43,9 @@ against OpenClaw.
 ## Repository verification
 
 ```sh
-sudo docker exec openclaw openclaw-repository gh api user --jq .login
-sudo docker exec openclaw openclaw-repository git files status --short --branch
-sudo docker exec openclaw openclaw-repository git infrastructure-docs status --short --branch
+sudo openclaw-repository-host gh api user --jq .login
+sudo openclaw-repository-host git files status --short --branch
+sudo openclaw-repository-host git infrastructure-docs status --short --branch
 ```
 
 ## Repository-access rollback
@@ -120,22 +127,23 @@ Run this on the NixOS server:
 
 ```sh
 systemctl --failed
-systemctl status openclaw-ollama-proxy.timer openclaw-ollama-proxy.service nginx.service --no-pager -l
+systemctl status openclaw-gateway.service configure-openclaw-gateway.service nginx.service --no-pager -l
+systemctl status openclaw-ollama-proxy.timer openclaw-ollama-proxy.service --no-pager -l
 systemctl list-timers openclaw-ollama-proxy.timer --all --no-pager
 cat /run/openclaw-ollama-proxy.conf
+curl -sS -I --max-time 8 http://127.0.0.1:18789/ | sed -n '1,12p'
 curl -sS -i --max-time 8 http://127.0.0.1:11434/api/tags | sed -n '1,20p'
-sudo docker exec openclaw openclaw models list --provider ollama
 ```
 
 Expected healthy state:
 
 - `systemctl --failed` reports `0 loaded units listed`.
+- `openclaw-gateway.service` is active.
 - `openclaw-ollama-proxy.timer` is active and has a populated `NEXT` run.
 - `nginx.service` is active.
 - `/run/openclaw-ollama-proxy.conf` contains a numeric IP, not `.local`.
 - `http://127.0.0.1:11434/api/tags` returns the Mac Ollama models when the Mac
   and Ollama are reachable.
-- OpenClaw lists the Ollama models through the `ollama` provider.
 
 ## Operational Notes
 
@@ -170,9 +178,10 @@ each other.
 | `/root/secrets/server-deepseek-openrouter.env` | `OPENROUTER_DEEPSEEK_API_KEY` |
 | `/root/secrets/server-free-openrouter.env` | `OPENROUTER_FREE_API_KEY`   |
 
-These files are `root:root 0600` and are passed to the OpenClaw container through
-NixOS `environmentFiles`. The container references each key through an
-environment-backed SecretRef in `openclaw.json`.
+These files are `root:root 0600` and are loaded by
+`openclaw-gateway.service` through systemd `EnvironmentFile=`. OpenClaw
+references each key through an environment-backed SecretRef in
+`openclaw.json`.
 
 ### Privacy Boundaries
 
@@ -185,12 +194,11 @@ environment-backed SecretRef in `openclaw.json`.
 
 ### Listing Models
 
-```sh
-sudo docker exec openclaw openclaw models list --provider openrouter-zdr
-sudo docker exec openclaw openclaw models list --provider openrouter-deepseek
-sudo docker exec openclaw openclaw models list --provider openrouter-free
-sudo docker exec openclaw openclaw models status
-```
+Use the Control UI for normal provider and model inspection. A plain host
+`openclaw` invocation does not inherit the gateway's state paths or secret
+environment, so it is not an equivalent diagnostic context. Service failures
+and provider startup errors are available through
+`journalctl -u openclaw-gateway.service`.
 
 ### Switching Models
 
