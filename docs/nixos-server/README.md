@@ -228,14 +228,10 @@ image digest does not necessarily undo a completed migration.
 
 ## Rollback And Backup
 
-- Fast local rollback: Snapper snapshots `/var/lib` every 15 minutes.
-- App-data offsite backup: restic sends `/var/lib/...` app data to Dropbox every
-  30 minutes.
-- Secret offsite backup: restic snapshots `/root/secrets` and
-  `/home/joshan/.secrets` to the dedicated encrypted secrets repository every
-  15 minutes.
-- The external recovery store keeps only the break-glass backup credentials:
-  the recovery `rclone.conf` and the secrets-repository password.
+- Fast local rollback: Snapper protects application data according to the configured storage policy.
+- App-data offsite backup: Restic protects the server's persistent application data.
+- Secret offsite backup: Restic protects server runtime secrets, primary-user secrets, and account state in a dedicated encrypted repository.
+- The external recovery store holds only the break-glass bootstrap material required to reach and decrypt the backups.
 
 ## VM Variant
 
