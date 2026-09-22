@@ -307,6 +307,7 @@ in
     let
       aliases = {
         j = "jj";
+        jpl = "jj git fetch && jj rebase -d 'trunk()'";
       };
     in
     {
