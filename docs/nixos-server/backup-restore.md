@@ -25,12 +25,9 @@ systemctl --failed --no-pager
 
 NixOS manages the normal backup/rollback machinery:
 
-- `services.snapper`: creates local `/var/lib/apps` snapshots every 15 minutes.
-- `services.restic.backups.apps`: backs up app data to Dropbox every
-  30 minutes and clears stale restic repository locks before each run.
-- `services.restic.backups.secrets`: backs up `/root/secrets`, the primary
-  user's `.secrets` directory, and Userborn's account database to Dropbox every
-  15 minutes.
+- `services.snapper`: creates local app-data snapshots according to the current storage policy.
+- `services.restic.backups.apps`: backs up app data offsite and clears stale repository locks before each run.
+- `services.restic.backups.secrets`: backs up server runtime secrets, primary-user secrets, and Userborn account state offsite.
 - `virtualisation.oci-containers` and native services: run the hosted apps with
   explicit persistent storage.
 
@@ -56,87 +53,52 @@ below put preview and copy-based recovery before whole-filesystem rollback.
 
 There are two kinds of state:
 
-| Thing | Where it lives | How to roll back |
+| Thing | Source of truth | How to roll back |
 | --- | --- | --- |
-| NixOS config | Git repo | Check out an older commit and rebuild |
-| Container app data | `/var/lib/apps` | Restore a Snapper snapshot or `restic-apps` backup |
-| Runtime secrets and account state | `/root/secrets`, `/home/joshan/.secrets`, `/etc/passwd`, `/etc/group`, `/etc/shadow` | Restore with `restic-secrets` |
-| Large Vault data | `/srv/vault` | Restore a local ZFS snapshot or import the existing mirrored pool |
+| NixOS config | Git repository | Check out an older commit and rebuild |
+| Container app data | Configured app-data root | Restore a Snapper snapshot or `restic-apps` backup |
+| Runtime secrets and account state | Configured server secret backup | Restore with `restic-secrets` |
+| Large Vault data | Configured ZFS data root | Restore a local ZFS snapshot or import the existing mirrored pool |
 
 That split is intentional. If an app edit breaks something, restore app data
 without rolling back the whole NixOS system.
 
 ## App Data Locations
 
-Container app data lives under one parent directory:
+Container app data lives below the configured app-data root. Each app owns a
+plain child directory there unless a dedicated mount or upstream requirement
+justifies another location. The Nix configuration remains the source of truth
+for the root path.
 
-```text
-/var/lib/apps
-```
+Large Vault data uses the configured ZFS data root and local recursive
+snapshots; it is not included in the app-data Restic repository. See
+[Vault ZFS Storage](vault-storage.md) for health checks, snapshot verification,
+and full-rebuild import instructions.
 
-Each app gets a plain child directory, for example:
-
-```text
-/var/lib/apps/home-assistant
-/var/lib/apps/adguard
-/var/lib/apps/matter-server
-/var/lib/apps/n8n
-/var/lib/apps/openclaw
-/var/lib/apps/openclaw-auth
-```
-
-Future container apps should store mutable data under `/var/lib/apps` so the
-normal backup and restore flow includes them automatically.
-
-Large files stored under `/srv/vault` use local recursive ZFS snapshots and are
-not included in this restic repository. See [Vault ZFS Storage](vault-storage.md)
-for health checks, snapshot verification, and full-rebuild import instructions.
-
-Tailscale is a native service and uses its own state outside `/var/lib/apps`.
-Normal replacement installs enrol with the OAuth client credentials in `/root/secrets`
-instead of restoring an old Tailscale machine identity.
+Tailscale is a native service and uses its own state outside the application-data
+tree. Normal replacement installs enrol with the OAuth client credentials from
+the server secret root instead of restoring an old Tailscale machine identity.
 
 ## Restic Repository
 
-The offsite restic repository is stored through the `dropbox` rclone remote at:
+The app-data Restic repository is configured in the server storage scope and is
+accessed through the generated `restic-apps` wrapper. The Nix configuration is
+the source of truth for repository settings and retention.
 
-```text
-Archives/Backups/nixos-server
-```
-
-The full repository URI used by NixOS is:
-
-```text
-rclone:dropbox:Archives/Backups/nixos-server
-```
-
-Scheduled backups expect this repository to already exist. Initialize a new
+Scheduled backups expect the repository to already exist. Initialize a new
 repository explicitly with `sudo restic-apps init`; replacement installs reuse
-the existing repository and must keep its existing restic password so backups
+the existing repository and must keep its existing Restic password so backups
 and restores can open it.
 
 ## Secret Backup And Recovery
 
-Runtime secrets are backed up every 15 minutes to
-`rclone:dropbox:Archives/Backups/secrets/nixos-server`:
+The server secret backup protects its runtime secrets, primary-user secrets,
+and account state. Exact protected paths, repository settings, schedules, and
+bootstrap credential locations are defined by the Nix configuration.
 
-```text
-/root/secrets
-/home/joshan/.secrets
-/etc/passwd
-/etc/group
-/etc/shadow
-```
-
-Keep recovery copies of these two bootstrap files in an external recovery store:
-
-```text
-/var/lib/backup-credentials/rclone.conf
-/var/lib/backup-credentials/secrets-restic-password
-```
-
-The recovery `rclone.conf` can be old; its refresh token can obtain a new access
-token.
+Keep the required bootstrap material in an external recovery store. Restore it
+to the locations defined by the current configuration before attempting repository
+recovery.
 
 Restore one secret to `/tmp` first:
 
@@ -159,14 +121,14 @@ sudo install -m 600 -o root -g root \
   "$restore_dir$secret" "$secret"
 ```
 
-For a primary-user secret, use `-o joshan -g users` instead.
+For a primary-user secret, restore it with that user's ownership instead.
 
-After total machine loss, install the two bootstrap files under
-`/var/lib/backup-credentials`, then restore secrets before app data:
+After total machine loss, restore the bootstrap material according to the
+current configuration, then restore secrets before app data:
 
 ```sh
 sudo restic-secrets restore latest --target /
-sudo restic-apps restore latest --target / --include /var/lib/apps
+sudo restic-apps restore latest --target / --include <configured-app-data-root>
 ```
 
 Initial setup/migration is in
