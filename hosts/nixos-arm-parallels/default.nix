@@ -27,7 +27,10 @@
 
   hardware = import ./hardware.nix;
 
-  dotfiles.profile.name = "nixos-arm-parallels";
+  dotfiles = {
+    profile.name = "nixos-arm-parallels";
+    defaults.terminal = "alacritty";
+  };
 
   users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGMZdbT05P/naiv07J32DxHDOR5A1z8F9jijeBrDkXWV joshankana@gmail.com"
