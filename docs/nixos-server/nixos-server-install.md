@@ -44,47 +44,71 @@ sudo btrfs subvolume list /mnt
 
 ## Restore Bootstrap Credentials
 
-Copy the recovery `rclone.conf` and `secrets-restic-password` to `/tmp` on the
-installer, then install them into the mounted target:
+Retrieve the backup bootstrap material from the external recovery store. The
+current Nix backup configuration is the source of truth for credential locations
+and repository settings.
+
+Stage the credentials with root-only permissions at the configured target
+locations, then set the installer-shell variables below from that same
+configuration:
 
 ```sh
-sudo install -d -m 700 /mnt/var/lib/backup-credentials
-sudo install -m 600 -o root -g root /tmp/rclone.conf \
-  /mnt/var/lib/backup-credentials/rclone.conf
-sudo install -m 600 -o root -g root /tmp/secrets-restic-password \
-  /mnt/var/lib/backup-credentials/secrets-restic-password
-rm -f /tmp/rclone.conf /tmp/secrets-restic-password
+export RCLONE_CONFIG=<mounted-target-rclone-config>
+export SECRETS_PASSWORD_FILE=<mounted-target-secrets-password-file>
+export SECRETS_REPOSITORY=<configured-secrets-repository>
 ```
 
 Restore the latest secrets snapshot:
 
 ```sh
-sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
+sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
   nix --extra-experimental-features "nix-command flakes" shell \
   nixpkgs#restic nixpkgs#rclone -c restic \
-  -r rclone:dropbox:Archives/Backups/secrets/nixos-server \
-  --password-file /mnt/var/lib/backup-credentials/secrets-restic-password \
+  -r "$SECRETS_REPOSITORY" \
+  --password-file "$SECRETS_PASSWORD_FILE" \
   restore latest --target /mnt
-
-sudo test -f /mnt/home/joshan/.secrets/id_ed25519
-sudo test -d /mnt/home/joshan/.secrets
-sudo test -f /mnt/etc/passwd
-sudo test -f /mnt/etc/group
-sudo test -f /mnt/etc/shadow
 ```
 
-The secrets snapshot carries the Unix account database so user and group
+Verify the restored primary-user secret tree and Unix account state before
+continuing. The secrets snapshot carries the account database so user and group
 identities and password hashes are retained across reinstalls.
 
-Restore the latest application-data snapshot before the system build:
+## Clone The Configuration
+
+Clone the repository using the restored GitHub SSH key:
 
 ```sh
-sudo env RCLONE_CONFIG=/mnt/var/lib/backup-credentials/rclone.conf \
+sudo env \
+  GIT_SSH_COMMAND='ssh -i /mnt/home/joshan/.secrets/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new' \
+  git clone --recurse-submodules \
+  git@github.com:joshan-kana/.files.git \
+  /mnt/home/joshan/.files
+```
+
+## Restore Application Data
+
+Now that the repository is available, derive the app-backup settings directly
+from the target configuration instead of copying them into this guide:
+
+```sh
+cd /mnt/home/joshan/.files
+
+nix_eval() {
+  sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
+    ".#nixosConfigurations.nixos-server.$1"
+}
+
+export APPS_REPOSITORY="$(nix_eval config.services.restic.backups.apps.repository)"
+export APPS_PASSWORD_FILE="/mnt$(nix_eval config.services.restic.backups.apps.passwordFile)"
+export RCLONE_CONFIG="/mnt$(nix_eval config.services.restic.backups.apps.rcloneConfigFile)"
+export APP_DATA_ROOT="$(nix_eval config.dotfiles.server.storage.appData.root)"
+
+sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
   nix --extra-experimental-features "nix-command flakes" shell \
   nixpkgs#restic nixpkgs#rclone -c restic \
-  -r rclone:dropbox:Archives/Backups/nixos-server \
-  --password-file /mnt/root/secrets/restic-password \
-  restore latest --target /mnt --include /var/lib/apps
+  -r "$APPS_REPOSITORY" \
+  --password-file "$APPS_PASSWORD_FILE" \
+  restore latest --target /mnt --include "$APP_DATA_ROOT"
 ```
 
 Backup creation, repository maintenance, and selective recovery procedures are
@@ -101,16 +125,6 @@ cat /mnt/etc/nixos/hardware-configuration.nix
 ```
 
 ## Install NixOS
-
-Clone the repository using the restored GitHub SSH key:
-
-```sh
-sudo env \
-  GIT_SSH_COMMAND='ssh -i /mnt/home/joshan/.secrets/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new' \
-  git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
-  /mnt/home/joshan/.files
-```
 
 Derive the bootstrap binary-cache settings from the target configuration:
 
