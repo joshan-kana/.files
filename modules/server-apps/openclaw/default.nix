@@ -753,7 +753,9 @@ in
       git
       jq
       openssh
+      python3
       util-linux
+      openclawPackage
       openclawHostCommand
       openclawRepositoryCommand
     ];
