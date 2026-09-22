@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   pkgs,
   ...
 }:
@@ -8,6 +9,9 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   gatewayPort = 18789;
+  openclawStateDir = "${server.storage.appData.root}/openclaw";
+  openclawAuthDir = "${server.storage.appData.root}/openclaw-auth";
+  openclawPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw;
 
   openclawSecrets = [
     "${server.secretsDir}/openclaw.env"
@@ -26,7 +30,6 @@ let
   openclawHostAdmin = {
     user = "openclaw-admin";
     privateKeySecret = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
-    privateKeyMountPath = "/run/openclaw-host-admin-id_ed25519";
   };
 
   openclawHostCommand = pkgs.writeShellApplication {
@@ -45,13 +48,6 @@ let
     knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
     '';
-  };
-
-  openclawContainerUser = {
-    # UID/GID used by the OpenClaw image's internal node user.
-    # This is not the host primary user.
-    uid = 1000;
-    gid = 1000;
   };
 
   openclawRepositoryHost = pkgs.writeShellApplication {
@@ -204,21 +200,21 @@ in
 
   environment.systemPackages = with pkgs; [
     curl
-    docker
     gh
     openclawRepositoryHost
   ];
 
   systemd.tmpfiles.rules = [
     "d ${server.storage.appData.root}/admin-tools 0755 root ${appDataEditor.group} - -"
-    "d ${server.storage.appData.root}/openclaw/workspace/skills 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
-    "d ${server.storage.appData.root}/openclaw/workspace/skills/repository-access 0755 ${toString openclawContainerUser.uid} ${toString openclawContainerUser.gid} - -"
+    "d ${openclawStateDir}/workspace/skills 0755 ${primary.name} ${appDataEditor.group} - -"
+    "d ${openclawStateDir}/workspace/skills/repository-access 0755 ${primary.name} ${appDataEditor.group} - -"
+    "L+ ${openclawStateDir}/workspace/skills/repository-access/SKILL.md - - - - ${openclawRepositorySkill}"
     "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
 
     "z ${openclawGitHub.apiSecret} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecret} 0400 root root - -"
     "z ${openclawGitHub.privateKeySecret}.pub 0644 root root - -"
-    "z ${openclawHostAdmin.privateKeySecret} 0400 ${toString openclawContainerUser.uid} root - -"
+    "z ${openclawHostAdmin.privateKeySecret} 0400 ${primary.name} root - -"
     "z ${openclawHostAdmin.privateKeySecret}.pub 0644 root root - -"
   ];
 
@@ -259,14 +255,14 @@ in
 
   systemd.services.configure-openclaw-gateway = {
     description = "Modify OpenClaw mutable gateway config for trusted-proxy access";
-    before = [ "docker-openclaw.service" ];
+    before = [ "openclaw-gateway.service" ];
     path = with pkgs; [
       coreutils
       jq
     ];
     serviceConfig.Type = "oneshot";
     script = ''
-      configFile="${server.storage.appData.root}/openclaw/openclaw.json"
+      configFile="${openclawStateDir}/openclaw.json"
 
       if [ ! -f "$configFile" ]; then
         echo "OpenClaw config does not exist yet: $configFile" >&2
@@ -601,7 +597,7 @@ in
             })
       ' "$configFile" > "$tmp"
 
-      install -m 0600 -o ${toString openclawContainerUser.uid} -g ${toString openclawContainerUser.gid} "$tmp" "$configFile"
+      install -m 0600 -o ${primary.name} -g ${appDataEditor.group} "$tmp" "$configFile"
       rm -f "$tmp"
     '';
   };
@@ -724,52 +720,59 @@ in
     };
   };
 
-  systemd.services.docker-openclaw = {
+  systemd.services.openclaw-gateway = {
+    description = "OpenClaw gateway";
     after = [
       "configure-openclaw-gateway.service"
+      "network-online.target"
       "nginx.service"
     ];
     requires = [ "configure-openclaw-gateway.service" ];
-    wants = [ "nginx.service" ];
-  };
+    wants = [
+      "network-online.target"
+      "nginx.service"
+    ];
+    wantedBy = [ "multi-user.target" ];
 
-  systemd.services.docker-openclaw.unitConfig.AssertPathExists = openclawSecrets ++ [
-    openclawHostAdmin.privateKeySecret
-  ];
-
-  # Server OCI containers. Images are declared as plain upstream `repository:tag`
-  # sources; the global `container-image-locking.nix` module appends the matching
-  # locked digest at evaluation time, so these definitions stay in native NixOS
-  # OCI-container syntax.
-  virtualisation.oci-containers.containers = {
-    openclaw = {
-      image = "ghcr.io/openclaw/openclaw:latest";
-
-      volumes = [
-        "${server.storage.appData.root}/openclaw:/home/node/.openclaw"
-        "${server.storage.appData.root}/openclaw-auth:/home/node/.config/openclaw"
-        "${openclawHostAdmin.privateKeySecret}:${openclawHostAdmin.privateKeyMountPath}:ro"
-        "${openclawHostCommand}/bin/openclaw-host:/usr/local/bin/openclaw-host:ro"
-        "${openclawRepositoryCommand}/bin/openclaw-repository:/usr/local/bin/openclaw-repository:ro"
-        "${openclawRepositorySkill}:/home/node/.openclaw/workspace/skills/repository-access/SKILL.md:ro"
-        "/:/host"
-        "/nix/store:/nix/store:ro"
-      ];
-
-      environment = {
-        OPENCLAW_DISABLE_BONJOUR = "1";
-        OLLAMA_API_KEY = "ollama-local";
-        NODE_OPTIONS = "--dns-result-order=ipv4first";
-        OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeyMountPath} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
-      };
-      environmentFiles = openclawSecrets;
-
-      extraOptions = [
-        "--network=host"
-        "--group-add=${toString appDataEditor.gid}"
-        "--add-host=host.docker.internal:host-gateway"
-      ];
+    environment = {
+      HOME = openclawStateDir;
+      OPENCLAW_CONFIG_PATH = "${openclawStateDir}/openclaw.json";
+      OPENCLAW_STATE_DIR = openclawStateDir;
+      XDG_CONFIG_HOME = openclawAuthDir;
+      OPENCLAW_DISABLE_BONJOUR = "1";
+      OLLAMA_API_KEY = "ollama-local";
+      NODE_OPTIONS = "--dns-result-order=ipv4first";
+      OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i ${openclawHostAdmin.privateKeySecret} -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
     };
+
+    path = with pkgs; [
+      bash
+      coreutils
+      curl
+      gh
+      git
+      jq
+      openssh
+      util-linux
+      openclawHostCommand
+      openclawRepositoryCommand
+    ];
+
+    serviceConfig = {
+      User = primary.name;
+      Group = appDataEditor.group;
+      WorkingDirectory = openclawStateDir;
+      EnvironmentFile = openclawSecrets;
+      ExecStart = "${openclawPackage}/bin/openclaw gateway --port ${toString gatewayPort}";
+      Restart = "always";
+      RestartSec = "2s";
+      UMask = "0077";
+    };
+
+    unitConfig.AssertPathExists = openclawSecrets ++ [
+      "${openclawStateDir}/openclaw.json"
+      openclawHostAdmin.privateKeySecret
+    ];
   };
 
 }
