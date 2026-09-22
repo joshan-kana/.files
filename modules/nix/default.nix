@@ -24,7 +24,6 @@ in
       "root"
       config.dotfiles.users.primary.name
     ];
-    eval-cores = 0;
     experimental-features = [
       "nix-command"
       "flakes"

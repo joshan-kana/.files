@@ -513,6 +513,7 @@
           code = {
             type = "app";
             program = lib.getExe vscodePkg;
+            meta.description = "Launch the configured VS Code-compatible editor";
           };
         }
       );
