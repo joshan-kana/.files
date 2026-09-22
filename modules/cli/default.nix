@@ -308,6 +308,9 @@ in
       aliases = {
         j = "jj";
         jpl = "jj git fetch && jj rebase -d 'trunk()'";
+        js = "jj st";
+        jd = "jj diff";
+        jl = "jj log";
       };
     in
     {
