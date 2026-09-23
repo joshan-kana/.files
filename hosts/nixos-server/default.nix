@@ -315,6 +315,7 @@
 
         let
           inherit (config.dotfiles) server;
+          homeAdvertisedRoutes = "${server.lan.subnet},fd7a:115c:a1e0:b1a:0:1:c0a8:100/120";
         in
         {
           networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
@@ -337,10 +338,10 @@
               "--hostname=${config.networking.hostName}"
               # Site 1 4via6 mapping keeps the home LAN reachable when a remote
               # network uses the same IPv4 subnet.
-              "--advertise-routes=${server.lan.subnet},fd7a:115c:a1e0:b1a:0:1:c0a8:100/120"
+              "--advertise-routes=${homeAdvertisedRoutes}"
               "--accept-dns=false"
             ];
-            extraSetFlags = [ ];
+            extraSetFlags = [ "--advertise-routes=${homeAdvertisedRoutes}" ];
           };
 
           # Keep the server's ephemeral Tailscale behaviour, but do not make
