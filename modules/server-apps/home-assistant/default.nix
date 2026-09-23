@@ -101,7 +101,9 @@ in
     "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
   ];
 
-  users.users.hass.extraGroups = [ appData.group.name ];
+  users.users.hass = lib.mkIf config.services.home-assistant.enable {
+    extraGroups = [ appData.group.name ];
+  };
 
   virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
 }
