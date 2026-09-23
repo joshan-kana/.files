@@ -23,47 +23,50 @@ service-user pattern used elsewhere on the host.
 
 ## Host and repository access
 
-The native Gateway already runs on the host. Privileged host commands still use
-`openclaw-host`, which connects over loopback SSH as `openclaw-admin`.
-Keeping that helper avoids granting the normal `joshan` login blanket
-passwordless sudo. Repository operations use `openclaw-repository`, which
-reuses that transport and runs Git and GitHub CLI as `joshan`.
+OpenClaw is intentionally a privileged server worker, like Hermes Agent and
+Open WebUI Computer. The openclaw service user has passwordless sudo and sees
+Joshan's home through a bindfs mapping at /home/joshan.
 
-```sh
-openclaw-repository git files <git arguments...>
-openclaw-repository git infrastructure-docs <git arguments...>
-openclaw-repository gh <gh arguments...>
+The bindfs mapping presents Joshan-owned files as writable by openclaw inside
+the service namespace while preserving joshan ownership on the underlying
+filesystem. Repository work therefore uses ordinary Git commands directly:
+
+```text
+git -C /home/joshan/.files <git arguments...>
+git -C /home/joshan/.files/docs/infrastructure-docs <git arguments...>
+gh <arguments...>
 ```
 
-Git uses `/root/secrets/openclaw-github-id_ed25519`; GitHub API operations use
-`/root/secrets/github-self-hosted-agents.env` and appear as `joshan-kana`.
+/root/secrets/github-self-hosted-agents.env supplies GH_TOKEN. Git rewrites
+<git@github.com>: remotes to HTTPS and uses gh auth git-credential, so OpenClaw
+does not need a dedicated GitHub SSH key, an SSH agent, or a localhost admin
+account.
 
-OpenClaw is intentionally host-root-equivalent. These wrappers preserve checkout
-ownership and provide a consistent interface; they are not security boundaries
-against OpenClaw.
+OpenClaw is host-root-equivalent by design. sudo is the normal NixOS sudo
+wrapper exposed on the service PATH; there is no separate privilege transport.
 
 ## Repository verification
 
-```sh
-sudo openclaw-repository-host gh api user --jq .login
-sudo openclaw-repository-host git files status --short --branch
-sudo openclaw-repository-host git infrastructure-docs status --short --branch
+From an OpenClaw shell, these should work directly:
+
+```text
+gh api user --jq .login
+git -C /home/joshan/.files status --short --branch
+git -C /home/joshan/.files/docs/infrastructure-docs status --short --branch
 ```
+
+The GitHub identity should be joshan-kana, and files created through the
+bindfs-mapped home should remain owned by joshan on the host.
 
 ## Repository-access rollback
 
-- GitHub API: move or remove `/root/secrets/github-self-hosted-agents.env`.
-- Git over SSH: revoke `OpenClaw nixos-server Git`, then move or remove its
-  dedicated keypair.
-- Host administration: remove or restrict the host-admin key or
-  `openclaw-admin` sudo access.
+- GitHub API: move or remove /root/secrets/github-self-hosted-agents.env.
+- Host administration: remove the openclaw sudo rule.
+- Home access: remove the /run/openclaw-home bindfs mapping.
 - Complete deployment: before switching back to the former Docker generation,
-  remove `plugins.load.paths` from `/var/lib/apps/openclaw/openclaw.json`, restore
-  state ownership with `sudo chown -R 1000:1000 /var/lib/apps/openclaw`, then run
-  `sudo nixos-rebuild switch --rollback` or boot the previous generation.
-
-This rollback does not modify Joshan's existing
-`/home/joshan/.secrets/id_ed25519` key.
+  remove plugins.load.paths from /var/lib/apps/openclaw/openclaw.json, restore
+  state ownership with sudo chown -R 1000:1000 /var/lib/apps/openclaw, then run
+  sudo nixos-rebuild switch --rollback or boot the previous generation.
 
 ## Ollama Proxy
 
