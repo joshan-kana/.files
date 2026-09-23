@@ -174,6 +174,8 @@
             user = "technitium";
             group = server.storage.appData.group.name;
             ip = server.lan.serverIp;
+            dnsPort = 53;
+            webPort = 5380;
             stateDir = "${server.storage.appData.root}/technitium";
             adminPasswordFile = "${server.secretsDir}/technitium-admin-password";
           };
@@ -190,6 +192,7 @@
 
           networking.firewall.allowedTCPPorts = [ adguard.port ];
           networking.firewall.allowedUDPPorts = [ adguard.port ];
+          networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ technitium.webPort ];
 
           users.users = {
             ${adguard.user} = {
@@ -237,6 +240,7 @@
                   "127.0.0.1"
                 ];
                 inherit (adguard) port;
+                upstream_dns = [ "${technitium.ip}:${toString technitium.dnsPort}" ];
               };
             };
           };
@@ -252,8 +256,12 @@
             adguardhome = {
               after = [
                 "network-online.target"
+                "technitium-dns-server.service"
               ];
-              wants = [ "network-online.target" ];
+              wants = [
+                "network-online.target"
+                "technitium-dns-server.service"
+              ];
 
               serviceConfig = {
                 DynamicUser = lib.mkForce false;
@@ -272,10 +280,6 @@
             technitium-dns-server = {
               after = [ "network-online.target" ];
               wants = [ "network-online.target" ];
-
-              # Keep first deployment dormant until its persistent DNS bind has
-              # been initialized away from AdGuard's 192.168.1.2:53 listener.
-              wantedBy = lib.mkForce [ ];
 
               environment = {
                 DNS_SERVER_DOMAIN = "dns.home";
