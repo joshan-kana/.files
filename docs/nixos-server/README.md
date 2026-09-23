@@ -32,7 +32,8 @@ recreating or formatting either member disk.
 - Router/default gateway: `192.168.1.1`
 - AdGuard Home client DNS/filter: `192.168.1.2:53`
 - NixOS host: `192.168.1.3`
-- Technitium DNS backend/admin UI: `192.168.1.3:53` / `:5380`
+- Technitium remote DNS/admin UI: `192.168.1.3:53` / `:5380`
+- Technitium local backend endpoint: `127.0.0.1:5300`
 - Current router DHCP pool: `192.168.1.100-192.168.1.199`
 
 Home Assistant uses host networking, so it is reached at
@@ -44,12 +45,50 @@ The machine hostname is `nixos-server`, and the flake target is also
 AdGuard remains the only client-facing DNS resolver. It owns the dedicated
 `192.168.1.2` service address and keeps network-wide ad/tracker filtering in
 front of normal client queries. AdGuard forwards allowed queries to Technitium
-on `192.168.1.3:53`.
+over the loopback-only
+`127.0.0.1:5300` backend. This keeps AdGuard filtering in front of normal LAN
+queries while reserving `192.168.1.3:53` for direct remote `.home` DNS over
+Tailscale.
 
 Technitium owns the DNS/DHCP backend role and keeps its application-managed
-state under `/var/lib/apps/technitium`. Its DHCP scope remains disabled until
-the router DHCP service is deliberately cut over; never run both DHCP servers
-at once.
+state under `/var/lib/apps/technitium`, which is already protected by the
+server app-data Snapper/restic policy. The authoritative `home` zone, DHCP
+leases, DNS Apps, and roaming records therefore remain runtime application
+state rather than duplicated Nix data.
+
+The official Technitium Failover App provides roaming aliases. `mac.home`
+prefers the DHCP-managed `joshans-macbook-pro.home` name while it responds on
+the LAN and falls back to the Tailscale MagicDNS machine name
+`joshans-macbook-pro.tailba46a0.ts.net` when the Mac leaves home. The record
+contains names, not fixed LAN or Tailscale addresses.
+
+The official DNS64 App is scoped to the translated Tailscale query path and
+embeds `192.168.1.0/24` into the site-1 4via6 `/96`. Home queries arrive via
+AdGuard's loopback backend and keep normal LAN IPv4 answers; remote `.home`
+queries go directly to Technitium over 4via6 and receive collision-proof IPv6
+answers for LAN-only destinations.
+
+Technitium's DHCP scope remains disabled until the router DHCP service is
+deliberately cut over; never run both DHCP servers at once. The staged scope
+uses AdGuard (`192.168.1.2`) as client DNS, the router (`192.168.1.1`) as the
+default gateway, dynamic leases from the non-infrastructure portion of the
+subnet, and DHCP option 121 for `100.64.0.0/10` via `192.168.1.3` so home
+clients can reach roaming tailnet peers without running Tailscale themselves.
+
+### DHCP Cutover
+
+Keep the Technitium scope disabled while the router is serving DHCP. For the
+cutover:
+
+1. Disable DHCP on the router.
+2. Enable the `Default` scope in the Technitium web console.
+3. Renew one client lease and confirm it receives gateway `192.168.1.1`, DNS
+   `192.168.1.2`, and the `100.64.0.0/10` route via `192.168.1.3`.
+4. Confirm the renewed client's DHCP hostname resolves through AdGuard.
+5. Renew the remaining clients once the canary client is healthy.
+
+Rollback is the reverse: disable the Technitium scope first, re-enable router
+DHCP, then renew the affected client lease.
 
 ## Tailscale Model
 
