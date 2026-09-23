@@ -82,7 +82,7 @@ From the extracted Home Assistant backup:
 
 - `homeassistant/data/` -> `/var/lib/home-assistant/`
 - `a0d7b954_adguard/data/adguard/` -> `/var/lib/adguard/conf/`
-- `core_matter_server/data/` -> `/var/lib/matter-server/`
+- `core_matter_server/data/` -> `/var/lib/apps/matter-server/`
 - `3cfc8f0f_hass-n8n/data/n8n/.n8n/` -> `/var/lib/n8n/`
 
 Special cases:
@@ -102,10 +102,10 @@ Special cases:
 Restore flow:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service docker-n8n.service docker-openclaw.service 2>/dev/null || true
+sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service matter-server.service docker-n8n.service docker-openclaw.service 2>/dev/null || true
 sudo rsync -a /path/to/extracted/homeassistant/data/ /var/lib/home-assistant/
 sudo rsync -a /path/to/extracted/a0d7b954_adguard/data/adguard/ /var/lib/adguard/conf/
-sudo rsync -a /path/to/extracted/core_matter_server/data/ /var/lib/matter-server/
+sudo rsync -a /path/to/extracted/core_matter_server/data/ /var/lib/apps/matter-server/
 sudo rsync -a /path/to/extracted/3cfc8f0f_hass-n8n/data/n8n/.n8n/ /var/lib/n8n/
 sudo nixos-rebuild switch --flake /home/joshan/.files#nixos-server
 ```

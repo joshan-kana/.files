@@ -1,20 +1,24 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 let
-  inherit (config.dotfiles) server;
+  inherit (config.dotfiles.server.storage) appData;
+  matterStateDir = "${appData.root}/matter-server";
 in
 {
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 5580 ];
+  users.users.matter-server = {
+    isSystemUser = true;
+    group = appData.group.name;
+  };
 
-  virtualisation.oci-containers.containers.matter-server = {
-    image = "ghcr.io/home-assistant-libs/python-matter-server:stable";
+  services.matter-server = {
+    enable = true;
+    extraArgs.vendorid = 65521; # 0xFFF1, used by the existing Matter fabric.
+  };
 
-    volumes = [ "${server.storage.appData.root}/matter-server:/data" ];
-
-    extraOptions = [
-      "--network=host"
-      "--cap-add=NET_ADMIN"
-      "--cap-add=NET_RAW"
-    ];
+  systemd.services.matter-server.serviceConfig = {
+    DynamicUser = lib.mkForce false;
+    User = "matter-server";
+    # StateDirectory sources are relative to /var/lib; keep the semantic path above absolute.
+    StateDirectory = lib.mkForce [ "${lib.removePrefix "/var/lib/" matterStateDir}:matter-server" ];
   };
 }
