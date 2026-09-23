@@ -16,12 +16,9 @@ let
 
   openclawPackages = inputs.nix-openclaw.packages.${pkgs.stdenv.hostPlatform.system};
   openclawPackage = openclawPackages.openclaw-gateway;
-  openclawRuntimePlugins = with openclawPackages; [
-    openclaw-runtime-plugin-codex
-    openclaw-runtime-plugin-deepseek
-    openclaw-runtime-plugin-matrix
+  openclawPluginPaths = builtins.toJSON [
+    "${openclawPackages.openclaw-runtime-plugin-codex}"
   ];
-  openclawPluginPaths = builtins.toJSON (map toString openclawRuntimePlugins);
   updateOpenclawPluginPaths = pkgs.writeShellScript "update-openclaw-plugin-paths" ''
     exec ${openclawPackage}/bin/openclaw config set plugins.load.paths \
       ${lib.escapeShellArg openclawPluginPaths} --strict-json --replace
@@ -374,6 +371,8 @@ in
     stateDir = openclawStateDir;
 
     environment = {
+      CLAWDBOT_CONFIG_PATH = openclawConfigFile;
+      OPENCLAW_CONFIG_PATH = openclawConfigFile;
       OPENCLAW_NIX_MODE = "0";
       OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i /run/credentials/openclaw-gateway.service/openclaw-host-admin-id_ed25519 -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
     };
@@ -392,8 +391,6 @@ in
   };
 
   systemd.services.openclaw-gateway = {
-    environment.OPENCLAW_CONFIG_PATH = lib.mkForce openclawConfigFile;
-
     serviceConfig = {
       LoadCredential = [
         "openclaw-host-admin-id_ed25519:${openclawHostAdmin.privateKeySecret}"

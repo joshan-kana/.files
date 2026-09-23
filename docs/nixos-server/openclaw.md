@@ -12,8 +12,8 @@ avoids the much larger batteries-included tool bundle.
 The server keeps OpenClaw state under `/var/lib/apps/openclaw`. OpenClaw owns
 its mutable application configuration at `/var/lib/apps/openclaw/openclaw.json`;
 Nix owns the service boundary, secrets, runtime tools, proxying, host integration,
-and the versioned Nix store paths for the required runtime plugins. Those plugin
-paths are refreshed before each start, then the service runs `openclaw config
+and the versioned Nix store path for the Codex runtime plugin. That plugin path
+is refreshed before each start, then the service runs `openclaw config
 validate` so an incompatible config prevents startup after an upgrade instead of
 being silently accepted.
 
