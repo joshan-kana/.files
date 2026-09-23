@@ -11,13 +11,12 @@ let
   inherit (config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway) enable;
 
   gatewayPort = 4444;
-  adminPort = 15000;
   readinessPort = 15021;
   agentgateway = import ./agentgateway.nix { inherit inputs pkgs; };
   format = pkgs.formats.yaml { };
   settings = {
     config = {
-      adminAddr = "${server.lan.serverIp}:${toString adminPort}";
+      adminAddr = "127.0.0.1:15000";
       readinessAddr = "127.0.0.1:${toString readinessPort}";
       statsAddr = "127.0.0.1:15020";
     };
@@ -112,5 +111,4 @@ in
     };
   };
 
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ adminPort ];
 }
