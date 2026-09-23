@@ -159,7 +159,7 @@
             lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
           };";
 
-          service = {
+          adguard = {
             user = "adguardhome";
             group = "appdata-editors";
             ip = server.lan.dns.serviceIp;
@@ -169,31 +169,45 @@
             confDir = "${server.storage.appData.root}/adguard/conf";
             configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
           };
+
+          technitium = {
+            user = "technitium";
+            group = server.storage.appData.group.name;
+            ip = server.lan.serverIp;
+            stateDir = "${server.storage.appData.root}/technitium";
+            adminPasswordFile = "${server.secretsDir}/technitium-admin-password";
+          };
         in
         {
           networking.networkmanager.ensureProfiles.profiles."wired-static" = {
             ipv4 = {
-              address2 = "${service.ip}/${lanPrefixLength}";
+              address2 = "${adguard.ip}/${lanPrefixLength}";
               dns = hostDns;
               "ignore-auto-dns" = true;
             };
             ipv6."ignore-auto-dns" = true;
           };
 
-          networking.firewall.allowedTCPPorts = [ service.port ];
-          networking.firewall.allowedUDPPorts = [ service.port ];
+          networking.firewall.allowedTCPPorts = [ adguard.port ];
+          networking.firewall.allowedUDPPorts = [ adguard.port ];
 
-          users.users.${service.user} = {
-            isSystemUser = true;
-            inherit (service) group;
+          users.users = {
+            ${adguard.user} = {
+              isSystemUser = true;
+              inherit (adguard) group;
+            };
+            ${technitium.user} = {
+              isSystemUser = true;
+              inherit (technitium) group;
+            };
           };
 
           systemd.tmpfiles.rules = [
-            "d ${service.dataDir} 2750 ${service.user} ${service.group} - -"
-            "d ${service.workDir} 2750 ${service.user} ${service.group} - -"
-            "d ${service.confDir} 2750 ${service.user} ${service.group} - -"
-            "Z ${service.dataDir} - ${service.user} ${service.group} - -"
-            "z ${service.configFile} 0660 ${service.user} ${service.group} - -"
+            "d ${adguard.dataDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "d ${adguard.workDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "d ${adguard.confDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "Z ${adguard.dataDir} - ${adguard.user} ${adguard.group} - -"
+            "z ${adguard.configFile} 0660 ${adguard.user} ${adguard.group} - -"
           ];
 
           services.adguardhome = {
@@ -208,42 +222,81 @@
 
             # Web UI only on the dedicated LAN DNS service IP.
             # Port is intentionally omitted because the module default is 3000.
-            host = service.ip;
+            host = adguard.ip;
 
             extraArgs = [
-              "--work-dir ${service.workDir}"
-              "--config ${service.configFile}"
+              "--work-dir ${adguard.workDir}"
+              "--config ${adguard.configFile}"
             ];
 
             settings = {
               dns = {
                 # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
                 bind_hosts = [
-                  service.ip
+                  adguard.ip
                   "127.0.0.1"
                 ];
-                inherit (service) port;
+                inherit (adguard) port;
               };
             };
           };
 
-          systemd.services.adguardhome = {
-            after = [
-              "network-online.target"
-            ];
-            wants = [ "network-online.target" ];
+          # Technitium owns DNS/DHCP backend state. AdGuard remains the
+          # client-facing filtering resolver on 192.168.1.2.
+          services.technitium-dns-server = {
+            enable = true;
+            openFirewall = false;
+          };
 
-            serviceConfig = {
-              DynamicUser = lib.mkForce false;
-              User = service.user;
-              Group = service.group;
+          systemd.services = {
+            adguardhome = {
+              after = [
+                "network-online.target"
+              ];
+              wants = [ "network-online.target" ];
 
-              StateDirectory = lib.mkForce "apps/adguard/conf";
-              StateDirectoryMode = "2750";
-              UMask = lib.mkForce "0007";
+              serviceConfig = {
+                DynamicUser = lib.mkForce false;
+                User = adguard.user;
+                Group = adguard.group;
 
-              # AdGuard writes runtime databases such as work/data/sessions.db here.
-              ReadWritePaths = [ service.workDir ];
+                StateDirectory = lib.mkForce "apps/adguard/conf";
+                StateDirectoryMode = "2750";
+                UMask = lib.mkForce "0007";
+
+                # AdGuard writes runtime databases such as work/data/sessions.db here.
+                ReadWritePaths = [ adguard.workDir ];
+              };
+            };
+
+            technitium-dns-server = {
+              after = [ "network-online.target" ];
+              wants = [ "network-online.target" ];
+
+              # Keep first deployment dormant until its persistent DNS bind has
+              # been initialized away from AdGuard's 192.168.1.2:53 listener.
+              wantedBy = lib.mkForce [ ];
+
+              environment = {
+                DNS_SERVER_DOMAIN = "dns.home";
+                DNS_SERVER_ADMIN_PASSWORD_FILE = "/run/credentials/technitium-dns-server.service/admin-password";
+                DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.ip},127.0.0.1";
+                DNS_SERVER_RECURSION = "AllowOnlyForPrivateNetworks";
+                DNS_SERVER_ENABLE_BLOCKING = "false";
+                DNS_SERVER_FORWARDERS = "https://dns10.quad9.net/dns-query";
+                DNS_SERVER_FORWARDER_PROTOCOL = "Https";
+              };
+
+              serviceConfig = {
+                DynamicUser = lib.mkForce false;
+                User = technitium.user;
+                Group = technitium.group;
+                StateDirectory = lib.mkForce "apps/technitium";
+                StateDirectoryMode = "2750";
+                WorkingDirectory = lib.mkForce technitium.stateDir;
+                UMask = lib.mkForce "0007";
+                LoadCredential = [ "admin-password:${technitium.adminPasswordFile}" ];
+              };
             };
           };
         };
@@ -366,8 +419,9 @@
         services.restic.backups = lib.mkForce { };
         services.snapper.configs = lib.mkForce { };
 
-        # The VM does not have the dedicated LAN address used by native AdGuard.
+        # The VM does not have the dedicated LAN addresses used by the DNS services.
         services.adguardhome.enable = lib.mkForce false;
+        services.technitium-dns-server.enable = lib.mkForce false;
       };
     };
   };
