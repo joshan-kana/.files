@@ -99,5 +99,7 @@ in
     "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
   ];
 
+  users.users.hass.extraGroups = [ appData.group.name ];
+
   virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
 }
