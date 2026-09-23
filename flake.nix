@@ -8,6 +8,9 @@
     # Stable Nixpkgs for server hosts where predictable updates matter more.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
+    # Current Home Assistant package stream for the stable server host.
+    nixpkgs-home-assistant.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     # Pull-based deployment from the repository main branch.
     comin = {
       url = "github:nlewo/comin/v0.14.0";

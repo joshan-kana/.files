@@ -1,5 +1,7 @@
 {
   config,
+  inputs,
+  lib,
   pkgs,
   ...
 }:
@@ -7,6 +9,13 @@
 let
   inherit (config.dotfiles) server;
   inherit (server.storage) appData;
+  configDir = "${appData.root}/home-assistant";
+
+  homeAssistantPkgs = inputs.nixpkgs-home-assistant.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  homeAssistantBase = homeAssistantPkgs.home-assistant;
+  homeAssistantPackage = (homeAssistantBase.override { skipPip = false; }).overrideAttrs (oldAttrs: {
+    patches = (oldAttrs.patches or [ ]) ++ [ ./allow-runtime-requirements.patch ];
+  });
 in
 {
   hardware.bluetooth = {
@@ -23,32 +32,40 @@ in
   ];
 
   services.restic.backups.apps.exclude = [
-    "${appData.root}/home-assistant/www/media/ha-bambulab"
+    "${configDir}/deps"
+    "${configDir}/www/media/ha-bambulab"
   ];
 
-  systemd.services.docker-home-assistant = {
-    after = [
-      "bluetooth.service"
-      "dbus.service"
-    ];
-    wants = [
-      "bluetooth.service"
-      "dbus.service"
-    ];
+  services.home-assistant = {
+    enable = true;
+    package = homeAssistantPackage;
+    inherit configDir;
+    config = null;
+    extraPackages = ps: [ ps.uv ];
   };
 
-  virtualisation.oci-containers.containers.home-assistant = {
-    image = "ghcr.io/home-assistant/home-assistant:stable";
+  systemd = {
+    services.home-assistant = {
+      environment = {
+        NIXOS_HOME_ASSISTANT_MANAGED_REQUIREMENTS = "1";
+        PYTHONPATH = lib.mkForce "${configDir}/deps:${config.services.home-assistant.finalPackage.pythonPath}";
+      };
+      after = [
+        "bluetooth.service"
+        "dbus.service"
+      ];
+      wants = [
+        "bluetooth.service"
+        "dbus.service"
+      ];
+      path = [ homeAssistantPkgs.go2rtc ];
+    };
 
-    volumes = [
-      "${appData.root}/home-assistant:/config"
-      "/run/dbus:/run/dbus:ro"
-    ];
-
-    extraOptions = [
-      "--network=host"
-      "--cap-add=NET_ADMIN"
-      "--cap-add=NET_RAW"
+    tmpfiles.rules = [
+      "d ${configDir} 0750 hass hass - -"
+      "d ${configDir}/deps 0750 hass hass - -"
+      "Z ${configDir} - hass hass - -"
+      "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
     ];
   };
 
@@ -57,7 +74,7 @@ in
     wantedBy = [ "multi-user.target" ];
     serviceConfig.Type = "oneshot";
     script = ''
-      file=${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+      file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
       [ -f "$file" ] || exit 0
 
       ${pkgs.gnused}/bin/sed -n \
@@ -68,12 +85,14 @@ in
       ${pkgs.gnused}/bin/sed -i -E \
         '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
 
-      ${pkgs.docker}/bin/docker restart home-assistant >/dev/null || true
+      ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
     '';
   };
 
   systemd.paths.breville-airactive3d-3speed = {
     wantedBy = [ "paths.target" ];
-    pathConfig.PathChanged = "${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
   };
+
+  virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
 }

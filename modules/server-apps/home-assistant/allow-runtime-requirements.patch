@@ -1,0 +1,22 @@
+diff --git a/homeassistant/requirements.py b/homeassistant/requirements.py
+--- a/homeassistant/requirements.py
++++ b/homeassistant/requirements.py
+@@ -256,6 +256,9 @@ class RequirementsManager:
+         This method is a coroutine. It will raise RequirementsNotFound
+         if a requirement can't be satisfied.
+         """
++        if is_built_in and os.environ.get("NIXOS_HOME_ASSISTANT_MANAGED_REQUIREMENTS") == "1":
++            return
++
+         if DEPRECATED_PACKAGES or self.hass.config.skip_pip_packages:
+             all_requirements = {
+                 requirement_string: requirement_details
+diff --git a/homeassistant/util/package.py b/homeassistant/util/package.py
+--- a/homeassistant/util/package.py
++++ b/homeassistant/util/package.py
+@@ -35,8 +35,7 @@ def is_virtual_env() -> bool:
+     return (
+         getattr(sys, "base_prefix", sys.prefix) != sys.prefix
+         or hasattr(sys, "real_prefix")
+-        or "PYTHONPATH" in os.environ
+     )
