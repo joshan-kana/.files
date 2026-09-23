@@ -125,6 +125,21 @@ in
       };
     };
 
+    services.breville-airactive3d-3speed = {
+      serviceConfig = {
+        Type = "oneshot";
+        User = "hass";
+        Group = "hass";
+        ExecStart = brevillePatch;
+        ExecStartPost = "+${pkgs.systemd}/bin/systemctl try-restart home-assistant.service";
+      };
+    };
+
+    paths.breville-airactive3d-3speed = {
+      wantedBy = [ "paths.target" ];
+      pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    };
+
     tmpfiles.rules = [
       "d ${configDir} 0750 hass hass - -"
       "Z ${configDir} - hass hass - -"
