@@ -350,6 +350,10 @@
           # The daemon still starts during boot. The auth/connect step still runs
           # automatically, but after multi-user.target so LAN boot is not held up by
           # Tailscale control-plane/auth latency.
+          # Like autoconnect below, applying mutable Tailscale settings must not
+          # become an ordering dependency of multi-user.target.
+          systemd.services.tailscaled-set.before = lib.mkForce [ "shutdown.target" ];
+
           systemd.services.tailscaled-autoconnect = {
             after = lib.mkForce [
               "tailscaled.service"
