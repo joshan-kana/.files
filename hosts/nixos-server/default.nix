@@ -352,7 +352,10 @@
           # Tailscale control-plane/auth latency.
           # Like autoconnect below, applying mutable Tailscale settings must not
           # become an ordering dependency of multi-user.target.
-          systemd.services.tailscaled-set.before = lib.mkForce [ "shutdown.target" ];
+          systemd.services.tailscaled-set = {
+            before = lib.mkForce [ "shutdown.target" ];
+            wantedBy = lib.mkForce [ ];
+          };
 
           systemd.services.tailscaled-autoconnect = {
             after = lib.mkForce [
@@ -360,6 +363,7 @@
               "multi-user.target"
             ];
             before = lib.mkForce [ "shutdown.target" ];
+            wants = [ "tailscaled-set.service" ];
             preStart = ''
               if ${config.services.tailscale.package}/bin/tailscale status --json 2>/dev/null |
                 ${pkgs.jq}/bin/jq -e '.BackendState == "Running"' >/dev/null; then
