@@ -5,19 +5,20 @@ This page documents the OpenClaw runtime wiring on the NixOS server.
 ## Local Gateway
 
 OpenClaw runs natively as `openclaw-gateway.service` on the NixOS server and
-is exposed through nginx. The service uses the OpenClaw package from the pinned
-`llm-agents` flake, which is available through the configured public Numtide
-binary cache.
+is exposed through nginx. The service uses the first-party `openclaw-gateway`
+package and NixOS module from the `nix-openclaw` flake. The gateway-only package
+avoids the much larger batteries-included tool bundle.
 
-The server keeps OpenClaw's app state under `/var/lib/apps/openclaw` and its
-auth/profile state under `/var/lib/apps/openclaw-auth`. Mutable application
-configuration remains at `/var/lib/apps/openclaw/openclaw.json`;
-`configure-openclaw-gateway.service` applies the host-owned networking,
-provider, trusted-proxy, and tool-policy settings before the gateway starts.
+The server keeps OpenClaw state under `/var/lib/apps/openclaw`. OpenClaw owns
+its mutable application configuration at `/var/lib/apps/openclaw/openclaw.json`;
+Nix owns the service boundary, secrets, runtime tools, proxying, host integration,
+and the versioned Nix store paths for the required runtime plugins. Those plugin
+paths are refreshed before each start, then the service runs `openclaw config
+validate` so an incompatible config prevents startup after an upgrade instead of
+being silently accepted.
 
-The native service runs as `joshan:appdata-editors`. Keeping the existing UID
-preserves the state created by the former container deployment and keeps a NixOS
-generation rollback compatible with the same state tree.
+The native service runs as `openclaw:appdata-editors`, matching the server-app
+service-user pattern used elsewhere on the host.
 
 ## Host and repository access
 
@@ -34,7 +35,7 @@ openclaw-repository gh <gh arguments...>
 ```
 
 Git uses `/root/secrets/openclaw-github-id_ed25519`; GitHub API operations use
-`/root/secrets/openclaw-github.env` and appear as `joshan-kana`.
+`/root/secrets/github-self-hosted-agents.env` and appear as `joshan-kana`.
 
 OpenClaw is intentionally host-root-equivalent. These wrappers preserve checkout
 ownership and provide a consistent interface; they are not security boundaries
@@ -50,7 +51,7 @@ sudo openclaw-repository-host git infrastructure-docs status --short --branch
 
 ## Repository-access rollback
 
-- GitHub API: move or remove `/root/secrets/openclaw-github.env`.
+- GitHub API: move or remove `/root/secrets/github-self-hosted-agents.env`.
 - Git over SSH: revoke `OpenClaw nixos-server Git`, then move or remove its
   dedicated keypair.
 - Host administration: remove or restrict the host-admin key or
@@ -127,7 +128,7 @@ Run this on the NixOS server:
 
 ```sh
 systemctl --failed
-systemctl status openclaw-gateway.service configure-openclaw-gateway.service nginx.service --no-pager -l
+systemctl status openclaw-gateway.service nginx.service --no-pager -l
 systemctl status openclaw-ollama-proxy.timer openclaw-ollama-proxy.service --no-pager -l
 systemctl list-timers openclaw-ollama-proxy.timer --all --no-pager
 cat /run/openclaw-ollama-proxy.conf
@@ -194,11 +195,11 @@ references each key through an environment-backed SecretRef in
 
 ### Listing Models
 
-Use the Control UI for normal provider and model inspection. The OpenClaw
-package is kept on the gateway service PATH rather than installed globally on
-the host. A separately invoked CLI would also need the gateway's state paths and
-secret environment to be an equivalent diagnostic context. Service failures and
-provider startup errors are available through
+Use the Control UI for normal provider and model inspection. OpenClaw is not
+installed globally on the host; the service invokes the first-party gateway
+package directly. A separately invoked CLI would also need the gateway's state
+paths and secret environment to be an equivalent diagnostic context. Service
+failures and provider startup errors are available through
 `journalctl -u openclaw-gateway.service`.
 
 ### Switching Models
