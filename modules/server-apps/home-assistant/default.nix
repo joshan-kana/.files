@@ -12,23 +12,6 @@ let
   configDir = "${appData.root}/home-assistant";
 in
 {
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-  };
-
-  environment.systemPackages = [ pkgs.bluez ];
-
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
-    8123
-    21064 # HomeKit main bridge
-    21065 # HomeKit Bambu camera bridge
-  ];
-
-  services.restic.backups.apps.exclude = [
-    "${configDir}/www/media/ha-bambulab"
-  ];
-
   services.home-assistant = {
     enable = true;
     package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.home-assistant;
@@ -70,6 +53,23 @@ in
         tuya-device-sharing-sdk
       ];
   };
+
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+
+  environment.systemPackages = [ pkgs.bluez ];
+
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
+    8123
+    21064 # HomeKit main bridge
+    21065 # HomeKit Bambu camera bridge
+  ];
+
+  services.restic.backups.apps.exclude = [
+    "${configDir}/www/media/ha-bambulab"
+  ];
 
   systemd.services.breville-airactive3d-3speed = {
     wantedBy = [ "multi-user.target" ];
