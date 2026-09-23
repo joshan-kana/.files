@@ -92,6 +92,11 @@
       url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
       flake = false;
     };
+
+    agentgateway-release = {
+      url = "file+https://api.github.com/repos/agentgateway/agentgateway/releases/latest";
+      flake = false;
+    };
   };
 
   outputs =
