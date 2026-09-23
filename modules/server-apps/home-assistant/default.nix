@@ -1,5 +1,7 @@
 {
   config,
+  inputs,
+  lib,
   pkgs,
   ...
 }:
@@ -7,14 +9,48 @@
 let
   inherit (config.dotfiles) server;
   inherit (server.storage) appData;
+  configDir = "${appData.root}/home-assistant";
 in
 {
-  hardware.bluetooth = {
+  services.home-assistant = {
     enable = true;
-    powerOnBoot = true;
+    package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.home-assistant;
+    inherit configDir;
+    config = null;
+
+    # Built-in integrations needing additional Nix runtime support.
+    extraComponents = [
+      "analytics"
+      "cast"
+      "default_config"
+      "dlna_dms"
+      "esphome"
+      "go2rtc"
+      "google_translate"
+      "homekit"
+      "homekit_controller"
+      "ipp"
+      "matter"
+      "met"
+      "radio_browser"
+      "rpi_power"
+      "samsungtv"
+      "thread"
+      "upnp"
+      "wled"
+    ];
+
+    # Requirements declared by the mutable HACS/custom components in configDir.
+    extraPackages =
+      ps: with ps; [
+        aiogithubapi
+        beautifulsoup4
+        tinytuya
+        tuya-device-sharing-sdk
+      ];
   };
 
-  environment.systemPackages = [ pkgs.bluez ];
+  hardware.bluetooth.enable = true;
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
     8123
@@ -23,57 +59,45 @@ in
   ];
 
   services.restic.backups.apps.exclude = [
-    "${appData.root}/home-assistant/www/media/ha-bambulab"
+    "${configDir}/www/media/ha-bambulab"
   ];
 
-  systemd.services.docker-home-assistant = {
-    after = [
-      "bluetooth.service"
-      "dbus.service"
-    ];
-    wants = [
-      "bluetooth.service"
-      "dbus.service"
-    ];
+  users.users.hass = lib.mkIf config.services.home-assistant.enable {
+    extraGroups = [ appData.group.name ];
   };
 
-  virtualisation.oci-containers.containers.home-assistant = {
-    image = "ghcr.io/home-assistant/home-assistant:stable";
+  virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
 
-    volumes = [
-      "${appData.root}/home-assistant:/config"
-      "/run/dbus:/run/dbus:ro"
+  systemd = {
+    tmpfiles.rules = [
+      "d ${configDir} 0750 hass hass - -"
+      "Z ${configDir} - hass hass - -"
+      "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
     ];
 
-    extraOptions = [
-      "--network=host"
-      "--cap-add=NET_ADMIN"
-      "--cap-add=NET_RAW"
-    ];
-  };
+    # Breville AirActive3D Tuya Local patch.
+    services.breville-airactive3d-3speed = {
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+        [ -f "$file" ] || exit 0
 
-  # fix breville fan 3-speed patch in home assistant
-  systemd.services.breville-airactive3d-3speed = {
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig.Type = "oneshot";
-    script = ''
-      file=${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
-      [ -f "$file" ] || exit 0
+        ${pkgs.gnused}/bin/sed -n \
+          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
+          | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
+          && exit 0
 
-      ${pkgs.gnused}/bin/sed -n \
-        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
-        | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
-        && exit 0
+        ${pkgs.gnused}/bin/sed -i -E \
+          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
 
-      ${pkgs.gnused}/bin/sed -i -E \
-        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
+        ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
+      '';
+    };
 
-      ${pkgs.docker}/bin/docker restart home-assistant >/dev/null || true
-    '';
-  };
-
-  systemd.paths.breville-airactive3d-3speed = {
-    wantedBy = [ "paths.target" ];
-    pathConfig.PathChanged = "${appData.root}/home-assistant/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    paths.breville-airactive3d-3speed = {
+      wantedBy = [ "paths.target" ];
+      pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    };
   };
 }

@@ -3,10 +3,6 @@
     "digest": "sha256:43181ac35adc3e03caebcd65df11dceb7269b94f9ae47d1da1c8caf76f3cf43a",
     "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
   },
-  "home-assistant": {
-    "digest": "sha256:d8922685169707fd91e8b9729902d975f06157d005e422874d201e0261dda196",
-    "source": "ghcr.io/home-assistant/home-assistant:stable"
-  },
   "mcp-gateway": {
     "digest": "sha256:31cf1d45ab56d83fc109ac0de1ada7b359df2497a52765af73421f013fa76b4d",
     "source": "ghcr.io/ibm/mcp-context-forge:v1.0.10"
