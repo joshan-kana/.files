@@ -215,10 +215,8 @@ serverApps = editScope moduleRegistry.serverApps {
     services.immich.host = "127.0.0.1";
   };
 
-  homeAssistant = { inherited, ... }: {
-    virtualisation.oci-containers.containers.home-assistant.volumes =
-      inherited.virtualisation.oci-containers.containers.home-assistant.volumes
-      ++ [ "/host:/host" ];
+  homeAssistant = _: {
+    services.home-assistant.extraArgs = [ "--debug" ];
   };
 };
 ```

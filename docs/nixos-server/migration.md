@@ -16,7 +16,7 @@ keeping one-off parser scripts in this repo.
 
 | HAOS add-on | NixOS target | Notes |
 | --- | --- | --- |
-| Home Assistant | `home-assistant` OCI container | Config/data lives in `/var/lib/apps/home-assistant`. |
+| Home Assistant | native NixOS `home-assistant` service | Config/data lives in `/var/lib/apps/home-assistant`. |
 | AdGuard Home | `adguard` OCI container | Config lives in `/var/lib/apps/adguard/conf`; runtime work data lives in `/var/lib/apps/adguard/work`. DNS/admin are served from the dedicated AdGuard LAN IP. |
 | Matter Server | Native `services.matter-server` service | Data lives in `/var/lib/apps/matter-server`; the native service uses a stable NixOS system user. |
 | n8n | `n8n` OCI container | Data lives in `/var/lib/apps/n8n`. |
@@ -88,7 +88,7 @@ rm -rf "$HA_BACKUP_DIR" &&
     sudo test -d "$STAGE_DIR/homeassistant/data/.storage"
 
     sudo systemctl stop \
-      docker-home-assistant.service \
+      home-assistant.service \
       docker-adguard.service \
       docker-matter-server.service \
       matter-server.service \
