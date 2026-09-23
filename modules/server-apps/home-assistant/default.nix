@@ -18,10 +18,9 @@ in
     inherit configDir;
     config = null;
 
-    # Built-in integrations currently managed through Home Assistant.
+    # Built-in integrations needing additional Nix runtime support.
     extraComponents = [
       "analytics"
-      "bluetooth"
       "cast"
       "default_config"
       "dlna_dms"
@@ -33,12 +32,9 @@ in
       "ipp"
       "matter"
       "met"
-      "mobile_app"
       "radio_browser"
       "rpi_power"
       "samsungtv"
-      "shopping_list"
-      "sun"
       "thread"
       "upnp"
       "wled"
@@ -54,12 +50,7 @@ in
       ];
   };
 
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-  };
-
-  environment.systemPackages = [ pkgs.bluez ];
+  hardware.bluetooth.enable = true;
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
     8123
@@ -71,39 +62,42 @@ in
     "${configDir}/www/media/ha-bambulab"
   ];
 
-  systemd.services.breville-airactive3d-3speed = {
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig.Type = "oneshot";
-    script = ''
-      file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
-      [ -f "$file" ] || exit 0
-
-      ${pkgs.gnused}/bin/sed -n \
-        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
-        | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
-        && exit 0
-
-      ${pkgs.gnused}/bin/sed -i -E \
-        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
-
-      ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
-    '';
-  };
-
-  systemd.paths.breville-airactive3d-3speed = {
-    wantedBy = [ "paths.target" ];
-    pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
-  };
-
-  systemd.tmpfiles.rules = [
-    "d ${configDir} 0750 hass hass - -"
-    "Z ${configDir} - hass hass - -"
-    "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
-  ];
-
   users.users.hass = lib.mkIf config.services.home-assistant.enable {
     extraGroups = [ appData.group.name ];
   };
 
   virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
+
+  systemd = {
+    tmpfiles.rules = [
+      "d ${configDir} 0750 hass hass - -"
+      "Z ${configDir} - hass hass - -"
+      "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
+    ];
+
+    # Breville AirActive3D Tuya Local patch.
+    services.breville-airactive3d-3speed = {
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+        [ -f "$file" ] || exit 0
+
+        ${pkgs.gnused}/bin/sed -n \
+          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
+          | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
+          && exit 0
+
+        ${pkgs.gnused}/bin/sed -i -E \
+          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
+
+        ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
+      '';
+    };
+
+    paths.breville-airactive3d-3speed = {
+      wantedBy = [ "paths.target" ];
+      pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+    };
+  };
 }
