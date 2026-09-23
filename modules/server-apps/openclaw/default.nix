@@ -203,8 +203,16 @@ in
     '';
   };
 
+  system.activationScripts.openclawNativeConfigOwnership = {
+    deps = [ "users" ];
+    text = ''
+      if [ -e ${lib.escapeShellArg openclawConfigFile} ]; then
+        ${pkgs.coreutils}/bin/chown --from=${primary.name} ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawConfigFile}
+      fi
+    '';
+  };
+
   systemd.tmpfiles.rules = [
-    "z ${openclawConfigFile} 0600 ${openclawUser} ${appDataGroup} - -"
     "d ${openclawStateDir}/workspace/skills 0755 ${openclawUser} ${appDataGroup} - -"
     "d ${openclawStateDir}/workspace/skills/repository-access 0755 ${openclawUser} ${appDataGroup} - -"
     "L+ ${openclawStateDir}/workspace/skills/repository-access/SKILL.md - - - - ${openclawRepositorySkill}"
