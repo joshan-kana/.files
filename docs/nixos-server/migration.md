@@ -18,7 +18,7 @@ keeping one-off parser scripts in this repo.
 | --- | --- | --- |
 | Home Assistant | `home-assistant` OCI container | Config/data lives in `/var/lib/apps/home-assistant`. |
 | AdGuard Home | `adguard` OCI container | Config lives in `/var/lib/apps/adguard/conf`; runtime work data lives in `/var/lib/apps/adguard/work`. DNS/admin are served from the dedicated AdGuard LAN IP. |
-| Matter Server | `matter-server` OCI container | Data lives in `/var/lib/apps/matter-server`; uses host networking for discovery. |
+| Matter Server | Native `services.matter-server` service | Data lives in `/var/lib/apps/matter-server`; the native service uses a stable NixOS system user. |
 | n8n | `n8n` OCI container | Data lives in `/var/lib/apps/n8n`. |
 | OpenClaw Assistant | `openclaw` OCI container | Restore `.openclaw` to `/var/lib/apps/openclaw`; restore `.config/openclaw` to `/var/lib/apps/openclaw-auth` if present. |
 | Twingate Connector | Replaced by Tailscale | Tailscale is managed by the NixOS service and enrols from the bootstrap auth key. |
@@ -91,6 +91,7 @@ rm -rf "$HA_BACKUP_DIR" &&
       docker-home-assistant.service \
       docker-adguard.service \
       docker-matter-server.service \
+      matter-server.service \
       docker-n8n.service \
       docker-openclaw.service \
       2>/dev/null || true

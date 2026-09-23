@@ -7,10 +7,6 @@
     "digest": "sha256:d8922685169707fd91e8b9729902d975f06157d005e422874d201e0261dda196",
     "source": "ghcr.io/home-assistant/home-assistant:stable"
   },
-  "matter-server": {
-    "digest": "sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a",
-    "source": "ghcr.io/home-assistant-libs/python-matter-server:stable"
-  },
   "mcp-gateway": {
     "digest": "sha256:31cf1d45ab56d83fc109ac0de1ada7b359df2497a52765af73421f013fa76b4d",
     "source": "ghcr.io/ibm/mcp-context-forge:v1.0.10"
