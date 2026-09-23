@@ -78,7 +78,7 @@ in
     lan = {
       interface = mkOption {
         type = types.str;
-        default = "enp0s31f6";
+        default = "enp0s20f0u4";
         description = "Primary wired LAN interface for the server.";
       };
 
