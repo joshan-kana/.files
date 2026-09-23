@@ -102,7 +102,7 @@ Special cases:
 Restore flow:
 
 ```sh
-sudo systemctl stop docker-home-assistant.service docker-adguard.service docker-matter-server.service docker-n8n.service docker-openclaw.service 2>/dev/null || true
+sudo systemctl stop home-assistant.service docker-adguard.service docker-matter-server.service docker-n8n.service docker-openclaw.service 2>/dev/null || true
 sudo rsync -a /path/to/extracted/homeassistant/data/ /var/lib/home-assistant/
 sudo rsync -a /path/to/extracted/a0d7b954_adguard/data/adguard/ /var/lib/adguard/conf/
 sudo rsync -a /path/to/extracted/core_matter_server/data/ /var/lib/matter-server/
