@@ -29,11 +29,11 @@ recreating or formatting either member disk.
 
 ## Network Layout
 
-- Router: `192.168.1.1`
-- AdGuard: `192.168.1.2`
-- NixOS host and Home Assistant: `192.168.1.3`
-- AdGuard host shim: `192.168.1.5`
-- DHCP pool: `192.168.1.100-192.168.1.199`
+- Router/default gateway: `192.168.1.1`
+- AdGuard Home client DNS/filter: `192.168.1.2:53`
+- NixOS host: `192.168.1.3`
+- Technitium DNS backend/admin UI: `192.168.1.3:53` / `:5380`
+- Current router DHCP pool: `192.168.1.100-192.168.1.199`
 
 Home Assistant uses host networking, so it is reached at
 `http://192.168.1.3:8123`.
@@ -41,23 +41,15 @@ Home Assistant uses host networking, so it is reached at
 The machine hostname is `nixos-server`, and the flake target is also
 `nixos-server`.
 
-AdGuard has its own macvlan IP because DNS clients should not care which host
-it runs on.
+AdGuard remains the only client-facing DNS resolver. It owns the dedicated
+`192.168.1.2` service address and keeps network-wide ad/tracker filtering in
+front of normal client queries. AdGuard forwards allowed queries to Technitium
+on `192.168.1.3:53`.
 
-## AdGuard Shim
-
-Docker macvlan networks isolate the parent host from the container. The second
-macvlan address on the host lets host-networked services reach AdGuard. The
-macvlan parent interface is detected at runtime from the default IPv4 route.
-
-The server networking configuration creates:
-
-- container IP `192.168.1.2` for AdGuard itself
-- host shim IP `192.168.1.5` on `adguard-shim`
-- a `/32` route for `192.168.1.2` through that shim
-
-If more macvlan services are added later, widen the route or add more `/32`
-routes.
+Technitium owns the DNS/DHCP backend role and keeps its application-managed
+state under `/var/lib/apps/technitium`. Its DHCP scope remains disabled until
+the router DHCP service is deliberately cut over; never run both DHCP servers
+at once.
 
 ## Tailscale Model
 
@@ -67,9 +59,21 @@ The server joins Tailscale as an ephemeral tagged subnet router:
 tag:nixos-server
 ```
 
-It advertises `192.168.1.0/24`. Tailnet policy should auto-approve that route
-for `tag:nixos-server`. The Tailscale `100.x` address is disposable; use LAN
-URLs such as `http://192.168.1.3:8123` through the subnet route for stable access.
+It advertises the ordinary home subnet plus the site-1 4via6 mapping:
+
+```text
+192.168.1.0/24
+fd7a:115c:a1e0:b1a:0:1:c0a8:100/120
+```
+
+The 4via6 route keeps home devices unambiguous when a remote network also uses
+`192.168.1.0/24`. Mutable route advertisement is applied with `tailscale set`
+after the delayed autoconnect step, preserving the existing rule that Tailscale
+authentication must not block normal LAN boot.
+
+The server's ephemeral Tailscale `100.x` address is not a stable service
+identity. Use `.home` names for services and Tailscale machine names for roaming
+Tailscale peers.
 
 ## Install
 
