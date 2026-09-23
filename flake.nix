@@ -24,6 +24,9 @@
     # Prebuilt AI agent packages.
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    # First-party OpenClaw package and NixOS module.
+    nix-openclaw.url = "github:openclaw/nix-openclaw";
+
     # Stylix: systemwide theming and typography for NixOS
     stylix = {
       url = "github:nix-community/stylix";

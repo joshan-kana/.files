@@ -15,6 +15,7 @@
 
   imports = [
     inputs.hermes-agent.nixosModules.default
+    inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix
     ./hardware.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
