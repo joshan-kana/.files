@@ -69,37 +69,35 @@ in
       ];
   };
 
-  systemd = {
-    services.breville-airactive3d-3speed = {
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig.Type = "oneshot";
-      script = ''
-        file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
-        [ -f "$file" ] || exit 0
+  systemd.services.breville-airactive3d-3speed = {
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      file=${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml
+      [ -f "$file" ] || exit 0
 
-        ${pkgs.gnused}/bin/sed -n \
-          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
-          | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
-          && exit 0
+      ${pkgs.gnused}/bin/sed -n \
+        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/p' "$file" \
+        | ${pkgs.gnugrep}/bin/grep -q '^[[:space:]]*max:[[:space:]]*3[[:space:]]*$' \
+        && exit 0
 
-        ${pkgs.gnused}/bin/sed -i -E \
-          '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
+      ${pkgs.gnused}/bin/sed -i -E \
+        '/^[[:space:]]*-[[:space:]]*id:[[:space:]]*3[[:space:]]*$/,/^[[:space:]]*-[[:space:]]*id:/ s/^([[:space:]]*max:[[:space:]]*)[0-9]+/\13/' "$file"
 
-        ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
-      '';
-    };
-
-    paths.breville-airactive3d-3speed = {
-      wantedBy = [ "paths.target" ];
-      pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
-    };
-
-    tmpfiles.rules = [
-      "d ${configDir} 0750 hass hass - -"
-      "Z ${configDir} - hass hass - -"
-      "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
-    ];
+      ${pkgs.systemd}/bin/systemctl try-restart home-assistant.service
+    '';
   };
+
+  systemd.paths.breville-airactive3d-3speed = {
+    wantedBy = [ "paths.target" ];
+    pathConfig.PathChanged = "${configDir}/custom_components/tuya_local/devices/breville_airdynamic3d_fan.yaml";
+  };
+
+  systemd.tmpfiles.rules = [
+    "d ${configDir} 0750 hass hass - -"
+    "Z ${configDir} - hass hass - -"
+    "A+ ${configDir} - - - - g:${appData.group.name}:rwX,d:g:${appData.group.name}:rwx"
+  ];
 
   virtualisation.vmVariant.services.home-assistant.enable = lib.mkForce false;
 }
