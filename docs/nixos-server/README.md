@@ -48,7 +48,8 @@ front of normal client queries. AdGuard forwards allowed queries to Technitium
 over the loopback-only
 `127.0.0.1:5300` backend. This keeps AdGuard filtering in front of normal LAN
 queries while reserving `192.168.1.3:53` for direct remote `.home` DNS over
-Tailscale.
+Tailscale. AdGuard also keeps a public fallback resolver so loss of the
+Technitium backend does not take ordinary internet DNS down with it.
 
 Technitium owns the DNS/DHCP backend role and keeps its application-managed
 state under `/var/lib/apps/technitium`, which is already protected by the
