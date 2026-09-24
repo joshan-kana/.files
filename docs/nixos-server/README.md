@@ -127,20 +127,22 @@ The server's ephemeral Tailscale `100.x` address is not a stable service
 identity. Use `.home` names for services and Tailscale machine names for roaming
 Tailscale peers.
 
-Tailnet DNS uses a restricted resolver for `home` rather than overriding all
-client DNS. The resolver is the site-1 4via6 address for `192.168.1.3`:
+Tailnet DNS keeps AdGuard filtering active while clients are away. The global
+resolver is AdGuard's site-1 4via6 address, while `home` uses a restricted
+resolver that goes directly to Technitium for split-view/DNS64 handling:
 
 ```text
-home -> fd7a:115c:a1e0:b1a:0:1:c0a8:103
+global -> fd7a:115c:a1e0:b1a:0:1:c0a8:102  # 192.168.1.2 (AdGuard)
+home   -> fd7a:115c:a1e0:b1a:0:1:c0a8:103  # 192.168.1.3 (Technitium)
 ```
 
-Keep Tailscale's global DNS override disabled. With VPN On Demand, home clients
-therefore continue using the DHCP-provided AdGuard resolver while away clients
-send only `*.home` queries through Tailscale. The Tailscale split-DNS API can
-apply this mapping with `PATCH /api/v2/tailnet/-/dns/split-dns` and a
-`{"home":["fd7a:115c:a1e0:b1a:0:1:c0a8:103"]}` body; the OAuth client must
-have DNS write scope. The current device-management OAuth credential does not
-have that DNS scope yet.
+Enable Tailscale's global DNS override. VPN On Demand disconnects Tailscale on
+the home Wi-Fi, so home clients still use the DHCP-provided `192.168.1.2`
+resolver directly. Away from home, Tailscale becomes active and sends normal
+DNS through AdGuard while the more-specific `home` route goes to Technitium.
+The existing Tailscale OAuth client must have DNS write scope before these
+control-plane DNS settings can be managed through the API; its current
+device-management scope does not grant DNS access.
 
 ## Install
 
