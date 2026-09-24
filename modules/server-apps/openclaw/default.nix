@@ -251,7 +251,10 @@ in
       package = openclawPackage;
       toolNames = [ ];
       systemd.enable = false;
-      runtimePlugins = [ "deepseek" ];
+      runtimePlugins = [
+        "codex"
+        "deepseek"
+      ];
       bundledPlugins.goplaces.enable = false;
       skills = [
         {
