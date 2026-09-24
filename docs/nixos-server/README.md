@@ -123,6 +123,21 @@ The server's ephemeral Tailscale `100.x` address is not a stable service
 identity. Use `.home` names for services and Tailscale machine names for roaming
 Tailscale peers.
 
+Tailnet DNS uses a restricted resolver for `home` rather than overriding all
+client DNS. The resolver is the site-1 4via6 address for `192.168.1.3`:
+
+```text
+home -> fd7a:115c:a1e0:b1a:0:1:c0a8:103
+```
+
+Keep Tailscale's global DNS override disabled. With VPN On Demand, home clients
+therefore continue using the DHCP-provided AdGuard resolver while away clients
+send only `*.home` queries through Tailscale. The Tailscale split-DNS API can
+apply this mapping with `PATCH /api/v2/tailnet/-/dns/split-dns` and a
+`{"home":["fd7a:115c:a1e0:b1a:0:1:c0a8:103"]}` body; the OAuth client must
+have DNS write scope. The current device-management OAuth credential does not
+have that DNS scope yet.
+
 ## Install
 
 Use [NixOS Server Install Guide](nixos-server-install.md) for bare-metal install
