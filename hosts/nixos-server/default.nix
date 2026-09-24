@@ -158,6 +158,9 @@
           hostDns = "${
             lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
           };";
+          adguardFallbackDns = lib.filter (
+            dnsServer: dnsServer != server.lan.gateway
+          ) server.lan.dns.fallbackServers;
 
           adguard = {
             user = "adguardhome";
@@ -246,6 +249,8 @@
                 ];
                 inherit (adguard) port;
                 upstream_dns = [ technitium.localBackend ];
+                # Preserve internet DNS when the local backend is unavailable.
+                fallback_dns = adguardFallbackDns;
               };
             };
           };
