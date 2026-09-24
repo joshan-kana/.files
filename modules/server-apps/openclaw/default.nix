@@ -12,17 +12,15 @@ let
   gatewayPort = 18789;
   openclawUser = "openclaw";
   openclawStateDir = "${server.storage.appData.root}/openclaw";
-  openclawConfigFile = "${openclawStateDir}/openclaw.json";
+  legacyOpenclawConfigFile = "${openclawStateDir}/openclaw.json";
+  openclawPackage = inputs.nix-openclaw.packages.${pkgs.stdenv.hostPlatform.system}.openclaw-gateway;
+  openclawConfig = import ./config.nix;
+  hmOpenclawConfig =
+    config.home-manager.users.${primary.name}.home.file.".openclaw/openclaw.json".source;
 
-  openclawPackages = inputs.nix-openclaw.packages.${pkgs.stdenv.hostPlatform.system};
-  openclawPackage = openclawPackages.openclaw-gateway;
-  openclawPluginPaths = builtins.toJSON [
-    "${openclawPackages.openclaw-runtime-plugin-codex}"
-  ];
-  updateOpenclawPluginPaths = pkgs.writeShellScript "update-openclaw-plugin-paths" ''
-    exec ${openclawPackage}/bin/openclaw config set plugins.load.paths \
-      ${lib.escapeShellArg openclawPluginPaths} --strict-json --replace
-  '';
+  githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
+  primaryHome = "${primary.homeRoot}/${primary.name}";
+  mappedHome = "/run/openclaw-home";
 
   openclawSecrets = [
     "${server.secretsDir}/openclaw.env"
@@ -31,134 +29,25 @@ let
     "${server.secretsDir}/server-deepseek-openrouter.env"
     "${server.secretsDir}/server-free-openrouter.env"
     "${server.secretsDir}/server-openai-openrouter.env"
+    githubSecret
   ];
 
   appDataGroup = server.storage.appData.group.name;
 
-  openclawHostAdmin = {
-    user = "openclaw-admin";
-    privateKeySecret = "${server.secretsDir}/openclaw-host-admin-id_ed25519";
-  };
+  openclawSudo = pkgs.writeShellScriptBin "sudo" ''
+    exec /run/wrappers/bin/sudo "$@"
+  '';
 
-  openclawHostCommand = pkgs.writeShellApplication {
-    name = "openclaw-host";
-    text = ''
-      : "''${OPENCLAW_HOST_ADMIN_SSH:?OPENCLAW_HOST_ADMIN_SSH is not set}"
-      read -r -a hostSsh <<< "$OPENCLAW_HOST_ADMIN_SSH"
-      exec "''${hostSsh[@]}" "$@"
-    '';
-  };
+  openclawRepositorySkillBody = ''
+    Prefer a connected macOS app node with system.run and system.which in
+    /Users/joshan/.files; otherwise work directly in the server checkout:
 
-  openclawGitHub = {
-    apiSecret = "${server.secretsDir}/github-self-hosted-agents.env";
-    privateKeySecret = "${server.secretsDir}/openclaw-github-id_ed25519";
-    knownHostsFile = pkgs.writeText "openclaw-github-known-hosts" ''
-      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-    '';
-  };
+      git -C ${primaryHome}/.files <git arguments...>
+      git -C ${primaryHome}/.files/docs/infrastructure-docs <git arguments...>
+      gh <arguments...>
 
-  openclawRepositoryHost = pkgs.writeShellApplication {
-    name = "openclaw-repository-host";
-    runtimeInputs = with pkgs; [
-      coreutils
-      gh
-      git
-      openssh
-      util-linux
-    ];
-    text = ''
-      die() { echo "$*" >&2; exit 1; }
-      [ "$(${pkgs.coreutils}/bin/id -u)" -eq 0 ] ||
-        die "openclaw-repository-host must run as root"
-
-      primaryEnv=(runuser -u ${primary.name} -- env -i HOME=/home/${primary.name}
-        USER=${primary.name} LOGNAME=${primary.name} PATH="$PATH")
-
-      operation="''${1:-}"; [ "$#" -eq 0 ] || shift
-
-      case "$operation" in
-        gh)
-          [ -r ${openclawGitHub.apiSecret} ] ||
-            die "GitHub API credentials are not provisioned: ${openclawGitHub.apiSecret}"
-
-          unset GH_TOKEN
-          # shellcheck disable=SC1091
-          source ${openclawGitHub.apiSecret}
-          : "''${GH_TOKEN:?${openclawGitHub.apiSecret} must define GH_TOKEN}"
-
-          exec "''${primaryEnv[@]}" \
-            GH_TOKEN="$GH_TOKEN" \
-            GH_CONFIG_DIR=/run/openclaw-github-cli \
-            gh "$@"
-          ;;
-        git)
-          repository="''${1:-}"; [ "$#" -eq 0 ] || shift
-
-          case "$repository" in
-            files) checkout=/home/${primary.name}/.files ;;
-            infrastructure-docs) checkout=/home/${primary.name}/.files/docs/infrastructure-docs ;;
-            *)
-              die "usage: openclaw-repository-host git {files|infrastructure-docs} <git arguments...>"
-              ;;
-          esac
-
-          [ -r ${openclawGitHub.privateKeySecret} ] ||
-            die "GitHub SSH key is not provisioned: ${openclawGitHub.privateKeySecret}"
-
-          agentDir="$(mktemp -d /run/openclaw-git-agent.XXXXXX)"
-          trap 'ssh-agent -k >/dev/null 2>&1 || true; rm -rf "$agentDir"' EXIT
-          install -d -m 0700 -o ${primary.name} -g users "$agentDir"
-
-          eval "$("''${primaryEnv[@]}" ssh-agent -a "$agentDir/agent.sock" -s)" >/dev/null
-
-          ssh-add ${openclawGitHub.privateKeySecret} >/dev/null 2>&1 ||
-            die "Failed to load the OpenClaw GitHub SSH key"
-
-          publicIdentity="$agentDir/id_ed25519.pub"
-          ssh-add -L | install -m 0644 -o ${primary.name} -g users /dev/stdin "$publicIdentity" ||
-            die "Failed to write the OpenClaw GitHub public identity"
-
-          gitSshCommand="ssh -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityFile=$publicIdentity -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${openclawGitHub.knownHostsFile}"
-          "''${primaryEnv[@]}" \
-            GIT_SSH_COMMAND="$gitSshCommand" \
-            SSH_AUTH_SOCK="$SSH_AUTH_SOCK" \
-            GIT_TERMINAL_PROMPT=0 \
-            git -C "$checkout" "$@"
-          ;;
-        *)
-          echo "usage: openclaw-repository-host {gh|git} ..." >&2
-          exit 2
-          ;;
-      esac
-    '';
-  };
-
-  openclawRepositoryCommand = pkgs.writeShellApplication {
-    name = "openclaw-repository";
-    text = ''
-      remoteCommand="sudo ${openclawRepositoryHost}/bin/openclaw-repository-host"
-      remoteArgs=
-      [ "$#" -eq 0 ] || printf -v remoteArgs ' %q' "$@"
-
-      exec ${openclawHostCommand}/bin/openclaw-host "$remoteCommand$remoteArgs"
-    '';
-  };
-
-  openclawRepositorySkill = pkgs.writeText "openclaw-repository-access-skill" ''
-    ---
-    name: repository-access
-    description: Manage the server repositories and their GitHub resources.
-    metadata: { "openclaw": { "requires": { "bins": ["openclaw-repository"] } } }
-    ---
-
-    Prefer a connected macOS app node with `system.run` and `system.which` in
-    `/Users/joshan/.files`; otherwise use the server wrappers:
-
-    ```sh
-    openclaw-repository git files <git arguments...>
-    openclaw-repository git infrastructure-docs <git arguments...>
-    openclaw-repository gh <gh arguments...>
-    ```
+    The service sees ${primaryHome} through bindfs, so normal writes preserve
+    ${primary.name} ownership. Use sudo only for host administration.
 
     Use one checkout per task; inspect status first and preserve unrelated work.
     For writes, use feature branches. Never expose credentials, add a clone,
@@ -168,17 +57,13 @@ let
 
 in
 {
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
+  nixpkgs.overlays = [ inputs.nix-openclaw.overlays.default ];
 
-  users.users.${openclawHostAdmin.user} = {
-    isNormalUser = true;
-    createHome = true;
-    hashedPassword = "!";
-  };
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
   security.sudo.extraRules = [
     {
-      users = [ openclawHostAdmin.user ];
+      users = [ openclawUser ];
       commands = [
         {
           command = "ALL";
@@ -188,37 +73,24 @@ in
     }
   ];
 
-  system.activationScripts.openclawHostAdminAuthorizedKeys = {
+  fileSystems.${mappedHome} = {
+    device = primaryHome;
+    fsType = "fuse.bindfs";
+    options = [
+      "map=${primary.name}/${openclawUser}"
+      "create-for-user=${primary.name}"
+      "create-for-group=${config.users.users.${primary.name}.group}"
+    ];
+  };
+
+  system.activationScripts.openclawNativeStateOwnership = {
     deps = [ "users" ];
     text = ''
-      keyFile="${openclawHostAdmin.privateKeySecret}.pub"
-      home="/home/${openclawHostAdmin.user}"
-
-      if [ -f "$keyFile" ]; then
-        ${pkgs.coreutils}/bin/install -d -m 0700 -o ${openclawHostAdmin.user} -g users "$home/.ssh"
-        ${pkgs.gawk}/bin/awk '{ print "from=\"127.0.0.1,::1\" " $1 " " $2 " openclaw-host-admin@nixos-server" }' "$keyFile" > "$home/.ssh/authorized_keys"
-        ${pkgs.coreutils}/bin/chown ${openclawHostAdmin.user}:users "$home/.ssh/authorized_keys"
-        ${pkgs.coreutils}/bin/chmod 0600 "$home/.ssh/authorized_keys"
+      if [ -e ${lib.escapeShellArg legacyOpenclawConfigFile} ] && [ "$(${pkgs.coreutils}/bin/stat -c %u ${lib.escapeShellArg legacyOpenclawConfigFile})" = "$(${pkgs.coreutils}/bin/id -u ${primary.name})" ]; then
+        ${pkgs.coreutils}/bin/chown -R ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawStateDir}
       fi
     '';
   };
-
-  system.activationScripts.openclawNativeConfigOwnership = {
-    deps = [ "users" ];
-    text = ''
-      if [ -e ${lib.escapeShellArg openclawConfigFile} ]; then
-        ${pkgs.coreutils}/bin/chown --from=${primary.name} ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawConfigFile}
-      fi
-    '';
-  };
-
-  systemd.tmpfiles.rules = [
-    "d ${openclawStateDir}/workspace/skills 0755 ${openclawUser} ${appDataGroup} - -"
-    "d ${openclawStateDir}/workspace/skills/repository-access 0755 ${openclawUser} ${appDataGroup} - -"
-    "L+ ${openclawStateDir}/workspace/skills/repository-access/SKILL.md - - - - ${openclawRepositorySkill}"
-    "d /run/openclaw-github-cli 0700 ${primary.name} users - -"
-
-  ];
 
   services.nginx = {
     enable = true;
@@ -370,6 +242,36 @@ in
     };
   };
 
+  home-manager.users.${primary.name} = {
+    imports = [ inputs.nix-openclaw.homeManagerModules.openclaw ];
+
+    programs.openclaw = {
+      enable = true;
+      package = openclawPackage;
+      toolNames = [ ];
+      systemd.enable = false;
+      runtimePlugins = [
+        "codex"
+        "deepseek"
+        "matrix"
+      ];
+      bundledPlugins.goplaces.enable = false;
+      skills = [
+        {
+          name = "repository-access";
+          description = "Manage the server repositories and their GitHub resources.";
+          mode = "inline";
+          openclaw.requires.bins = [
+            "git"
+            "gh"
+          ];
+          body = openclawRepositorySkillBody;
+        }
+      ];
+      config = openclawConfig;
+    };
+  };
+
   services.openclaw-gateway = {
     enable = true;
     package = openclawPackage;
@@ -377,38 +279,45 @@ in
     user = openclawUser;
     group = appDataGroup;
     stateDir = openclawStateDir;
+    configFile = hmOpenclawConfig;
 
     environment = {
-      CLAWDBOT_CONFIG_PATH = openclawConfigFile;
-      OPENCLAW_CONFIG_PATH = openclawConfigFile;
-      OPENCLAW_NIX_MODE = "0";
-      OPENCLAW_HOST_ADMIN_SSH = "${pkgs.openssh}/bin/ssh -i /run/credentials/openclaw-gateway.service/openclaw-host-admin-id_ed25519 -o StrictHostKeyChecking=accept-new ${openclawHostAdmin.user}@127.0.0.1";
+      GIT_CONFIG_COUNT = "2";
+      GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
+      GIT_CONFIG_VALUE_0 = "git@github.com:";
+      GIT_CONFIG_KEY_1 = "credential.https://github.com.helper";
+      GIT_CONFIG_VALUE_1 = "!${pkgs.gh}/bin/gh auth git-credential";
     };
 
     environmentFiles = openclawSecrets;
-    execStartPre = [
-      "${updateOpenclawPluginPaths}"
-      "${openclawPackage}/bin/openclaw config validate"
-    ];
+    execStartPre = [ "${openclawPackage}/bin/openclaw config validate" ];
 
     servicePath = with pkgs; [
       curl
+      docker
+      gh
+      git
+      jq
+      nh
+      nix
+      nodejs_24
+      openssh
       python3
-      openclawRepositoryCommand
+      rsync
+      systemd
+      openclawSudo
     ];
   };
 
   systemd.services.openclaw-gateway = {
+    unitConfig = {
+      AssertPathExists = openclawSecrets;
+      RequiresMountsFor = [ mappedHome ];
+    };
     serviceConfig = {
-      LoadCredential = [
-        "openclaw-host-admin-id_ed25519:${openclawHostAdmin.privateKeySecret}"
-      ];
+      BindPaths = [ "${mappedHome}:${primaryHome}" ];
       UMask = "0077";
     };
-    unitConfig.AssertPathExists = openclawSecrets ++ [
-      openclawConfigFile
-      openclawHostAdmin.privateKeySecret
-    ];
   };
 
 }
