@@ -140,9 +140,15 @@ Enable Tailscale's global DNS override. VPN On Demand disconnects Tailscale on
 the home Wi-Fi, so home clients still use the DHCP-provided `192.168.1.2`
 resolver directly. Away from home, Tailscale becomes active and sends normal
 DNS through AdGuard while the more-specific `home` route goes to Technitium.
-The existing Tailscale OAuth client must have DNS write scope before these
-control-plane DNS settings can be managed through the API; its current
-device-management scope does not grant DNS access.
+
+The stable Tailscale API can set the global resolver with
+`POST /api/v2/tailnet/-/dns/nameservers` using a `dns` array and update the
+restricted resolver with `PATCH /api/v2/tailnet/-/dns/split-dns` using a
+`home` mapping. The existing OAuth client needs DNS write scope first; its
+current device-management scope does not grant DNS access. Keep the Override
+DNS setting as an admin-console toggle: Tailscale's all-in-one DNS configuration
+API can express `overrideLocalDNS`, but the maintained client still marks that
+endpoint alpha.
 
 ## Install
 
