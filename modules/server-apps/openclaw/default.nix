@@ -89,6 +89,7 @@ in
       if [ -e ${lib.escapeShellArg legacyOpenclawConfigFile} ] && [ "$(${pkgs.coreutils}/bin/stat -c %u ${lib.escapeShellArg legacyOpenclawConfigFile})" = "$(${pkgs.coreutils}/bin/id -u ${primary.name})" ]; then
         ${pkgs.coreutils}/bin/chown -R ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawStateDir}
       fi
+      ${pkgs.coreutils}/bin/rm -rf ${lib.escapeShellArg "${openclawStateDir}/skills/repository-access"}
     '';
   };
 
@@ -250,10 +251,7 @@ in
       package = openclawPackage;
       toolNames = [ ];
       systemd.enable = false;
-      runtimePlugins = [
-        "codex"
-        "deepseek"
-      ];
+      runtimePlugins = [ "deepseek" ];
       bundledPlugins.goplaces.enable = false;
       skills = [
         {
@@ -281,8 +279,6 @@ in
     configFile = hmOpenclawConfig;
 
     environment = {
-      OPENCLAW_NIX_MODE = "1";
-      OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
       GIT_CONFIG_COUNT = "2";
       GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
       GIT_CONFIG_VALUE_0 = "git@github.com:";

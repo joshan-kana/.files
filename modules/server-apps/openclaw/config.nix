@@ -196,6 +196,9 @@ in
   };
   "plugins" = {
     "entries" = {
+      "codex" = {
+        "enabled" = true;
+      };
       "matrix" = {
         "enabled" = true;
       };

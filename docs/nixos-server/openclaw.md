@@ -18,10 +18,13 @@ Mutable application state remains under `/var/lib/apps/openclaw`. The former
 Docker-era `/var/lib/apps/openclaw/openclaw.json` is retained only as rollback
 state and is not the active native-service configuration.
 
-Codex, Matrix, and DeepSeek are declared through Home Manager's
-`runtimePlugins`, so their packages and load paths track the same OpenClaw
-revision as the gateway. `repository-access` is likewise an HM-managed
-declarative skill rather than an activation-time copied file.
+DeepSeek is declared through Home Manager's `runtimePlugins`, so its package
+and load path track the same OpenClaw revision as the gateway. Codex uses the
+trusted copy already bundled with the first-party gateway, while Matrix remains
+the existing OpenClaw-managed official install because its encrypted state
+requires installed-plugin provenance. Their settings are still part of the typed
+declarative config. `repository-access` is an HM-managed declarative skill rather
+than an activation-time copied file.
 
 The native service runs as `openclaw:appdata-editors`, matching the server-app
 service-user pattern used elsewhere on the host. Systemd still owns the
