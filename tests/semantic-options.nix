@@ -24,7 +24,12 @@ let
   leafControlOptions = lib.filterAttrs (
     _: option: visibleOptions (option.type.getSubOptions [ ]) == { }
   ) controlOptions;
-  semanticChildren = lib.filterAttrs (_: value: builtins.isAttrs value);
+  semanticChildren =
+    tree:
+    lib.filterAttrs (
+      name: value:
+      builtins.isAttrs value && !(builtins.elem name semanticScopeOptions.resolvedScopeControlNames)
+    ) tree;
 
   sameNames =
     expected: actual:
@@ -57,8 +62,23 @@ let
   nixosResolvedScopes = semanticChildren configurations.nixos.config.dotfiles.resolvedScopes;
   serverResolvedScopes = semanticChildren configurations.nixos-server.config.dotfiles.resolvedScopes;
   rootChildren = semanticChildren tree;
+  privateHost = {
+    options = { };
+    config.dotfiles.resolvedScopes.root = {
+      enable = true;
+      scopeOptions = { };
+      app = {
+        enable = true;
+        scopeOptions.token = lib.mkOption {
+          type = lib.types.str;
+        };
+      };
+    };
+  };
+  privateHostOptions = semanticScopeOptions.nixdHostOptions { } privateHost;
 in
 assert hosts != [ ];
+assert privateHostOptions.app.token.type.name == "str";
 assert rootChildren != { };
 assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames rootOptions);
 assert sameNames (builtins.attrNames (

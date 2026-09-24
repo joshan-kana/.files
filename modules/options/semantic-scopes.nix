@@ -39,6 +39,12 @@ let
       type = types.bool;
       internal = true;
     };
+
+    scopeOptions = mkOption {
+      type = types.raw;
+      default = { };
+      internal = true;
+    };
   };
 
   resolvedScopeControlNames = builtins.attrNames resolvedScopeOptions;
@@ -61,7 +67,11 @@ let
       description = "resolved semantic scope state";
     };
 
-  semanticChildren = lib.filterAttrs (_: value: builtins.isAttrs value);
+  semanticChildren =
+    tree:
+    lib.filterAttrs (
+      name: value: builtins.isAttrs value && !(builtins.elem name resolvedScopeControlNames)
+    ) tree;
 
   nixdScopeType =
     tree:
@@ -120,9 +130,24 @@ let
 
   nixdOptions = configurations: nixdOptionsForTree (scopeTree configurations);
 
+  nixdEditOptionsForTree =
+    tree:
+    let
+      childOptions = builtins.mapAttrs (_: nixdEditOptionsForTree) (semanticChildren tree);
+      nonEmptyChildren = lib.filterAttrs (_: value: builtins.attrNames value != [ ]) childOptions;
+    in
+    (tree.scopeOptions or { }) // nonEmptyChildren;
+
   nixdHostOptions =
     _configurations: host:
-    lib.recursiveUpdate host.options (nixdOptionsForTree host.config.dotfiles.resolvedScopes);
+    let
+      resolved = host.config.dotfiles.resolvedScopes;
+      # nixd drops the outer `name = editScope ...` binding when completing the edit attrset.
+      editOptions = lib.foldl' lib.recursiveUpdate { } (
+        lib.mapAttrsToList (_: nixdEditOptionsForTree) (semanticChildren resolved)
+      );
+    in
+    lib.recursiveUpdate (lib.recursiveUpdate host.options (nixdOptionsForTree resolved)) editOptions;
 in
 {
   inherit
