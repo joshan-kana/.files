@@ -224,6 +224,47 @@ serverApps = editScope moduleRegistry.serverApps {
 Plain assignments replace values; use `inherited` only when deriving from the
 shared value. Disable scopes with `dotfiles.scopes.<path>.enable = false`.
 
+When a semantic child needs typed host-specific input that is not itself a
+native NixOS/Home Manager option, declare it under `scopeOptions` and consume
+the resolved value through `scopeConfig`. These parameters stay private to the
+semantic scope: they are type checked with normal `lib.mkOption` semantics but
+do not become global Nix module options.
+
+```nix
+webhook =
+  {
+    lib,
+    scopeConfig,
+    ...
+  }:
+  {
+    scopeOptions.cloudflareTunnelId = lib.mkOption {
+      type = lib.types.str;
+    };
+
+    services.cloudflared.tunnels.${scopeConfig.cloudflareTunnelId} = {
+      # Shared implementation stays here.
+    };
+  };
+```
+
+Hosts set only the parameter while mirroring the semantic path:
+
+```nix
+system = editScope moduleRegistry.system {
+  autoDeploy.webhook.cloudflareTunnelId = "<host-tunnel-uuid>";
+};
+```
+
+Defaults, required values, and type validation behave like normal Nix options.
+A required private value is only required when its semantic scope is effectively
+enabled; disabling the scope or an ancestor leaves that value dormant. nixd is
+given the same private option declarations for completion and hover inside the
+matching `editScope` path.
+
+Use native options directly when they already express the configuration; use
+`scopeOptions` only for private inputs needed to build that configuration.
+
 Add genuinely host-local semantic children with `extendScope`. Extensions are
 strict: every addition must be a scope function and cannot replace an inherited
 name. Use `editScope` for existing children and `extendScope` only for new ones.

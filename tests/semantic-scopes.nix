@@ -71,6 +71,112 @@ let
         semanticEditOption = "host";
       };
 
+  scopeOptionResultModule = { lib, ... }: {
+    options.semanticScopeOptionResult.value = lib.mkOption {
+      type = lib.types.str;
+    };
+  };
+
+  evalScopeOption =
+    {
+      scope,
+      overrides ? { },
+    }:
+    lib.evalModules {
+      modules = [
+        ({ lib, ... }: {
+          options.assertions = lib.mkOption {
+            type = lib.types.listOf lib.types.raw;
+            default = [ ];
+          };
+        })
+        ../modules/options
+        scopeOptionResultModule
+        {
+          dotfiles.profile.name = "scope-option-test";
+          dotfiles.scopes.scope-option-test = overrides;
+        }
+        (semantic.systemModule "scope-option-test" scope)
+      ];
+    };
+
+  tryScopeOption =
+    scope:
+    builtins.tryEval (
+      builtins.deepSeq (evalScopeOption { inherit scope; }).config.semanticScopeOptionResult.value true
+    );
+
+  scopeOptionBase = _: {
+    app =
+      {
+        lib,
+        scopeConfig,
+        ...
+      }:
+      {
+        scopeOptions = {
+          required = lib.mkOption {
+            type = lib.types.str;
+          };
+
+          defaulted = lib.mkOption {
+            type = lib.types.str;
+            default = "default";
+          };
+        };
+
+        semanticScopeOptionResult.value = "${scopeConfig.required}:${scopeConfig.defaulted}";
+      };
+  };
+
+  scopeOptionEvaluation = evalScopeOption {
+    scope = semantic.editScope scopeOptionBase {
+      app.required = "host";
+    };
+  };
+  scopeOptionWrongType = tryScopeOption (
+    semantic.editScope scopeOptionBase {
+      app.required = 123;
+    }
+  );
+  scopeOptionMissing = tryScopeOption scopeOptionBase;
+  scopeOptionDisabled =
+    builtins.tryEval
+      (evalScopeOption {
+        scope = scopeOptionBase;
+        overrides.app.enable = false;
+      }).config.dotfiles.resolvedScopes.scope-option-test.app.enable;
+  scopeOptionParentDisabled =
+    builtins.tryEval
+      (evalScopeOption {
+        scope = scopeOptionBase;
+        overrides.enable = false;
+      }).config.dotfiles.resolvedScopes.scope-option-test.app.enable;
+  scopeOptionTypo = tryScopeOption (
+    semantic.editScope scopeOptionBase {
+      app.requried = "host";
+    }
+  );
+  scopeOptionInvalidDeclaration = tryScopeOption (_: {
+    app =
+      { scopeConfig, ... }:
+      {
+        scopeOptions.invalid = "not-an-option";
+        semanticScopeOptionResult = scopeConfig.invalid;
+      };
+  });
+  scopeOptionMissingConfigArg = tryScopeOption (_: {
+    app =
+      { lib, ... }:
+      {
+        scopeOptions.required = lib.mkOption {
+          type = lib.types.str;
+          default = "value";
+        };
+        semanticScopeOptionResult = "unused";
+      };
+  });
+
   editedScope =
     semantic.editScope
       (_: {
@@ -541,6 +647,18 @@ assert !cfg.dotfiles.resolvedScopes.extended.hostOnlyDisabled.enable;
 assert cfg.dotfiles.resolvedScopes.extended.hostOnlyEnabled.enable;
 assert hm.home.sessionVariables.SEMANTIC_EXTEND_HOME == "yes";
 assert !editUnknown.success;
+assert scopeOptionEvaluation.config.semanticScopeOptionResult.value == "host:default";
+assert !(scopeOptionEvaluation.options ? required);
+assert !(scopeOptionEvaluation.config ? required);
+assert !scopeOptionWrongType.success;
+assert !scopeOptionMissing.success;
+assert scopeOptionDisabled.success;
+assert !scopeOptionDisabled.value;
+assert scopeOptionParentDisabled.success;
+assert !scopeOptionParentDisabled.value;
+assert !scopeOptionTypo.success;
+assert !scopeOptionInvalidDeclaration.success;
+assert !scopeOptionMissingConfigArg.success;
 assert cfg.environment.variables.SEMANTIC_EDIT_OPTION == "host";
 assert cfg.environment.variables.SEMANTIC_EDIT_REPLACE == "host";
 assert cfg.environment.variables.SEMANTIC_EDIT_NESTED == "host";
