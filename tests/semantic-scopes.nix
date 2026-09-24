@@ -59,6 +59,18 @@ let
     builtins.deepSeq ((semantic.editScope (_: { existing = _: { }; }) { typo = _: { }; }) { }) true
   );
 
+  editedOptionScope =
+    semantic.editScope
+      (
+        { config, ... }:
+        {
+          config.environment.variables.SEMANTIC_EDIT_OPTION = config.semanticEditOption;
+        }
+      )
+      {
+        semanticEditOption = "host";
+      };
+
   editedScope =
     semantic.editScope
       (_: {
@@ -115,6 +127,11 @@ let
     modules = [
       inputs.home-manager.nixosModules.home-manager
       ../modules/options
+      ({ lib, ... }: {
+        options.semanticEditOption = lib.mkOption {
+          type = lib.types.str;
+        };
+      })
       ({ lib, pkgs, ... }: {
         networking.hostName = "semantic-test";
         system.stateVersion = "26.05";
@@ -153,6 +170,9 @@ let
         environment.systemPackages = [ pkgs.coreutils ];
       })
       (semantic.systemModule "edited" editedScope)
+      (semantic.rootModule (_: {
+        editedOption = editedOptionScope;
+      }))
       (semantic.systemModule "extended" extendedScope)
       (semantic.systemModule "semantic" (
         {
@@ -521,6 +541,7 @@ assert !cfg.dotfiles.resolvedScopes.extended.hostOnlyDisabled.enable;
 assert cfg.dotfiles.resolvedScopes.extended.hostOnlyEnabled.enable;
 assert hm.home.sessionVariables.SEMANTIC_EXTEND_HOME == "yes";
 assert !editUnknown.success;
+assert cfg.environment.variables.SEMANTIC_EDIT_OPTION == "host";
 assert cfg.environment.variables.SEMANTIC_EDIT_REPLACE == "host";
 assert cfg.environment.variables.SEMANTIC_EDIT_NESTED == "host";
 assert builtins.elem "hello" packageNames;

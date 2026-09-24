@@ -211,10 +211,17 @@ let
       // builtins.mapAttrs (
         name: edit:
         let
-          child = inherited.${name} or (throw "Unknown semantic scope edit target '${name}'.");
+          hasChild = builtins.hasAttr name inherited;
+          child = inherited.${name} or null;
+          isDeclaredOption =
+            !hasChild && builtins.hasAttr name (args.options or { }) && lib.isOption args.options.${name};
         in
-        if !lib.isFunction child then
-          throw "Semantic scope edit target '${name}' is not a child scope."
+        if isDeclaredOption then
+          edit
+        else if !hasChild then
+          throw "Unknown semantic scope edit target '${name}'."
+        else if !lib.isFunction child then
+          throw "Semantic scope edit target '${name}' is not a child scope or declared option."
         else if builtins.isAttrs edit then
           editScope child edit
         else if lib.isFunction edit then
@@ -244,7 +251,7 @@ let
         else
           throw "Semantic scope edit '${name}' must be a nested scope set or editor function."
       ) edits
-    ) (lib.functionArgs scope);
+    ) ((lib.functionArgs scope) // { options = false; });
 
   mkScopeModule =
     context: projectHomeBranches: parentEnabled: path: scopeModule:
