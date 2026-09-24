@@ -6,8 +6,7 @@ This page documents the OpenClaw runtime wiring on the NixOS server.
 
 OpenClaw runs natively as `openclaw-gateway.service` on the NixOS server and
 is exposed through nginx. The service uses the first-party NixOS module from the
-`nix-openclaw` flake with the current OpenClaw package from `llm-agents.nix`.
-The runtime package is available from the Numtide public binary cache.
+`nix-openclaw` flake with its first-party slim `openclaw-gateway` package.
 
 The server keeps OpenClaw state under `/var/lib/apps/openclaw`. OpenClaw owns
 its mutable application configuration at `/var/lib/apps/openclaw/openclaw.json`;

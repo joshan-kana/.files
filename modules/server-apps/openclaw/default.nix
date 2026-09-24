@@ -14,7 +14,8 @@ let
   openclawStateDir = "${server.storage.appData.root}/openclaw";
   openclawConfigFile = "${openclawStateDir}/openclaw.json";
 
-  openclawPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw;
+  openclawPackage = inputs.nix-openclaw.packages.${pkgs.stdenv.hostPlatform.system}.openclaw-gateway;
+
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   primaryHome = "${primary.homeRoot}/${primary.name}";
   mappedHome = "/run/openclaw-home";
@@ -265,6 +266,7 @@ in
     configFile = openclawConfigFile;
 
     environment = {
+      OPENCLAW_NIX_MODE = "0";
       GIT_CONFIG_COUNT = "2";
       GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
       GIT_CONFIG_VALUE_0 = "git@github.com:";
