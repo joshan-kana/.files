@@ -173,8 +173,8 @@
           technitium = {
             user = "technitium";
             group = server.storage.appData.group.name;
-            ip = server.lan.serverIp;
-            dnsPort = 53;
+            remoteIp = server.lan.serverIp;
+            localBackend = "127.0.0.1:5300";
             webPort = 5380;
             stateDir = "${server.storage.appData.root}/technitium";
             adminPasswordFile = "${server.secretsDir}/technitium-admin-password";
@@ -192,7 +192,12 @@
 
           networking.firewall.allowedTCPPorts = [ adguard.port ];
           networking.firewall.allowedUDPPorts = [ adguard.port ];
-          networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ technitium.webPort ];
+          networking.firewall.interfaces.${server.lan.interface} = {
+            allowedTCPPorts = [ technitium.webPort ];
+            # Technitium DHCP remains disabled until the router DHCP cutover,
+            # but the LAN boundary is ready for the eventual server socket.
+            allowedUDPPorts = [ 67 ];
+          };
 
           users.users = {
             ${adguard.user} = {
@@ -240,7 +245,7 @@
                   "127.0.0.1"
                 ];
                 inherit (adguard) port;
-                upstream_dns = [ "${technitium.ip}:${toString technitium.dnsPort}" ];
+                upstream_dns = [ technitium.localBackend ];
               };
             };
           };
@@ -284,7 +289,7 @@
               environment = {
                 DNS_SERVER_DOMAIN = "dns.home";
                 DNS_SERVER_ADMIN_PASSWORD_FILE = "/run/credentials/technitium-dns-server.service/admin-password";
-                DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.ip},127.0.0.1";
+                DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.remoteIp},127.0.0.1";
                 DNS_SERVER_RECURSION = "AllowOnlyForPrivateNetworks";
                 DNS_SERVER_ENABLE_BLOCKING = "false";
                 DNS_SERVER_FORWARDERS = "https://dns10.quad9.net/dns-query";
