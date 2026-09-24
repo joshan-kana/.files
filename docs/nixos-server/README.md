@@ -57,6 +57,14 @@ server app-data Snapper/restic policy. The authoritative `home` zone, DHCP
 leases, DNS Apps, and roaming records therefore remain runtime application
 state rather than duplicated Nix data.
 
+On a genuinely empty Technitium state, its upstream default is to request
+wildcard port 53. AdGuard may already own part of that socket space, but
+Technitium keeps its web service running even when the DNS bind is unavailable.
+AdGuard's public fallback keeps ordinary DNS working while the Technitium DNS
+endpoints are restored/configured to `127.0.0.1:5300` and `192.168.1.3:53`.
+Normal recovery restores `/var/lib/apps` first, so the persisted endpoint and
+zone state is reused instead of repeating first-run setup.
+
 The official Technitium Failover App provides roaming aliases. `mac.home`
 prefers the DHCP-managed `joshans-macbook-pro.home` name while it responds on
 the LAN and falls back to the Tailscale MagicDNS machine name
