@@ -292,7 +292,7 @@
               wants = [ "network-online.target" ];
 
               environment = {
-                DNS_SERVER_DOMAIN = "dns.home";
+                DNS_SERVER_DOMAIN = "${config.networking.hostName}.home";
                 DNS_SERVER_ADMIN_PASSWORD_FILE = "/run/credentials/technitium-dns-server.service/admin-password";
                 DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.remoteIp},127.0.0.1";
                 DNS_SERVER_RECURSION = "AllowOnlyForPrivateNetworks";
