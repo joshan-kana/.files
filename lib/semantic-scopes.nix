@@ -41,6 +41,8 @@ let
     "disabledModules"
     "imports"
     "options"
+    "scopeOptions"
+    "__scopeOptionOverrides"
   ];
 
   reservedChildNames = moduleKeys ++ [
@@ -65,8 +67,36 @@ let
     scopeModule: args:
     let
       expected = lib.functionArgs scopeModule;
+      supplied = lib.filterAttrs (name: _: builtins.hasAttr name expected) args;
+      scope = scopeModule (
+        supplied
+        // lib.optionalAttrs (expected ? scopeConfig) {
+          scopeConfig = args.scopeConfig or resolvedScopeConfig;
+        }
+      );
+      rawDeclarations = scope.scopeOptions or { };
+      declarations =
+        if builtins.isAttrs rawDeclarations then
+          rawDeclarations
+        else
+          throw "scopeOptions must be an attribute set of lib.mkOption declarations.";
+      invalid = builtins.attrNames (lib.filterAttrs (_: option: !lib.isOption option) declarations);
+      resolvedScopeConfig =
+        (lib.evalModules {
+          modules = [
+            {
+              options = declarations;
+              config = scope.__scopeOptionOverrides or { };
+            }
+          ];
+        }).config;
     in
-    scopeModule (lib.filterAttrs (name: _: builtins.hasAttr name expected) args);
+    if invalid != [ ] then
+      throw "scopeOptions entries must be lib.mkOption declarations: ${lib.concatStringsSep ", " invalid}"
+    else if declarations != { } && !(expected ? scopeConfig) then
+      throw "Semantic scopes declaring scopeOptions must accept the scopeConfig argument."
+    else
+      scope;
 
   hasHomeBranch = scope: builtins.hasAttr "home" scope && lib.isFunction scope.home;
 
@@ -162,7 +192,10 @@ let
       stateConfig =
         lib.optionalAttrs (path != [ ] && lib.hasAttrByPath [ "dotfiles" "resolvedScopes" ] args.options)
           {
-            dotfiles.resolvedScopes = lib.setAttrByPath (path ++ [ "enable" ]) enabled;
+            dotfiles.resolvedScopes = lib.setAttrByPath path {
+              enable = enabled;
+              scopeOptions = scope.scopeOptions or { };
+            };
           };
     in
     lib.mkMerge (
@@ -206,6 +239,10 @@ let
       args:
       let
         inherited = callScope scope args;
+        localOptions = inherited.scopeOptions or { };
+        localOptionNames = builtins.attrNames localOptions;
+        localEdits = lib.filterAttrs (name: _: builtins.elem name localOptionNames) edits;
+        structuralEdits = builtins.removeAttrs edits localOptionNames;
       in
       inherited
       // builtins.mapAttrs (
@@ -250,7 +287,10 @@ let
             )
         else
           throw "Semantic scope edit '${name}' must be a nested scope set or editor function."
-      ) edits
+      ) structuralEdits
+      // lib.optionalAttrs (localEdits != { }) {
+        __scopeOptionOverrides = (inherited.__scopeOptionOverrides or { }) // localEdits;
+      }
     ) ((lib.functionArgs scope) // { options = false; });
 
   mkScopeModule =
@@ -258,7 +298,7 @@ let
     let
       expected = lib.functionArgs scopeModule;
       wrapperArgs =
-        expected
+        builtins.removeAttrs expected [ "scopeConfig" ]
         // commonArgs.${context}
         // {
           lib = false;
