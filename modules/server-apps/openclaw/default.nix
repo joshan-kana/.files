@@ -15,15 +15,6 @@ let
   openclawConfigFile = "${openclawStateDir}/openclaw.json";
 
   openclawPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.openclaw;
-  openclawPluginPaths = builtins.toJSON [
-    "${openclawPackage}/lib/openclaw/extensions/codex"
-    "${openclawPackage}/lib/openclaw/extensions/matrix"
-    "${openclawPackage}/lib/openclaw/extensions/deepseek"
-  ];
-  updateOpenclawPluginPaths = pkgs.writeShellScript "update-openclaw-plugin-paths" ''
-    exec ${openclawPackage}/bin/openclaw config set plugins.load.paths       ${lib.escapeShellArg openclawPluginPaths} --strict-json --replace
-  '';
-
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   primaryHome = "${primary.homeRoot}/${primary.name}";
   mappedHome = "/run/openclaw-home";
@@ -283,10 +274,7 @@ in
     };
 
     environmentFiles = openclawSecrets;
-    execStartPre = [
-      "${updateOpenclawPluginPaths}"
-      "${openclawPackage}/bin/openclaw config validate"
-    ];
+    execStartPre = [ "${openclawPackage}/bin/openclaw config validate" ];
 
     servicePath = with pkgs; [
       curl

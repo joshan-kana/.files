@@ -11,12 +11,11 @@ The runtime package is available from the Numtide public binary cache.
 
 The server keeps OpenClaw state under `/var/lib/apps/openclaw`. OpenClaw owns
 its mutable application configuration at `/var/lib/apps/openclaw/openclaw.json`;
-Nix owns the service boundary, secrets, runtime tools, proxying, host integration,
-and the versioned package-local paths for Codex, Matrix, and DeepSeek. OpenClaw
-still owns the rest of the mutable config. The package-local plugin paths are
-refreshed before startup, then the service runs `openclaw config validate` so an
-incompatible config prevents startup after an upgrade instead of being silently
-accepted.
+Nix owns the service boundary, secrets, runtime tools, proxying, and host
+integration. OpenClaw owns the mutable config and trusted installed-plugin
+registry, including the official Codex, Matrix, and DeepSeek installs. The
+service runs `openclaw config validate` before startup so an incompatible config
+prevents startup after an upgrade instead of being silently accepted.
 
 The native service runs as `openclaw:appdata-editors`, matching the server-app
 service-user pattern used elsewhere on the host.
@@ -64,9 +63,8 @@ bindfs-mapped home should remain owned by joshan on the host.
 - Host administration: remove the openclaw sudo rule.
 - Home access: remove the /run/openclaw-home bindfs mapping.
 - Complete deployment: before switching back to the former Docker generation,
-  remove plugins.load.paths from /var/lib/apps/openclaw/openclaw.json, restore
-  state ownership with sudo chown -R 1000:1000 /var/lib/apps/openclaw, then run
-  sudo nixos-rebuild switch --rollback or boot the previous generation.
+  restore state ownership with sudo chown -R 1000:1000 /var/lib/apps/openclaw,
+  then run sudo nixos-rebuild switch --rollback or boot the previous generation.
 
 ## Ollama Proxy
 
