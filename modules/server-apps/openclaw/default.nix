@@ -253,7 +253,6 @@ in
       runtimePlugins = [
         "codex"
         "deepseek"
-        "matrix"
       ];
       bundledPlugins.goplaces.enable = false;
       skills = [
@@ -282,6 +281,8 @@ in
     configFile = hmOpenclawConfig;
 
     environment = {
+      OPENCLAW_NIX_MODE = "1";
+      OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY = "1";
       GIT_CONFIG_COUNT = "2";
       GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
       GIT_CONFIG_VALUE_0 = "git@github.com:";
