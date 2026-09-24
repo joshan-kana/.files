@@ -7,7 +7,6 @@
 
 {
   inherit (moduleRegistry)
-    system
     theme
     cli
     serverApps
@@ -48,6 +47,144 @@
       nixTree.enable = false;
       python3.enable = false;
     };
+  };
+
+  system = editScope moduleRegistry.system {
+    autoDeploy.webhook =
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+
+      let
+        ntfyEnvironment = "${config.dotfiles.server.secretsDir}/comin-ntfy.env";
+        githubWebhookSecret = "${config.dotfiles.server.secretsDir}/comin-webhook-secret";
+        topic = "${config.dotfiles.services.ntfy.url}/comin";
+
+        publishEvent = pkgs.writeShellScript "publish-comin-event" ''
+          case "''${NTFY_AUTH_TOKENS:-}" in
+            comin-publisher:tk_*) ;;
+            *)
+              echo "invalid NTFY_AUTH_TOKENS value" >&2
+              exit 1
+              ;;
+          esac
+
+          export NTFY_TOKEN="''${NTFY_AUTH_TOKENS#comin-publisher:}"
+          exec ${lib.getExe pkgs.ntfy-sh} publish --quiet \
+            ${lib.escapeShellArg topic} \
+            fetch
+        '';
+      in
+      {
+        services.ntfy-sh = {
+          environmentFile = ntfyEnvironment;
+          settings = {
+            # Token-only publisher account; the random bcrypt password was discarded.
+            "auth-users" = [
+              "comin-publisher:$2y$12$NJnqcKvLVz859hBmkUQBi.dIsAGVCZtbVVzRiw.WHj/vbO3We3AkO:user"
+            ];
+            # The event body is non-sensitive; only publishing needs authentication.
+            "auth-access" = [
+              "comin-publisher:comin:write-only"
+              "*:comin:read-only"
+            ];
+          };
+        };
+
+        services.webhook = {
+          package = pkgs.webhook.overrideAttrs (old: {
+            patches = (old.patches or [ ]) ++ [
+              (pkgs.fetchpatch {
+                url = "https://github.com/mikelolasagasti/webhook/commit/2f9528ca1cc5a53c2e5bb9eaf60573a5c9171360.patch";
+                hash = "sha256-MWps4IZ+OnCpbqKQnsPODHgr4LoY5/fqSxCCkdUjynE=";
+              })
+            ];
+          });
+          ip = "127.0.0.1";
+          port = 9000;
+          extraArgs = [
+            "-max-body-size"
+            "26214400"
+          ];
+
+          hooksTemplated.comin = ''
+            {
+              "id": "comin",
+              "execute-command": "${publishEvent}",
+              "http-methods": ["POST"],
+              "success-http-response-code": 202,
+              "trigger-rule": {
+                "and": [
+                  {
+                    "match": {
+                      "type": "payload-hmac-sha256",
+                      "secret": "{{ credential "github-webhook-secret" | js }}",
+                      "parameter": {
+                        "source": "header",
+                        "name": "X-Hub-Signature-256"
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "type": "value",
+                      "value": "refs/heads/main",
+                      "parameter": {
+                        "source": "payload",
+                        "name": "ref"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          '';
+        };
+
+        systemd.services = {
+          ntfy-sh.unitConfig.AssertPathExists = [ ntfyEnvironment ];
+
+          webhook = {
+            after = [ "ntfy-sh.service" ];
+            wants = [ "ntfy-sh.service" ];
+            unitConfig.AssertPathExists = [
+              ntfyEnvironment
+              githubWebhookSecret
+            ];
+            serviceConfig = {
+              EnvironmentFile = ntfyEnvironment;
+              LoadCredential = [
+                "github-webhook-secret:${githubWebhookSecret}"
+              ];
+            };
+          };
+
+          tailscale-funnel-comin = {
+            description = "Expose the authenticated Comin webhook through Tailscale Funnel";
+            after = [
+              "tailscaled-autoconnect.service"
+              "webhook.service"
+            ];
+            wants = [ "webhook.service" ];
+            wantedBy = [ "tailscaled-autoconnect.service" ];
+            script = ''
+              ${config.services.tailscale.package}/bin/tailscale funnel \
+                --bg \
+                --yes \
+                --https=443 \
+                --set-path=/hooks/comin \
+                http://127.0.0.1:9000/hooks/comin
+            '';
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+            };
+          };
+        };
+      };
   };
 
   backups = editScope moduleRegistry.backups {
