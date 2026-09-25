@@ -15,6 +15,25 @@
     virtualisation
     ;
 
+  imports = [
+    ./generated.nix
+    "${modulesPath}/virtualisation/lxc-container.nix"
+  ];
+
+  dotfiles = {
+    profile.name = "nixos-orbstack";
+    paths.repoPath = "/Users/joshan/.files";
+    services.ollama.url = "http://host.orb.internal:11434/v1";
+    scopes = {
+      networking.mdns.enable = false;
+      virtualisation = {
+        children.enable = false;
+        vm.enable = true;
+      };
+      cli.codex.enable = false;
+    };
+  };
+
   networking = editScope moduleRegistry.networking {
     ssh = { lib, ... }: {
       services.openssh = {
@@ -41,25 +60,6 @@
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEER0NqlNCN0MYwBhWKNnk8iNSApeiDPiXDziS5aU5jz nix-builder"
         ];
       };
-  };
-
-  imports = [
-    ./generated.nix
-    "${modulesPath}/virtualisation/lxc-container.nix"
-  ];
-
-  dotfiles = {
-    profile.name = "nixos-orbstack";
-    paths.repoPath = "/Users/joshan/.files";
-    services.ollama.url = "http://host.orb.internal:11434/v1";
-    scopes = {
-      networking.mdns.enable = false;
-      virtualisation = {
-        children.enable = false;
-        vm.enable = true;
-      };
-      cli.codex.enable = false;
-    };
   };
 
   container = { config, ... }: {
