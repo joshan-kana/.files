@@ -85,19 +85,10 @@ in
   systemd.services.agentgateway = lib.mkIf enable {
     description = "AgentGateway MCP gateway";
     wantedBy = [ "multi-user.target" ];
-    after = [
-      "network-online.target"
-      "docker-n8n.service"
-      "mcp-agent-mail.service"
-    ];
-    wants = [
-      "network-online.target"
-      "docker-n8n.service"
-      "mcp-agent-mail.service"
-    ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
 
     serviceConfig = {
-      Type = "simple";
       DynamicUser = true;
       ExecStart = start;
       LoadCredential = [

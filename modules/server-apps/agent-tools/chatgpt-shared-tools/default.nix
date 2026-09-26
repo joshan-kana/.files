@@ -42,19 +42,14 @@ in
   systemd.services.chatgpt-shared-tools = lib.mkIf enable {
     description = "Shared agent MCP tools through OpenAI Secure MCP Tunnel";
     wantedBy = [ "multi-user.target" ];
-    after = [
-      "network-online.target"
-      "agentgateway.service"
-    ];
+    after = [ "agentgateway.service" ];
     requires = [ "agentgateway.service" ];
-    wants = [ "network-online.target" ];
 
     unitConfig.AssertPathExists = tunnelSecret;
 
     environment.HEALTH_LISTEN_ADDR = "127.0.0.1:18793";
 
     serviceConfig = {
-      Type = "simple";
       User = serviceUser;
       EnvironmentFile = tunnelSecret;
       ExecStart = start;
