@@ -84,6 +84,8 @@
     }:
     (moduleRegistry.nix { inherit config inputs pkgs; })
     // {
+      boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+
       home-manager.sharedModules = [
         "${inputs.home-manager}/modules/programs/attic-client.nix"
       ];
