@@ -10,7 +10,7 @@ let
     "atticd"
     "chatgpt-shell-access"
     "docker-n8n"
-    "docker-openclaw"
+    "openclaw-gateway"
   ]
   ++ lib.filter (lib.hasPrefix "matrix-bridge-") (builtins.attrNames cfg.systemd.services);
 
