@@ -38,6 +38,60 @@ let
 
 in
 {
+  services.openclaw-gateway = {
+    enable = true;
+    package = openclawPackage;
+    port = gatewayPort;
+    user = openclawUser;
+    group = appDataGroup;
+    stateDir = openclawStateDir;
+    configFile = openclawConfigFile;
+
+    environment = {
+      OPENCLAW_NIX_MODE = "0";
+      GIT_CONFIG_COUNT = "2";
+      GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
+      GIT_CONFIG_VALUE_0 = "git@github.com:";
+      GIT_CONFIG_KEY_1 = "credential.https://github.com.helper";
+      GIT_CONFIG_VALUE_1 = "!${pkgs.gh}/bin/gh auth git-credential";
+
+      # Config writes replace symlinks, so use the app-owned file directly.
+      OPENCLAW_CONFIG_PATH = openclawConfigFile;
+    };
+
+    environmentFiles = openclawSecrets;
+    execStartPre = [ "${openclawPackage}/bin/openclaw config validate" ];
+
+    servicePath = with pkgs; [
+      curl
+      docker
+      gh
+      git
+      jq
+      nh
+      nix
+      nodejs_24
+      openssh
+      python3
+      rsync
+      systemd
+      openclawSudo
+    ];
+  };
+
+  environment.etc."openclaw/openclaw.json".mode = lib.mkForce "direct-symlink";
+
+  systemd.services.openclaw-gateway = {
+    unitConfig = {
+      AssertPathExists = openclawSecrets ++ [ openclawConfigFile ];
+      RequiresMountsFor = [ mappedHome ];
+    };
+    serviceConfig = {
+      BindPaths = [ "${mappedHome}:${primaryHome}" ];
+      UMask = "0077";
+    };
+  };
+
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
   security.sudo.extraRules = [
@@ -218,60 +272,6 @@ in
         requires = [ "openclaw-ollama-proxy.service" ];
         after = [ "openclaw-ollama-proxy.service" ];
       };
-    };
-  };
-
-  services.openclaw-gateway = {
-    enable = true;
-    package = openclawPackage;
-    port = gatewayPort;
-    user = openclawUser;
-    group = appDataGroup;
-    stateDir = openclawStateDir;
-    configFile = openclawConfigFile;
-
-    environment = {
-      OPENCLAW_NIX_MODE = "0";
-      GIT_CONFIG_COUNT = "2";
-      GIT_CONFIG_KEY_0 = "url.https://github.com/.insteadOf";
-      GIT_CONFIG_VALUE_0 = "git@github.com:";
-      GIT_CONFIG_KEY_1 = "credential.https://github.com.helper";
-      GIT_CONFIG_VALUE_1 = "!${pkgs.gh}/bin/gh auth git-credential";
-
-      # Config writes replace symlinks, so use the app-owned file directly.
-      OPENCLAW_CONFIG_PATH = openclawConfigFile;
-    };
-
-    environmentFiles = openclawSecrets;
-    execStartPre = [ "${openclawPackage}/bin/openclaw config validate" ];
-
-    servicePath = with pkgs; [
-      curl
-      docker
-      gh
-      git
-      jq
-      nh
-      nix
-      nodejs_24
-      openssh
-      python3
-      rsync
-      systemd
-      openclawSudo
-    ];
-  };
-
-  environment.etc."openclaw/openclaw.json".mode = lib.mkForce "direct-symlink";
-
-  systemd.services.openclaw-gateway = {
-    unitConfig = {
-      AssertPathExists = openclawSecrets ++ [ openclawConfigFile ];
-      RequiresMountsFor = [ mappedHome ];
-    };
-    serviceConfig = {
-      BindPaths = [ "${mappedHome}:${primaryHome}" ];
-      UMask = "0077";
     };
   };
 
