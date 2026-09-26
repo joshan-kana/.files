@@ -10,8 +10,6 @@ let
   topic = "${config.dotfiles.services.ntfy.url}/comin";
 in
 {
-  enable = false;
-
   # ntfy is private to LAN/Tailscale, and this topic only triggers a safe fetch.
   services.ntfy-sh.settings."auth-access" = [ "*:comin:read-write" ];
 

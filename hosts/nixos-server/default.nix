@@ -24,7 +24,6 @@
 
   dotfiles = {
     profile.name = "nixos-server";
-    scopes.serverApps.ntfy.comin.enable = true;
     scopes.virtualisation = {
       children.enable = false;
       containers.enable = true;
