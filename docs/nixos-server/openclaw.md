@@ -8,13 +8,12 @@ OpenClaw runs natively as `openclaw-gateway.service` on the NixOS server and
 is exposed through nginx. The service uses the first-party NixOS module from the
 `nix-openclaw` flake with its first-party slim `openclaw-gateway` package.
 
-The server keeps OpenClaw state under `/var/lib/apps/openclaw`. OpenClaw owns
-its mutable application configuration at `/var/lib/apps/openclaw/openclaw.json`;
-Nix owns the service boundary, secrets, runtime tools, proxying, and host
-integration. OpenClaw owns the mutable config and trusted installed-plugin
-registry, including the official Codex, Matrix, and DeepSeek installs. The
-service runs `openclaw config validate` before startup so an incompatible config
-prevents startup after an upgrade instead of being silently accepted.
+The server keeps OpenClaw state under `/var/lib/apps/openclaw`, including
+`/var/lib/apps/openclaw/openclaw.json`, which OpenClaw owns directly. Nix owns
+the service boundary, secrets, runtime tools, proxying, and host integration.
+The service runs `openclaw config validate` before startup so an incompatible
+configuration prevents startup after an upgrade instead of being silently
+accepted.
 
 The native service runs as `openclaw:appdata-editors`, matching the server-app
 service-user pattern used elsewhere on the host.
@@ -56,7 +55,7 @@ git -C /home/joshan/.files/docs/infrastructure-docs status --short --branch
 The GitHub identity should be joshan-kana, and files created through the
 bindfs-mapped home should remain owned by joshan on the host.
 
-## Repository-access rollback
+## Host access rollback
 
 - GitHub API: move or remove /root/secrets/github-self-hosted-agents.env.
 - Host administration: remove the openclaw sudo rule.

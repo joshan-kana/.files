@@ -36,29 +36,6 @@ let
     exec /run/wrappers/bin/sudo "$@"
   '';
 
-  openclawRepositorySkill = pkgs.writeText "openclaw-repository-access-skill" ''
-    ---
-    name: repository-access
-    description: Manage the server repositories and their GitHub resources.
-    metadata: { "openclaw": { "requires": { "bins": ["git", "gh"] } } }
-    ---
-
-    Prefer a connected macOS app node with system.run and system.which in
-    /Users/joshan/.files; otherwise work directly in the server checkout:
-
-      git -C ${primaryHome}/.files <git arguments...>
-      git -C ${primaryHome}/.files/docs/infrastructure-docs <git arguments...>
-      gh <arguments...>
-
-    The service sees ${primaryHome} through bindfs, so normal writes preserve
-    ${primary.name} ownership. Use sudo only for host administration.
-
-    Use one checkout per task; inspect status first and preserve unrelated work.
-    For writes, use feature branches. Never expose credentials, add a clone,
-    disable host verification, or reference an unpushed submodule commit. Confirm
-    before deployment or destructive operations.
-  '';
-
 in
 {
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
@@ -85,25 +62,13 @@ in
     ];
   };
 
-  system.activationScripts = {
-    openclawNativeStateOwnership = {
-      deps = [ "users" ];
-      text = ''
-        if [ -e ${lib.escapeShellArg openclawConfigFile} ] && [ "$(${pkgs.coreutils}/bin/stat -c %u ${lib.escapeShellArg openclawConfigFile})" = "$(${pkgs.coreutils}/bin/id -u ${primary.name})" ]; then
-          ${pkgs.coreutils}/bin/chown -R ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawStateDir}
-        fi
-      '';
-    };
-
-    openclawRepositorySkill = {
-      deps = [ "users" ];
-      text = ''
-        ${pkgs.coreutils}/bin/rm -rf ${lib.escapeShellArg "${openclawStateDir}/workspace/skills/repository-access"}
-        skillDir=${lib.escapeShellArg "${openclawStateDir}/skills/repository-access"}
-        ${pkgs.coreutils}/bin/install -d -m 0755 -o ${openclawUser} -g ${appDataGroup} "$skillDir"
-        ${pkgs.coreutils}/bin/install -m 0644 -o ${openclawUser} -g ${appDataGroup} ${openclawRepositorySkill} "$skillDir/SKILL.md"
-      '';
-    };
+  system.activationScripts.openclawNativeStateOwnership = {
+    deps = [ "users" ];
+    text = ''
+      if [ -e ${lib.escapeShellArg openclawConfigFile} ] && [ "$(${pkgs.coreutils}/bin/stat -c %u ${lib.escapeShellArg openclawConfigFile})" = "$(${pkgs.coreutils}/bin/id -u ${primary.name})" ]; then
+        ${pkgs.coreutils}/bin/chown -R ${openclawUser}:${appDataGroup} ${lib.escapeShellArg openclawStateDir}
+      fi
+    '';
   };
 
   services.nginx = {
