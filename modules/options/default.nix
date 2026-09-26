@@ -154,6 +154,12 @@ in
       description = "OpenAI-compatible Ollama endpoint used by local tools.";
     };
 
+    services.ntfy.url = mkOption {
+      type = types.str;
+      default = "http://192.168.1.3:2586";
+      description = "Private ntfy endpoint used by infrastructure clients.";
+    };
+
     scopes = mkOption {
       type = types.attrsOf semanticScopes.scopeOverrideType;
       default = { };
