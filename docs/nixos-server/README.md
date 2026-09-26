@@ -111,15 +111,22 @@ The server joins Tailscale as an ephemeral tagged subnet router:
 tag:nixos-server
 ```
 
-It advertises the ordinary home subnet plus the site-1 4via6 mapping:
+It advertises a deliberately broader IPv4 route plus the site-1 4via6 mapping:
 
 ```text
-192.168.1.0/24
+192.168.0.0/23
 fd7a:115c:a1e0:b1a:0:1:c0a8:100/120
 ```
 
-The 4via6 route keeps home devices unambiguous when a remote network also uses
-`192.168.1.0/24`. Mutable route advertisement is applied with `tailscale set`
+The real home LAN remains `192.168.1.0/24`. On macOS and Windows, the directly
+connected `/24` is more specific than Tailscale's advertised `/23`, so local LAN
+traffic wins while Tailscale stays connected. Verify the same behavior on iOS
+during the roaming-device acceptance test. The 4via6 route still represents
+the actual home `192.168.1.0/24` and keeps home devices unambiguous when a remote
+network uses the same IPv4 subnet. Tailnet route policy must approve/auto-approve
+the advertised `/23` for `tag:nixos-server`.
+
+Mutable route advertisement is applied with `tailscale set`
 after the delayed autoconnect step, preserving the existing rule that Tailscale
 authentication must not block normal LAN boot.
 

@@ -325,7 +325,9 @@
 
         let
           inherit (config.dotfiles) server;
-          homeAdvertisedRoutes = "${server.lan.subnet},fd7a:115c:a1e0:b1a:0:1:c0a8:100/120";
+          # Advertise a broader IPv4 route so the directly connected home
+          # 192.168.1.0/24 route wins on roaming clients by longest-prefix match.
+          homeAdvertisedRoutes = "192.168.0.0/23,fd7a:115c:a1e0:b1a:0:1:c0a8:100/120";
         in
         {
           networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
