@@ -59,40 +59,12 @@
       }:
 
       let
-        ntfyEnvironment = "${config.dotfiles.server.secretsDir}/comin-ntfy.env";
         githubWebhookSecret = "${config.dotfiles.server.secretsDir}/comin-webhook-secret";
         topic = "${config.dotfiles.services.ntfy.url}/comin";
-
-        publishEvent = pkgs.writeShellScript "publish-comin-event" ''
-          case "''${NTFY_AUTH_TOKENS:-}" in
-            comin-publisher:tk_*) ;;
-            *)
-              echo "invalid NTFY_AUTH_TOKENS value" >&2
-              exit 1
-              ;;
-          esac
-
-          export NTFY_TOKEN="''${NTFY_AUTH_TOKENS#comin-publisher:}"
-          exec ${lib.getExe pkgs.ntfy-sh} publish --quiet \
-            ${lib.escapeShellArg topic} \
-            fetch
-        '';
       in
       {
-        services.ntfy-sh = {
-          environmentFile = ntfyEnvironment;
-          settings = {
-            # Token-only publisher account; the random bcrypt password was discarded.
-            "auth-users" = [
-              "comin-publisher:$2y$12$NJnqcKvLVz859hBmkUQBi.dIsAGVCZtbVVzRiw.WHj/vbO3We3AkO:user"
-            ];
-            # The event body is non-sensitive; only publishing needs authentication.
-            "auth-access" = [
-              "comin-publisher:comin:write-only"
-              "*:comin:read-only"
-            ];
-          };
-        };
+        # ntfy is private to LAN/Tailscale, and this topic only triggers a safe fetch.
+        services.ntfy-sh.settings."auth-access" = [ "*:comin:read-write" ];
 
         services.webhook = {
           package = pkgs.webhook.overrideAttrs (old: {
@@ -104,7 +76,6 @@
             ];
           });
           ip = "127.0.0.1";
-          port = 9000;
           extraArgs = [
             "-max-body-size"
             "26214400"
@@ -113,9 +84,13 @@
           hooksTemplated.comin = ''
             {
               "id": "comin",
-              "execute-command": "${publishEvent}",
+              "execute-command": "${lib.getExe pkgs.ntfy-sh}",
+              "pass-arguments-to-command": [
+                {"source": "string", "name": "publish"},
+                {"source": "string", "name": "--quiet"},
+                {"source": "string", "name": "${topic}"}
+              ],
               "http-methods": ["POST"],
-              "success-http-response-code": 202,
               "trigger-rule": {
                 "and": [
                   {
@@ -145,21 +120,12 @@
         };
 
         systemd.services = {
-          ntfy-sh.unitConfig.AssertPathExists = [ ntfyEnvironment ];
-
           webhook = {
             after = [ "ntfy-sh.service" ];
-            wants = [ "ntfy-sh.service" ];
-            unitConfig.AssertPathExists = [
-              ntfyEnvironment
-              githubWebhookSecret
+            unitConfig.AssertPathExists = [ githubWebhookSecret ];
+            serviceConfig.LoadCredential = [
+              "github-webhook-secret:${githubWebhookSecret}"
             ];
-            serviceConfig = {
-              EnvironmentFile = ntfyEnvironment;
-              LoadCredential = [
-                "github-webhook-secret:${githubWebhookSecret}"
-              ];
-            };
           };
 
           tailscale-funnel-comin = {

@@ -5,11 +5,6 @@
   ...
 }:
 
-let
-  cominFetch = pkgs.writeShellScript "comin-fetch" ''
-    exec ${lib.getExe config.services.comin.package} fetch
-  '';
-in
 {
   programs.ssh.knownHosts."github.com".publicKey =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
@@ -40,26 +35,20 @@ in
 
     let
       topic = "${config.dotfiles.services.ntfy.url}/comin";
-      handleEvent = pkgs.writeShellScript "comin-event" ''
-        [ "''${NTFY_MESSAGE:-}" = "fetch" ] || exit 0
-        exec ${cominFetch}
-      '';
     in
     {
       systemd.services.comin-event-listener = {
         description = "Trigger Comin from ntfy events";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
 
         script = ''
           exec ${lib.getExe pkgs.ntfy-sh} subscribe \
             ${lib.escapeShellArg topic} \
-            ${handleEvent}
+            ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
         '';
 
         serviceConfig = {
-          Restart = "always";
+          Restart = "on-failure";
           RestartSec = "5s";
         };
       };
