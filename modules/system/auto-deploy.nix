@@ -1,5 +1,7 @@
 {
   config,
+  lib,
+  pkgs,
   ...
 }:
 
@@ -21,7 +23,34 @@
           ssh_deploy_key_path = "${config.dotfiles.secretsDir}/comin-github";
         };
         branches.testing.name = "";
+
+        # Events are the fast path. Polling remains reconciliation.
+        poller.period = 300;
       }
     ];
   };
+
+  webhook =
+    _:
+
+    let
+      topic = "${config.dotfiles.services.ntfy.url}/comin";
+    in
+    {
+      systemd.services.comin-event-listener = {
+        description = "Trigger Comin from ntfy events";
+        wantedBy = [ "multi-user.target" ];
+
+        script = ''
+          exec ${lib.getExe pkgs.ntfy-sh} subscribe \
+            ${lib.escapeShellArg topic} \
+            ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
+        '';
+
+        serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "5s";
+        };
+      };
+    };
 }
