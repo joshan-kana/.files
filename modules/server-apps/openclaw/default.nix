@@ -237,6 +237,8 @@ in
       GIT_CONFIG_VALUE_0 = "git@github.com:";
       GIT_CONFIG_KEY_1 = "credential.https://github.com.helper";
       GIT_CONFIG_VALUE_1 = "!${pkgs.gh}/bin/gh auth git-credential";
+
+      # Config writes replace symlinks, so use the app-owned file directly.
       OPENCLAW_CONFIG_PATH = openclawConfigFile;
     };
 
