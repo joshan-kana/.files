@@ -197,8 +197,6 @@
           networking.firewall.allowedUDPPorts = [ adguard.port ];
           networking.firewall.interfaces.${server.lan.interface} = {
             allowedTCPPorts = [ technitium.webPort ];
-            # Technitium DHCP remains disabled until the router DHCP cutover,
-            # but the LAN boundary is ready for the eventual server socket.
             allowedUDPPorts = [ 67 ];
           };
 
@@ -291,14 +289,12 @@
               after = [ "network-online.target" ];
               wants = [ "network-online.target" ];
 
+              # Technitium reads these only when creating a fresh dns.config.
+              # Runtime DNS/DHCP policy remains application-managed state.
               environment = {
                 DNS_SERVER_DOMAIN = "${config.networking.hostName}.home";
                 DNS_SERVER_ADMIN_PASSWORD_FILE = "/run/credentials/technitium-dns-server.service/admin-password";
                 DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.remoteIp},127.0.0.1";
-                DNS_SERVER_RECURSION = "AllowOnlyForPrivateNetworks";
-                DNS_SERVER_ENABLE_BLOCKING = "false";
-                DNS_SERVER_FORWARDERS = "https://dns10.quad9.net/dns-query";
-                DNS_SERVER_FORWARDER_PROTOCOL = "Https";
               };
 
               serviceConfig = {
