@@ -12,12 +12,9 @@ let
     .${pkgs.stdenv.hostPlatform.system}
       or (throw "Unsupported AgentGateway platform: ${pkgs.stdenv.hostPlatform.system}");
   assetName = "agentgateway-${assetPlatform}";
-  assets = lib.filter (asset: asset.name == assetName) release.assets;
-  asset =
-    if builtins.length assets == 1 then
-      builtins.head assets
-    else
-      throw "Missing AgentGateway release asset ${assetName}";
+  asset = lib.findFirst (
+    asset: asset.name == assetName
+  ) (throw "Missing AgentGateway release asset ${assetName}") release.assets;
   hash = builtins.convertHash {
     hash = lib.removePrefix "sha256:" asset.digest;
     hashAlgo = "sha256";
@@ -29,7 +26,7 @@ pkgs.stdenvNoCC.mkDerivation {
   inherit version;
 
   src = pkgs.fetchurl {
-    url = "https://github.com/agentgateway/agentgateway/releases/download/v${version}/${assetName}";
+    url = asset.browser_download_url;
     inherit hash;
   };
 

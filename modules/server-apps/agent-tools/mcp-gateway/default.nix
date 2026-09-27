@@ -1,27 +1,21 @@
 {
   config,
   inputs,
-  lib,
   pkgs,
   ...
 }:
 
 let
   inherit (config.dotfiles) server;
-  inherit (config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway) enable;
-
-  gatewayPort = 4444;
-  readinessPort = 15021;
   agentgateway = import ./agentgateway.nix { inherit inputs pkgs; };
-  format = pkgs.formats.yaml { };
   settings = {
     config = {
       adminAddr = "127.0.0.1:15000";
-      readinessAddr = "127.0.0.1:${toString readinessPort}";
+      readinessAddr = "127.0.0.1:15021";
       statsAddr = "127.0.0.1:15020";
     };
     mcp = {
-      port = gatewayPort;
+      port = 4444;
       targets = [
         {
           name = "agent-mail";
@@ -63,14 +57,16 @@ let
       ];
     };
   };
-  configFile = format.generate "agentgateway.yaml" settings;
+  configFile = (pkgs.formats.yaml { }).generate "agentgateway.yaml" settings;
   validatedConfig =
-    pkgs.runCommand "agentgateway-config.yaml" { nativeBuildInputs = [ agentgateway ]; }
+    pkgs.runCommand "agentgateway-config.yaml"
+      {
+        GITHUB_AUTHORIZATION = "validation-placeholder";
+        YOUTRACK_AUTHORIZATION = "validation-placeholder";
+        N8N_AUTHORIZATION = "validation-placeholder";
+      }
       ''
-        export GITHUB_AUTHORIZATION=validation-placeholder
-        export YOUTRACK_AUTHORIZATION=validation-placeholder
-        export N8N_AUTHORIZATION=validation-placeholder
-        agentgateway --file ${configFile} --validate-only
+        ${agentgateway}/bin/agentgateway --file ${configFile} --validate-only
         cp ${configFile} "$out"
       '';
   start = pkgs.writeShellScript "agentgateway-start" ''
@@ -82,12 +78,9 @@ let
   '';
 in
 {
-  systemd.services.agentgateway = lib.mkIf enable {
+  systemd.services.agentgateway = {
     description = "AgentGateway MCP gateway";
     wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-
     serviceConfig = {
       DynamicUser = true;
       ExecStart = start;
@@ -101,5 +94,4 @@ in
       UMask = "0077";
     };
   };
-
 }
