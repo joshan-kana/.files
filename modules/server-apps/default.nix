@@ -82,16 +82,18 @@ _: {
   onedev = import ./onedev;
 
   /**
-    OpenClaw container and its host integration.
+    Native mutable OpenClaw gateway and its host integration.
 
-    Repository access, local-model connectivity, credentials, and provider
-    routing are expressed by the module itself. Runtime secrets remain outside
-    the Nix store and are supplied through service credentials/environment files.
+    Nix owns the service boundary, runtime package, secret injection, networking,
+    proxying, and host capabilities. OpenClaw owns its mutable `openclaw.json`
+    application configuration under server app data; startup validates that file
+    before the gateway is allowed to run.
 
-    Host administration and repository operations deliberately cross the
-    container boundary through dedicated wrappers. Those wrappers preserve
-    ownership and provide a stable interface; they are not a security boundary
-    against the OpenClaw workload.
+    The service is intentionally host-root-equivalent. It receives passwordless
+    sudo and a bindfs view of the primary user's home so repository work can use
+    ordinary Git/GitHub tooling while files remain owned by the primary user on
+    the underlying filesystem. Those facilities are operational capabilities,
+    not a security boundary against the OpenClaw workload.
 
     Local Ollama access uses a loopback nginx endpoint. A timer selects the Mac's
     reachable LAN address first and a numeric Tailscale fallback otherwise, so

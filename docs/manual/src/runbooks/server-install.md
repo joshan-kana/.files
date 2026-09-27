@@ -127,6 +127,12 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 Backup creation, repository maintenance, and selective recovery procedures are
 kept in [Backup And Restore](backup-restore.md).
 
+Technitium's zones, DHCP scope and leases, DNS Apps, recursion, and forwarder
+policy are application-managed state. Restoring the server app-data backup
+before first boot restores that policy; Nix only owns the service boundary and
+first-start bootstrap inputs, not a second declarative copy of Technitium's
+runtime database.
+
 ## Check Hardware Detection
 
 Generate a hardware scan against the mounted target and compare its detected
