@@ -27,49 +27,35 @@ Snapper configuration continues to snapshot application state independently.
 The external `vault` ZFS pool remains separate and is imported without
 recreating or formatting either member disk.
 
-## Network Layout
+## Networking
 
-- Router: `192.168.1.1`
-- AdGuard: `192.168.1.2`
-- NixOS host and Home Assistant: `192.168.1.3`
-- AdGuard host shim: `192.168.1.5`
-- DHCP pool: `192.168.1.100-192.168.1.199`
+The canonical address plan, DNS names, routing policy, and remote-access model
+live in
+[`infrastructure-docs/docs/NETWORKING.md`](../infrastructure-docs/docs/NETWORKING.md).
+Update that document only after the corresponding implementation has merged.
 
-Home Assistant uses host networking, so it is reached at
-`http://192.168.1.3:8123`.
+On this host, Nix owns the service boundary rather than Technitium's application
+policy:
 
-The machine hostname is `nixos-server`, and the flake target is also
-`nixos-server`.
+- AdGuard Home remains the client-facing DNS filter and has its critical bind,
+  upstream, and fallback settings enforced by the NixOS module.
+- Technitium runs natively as the DNS/DHCP backend with state under
+  `/var/lib/apps/technitium`, covered by the server app-data snapshot/backup
+  policy.
+- Technitium zones, DHCP scope and leases, DNS Apps, records, recursion, and
+  forwarder settings are application-managed state. Nix supplies only
+  first-start identity, admin-password, and web-listener bootstrap values.
+- The VM variant disables both DNS services because it does not own the server's
+  dedicated LAN addresses.
+- Tailscale route advertisement is declared in Nix. The existing delayed
+  autoconnect policy means changed routes are also applied with `tailscale set`
+  after authentication so an already-running ephemeral node converges without
+  making Tailscale a LAN-boot dependency.
 
-AdGuard has its own macvlan IP because DNS clients should not care which host
-it runs on.
-
-## AdGuard Shim
-
-Docker macvlan networks isolate the parent host from the container. The second
-macvlan address on the host lets host-networked services reach AdGuard. The
-macvlan parent interface is detected at runtime from the default IPv4 route.
-
-The server networking configuration creates:
-
-- container IP `192.168.1.2` for AdGuard itself
-- host shim IP `192.168.1.5` on `adguard-shim`
-- a `/32` route for `192.168.1.2` through that shim
-
-If more macvlan services are added later, widen the route or add more `/32`
-routes.
-
-## Tailscale Model
-
-The server joins Tailscale as an ephemeral tagged subnet router:
-
-```text
-tag:nixos-server
-```
-
-It advertises `192.168.1.0/24`. Tailnet policy should auto-approve that route
-for `tag:nixos-server`. The Tailscale `100.x` address is disposable; use LAN
-URLs such as `http://192.168.1.3:8123` through the subnet route for stable access.
+Restore `/var/lib/apps` before rebuilding a replacement server so Technitium's
+runtime DNS/DHCP state is present when the service starts. On a genuinely empty
+Technitium state, AdGuard's fallback resolver keeps ordinary internet DNS
+available while the backend is configured or restored.
 
 ## Install
 
