@@ -10,19 +10,12 @@ let
   inherit (config.dotfiles) server;
   gatewayEnabled = config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway.enable;
 
-  serviceUser = "chatgpt-shared-tools";
   tunnelSecret = "${server.secretsDir}/chatgpt-shared-tools.env";
   tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
 
 in
 {
   config = lib.mkIf gatewayEnabled {
-    users.groups.${serviceUser} = { };
-    users.users.${serviceUser} = {
-      isSystemUser = true;
-      group = serviceUser;
-    };
-
     systemd.services.chatgpt-shared-tools = {
       description = "Shared agent MCP tools through OpenAI Secure MCP Tunnel";
       wantedBy = [ "multi-user.target" ];
@@ -37,7 +30,7 @@ in
       };
 
       serviceConfig = {
-        User = serviceUser;
+        DynamicUser = true;
         EnvironmentFile = tunnelSecret;
         ExecStart = "${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text";
         Restart = "always";
