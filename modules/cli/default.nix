@@ -853,4 +853,8 @@ in
     };
   };
 
+  dust = _: {
+    environment.systemPackages = [ pkgs.dust ];
+  };
+
 }
