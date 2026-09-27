@@ -158,8 +158,11 @@
           hostDns = "${
             lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
           };";
+          adguardFallbackDns = lib.filter (
+            dnsServer: dnsServer != server.lan.gateway
+          ) server.lan.dns.fallbackServers;
 
-          service = {
+          adguard = {
             user = "adguardhome";
             group = "appdata-editors";
             ip = server.lan.dns.serviceIp;
@@ -169,31 +172,51 @@
             confDir = "${server.storage.appData.root}/adguard/conf";
             configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
           };
+
+          technitium = {
+            user = "technitium";
+            group = server.storage.appData.group.name;
+            remoteIp = server.lan.serverIp;
+            localBackend = "127.0.0.1:5300";
+            webPort = 5380;
+            stateDir = "${server.storage.appData.root}/technitium";
+            adminPasswordFile = "${server.secretsDir}/technitium-admin-password";
+          };
         in
         {
           networking.networkmanager.ensureProfiles.profiles."wired-static" = {
             ipv4 = {
-              address2 = "${service.ip}/${lanPrefixLength}";
+              address2 = "${adguard.ip}/${lanPrefixLength}";
               dns = hostDns;
               "ignore-auto-dns" = true;
             };
             ipv6."ignore-auto-dns" = true;
           };
 
-          networking.firewall.allowedTCPPorts = [ service.port ];
-          networking.firewall.allowedUDPPorts = [ service.port ];
+          networking.firewall.allowedTCPPorts = [ adguard.port ];
+          networking.firewall.allowedUDPPorts = [ adguard.port ];
+          networking.firewall.interfaces.${server.lan.interface} = {
+            allowedTCPPorts = [ technitium.webPort ];
+            allowedUDPPorts = [ 67 ];
+          };
 
-          users.users.${service.user} = {
-            isSystemUser = true;
-            inherit (service) group;
+          users.users = {
+            ${adguard.user} = {
+              isSystemUser = true;
+              inherit (adguard) group;
+            };
+            ${technitium.user} = {
+              isSystemUser = true;
+              inherit (technitium) group;
+            };
           };
 
           systemd.tmpfiles.rules = [
-            "d ${service.dataDir} 2750 ${service.user} ${service.group} - -"
-            "d ${service.workDir} 2750 ${service.user} ${service.group} - -"
-            "d ${service.confDir} 2750 ${service.user} ${service.group} - -"
-            "Z ${service.dataDir} - ${service.user} ${service.group} - -"
-            "z ${service.configFile} 0660 ${service.user} ${service.group} - -"
+            "d ${adguard.dataDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "d ${adguard.workDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "d ${adguard.confDir} 2750 ${adguard.user} ${adguard.group} - -"
+            "Z ${adguard.dataDir} - ${adguard.user} ${adguard.group} - -"
+            "z ${adguard.configFile} 0660 ${adguard.user} ${adguard.group} - -"
           ];
 
           services.adguardhome = {
@@ -208,42 +231,82 @@
 
             # Web UI only on the dedicated LAN DNS service IP.
             # Port is intentionally omitted because the module default is 3000.
-            host = service.ip;
+            host = adguard.ip;
 
             extraArgs = [
-              "--work-dir ${service.workDir}"
-              "--config ${service.configFile}"
+              "--work-dir ${adguard.workDir}"
+              "--config ${adguard.configFile}"
             ];
 
             settings = {
               dns = {
                 # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
                 bind_hosts = [
-                  service.ip
+                  adguard.ip
                   "127.0.0.1"
                 ];
-                inherit (service) port;
+                inherit (adguard) port;
+                upstream_dns = [ technitium.localBackend ];
+                # Preserve internet DNS when the local backend is unavailable.
+                fallback_dns = adguardFallbackDns;
               };
             };
           };
 
-          systemd.services.adguardhome = {
-            after = [
-              "network-online.target"
-            ];
-            wants = [ "network-online.target" ];
+          # Technitium owns DNS/DHCP backend state. AdGuard remains the
+          # client-facing filtering resolver on 192.168.1.2.
+          services.technitium-dns-server = {
+            enable = true;
+            openFirewall = false;
+          };
 
-            serviceConfig = {
-              DynamicUser = lib.mkForce false;
-              User = service.user;
-              Group = service.group;
+          systemd.services = {
+            adguardhome = {
+              after = [
+                "network-online.target"
+                "technitium-dns-server.service"
+              ];
+              wants = [
+                "network-online.target"
+                "technitium-dns-server.service"
+              ];
 
-              StateDirectory = lib.mkForce "apps/adguard/conf";
-              StateDirectoryMode = "2750";
-              UMask = lib.mkForce "0007";
+              serviceConfig = {
+                DynamicUser = lib.mkForce false;
+                User = adguard.user;
+                Group = adguard.group;
 
-              # AdGuard writes runtime databases such as work/data/sessions.db here.
-              ReadWritePaths = [ service.workDir ];
+                StateDirectory = lib.mkForce "apps/adguard/conf";
+                StateDirectoryMode = "2750";
+                UMask = lib.mkForce "0007";
+
+                # AdGuard writes runtime databases such as work/data/sessions.db here.
+                ReadWritePaths = [ adguard.workDir ];
+              };
+            };
+
+            technitium-dns-server = {
+              after = [ "network-online.target" ];
+              wants = [ "network-online.target" ];
+
+              # Technitium reads these only when creating a fresh dns.config.
+              # Runtime DNS/DHCP policy remains application-managed state.
+              environment = {
+                DNS_SERVER_DOMAIN = "${config.networking.hostName}.home";
+                DNS_SERVER_ADMIN_PASSWORD_FILE = "/run/credentials/technitium-dns-server.service/admin-password";
+                DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES = "${technitium.remoteIp},127.0.0.1";
+              };
+
+              serviceConfig = {
+                DynamicUser = lib.mkForce false;
+                User = technitium.user;
+                Group = technitium.group;
+                StateDirectory = lib.mkForce "apps/technitium";
+                StateDirectoryMode = "2750";
+                WorkingDirectory = lib.mkForce technitium.stateDir;
+                UMask = lib.mkForce "0007";
+                LoadCredential = [ "admin-password:${technitium.adminPasswordFile}" ];
+              };
             };
           };
         };
@@ -258,6 +321,9 @@
 
         let
           inherit (config.dotfiles) server;
+          # Advertise a broader IPv4 route so the directly connected home
+          # 192.168.1.0/24 route wins on roaming clients by longest-prefix match.
+          homeAdvertisedRoutes = "192.168.0.0/23,fd7a:115c:a1e0:b1a:0:1:c0a8:100/120";
         in
         {
           networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
@@ -278,10 +344,12 @@
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
-              "--advertise-routes=${server.lan.subnet}"
+              # Site 1 4via6 mapping keeps the home LAN reachable when a remote
+              # network uses the same IPv4 subnet.
+              "--advertise-routes=${homeAdvertisedRoutes}"
               "--accept-dns=false"
             ];
-            extraSetFlags = [ ];
+            extraSetFlags = [ "--advertise-routes=${homeAdvertisedRoutes}" ];
           };
 
           # Keep the server's ephemeral Tailscale behaviour, but do not make
@@ -290,12 +358,20 @@
           # The daemon still starts during boot. The auth/connect step still runs
           # automatically, but after multi-user.target so LAN boot is not held up by
           # Tailscale control-plane/auth latency.
+          # Like autoconnect below, applying mutable Tailscale settings must not
+          # become an ordering dependency of multi-user.target.
+          systemd.services.tailscaled-set = {
+            before = lib.mkForce [ "shutdown.target" ];
+            wantedBy = lib.mkForce [ ];
+          };
+
           systemd.services.tailscaled-autoconnect = {
             after = lib.mkForce [
               "tailscaled.service"
               "multi-user.target"
             ];
             before = lib.mkForce [ "shutdown.target" ];
+            wants = [ "tailscaled-set.service" ];
             preStart = ''
               if ${config.services.tailscale.package}/bin/tailscale status --json 2>/dev/null |
                 ${pkgs.jq}/bin/jq -e '.BackendState == "Running"' >/dev/null; then
@@ -366,8 +442,9 @@
         services.restic.backups = lib.mkForce { };
         services.snapper.configs = lib.mkForce { };
 
-        # The VM does not have the dedicated LAN address used by native AdGuard.
+        # The VM does not have the dedicated LAN addresses used by the DNS services.
         services.adguardhome.enable = lib.mkForce false;
+        services.technitium-dns-server.enable = lib.mkForce false;
       };
     };
   };
