@@ -34,7 +34,7 @@ recreating or formatting either member disk.
 - NixOS host: `192.168.1.3`
 - Technitium remote DNS/admin UI: `192.168.1.3:53` / `:5380`
 - Technitium local backend endpoint: `127.0.0.1:5300`
-- Current router DHCP pool: `192.168.1.100-192.168.1.199`
+- Technitium DHCP: active; effective dynamic pool `192.168.1.100-192.168.1.199`
 
 Home Assistant uses host networking, so it is reached at
 `http://192.168.1.3:8123`.
@@ -69,39 +69,39 @@ endpoints are restored/configured to `127.0.0.1:5300` and `192.168.1.3:53`.
 Normal recovery restores `/var/lib/apps` first, so the persisted endpoint and
 zone state is reused instead of repeating first-run setup.
 
-The official Technitium Failover App provides roaming aliases. `mac.home`
-prefers the DHCP-managed `joshans-macbook-pro.home` name while it responds on
-the LAN and falls back to the Tailscale MagicDNS machine name
-`joshans-macbook-pro.tailba46a0.ts.net` when the Mac leaves home. The record
-contains names, not fixed LAN or Tailscale addresses.
+Technitium's official Split Horizon App provides deterministic local and
+remote views for canonical `.home` names. Local queries arrive through
+AdGuard's `127.0.0.1:5300` backend and receive LAN IPv4 answers. Remote `.home`
+queries arrive directly from the 4via6-translated `192.168.1.3/32` source and
+receive only the corresponding 4via6 IPv6 answer. `mac.home` uses a split CNAME:
+locally it points at the DHCP-managed `joshans-macbook-pro.home` name, while the
+remote view points at the stable Tailscale machine name
+`joshans-macbook-pro.tailba46a0.ts.net`.
 
-The official DNS64 App is scoped to the translated Tailscale query path and
-embeds `192.168.1.0/24` into the site-1 4via6 `/96`. Home queries arrive via
-AdGuard's loopback backend and keep normal LAN IPv4 answers; remote `.home`
-queries go directly to Technitium over 4via6 and receive collision-proof IPv6
-answers for LAN-only destinations.
+The official DNS64 App remains scoped to the translated Tailscale query path
+and can synthesize 4via6 AAAA answers for IPv4-only LAN records. Canonical
+service names that need deterministic routing use Split Horizon so the remote
+view does not also expose an overlapping IPv4 answer.
 
-Technitium's DHCP scope remains disabled until the router DHCP service is
-deliberately cut over; never run both DHCP servers at once. The staged scope
-uses AdGuard (`192.168.1.2`) as client DNS, the router (`192.168.1.1`) as the
-default gateway, dynamic leases from the non-infrastructure portion of the
-subnet, and DHCP option 121 for `100.64.0.0/10` via `192.168.1.3` so home
-clients can reach roaming tailnet peers without running Tailscale themselves.
+Technitium now owns DHCP; router DHCP is disabled. The `Default` scope uses
+AdGuard (`192.168.1.2`) as client DNS, the router (`192.168.1.1`) as the default
+gateway, the `home` domain/search suffix, dynamic DNS updates, and DHCP option
+121 for `100.64.0.0/10` via `192.168.1.3`. Exclusions keep ordinary dynamic
+leases effectively in `192.168.1.100-192.168.1.199` while reservations preserve
+Bambu P2S `.4`, the Breville fan `.12`, the Breville purifier `.13`, and the
+Swann DVR `.200`.
 
-### DHCP Cutover
+### DHCP Operation And Rollback
 
-Keep the Technitium scope disabled while the router is serving DHCP. For the
-cutover:
+Do not run router DHCP and Technitium DHCP at the same time. The active design
+is router DHCP disabled and Technitium's `Default` scope enabled. A canary
+macOS lease was validated with DHCP server `192.168.1.3`, gateway
+`192.168.1.1`, DNS `192.168.1.2`, the `home` search domain, and the classless
+`100.64.0.0/10 -> 192.168.1.3` route. DHCP-managed hostnames resolve through
+AdGuard.
 
-1. Disable DHCP on the router.
-2. Enable the `Default` scope in the Technitium web console.
-3. Renew one client lease and confirm it receives gateway `192.168.1.1`, DNS
-   `192.168.1.2`, and the `100.64.0.0/10` route via `192.168.1.3`.
-4. Confirm the renewed client's DHCP hostname resolves through AdGuard.
-5. Renew the remaining clients once the canary client is healthy.
-
-Rollback is the reverse: disable the Technitium scope first, re-enable router
-DHCP, then renew the affected client lease.
+Rollback is the reverse of the active design: disable the Technitium scope
+first, re-enable router DHCP, then renew affected client leases.
 
 ## Tailscale Model
 
@@ -143,19 +143,17 @@ global -> fd7a:115c:a1e0:b1a:0:1:c0a8:102  # 192.168.1.2 (AdGuard)
 home   -> fd7a:115c:a1e0:b1a:0:1:c0a8:103  # 192.168.1.3 (Technitium)
 ```
 
-Enable Tailscale's global DNS override. VPN On Demand disconnects Tailscale on
-the home Wi-Fi, so home clients still use the DHCP-provided `192.168.1.2`
-resolver directly. Away from home, Tailscale becomes active and sends normal
-DNS through AdGuard while the more-specific `home` route goes to Technitium.
+Tailscale's global DNS override is enabled. Roaming clients keep Tailscale
+connected at home, but disable acceptance of Tailscale DNS so DHCP-provided
+AdGuard (`192.168.1.2`) remains the local resolver and the directly connected
+`192.168.1.0/24` route wins over the advertised `/23`. Away from home, clients
+enable Tailscale DNS: ordinary queries use AdGuard over `...:102`, while the
+more-specific `home` split-DNS route uses Technitium over `...:103`.
 
-The stable Tailscale API can set the global resolver with
-`POST /api/v2/tailnet/-/dns/nameservers` using a `dns` array and update the
-restricted resolver with `PATCH /api/v2/tailnet/-/dns/split-dns` using a
-`home` mapping. The existing OAuth client needs DNS write scope first; its
-current device-management scope does not grant DNS access. Keep the Override
-DNS setting as an admin-console toggle: Tailscale's all-in-one DNS configuration
-API can express `overrideLocalDNS`, but the maintained client still marks that
-endpoint alpha.
+The home/away DNS toggle is a client concern (`tailscale set
+--accept-dns=false|true` on desktop platforms, or the equivalent OS automation
+on mobile). The tailnet DNS settings are currently managed in the Tailscale
+admin console; the existing OAuth client does not have DNS write scope.
 
 ## Install
 
