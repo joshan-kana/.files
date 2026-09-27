@@ -157,12 +157,20 @@ in
 
   ollamaMacBridge = _: {
     services.nginx.appendHttpConfig = ''
+      resolver 127.0.0.1 valid=30s ipv6=off;
+
+      upstream openclaw_ollama {
+        zone openclaw_ollama 64k;
+        server mac.home:11434 resolve;
+        server joshans-macbook-pro.tailba46a0.ts.net:11434 resolve backup;
+      }
+
       server {
         listen 127.0.0.1:11434;
         server_name ollama-proxy;
 
         location / {
-          include /run/openclaw-ollama-proxy.conf;
+          proxy_pass http://openclaw_ollama;
           proxy_connect_timeout 2s;
           proxy_read_timeout 300s;
           proxy_send_timeout 300s;
@@ -172,107 +180,6 @@ in
         }
       }
     '';
-
-    systemd = {
-      services.openclaw-ollama-proxy = {
-        description = "Write nginx upstream for the local OpenClaw Ollama proxy";
-        after = [
-          "network-online.target"
-          "avahi-daemon.service"
-        ];
-        wants = [
-          "network-online.target"
-          "avahi-daemon.service"
-        ];
-        before = [ "nginx.service" ];
-        path = with pkgs; [
-          avahi
-          coreutils
-          curl
-          gawk
-          systemd
-        ];
-        serviceConfig.Type = "oneshot";
-        script = ''
-          conf=/run/openclaw-ollama-proxy.conf
-          tmp="$(mktemp /run/openclaw-ollama-proxy.conf.XXXXXX)"
-          trap 'rm -f "$tmp"' EXIT
-
-          lan_host="Joshans-MacBook-Pro.local"
-          port="11434"
-          tailscale="http://100.87.66.20:11434"
-          selected=""
-
-          lan_ip="$(
-            timeout 2s avahi-resolve-host-name -4 "$lan_host" 2>/dev/null \
-              | awk '{ print $2; exit }' \
-              || true
-          )"
-
-          if [ -n "$lan_ip" ] \
-            && curl -fsS --connect-timeout 1 --max-time 2 "http://$lan_ip:$port/api/tags" >/dev/null 2>&1; then
-            selected="http://$lan_ip:$port"
-            echo "Using LAN Ollama upstream: $selected"
-          elif curl -fsS --connect-timeout 1 --max-time 2 "$tailscale/api/tags" >/dev/null 2>&1; then
-            selected="$tailscale"
-            echo "Using Tailscale Ollama upstream: $selected"
-          fi
-
-          if [ -z "$selected" ] && [ -s "$conf" ]; then
-            current="$(cat "$conf")"
-            case "$current" in
-              *".local"*)
-                selected="$tailscale"
-                echo "Existing proxy config used mDNS; replacing with numeric fallback: $selected"
-                ;;
-              *)
-                echo "No reachable Ollama endpoint; keeping existing proxy config:"
-                cat "$conf"
-                exit 0
-                ;;
-            esac
-          fi
-
-          if [ -z "$selected" ]; then
-            selected="$tailscale"
-            echo "No reachable Ollama endpoint yet; writing numeric fallback: $selected"
-          fi
-
-          printf 'proxy_pass %s;\n' "$selected" > "$tmp"
-
-          old="$(cat "$conf" 2>/dev/null || true)"
-          new="$(cat "$tmp")"
-
-          if [ "$new" = "$old" ]; then
-            echo "Proxy config unchanged:"
-            cat "$conf"
-            exit 0
-          fi
-
-          install -m 0644 "$tmp" "$conf"
-          echo "Wrote proxy config:"
-          cat "$conf"
-
-          if systemctl is-active --quiet nginx.service; then
-            systemctl --no-block reload nginx.service
-          fi
-        '';
-      };
-
-      timers.openclaw-ollama-proxy = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnBootSec = "30s";
-          OnUnitInactiveSec = "30s";
-          AccuracySec = "10s";
-          Persistent = true;
-        };
-      };
-      services.nginx = {
-        requires = [ "openclaw-ollama-proxy.service" ];
-        after = [ "openclaw-ollama-proxy.service" ];
-      };
-    };
   };
 
 }

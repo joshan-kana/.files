@@ -153,11 +153,10 @@ For example, an app-owned helper belongs under that app:
 
 ```nix
 openclaw = { ... }: {
-  virtualisation.oci-containers.containers.openclaw = { ... };
+  services.openclaw-gateway = { ... };
 
   ollamaMacBridge = { ... }: {
-    services.nginx = { ... };
-    systemd.services.openclaw-ollama-proxy = { ... };
+    services.nginx.appendHttpConfig = "...";
   };
 };
 ```
