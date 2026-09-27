@@ -16,6 +16,13 @@ let
     };
     mcp = {
       port = 4444;
+      policies.apiKey = {
+        mode = "strict";
+        keys = [
+          { key = "$CHATGPT_CLIENT_API_KEY"; }
+          { key = "$CODEX_CLIENT_API_KEY"; }
+        ];
+      };
       targets = [
         {
           name = "agent-mail";
@@ -61,6 +68,8 @@ let
   validatedConfig =
     pkgs.runCommand "agentgateway-config.yaml"
       {
+        CHATGPT_CLIENT_API_KEY = "validation-placeholder";
+        CODEX_CLIENT_API_KEY = "validation-placeholder";
         GITHUB_AUTHORIZATION = "validation-placeholder";
         YOUTRACK_AUTHORIZATION = "validation-placeholder";
         N8N_AUTHORIZATION = "validation-placeholder";
@@ -71,6 +80,9 @@ let
       '';
   start = pkgs.writeShellScript "agentgateway-start" ''
     set -euo pipefail
+    export CHATGPT_CLIENT_API_KEY="$(${pkgs.gnused}/bin/sed -n 's/^MCPGATEWAY_BEARER_TOKEN=//p' "$CREDENTIALS_DIRECTORY/chatgpt-client-env")"
+    : "''${CHATGPT_CLIENT_API_KEY:?MCPGATEWAY_BEARER_TOKEN is not set}"
+    export CODEX_CLIENT_API_KEY="$(cat "$CREDENTIALS_DIRECTORY/codex-client-api-key")"
     export GITHUB_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/github-authorization")"
     export YOUTRACK_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/youtrack-authorization")"
     export N8N_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/n8n-authorization")"
@@ -85,6 +97,8 @@ in
       DynamicUser = true;
       ExecStart = start;
       LoadCredential = [
+        "chatgpt-client-env:${server.secretsDir}/chatgpt-shared-tools.env"
+        "codex-client-api-key:${server.secretsDir}/agentgateway/codex-client-api-key"
         "github-authorization:${server.secretsDir}/agentgateway/github-authorization"
         "youtrack-authorization:${server.secretsDir}/agentgateway/youtrack-authorization"
         "n8n-authorization:${server.secretsDir}/agentgateway/n8n-authorization"
@@ -94,4 +108,6 @@ in
       UMask = "0077";
     };
   };
+
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ 4444 ];
 }
