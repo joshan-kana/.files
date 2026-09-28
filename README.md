@@ -149,17 +149,9 @@ function-valued attributes are child scopes and inherit the parent `enable`
 gate. Do not invent app-specific DSL fields when native NixOS/Home Manager
 options already express the configuration.
 
-For example, an app-owned helper belongs under that app:
-
-```nix
-openclaw = { ... }: {
-  services.openclaw-gateway = { ... };
-
-  ollamaMacBridge = { ... }: {
-    services.nginx.appendHttpConfig = "...";
-  };
-};
-```
+For example, an app's native service and proxy configuration stay together
+under that app's semantic scope rather than being split into generic service
+sections elsewhere in the repository.
 
 ### Plasma generated state
 

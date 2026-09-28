@@ -129,6 +129,30 @@ in
     enable = true;
     recommendedProxySettings = true;
 
+    appendHttpConfig = ''
+      resolver 127.0.0.1 valid=30s ipv6=off;
+
+      upstream openclaw_ollama {
+        zone openclaw_ollama 64k;
+        server mac.home:11434 resolve;
+      }
+
+      server {
+        listen 127.0.0.1:11434;
+        server_name ollama-proxy;
+
+        location / {
+          proxy_pass http://openclaw_ollama;
+          proxy_connect_timeout 2s;
+          proxy_read_timeout 300s;
+          proxy_send_timeout 300s;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+          proxy_set_header Host $host;
+        }
+      }
+    '';
+
     virtualHosts.openclaw = {
       listen = [
         {
@@ -153,32 +177,6 @@ in
         '';
       };
     };
-  };
-
-  ollamaMacBridge = _: {
-    services.nginx.appendHttpConfig = ''
-      resolver 127.0.0.1 valid=30s ipv6=off;
-
-      upstream openclaw_ollama {
-        zone openclaw_ollama 64k;
-        server mac.home:11434 resolve;
-      }
-
-      server {
-        listen 127.0.0.1:11434;
-        server_name ollama-proxy;
-
-        location / {
-          proxy_pass http://openclaw_ollama;
-          proxy_connect_timeout 2s;
-          proxy_read_timeout 300s;
-          proxy_send_timeout 300s;
-          proxy_http_version 1.1;
-          proxy_set_header Connection "";
-          proxy_set_header Host $host;
-        }
-      }
-    '';
   };
 
 }
