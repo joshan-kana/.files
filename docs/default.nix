@@ -344,7 +344,6 @@ let
     - [dotfiles options](reference/options.md)
     - [Backup and restore](runbooks/backup-restore.md)
     - [Vault ZFS storage](runbooks/vault-storage.md)
-    - [Maintain gh-dash patches](runbooks/gh-dash-patches.md)
   '';
 
   summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
