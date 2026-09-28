@@ -14,12 +14,9 @@ let
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
+  knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
 
   macHost = "mac.home";
-  macHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIImH30rGwro6wEvQ9mBHhgY7LLmm7cjobmw+IBv67Qjq";
-  macKnownHosts = pkgs.writeText "chatgpt-shell-known-hosts" ''
-    ${macHost} ${macHostKey}
-  '';
 
   remoteTargets = {
     mac = {
@@ -103,6 +100,7 @@ in
       tunnelSecret
       sudoSshKeySecret
       githubSecret
+      knownHostsFile
     ]
     ++ lib.mapAttrsToList (_: target: target.credential) remoteTargets;
 
@@ -133,7 +131,7 @@ in
         lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
         ++ [
           "chatgpt-shell-sudo:${sudoSshKeySecret}"
-          "chatgpt-shell-known-hosts:${macKnownHosts}"
+          "chatgpt-shell-known-hosts:${knownHostsFile}"
         ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
