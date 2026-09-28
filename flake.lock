@@ -3,7 +3,7 @@
     "agentgateway-release": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-ngYnuGzzFkmBnl1/e4AK9PAO9DzadbiseDH+jD4KHEk=",
+        "narHash": "sha256-9Y30vr5sIFmSMlm49YKnK4NxKHCbovjIYm7eCXWvyfw=",
         "type": "file",
         "url": "https://api.github.com/repos/agentgateway/agentgateway/releases/latest"
       },
