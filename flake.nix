@@ -93,8 +93,13 @@
       flake = false;
     };
 
-    agentgateway-release = {
-      url = "file+https://api.github.com/repos/agentgateway/agentgateway/releases/latest";
+    agentgateway-linux-amd64 = {
+      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64";
+      flake = false;
+    };
+
+    agentgateway-linux-arm64 = {
+      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64";
       flake = false;
     };
   };

@@ -1,15 +1,27 @@
 {
   "nodes": {
-    "agentgateway-release": {
+    "agentgateway-linux-amd64": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-9Y30vr5sIFmSMlm49YKnK4NxKHCbovjIYm7eCXWvyfw=",
+        "narHash": "sha256-6G1ieWVmzcHBUMi+zYVnZgJdKbs7fz84s27bMRqbLVk=",
         "type": "file",
-        "url": "https://api.github.com/repos/agentgateway/agentgateway/releases/latest"
+        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64"
       },
       "original": {
         "type": "file",
-        "url": "https://api.github.com/repos/agentgateway/agentgateway/releases/latest"
+        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64"
+      }
+    },
+    "agentgateway-linux-arm64": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-52Nd7qMY4ErS5NG23AVno6gx8NvHysG/OSdAVA0BzpY=",
+        "type": "file",
+        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64"
       }
     },
     "base16": {
@@ -1100,7 +1112,8 @@
     },
     "root": {
       "inputs": {
-        "agentgateway-release": "agentgateway-release",
+        "agentgateway-linux-amd64": "agentgateway-linux-amd64",
+        "agentgateway-linux-arm64": "agentgateway-linux-arm64",
         "comin": "comin",
         "computer": "computer",
         "determinate-nix": "determinate-nix",
