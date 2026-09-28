@@ -8,13 +8,6 @@
     # Stable Nixpkgs for server hosts where predictable updates matter more.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # Pull-based deployment from the repository main branch.
-    comin = {
-      url = "github:nlewo/comin/v0.14.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.treefmt-nix.follows = "treefmt-nix";
-    };
-
     # Hermes Agent: native NixOS service/module.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
@@ -298,7 +291,7 @@
             ./modules/options
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
-            inputs.comin.nixosModules.comin
+            ./overlays/comin.nix
             ./overlays/libreoffice.nix
             (semantic.rootModule hostScopeWithFile)
           ]
