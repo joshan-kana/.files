@@ -77,8 +77,6 @@ let
   hostsMarkdown = ''
     # Hosts
 
-    This page is generated from the evaluated flake configurations.
-
     | Host | System | Profile |
     | --- | --- | --- |
     ${lib.concatMapStringsSep "\n" (
@@ -92,8 +90,6 @@ let
 
   scopesMarkdown = ''
     # Semantic scopes
-
-    This table is generated from each host's evaluated `dotfiles.resolvedScopes` tree.
 
     ${scopeTableHeader}
     ${lib.concatStringsSep "\n" scopeTableRows}
@@ -118,8 +114,6 @@ let
 
         {
           echo '# dotfiles option reference'
-          echo
-          echo 'Generated from the project-owned evaluated Nix option tree.'
           echo
           sed -E \
             -e "s#${source}/##g" \
