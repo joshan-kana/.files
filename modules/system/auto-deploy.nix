@@ -12,6 +12,7 @@
   services.comin = {
     enable = true;
     hostname = config.dotfiles.profile.name;
+    allowForcePush = true;
 
     remotes = [
       {
