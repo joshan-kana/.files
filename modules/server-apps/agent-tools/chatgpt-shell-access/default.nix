@@ -15,9 +15,12 @@ let
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+
+  macHost = "mac.home";
+
   remoteTargets = {
     mac = {
-      sshTarget = "${primary.name}@Joshans-MacBook-Pro.local";
+      sshTarget = "${primary.name}@${macHost}";
       credential = macSshKeySecret;
       shell = "/bin/zsh";
       sudo = false;

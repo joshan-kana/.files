@@ -66,63 +66,27 @@ bindfs-mapped home should remain owned by joshan on the host.
 
 ## Ollama Proxy
 
-OpenClaw should always talk to Ollama through the local server endpoint:
+OpenClaw always talks to Ollama through the server-local endpoint:
 
 ```text
 http://127.0.0.1:11434
 ```
 
-The Ollama models actually run on Joshan's Mac. The NixOS server runs a small
-nginx proxy on `127.0.0.1:11434` and forwards that local endpoint to whichever
-Mac Ollama path is currently reachable.
-
-The selection policy is:
-
-1. Prefer the LAN path at home by resolving `Joshans-MacBook-Pro.local` and
-   writing the resolved numeric LAN IP into nginx config.
-2. Fall back to the Mac's Tailscale address, `100.87.66.20`, when the LAN path
-   is not reachable.
-
-This keeps OpenClaw stable because the provider base URL never changes, even
-when the Mac moves between LAN and Tailscale paths.
-
-## Why nginx Uses Numeric Upstreams
-
-The generated nginx include at `/run/openclaw-ollama-proxy.conf` should contain a
-numeric upstream such as:
+The Ollama models run on Joshan's Mac. nginx keeps the local endpoint stable and
+proxies it to:
 
 ```text
-proxy_pass http://192.168.1.108:11434;
+mac.home:11434
 ```
 
-or:
+`mac.home` is the canonical Mac identity. Technitium owns its routing policy as
+application-managed DNS state: the Failover app prefers the Mac's DHCP-managed
+LAN identity and switches to the stable Tailscale machine name when the LAN path
+fails. Consumers should not duplicate that LAN/Tailscale selection logic.
 
-```text
-proxy_pass http://100.87.66.20:11434;
-```
-
-It should not contain a `.local` hostname. nginx resolves normal hostnames during
-config load/reload, so a `.local` upstream can make nginx fail to start or reload
-when mDNS is unavailable or the Mac is off. A numeric fallback keeps nginx
-healthy. If the Mac or Ollama is unavailable, Ollama requests can fail with a
-backend/proxy error, but nginx itself remains running.
-
-## Polling Timer
-
-`openclaw-ollama-proxy.timer` periodically runs
-`openclaw-ollama-proxy.service`. The timer polls about every 30 seconds.
-
-The oneshot service:
-
-1. resolves the Mac's mDNS name to a LAN IP,
-2. checks the LAN Ollama `/api/tags` endpoint,
-3. checks the Tailscale Ollama `/api/tags` endpoint if LAN fails,
-4. writes `/run/openclaw-ollama-proxy.conf` only when the selected upstream
-   changes, and
-5. reloads nginx only after a config change.
-
-Each poll does a short mDNS lookup and one or two short HTTP checks, and nginx
-is not reloaded when the selected upstream is unchanged.
+nginx uses its local Technitium resolver and re-resolves `mac.home` periodically,
+so route changes do not require a generated config file, polling service, or
+nginx reload loop.
 
 ## Verification
 
@@ -131,30 +95,39 @@ Run this on the NixOS server:
 ```sh
 systemctl --failed
 systemctl status openclaw-gateway.service nginx.service --no-pager -l
-systemctl status openclaw-ollama-proxy.timer openclaw-ollama-proxy.service --no-pager -l
-systemctl list-timers openclaw-ollama-proxy.timer --all --no-pager
-cat /run/openclaw-ollama-proxy.conf
+getent ahostsv4 mac.home
 curl -sS -I --max-time 8 http://127.0.0.1:18789/ | sed -n '1,12p'
 curl -sS -i --max-time 8 http://127.0.0.1:11434/api/tags | sed -n '1,20p'
 ```
 
+For DNS-level routing diagnostics, query Technitium directly:
+
+```sh
+dig @127.0.0.1 -p 5300 mac.home CNAME
+dig @127.0.0.1 -p 5300 mac.home TXT
+```
+
+The TXT response is enabled on the Failover APP record and reports the current
+health state for the primary and secondary Mac identities.
+
 Expected healthy state:
 
-- `systemctl --failed` reports `0 loaded units listed`.
-- `openclaw-gateway.service` is active.
-- `openclaw-ollama-proxy.timer` is active and has a populated `NEXT` run.
-- `nginx.service` is active.
-- `/run/openclaw-ollama-proxy.conf` contains a numeric IP, not `.local`.
+- `systemctl --failed` reports no unexpected failed units.
+- `openclaw-gateway.service` and `nginx.service` are active.
+- `mac.home` resolves through whichever Mac path Technitium currently selects.
 - `http://127.0.0.1:11434/api/tags` returns the Mac Ollama models when the Mac
   and Ollama are reachable.
 
 ## Operational Notes
 
-The Mac runs Ollama; the NixOS server hosts the OpenClaw gateway and the local
-proxy. When the Mac is asleep, off, or Ollama is stopped, the local proxy
-can return a backend error. That is expected. The important property is that
-nginx and OpenClaw remain healthy and the polling timer picks up the Mac again
-when Ollama becomes reachable.
+The Mac runs Ollama; the NixOS server hosts the OpenClaw gateway and local nginx
+proxy. When the Mac is asleep, off, or Ollama is stopped, the local proxy can
+return a backend error. nginx and OpenClaw remain healthy, and DNS routing
+converges independently through Technitium when the Mac changes location.
+
+The Technitium zone, Failover APP record, health-check profile, and DHCP-backed
+Mac record are mutable application state under `/var/lib/apps/technitium`.
+Nix owns the service boundary; it does not duplicate those DNS policy records.
 
 ## OpenRouter Model Lanes
 

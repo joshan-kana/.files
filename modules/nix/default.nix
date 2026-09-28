@@ -7,7 +7,7 @@
 
 let
   atticCache = "dotfiles";
-  atticEndpoint = "http://192.168.1.3:8080";
+  atticEndpoint = "http://nixos-server.home:8080";
   nixBuilderSecret = "${config.dotfiles.server.secretsDir or config.dotfiles.secretsDir}/nix-builder";
 in
 {
@@ -53,7 +53,7 @@ in
       distributedBuilds = true;
       buildMachines = [
         {
-          hostName = "Joshans-MacBook-Pro.local";
+          hostName = "mac.home";
           protocol = "ssh-ng";
           sshUser = config.dotfiles.users.primary.name;
           sshKey = nixBuilderSecret;
@@ -62,7 +62,7 @@ in
           maxJobs = 12;
         }
         {
-          hostName = "Joshans-MacBook-Pro.local:32223";
+          hostName = "mac.home:32223";
           protocol = "ssh-ng";
           sshUser = config.dotfiles.users.primary.name;
           sshKey = nixBuilderSecret;
