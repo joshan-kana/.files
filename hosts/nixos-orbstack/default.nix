@@ -53,7 +53,7 @@
       }:
       {
         nix.buildMachines = lib.filter (
-          builder: builder.hostName != "Joshans-MacBook-Pro.local:32223"
+          builder: builder.hostName != "mac.home:32223"
         ) inherited.nix.buildMachines;
 
         users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
