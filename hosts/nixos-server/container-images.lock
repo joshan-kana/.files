@@ -3,16 +3,12 @@
     "digest": "sha256:43181ac35adc3e03caebcd65df11dceb7269b94f9ae47d1da1c8caf76f3cf43a",
     "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
   },
-  "mcp-gateway": {
-    "digest": "sha256:31cf1d45ab56d83fc109ac0de1ada7b359df2497a52765af73421f013fa76b4d",
-    "source": "ghcr.io/ibm/mcp-context-forge:v1.0.10"
-  },
   "n8n": {
-    "digest": "sha256:b73045abaddb40cb4024e86eea1b1f69093501a7339f685a4cd486b7743d23ae",
+    "digest": "sha256:ffeb52485f78b1b06c9a832205853cf75da72a07a514c9a27724df85979d6c34",
     "source": "docker.io/n8nio/n8n:latest"
   },
   "onedev": {
-    "digest": "sha256:f59032611d73af965f349b9942cc5cae5c1d95a96093cf169b5df75935f3b040",
+    "digest": "sha256:7fccae714bfd9190056fa1985f3facd966542bd9d4c64f020af55c46a3052aa1",
     "source": "1dev/server:latest"
   }
 }
