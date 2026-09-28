@@ -1,7 +1,7 @@
 # Summary
 
 - [Introduction](introduction.md)
-- [Documentation model](documentation-model.md)
+- [Sources of truth](documentation-model.md)
 - [Reference](reference.md)
   - [Hosts](reference/hosts.md)
   - [Semantic scopes](reference/scopes.md)

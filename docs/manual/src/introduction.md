@@ -1,8 +1,8 @@
 # .files Manual
 
-This manual is built from the exact `.files` revision being inspected.
+Reference data is built from the checked-out `.files` revision.
 
-Generated reference pages describe the repository's project-owned Nix interfaces and evaluated host/scope structure without committing generated Markdown back into Git.
+Project-owned Nix interfaces and evaluated host/scope state are rendered without committing generated Markdown.
 
 ```sh
 nix build .#docs

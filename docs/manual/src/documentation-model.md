@@ -1,9 +1,9 @@
-# Documentation model
+# Sources of truth
 
-`.files` treats executable configuration as the source of truth for current implementation facts.
+Executable configuration is the source of truth for current implementation facts.
 
-- Nix option descriptions document configurable project interfaces.
+- Nix option descriptions define configurable project interfaces.
 - Evaluated configuration supplies host and semantic-scope reference state.
-- Generated output is a build artifact rather than a second committed copy of configuration facts.
+- Generated output is a build artifact rather than a committed copy of configuration facts.
 
-Later documentation layers can add authored operational guidance around this generated reference without changing those source-of-truth rules.
+Operational procedures belong in runbooks; current implementation facts remain sourced from executable configuration.
