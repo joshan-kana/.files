@@ -156,7 +156,7 @@ in
 
     services.ntfy.url = mkOption {
       type = types.str;
-      default = "http://192.168.1.3:2586";
+      default = "http://nixos-server.home:2586";
       description = "Private ntfy endpoint used by infrastructure clients.";
     };
 
