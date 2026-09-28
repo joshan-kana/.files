@@ -27,7 +27,14 @@ let
     options = projectOptions;
     documentType = "none";
     variablelistId = "dotfiles-options";
-    optionIdPrefix = "opt-dotfiles-";
+  };
+  optionDocsCommonMark = optionDocs.optionsCommonMark.overrideAttrs {
+    extraArgs = [
+      "--anchor-style"
+      "legacy"
+      "--anchor-prefix"
+      "opt-"
+    ];
   };
 
   scopeChildren = tree: lib.filterAttrs (_: value: builtins.isAttrs value && value ? enable) tree;
@@ -339,7 +346,9 @@ let
           sed -E \
             -e "s#${source}/##g" \
             -e 's#\[([^]]+)\]\(file://[^)]*\)#`\1`#g' \
-            ${optionDocs.optionsCommonMark}
+            -e 's|^## (.*) \{#([^}]+)\}$|<h2 id="\2">\1</h2>|' \
+            -e '/^<h2 id=/ s/\\\././g' \
+            ${optionDocsCommonMark}
         } > "$out/src/reference/options.md"
 
         install -m 0644 ${hostsSource} "$out/src/reference/hosts.md"
