@@ -71,6 +71,58 @@ let
     ) hostScopeRows.${hostName};
 
   hostNames = builtins.attrNames configurations;
+
+  filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
+  filesystemValue = fs: if fs == null then "_Not configured_" else "`${fs.device}` (`${fs.fsType}`)";
+
+  hostIdentityMarkdown =
+    name: host:
+    let
+      inherit (host) config;
+      primaryUser = config.dotfiles.users.primary;
+      primaryHomePath = "${primaryUser.homeRoot}/${primaryUser.name}";
+    in
+    ''
+      # `${name}`
+
+      | Setting | Evaluated value |
+      | --- | --- |
+      | Platform | `${host.pkgs.stdenv.hostPlatform.system}` |
+      | Profile | `${config.dotfiles.profile.name}` |
+      | Hostname | `${config.networking.hostName}` |
+      | Primary user | `${primaryUser.name}` |
+      | Primary home | `${primaryHomePath}` |
+      | Repository | `${config.dotfiles.paths.repoPath}` |
+      | Container | ${if config.boot.isContainer or false then "yes" else "no"} |
+      | Root filesystem | ${filesystemValue (filesystem config "/")} |
+      | Boot filesystem | ${filesystemValue (filesystem config "/boot")} |
+      | Home filesystem | ${filesystemValue (filesystem config "/home")} |
+    '';
+
+  hostRunbookEnvironment =
+    name: host:
+    let
+      inherit (host) config;
+      primaryUser = config.dotfiles.users.primary;
+      value = fs: field: if fs == null then "" else fs.${field};
+      rootFs = filesystem config "/";
+      bootFs = filesystem config "/boot";
+      homeFs = filesystem config "/home";
+    in
+    ''
+      HOST_NAME=${lib.escapeShellArg name}
+      SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
+      PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
+      DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
+      PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
+      ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
+      ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
+      BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
+      BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
+      HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
+      HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
+    '';
   scopeTableHeader = "| Scope | ${lib.concatStringsSep " | " hostNames} |\n| --- | ${
     lib.concatStringsSep " | " (map (_: "---:") hostNames)
   } |";
@@ -104,6 +156,10 @@ let
     hosts = lib.mapAttrs (_: host: {
       system = host.pkgs.stdenv.hostPlatform.system;
       profile = host.config.dotfiles.profile.name;
+      hostName = host.config.networking.hostName;
+      repoPath = host.config.dotfiles.paths.repoPath;
+      primaryUser = host.config.dotfiles.users.primary.name;
+      container = host.config.boot.isContainer or false;
       enabledScopes = map (row: lib.concatStringsSep "." row.path) (
         lib.filter (row: row.enabled) (flattenScopes [ ] host.config.dotfiles.resolvedScopes)
       );
@@ -206,9 +262,7 @@ let
     ${lib.concatStringsSep "\n" scopeTableRows}
   '';
 
-  serverMarkdown = ''
-    # NixOS server reference
-
+  serverDetailsMarkdown = ''
     ## Storage
 
     | Setting | Evaluated value |
@@ -264,7 +318,39 @@ let
     | Monthly | ${toString retention.monthly} |
   '';
 
+  hostMarkdown = lib.mapAttrs (
+    name: host:
+    hostIdentityMarkdown name host
+    + lib.optionalString (name == "nixos-server") "\n${serverDetailsMarkdown}"
+  ) configurations;
+
+  hostSources = lib.mapAttrs (
+    name: markdown: pkgs.writeText "dotfiles-host-${name}.md" markdown
+  ) hostMarkdown;
+
+  hostEnvironmentSources = lib.mapAttrs (
+    name: host: pkgs.writeText "dotfiles-host-${name}-env.sh" (hostRunbookEnvironment name host)
+  ) configurations;
+
+  summaryMarkdown = ''
+    # Summary
+
+    - [Hosts](reference/hosts.md)
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      "  - [`${name}`](reference/hosts/${name}.md)\n    - [Install or recover](runbooks/install/${name}.md)"
+    ) hostNames}
+    - [Semantic scopes](reference/scopes.md)
+    - [dotfiles options](reference/options.md)
+    - [Backup and restore](runbooks/backup-restore.md)
+    - [Vault ZFS storage](runbooks/vault-storage.md)
+    - [Maintain gh-dash patches](runbooks/gh-dash-patches.md)
+  '';
+
+  summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
+
   runbookEnvironment = ''
+    ${hostRunbookEnvironment "nixos-server" server}
     APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
     VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
     VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
@@ -319,7 +405,6 @@ let
 
   hostsSource = pkgs.writeText "dotfiles-hosts.md" hostsMarkdown;
   scopesSource = pkgs.writeText "dotfiles-scopes.md" scopesMarkdown;
-  serverSource = pkgs.writeText "dotfiles-server.md" serverMarkdown;
   runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
   backupSource = pkgs.writeText "dotfiles-backup-reference.md" backupMarkdown;
   storageSource = pkgs.writeText "dotfiles-storage-reference.md" storageMarkdown;
@@ -338,7 +423,7 @@ let
         set -euo pipefail
         cp -R ${source}/docs/manual/. "$out"
         chmod -R u+w "$out"
-        mkdir -p "$out/src/generated" "$out/src/reference" "$out/data"
+        mkdir -p "$out/src/generated/hosts" "$out/src/reference/hosts" "$out/data"
 
         {
           echo '# dotfiles option reference'
@@ -351,9 +436,13 @@ let
             ${optionDocsCommonMark}
         } > "$out/src/reference/options.md"
 
+        install -m 0644 ${summarySource} "$out/src/SUMMARY.md"
         install -m 0644 ${hostsSource} "$out/src/reference/hosts.md"
         install -m 0644 ${scopesSource} "$out/src/reference/scopes.md"
-        install -m 0644 ${serverSource} "$out/src/reference/server.md"
+        ${lib.concatMapStringsSep "\n" (name: ''
+          install -m 0644 ${hostSources.${name}} "$out/src/reference/hosts/${name}.md"
+          install -m 0644 ${hostEnvironmentSources.${name}} "$out/src/generated/hosts/${name}.sh"
+        '') hostNames}
         install -m 0644 ${runbookEnvironmentSource} "$out/src/generated/server-env.sh"
         install -m 0644 ${backupSource} "$out/src/generated/backup-reference.md"
         install -m 0644 ${storageSource} "$out/src/generated/storage-reference.md"
@@ -380,7 +469,6 @@ let
           src/reference/options.md \
           src/reference/hosts.md \
           src/reference/scopes.md \
-          src/reference/server.md \
           src/generated/server-env.sh \
           src/generated/backup-reference.md \
           src/generated/storage-reference.md \
@@ -388,6 +476,12 @@ let
           data/reference.json; do
           test -s "$out/$required"
         done
+
+        ${lib.concatMapStringsSep "\n" (name: ''
+          test -s "$out/src/reference/hosts/${name}.md"
+          test -s "$out/src/generated/hosts/${name}.sh"
+          test -s "$out/src/runbooks/install/${name}.md"
+        '') hostNames}
       '';
 
   book =

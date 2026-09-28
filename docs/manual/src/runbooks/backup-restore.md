@@ -85,7 +85,7 @@ sudo restic-secrets restore latest --target /
 sudo restic-apps restore latest --target / --include "$APP_DATA_ROOT"
 ```
 
-For a bare-metal replacement, use [Install or recover the NixOS server](server-install.md), which covers the bootstrap sequence before the installed system exists.
+For a bare-metal replacement, use [Install or recover `nixos-server`](install/nixos-server.md), which covers the bootstrap sequence before the installed system exists.
 
 ## Application-data recovery with Restic
 

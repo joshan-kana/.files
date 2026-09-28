@@ -1,4 +1,4 @@
-# NixOS Server Install Guide
+# Install or recover `nixos-server`
 
 This guide installs the current `nixos-server` configuration on the Dell
 OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected until
@@ -9,7 +9,7 @@ the installed system has booted successfully.
 The built manual injects these values from `nixosConfigurations.nixos-server`:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 ```
 
 Commands below that use these variables assume the block has been loaded in the current shell.
@@ -43,7 +43,7 @@ sudo mkfs.btrfs -f -L ROOT "${DISK}p2"
 Mount the target and create the application-data subvolume:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 sudo mount /dev/disk/by-label/ROOT /mnt
 sudo mkdir -p /mnt/boot "$(dirname "/mnt$APP_DATA_ROOT")"
 sudo mount /dev/disk/by-label/BOOT /mnt/boot
@@ -89,7 +89,7 @@ identities and password hashes are retained across reinstalls.
 Clone the repository using the restored GitHub SSH key:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 sudo env \
   GIT_SSH_COMMAND="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
   git clone --recurse-submodules \
@@ -103,7 +103,7 @@ Now that the repository is available, derive the app-backup settings directly
 from the target configuration instead of copying them into this guide:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 nix_eval() {
@@ -125,7 +125,7 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 ```
 
 Backup creation, repository maintenance, and selective recovery procedures are
-kept in [Backup And Restore](backup-restore.md).
+kept in [Backup and restore](../backup-restore.md).
 
 Technitium's zones, DHCP scope and leases, DNS Apps, recursion, and forwarder
 policy are application-managed state. Restoring the server app-data backup
@@ -148,7 +148,7 @@ cat /mnt/etc/nixos/hardware-configuration.nix
 Derive the bootstrap binary-cache settings from the target configuration:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 substituters="$(
@@ -179,7 +179,7 @@ Reboot from the internal NVMe with the Vault HDDs still disconnected. Then check
 the filesystems, network, restored backups, and failed units:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 findmnt -T /
 findmnt -T /boot
 findmnt -T "$APP_DATA_ROOT"
@@ -194,11 +194,11 @@ systemctl --failed --no-pager
 Fix ownership of the restored user files if needed:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
 ```
 
 After the base system is healthy, connect the Vault HDDs and follow
-[Vault ZFS Storage](vault-storage.md) to import and verify the existing pool.
+[Vault ZFS storage](../vault-storage.md) to import and verify the existing pool.
 Then restore the PostgreSQL-backed application databases using
-[Backup And Restore](backup-restore.md#postgresql-backed-applications).
+[Backup and restore](../backup-restore.md#postgresql-backed-applications).
