@@ -1,0 +1,120 @@
+diff --git a/internal/repository/git.go b/internal/repository/git.go
+index f50bda3..756c654 100644
+--- a/internal/repository/git.go
++++ b/internal/repository/git.go
+@@ -56,7 +56,7 @@ func hasNotBeenHardReset(r repository, branchName string, currentMainHash *plumb
+ 	return nil
+ }
+ 
+-func getHeadFromRemoteAndBranch(r repository, remoteName, branchName, currentMainCommitId string) (newHead plumbing.Hash, msg string, err error) {
++func getHeadFromRemoteAndBranch(r repository, remoteName, branchName, currentMainCommitId string, allowForcePush bool) (newHead plumbing.Hash, msg string, err error) {
+ 	var currentMainHash *plumbing.Hash
+ 	head := getRemoteCommitHash(r, remoteName, branchName)
+ 	if head == nil {
+@@ -67,8 +67,10 @@ func getHeadFromRemoteAndBranch(r repository, remoteName, branchName, currentMai
+ 		currentMainHash = &c
+ 	}
+ 
+-	if err = hasNotBeenHardReset(r, branchName, currentMainHash, head); err != nil {
+-		return
++	if !allowForcePush {
++		if err = hasNotBeenHardReset(r, branchName, currentMainHash, head); err != nil {
++			return
++		}
+ 	}
+ 
+ 	commitObject, err := r.Repository.CommitObject(*head)
+diff --git a/internal/repository/repository.go b/internal/repository/repository.go
+index 19f7ce5..ccbab97 100644
+--- a/internal/repository/repository.go
++++ b/internal/repository/repository.go
+@@ -6,6 +6,7 @@ import (
+ 	"fmt"
+ 	"os"
+ 	"slices"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/ProtonMail/go-crypto/openpgp"
+@@ -138,7 +139,8 @@ func (r *repository) Update() error {
+ 			*r,
+ 			remote.Name,
+ 			remote.Main.Name,
+-			r.RepositoryStatus.MainCommitId)
++			r.RepositoryStatus.MainCommitId,
++			strings.EqualFold(os.Getenv("COMIN_ALLOW_FORCE_PUSH"), "true"))
+ 		if err != nil {
+ 			remote.Main.ErrorMsg = err.Error()
+ 			logrus.Debugf("Failed to getHeadFromRemoteAndBranch: %s", err)
+@@ -188,7 +190,8 @@ func (r *repository) Update() error {
+ 			*r,
+ 			remote.Name,
+ 			remote.Testing.Name,
+-			r.RepositoryStatus.MainCommitId)
++			r.RepositoryStatus.MainCommitId,
++			false)
+ 		if err != nil {
+ 			remote.Testing.ErrorMsg = err.Error()
+ 			logrus.Debugf("Failed to getHeadFromRemoteAndBranch: %s", err)
+diff --git a/internal/repository/repository_test.go b/internal/repository/repository_test.go
+index c3d118c..a28a92c 100644
+--- a/internal/repository/repository_test.go
++++ b/internal/repository/repository_test.go
+@@ -551,6 +551,57 @@ func TestRepositoryUpdateMain(t *testing.T) {
+ 	assert.Equal(t, "origin", r.RepositoryStatus.SelectedRemoteName)
+ }
+ 
++func TestRepositoryUpdateHardResetMainAllowed(t *testing.T) {
++	t.Setenv("COMIN_ALLOW_FORCE_PUSH", "true")
++
++	remoteRepositoryDir := t.TempDir()
++	cominRepositoryDir := t.TempDir()
++	remoteRepository, err := initRemoteRepostiory(remoteRepositoryDir, true)
++	assert.Nil(t, err)
++
++	gitConfig := types.GitConfig{
++		Path: cominRepositoryDir,
++		Remotes: []types.Remote{
++			{
++				Name: "origin",
++				URL:  remoteRepositoryDir,
++				Branches: types.Branches{
++					Main: types.Branch{
++						Name: "main",
++					},
++					Testing: types.Branch{
++						Name: "testing",
++					},
++				},
++				Timeout: 30,
++			},
++		},
++	}
++	r, _ := New(gitConfig, "", prometheus.New())
++
++	r.Fetch([]string{"origin"})
++	_ = r.Update()
++
++	previousHash, _ := commitFile(remoteRepository, remoteRepositoryDir, "main", "file-4")
++	oldHead, _ := commitFile(remoteRepository, remoteRepositoryDir, "main", "file-5")
++	r.Fetch([]string{"origin"})
++	_ = r.Update()
++	assert.Equal(t, oldHead, r.RepositoryStatus.SelectedCommitId)
++
++	ref := plumbing.NewHashReference("refs/heads/main", plumbing.NewHash(previousHash))
++	assert.Nil(t, remoteRepository.Storer.SetReference(ref))
++	newHead, _ := commitFile(remoteRepository, remoteRepositoryDir, "main", "file-6")
++
++	r.Fetch([]string{"origin"})
++	_ = r.Update()
++
++	assert.Equal(t, newHead, r.RepositoryStatus.SelectedCommitId)
++	assert.Equal(t, "main", r.RepositoryStatus.SelectedBranchName)
++	assert.Equal(t, newHead, r.RepositoryStatus.MainCommitId)
++	assert.Empty(t, r.RepositoryStatus.Remotes[0].Main.ErrorMsg)
++	assert.Contains(t, r.RepositoryStatus.Remotes[0].Testing.ErrorMsg, "this branch has been hard reset")
++}
++
+ func TestRepositoryUpdateHardResetMain(t *testing.T) {
+ 	remoteRepositoryDir := t.TempDir()
+ 	cominRepositoryDir := t.TempDir()
