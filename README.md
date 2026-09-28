@@ -28,7 +28,7 @@ docs-serve
 
 `docs` builds the current manual. `docs-serve` regenerates the mdBook source when Nix, host, module, library, or manual sources change and serves a live local preview. Normal development-shell entry does not build the manual; documentation generation stays explicit during ordinary work and automatic while `docs-serve` is running.
 
-The documentation rule is deliberately simple: do not manually copy implementation facts that can be derived from evaluated Nix. Use normal code comments for surprising local behaviour, option descriptions for configurable interfaces, RFC 145 doc comments when a larger scope needs prose, and runbooks for procedures where ordering, safety, recovery, or judgement matters.
+Current implementation facts come from evaluated Nix. Local comments explain surprising behaviour, option descriptions define configurable interfaces, RFC 145 comments explain larger scope boundaries, and runbooks cover procedures involving ordering, safety, recovery, or judgement.
 
 The cross-project operating handbook is included as the `docs/infrastructure-docs` submodule.
 
