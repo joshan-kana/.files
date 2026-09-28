@@ -95,9 +95,10 @@ _: {
     the underlying filesystem. Those facilities are operational capabilities,
     not a security boundary against the OpenClaw workload.
 
-    Local Ollama access uses a loopback nginx endpoint. A timer selects the Mac's
-    reachable LAN address first and a numeric Tailscale fallback otherwise, so
-    nginx does not depend on mDNS remaining resolvable during reloads.
+    Local Ollama access uses a loopback nginx endpoint backed by the canonical
+    `mac.home` identity. Technitium owns LAN/Tailscale failover as mutable DNS
+    policy, while nginx re-resolves that name through the local resolver instead
+    of duplicating routing logic or running a polling/reload loop.
 
     OpenRouter provider lanes use independently scoped credentials and no
     automatic fallback between privacy classes. Free-provider lanes are for
