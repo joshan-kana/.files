@@ -10,6 +10,7 @@ let
   cachePort = 8080;
   atticSecret = "${server.secretsDir}/attic.env";
   cacheHost = server.lan.serverIp;
+  lanHost = "${config.networking.hostName}.home";
   tailnetHost = config.networking.hostName;
 in
 {
@@ -27,6 +28,8 @@ in
       allowed-hosts = [
         cacheHost
         "${cacheHost}:${toString cachePort}"
+        lanHost
+        "${lanHost}:${toString cachePort}"
         tailnetHost
         "${tailnetHost}:${toString cachePort}"
       ];
