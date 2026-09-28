@@ -50,22 +50,7 @@
   desktopApps = import ./desktop-apps;
 
   /**
-    Self-hosted server applications and their app-owned infrastructure.
-
-    Each application scope owns the complete app-specific system consequence of
-    enabling that application: service/container configuration, persistent-state
-    wiring, secrets references, users/groups, permissions, firewall rules,
-    backups, and runtime glue. Shared infrastructure remains in its shared scope.
-
-    Runtime secrets are files outside the Nix store. Required secrets should make
-    an enabled service fail clearly when absent rather than silently disabling the
-    service. Persistent application state normally belongs under the configured
-    application-data root; bulk user data belongs under the configured bulk-data
-    root.
-
-    Prefer native NixOS modules when they cleanly express the deployment. Do not
-    add a second server-app abstraction layer merely to make applications look
-    uniform.
+    Self-hosted server applications and app-owned infrastructure.
   */
   serverApps = import ./server-apps;
 

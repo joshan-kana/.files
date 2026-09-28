@@ -1,126 +1,76 @@
 _: {
   /**
-    Shared tooling that exposes controlled agent capabilities from the server.
+    Controlled agent tooling exposed from the server.
   */
   agentTools = import ./agent-tools;
 
   /**
-    Attic binary-cache service and storage integration.
+    Attic binary-cache service.
   */
   attic = import ./attic;
 
   /**
-    Git hosting service and its persistent server state.
+    Gitea Git hosting service.
   */
   gitea = import ./gitea;
 
   /**
-    Native Home Assistant service, LAN integration, and persistent automation state.
+    Native Home Assistant service.
   */
   homeAssistant = import ./home-assistant;
 
   /**
-    Hermes Agent service integration.
+    Hermes Agent service.
   */
   hermesAgent = import ./hermes-agent;
 
   /**
-    Native Immich deployment.
-
-    Bulk media and generated assets live on the Vault while database state is
-    protected through logical backups. Existing media can remain in place as an
-    external library rather than being copied into application storage.
-
-    External-library registration is application-managed state rather than a
-    Nix interface. The existing library is registered at `/srv/vault/media-library`;
-    recreate that registration after a fresh application database before starting
-    its scan. Initial thumbnail, metadata, face, search, and video processing can
-    be CPU-intensive.
-
-    Recovery requires compatible media and database state. A NixOS generation
-    rollback is not a database downgrade mechanism after an application migration.
+    Native Immich media service.
   */
   immich = import ./immich;
 
   /**
-    Matrix bridge services and their persistent state.
+    Matrix bridge services.
   */
   matrix = import ./matrix;
 
   /**
-    Native Matter Server service with persistent state and local discovery support.
+    Native Matter Server service.
   */
   matterServer = import ./matter-server;
 
   /**
-    n8n workflow automation and its persistent application state.
+    n8n workflow automation service.
   */
   n8n = import ./n8n;
 
   /**
-    Private ntfy event bus used by infrastructure services on the LAN/Tailnet.
-
-    Topics are application-owned interfaces. The service itself owns persistence,
-    authentication, and LAN firewall exposure; individual event integrations stay
-    with the application that publishes or consumes them.
+    Private ntfy event-bus service.
   */
   ntfy = import ./ntfy;
 
   /**
-    Loopback webhook receiver and Tailscale Funnel ingress for authenticated
-    external events.
-
-    Hook definitions belong to the application being triggered rather than to the
-    shared ingress service, so adding an event source does not turn this scope into
-    a central workflow registry.
+    Authenticated external-event webhook ingress.
   */
   webhook = import ./webhook;
 
   /**
-    OneDev source hosting and development service.
+    OneDev source hosting service.
   */
   onedev = import ./onedev;
 
   /**
-    Native mutable OpenClaw gateway and its host integration.
-
-    Nix owns the service boundary, runtime package, secret injection, networking,
-    proxying, and host capabilities. OpenClaw owns its mutable `openclaw.json`
-    application configuration under server app data; startup validates that file
-    before the gateway is allowed to run.
-
-    The service is intentionally host-root-equivalent. It receives passwordless
-    sudo and a bindfs view of the primary user's home so repository work can use
-    ordinary Git/GitHub tooling while files remain owned by the primary user on
-    the underlying filesystem. Those facilities are operational capabilities,
-    not a security boundary against the OpenClaw workload.
-
-    Local Ollama access uses a loopback nginx endpoint backed by the canonical
-    `mac.home` identity. Technitium owns LAN/Tailscale failover as mutable DNS
-    policy, while nginx re-resolves that name through the local resolver instead
-    of duplicating routing logic or running a polling/reload loop.
-
-    OpenRouter provider lanes use independently scoped credentials and no
-    automatic fallback between privacy classes. Free-provider lanes are for
-    non-sensitive prompts only.
+    Native OpenClaw gateway service.
   */
   openclaw = import ./openclaw;
 
   /**
-    Open WebUI service and local model integration.
+    Open WebUI service.
   */
   openWebui = import ./open-webui;
 
   /**
-    Native Paperless-ngx deployment.
-
-    Document media belongs on bulk storage while smaller application state and
-    logical database backups participate in the normal application-data backup.
-    The consume directory is an inbox, not the authoritative document archive.
-
-    Create the initial application user with `paperless-manage createsuperuser`.
-    A complete recovery requires both document media and compatible application
-    database state.
+    Native Paperless-ngx document service.
   */
   paperless = import ./paperless;
 }

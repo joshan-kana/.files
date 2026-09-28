@@ -204,6 +204,12 @@ sudo gzip -cd "$immich_dump" | \
 
 Start the applications again and verify their state before allowing normal backup timers to continue.
 
+### Application-managed recovery state
+
+Immich external-library registration is stored in application state rather than Nix. After restoring a fresh application database, recreate the external library pointing to `$VAULT_ROOT/media-library` before starting its scan.
+
+`$PAPERLESS_CONSUME_ROOT` is an ingestion inbox, not the authoritative Paperless document archive. Complete Paperless recovery depends on compatible document media and database state.
+
 ## Vault snapshot recovery
 
 Vault recovery is deliberately separate from application-data Restic/Snapper recovery. For browsing snapshots, copying individual files, cloning snapshots for inspection, whole-dataset rollback warnings, and pool-import recovery, use [Vault ZFS storage](vault-storage.md).
