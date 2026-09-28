@@ -93,8 +93,8 @@
       flake = false;
     };
 
-    agentgateway-release = {
-      url = "file+https://api.github.com/repos/agentgateway/agentgateway/releases/latest";
+    agentgateway-bin = {
+      url = "github:joshan-kana/agentgateway-bin-nix";
       flake = false;
     };
   };

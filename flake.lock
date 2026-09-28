@@ -1,15 +1,19 @@
 {
   "nodes": {
-    "agentgateway-release": {
+    "agentgateway-bin": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-9Y30vr5sIFmSMlm49YKnK4NxKHCbovjIYm7eCXWvyfw=",
-        "type": "file",
-        "url": "https://api.github.com/repos/agentgateway/agentgateway/releases/latest"
+        "lastModified": 1790605549,
+        "narHash": "sha256-B5CheBpK0ss95/wToxi0wXRMBR1g8nZBIAPfwpP3xNo=",
+        "owner": "joshan-kana",
+        "repo": "agentgateway-bin-nix",
+        "rev": "d3b0c95d347c71c1f3108cef8b14e9ef4c67223d",
+        "type": "github"
       },
       "original": {
-        "type": "file",
-        "url": "https://api.github.com/repos/agentgateway/agentgateway/releases/latest"
+        "owner": "joshan-kana",
+        "repo": "agentgateway-bin-nix",
+        "type": "github"
       }
     },
     "base16": {
@@ -1100,7 +1104,7 @@
     },
     "root": {
       "inputs": {
-        "agentgateway-release": "agentgateway-release",
+        "agentgateway-bin": "agentgateway-bin",
         "comin": "comin",
         "computer": "computer",
         "determinate-nix": "determinate-nix",
