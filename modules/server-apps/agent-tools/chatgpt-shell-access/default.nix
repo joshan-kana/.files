@@ -15,26 +15,15 @@ let
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
 
-  # The server gets the LAN view of mac.home, so keep the stable Tailscale
-  # hostname as a transport fallback for when the Mac roams.
   macHost = "mac.home";
-  macTailnetHost = "joshans-macbook-pro.tailba46a0.ts.net";
   macHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIImH30rGwro6wEvQ9mBHhgY7LLmm7cjobmw+IBv67Qjq";
   macKnownHosts = pkgs.writeText "chatgpt-shell-known-hosts" ''
     ${macHost} ${macHostKey}
-  '';
-  macProxy = pkgs.writeShellScript "chatgpt-shell-mac-proxy" ''
-    set -u
-    port="$1"
-
-    ${pkgs.socat}/bin/socat - "TCP:${macHost}:$port,connect-timeout=2" ||
-      exec ${pkgs.socat}/bin/socat - "TCP:${macTailnetHost}:$port,connect-timeout=5"
   '';
 
   remoteTargets = {
     mac = {
       sshTarget = "${primary.name}@${macHost}";
-      sshOptions = [ "-oProxyCommand=${macProxy} %p" ];
       credential = macSshKeySecret;
       shell = "/bin/zsh";
       sudo = false;
@@ -42,7 +31,6 @@ let
   };
   remoteTargetConfig = lib.mapAttrs (name: target: {
     ssh_target = target.sshTarget;
-    ssh_options = target.sshOptions;
     credential = "chatgpt-shell-${name}";
     inherit (target) shell sudo;
   }) remoteTargets;

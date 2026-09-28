@@ -162,7 +162,6 @@ in
       upstream openclaw_ollama {
         zone openclaw_ollama 64k;
         server mac.home:11434 resolve;
-        server joshans-macbook-pro.tailba46a0.ts.net:11434 resolve backup;
       }
 
       server {

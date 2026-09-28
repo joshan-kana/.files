@@ -24,7 +24,6 @@ Host = Literal["nixos-server", "mac"]
 @dataclass(frozen=True)
 class RemoteTarget:
     ssh_target: str
-    ssh_options: list[str]
     credential: str
     shell: str
     sudo: bool
@@ -139,7 +138,6 @@ def _build_argv(host: Host, script: str) -> list[str]:
     target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        *target.ssh_options,
         f"-oForwardAgent={'yes' if target.sudo else 'no'}",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
