@@ -42,11 +42,19 @@ ShellRoot {
         motion: motion
     }
 
+    CommandPalette {
+        id: launcher
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     Actions {
         id: actions
         runtime: runtime
         prototype: prototype
         cheatsheet: cheatsheet
+        launcher: launcher
         motion: motion
     }
 
@@ -55,6 +63,13 @@ ShellRoot {
         name: "cheatsheet"
         description: "Show Hyprland keyboard shortcuts"
         onPressed: actions.toggleCheatsheet()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher"
+        description: "Open command palette"
+        onPressed: actions.toggleLauncher()
     }
 
     IpcHandler {
@@ -74,6 +89,10 @@ ShellRoot {
 
         function toggleCheatsheet(): void {
             actions.toggleCheatsheet();
+        }
+
+        function toggleLauncher(): void {
+            actions.toggleLauncher();
         }
 
         function toggleAnimations(): void {
