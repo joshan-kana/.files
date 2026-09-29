@@ -188,7 +188,6 @@ let
       primaryUser = primaryUser.name;
       primaryHome = "${primaryUser.homeRoot}/${primaryUser.name}";
       repoPath = config.dotfiles.paths.repoPath;
-      container = config.boot.isContainer or false;
       inherit
         filesystems
         systemPackages
@@ -330,14 +329,14 @@ let
   fleetMarkdown = ''
     # Fleet
 
-    | Host | Platform | Profile | Container | Backup jobs | Server apps | System packages | Home packages |
-    | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+    | Host | Platform | Backup jobs | Server apps | System packages | Home packages |
+    | --- | --- | ---: | ---: | ---: | ---: |
     ${lib.concatMapStringsSep "\n" (
       name:
       let
         facts = hostFacts.${name};
       in
-      "| `${name}` | `${facts.system}` | `${facts.profile}` | ${yesNo facts.container} | ${toString (builtins.length facts.backupJobs)} | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
+      "| `${name}` | `${facts.system}` | ${toString (builtins.length facts.backupJobs)} | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
     ) hostNames}
   '';
 
@@ -370,7 +369,6 @@ let
       | Primary user | `${facts.primaryUser}` |
       | Primary home | `${facts.primaryHome}` |
       | Repository | `${facts.repoPath}` |
-      | Container | ${yesNo facts.container} |
 
       ## Filesystems
 
