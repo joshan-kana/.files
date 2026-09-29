@@ -10,18 +10,16 @@
 
 ## Create the machine
 
-On the Mac, create an ARM64 NixOS machine named `nixos`:
+On the Mac, create an ARM64 NixOS machine named `nixos-orbstack`:
 
 ```sh
-orbctl create --arch arm64 nixos:unstable nixos
+orbctl create --arch arm64 nixos:unstable nixos-orbstack
 ```
-
-The machine name intentionally remains `nixos`; the flake profile installed into it is `nixos-orbstack`.
 
 Verify the generated OrbStack integration before applying the flake:
 
 ```sh
-orb -m nixos cat /etc/nixos/orbstack.nix \
+orb -m nixos-orbstack cat /etc/nixos/orbstack.nix \
   > ~/.files/hosts/nixos-orbstack/generated.nix
 cd ~/.files
 nix fmt hosts/nixos-orbstack/generated.nix
@@ -32,16 +30,16 @@ nix fmt hosts/nixos-orbstack/generated.nix
 The Mac repository is mounted inside OrbStack at `/Users/joshan/.files`:
 
 ```sh
-orb -m nixos -u root nixos-rebuild switch \
+orb -m nixos-orbstack -u root nixos-rebuild switch \
   --flake /Users/joshan/.files#nixos-orbstack
 ```
 
 Verify the profile and the vendored OrbStack integration:
 
 ```sh
-orb -m nixos hostname
-orb -m nixos nixos-version
-orb -m nixos /Users/joshan/.files/scripts/check-orbstack-generated.sh
+orb -m nixos-orbstack hostname
+orb -m nixos-orbstack nixos-version
+orb -m nixos-orbstack /Users/joshan/.files/scripts/check-orbstack-generated.sh
 ```
 
 Restore the host's backup bootstrap credentials and primary-user secrets before relying on its scheduled secret backup.
