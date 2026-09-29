@@ -41,6 +41,7 @@ watchexec \
   -- "$work/refresh" "$repo" "$book" &
 watch_pid=$!
 
+host="${DOCS_HOST:-0.0.0.0}"
 port="${DOCS_PORT:-38080}"
-printf 'Serving generated docs at http://127.0.0.1:%s\n' "$port"
-mdbook serve "$book" --hostname 127.0.0.1 --port "$port"
+printf 'Serving generated docs on %s:%s\n' "$host" "$port"
+mdbook serve "$book" --hostname "$host" --port "$port"
