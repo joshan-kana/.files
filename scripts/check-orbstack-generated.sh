@@ -30,7 +30,7 @@ if [[ -r "$live" ]]; then
 elif command -v orb >/dev/null 2>&1; then
   tmp_file="$(mktemp)"
   tmp_files+=("$tmp_file")
-  orb -m nixos cat "$live" > "$tmp_file"
+  orb -m nixos-orbstack cat "$live" > "$tmp_file"
   live_file="$tmp_file"
 else
   echo "Cannot read $live and orb is not available." >&2
