@@ -10,6 +10,8 @@ Load the generated target environment once in the installer shell before using c
 {{#include ../../generated/hosts/nixos.sh}}
 ```
 
+If practical, enable [NixOS installer SSH](../nixos-installer-ssh.md) after networking is available and continue the installation remotely.
+
 ## Prepare the target
 
 Boot a current x86_64 NixOS installer in UEFI mode. Inspect the target disks before partitioning:
@@ -20,17 +22,7 @@ lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
 
 Partition, format, and mount the target filesystems under `/mnt`, including the EFI system partition required by systemd-boot.
 
-## Make the private repository available
-
-Load an SSH key that can read `joshan-kana/.files`, then clone the repository into the mounted target:
-
-```sh
-sudo mkdir -p "/mnt$(dirname "$DOTFILES_REPO")"
-sudo git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
-  "/mnt$DOTFILES_REPO"
-cd "/mnt$DOTFILES_REPO"
-```
+{{#include ../_shared/restore-secrets-and-clone.inc}}
 
 Generate the real hardware configuration directly into the checkout:
 

@@ -10,6 +10,8 @@ Load the generated target environment once in the installer shell before using c
 {{#include ../../generated/hosts/nixos-arm-parallels.sh}}
 ```
 
+If practical, enable [NixOS installer SSH](../nixos-installer-ssh.md) after networking is available and continue the installation remotely.
+
 ## Create and boot the VM
 
 Create an ARM64 Linux VM in Parallels Desktop, attach a current ARM64 NixOS installer ISO, and boot it in UEFI mode.
@@ -28,17 +30,7 @@ The current hardware configuration expects:
 
 Choose partition sizes appropriate for the VM, then format and mount those three partitions under `/mnt` before continuing.
 
-## Make the private repository available
-
-Load an SSH key that can read `joshan-kana/.files`, then clone the repository into the target root:
-
-```sh
-sudo mkdir -p "/mnt$(dirname "$DOTFILES_REPO")"
-sudo git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
-  "/mnt$DOTFILES_REPO"
-cd "/mnt$DOTFILES_REPO"
-```
+{{#include ../_shared/restore-secrets-and-clone.inc}}
 
 Compare a fresh hardware scan with the tracked Parallels hardware configuration before installing:
 
@@ -66,5 +58,3 @@ findmnt -T /boot
 findmnt -T /home
 systemctl --failed --no-pager
 ```
-
-Restore the host's backup bootstrap credentials and `~/.secrets` before relying on its scheduled secret backup.

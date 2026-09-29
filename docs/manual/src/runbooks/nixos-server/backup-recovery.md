@@ -2,12 +2,12 @@
 
 Use this runbook when recovering application state, runtime secrets, account state, or Vault data. Prefer the least destructive recovery mechanism that solves the problem.
 
-Current backup jobs, repositories, paths, schedules, exclusions, and retention are in [Backups](../infrastructure/backups.md).
+Current backup jobs, repositories, paths, schedules, exclusions, and retention are in [Backups](../../infrastructure/backups.md).
 
 The shell snippets below use path variables generated from the evaluated `nixos-server` configuration:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 ```
 
 Run that block in the shell before using snippets that reference those variables.
@@ -57,7 +57,7 @@ For a specific older repository revision, check out or inspect that revision in 
 
 ## Secret and account-state recovery
 
-`restic-secrets` protects the paths shown in [Backups](../infrastructure/backups.md). The repository password and rclone bootstrap material remain outside Git.
+`restic-secrets` protects the paths shown in [Backups](../../infrastructure/backups.md). The repository password and rclone bootstrap material remain outside Git.
 
 Restore one secret into a temporary directory first:
 
@@ -81,7 +81,7 @@ sudo restic-secrets restore latest --target /
 sudo restic-apps restore latest --target / --include "$APP_DATA_ROOT"
 ```
 
-For a bare-metal replacement, use [Install or recover `nixos-server`](../runbooks/install/nixos-server.md), which covers the bootstrap sequence before the installed system exists.
+For a bare-metal replacement, use [Install or recover `nixos-server`](install.md), which covers the bootstrap sequence before the installed system exists.
 
 ## Application-data recovery with Restic
 
@@ -107,7 +107,7 @@ sudo restic-apps restore latest \
   --include "$APP_DATA_ROOT/n8n"
 ```
 
-The generated [Backups](../infrastructure/backups.md) reference is authoritative for paths that are currently included or excluded. Do not maintain a second list in this runbook.
+The generated [Backups](../../infrastructure/backups.md) reference is authoritative for paths that are currently included or excluded. Do not maintain a second list in this runbook.
 
 ## Fast local application-data recovery with Snapper
 
@@ -198,6 +198,6 @@ Immich external-library registration is stored in application state rather than 
 
 ## Vault snapshot recovery
 
-Vault recovery is deliberately separate from application-data Restic/Snapper recovery. For browsing snapshots, copying individual files, cloning snapshots for inspection, whole-dataset rollback warnings, and pool-import recovery, use [Vault / ZFS recovery](vault-recovery.md).
+Vault recovery is deliberately separate from application-data Restic/Snapper recovery. For browsing snapshots, copying individual files, cloning snapshots for inspection, whole-dataset rollback warnings, and pool-import recovery, use [Vault / ZFS recovery](vault-zfs-recovery.md).
 
 Do not use a NixOS generation rollback to undo an application database migration. Reverting the service binary does not automatically revert migrated persistent state.

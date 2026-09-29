@@ -9,6 +9,7 @@
 {
   inherit (moduleRegistry)
     system
+    backups
     nix
     theme
     networking

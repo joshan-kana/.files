@@ -416,6 +416,7 @@ let
     let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
+      secretsBackup = config.services.restic.backups.secrets;
       value = fs: field: if fs == null then "" else fs.${field};
       rootFs = filesystem config "/";
       bootFs = filesystem config "/boot";
@@ -428,6 +429,10 @@ let
       export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
       export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
+      export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
+      export SECRETS_REPOSITORY=${lib.escapeShellArg (toString secretsBackup.repository)}
+      export SECRETS_PASSWORD_FILE=${lib.escapeShellArg (toString secretsBackup.passwordFile)}
+      export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg (toString secretsBackup.rcloneConfigFile)}
       export ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
       export ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
       export BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
@@ -651,11 +656,23 @@ let
 
     - [Fleet](overview/fleet.md)
 
+    # Runbooks
+
+    - [NixOS installer SSH](runbooks/nixos-installer-ssh.md)
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        action = if name == "nixos-orbstack" then "Recreate or recover" else "Install or recover";
+        serverRecovery =
+          lib.optionalString (name == "nixos-server")
+            "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
+      in
+      "- [`${name}`: ${action}](runbooks/${name}/install.md)${serverRecovery}"
+    ) hostNames}
+
     # Systems
 
-    ${lib.concatMapStringsSep "\n" (
-      name: "- [`${name}`](systems/${name}.md)\n  - [Install or recover](runbooks/install/${name}.md)"
-    ) hostNames}
+    ${lib.concatMapStringsSep "\n" (name: "- [`${name}`](systems/${name}.md)") hostNames}
 
     # Infrastructure
 
@@ -665,11 +682,6 @@ let
     - [Backups](infrastructure/backups.md)
     - [Services](infrastructure/services.md)
     - [Packages](infrastructure/packages.md)
-
-    # Operations
-
-    - [Backup restore](operations/backup-restore.md)
-    - [Vault / ZFS recovery](operations/vault-recovery.md)
 
     # Configuration
 
@@ -684,7 +696,6 @@ let
     export VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
     export VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
     export SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
-    export USER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.secretsDir}
     export SERVER_IP=${lib.escapeShellArg lan.serverIp}
     export IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
     export IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
@@ -716,13 +727,13 @@ let
   ) generatedFiles;
 
   missingInstallRunbooks = lib.filter (
-    name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/install/${name}.md")
+    name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/${name}/install.md")
   ) hostNames;
 
   docsSource =
     assert lib.assertMsg (missingInstallRunbooks == [ ]) ''
       Missing install/recovery runbook(s) for: ${lib.concatStringsSep ", " missingInstallRunbooks}
-      Add docs/manual/src/runbooks/install/<configuration>.md for every nixosConfigurations entry.
+      Add docs/manual/src/runbooks/<configuration>/install.md for every nixosConfigurations entry.
     '';
     pkgs.runCommand "dotfiles-docs-source"
       {

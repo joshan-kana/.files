@@ -15,6 +15,8 @@ The built manual injects these values from `nixosConfigurations.nixos-server`. L
 
 Commands below that use these variables assume the block has been loaded in the current shell.
 
+If practical, enable [NixOS installer SSH](../nixos-installer-ssh.md) after networking is available and continue the installation remotely.
+
 ## Prepare The Target
 
 Boot a current x86_64 NixOS installer in UEFI mode, then verify the internal
@@ -54,48 +56,7 @@ findmnt -T /mnt/boot
 sudo btrfs subvolume list /mnt
 ```
 
-## Restore Bootstrap Credentials
-
-Retrieve the backup bootstrap material from the external recovery store. The
-current Nix backup configuration is the source of truth for credential locations
-and repository settings.
-
-Stage the credentials with root-only permissions at the configured target
-locations, then set the installer-shell variables below from that same
-configuration:
-
-```sh
-export RCLONE_CONFIG=<mounted-target-rclone-config>
-export SECRETS_PASSWORD_FILE=<mounted-target-secrets-password-file>
-export SECRETS_REPOSITORY=<configured-secrets-repository>
-```
-
-Restore the latest secrets snapshot:
-
-```sh
-sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
-  nix --extra-experimental-features "nix-command flakes" shell \
-  nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" \
-  --password-file "$SECRETS_PASSWORD_FILE" \
-  restore latest --target /mnt
-```
-
-Verify the restored primary-user secret tree and Unix account state before
-continuing. The secrets snapshot carries the account database so user and group
-identities and password hashes are retained across reinstalls.
-
-## Clone The Configuration
-
-Clone the repository using the restored GitHub SSH key:
-
-```sh
-sudo env \
-  GIT_SSH_COMMAND="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
-  git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
-  "/mnt$DOTFILES_REPO"
-```
+{{#include ../_shared/restore-secrets-and-clone.inc}}
 
 ## Restore Application Data
 
@@ -124,7 +85,7 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 ```
 
 Backup creation, repository maintenance, and selective recovery procedures are
-kept in [Backup restore](../../operations/backup-restore.md).
+kept in [Backup / application recovery](backup-recovery.md).
 
 Some services keep mutable application-managed state outside the Nix
 configuration. Restoring the server application-data backup before first boot
@@ -200,7 +161,7 @@ systemctl --failed --no-pager
 ```
 
 If the Vault pool was not imported or mounted, use
-[Vault / ZFS recovery](../../operations/vault-recovery.md) to inspect and import
+[Vault / ZFS recovery](vault-zfs-recovery.md) to inspect and import
 the existing pool. Do not recreate the pool as a recovery step.
 
 Fix ownership of the restored user files if needed:
@@ -211,5 +172,5 @@ sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
 
 Once the base system and Vault storage are healthy, restore any remaining
 application-managed or database-backed state using
-[Backup restore](../../operations/backup-restore.md). Stop writers before
+[Backup / application recovery](backup-recovery.md). Stop writers before
 replacing mutable application state.

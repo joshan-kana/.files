@@ -1,4 +1,4 @@
-# Install or recover `nixos-orbstack`
+# Recreate or recover `nixos-orbstack`
 
 `nixos-orbstack` is an ARM64 NixOS machine managed by OrbStack on the Mac. Its repository checkout is the Mac checkout mounted into the guest, so no separate clone is required inside the machine.
 
@@ -42,4 +42,20 @@ orb -m nixos-orbstack nixos-version
 orb -m nixos-orbstack /Users/joshan/.files/scripts/check-orbstack-generated.sh
 ```
 
-Restore the host's backup bootstrap credentials and primary-user secrets before relying on its scheduled secret backup.
+## Restore host secrets
+
+The Mac checkout is already available inside OrbStack, so no Git bootstrap is needed. Copy this host's external backup bootstrap files into the guest as `/tmp/rclone.conf` and `/tmp/secrets-restic-password`, then install them at the evaluated paths:
+
+```sh
+sudo install -d -m 0700 "$(dirname "$SECRETS_RCLONE_CONFIG")"
+sudo install -m 0600 /tmp/rclone.conf "$SECRETS_RCLONE_CONFIG"
+sudo install -m 0600 /tmp/secrets-restic-password "$SECRETS_PASSWORD_FILE"
+```
+
+Restore the host's encrypted secrets backup:
+
+```sh
+sudo restic-secrets restore latest --target /
+```
+
+Verify the primary-user secret tree before relying on scheduled secret backups.

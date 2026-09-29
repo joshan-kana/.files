@@ -2,12 +2,12 @@
 
 Vault is the server's bulk local-data layer. Pool creation is deliberately an explicit human action because it destroys existing disk contents; normal NixOS activation only manages the configuration around an existing pool.
 
-Current filesystem, Vault, pool, snapshot, and retention state is in [Storage](../infrastructure/storage.md).
+Current filesystem, Vault, pool, snapshot, and retention state is in [Storage](../../infrastructure/storage.md).
 
 Load the generated server environment once in the shell used for the recovery procedure:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 ```
 
 ## Physical setup and safety
@@ -73,7 +73,7 @@ systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 journalctl -u sanoid.service -u zfs-scrub.service --since '7 days ago'
 ```
 
-Snapshot interval and retention policy are shown in [Storage](../infrastructure/storage.md). Change them in Nix rather than editing this runbook.
+Snapshot interval and retention policy are shown in [Storage](../../infrastructure/storage.md). Change them in Nix rather than editing this runbook.
 
 ## Recover a file or directory from a snapshot
 
@@ -157,7 +157,7 @@ Prefer file copies or a temporary clone whenever they can solve the problem.
 After rebuilding the internal system disk, reconnect the existing Vault drives only after the base NixOS system is healthy. In the rebuilt system's shell, reload the generated environment before applying the current configuration and inspecting/importing the existing pool:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 ```
 
 ```sh
