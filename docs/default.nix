@@ -73,31 +73,381 @@ let
   hostNames = builtins.attrNames configurations;
 
   filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
-  filesystemValue = fs: if fs == null then "_Not configured_" else "`${fs.device}` (`${fs.fsType}`)";
+  packageNames = packages: lib.sort builtins.lessThan (lib.unique (map lib.getName packages));
+  codeList =
+    values:
+    if values == [ ] then
+      "_None_"
+    else
+      lib.concatStringsSep ", " (map (value: "`${toString value}`") values);
+  cellList =
+    values:
+    if values == [ ] then
+      "_None_"
+    else
+      lib.concatStringsSep "<br>" (map (value: "`${toString value}`") values);
+  bulletList =
+    values:
+    if values == [ ] then
+      "- _None_"
+    else
+      lib.concatMapStringsSep "\n" (value: "- `${toString value}`") values;
+  yesNo = value: if value then "yes" else "no";
+  optionalCode = value: if value == null || value == "" then "_None_" else "`${toString value}`";
+  portRanges =
+    values:
+    if values == [ ] then
+      "_None_"
+    else
+      lib.concatStringsSep ", " (map (range: "${toString range.from}-${toString range.to}") values);
+  htmlEscape = value: lib.replaceStrings [ "&" "<" ">" ] [ "&amp;" "&lt;" "&gt;" ] value;
+  htmlPackageList =
+    values:
+    if values == [ ] then
+      "<p><em>None</em></p>"
+    else
+      "<ul>\n${
+        lib.concatMapStringsSep "\n" (value: "<li><code>${htmlEscape value}</code></li>") values
+      }\n</ul>";
 
-  hostIdentityMarkdown =
+  scopeTableHeader = "| Scope | ${lib.concatStringsSep " | " hostNames} |\n| --- | ${
+    lib.concatStringsSep " | " (map (_: "---:") hostNames)
+  } |";
+  scopeTableRows = map (
+    scopeName:
+    "| `${scopeName}` | ${
+      lib.concatStringsSep " | " (
+        map (hostName: if scopeEnabled hostName scopeName then "✓" else "") hostNames
+      )
+    } |"
+  ) (lib.sort builtins.lessThan allScopeNames);
+
+  enabledScopeNames =
+    hostName:
+    map (row: lib.concatStringsSep "." row.path) (
+      lib.filter (row: row.enabled) hostScopeRows.${hostName}
+    );
+  topLevelScopeNames =
+    hostName:
+    map (row: builtins.head row.path) (
+      lib.filter (row: row.enabled && builtins.length row.path == 1) hostScopeRows.${hostName}
+    );
+  enabledServerApps =
+    config:
+    let
+      root = lib.attrByPath [ "serverApps" ] { } config.dotfiles.resolvedScopes;
+    in
+    lib.sort builtins.lessThan (
+      lib.filter (
+        name:
+        let
+          node = root.${name};
+        in
+        builtins.isAttrs node && node ? enable && node.enable
+      ) (builtins.attrNames root)
+    );
+
+  hostFacts = lib.mapAttrs (
     name: host:
     let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
-      primaryHomePath = "${primaryUser.homeRoot}/${primaryUser.name}";
+      firewall = config.networking.firewall;
+      backupJobs = lib.mapAttrsToList (backupName: backup: {
+        name = backupName;
+        repository = toString backup.repository;
+        paths = backup.paths or [ ];
+        exclude = backup.exclude or [ ];
+        schedule = backup.timerConfig.OnCalendar or null;
+        prune = backup.pruneOpts or [ ];
+      }) config.services.restic.backups;
+      filesystems = lib.mapAttrsToList (mountPoint: fs: {
+        inherit mountPoint;
+        device = toString fs.device;
+        inherit (fs) fsType;
+        options = fs.options or [ ];
+      }) config.fileSystems;
+      firewallInterfaces = lib.mapAttrsToList (interfaceName: interface: {
+        name = interfaceName;
+        tcpPorts = interface.allowedTCPPorts;
+        udpPorts = interface.allowedUDPPorts;
+        tcpPortRanges = interface.allowedTCPPortRanges;
+        udpPortRanges = interface.allowedUDPPortRanges;
+      }) firewall.interfaces;
+      hasServerLan = lib.hasAttrByPath [ "dotfiles" "server" "lan" ] config;
+      hasServerStorage = lib.hasAttrByPath [ "dotfiles" "server" "storage" ] config;
+      systemPackages = packageNames config.environment.systemPackages;
+      homePackages = packageNames config.home-manager.users.${primaryUser.name}.home.packages;
+    in
+    {
+      system = host.pkgs.stdenv.hostPlatform.system;
+      profile = config.dotfiles.profile.name;
+      hostName = config.networking.hostName;
+      primaryUser = primaryUser.name;
+      primaryHome = "${primaryUser.homeRoot}/${primaryUser.name}";
+      repoPath = config.dotfiles.paths.repoPath;
+      container = config.boot.isContainer or false;
+      inherit
+        filesystems
+        systemPackages
+        homePackages
+        backupJobs
+        firewallInterfaces
+        ;
+      networking = {
+        networkManager = config.networking.networkmanager.enable;
+        useDHCP = config.networking.useDHCP;
+        nameservers = config.networking.nameservers;
+        profiles = builtins.attrNames config.networking.networkmanager.ensureProfiles.profiles;
+      };
+      firewall = {
+        inherit (firewall) enable;
+        inherit (firewall) trustedInterfaces;
+        tcpPorts = firewall.allowedTCPPorts;
+        udpPorts = firewall.allowedUDPPorts;
+        tcpPortRanges = firewall.allowedTCPPortRanges;
+        udpPortRanges = firewall.allowedUDPPortRanges;
+      };
+      retention = config.dotfiles.backups.retention;
+      containers = builtins.attrNames config.virtualisation.oci-containers.containers;
+      serverApps = enabledServerApps config;
+      enabledScopes = enabledScopeNames name;
+      topLevelScopes = topLevelScopeNames name;
+      serverLan =
+        if hasServerLan then
+          let
+            lan = config.dotfiles.server.lan;
+          in
+          {
+            inherit (lan)
+              interface
+              subnet
+              gateway
+              serverIp
+              ;
+            dnsIp = lan.dns.serviceIp;
+          }
+        else
+          null;
+      managedStorage =
+        if hasServerStorage then
+          let
+            storage = config.dotfiles.server.storage;
+          in
+          {
+            appDataRoot = storage.appData.root;
+            dataRoot = storage.dataRoot.path;
+            dataPool = storage.dataRoot.poolName;
+            snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
+          }
+        else
+          null;
+    }
+  ) configurations;
+
+  resticBackups = serverConfig.services.restic.backups;
+  appBackup = resticBackups.apps;
+  secretBackup = resticBackups.secrets;
+  retention = serverConfig.dotfiles.backups.retention;
+  storage = serverConfig.dotfiles.server.storage;
+  lan = serverConfig.dotfiles.server.lan;
+  primary = serverConfig.dotfiles.users.primary;
+  primaryHome = "${primary.homeRoot}/${primary.name}";
+  immichMediaRoot = serverConfig.services.immich.mediaLocation;
+  paperlessDataRoot = serverConfig.services.paperless.dataDir;
+  paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
+  paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
+  paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
+
+  referenceModel = {
+    hosts = hostFacts;
+    server = {
+      appDataRoot = storage.appData.root;
+      dataRoot = storage.dataRoot.path;
+      dataPool = storage.dataRoot.poolName;
+      snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
+      secretsDir = serverConfig.dotfiles.server.secretsDir;
+      repoPath = serverConfig.dotfiles.paths.repoPath;
+      primaryUser = primary.name;
+      inherit primaryHome;
+      userSecretsDir = serverConfig.dotfiles.secretsDir;
+      applications = {
+        immich = {
+          mediaRoot = immichMediaRoot;
+          backupRoot = "${immichMediaRoot}/backups";
+        };
+        paperless = {
+          dataRoot = paperlessDataRoot;
+          mediaRoot = paperlessMediaRoot;
+          consumeRoot = paperlessConsumeRoot;
+          backupRoot = paperlessBackupRoot;
+        };
+      };
+    };
+  };
+
+  referenceJson = pkgs.writeText "dotfiles-reference.json" (builtins.toJSON referenceModel);
+
+  filesystemTable =
+    facts:
+    if facts.filesystems == [ ] then
+      "_None configured._"
+    else
+      ''
+        | Mount | Device | Filesystem | Options |
+        | --- | --- | --- | --- |
+        ${lib.concatMapStringsSep "\n" (
+          fs: "| `${fs.mountPoint}` | `${fs.device}` | `${fs.fsType}` | ${cellList fs.options} |"
+        ) facts.filesystems}
+      '';
+
+  firewallInterfaceTable =
+    facts:
+    if facts.firewallInterfaces == [ ] then
+      "_No interface-specific rules._"
+    else
+      ''
+        | Interface | TCP | UDP | TCP ranges | UDP ranges |
+        | --- | --- | --- | --- | --- |
+        ${lib.concatMapStringsSep "\n" (
+          interface:
+          "| `${interface.name}` | ${codeList interface.tcpPorts} | ${codeList interface.udpPorts} | ${portRanges interface.tcpPortRanges} | ${portRanges interface.udpPortRanges} |"
+        ) facts.firewallInterfaces}
+      '';
+
+  backupTable =
+    facts:
+    if facts.backupJobs == [ ] then
+      "_None configured._"
+    else
+      ''
+        | Job | Repository | Schedule | Paths |
+        | --- | --- | --- | --- |
+        ${lib.concatMapStringsSep "\n" (
+          backup:
+          "| `${backup.name}` | `${backup.repository}` | ${optionalCode backup.schedule} | ${cellList backup.paths} |"
+        ) facts.backupJobs}
+      '';
+
+  fleetMarkdown = ''
+    # Fleet
+
+    | Host | Platform | Profile | Container | Backup jobs | Server apps | System packages | Home packages |
+    | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      "| `${name}` | `${facts.system}` | `${facts.profile}` | ${yesNo facts.container} | ${toString (builtins.length facts.backupJobs)} | ${toString (builtins.length facts.serverApps)} | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
+    ) hostNames}
+  '';
+
+  scopeMatrixMarkdown = ''
+    # Scope matrix
+
+    ${scopeTableHeader}
+    ${lib.concatStringsSep "\n" scopeTableRows}
+  '';
+
+  semanticScopesMarkdown = ''
+    # Semantic scopes
+  '';
+
+  systemMarkdown =
+    name:
+    let
+      facts = hostFacts.${name};
     in
     ''
       # `${name}`
 
+      ## Identity
+
       | Setting | Evaluated value |
       | --- | --- |
-      | Platform | `${host.pkgs.stdenv.hostPlatform.system}` |
-      | Profile | `${config.dotfiles.profile.name}` |
-      | Hostname | `${config.networking.hostName}` |
-      | Primary user | `${primaryUser.name}` |
-      | Primary home | `${primaryHomePath}` |
-      | Repository | `${config.dotfiles.paths.repoPath}` |
-      | Container | ${if config.boot.isContainer or false then "yes" else "no"} |
-      | Root filesystem | ${filesystemValue (filesystem config "/")} |
-      | Boot filesystem | ${filesystemValue (filesystem config "/boot")} |
-      | Home filesystem | ${filesystemValue (filesystem config "/home")} |
+      | Platform | `${facts.system}` |
+      | Profile | `${facts.profile}` |
+      | Hostname | `${facts.hostName}` |
+      | Primary user | `${facts.primaryUser}` |
+      | Primary home | `${facts.primaryHome}` |
+      | Repository | `${facts.repoPath}` |
+      | Container | ${yesNo facts.container} |
+
+      ## Filesystems
+
+      ${filesystemTable facts}
+
+      ## Networking
+
+      | Setting | Evaluated value |
+      | --- | --- |
+      | NetworkManager | ${yesNo facts.networking.networkManager} |
+      | Global DHCP | ${yesNo facts.networking.useDHCP} |
+      | Nameservers | ${codeList facts.networking.nameservers} |
+      | Managed profiles | ${codeList facts.networking.profiles} |
+
+      ${lib.optionalString (facts.serverLan != null) ''
+        ### Managed LAN
+
+        | Setting | Evaluated value |
+        | --- | --- |
+        | Interface | `${facts.serverLan.interface}` |
+        | Subnet | `${facts.serverLan.subnet}` |
+        | Gateway | `${facts.serverLan.gateway}` |
+        | Host address | `${facts.serverLan.serverIp}` |
+        | DNS service address | `${facts.serverLan.dnsIp}` |
+      ''}
+
+      ## Firewall
+
+      | Setting | Evaluated value |
+      | --- | --- |
+      | Enabled | ${yesNo facts.firewall.enable} |
+      | Trusted interfaces | ${codeList facts.firewall.trustedInterfaces} |
+      | Global TCP | ${codeList facts.firewall.tcpPorts} |
+      | Global UDP | ${codeList facts.firewall.udpPorts} |
+      | Global TCP ranges | ${portRanges facts.firewall.tcpPortRanges} |
+      | Global UDP ranges | ${portRanges facts.firewall.udpPortRanges} |
+
+      ${firewallInterfaceTable facts}
+
+      ## Services
+
+      **Server applications**
+
+      ${bulletList facts.serverApps}
+
+      **OCI containers**
+
+      ${bulletList facts.containers}
+
+      ## Packages
+
+      | Package set | Count |
+      | --- | ---: |
+      | System packages | ${toString (builtins.length facts.systemPackages)} |
+      | Home packages | ${toString (builtins.length facts.homePackages)} |
+
+      Full evaluated package lists are in [Packages](../infrastructure/packages.md#${name}).
+
+      ## Backups
+
+      ${backupTable facts}
+
+      ## Enabled scopes
+
+      ${toString (builtins.length facts.enabledScopes)} scopes are enabled. Top-level scopes:
+
+      ${bulletList facts.topLevelScopes}
+
+      See the fleet-wide [scope matrix](../overview/scope-matrix.md).
     '';
+
+  hostMarkdown = lib.mapAttrs (name: _: systemMarkdown name) configurations;
+  hostSources = lib.mapAttrs (
+    name: markdown: pkgs.writeText "dotfiles-host-${name}.md" markdown
+  ) hostMarkdown;
 
   hostRunbookEnvironment =
     name: host:
@@ -123,218 +473,207 @@ let
       HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
       HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
     '';
-  scopeTableHeader = "| Scope | ${lib.concatStringsSep " | " hostNames} |\n| --- | ${
-    lib.concatStringsSep " | " (map (_: "---:") hostNames)
-  } |";
-  scopeTableRows = map (
-    scopeName:
-    "| `${scopeName}` | ${
-      lib.concatStringsSep " | " (
-        map (hostName: if scopeEnabled hostName scopeName then "✓" else "") hostNames
-      )
-    } |"
-  ) allScopeNames;
-
-  containers = builtins.attrNames serverConfig.virtualisation.oci-containers.containers;
-  resticBackups = serverConfig.services.restic.backups;
-  appBackup = resticBackups.apps;
-  secretBackup = resticBackups.secrets;
-  retention = serverConfig.dotfiles.backups.retention;
-  storage = serverConfig.dotfiles.server.storage;
-  lan = serverConfig.dotfiles.server.lan;
-  firewall = serverConfig.networking.firewall;
-  lanFirewall = lib.attrByPath [ lan.interface ] { } firewall.interfaces;
-  primary = serverConfig.dotfiles.users.primary;
-  primaryHome = "${primary.homeRoot}/${primary.name}";
-  immichMediaRoot = serverConfig.services.immich.mediaLocation;
-  paperlessDataRoot = serverConfig.services.paperless.dataDir;
-  paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
-  paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
-  paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
-
-  referenceModel = {
-    hosts = lib.mapAttrs (_: host: {
-      system = host.pkgs.stdenv.hostPlatform.system;
-      profile = host.config.dotfiles.profile.name;
-      hostName = host.config.networking.hostName;
-      repoPath = host.config.dotfiles.paths.repoPath;
-      primaryUser = host.config.dotfiles.users.primary.name;
-      container = host.config.boot.isContainer or false;
-      enabledScopes = map (row: lib.concatStringsSep "." row.path) (
-        lib.filter (row: row.enabled) (flattenScopes [ ] host.config.dotfiles.resolvedScopes)
-      );
-    }) configurations;
-    server = {
-      appDataRoot = storage.appData.root;
-      dataRoot = storage.dataRoot.path;
-      dataPool = storage.dataRoot.poolName;
-      snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
-      secretsDir = serverConfig.dotfiles.server.secretsDir;
-      repoPath = serverConfig.dotfiles.paths.repoPath;
-      primaryUser = primary.name;
-      inherit primaryHome;
-      userSecretsDir = serverConfig.dotfiles.secretsDir;
-      applications = {
-        immich = {
-          mediaRoot = immichMediaRoot;
-          backupRoot = "${immichMediaRoot}/backups";
-        };
-        paperless = {
-          dataRoot = paperlessDataRoot;
-          mediaRoot = paperlessMediaRoot;
-          consumeRoot = paperlessConsumeRoot;
-          backupRoot = paperlessBackupRoot;
-        };
-      };
-      lan = {
-        inherit (lan) interface;
-        inherit (lan) subnet;
-        inherit (lan) gateway;
-        inherit (lan) serverIp;
-        dnsIp = lan.dns.serviceIp;
-      };
-      firewall = {
-        global = {
-          tcpPorts = firewall.allowedTCPPorts;
-          udpPorts = firewall.allowedUDPPorts;
-          tcpPortRanges = firewall.allowedTCPPortRanges;
-          udpPortRanges = firewall.allowedUDPPortRanges;
-        };
-        interfaces = lib.mapAttrs (_: interface: {
-          tcpPorts = interface.allowedTCPPorts;
-          udpPorts = interface.allowedUDPPorts;
-          tcpPortRanges = interface.allowedTCPPortRanges;
-          udpPortRanges = interface.allowedUDPPortRanges;
-        }) firewall.interfaces;
-      };
-      inherit containers;
-      backups = {
-        apps = {
-          inherit (appBackup) repository;
-          inherit (appBackup) paths;
-          exclude = appBackup.exclude or [ ];
-          schedule = appBackup.timerConfig.OnCalendar or null;
-        };
-        secrets = {
-          inherit (secretBackup) repository;
-          inherit (secretBackup) paths;
-          schedule = secretBackup.timerConfig.OnCalendar or null;
-        };
-        inherit retention;
-      };
-    };
-  };
-
-  referenceJson = pkgs.writeText "dotfiles-reference.json" (builtins.toJSON referenceModel);
-
-  mdList =
-    values:
-    if values == [ ] then
-      "- _None_"
-    else
-      lib.concatMapStringsSep "\n" (value: "- `${toString value}`") values;
-  ports = values: if values == [ ] then "_None_" else lib.concatStringsSep ", " (map toString values);
-  portRanges =
-    values:
-    if values == [ ] then
-      "_None_"
-    else
-      lib.concatStringsSep ", " (map (range: "${toString range.from}-${toString range.to}") values);
-
-  fleetMarkdown = ''
-    # Fleet
-
-    | Host | System | Profile |
-    | --- | --- | --- |
-    ${lib.concatMapStringsSep "\n" (
-      name:
-      let
-        host = configurations.${name};
-      in
-      "| `${name}` | `${host.pkgs.stdenv.hostPlatform.system}` | `${host.config.dotfiles.profile.name}` |"
-    ) hostNames}
-  '';
-
-  scopeMatrixMarkdown = ''
-    # Scope matrix
-
-    ${scopeTableHeader}
-    ${lib.concatStringsSep "\n" scopeTableRows}
-  '';
-
-  semanticScopesMarkdown = ''
-    # Semantic scopes
-  '';
-
-  serverDetailsMarkdown = ''
-    ## Storage
-
-    | Setting | Evaluated value |
-    | --- | --- |
-    | Application data root | `${storage.appData.root}` |
-    | Bulk data root | `${storage.dataRoot.path}` |
-    | ZFS pool | `${storage.dataRoot.poolName}` |
-    | Snapshot interval | ${toString storage.snapshots.intervalMinutes} minutes |
-
-    ## Network
-
-    | Setting | Evaluated value |
-    | --- | --- |
-    | LAN interface | `${lan.interface}` |
-    | LAN subnet | `${lan.subnet}` |
-    | Gateway | `${lan.gateway}` |
-    | Server IP | `${lan.serverIp}` |
-    | DNS service IP | `${lan.dns.serviceIp}` |
-    | Global TCP firewall ports | ${ports firewall.allowedTCPPorts} |
-    | Global UDP firewall ports | ${ports firewall.allowedUDPPorts} |
-    | Global TCP firewall ranges | ${portRanges firewall.allowedTCPPortRanges} |
-    | Global UDP firewall ranges | ${portRanges firewall.allowedUDPPortRanges} |
-    | `${lan.interface}` TCP firewall ports | ${ports (lanFirewall.allowedTCPPorts or [ ])} |
-    | `${lan.interface}` UDP firewall ports | ${ports (lanFirewall.allowedUDPPorts or [ ])} |
-    | `${lan.interface}` TCP firewall ranges | ${portRanges (lanFirewall.allowedTCPPortRanges or [ ])} |
-    | `${lan.interface}` UDP firewall ranges | ${portRanges (lanFirewall.allowedUDPPortRanges or [ ])} |
-
-    ## OCI containers
-
-    ${mdList containers}
-
-    ## Backups
-
-    ### Application data
-
-    Repository: `${appBackup.repository}`
-
-    ${mdList appBackup.paths}
-
-    ### Secrets and account state
-
-    Repository: `${secretBackup.repository}`
-
-    ${mdList secretBackup.paths}
-
-    ### Retention
-
-    | Class | Count |
-    | --- | ---: |
-    | Hourly | ${toString retention.hourly} |
-    | Daily | ${toString retention.daily} |
-    | Weekly | ${toString retention.weekly} |
-    | Monthly | ${toString retention.monthly} |
-  '';
-
-  hostMarkdown = lib.mapAttrs (
-    name: host:
-    hostIdentityMarkdown name host
-    + lib.optionalString (name == "nixos-server") "\n${serverDetailsMarkdown}"
-  ) configurations;
-
-  hostSources = lib.mapAttrs (
-    name: markdown: pkgs.writeText "dotfiles-host-${name}.md" markdown
-  ) hostMarkdown;
 
   hostEnvironmentSources = lib.mapAttrs (
     name: host: pkgs.writeText "dotfiles-host-${name}-env.sh" (hostRunbookEnvironment name host)
   ) configurations;
+
+  networkingMarkdown = ''
+    # Networking
+
+    | Host | Hostname | NetworkManager | Global DHCP | Nameservers | Managed profiles |
+    | --- | --- | ---: | ---: | --- | --- |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      "| `${name}` | `${facts.hostName}` | ${yesNo facts.networking.networkManager} | ${yesNo facts.networking.useDHCP} | ${cellList facts.networking.nameservers} | ${cellList facts.networking.profiles} |"
+    ) hostNames}
+
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      lib.optionalString (facts.serverLan != null) ''
+        ## `${name}` managed LAN
+
+        | Setting | Evaluated value |
+        | --- | --- |
+        | Interface | `${facts.serverLan.interface}` |
+        | Subnet | `${facts.serverLan.subnet}` |
+        | Gateway | `${facts.serverLan.gateway}` |
+        | Host address | `${facts.serverLan.serverIp}` |
+        | DNS service address | `${facts.serverLan.dnsIp}` |
+      ''
+    ) hostNames}
+  '';
+
+  firewallMarkdown = ''
+    # Firewall
+
+    | Host | Enabled | Trusted interfaces | Global TCP | Global UDP | TCP ranges | UDP ranges |
+    | --- | ---: | --- | --- | --- | --- | --- |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      "| `${name}` | ${yesNo facts.firewall.enable} | ${cellList facts.firewall.trustedInterfaces} | ${codeList facts.firewall.tcpPorts} | ${codeList facts.firewall.udpPorts} | ${portRanges facts.firewall.tcpPortRanges} | ${portRanges facts.firewall.udpPortRanges} |"
+    ) hostNames}
+
+    ## Interface-specific rules
+
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      lib.optionalString (facts.firewallInterfaces != [ ]) ''
+        ### `${name}`
+
+        ${firewallInterfaceTable facts}
+      ''
+    ) hostNames}
+  '';
+
+  infrastructureStorageMarkdown = ''
+    # Storage
+
+    ## Filesystems
+
+    | Host | Mount | Device | Filesystem | Options |
+    | --- | --- | --- | --- | --- |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      lib.concatMapStringsSep "\n" (
+        fs: "| `${name}` | `${fs.mountPoint}` | `${fs.device}` | `${fs.fsType}` | ${cellList fs.options} |"
+      ) hostFacts.${name}.filesystems
+    ) hostNames}
+
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      lib.optionalString (facts.managedStorage != null) ''
+        ## `${name}` managed storage
+
+        | Setting | Evaluated value |
+        | --- | --- |
+        | Application data root | `${facts.managedStorage.appDataRoot}` |
+        | Bulk data root | `${facts.managedStorage.dataRoot}` |
+        | ZFS pool | `${facts.managedStorage.dataPool}` |
+        | Snapshot interval | ${toString facts.managedStorage.snapshotIntervalMinutes} minutes |
+        | Retention | ${toString facts.retention.hourly} hourly / ${toString facts.retention.daily} daily / ${toString facts.retention.weekly} weekly / ${toString facts.retention.monthly} monthly |
+      ''
+    ) hostNames}
+  '';
+
+  backupsMarkdown = ''
+    # Backups
+
+    ## Coverage
+
+    | Host | Jobs | Hourly | Daily | Weekly | Monthly |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      "| `${name}` | ${toString (builtins.length facts.backupJobs)} | ${toString facts.retention.hourly} | ${toString facts.retention.daily} | ${toString facts.retention.weekly} | ${toString facts.retention.monthly} |"
+    ) hostNames}
+
+    ## Jobs
+
+    | Host | Job | Repository | Schedule | Paths | Exclusions |
+    | --- | --- | --- | --- | --- | --- |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        jobs = hostFacts.${name}.backupJobs;
+      in
+      if jobs == [ ] then
+        "| `${name}` | _None_ | _None_ | _None_ | _None_ | _None_ |"
+      else
+        lib.concatMapStringsSep "\n" (
+          backup:
+          "| `${name}` | `${backup.name}` | `${backup.repository}` | ${optionalCode backup.schedule} | ${cellList backup.paths} | ${cellList backup.exclude} |"
+        ) jobs
+    ) hostNames}
+  '';
+
+  servicesMarkdown = ''
+    # Services
+
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      ''
+        ## `${name}`
+
+        **Server applications**
+
+        ${bulletList facts.serverApps}
+
+        **OCI containers**
+
+        ${bulletList facts.containers}
+      ''
+    ) hostNames}
+  '';
+
+  packagesMarkdown = ''
+    # Packages
+
+    | Host | System packages | Home packages |
+    | --- | ---: | ---: |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      "| `${name}` | ${toString (builtins.length facts.systemPackages)} | ${toString (builtins.length facts.homePackages)} |"
+    ) hostNames}
+
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        facts = hostFacts.${name};
+      in
+      ''
+        ## `${name}`
+
+        <details>
+        <summary>System packages (${toString (builtins.length facts.systemPackages)})</summary>
+
+        ${htmlPackageList facts.systemPackages}
+
+        </details>
+
+        <details>
+        <summary>Home packages (${toString (builtins.length facts.homePackages)})</summary>
+
+        ${htmlPackageList facts.homePackages}
+
+        </details>
+      ''
+    ) hostNames}
+  '';
+
+  fleetSource = pkgs.writeText "dotfiles-fleet.md" fleetMarkdown;
+  scopeMatrixSource = pkgs.writeText "dotfiles-scope-matrix.md" scopeMatrixMarkdown;
+  semanticScopesSource = pkgs.writeText "dotfiles-semantic-scopes.md" semanticScopesMarkdown;
+  networkingSource = pkgs.writeText "dotfiles-networking.md" networkingMarkdown;
+  firewallSource = pkgs.writeText "dotfiles-firewall.md" firewallMarkdown;
+  infrastructureStorageSource = pkgs.writeText "dotfiles-storage.md" infrastructureStorageMarkdown;
+  infrastructureBackupsSource = pkgs.writeText "dotfiles-backups.md" backupsMarkdown;
+  servicesSource = pkgs.writeText "dotfiles-services.md" servicesMarkdown;
+  packagesSource = pkgs.writeText "dotfiles-packages.md" packagesMarkdown;
 
   summaryMarkdown = ''
     # Summary
@@ -350,6 +689,15 @@ let
       name: "- [`${name}`](systems/${name}.md)\n  - [Install or recover](runbooks/install/${name}.md)"
     ) hostNames}
 
+    # Infrastructure
+
+    - [Networking](infrastructure/networking.md)
+      - [Firewall](infrastructure/firewall.md)
+    - [Storage](infrastructure/storage.md)
+    - [Backups](infrastructure/backups.md)
+    - [Services](infrastructure/services.md)
+    - [Packages](infrastructure/packages.md)
+
     # Operations
 
     - [Backup restore](runbooks/backup-restore.md)
@@ -362,6 +710,8 @@ let
   '';
 
   summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
+
+  mdList = bulletList;
 
   runbookEnvironment = ''
     ${hostRunbookEnvironment "nixos-server" server}
@@ -417,9 +767,6 @@ let
     | Retention | ${toString retention.hourly} hourly / ${toString retention.daily} daily / ${toString retention.weekly} weekly / ${toString retention.monthly} monthly |
   '';
 
-  fleetSource = pkgs.writeText "dotfiles-fleet.md" fleetMarkdown;
-  scopeMatrixSource = pkgs.writeText "dotfiles-scope-matrix.md" scopeMatrixMarkdown;
-  semanticScopesSource = pkgs.writeText "dotfiles-semantic-scopes.md" semanticScopesMarkdown;
   runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
   backupSource = pkgs.writeText "dotfiles-backup-reference.md" backupMarkdown;
   storageSource = pkgs.writeText "dotfiles-storage-reference.md" storageMarkdown;
@@ -441,6 +788,7 @@ let
         mkdir -p \
           "$out/src/configuration" \
           "$out/src/generated/hosts" \
+          "$out/src/infrastructure" \
           "$out/src/overview" \
           "$out/src/systems" \
           "$out/data"
@@ -460,6 +808,12 @@ let
         install -m 0644 ${fleetSource} "$out/src/overview/fleet.md"
         install -m 0644 ${scopeMatrixSource} "$out/src/overview/scope-matrix.md"
         install -m 0644 ${semanticScopesSource} "$out/src/configuration/scopes.md"
+        install -m 0644 ${networkingSource} "$out/src/infrastructure/networking.md"
+        install -m 0644 ${firewallSource} "$out/src/infrastructure/firewall.md"
+        install -m 0644 ${infrastructureStorageSource} "$out/src/infrastructure/storage.md"
+        install -m 0644 ${infrastructureBackupsSource} "$out/src/infrastructure/backups.md"
+        install -m 0644 ${servicesSource} "$out/src/infrastructure/services.md"
+        install -m 0644 ${packagesSource} "$out/src/infrastructure/packages.md"
         ${lib.concatMapStringsSep "\n" (name: ''
           install -m 0644 ${hostSources.${name}} "$out/src/systems/${name}.md"
           install -m 0644 ${hostEnvironmentSources.${name}} "$out/src/generated/hosts/${name}.sh"
@@ -491,6 +845,12 @@ let
           src/configuration/scopes.md \
           src/overview/fleet.md \
           src/overview/scope-matrix.md \
+          src/infrastructure/networking.md \
+          src/infrastructure/firewall.md \
+          src/infrastructure/storage.md \
+          src/infrastructure/backups.md \
+          src/infrastructure/services.md \
+          src/infrastructure/packages.md \
           src/generated/server-env.sh \
           src/generated/backup-reference.md \
           src/generated/storage-reference.md \
