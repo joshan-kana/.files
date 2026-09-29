@@ -2,6 +2,7 @@
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
 ShellRoot {
@@ -16,16 +17,37 @@ ShellRoot {
         runtime: runtime
     }
 
+    Motion {
+        id: motion
+        runtime: runtime
+    }
+
     PrototypeSurface {
         id: prototype
         runtime: runtime
         theme: theme
     }
 
+    ShortcutCheatsheet {
+        id: cheatsheet
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     Actions {
         id: actions
         runtime: runtime
         prototype: prototype
+        cheatsheet: cheatsheet
+        motion: motion
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "cheatsheet"
+        description: "Show Hyprland keyboard shortcuts"
+        onPressed: actions.toggleCheatsheet()
     }
 
     IpcHandler {
@@ -41,6 +63,18 @@ ShellRoot {
 
         function togglePrototype(): void {
             actions.togglePrototype();
+        }
+
+        function toggleCheatsheet(): void {
+            actions.toggleCheatsheet();
+        }
+
+        function toggleAnimations(): void {
+            actions.toggleAnimations();
+        }
+
+        function animationsEnabled(): bool {
+            return motion.enabled;
         }
 
         function launchTerminal(): void {
