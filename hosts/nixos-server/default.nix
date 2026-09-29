@@ -126,7 +126,10 @@
         _:
         lib.recursiveUpdate (shared.networkManager { }) {
           networking.networkmanager = {
-            settings.main."ignore-carrier" = "*";
+            settings.main = {
+              "ignore-carrier" = "*";
+              "no-auto-default" = lan.interface;
+            };
             ensureProfiles.profiles."wired-static" = {
               connection = {
                 id = "wired-static";
