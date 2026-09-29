@@ -1,4 +1,4 @@
-# Install or recover `nixos-arm-parallels`
+# Installation guide for `nixos-arm-parallels`
 
 `nixos-arm-parallels` is an ARM64 NixOS VM running under Parallels Desktop.
 

@@ -649,9 +649,6 @@ let
     ) hostNames}
   '';
 
-  runbookAction =
-    name: if name == "nixos-orbstack" then "Recreate or recover" else "Install or recover";
-
   commonRunbookIndexMarkdown = ''
     # Common runbooks
 
@@ -663,7 +660,6 @@ let
   hostRunbookIndexMarkdown =
     name:
     let
-      action = runbookAction name;
       serverRecovery = lib.optionalString (name == "nixos-server") ''
         - [Backup / application recovery](backup-recovery.md)
         - [Vault / ZFS recovery](vault-zfs-recovery.md)
@@ -674,7 +670,7 @@ let
 
       Procedures for `${name}`.
 
-      - [${action}](install.md)
+      - [Installation guide](install.md)
       ${serverRecovery}
     '';
 
@@ -692,12 +688,11 @@ let
     ${lib.concatMapStringsSep "\n" (
       name:
       let
-        action = runbookAction name;
         serverRecovery =
           lib.optionalString (name == "nixos-server")
             "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
       in
-      "- [`${name}`](runbooks/${name}/index.md)\n  - [${action}](runbooks/${name}/install.md)${serverRecovery}"
+      "- [`${name}`](runbooks/${name}/index.md)\n  - [Installation guide](runbooks/${name}/install.md)${serverRecovery}"
     ) hostNames}
 
     # Systems

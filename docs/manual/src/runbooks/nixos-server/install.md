@@ -1,4 +1,4 @@
-# Install or recover `nixos-server`
+# Installation guide for `nixos-server`
 
 This guide installs the current `nixos-server` configuration on the Dell
 OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected while

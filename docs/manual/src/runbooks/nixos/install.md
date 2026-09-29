@@ -1,4 +1,4 @@
-# Install or recover `nixos`
+# Installation guide for `nixos`
 
 The `nixos` x86_64 configuration currently contains a placeholder hardware file for evaluation only. Do not install or switch this profile until the real target machine is available and `hosts/nixos/hardware.nix` has been regenerated from that machine.
 

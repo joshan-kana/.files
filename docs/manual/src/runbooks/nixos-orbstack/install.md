@@ -1,4 +1,4 @@
-# Recreate or recover `nixos-orbstack`
+# Installation guide for `nixos-orbstack`
 
 `nixos-orbstack` is an ARM64 NixOS machine managed by OrbStack on the Mac. Its repository checkout is the Mac checkout mounted into the guest, so no separate clone is required inside the machine.
 
