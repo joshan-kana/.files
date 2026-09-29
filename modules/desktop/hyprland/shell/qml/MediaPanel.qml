@@ -6,6 +6,7 @@ PanelWindow {
     id: panel
 
     required property QtObject media
+    required property QtObject spectrum
     required property QtObject runtime
     required property QtObject theme
     required property QtObject motion
@@ -245,8 +246,8 @@ PanelWindow {
 
                     Text {
                         id: spectrumStatus
-                        text: "ANALYSER PENDING"
-                        color: theme.warning
+                        text: spectrum.connected ? "LIVE // " + spectrum.sampleRate / 1000 + " kHz" : "STANDBY"
+                        color: spectrum.connected ? theme.positive : theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: 9
                         font.letterSpacing: 1
@@ -255,31 +256,63 @@ PanelWindow {
 
                 Rectangle {
                     width: parent.width
-                    height: 86
+                    height: 96
                     color: theme.background
                     radius: theme.radiusMedium
                     border.width: 1
                     border.color: theme.outline
+                    clip: true
 
-                    Rectangle {
+                    SpectrumBars {
                         anchors {
-                            left: parent.left
+                            top: parent.top
                             right: parent.right
-                            verticalCenter: parent.verticalCenter
-                            leftMargin: theme.spacing4
-                            rightMargin: theme.spacing4
+                            bottom: frequencyLabels.top
+                            left: parent.left
+                            topMargin: theme.spacing3
+                            rightMargin: theme.spacing3
+                            leftMargin: theme.spacing3
                         }
-                        height: 1
-                        color: theme.outline
+
+                        spectrum: panel.spectrum
+                        theme: panel.theme
                     }
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "native low-latency spectrum engine goes here"
-                        color: theme.textMuted
-                        opacity: 0.58
-                        font.family: runtime.fontMono
-                        font.pixelSize: 10
+                    Row {
+                        id: frequencyLabels
+
+                        height: 18
+                        anchors {
+                            right: parent.right
+                            bottom: parent.bottom
+                            left: parent.left
+                            rightMargin: theme.spacing3
+                            bottomMargin: 3
+                            leftMargin: theme.spacing3
+                        }
+
+                        Repeater {
+                            model: [
+                                "20",
+                                "60",
+                                "250",
+                                "1K",
+                                "4K",
+                                "20K"
+                            ]
+
+                            delegate: Text {
+                                required property string modelData
+
+                                width: frequencyLabels.width / 6
+                                text: modelData
+                                horizontalAlignment: Text.AlignHCenter
+                                color: theme.textMuted
+                                opacity: 0.62
+                                font.family: runtime.fontMono
+                                font.pixelSize: 8
+                            }
+                        }
                     }
                 }
             }
