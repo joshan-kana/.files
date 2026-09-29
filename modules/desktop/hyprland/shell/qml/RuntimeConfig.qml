@@ -1,0 +1,63 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+QtObject {
+    id: root
+
+    readonly property string terminal: data.defaults.terminal
+    readonly property string editor: data.defaults.editor
+    readonly property string wallpaper: data.wallpaper
+
+    readonly property string fontSans: data.fonts.sans
+    readonly property string fontMono: data.fonts.mono
+
+    readonly property color background: data.theme.background
+    readonly property color surface: data.theme.surface
+    readonly property color surfaceRaised: data.theme.surfaceRaised
+    readonly property color outline: data.theme.outline
+    readonly property color textMuted: data.theme.textMuted
+    readonly property color text: data.theme.text
+    readonly property color textStrong: data.theme.textStrong
+    readonly property color critical: data.theme.critical
+    readonly property color warning: data.theme.warning
+    readonly property color positive: data.theme.positive
+    readonly property color accent: data.theme.accent
+
+    property FileView configFile: FileView {
+        path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
+        blockLoading: true
+        watchChanges: true
+        onFileChanged: reload()
+
+        JsonAdapter {
+            id: data
+
+            property JsonObject defaults: JsonObject {
+                property string terminal: ""
+                property string editor: ""
+            }
+
+            property JsonObject theme: JsonObject {
+                property string background: "#111111"
+                property string surface: "#1a1a1a"
+                property string surfaceRaised: "#3a3a3a"
+                property string outline: "#505050"
+                property string textMuted: "#d0d0d0"
+                property string text: "#f0f0f0"
+                property string textStrong: "#ffffff"
+                property string critical: "#ff7a5c"
+                property string warning: "#ffd24a"
+                property string positive: "#3de5f0"
+                property string accent: "#33a8ff"
+            }
+
+            property JsonObject fonts: JsonObject {
+                property string sans: "sans-serif"
+                property string mono: "monospace"
+            }
+
+            property string wallpaper: ""
+        }
+    }
+}
