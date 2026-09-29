@@ -5,15 +5,10 @@
 }:
 
 {
+  nixpkgs.overlays = (import ../../../overlays/webhook.nix { }).nixpkgs.overlays;
+
   services.webhook = {
-    package = pkgs.webhook.overrideAttrs (old: {
-      patches = (old.patches or [ ]) ++ [
-        (pkgs.fetchpatch {
-          url = "https://github.com/mikelolasagasti/webhook/commit/2f9528ca1cc5a53c2e5bb9eaf60573a5c9171360.patch";
-          hash = "sha256-MWps4IZ+OnCpbqKQnsPODHgr4LoY5/fqSxCCkdUjynE=";
-        })
-      ];
-    });
+    package = pkgs.webhook;
     ip = "127.0.0.1";
     extraArgs = [
       "-max-body-size"
