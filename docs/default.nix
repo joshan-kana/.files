@@ -153,13 +153,19 @@ let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
       firewall = config.networking.firewall;
-      backupJobs = lib.mapAttrsToList (backupName: backup: {
+      resticJobs = lib.mapAttrsToList (backupName: backup: {
         name = backupName;
         repository = toString backup.repository;
         paths = backup.paths or [ ];
         exclude = backup.exclude or [ ];
         schedule = backup.timerConfig.OnCalendar or null;
+        pruneOpts = backup.pruneOpts or [ ];
+        checkOpts = backup.checkOpts or [ ];
       }) config.services.restic.backups;
+      backupJobs = builtins.filter (backup: backup.paths != [ ]) resticJobs;
+      maintenanceJobs = builtins.filter (
+        backup: backup.paths == [ ] && (backup.pruneOpts != [ ] || backup.checkOpts != [ ])
+      ) resticJobs;
       filesystems = lib.mapAttrsToList (mountPoint: fs: {
         inherit mountPoint;
         device = toString fs.device;
@@ -190,6 +196,7 @@ let
         systemPackages
         homePackages
         backupJobs
+        maintenanceJobs
         firewallInterfaces
         ;
       networking = {
@@ -536,7 +543,10 @@ let
       let
         facts = hostFacts.${name};
       in
-      "| `${name}` | ${toString (builtins.length facts.backupJobs)} | ${toString facts.retention.hourly} | ${toString facts.retention.daily} | ${toString facts.retention.weekly} | ${toString facts.retention.monthly} |"
+      if facts.backupJobs == [ ] then
+        "| `${name}` | 0 | — | — | — | — |"
+      else
+        "| `${name}` | ${toString (builtins.length facts.backupJobs)} | ${toString facts.retention.hourly} | ${toString facts.retention.daily} | ${toString facts.retention.weekly} | ${toString facts.retention.monthly} |"
     ) hostNames}
 
     ## Jobs
@@ -554,6 +564,24 @@ let
         lib.concatMapStringsSep "\n" (
           backup:
           "| `${name}` | `${backup.name}` | `${backup.repository}` | ${optionalCode backup.schedule} | ${cellList backup.paths} | ${cellList backup.exclude} |"
+        ) jobs
+    ) hostNames}
+
+    ## Maintenance
+
+    | Host | Job | Repository | Schedule | Prune | Check |
+    | --- | --- | --- | --- | --- | --- |
+    ${lib.concatMapStringsSep "\n" (
+      name:
+      let
+        jobs = hostFacts.${name}.maintenanceJobs;
+      in
+      if jobs == [ ] then
+        "| `${name}` | _None_ | _None_ | _None_ | _None_ | _None_ |"
+      else
+        lib.concatMapStringsSep "\n" (
+          job:
+          "| `${name}` | `${job.name}` | `${job.repository}` | ${optionalCode job.schedule} | ${cellList job.pruneOpts} | ${cellList job.checkOpts} |"
         ) jobs
     ) hostNames}
   '';

@@ -49,7 +49,8 @@ sudo mkdir -p /mnt/boot "$(dirname "/mnt$APP_DATA_ROOT")"
 sudo mount /dev/disk/by-label/BOOT /mnt/boot
 sudo btrfs subvolume create "/mnt$APP_DATA_ROOT"
 
-findmnt /mnt /mnt/boot
+findmnt -T /mnt
+findmnt -T /mnt/boot
 sudo btrfs subvolume list /mnt
 ```
 

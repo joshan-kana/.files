@@ -34,6 +34,7 @@ watchexec \
   --watch "$repo/modules" \
   --watch "$repo/hosts" \
   --watch "$repo/lib" \
+  --watch "$repo/overlays" \
   --watch "$repo/flake.nix" \
   --watch "$repo/flake.lock" \
   --postpone \

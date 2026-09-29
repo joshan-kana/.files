@@ -60,7 +60,9 @@ Reboot without the installer ISO, then verify:
 
 ```sh
 hostname
-findmnt / /boot /home
+findmnt -T /
+findmnt -T /boot
+findmnt -T /home
 systemctl --failed --no-pager
 ```
 
