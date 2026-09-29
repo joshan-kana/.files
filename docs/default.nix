@@ -29,8 +29,6 @@ let
 
   optionDocs = pkgs.nixosOptionsDoc {
     options = projectOptions;
-    documentType = "none";
-    variablelistId = "dotfiles-options";
   };
   optionDocsCommonMark = optionDocs.optionsCommonMark.overrideAttrs {
     extraArgs = [
@@ -74,7 +72,6 @@ let
       row: lib.concatStringsSep "." row.path == scopeName && row.enabled
     ) hostScopeRows.${hostName};
 
-  filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
   packageNames = packages: lib.sort builtins.lessThan (lib.unique (map lib.getName packages));
   codeList =
     values:
@@ -161,7 +158,6 @@ let
         paths = backup.paths or [ ];
         exclude = backup.exclude or [ ];
         schedule = backup.timerConfig.OnCalendar or null;
-        prune = backup.pruneOpts or [ ];
       }) config.services.restic.backups;
       filesystems = lib.mapAttrsToList (mountPoint: fs: {
         inherit mountPoint;
@@ -247,43 +243,10 @@ let
   ) configurations;
 
   storage = serverConfig.dotfiles.server.storage;
-  lan = serverConfig.dotfiles.server.lan;
   primary = serverConfig.dotfiles.users.primary;
-  primaryHome = "${primary.homeRoot}/${primary.name}";
   immichMediaRoot = serverConfig.services.immich.mediaLocation;
-  paperlessDataRoot = serverConfig.services.paperless.dataDir;
-  paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
   paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
   paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
-
-  referenceModel = {
-    hosts = hostFacts;
-    server = {
-      appDataRoot = storage.appData.root;
-      dataRoot = storage.dataRoot.path;
-      dataPool = storage.dataRoot.poolName;
-      snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
-      secretsDir = serverConfig.dotfiles.server.secretsDir;
-      repoPath = serverConfig.dotfiles.paths.repoPath;
-      primaryUser = primary.name;
-      inherit primaryHome;
-      userSecretsDir = serverConfig.dotfiles.secretsDir;
-      applications = {
-        immich = {
-          mediaRoot = immichMediaRoot;
-          backupRoot = "${immichMediaRoot}/backups";
-        };
-        paperless = {
-          dataRoot = paperlessDataRoot;
-          mediaRoot = paperlessMediaRoot;
-          consumeRoot = paperlessConsumeRoot;
-          backupRoot = paperlessBackupRoot;
-        };
-      };
-    };
-  };
-
-  referenceJson = pkgs.writeText "dotfiles-reference.json" (builtins.toJSON referenceModel);
 
   filesystemTable =
     facts:
@@ -437,38 +400,10 @@ let
     '';
 
   hostMarkdown = lib.mapAttrs (name: _: systemMarkdown name) configurations;
-  hostSources = lib.mapAttrs (
-    name: markdown: pkgs.writeText "dotfiles-host-${name}.md" markdown
-  ) hostMarkdown;
 
-  hostRunbookEnvironment =
-    name: host:
-    let
-      inherit (host) config;
-      primaryUser = config.dotfiles.users.primary;
-      value = fs: field: if fs == null then "" else fs.${field};
-      rootFs = filesystem config "/";
-      bootFs = filesystem config "/boot";
-      homeFs = filesystem config "/home";
-    in
-    ''
-      HOST_NAME=${lib.escapeShellArg name}
-      SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
-      PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
-      DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
-      PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
-      PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
-      ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
-      ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
-      BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
-      BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
-      HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
-      HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
-    '';
-
-  hostEnvironmentSources = lib.mapAttrs (
-    name: host: pkgs.writeText "dotfiles-host-${name}-env.sh" (hostRunbookEnvironment name host)
-  ) configurations;
+  hostRunbookEnvironment = host: ''
+    DOTFILES_REPO=${lib.escapeShellArg host.config.dotfiles.paths.repoPath}
+  '';
 
   networkingMarkdown = ''
     # Networking
@@ -657,15 +592,6 @@ let
     ) hostNames}
   '';
 
-  fleetSource = pkgs.writeText "dotfiles-fleet.md" fleetMarkdown;
-  semanticScopesSource = pkgs.writeText "dotfiles-semantic-scopes.md" semanticScopesMarkdown;
-  networkingSource = pkgs.writeText "dotfiles-networking.md" networkingMarkdown;
-  firewallSource = pkgs.writeText "dotfiles-firewall.md" firewallMarkdown;
-  infrastructureStorageSource = pkgs.writeText "dotfiles-storage.md" infrastructureStorageMarkdown;
-  infrastructureBackupsSource = pkgs.writeText "dotfiles-backups.md" backupsMarkdown;
-  servicesSource = pkgs.writeText "dotfiles-services.md" servicesMarkdown;
-  packagesSource = pkgs.writeText "dotfiles-packages.md" packagesMarkdown;
-
   summaryMarkdown = ''
     # Summary
 
@@ -699,29 +625,40 @@ let
     - [dotfiles options](configuration/options.md)
   '';
 
-  summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
-
   runbookEnvironment = ''
-    ${hostRunbookEnvironment "nixos-server" server}
+    ${hostRunbookEnvironment server}
     APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
     VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
     VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
     VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
     SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
     USER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.secretsDir}
-    DOTFILES_REPO=${lib.escapeShellArg serverConfig.dotfiles.paths.repoPath}
     PRIMARY_USER=${lib.escapeShellArg primary.name}
-    PRIMARY_HOME=${lib.escapeShellArg primaryHome}
-    SERVER_IP=${lib.escapeShellArg lan.serverIp}
-    IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
     IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
-    PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
-    PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg paperlessMediaRoot}
     PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg paperlessConsumeRoot}
     PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
   '';
 
-  runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
+  generatedFiles = {
+    "SUMMARY.md" = summaryMarkdown;
+    "configuration/scopes.md" = semanticScopesMarkdown;
+    "generated/server-env.sh" = runbookEnvironment;
+    "infrastructure/backups.md" = backupsMarkdown;
+    "infrastructure/firewall.md" = firewallMarkdown;
+    "infrastructure/networking.md" = networkingMarkdown;
+    "infrastructure/packages.md" = packagesMarkdown;
+    "infrastructure/services.md" = servicesMarkdown;
+    "infrastructure/storage.md" = infrastructureStorageMarkdown;
+    "overview/fleet.md" = fleetMarkdown;
+  }
+  // lib.mapAttrs' (name: markdown: lib.nameValuePair "systems/${name}.md" markdown) hostMarkdown
+  // lib.mapAttrs' (
+    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment host)
+  ) configurations;
+
+  generatedFileSources = lib.mapAttrs (
+    path: contents: builtins.toFile "dotfiles-${lib.replaceStrings [ "/" ] [ "-" ] path}" contents
+  ) generatedFiles;
 
   missingInstallRunbooks = lib.filter (
     name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/install/${name}.md")
@@ -734,24 +671,17 @@ let
     '';
     pkgs.runCommand "dotfiles-docs-source"
       {
-        nativeBuildInputs = [
-          pkgs.coreutils
-          pkgs.findutils
-          pkgs.gnused
-          pkgs.nixdoc
-        ];
+        nativeBuildInputs = [ pkgs.nixdoc ];
       }
       ''
         set -euo pipefail
         cp -R ${source}/docs/manual/. "$out"
         chmod -R u+w "$out"
-        mkdir -p \
-          "$out/src/configuration" \
-          "$out/src/generated/hosts" \
-          "$out/src/infrastructure" \
-          "$out/src/overview" \
-          "$out/src/systems" \
-          "$out/data"
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (path: file: ''
+            install -D -m 0644 ${file} "$out/src/${path}"
+          '') generatedFileSources
+        )}
 
         {
           echo '# dotfiles option reference'
@@ -763,22 +693,6 @@ let
             -e '/^<h2 id=/ s/\\\././g' \
             ${optionDocsCommonMark}
         } > "$out/src/configuration/options.md"
-
-        install -m 0644 ${summarySource} "$out/src/SUMMARY.md"
-        install -m 0644 ${fleetSource} "$out/src/overview/fleet.md"
-        install -m 0644 ${semanticScopesSource} "$out/src/configuration/scopes.md"
-        install -m 0644 ${networkingSource} "$out/src/infrastructure/networking.md"
-        install -m 0644 ${firewallSource} "$out/src/infrastructure/firewall.md"
-        install -m 0644 ${infrastructureStorageSource} "$out/src/infrastructure/storage.md"
-        install -m 0644 ${infrastructureBackupsSource} "$out/src/infrastructure/backups.md"
-        install -m 0644 ${servicesSource} "$out/src/infrastructure/services.md"
-        install -m 0644 ${packagesSource} "$out/src/infrastructure/packages.md"
-        ${lib.concatMapStringsSep "\n" (name: ''
-          install -m 0644 ${hostSources.${name}} "$out/src/systems/${name}.md"
-          install -m 0644 ${hostEnvironmentSources.${name}} "$out/src/generated/hosts/${name}.sh"
-        '') hostNames}
-        install -m 0644 ${runbookEnvironmentSource} "$out/src/generated/server-env.sh"
-        chmod u+w "$out/src/configuration/scopes.md"
 
         while IFS= read -r -d "" file; do
           grep -q '/\*\*' "$file" || continue
@@ -794,33 +708,6 @@ let
           find ${source}/modules ${source}/lib -type f -name '*.nix' -print0 | sort -z
         )
 
-        cp ${optionDocs.optionsJSON}/share/doc/nixos/options.json "$out/data/options.json"
-        cp ${referenceJson} "$out/data/reference.json"
-
-        for required in \
-          src/configuration/options.md \
-          src/configuration/scopes.md \
-          src/overview/fleet.md \
-          src/infrastructure/networking.md \
-          src/infrastructure/firewall.md \
-          src/infrastructure/storage.md \
-          src/infrastructure/backups.md \
-          src/infrastructure/services.md \
-          src/infrastructure/packages.md \
-          src/generated/server-env.sh \
-          data/options.json \
-          data/reference.json; do
-          test -s "$out/$required"
-        done
-
-        ${lib.concatMapStringsSep "\n" (name: ''
-          test -s "$out/src/systems/${name}.md"
-          test -s "$out/src/generated/hosts/${name}.sh"
-          test -s "$out/src/runbooks/install/${name}.md" || {
-            echo "Missing install/recovery runbook for ${name}" >&2
-            exit 1
-          }
-        '') hostNames}
       '';
 
   book =
@@ -831,10 +718,8 @@ let
       ''
         set -euo pipefail
         mdbook build ${docsSource} --dest-dir "$out"
-        mkdir -p "$out/data"
-        cp -R ${docsSource}/data/. "$out/data/"
       '';
 in
 {
-  inherit book docsSource referenceModel;
+  inherit book docsSource;
 }
