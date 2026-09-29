@@ -7,14 +7,18 @@
 }:
 
 let
+  hostNames = builtins.attrNames configurations;
   server = configurations.nixos-server;
   serverConfig = server.config;
 
   allScopeOptions = semanticScopeOptions.nixdOptions configurations;
-  serverOptions = semanticScopeOptions.nixdHostOptions configurations server;
+  hostOptionTrees = map (
+    name: semanticScopeOptions.nixdHostOptions configurations configurations.${name}
+  ) hostNames;
+  mergedHostOptions = lib.foldl' lib.recursiveUpdate { } hostOptionTrees;
   projectOptions = {
     dotfiles =
-      (builtins.removeAttrs serverOptions.dotfiles [
+      (builtins.removeAttrs mergedHostOptions.dotfiles [
         "scopes"
         "resolvedScopes"
       ])
@@ -69,8 +73,6 @@ let
     lib.any (
       row: lib.concatStringsSep "." row.path == scopeName && row.enabled
     ) hostScopeRows.${hostName};
-
-  hostNames = builtins.attrNames configurations;
 
   filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
   packageNames = packages: lib.sort builtins.lessThan (lib.unique (map lib.getName packages));
@@ -729,7 +731,15 @@ let
 
   runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
 
+  missingInstallRunbooks = lib.filter (
+    name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/install/${name}.md")
+  ) hostNames;
+
   docsSource =
+    assert lib.assertMsg (missingInstallRunbooks == [ ]) ''
+      Missing install/recovery runbook(s) for: ${lib.concatStringsSep ", " missingInstallRunbooks}
+      Add docs/manual/src/runbooks/install/<configuration>.md for every nixosConfigurations entry.
+    '';
     pkgs.runCommand "dotfiles-docs-source"
       {
         nativeBuildInputs = [
@@ -816,7 +826,10 @@ let
         ${lib.concatMapStringsSep "\n" (name: ''
           test -s "$out/src/systems/${name}.md"
           test -s "$out/src/generated/hosts/${name}.sh"
-          test -s "$out/src/runbooks/install/${name}.md"
+          test -s "$out/src/runbooks/install/${name}.md" || {
+            echo "Missing install/recovery runbook for ${name}" >&2
+            exit 1
+          }
         '') hostNames}
       '';
 
