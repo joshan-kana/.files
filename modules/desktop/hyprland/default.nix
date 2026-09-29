@@ -33,6 +33,8 @@ in
     wlr-randr
   ];
 
+  shell = import ./shell;
+
   eww = _: {
     home = _: {
       programs.eww = {
