@@ -4,6 +4,8 @@ The `nixos` x86_64 configuration currently contains a placeholder hardware file 
 
 ## Current evaluated target
 
+Load the generated target environment once in the installer shell before using commands below that reference these values:
+
 ```sh
 {{#include ../../generated/hosts/nixos.sh}}
 ```
@@ -23,7 +25,6 @@ Partition, format, and mount the target filesystems under `/mnt`, including the 
 Load an SSH key that can read `joshan-kana/.files`, then clone the repository into the mounted target:
 
 ```sh
-{{#include ../../generated/hosts/nixos.sh}}
 sudo mkdir -p "/mnt$(dirname "$DOTFILES_REPO")"
 sudo git clone --recurse-submodules \
   git@github.com:joshan-kana/.files.git \

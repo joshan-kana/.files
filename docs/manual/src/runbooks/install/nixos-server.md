@@ -6,7 +6,7 @@ the installed system has booted successfully.
 
 ## Current evaluated target values
 
-The built manual injects these values from `nixosConfigurations.nixos-server`:
+The built manual injects these values from `nixosConfigurations.nixos-server`. Load this generated environment once in the installer shell:
 
 ```sh
 {{#include ../../generated/server-env.sh}}
@@ -43,7 +43,6 @@ sudo mkfs.btrfs -f -L ROOT "${DISK}p2"
 Mount the target and create the application-data subvolume:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
 sudo mount /dev/disk/by-label/ROOT /mnt
 sudo mkdir -p /mnt/boot "$(dirname "/mnt$APP_DATA_ROOT")"
 sudo mount /dev/disk/by-label/BOOT /mnt/boot
@@ -90,7 +89,6 @@ identities and password hashes are retained across reinstalls.
 Clone the repository using the restored GitHub SSH key:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
 sudo env \
   GIT_SSH_COMMAND="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
   git clone --recurse-submodules \
@@ -104,7 +102,6 @@ Now that the repository is available, derive the app-backup settings directly
 from the target configuration instead of copying them into this guide:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 nix_eval() {
@@ -149,7 +146,6 @@ cat /mnt/etc/nixos/hardware-configuration.nix
 Derive the bootstrap binary-cache settings from the target configuration:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 substituters="$(
@@ -176,8 +172,7 @@ sudo nixos-install \
 
 ## First Boot
 
-Reboot from the internal NVMe with the Vault HDDs still disconnected. Then check
-the filesystems, network, restored backups, and failed units:
+Reboot from the internal NVMe with the Vault HDDs still disconnected. In the new shell, reload the generated environment before checking the filesystems, network, restored backups, and failed units:
 
 ```sh
 {{#include ../../generated/server-env.sh}}
@@ -195,7 +190,6 @@ systemctl --failed --no-pager
 Fix ownership of the restored user files if needed:
 
 ```sh
-{{#include ../../generated/server-env.sh}}
 sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
 ```
 

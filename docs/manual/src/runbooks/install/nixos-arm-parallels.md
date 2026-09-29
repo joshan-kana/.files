@@ -4,6 +4,8 @@
 
 ## Current evaluated target
 
+Load the generated target environment once in the installer shell before using commands below that reference these values:
+
 ```sh
 {{#include ../../generated/hosts/nixos-arm-parallels.sh}}
 ```
@@ -31,7 +33,6 @@ Choose partition sizes appropriate for the VM, then format and mount those three
 Load an SSH key that can read `joshan-kana/.files`, then clone the repository into the target root:
 
 ```sh
-{{#include ../../generated/hosts/nixos-arm-parallels.sh}}
 sudo mkdir -p "/mnt$(dirname "$DOTFILES_REPO")"
 sudo git clone --recurse-submodules \
   git@github.com:joshan-kana/.files.git \

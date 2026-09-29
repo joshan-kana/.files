@@ -62,7 +62,6 @@ For a specific older repository revision, check out or inspect that revision in 
 Restore one secret into a temporary directory first:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 secret="$SERVER_SECRETS_DIR/n8n.env"
 restore_dir="$(mktemp -d)"
 
@@ -78,7 +77,6 @@ After inspection, stop the consuming service and install the recovered file with
 After total machine loss, restore the backup bootstrap credentials first, then restore the secrets repository before application state:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo restic-secrets restore latest --target /
 sudo restic-apps restore latest --target / --include "$APP_DATA_ROOT"
 ```
@@ -96,7 +94,6 @@ sudo restic-apps snapshots
 Restore all application data:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo restic-apps restore latest \
   --target / \
   --include "$APP_DATA_ROOT"
@@ -105,7 +102,6 @@ sudo restic-apps restore latest \
 Restore one application, using n8n as the example:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo restic-apps restore latest \
   --target / \
   --include "$APP_DATA_ROOT/n8n"
@@ -127,7 +123,6 @@ sudo snapper -c apps status <old>..<new>
 Restore a single application only after stopping it:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo systemctl stop docker-n8n.service
 sudo snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT/n8n"
 sudo systemctl start docker-n8n.service
@@ -136,18 +131,13 @@ sudo systemctl start docker-n8n.service
 A whole-tree undo is substantially more destructive because unrelated applications are returned to the same point in time. Use it only when that is explicitly intended:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT"
 sudo nixos-rebuild switch --flake "$DOTFILES_REPO#nixos-server"
 ```
 
 ## PostgreSQL-backed applications
 
-Paperless and Immich require compatible database state in addition to their file storage. The current locations used by the recovery commands are generated from the evaluated configuration:
-
-```sh
-{{#include ../generated/server-env.sh}}
-```
+Paperless and Immich require compatible database state in addition to their file storage. The paths used by the recovery commands come from the generated environment loaded at the start of this runbook.
 
 Stop writers and the automatic Paperless database backup before replacing database state:
 
@@ -164,7 +154,6 @@ sudo systemctl stop \
 Restore the relevant logical dumps into a temporary directory:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 snapshot=<snapshot-id>
 restore_dir="$(mktemp -d)"
 
@@ -179,7 +168,6 @@ Verify compressed dumps with `gzip -t` before loading them. Do not use an incomp
 Restore Paperless:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 restore_dir=<temporary-restore-directory>
 paperless_dump="$restore_dir$PAPERLESS_BACKUP_ROOT/paperless.sql.gz"
 

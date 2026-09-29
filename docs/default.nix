@@ -252,8 +252,6 @@ let
 
   storage = serverConfig.dotfiles.server.storage;
   lan = serverConfig.dotfiles.server.lan;
-  primary = serverConfig.dotfiles.users.primary;
-  primaryHome = "${primary.homeRoot}/${primary.name}";
   immichMediaRoot = serverConfig.services.immich.mediaLocation;
   paperlessDataRoot = serverConfig.services.paperless.dataDir;
   paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
@@ -424,18 +422,18 @@ let
       homeFs = filesystem config "/home";
     in
     ''
-      HOST_NAME=${lib.escapeShellArg name}
-      SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
-      PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
-      DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
-      PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
-      PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
-      ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
-      ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
-      BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
-      BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
-      HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
-      HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
+      export HOST_NAME=${lib.escapeShellArg name}
+      export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
+      export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
+      export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
+      export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
+      export ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
+      export ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
+      export BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
+      export BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
+      export HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
+      export HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
     '';
 
   networkingMarkdown = ''
@@ -681,22 +679,19 @@ let
 
   runbookEnvironment = ''
     ${hostRunbookEnvironment "nixos-server" server}
-    APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
-    VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
-    VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
-    VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
-    SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
-    USER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.secretsDir}
-    DOTFILES_REPO=${lib.escapeShellArg serverConfig.dotfiles.paths.repoPath}
-    PRIMARY_USER=${lib.escapeShellArg primary.name}
-    PRIMARY_HOME=${lib.escapeShellArg primaryHome}
-    SERVER_IP=${lib.escapeShellArg lan.serverIp}
-    IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
-    IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
-    PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
-    PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg paperlessMediaRoot}
-    PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg paperlessConsumeRoot}
-    PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
+    export APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
+    export VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
+    export VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
+    export VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
+    export SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
+    export USER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.secretsDir}
+    export SERVER_IP=${lib.escapeShellArg lan.serverIp}
+    export IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
+    export IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
+    export PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
+    export PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg paperlessMediaRoot}
+    export PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg paperlessConsumeRoot}
+    export PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
   '';
 
   generatedFiles = {
