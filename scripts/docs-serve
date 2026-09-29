@@ -29,6 +29,7 @@ chmod +x "$work/refresh"
 "$work/refresh" "$repo" "$book"
 
 watchexec \
+  --poll 1s \
   --watch "$repo/docs/manual" \
   --watch "$repo/docs/default.nix" \
   --watch "$repo/modules" \
