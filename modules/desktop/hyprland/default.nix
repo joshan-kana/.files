@@ -83,7 +83,33 @@ in
   caelestia = _: {
     home-manager.sharedModules = [ inputs.caelestia-shell.homeManagerModules.default ];
 
-    home = _: {
+    home = { osConfig, pkgs, ... }: {
+      systemd.user.services.caelestia.Service.ExecStartPre =
+        let
+          wallpaper = toString osConfig.stylix.image;
+          initialiseWallpaper = pkgs.writeShellScript "caelestia-wallpaper-init" ''
+            set -eu
+
+            stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/caelestia/wallpaper"
+            stateFile="$stateDir/path.txt"
+            currentLink="$stateDir/current"
+            currentWallpaper=""
+
+            if [ -s "$stateFile" ]; then
+              currentWallpaper="$(${pkgs.coreutils}/bin/cat "$stateFile")"
+            fi
+
+            if [ -n "$currentWallpaper" ] && [ -f "$currentWallpaper" ]; then
+              exit 0
+            fi
+
+            ${pkgs.coreutils}/bin/install -d -m 0700 "$stateDir"
+            printf '%s\n' ${lib.escapeShellArg wallpaper} > "$stateFile"
+            ${pkgs.coreutils}/bin/ln -sfn ${lib.escapeShellArg wallpaper} "$currentLink"
+          '';
+        in
+        [ initialiseWallpaper ];
+
       programs.caelestia = {
         enable = true;
         systemd.target = "hyprland-session.target";
