@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  configurationName,
+  config,
+  lib,
+  ...
+}:
 
 let
   inherit (lib) mkOption types;
@@ -55,7 +60,8 @@ in
   options.dotfiles = {
     profile.name = mkOption {
       type = types.str;
-      description = "Flake profile name for this host.";
+      default = configurationName;
+      description = "NixOS configuration name for this host.";
     };
 
     secretsDir = mkOption {
