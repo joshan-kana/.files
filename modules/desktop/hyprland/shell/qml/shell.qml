@@ -22,6 +22,13 @@ ShellRoot {
         runtime: runtime
     }
 
+    AmbientBar {
+        id: ambientBar
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     PrototypeSurface {
         id: prototype
         runtime: runtime
