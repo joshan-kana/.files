@@ -508,12 +508,14 @@ let
 
     | Host | Mount | Device | Filesystem | Options |
     | --- | --- | --- | --- | --- |
-    ${lib.concatMapStringsSep "\n" (
-      name:
-      lib.concatMapStringsSep "\n" (
-        fs: "| `${name}` | `${fs.mountPoint}` | `${fs.device}` | `${fs.fsType}` | ${cellList fs.options} |"
-      ) hostFacts.${name}.filesystems
-    ) hostNames}
+    ${lib.concatStringsSep "\n" (
+      lib.concatMap (
+        name:
+        map (
+          fs: "| `${name}` | `${fs.mountPoint}` | `${fs.device}` | `${fs.fsType}` | ${cellList fs.options} |"
+        ) hostFacts.${name}.filesystems
+      ) hostNames
+    )}
 
     ${lib.concatMapStringsSep "\n" (
       name:
