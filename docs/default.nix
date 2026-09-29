@@ -241,8 +241,8 @@ let
     else
       lib.concatStringsSep ", " (map (range: "${toString range.from}-${toString range.to}") values);
 
-  hostsMarkdown = ''
-    # Hosts
+  fleetMarkdown = ''
+    # Fleet
 
     | Host | System | Profile |
     | --- | --- | --- |
@@ -255,11 +255,15 @@ let
     ) hostNames}
   '';
 
-  scopesMarkdown = ''
-    # Semantic scopes
+  scopeMatrixMarkdown = ''
+    # Scope matrix
 
     ${scopeTableHeader}
     ${lib.concatStringsSep "\n" scopeTableRows}
+  '';
+
+  semanticScopesMarkdown = ''
+    # Semantic scopes
   '';
 
   serverDetailsMarkdown = ''
@@ -335,15 +339,26 @@ let
   summaryMarkdown = ''
     # Summary
 
-    - [Hosts](reference/hosts.md)
+    # Overview
+
+    - [Fleet](overview/fleet.md)
+    - [Scope matrix](overview/scope-matrix.md)
+
+    # Systems
+
     ${lib.concatMapStringsSep "\n" (
-      name:
-      "  - [`${name}`](reference/hosts/${name}.md)\n    - [Install or recover](runbooks/install/${name}.md)"
+      name: "- [`${name}`](systems/${name}.md)\n  - [Install or recover](runbooks/install/${name}.md)"
     ) hostNames}
-    - [Semantic scopes](reference/scopes.md)
-    - [dotfiles options](reference/options.md)
-    - [Backup and restore](runbooks/backup-restore.md)
-    - [Vault ZFS storage](runbooks/vault-storage.md)
+
+    # Operations
+
+    - [Backup restore](runbooks/backup-restore.md)
+    - [Vault / ZFS](runbooks/vault-storage.md)
+
+    # Configuration
+
+    - [Semantic scopes](configuration/scopes.md)
+    - [dotfiles options](configuration/options.md)
   '';
 
   summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
@@ -402,8 +417,9 @@ let
     | Retention | ${toString retention.hourly} hourly / ${toString retention.daily} daily / ${toString retention.weekly} weekly / ${toString retention.monthly} monthly |
   '';
 
-  hostsSource = pkgs.writeText "dotfiles-hosts.md" hostsMarkdown;
-  scopesSource = pkgs.writeText "dotfiles-scopes.md" scopesMarkdown;
+  fleetSource = pkgs.writeText "dotfiles-fleet.md" fleetMarkdown;
+  scopeMatrixSource = pkgs.writeText "dotfiles-scope-matrix.md" scopeMatrixMarkdown;
+  semanticScopesSource = pkgs.writeText "dotfiles-semantic-scopes.md" semanticScopesMarkdown;
   runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
   backupSource = pkgs.writeText "dotfiles-backup-reference.md" backupMarkdown;
   storageSource = pkgs.writeText "dotfiles-storage-reference.md" storageMarkdown;
@@ -422,7 +438,12 @@ let
         set -euo pipefail
         cp -R ${source}/docs/manual/. "$out"
         chmod -R u+w "$out"
-        mkdir -p "$out/src/generated/hosts" "$out/src/reference/hosts" "$out/data"
+        mkdir -p \
+          "$out/src/configuration" \
+          "$out/src/generated/hosts" \
+          "$out/src/overview" \
+          "$out/src/systems" \
+          "$out/data"
 
         {
           echo '# dotfiles option reference'
@@ -433,19 +454,20 @@ let
             -e 's|^## (.*) \{#([^}]+)\}$|<h2 id="\2">\1</h2>|' \
             -e '/^<h2 id=/ s/\\\././g' \
             ${optionDocsCommonMark}
-        } > "$out/src/reference/options.md"
+        } > "$out/src/configuration/options.md"
 
         install -m 0644 ${summarySource} "$out/src/SUMMARY.md"
-        install -m 0644 ${hostsSource} "$out/src/reference/hosts.md"
-        install -m 0644 ${scopesSource} "$out/src/reference/scopes.md"
+        install -m 0644 ${fleetSource} "$out/src/overview/fleet.md"
+        install -m 0644 ${scopeMatrixSource} "$out/src/overview/scope-matrix.md"
+        install -m 0644 ${semanticScopesSource} "$out/src/configuration/scopes.md"
         ${lib.concatMapStringsSep "\n" (name: ''
-          install -m 0644 ${hostSources.${name}} "$out/src/reference/hosts/${name}.md"
+          install -m 0644 ${hostSources.${name}} "$out/src/systems/${name}.md"
           install -m 0644 ${hostEnvironmentSources.${name}} "$out/src/generated/hosts/${name}.sh"
         '') hostNames}
         install -m 0644 ${runbookEnvironmentSource} "$out/src/generated/server-env.sh"
         install -m 0644 ${backupSource} "$out/src/generated/backup-reference.md"
         install -m 0644 ${storageSource} "$out/src/generated/storage-reference.md"
-        chmod u+w "$out/src/reference/scopes.md"
+        chmod u+w "$out/src/configuration/scopes.md"
 
         while IFS= read -r -d "" file; do
           grep -q '/\*\*' "$file" || continue
@@ -453,10 +475,10 @@ let
           anchor="$(printf '%s' "$relative" | tr '/.' '--')"
           rendered="$(nixdoc --file "$file" --category "" --description "" --prefix "" --anchor-prefix "$anchor-")"
           [ -n "$(printf '%s' "$rendered" | tr -d '[:space:]')" ] || continue
-          printf '\n## `%s`\n\n' "$relative" >> "$out/src/reference/scopes.md"
+          printf '\n## `%s`\n\n' "$relative" >> "$out/src/configuration/scopes.md"
           printf '%s\n' "$rendered" \
             | sed -E 's/^(#{1,5})([[:space:]])/#\1\2/' \
-            >> "$out/src/reference/scopes.md"
+            >> "$out/src/configuration/scopes.md"
         done < <(
           find ${source}/modules ${source}/lib -type f -name '*.nix' -print0 | sort -z
         )
@@ -465,9 +487,10 @@ let
         cp ${referenceJson} "$out/data/reference.json"
 
         for required in \
-          src/reference/options.md \
-          src/reference/hosts.md \
-          src/reference/scopes.md \
+          src/configuration/options.md \
+          src/configuration/scopes.md \
+          src/overview/fleet.md \
+          src/overview/scope-matrix.md \
           src/generated/server-env.sh \
           src/generated/backup-reference.md \
           src/generated/storage-reference.md \
@@ -477,7 +500,7 @@ let
         done
 
         ${lib.concatMapStringsSep "\n" (name: ''
-          test -s "$out/src/reference/hosts/${name}.md"
+          test -s "$out/src/systems/${name}.md"
           test -s "$out/src/generated/hosts/${name}.sh"
           test -s "$out/src/runbooks/install/${name}.md"
         '') hostNames}
