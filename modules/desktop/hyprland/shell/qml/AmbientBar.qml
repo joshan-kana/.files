@@ -9,6 +9,9 @@ PanelWindow {
     required property QtObject runtime
     required property QtObject theme
     required property QtObject motion
+    required property QtObject media
+
+    signal mediaRequested()
 
     implicitHeight: 64
     color: "transparent"
@@ -135,6 +138,22 @@ PanelWindow {
                     }
                 }
             }
+        }
+
+        NowPlayingIsland {
+            id: mediaIsland
+
+            anchors {
+                left: workspaceIsland.right
+                leftMargin: theme.spacing3
+                verticalCenter: parent.verticalCenter
+            }
+
+            runtime: bar.runtime
+            theme: bar.theme
+            motion: bar.motion
+            media: bar.media
+            onActivated: bar.mediaRequested()
         }
 
         SquircleSurface {
