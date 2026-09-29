@@ -28,7 +28,7 @@ Generate the real hardware configuration directly into the checkout:
 
 ```sh
 sudo nixos-generate-config --root /mnt --show-hardware-config \
-  > hosts/nixos/hardware.nix
+  | sudo tee hosts/nixos/hardware.nix >/dev/null
 ```
 
 Review the generated filesystem, boot, CPU, and kernel-module settings before installing. The placeholder warning must be gone from `hosts/nixos/hardware.nix`.
@@ -41,7 +41,15 @@ sudo nixos-install \
   --flake ".#nixos"
 ```
 
-Reboot from the installed disk and verify:
+{{#include ../_shared/finalize-bare-install.inc}}
+
+Reboot from the installed disk and reload the generated target environment:
+
+```sh
+{{#include ../../generated/hosts/nixos.sh}}
+```
+
+Then verify:
 
 ```sh
 hostname

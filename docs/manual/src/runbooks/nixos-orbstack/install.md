@@ -42,7 +42,7 @@ orb -m nixos-orbstack nixos-version
 orb -m nixos-orbstack /Users/joshan/.files/scripts/check-orbstack-generated.sh
 ```
 
-## Restore host secrets
+## Restore or initialize host secrets backup
 
 The Mac checkout is already available inside OrbStack, so no Git bootstrap is needed. Copy this host's external backup bootstrap files into the guest as `/tmp/rclone.conf` and `/tmp/secrets-restic-password`, then install them at the evaluated paths:
 
@@ -52,10 +52,19 @@ sudo install -m 0600 /tmp/rclone.conf "$SECRETS_RCLONE_CONFIG"
 sudo install -m 0600 /tmp/secrets-restic-password "$SECRETS_PASSWORD_FILE"
 ```
 
-Restore the host's encrypted secrets backup:
+When recovering an existing machine, restore its latest encrypted secrets snapshot and verify it:
 
 ```sh
 sudo restic-secrets restore latest --target /
+sudo restic-secrets snapshots --latest 1
 ```
 
-Verify the primary-user secret tree before relying on scheduled secret backups.
+On first-ever provisioning, initialize the repository once, run the first backup, and verify it instead:
+
+```sh
+sudo restic-secrets init
+sudo systemctl start restic-backups-secrets.service
+sudo restic-secrets snapshots --latest 1
+```
+
+Do not run `restic-secrets init` when recovering an existing repository.

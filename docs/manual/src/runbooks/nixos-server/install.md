@@ -130,6 +130,8 @@ sudo nixos-install \
   --flake .#nixos-server
 ```
 
+{{#include ../_shared/finalize-bare-install.inc}}
+
 ## First Boot
 
 After `nixos-install` succeeds, shut down the installer, connect the Vault HDDs,
@@ -154,7 +156,6 @@ zfs list -r "$VAULT_POOL"
 findmnt -T "$VAULT_ROOT"
 lsblk -f
 ip -br addr
-sudo restic-secrets snapshots --latest 1
 sudo restic-apps snapshots --latest 1
 systemctl is-system-running || true
 systemctl --failed --no-pager
@@ -164,13 +165,9 @@ If the Vault pool was not imported or mounted, use
 [Vault / ZFS recovery](vault-zfs-recovery.md) to inspect and import
 the existing pool. Do not recreate the pool as a recovery step.
 
-Fix ownership of the restored user files if needed:
-
-```sh
-sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
-```
-
 Once the base system and Vault storage are healthy, restore any remaining
 application-managed or database-backed state using
 [Backup / application recovery](backup-recovery.md). Stop writers before
 replacing mutable application state.
+
+{{#include ../_shared/secrets-backup-first-boot.inc}}

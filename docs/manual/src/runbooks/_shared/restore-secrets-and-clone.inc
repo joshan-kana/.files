@@ -1,34 +1,60 @@
-## Restore host secrets and clone the private repository
+## Restore existing host secrets when applicable
 
-The private repository cannot be cloned until the host Git SSH key has been recovered. Copy the host backup bootstrap files from the external recovery store into the installer as `/tmp/rclone.conf` and `/tmp/secrets-restic-password`. When the installer is being used over SSH, `scp` is a convenient way to stage them.
+`SECRETS_BACKUP_ENABLED` comes from the evaluated target configuration. If it is `false`, skip this section.
 
-Install those bootstrap files at the evaluated target paths:
+For a host with secrets backup enabled, copy its external bootstrap files into the installer as `/tmp/rclone.conf` and `/tmp/secrets-restic-password`:
 
 ```sh
-sudo install -d -m 0700 "/mnt$(dirname "$SECRETS_RCLONE_CONFIG")"
-sudo install -m 0600 /tmp/rclone.conf "/mnt$SECRETS_RCLONE_CONFIG"
-sudo install -m 0600 /tmp/secrets-restic-password "/mnt$SECRETS_PASSWORD_FILE"
+if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
+  sudo install -d -m 0700 "/mnt$(dirname "$SECRETS_RCLONE_CONFIG")"
+  sudo install -m 0600 /tmp/rclone.conf "/mnt$SECRETS_RCLONE_CONFIG"
+  sudo install -m 0600 /tmp/secrets-restic-password "/mnt$SECRETS_PASSWORD_FILE"
+fi
 ```
 
-Restore this host's encrypted secrets backup into the mounted target:
+When recovering an existing host, restore its latest secrets snapshot:
 
 ```sh
-sudo env RCLONE_CONFIG="/mnt$SECRETS_RCLONE_CONFIG" \
-  nix --extra-experimental-features "nix-command flakes" shell \
-  nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" \
-  --password-file "/mnt$SECRETS_PASSWORD_FILE" \
-  restore latest --target /mnt
+if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
+  sudo env RCLONE_CONFIG="/mnt$SECRETS_RCLONE_CONFIG" \
+    nix --extra-experimental-features "nix-command flakes" shell \
+    nixpkgs#restic nixpkgs#rclone -c restic \
+    -r "$SECRETS_REPOSITORY" \
+    --password-file "/mnt$SECRETS_PASSWORD_FILE" \
+    restore latest --target /mnt
+fi
 ```
 
-The restore uses the host's evaluated secrets-backup paths, so host-specific state included by that job is restored as well. The primary-user secret tree contains the Git SSH key needed for the private repository. Clone the configuration into its evaluated target path:
+On first-ever provisioning, skip the restore. The staged bootstrap files are used to initialize the repository after first boot.
+
+## Clone the configuration
+
+Git authentication is independent of Restic. Use whichever credential is available: the recovered host key, a forwarded SSH agent, or a temporary private key staged as `/tmp/dotfiles-git-key`.
 
 ```sh
+if [[ -r "/mnt$USER_SECRETS_DIR/id_ed25519" ]]; then
+  git_ssh_command="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+elif [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
+  git_ssh_command="ssh -o StrictHostKeyChecking=accept-new"
+elif [[ -r /tmp/dotfiles-git-key ]]; then
+  sudo chmod 0600 /tmp/dotfiles-git-key
+  git_ssh_command="ssh -i /tmp/dotfiles-git-key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+else
+  echo "No Git SSH credential is available." >&2
+  false
+fi
+
 sudo mkdir -p "/mnt$(dirname "$DOTFILES_REPO")"
 sudo env \
-  GIT_SSH_COMMAND="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+  SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-}" \
+  GIT_SSH_COMMAND="$git_ssh_command" \
   git clone --recurse-submodules \
   git@github.com:joshan-kana/.files.git \
   "/mnt$DOTFILES_REPO"
+
+sudo rm -f /tmp/dotfiles-git-key
+unset git_ssh_command
 cd "/mnt$DOTFILES_REPO"
 ```
+
+The checkout remains root-owned while installation is in progress. Ownership is fixed against the installed system after `nixos-install`.

@@ -29,6 +29,15 @@ let
 
   optionDocs = pkgs.nixosOptionsDoc {
     options = projectOptions;
+    transformOptions =
+      option:
+      option
+      // {
+        declarations = map (
+          declaration:
+          builtins.unsafeDiscardStringContext (lib.removePrefix "${source}/" (toString declaration))
+        ) option.declarations;
+      };
   };
   optionDocsCommonMark = optionDocs.optionsCommonMark.overrideAttrs {
     extraArgs = [
@@ -416,7 +425,8 @@ let
     let
       inherit (host) config;
       primaryUser = config.dotfiles.users.primary;
-      secretsBackup = config.services.restic.backups.secrets;
+      secretsBackup = lib.attrByPath [ "secrets" ] null config.services.restic.backups;
+      backupValue = field: if secretsBackup == null then "" else toString secretsBackup.${field};
       value = fs: field: if fs == null then "" else fs.${field};
       rootFs = filesystem config "/";
       bootFs = filesystem config "/boot";
@@ -430,9 +440,12 @@ let
       export PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
-      export SECRETS_REPOSITORY=${lib.escapeShellArg (toString secretsBackup.repository)}
-      export SECRETS_PASSWORD_FILE=${lib.escapeShellArg (toString secretsBackup.passwordFile)}
-      export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg (toString secretsBackup.rcloneConfigFile)}
+      export SECRETS_BACKUP_ENABLED=${
+        lib.escapeShellArg (if secretsBackup == null then "false" else "true")
+      }
+      export SECRETS_REPOSITORY=${lib.escapeShellArg (backupValue "repository")}
+      export SECRETS_PASSWORD_FILE=${lib.escapeShellArg (backupValue "passwordFile")}
+      export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg (backupValue "rcloneConfigFile")}
       export ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
       export ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
       export BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}

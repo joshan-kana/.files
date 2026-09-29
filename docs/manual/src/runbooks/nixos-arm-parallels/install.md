@@ -49,7 +49,15 @@ sudo nixos-install \
   --flake ".#nixos-arm-parallels"
 ```
 
-Reboot without the installer ISO, then verify:
+{{#include ../_shared/finalize-bare-install.inc}}
+
+Reboot without the installer ISO and reload the generated target environment:
+
+```sh
+{{#include ../../generated/hosts/nixos-arm-parallels.sh}}
+```
+
+Then verify:
 
 ```sh
 hostname
@@ -58,3 +66,5 @@ findmnt -T /boot
 findmnt -T /home
 systemctl --failed --no-pager
 ```
+
+{{#include ../_shared/secrets-backup-first-boot.inc}}
