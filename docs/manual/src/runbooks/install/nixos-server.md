@@ -1,8 +1,9 @@
 # Install or recover `nixos-server`
 
 This guide installs the current `nixos-server` configuration on the Dell
-OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected until
-the installed system has booted successfully.
+OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected while
+the installer modifies the internal system disk. After `nixos-install` succeeds,
+shut down, connect the Vault HDDs, and boot the installed system.
 
 ## Current evaluated target values
 
@@ -125,11 +126,9 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 Backup creation, repository maintenance, and selective recovery procedures are
 kept in [Backup restore](../../operations/backup-restore.md).
 
-Technitium's zones, DHCP scope and leases, DNS Apps, recursion, and forwarder
-policy are application-managed state. Restoring the server app-data backup
-before first boot restores that policy; Nix only owns the service boundary and
-first-start bootstrap inputs, not a second declarative copy of Technitium's
-runtime database.
+Some services keep mutable application-managed state outside the Nix
+configuration. Restoring the server application-data backup before first boot
+preserves that state without duplicating it declaratively in this runbook.
 
 ## Check Hardware Detection
 
@@ -172,16 +171,26 @@ sudo nixos-install \
 
 ## First Boot
 
-Reboot from the internal NVMe with the Vault HDDs still disconnected. In the new shell, reload the generated environment before checking the filesystems, network, restored backups, and failed units:
+After `nixos-install` succeeds, shut down the installer, connect the Vault HDDs,
+and boot from the internal NVMe. The configured Vault pool should import and
+mount automatically during normal boot.
+
+In the new shell, reload the generated environment:
 
 ```sh
 {{#include ../../generated/server-env.sh}}
 ```
 
+Verify the installed filesystems, Vault pool, network, restored backups, and
+failed units:
+
 ```sh
 findmnt -T /
 findmnt -T /boot
 findmnt -T "$APP_DATA_ROOT"
+zpool status "$VAULT_POOL"
+zfs list -r "$VAULT_POOL"
+findmnt -T "$VAULT_ROOT"
 lsblk -f
 ip -br addr
 sudo restic-secrets snapshots --latest 1
@@ -190,13 +199,17 @@ systemctl is-system-running || true
 systemctl --failed --no-pager
 ```
 
+If the Vault pool was not imported or mounted, use
+[Vault / ZFS recovery](../../operations/vault-recovery.md) to inspect and import
+the existing pool. Do not recreate the pool as a recovery step.
+
 Fix ownership of the restored user files if needed:
 
 ```sh
 sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
 ```
 
-After the base system is healthy, connect the Vault HDDs and follow
-[Vault / ZFS recovery](../../operations/vault-recovery.md) to import and verify the existing pool.
-Then restore the PostgreSQL-backed application databases using
-[Backup restore](../../operations/backup-restore.md#postgresql-backed-applications).
+Once the base system and Vault storage are healthy, restore any remaining
+application-managed or database-backed state using
+[Backup restore](../../operations/backup-restore.md). Stop writers before
+replacing mutable application state.
