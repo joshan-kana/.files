@@ -168,9 +168,9 @@ in
 
   (mk {
     keys = "SPACE";
-    action = exec "${repoPath}/scripts/app_launch";
+    action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
-    description = "Application launcher";
+    description = "Command palette";
   })
   (mk {
     keys = "V";
