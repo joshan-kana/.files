@@ -22,11 +22,17 @@ ShellRoot {
         runtime: runtime
     }
 
+    MediaState {
+        id: media
+    }
+
     AmbientBar {
         id: ambientBar
         runtime: runtime
         theme: theme
         motion: motion
+        media: media
+        onMediaRequested: actions.toggleMedia()
     }
 
     PrototypeSurface {
@@ -42,11 +48,26 @@ ShellRoot {
         motion: motion
     }
 
+    MediaPanel {
+        id: mediaPanel
+        media: media
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     CommandPalette {
         id: launcher
         runtime: runtime
         theme: theme
         motion: motion
+        commands: [
+            { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
+            { id: "shortcuts.toggle", name: "Keyboard Shortcuts", description: "Show the Hyprland key map", icon: "preferences-desktop-keyboard-shortcuts", key: "SUPER + /", keywords: ["keybinds", "cheatsheet"] },
+            { id: "animations.toggle", name: "Toggle Animations", description: "Enable or disable desktop motion", icon: "preferences-desktop-effects", keywords: ["motion", "reduce motion"] },
+            { id: "terminal.open", name: "Open Terminal", description: runtime.terminal, icon: "utilities-terminal", keywords: ["shell", "console"] }
+        ]
+        onCommandTriggered: commandId => actions.invokeCommand(commandId)
     }
 
     Actions {
@@ -55,6 +76,7 @@ ShellRoot {
         prototype: prototype
         cheatsheet: cheatsheet
         launcher: launcher
+        mediaPanel: mediaPanel
         motion: motion
     }
 
@@ -70,6 +92,13 @@ ShellRoot {
         name: "launcher"
         description: "Open command palette"
         onPressed: actions.toggleLauncher()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media"
+        description: "Open now playing"
+        onPressed: actions.toggleMedia()
     }
 
     IpcHandler {
@@ -93,6 +122,10 @@ ShellRoot {
 
         function toggleLauncher(): void {
             actions.toggleLauncher();
+        }
+
+        function toggleMedia(): void {
+            actions.toggleMedia();
         }
 
         function toggleAnimations(): void {
