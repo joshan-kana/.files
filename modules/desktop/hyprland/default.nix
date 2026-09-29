@@ -196,10 +196,26 @@ in
           ];
         };
         modBind = keys: dispatcher: bind (mod keys) dispatcher;
-        modBindWith =
-          keys: dispatcher: flags:
-          bindWith (mod keys) dispatcher flags;
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
+        keybindings = import ./keybindings.nix {
+          repoPath = config.dotfiles.paths.repoPath;
+          inherit terminal;
+        };
+        actionDispatcher =
+          action:
+          if action.type == "exec" then
+            exec action.value
+          else if action.type == "global" then
+            ''hl.dsp.global("${action.value}")''
+          else
+            action.value;
+        renderBinding =
+          binding:
+          let
+            keys = if binding.mainMod then mod binding.keys else binding.keys;
+            dispatcher = actionDispatcher binding.action;
+          in
+          if binding.flags == { } then bind keys dispatcher else bindWith keys dispatcher binding.flags;
       in
       {
         xwayland.enable = xwaylandEnabled;
@@ -376,104 +392,7 @@ in
             ];
           };
 
-          bind = [
-            # Favourite apps
-            (modBind "ALT + 1" (exec terminal))
-            (modBind "ALT + 2" (exec "spotify"))
-            (modBind "ALT + 3" (exec config.dotfiles.defaults.browser))
-            (modBind "ALT + 4" (exec "floorp"))
-            (modBind "ALT + 5" (exec "thunderbird"))
-            (modBind "ALT + 6" (exec "code"))
-            (modBind "ALT + 7" (exec "obsidian --disable-gpu"))
-            (modBind "ALT + E" (exec "nautilus"))
-            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer"))
-            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx"))
-
-            # Applets and launchers
-            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch"))
-            (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
-            (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
-
-            # Window management
-            (modBind "Q" "hl.dsp.window.close()")
-            (modBind "M" "hl.dsp.exit()")
-            (modBind "SHIFT + F" "hl.dsp.window.float()")
-            (modBind "SHIFT + P" "hl.dsp.window.pin()")
-            (modBind "P" "hl.dsp.window.pseudo()")
-            (modBind "J" ''hl.dsp.layout("togglesplit")'')
-            (modBind "F" ''hl.dsp.window.fullscreen({ mode = "maximized" })'')
-            (modBindWith "mouse:272" "hl.dsp.window.drag()" { mouse = true; })
-            (modBindWith "mouse:273" "hl.dsp.window.resize()" { mouse = true; })
-
-            # Focus
-            (modBind "A" ''hl.dsp.focus({ direction = "l" })'')
-            (modBind "D" ''hl.dsp.focus({ direction = "r" })'')
-            (modBind "W" ''hl.dsp.focus({ direction = "u" })'')
-            (modBind "S" ''hl.dsp.focus({ direction = "d" })'')
-
-            # Workspaces
-            (modBind "1" ''hl.dsp.focus({ workspace = "1" })'')
-            (modBind "2" ''hl.dsp.focus({ workspace = "2" })'')
-            (modBind "3" ''hl.dsp.focus({ workspace = "3" })'')
-            (modBind "4" ''hl.dsp.focus({ workspace = "4" })'')
-            (modBind "5" ''hl.dsp.focus({ workspace = "5" })'')
-            (modBind "6" ''hl.dsp.focus({ workspace = "6" })'')
-            (modBind "7" ''hl.dsp.focus({ workspace = "7" })'')
-            (modBind "8" ''hl.dsp.focus({ workspace = "8" })'')
-            (modBind "9" ''hl.dsp.focus({ workspace = "9" })'')
-            (modBind "0" ''hl.dsp.focus({ workspace = "10" })'')
-
-            (modBind "SHIFT + 1" ''hl.dsp.window.move({ workspace = "1", follow = false })'')
-            (modBind "SHIFT + 2" ''hl.dsp.window.move({ workspace = "2", follow = false })'')
-            (modBind "SHIFT + 3" ''hl.dsp.window.move({ workspace = "3", follow = false })'')
-            (modBind "SHIFT + 4" ''hl.dsp.window.move({ workspace = "4", follow = false })'')
-            (modBind "SHIFT + 5" ''hl.dsp.window.move({ workspace = "5", follow = false })'')
-            (modBind "SHIFT + 6" ''hl.dsp.window.move({ workspace = "6", follow = false })'')
-            (modBind "SHIFT + 7" ''hl.dsp.window.move({ workspace = "7", follow = false })'')
-            (modBind "SHIFT + 8" ''hl.dsp.window.move({ workspace = "8", follow = false })'')
-            (modBind "SHIFT + 9" ''hl.dsp.window.move({ workspace = "9", follow = false })'')
-            (modBind "SHIFT + 0" ''hl.dsp.window.move({ workspace = "10", follow = false })'')
-
-            (modBindWith "SHIFT + D" "hl.dsp.window.resize({ x = 50, y = 0, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + A" "hl.dsp.window.resize({ x = -50, y = 0, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + W" "hl.dsp.window.resize({ x = 0, y = -50, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + S" "hl.dsp.window.resize({ x = 0, y = 50, relative = true })" {
-              repeating = true;
-            })
-
-            (modBind "X" ''hl.dsp.workspace.toggle_special("magic")'')
-            (modBind "SHIFT + X" ''hl.dsp.window.move({ workspace = "special:magic", follow = true })'')
-            (modBind "mouse_down" ''hl.dsp.focus({ workspace = "e+1" })'')
-            (modBind "mouse_up" ''hl.dsp.focus({ workspace = "e-1" })'')
-            (modBind "CTRL + A" ''hl.dsp.focus({ workspace = "e-1" })'')
-            (modBind "CTRL + D" ''hl.dsp.focus({ workspace = "e+1" })'')
-
-            # Media keys
-            (bindWith "XF86AudioRaiseVolume" (exec "volumectl + 5") { repeating = true; })
-            (bindWith "XF86AudioLowerVolume" (exec "volumectl - 5") { repeating = true; })
-            (bind "XF86AudioMute" (exec "volumectl %"))
-            (modBind "ALT + X" (exec "playerctl play-pause"))
-            (modBind "ALT + C" (exec "playerctl next"))
-            (modBind "ALT + Z" (exec "playerctl previous"))
-            (modBindWith "ALT + D" (exec "playerctl position 10+") { repeating = true; })
-            (modBindWith "ALT + S" (exec "playerctl position 10-") { repeating = true; })
-            (modBind "ALT + W" (exec "playerctl shuffle toggle"))
-            (modBind "ALT + F" (exec "playerctld shift"))
-
-            # Brightness
-            (bindWith "XF86MonBrightnessUp" (exec "lightctl + 5") { repeating = true; })
-            (bindWith "XF86MonBrightnessDown" (exec "lightctl - 5") { repeating = true; })
-
-            (modBind "L" (exec "swaylock"))
-            (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
-            (modBind "Escape" ''hl.dsp.submap("passthru")'')
-          ];
+          bind = map renderBinding keybindings;
         };
 
         submaps.passthru.settings.bind = [
