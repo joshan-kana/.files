@@ -72,6 +72,7 @@ let
       row: lib.concatStringsSep "." row.path == scopeName && row.enabled
     ) hostScopeRows.${hostName};
 
+  filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
   packageNames = packages: lib.sort builtins.lessThan (lib.unique (map lib.getName packages));
   codeList =
     values:
@@ -243,8 +244,12 @@ let
   ) configurations;
 
   storage = serverConfig.dotfiles.server.storage;
+  lan = serverConfig.dotfiles.server.lan;
   primary = serverConfig.dotfiles.users.primary;
+  primaryHome = "${primary.homeRoot}/${primary.name}";
   immichMediaRoot = serverConfig.services.immich.mediaLocation;
+  paperlessDataRoot = serverConfig.services.paperless.dataDir;
+  paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
   paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
   paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
 
@@ -401,9 +406,30 @@ let
 
   hostMarkdown = lib.mapAttrs (name: _: systemMarkdown name) configurations;
 
-  hostRunbookEnvironment = host: ''
-    DOTFILES_REPO=${lib.escapeShellArg host.config.dotfiles.paths.repoPath}
-  '';
+  hostRunbookEnvironment =
+    name: host:
+    let
+      inherit (host) config;
+      primaryUser = config.dotfiles.users.primary;
+      value = fs: field: if fs == null then "" else fs.${field};
+      rootFs = filesystem config "/";
+      bootFs = filesystem config "/boot";
+      homeFs = filesystem config "/home";
+    in
+    ''
+      HOST_NAME=${lib.escapeShellArg name}
+      SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
+      PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
+      DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      PRIMARY_USER=${lib.escapeShellArg primaryUser.name}
+      PRIMARY_HOME=${lib.escapeShellArg "${primaryUser.homeRoot}/${primaryUser.name}"}
+      ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
+      ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
+      BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
+      BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
+      HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
+      HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
+    '';
 
   networkingMarkdown = ''
     # Networking
@@ -626,15 +652,21 @@ let
   '';
 
   runbookEnvironment = ''
-    ${hostRunbookEnvironment server}
+    ${hostRunbookEnvironment "nixos-server" server}
     APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
     VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
     VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
     VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
     SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
     USER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.secretsDir}
+    DOTFILES_REPO=${lib.escapeShellArg serverConfig.dotfiles.paths.repoPath}
     PRIMARY_USER=${lib.escapeShellArg primary.name}
+    PRIMARY_HOME=${lib.escapeShellArg primaryHome}
+    SERVER_IP=${lib.escapeShellArg lan.serverIp}
+    IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
     IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
+    PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
+    PAPERLESS_MEDIA_ROOT=${lib.escapeShellArg paperlessMediaRoot}
     PAPERLESS_CONSUME_ROOT=${lib.escapeShellArg paperlessConsumeRoot}
     PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
   '';
@@ -653,7 +685,7 @@ let
   }
   // lib.mapAttrs' (name: markdown: lib.nameValuePair "systems/${name}.md" markdown) hostMarkdown
   // lib.mapAttrs' (
-    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment host)
+    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
   ) configurations;
 
   generatedFileSources = lib.mapAttrs (
@@ -676,7 +708,7 @@ let
       ''
         set -euo pipefail
         cp -R ${source}/docs/manual/. "$out"
-        chmod -R u+w "$out"
+        chmod u+w "$out/src"
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (path: file: ''
             install -D -m 0644 ${file} "$out/src/${path}"
