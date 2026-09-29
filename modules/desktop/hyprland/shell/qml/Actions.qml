@@ -6,6 +6,7 @@ QtObject {
     required property QtObject prototype
     required property QtObject cheatsheet
     required property QtObject launcher
+    required property QtObject mediaPanel
     required property QtObject motion
 
     function showPrototype(): void {
@@ -26,6 +27,21 @@ QtObject {
 
     function toggleLauncher(): void {
         launcher.toggle();
+    }
+
+    function toggleMedia(): void {
+        mediaPanel.toggle();
+    }
+
+    function invokeCommand(commandId: string): void {
+        if (commandId === "media.toggle")
+            toggleMedia();
+        else if (commandId === "shortcuts.toggle")
+            toggleCheatsheet();
+        else if (commandId === "animations.toggle")
+            toggleAnimations();
+        else if (commandId === "terminal.open")
+            launchTerminal();
     }
 
     function toggleAnimations(): void {
