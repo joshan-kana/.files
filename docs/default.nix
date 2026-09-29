@@ -340,15 +340,11 @@ let
     ) hostNames}
   '';
 
-  scopeMatrixMarkdown = ''
-    # Scope matrix
+  semanticScopesMarkdown = ''
+    # Semantic scopes
 
     ${scopeTableHeader}
     ${lib.concatStringsSep "\n" scopeTableRows}
-  '';
-
-  semanticScopesMarkdown = ''
-    # Semantic scopes
   '';
 
   systemMarkdown =
@@ -437,7 +433,7 @@ let
 
       ${bulletList facts.topLevelScopes}
 
-      See the fleet-wide [scope matrix](../overview/scope-matrix.md).
+      See [Semantic scopes](../configuration/scopes.md).
     '';
 
   hostMarkdown = lib.mapAttrs (name: _: systemMarkdown name) configurations;
@@ -662,7 +658,6 @@ let
   '';
 
   fleetSource = pkgs.writeText "dotfiles-fleet.md" fleetMarkdown;
-  scopeMatrixSource = pkgs.writeText "dotfiles-scope-matrix.md" scopeMatrixMarkdown;
   semanticScopesSource = pkgs.writeText "dotfiles-semantic-scopes.md" semanticScopesMarkdown;
   networkingSource = pkgs.writeText "dotfiles-networking.md" networkingMarkdown;
   firewallSource = pkgs.writeText "dotfiles-firewall.md" firewallMarkdown;
@@ -677,7 +672,6 @@ let
     # Overview
 
     - [Fleet](overview/fleet.md)
-    - [Scope matrix](overview/scope-matrix.md)
 
     # Systems
 
@@ -772,7 +766,6 @@ let
 
         install -m 0644 ${summarySource} "$out/src/SUMMARY.md"
         install -m 0644 ${fleetSource} "$out/src/overview/fleet.md"
-        install -m 0644 ${scopeMatrixSource} "$out/src/overview/scope-matrix.md"
         install -m 0644 ${semanticScopesSource} "$out/src/configuration/scopes.md"
         install -m 0644 ${networkingSource} "$out/src/infrastructure/networking.md"
         install -m 0644 ${firewallSource} "$out/src/infrastructure/firewall.md"
@@ -808,7 +801,6 @@ let
           src/configuration/options.md \
           src/configuration/scopes.md \
           src/overview/fleet.md \
-          src/overview/scope-matrix.md \
           src/infrastructure/networking.md \
           src/infrastructure/firewall.md \
           src/infrastructure/storage.md \
