@@ -1,12 +1,17 @@
 {
   lib,
+  scopeConfig,
   ...
 }:
 
 {
-  # Keep the prototype opt-in. Individual development hosts may enable it
-  # without replacing their current desktop session.
   enable = false;
+
+  scopeOptions.animationsEnabled = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Enable motion and animated transitions in the Hyprland desktop shell.";
+  };
 
   home =
     {
@@ -19,6 +24,19 @@
       shellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
+      keybindings = import ../keybindings.nix {
+        repoPath = osConfig.dotfiles.paths.repoPath;
+        terminal = osConfig.dotfiles.defaults.terminal;
+      };
+
+      cheatsheetBindings = map (binding: {
+        key =
+          if binding.label != null then
+            binding.label
+          else
+            "${lib.optionalString binding.mainMod "SUPER + "}${binding.keys}";
+        inherit (binding) description section;
+      }) (lib.filter (binding: binding.cheatsheet) keybindings);
 
       runtimeConfig = json.generate "linux-desktop-runtime.json" {
         defaults = {
@@ -45,6 +63,8 @@
           mono = config.stylix.fonts.monospace.name;
         };
 
+        motion.animationsEnabled = scopeConfig.animationsEnabled;
+        keybindings = cheatsheetBindings;
         wallpaper = toString osConfig.stylix.image;
       };
 
@@ -64,5 +84,21 @@
       ];
 
       xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
+
+      systemd.user.services.linux-desktop = {
+        Unit = {
+          Description = "Hyprland desktop shell";
+          PartOf = [ "hyprland-session.target" ];
+          After = [ "hyprland-session.target" ];
+        };
+
+        Service = {
+          ExecStart = "${lib.getExe launcher} --no-duplicate";
+          Restart = "on-failure";
+          RestartSec = 1;
+        };
+
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
     };
 }
