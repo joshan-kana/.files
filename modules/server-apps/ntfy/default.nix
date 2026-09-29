@@ -36,9 +36,13 @@ in
   };
 
   systemd = {
-    services.ntfy-sh.serviceConfig = {
-      StateDirectory = lib.mkForce [ ];
-      ReadWritePaths = [ service.stateDir ];
+    services.ntfy-sh = {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        StateDirectory = lib.mkForce [ ];
+        ReadWritePaths = [ service.stateDir ];
+      };
     };
 
     tmpfiles.rules = [
