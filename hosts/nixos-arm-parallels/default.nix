@@ -26,6 +26,11 @@
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
+  dotfiles = {
+    defaults.terminal = "alacritty";
+    scopes.desktop.hyprland.shell.enable = true;
+  };
+
   hardware = import ./hardware.nix;
 
   desktopApps = editScope moduleRegistry.desktopApps {
