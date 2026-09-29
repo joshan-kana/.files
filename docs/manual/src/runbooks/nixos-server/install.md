@@ -15,7 +15,7 @@ The built manual injects these values from `nixosConfigurations.nixos-server`. L
 
 Commands below that use these variables assume the block has been loaded in the current shell.
 
-If practical, enable [NixOS installer SSH](../nixos-installer-ssh.md) after networking is available and continue the installation remotely.
+If practical, enable [NixOS installer SSH](../common/nixos-installer-ssh.md) after networking is available and continue the installation remotely.
 
 ## Prepare The Target
 

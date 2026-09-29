@@ -649,6 +649,35 @@ let
     ) hostNames}
   '';
 
+  runbookAction =
+    name: if name == "nixos-orbstack" then "Recreate or recover" else "Install or recover";
+
+  commonRunbookIndexMarkdown = ''
+    # Common runbooks
+
+    Procedures shared by multiple NixOS hosts.
+
+    - [NixOS installer SSH](nixos-installer-ssh.md)
+  '';
+
+  hostRunbookIndexMarkdown =
+    name:
+    let
+      action = runbookAction name;
+      serverRecovery = lib.optionalString (name == "nixos-server") ''
+        - [Backup / application recovery](backup-recovery.md)
+        - [Vault / ZFS recovery](vault-zfs-recovery.md)
+      '';
+    in
+    ''
+      # `${name}` runbooks
+
+      Procedures for `${name}`.
+
+      - [${action}](install.md)
+      ${serverRecovery}
+    '';
+
   summaryMarkdown = ''
     # Summary
 
@@ -658,16 +687,17 @@ let
 
     # Runbooks
 
-    - [NixOS installer SSH](runbooks/nixos-installer-ssh.md)
+    - [Common](runbooks/common/index.md)
+      - [NixOS installer SSH](runbooks/common/nixos-installer-ssh.md)
     ${lib.concatMapStringsSep "\n" (
       name:
       let
-        action = if name == "nixos-orbstack" then "Recreate or recover" else "Install or recover";
+        action = runbookAction name;
         serverRecovery =
           lib.optionalString (name == "nixos-server")
             "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
       in
-      "- [`${name}`: ${action}](runbooks/${name}/install.md)${serverRecovery}"
+      "- [`${name}`](runbooks/${name}/index.md)\n  - [${action}](runbooks/${name}/install.md)${serverRecovery}"
     ) hostNames}
 
     # Systems
@@ -716,8 +746,12 @@ let
     "infrastructure/services.md" = servicesMarkdown;
     "infrastructure/storage.md" = infrastructureStorageMarkdown;
     "overview/fleet.md" = fleetMarkdown;
+    "runbooks/common/index.md" = commonRunbookIndexMarkdown;
   }
   // lib.mapAttrs' (name: markdown: lib.nameValuePair "systems/${name}.md" markdown) hostMarkdown
+  // lib.genAttrs' hostNames (
+    name: lib.nameValuePair "runbooks/${name}/index.md" (hostRunbookIndexMarkdown name)
+  )
   // lib.mapAttrs' (
     name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
   ) configurations;
@@ -742,7 +776,7 @@ let
       ''
         set -euo pipefail
         cp -R ${source}/docs/manual/. "$out"
-        chmod u+w "$out/src"
+        chmod -R u+w "$out/src"
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (path: file: ''
             install -D -m 0644 ${file} "$out/src/${path}"

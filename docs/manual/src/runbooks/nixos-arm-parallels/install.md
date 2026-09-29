@@ -10,7 +10,7 @@ Load the generated target environment once in the installer shell before using c
 {{#include ../../generated/hosts/nixos-arm-parallels.sh}}
 ```
 
-If practical, enable [NixOS installer SSH](../nixos-installer-ssh.md) after networking is available and continue the installation remotely.
+If practical, enable [NixOS installer SSH](../common/nixos-installer-ssh.md) after networking is available and continue the installation remotely.
 
 ## Create and boot the VM
 
