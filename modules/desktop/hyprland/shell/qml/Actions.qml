@@ -5,6 +5,7 @@ QtObject {
     required property QtObject runtime
     required property QtObject prototype
     required property QtObject cheatsheet
+    required property QtObject launcher
     required property QtObject motion
 
     function showPrototype(): void {
@@ -21,6 +22,10 @@ QtObject {
 
     function toggleCheatsheet(): void {
         cheatsheet.toggle();
+    }
+
+    function toggleLauncher(): void {
+        launcher.toggle();
     }
 
     function toggleAnimations(): void {
