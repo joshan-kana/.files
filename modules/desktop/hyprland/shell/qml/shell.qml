@@ -26,6 +26,11 @@ ShellRoot {
         id: media
     }
 
+    SpectrumState {
+        id: spectrum
+        active: media.playing || mediaPanel.open
+    }
+
     AmbientBar {
         id: ambientBar
         runtime: runtime
@@ -51,6 +56,7 @@ ShellRoot {
     MediaPanel {
         id: mediaPanel
         media: media
+        spectrum: spectrum
         runtime: runtime
         theme: theme
         motion: motion
@@ -134,6 +140,18 @@ ShellRoot {
 
         function animationsEnabled(): bool {
             return motion.enabled;
+        }
+
+        function mediaOpen(): bool {
+            return mediaPanel.open;
+        }
+
+        function spectrumConnected(): bool {
+            return spectrum.connected;
+        }
+
+        function spectrumSequence(): int {
+            return spectrum.sequence;
         }
 
         function launchTerminal(): void {
