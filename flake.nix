@@ -258,6 +258,7 @@
         };
 
       nixosHost =
+        configurationName:
         {
           system,
           hostModule,
@@ -280,7 +281,7 @@
         nixpkgsInput.lib.nixosSystem {
           inherit system;
           specialArgs = {
-            inherit inputs;
+            inherit configurationName inputs;
             inherit (semantic)
               editScope
               extendScope
@@ -523,23 +524,23 @@
           };
         }
       );
-      nixosConfigurations = {
-        nixos = nixosHost {
+      nixosConfigurations = lib.mapAttrs nixosHost {
+        nixos = {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
         };
 
-        nixos-arm-parallels = nixosHost {
+        nixos-arm-parallels = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-arm-parallels;
         };
 
-        nixos-orbstack = nixosHost {
+        nixos-orbstack = {
           system = "aarch64-linux";
           hostModule = ./hosts/nixos-orbstack;
         };
 
-        nixos-server = nixosHost {
+        nixos-server = {
           nixpkgsInput = nixpkgs-stable;
           homeManagerInput = home-manager-stable;
           stylixInput = stylix-stable;

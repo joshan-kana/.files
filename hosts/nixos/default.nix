@@ -24,7 +24,6 @@
   ];
 
   dotfiles = {
-    profile.name = "nixos";
     rebuild.flags = "--impure";
   };
 

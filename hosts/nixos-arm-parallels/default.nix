@@ -26,7 +26,6 @@
   ];
 
   dotfiles = {
-    profile.name = "nixos-arm-parallels";
     defaults.terminal = "alacritty";
   };
 
