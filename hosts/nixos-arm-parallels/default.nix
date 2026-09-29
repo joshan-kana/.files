@@ -24,6 +24,11 @@
     (moduleRegistry.profiles { }).desktop
   ];
 
+  dotfiles = {
+    defaults.terminal = "alacritty";
+    scopes.desktop.hyprland.shell.enable = true;
+  };
+
   hardware = import ./hardware.nix;
 
   system = extendScope moduleRegistry.system {
