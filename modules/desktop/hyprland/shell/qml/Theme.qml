@@ -15,9 +15,10 @@ QtObject {
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
 
-    readonly property int radiusSmall: 8
-    readonly property int radiusMedium: 14
-    readonly property int radiusLarge: 22
+    readonly property int radiusSmall: 10
+    readonly property int radiusMedium: 18
+    readonly property int radiusLarge: 30
+    readonly property real squircleExponent: 4.5
 
     readonly property int spacing1: 4
     readonly property int spacing2: 8
