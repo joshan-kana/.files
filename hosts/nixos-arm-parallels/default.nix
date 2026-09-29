@@ -7,7 +7,28 @@
   ...
 }:
 
-lib.recursiveUpdate (import ../../profiles/workstation.nix { inherit moduleRegistry; }) {
+{
+  inherit (moduleRegistry)
+    backups
+    nix
+    theme
+    cli
+    networking
+    appimage
+    audio
+    virtualisation
+    desktop
+    ;
+
+  imports = [
+    (moduleRegistry.profiles { }).desktop
+  ];
+
+  dotfiles = {
+    defaults.terminal = "alacritty";
+    scopes.desktop.hyprland.shell.enable = true;
+  };
+
   hardware = import ./hardware.nix;
 
   system =
