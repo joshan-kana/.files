@@ -176,6 +176,9 @@ Reboot from the internal NVMe with the Vault HDDs still disconnected. In the new
 
 ```sh
 {{#include ../../generated/server-env.sh}}
+```
+
+```sh
 findmnt -T /
 findmnt -T /boot
 findmnt -T "$APP_DATA_ROOT"

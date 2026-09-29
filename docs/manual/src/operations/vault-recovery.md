@@ -158,6 +158,9 @@ After rebuilding the internal system disk, reconnect the existing Vault drives o
 
 ```sh
 {{#include ../generated/server-env.sh}}
+```
+
+```sh
 cd "$DOTFILES_REPO"
 sudo nixos-rebuild switch --flake ".#nixos-server"
 
