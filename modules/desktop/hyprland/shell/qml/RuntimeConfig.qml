@@ -24,6 +24,9 @@ QtObject {
     readonly property color positive: data.theme.positive
     readonly property color accent: data.theme.accent
 
+    readonly property bool animationsEnabled: data.motion.animationsEnabled
+    readonly property var keybindings: data.keybindings
+
     property FileView configFile: FileView {
         path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
         blockLoading: true
@@ -57,6 +60,11 @@ QtObject {
                 property string mono: "monospace"
             }
 
+            property JsonObject motion: JsonObject {
+                property bool animationsEnabled: true
+            }
+
+            property var keybindings: []
             property string wallpaper: ""
         }
     }
