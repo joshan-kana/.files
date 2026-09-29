@@ -125,7 +125,7 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 ```
 
 Backup creation, repository maintenance, and selective recovery procedures are
-kept in [Backup and restore](../backup-restore.md).
+kept in [Backup restore](../../operations/backup-restore.md).
 
 Technitium's zones, DHCP scope and leases, DNS Apps, recursion, and forwarder
 policy are application-managed state. Restoring the server app-data backup
@@ -199,6 +199,6 @@ sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
 ```
 
 After the base system is healthy, connect the Vault HDDs and follow
-[Vault ZFS storage](../vault-storage.md) to import and verify the existing pool.
+[Vault / ZFS recovery](../../operations/vault-recovery.md) to import and verify the existing pool.
 Then restore the PostgreSQL-backed application databases using
-[Backup and restore](../backup-restore.md#postgresql-backed-applications).
+[Backup restore](../../operations/backup-restore.md#postgresql-backed-applications).

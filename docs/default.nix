@@ -245,10 +245,6 @@ let
     }
   ) configurations;
 
-  resticBackups = serverConfig.services.restic.backups;
-  appBackup = resticBackups.apps;
-  secretBackup = resticBackups.secrets;
-  retention = serverConfig.dotfiles.backups.retention;
   storage = serverConfig.dotfiles.server.storage;
   lan = serverConfig.dotfiles.server.lan;
   primary = serverConfig.dotfiles.users.primary;
@@ -700,8 +696,8 @@ let
 
     # Operations
 
-    - [Backup restore](runbooks/backup-restore.md)
-    - [Vault / ZFS](runbooks/vault-storage.md)
+    - [Backup restore](operations/backup-restore.md)
+    - [Vault / ZFS recovery](operations/vault-recovery.md)
 
     # Configuration
 
@@ -710,8 +706,6 @@ let
   '';
 
   summarySource = pkgs.writeText "dotfiles-summary.md" summaryMarkdown;
-
-  mdList = bulletList;
 
   runbookEnvironment = ''
     ${hostRunbookEnvironment "nixos-server" server}
@@ -733,43 +727,7 @@ let
     PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
   '';
 
-  backupMarkdown = ''
-    | Setting | Evaluated value |
-    | --- | --- |
-    | Application data root | `${storage.appData.root}` |
-    | Vault root | `${storage.dataRoot.path}` |
-    | App backup repository | `${appBackup.repository}` |
-    | Secret backup repository | `${secretBackup.repository}` |
-    | Snapshot interval | ${toString storage.snapshots.intervalMinutes} minutes |
-    | App backup schedule | `${appBackup.timerConfig.OnCalendar}` |
-    | Secret backup schedule | `${secretBackup.timerConfig.OnCalendar}` |
-
-    **Application backup paths**
-
-    ${mdList appBackup.paths}
-
-    **Application backup exclusions**
-
-    ${mdList (appBackup.exclude or [ ])}
-
-    **Secret/account backup paths**
-
-    ${mdList secretBackup.paths}
-  '';
-
-  storageMarkdown = ''
-    | Setting | Evaluated value |
-    | --- | --- |
-    | Application data | `${storage.appData.root}` |
-    | Vault mount | `${storage.dataRoot.path}` |
-    | Vault pool | `${storage.dataRoot.poolName}` |
-    | Snapshot interval | ${toString storage.snapshots.intervalMinutes} minutes |
-    | Retention | ${toString retention.hourly} hourly / ${toString retention.daily} daily / ${toString retention.weekly} weekly / ${toString retention.monthly} monthly |
-  '';
-
   runbookEnvironmentSource = pkgs.writeText "dotfiles-server-env.sh" runbookEnvironment;
-  backupSource = pkgs.writeText "dotfiles-backup-reference.md" backupMarkdown;
-  storageSource = pkgs.writeText "dotfiles-storage-reference.md" storageMarkdown;
 
   docsSource =
     pkgs.runCommand "dotfiles-docs-source"
@@ -819,8 +777,6 @@ let
           install -m 0644 ${hostEnvironmentSources.${name}} "$out/src/generated/hosts/${name}.sh"
         '') hostNames}
         install -m 0644 ${runbookEnvironmentSource} "$out/src/generated/server-env.sh"
-        install -m 0644 ${backupSource} "$out/src/generated/backup-reference.md"
-        install -m 0644 ${storageSource} "$out/src/generated/storage-reference.md"
         chmod u+w "$out/src/configuration/scopes.md"
 
         while IFS= read -r -d "" file; do
@@ -852,8 +808,6 @@ let
           src/infrastructure/services.md \
           src/infrastructure/packages.md \
           src/generated/server-env.sh \
-          src/generated/backup-reference.md \
-          src/generated/storage-reference.md \
           data/options.json \
           data/reference.json; do
           test -s "$out/$required"

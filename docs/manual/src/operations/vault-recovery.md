@@ -1,10 +1,8 @@
-# Vault ZFS storage
+# Vault / ZFS recovery
 
 Vault is the server's bulk local-data layer. Pool creation is deliberately an explicit human action because it destroys existing disk contents; normal NixOS activation only manages the configuration around an existing pool.
 
-## Current evaluated storage configuration
-
-{{#include ../generated/storage-reference.md}}
+Current filesystem, Vault, pool, snapshot, and retention state is in [Storage](../infrastructure/storage.md).
 
 The command examples use these generated values:
 
@@ -78,7 +76,7 @@ systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 journalctl -u sanoid.service -u zfs-scrub.service --since '7 days ago'
 ```
 
-Snapshot interval and retention policy are generated at the top of this page from the current configuration. Change them in Nix rather than editing this runbook.
+Snapshot interval and retention policy are shown in [Storage](../infrastructure/storage.md). Change them in Nix rather than editing this runbook.
 
 ## Recover a file or directory from a snapshot
 
