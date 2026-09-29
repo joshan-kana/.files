@@ -591,28 +591,6 @@ let
     ) hostNames}
   '';
 
-  servicesMarkdown = ''
-    # Services
-
-    ${lib.concatMapStringsSep "\n" (
-      name:
-      let
-        facts = hostFacts.${name};
-      in
-      ''
-        ## `${name}`
-
-        **Server applications**
-
-        ${bulletList facts.serverApps}
-
-        **OCI containers**
-
-        ${bulletList facts.containers}
-      ''
-    ) hostNames}
-  '';
-
   packagesMarkdown = ''
     # Packages
 
@@ -707,7 +685,6 @@ let
       - [Firewall](infrastructure/firewall.md)
     - [Storage](infrastructure/storage.md)
     - [Backups](infrastructure/backups.md)
-    - [Services](infrastructure/services.md)
     - [Packages](infrastructure/packages.md)
 
     # Configuration
@@ -740,7 +717,6 @@ let
     "infrastructure/firewall.md" = firewallMarkdown;
     "infrastructure/networking.md" = networkingMarkdown;
     "infrastructure/packages.md" = packagesMarkdown;
-    "infrastructure/services.md" = servicesMarkdown;
     "infrastructure/storage.md" = infrastructureStorageMarkdown;
     "overview/fleet.md" = fleetMarkdown;
     "runbooks/common/index.md" = commonRunbookIndexMarkdown;
