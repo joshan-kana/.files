@@ -24,6 +24,32 @@
       shellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
+
+      spectrumAnalyzer = pkgs.stdenv.mkDerivation {
+        pname = "linux-desktop-spectrum";
+        version = "0.1.0";
+        src = ./spectrum;
+
+        nativeBuildInputs = [ pkgs.pkg-config ];
+        buildInputs = [ pkgs.pipewire ];
+
+        buildPhase = ''
+          runHook preBuild
+
+          $CXX             -std=c++20             -O3             -DNDEBUG             -Wall             -Wextra             main.cpp             -o linux-desktop-spectrum             $(pkg-config --cflags --libs libpipewire-0.3)             -pthread
+
+          runHook postBuild
+        '';
+
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 linux-desktop-spectrum "$out/bin/linux-desktop-spectrum"
+          runHook postInstall
+        '';
+
+        meta.mainProgram = "linux-desktop-spectrum";
+      };
+
       keybindings = import ../keybindings.nix {
         repoPath = osConfig.dotfiles.paths.repoPath;
         terminal = osConfig.dotfiles.defaults.terminal;
@@ -81,24 +107,50 @@
       home.packages = [
         launcher
         pkgs.quickshell
+        spectrumAnalyzer
       ];
 
       xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
 
-      systemd.user.services.linux-desktop = {
-        Unit = {
-          Description = "Hyprland desktop shell";
-          PartOf = [ "hyprland-session.target" ];
-          After = [ "hyprland-session.target" ];
+      systemd.user.services = {
+        linux-desktop-spectrum = {
+          Unit = {
+            Description = "Hyprland desktop audio spectrum analyser";
+            PartOf = [ "hyprland-session.target" ];
+            After = [
+              "hyprland-session.target"
+              "pipewire.service"
+            ];
+          };
+
+          Service = {
+            ExecStart = lib.getExe spectrumAnalyzer;
+            Restart = "on-failure";
+            RestartSec = 1;
+          };
+
+          Install.WantedBy = [ "hyprland-session.target" ];
         };
 
-        Service = {
-          ExecStart = "${lib.getExe launcher} --no-duplicate";
-          Restart = "on-failure";
-          RestartSec = 1;
-        };
+        linux-desktop = {
+          Unit = {
+            Description = "Hyprland desktop shell";
+            PartOf = [ "hyprland-session.target" ];
+            Requires = [ "linux-desktop-spectrum.service" ];
+            After = [
+              "hyprland-session.target"
+              "linux-desktop-spectrum.service"
+            ];
+          };
 
-        Install.WantedBy = [ "hyprland-session.target" ];
+          Service = {
+            ExecStart = "${lib.getExe launcher} --no-duplicate";
+            Restart = "on-failure";
+            RestartSec = 1;
+          };
+
+          Install.WantedBy = [ "hyprland-session.target" ];
+        };
       };
     };
 }
