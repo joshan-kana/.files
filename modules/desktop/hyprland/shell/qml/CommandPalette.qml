@@ -9,6 +9,9 @@ PanelWindow {
     required property QtObject theme
     required property QtObject motion
 
+    property var commands: []
+    signal commandTriggered(string commandId)
+
     property bool open: false
     property bool closing: false
 
@@ -34,13 +37,13 @@ PanelWindow {
     }
 
     ScriptModel {
-        id: applicationModel
-        values: palette.filteredApplications()
+        id: resultModel
+        values: palette.filteredItems()
     }
 
-    function score(entry, query): int {
-        const name = entry.name.toLowerCase();
-        const generic = (entry.genericName || "").toLowerCase();
+    function score(item, query): int {
+        const name = item.name.toLowerCase();
+        const generic = (item.genericName || "").toLowerCase();
 
         if (name === query)
             return 0;
@@ -56,29 +59,54 @@ PanelWindow {
         return 10;
     }
 
-    function filteredApplications(): var {
+    function filteredItems(): var {
         const query = search.text.trim().toLowerCase();
-        const applications = [...DesktopEntries.applications.values];
+
+        const commandItems = (commands || []).map(command => ({
+            kind: "command",
+            name: command.name,
+            genericName: command.description || "Desktop action",
+            icon: command.icon || "system-run",
+            key: command.key || "",
+            commandId: command.id,
+            keywords: command.keywords || []
+        }));
+
+        const applicationItems = [...DesktopEntries.applications.values].map(entry => ({
+            kind: "application",
+            name: entry.name,
+            genericName: entry.genericName || entry.comment || "Application",
+            icon: entry.icon || "application-x-executable",
+            key: "",
+            desktopEntry: entry,
+            keywords: entry.keywords || []
+        }));
+
+        const items = commandItems.concat(applicationItems);
 
         if (query.length === 0)
-            return applications
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .slice(0, 9);
+            return items.slice(0, 9);
 
-        return applications
-            .filter(entry => {
+        return items
+            .filter(item => {
                 const haystack = [
-                    entry.name,
-                    entry.genericName || "",
-                    entry.comment || "",
-                    ...(entry.keywords || [])
+                    item.name,
+                    item.genericName || "",
+                    item.key || "",
+                    ...(item.keywords || [])
                 ].join(" ").toLowerCase();
 
                 return haystack.includes(query);
             })
             .sort((a, b) => {
                 const rank = score(a, query) - score(b, query);
-                return rank !== 0 ? rank : a.name.localeCompare(b.name);
+                if (rank !== 0)
+                    return rank;
+
+                if (a.kind !== b.kind)
+                    return a.kind === "command" ? -1 : 1;
+
+                return a.name.localeCompare(b.name);
             })
             .slice(0, 9);
     }
@@ -88,7 +116,7 @@ PanelWindow {
         closing = false;
         open = true;
         search.text = "";
-        results.currentIndex = applicationModel.values.length > 0 ? 0 : -1;
+        results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
         search.forceActiveFocus();
     }
 
@@ -111,12 +139,16 @@ PanelWindow {
     }
 
     function launchCurrent(): void {
-        if (results.currentIndex < 0 || results.currentIndex >= applicationModel.values.length)
+        if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
             return;
 
-        const entry = applicationModel.values[results.currentIndex];
+        const entry = resultModel.values[results.currentIndex];
         hide();
-        entry.execute();
+
+        if (entry.kind === "command")
+            commandTriggered(entry.commandId);
+        else if (entry.desktopEntry)
+            entry.desktopEntry.execute();
     }
 
     Rectangle {
@@ -233,20 +265,20 @@ PanelWindow {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: "Search applications…"
+                        text: "Search apps and actions…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
                     }
 
-                    onTextChanged: results.currentIndex = applicationModel.values.length > 0 ? 0 : -1
+                    onTextChanged: results.currentIndex = resultModel.values.length > 0 ? 0 : -1
 
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Escape) {
                             palette.hide();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Down) {
-                            results.currentIndex = Math.min(applicationModel.values.length - 1, results.currentIndex + 1);
+                            results.currentIndex = Math.min(resultModel.values.length - 1, results.currentIndex + 1);
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
@@ -287,10 +319,10 @@ PanelWindow {
                     bottomMargin: theme.spacing3
                 }
 
-                model: applicationModel
+                model: resultModel
                 spacing: 4
                 clip: true
-                currentIndex: applicationModel.values.length > 0 ? 0 : -1
+                currentIndex: resultModel.values.length > 0 ? 0 : -1
                 highlightMoveDuration: motion.fast
                 highlightResizeDuration: motion.fast
 
@@ -363,7 +395,7 @@ PanelWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 86
-                            text: result.ListView.isCurrentItem ? "↵  OPEN" : ""
+                            text: modelData.key.length > 0 ? modelData.key : (result.ListView.isCurrentItem ? "↵  RUN" : "")
                             horizontalAlignment: Text.AlignRight
                             color: theme.accent
                             font.family: runtime.fontMono
@@ -386,7 +418,7 @@ PanelWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    visible: applicationModel.values.length === 0
+                    visible: resultModel.values.length === 0
                     text: "NO MATCHES"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -405,7 +437,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: applicationModel.values.length + " RESULTS"
+                    text: resultModel.values.length + " RESULTS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: 10
