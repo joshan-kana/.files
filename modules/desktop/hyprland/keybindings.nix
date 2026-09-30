@@ -161,7 +161,7 @@ in
   })
   (mk {
     keys = "ALT + V";
-    action = exec "${repoPath}/scripts/audio_fx";
+    action = exec "[float] easyeffects";
     section = "AUDIO";
     description = "Audio effects";
   })
