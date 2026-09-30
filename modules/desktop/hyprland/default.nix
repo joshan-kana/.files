@@ -58,12 +58,8 @@ in
     };
   };
 
-  swaylock = _: {
-    security.pam.services.swaylock = { };
-
-    home = _: {
-      programs.swaylock.package = pkgs.swaylock-effects;
-    };
+  lock = _: {
+    security.pam.services.linux-desktop = { };
   };
 
   cliphist = _: {
