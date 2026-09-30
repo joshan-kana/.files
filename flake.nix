@@ -298,11 +298,65 @@
           ]
           ++ extraModules;
         };
+
+      docsFor =
+        system:
+        import ./docs {
+          inherit lib semanticScopeOptions;
+          pkgs = pkgsFor system;
+          source = self;
+          configurations = self.nixosConfigurations;
+        };
+
+      docsToolsFor =
+        system:
+        let
+          pkgs = pkgsFor system;
+          docsBuild = pkgs.writeShellApplication {
+            name = "docs";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.nix
+            ];
+            text = builtins.readFile ./scripts/docs;
+          };
+          docsServe = pkgs.writeShellApplication {
+            name = "docs-serve";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.git
+              pkgs.mdbook
+              pkgs.nix
+              pkgs.rsync
+              pkgs.watchexec
+            ];
+            text = builtins.readFile ./scripts/docs-serve;
+          };
+        in
+        pkgs.symlinkJoin {
+          name = "dotfiles-docs-tools";
+          paths = [
+            docsBuild
+            docsServe
+          ];
+        };
     in
     {
       lib.semanticScopeOptions = semanticScopeOptions;
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
+
+      packages = forAllSystems (
+        system:
+        let
+          generatedDocs = docsFor system;
+        in
+        {
+          docs = generatedDocs.book;
+          docs-source = generatedDocs.docsSource;
+          docs-tools = docsToolsFor system;
+        }
+      );
 
       devShells = forAllSystems (
         system:
@@ -340,6 +394,7 @@
               nil
               statix
               deadnix
+              nixdoc
               jq
               skopeo
             ]
@@ -348,6 +403,7 @@
               formatRepo
               repoOptionsFzf
               treefmt.config.build.wrapper
+              (docsToolsFor system)
             ];
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
@@ -386,6 +442,7 @@
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
+          docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
@@ -498,6 +555,11 @@
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
+          docs-serve = {
+            type = "app";
+            program = "${docsToolsFor system}/bin/docs-serve";
+            meta.description = "Build and live-preview the generated repository manual";
+          };
           system-upgrade = {
             type = "app";
             program = lib.getExe systemUpgrade;

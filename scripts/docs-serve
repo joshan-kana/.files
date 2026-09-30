@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+work="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-docs.XXXXXX")"
+book="$work/book"
+watch_pid=""
+
+cleanup() {
+  if [[ -n "$watch_pid" ]]; then
+    kill "$watch_pid" 2>/dev/null || true
+  fi
+  rm -rf -- "$work"
+}
+trap cleanup EXIT INT TERM
+
+cat > "$work/refresh" <<'REFRESH'
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$1"
+book="$2"
+source_path="$(nix build "path:$repo#docs-source" --no-link --print-out-paths)"
+mkdir -p "$book"
+rsync -a --delete "$source_path/" "$book/"
+chmod -R u+w "$book"
+REFRESH
+chmod +x "$work/refresh"
+
+"$work/refresh" "$repo" "$book"
+
+watchexec \
+  --watch "$repo/docs/manual" \
+  --watch "$repo/docs/default.nix" \
+  --watch "$repo/modules" \
+  --watch "$repo/hosts" \
+  --watch "$repo/lib" \
+  --watch "$repo/flake.nix" \
+  --watch "$repo/flake.lock" \
+  --postpone \
+  --restart \
+  -- "$work/refresh" "$repo" "$book" &
+watch_pid=$!
+
+port="${DOCS_PORT:-38080}"
+printf 'Serving generated docs at http://127.0.0.1:%s\n' "$port"
+mdbook serve "$book" --hostname 127.0.0.1 --port "$port"
