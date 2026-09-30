@@ -89,7 +89,7 @@ PanelWindow {
                     text: osd.label
                     color: popup.accentColor
                     font.family: runtime.fontMono
-                    font.pixelSize: 11
+                    font.pixelSize: theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.4
                 }
@@ -104,7 +104,7 @@ PanelWindow {
                     text: osd.value + "%"
                     color: theme.textStrong
                     font.family: runtime.fontMono
-                    font.pixelSize: 12
+                    font.pixelSize: theme.fontSize(12)
                     font.weight: Font.DemiBold
                 }
             }

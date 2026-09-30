@@ -11,6 +11,19 @@
     description = "Enable motion and animated transitions in the Hyprland desktop shell.";
   };
 
+  scopeOptions.textScale = lib.mkOption {
+    type = lib.types.float;
+    default = 1.0;
+    description = "Scale text in the Hyprland desktop shell.";
+  };
+
+  assertions = [
+    {
+      assertion = scopeConfig.textScale >= 0.75 && scopeConfig.textScale <= 1.5;
+      message = "desktop.hyprland.shell.textScale must be between 0.75 and 1.5";
+    }
+  ];
+
   home =
     {
       config,
@@ -116,6 +129,7 @@
 
         assets.spectrumFieldShader = "file://${spectrumFieldShader}";
 
+        accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         keybindings = cheatsheetBindings;
 
