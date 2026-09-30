@@ -145,6 +145,7 @@ ShellRoot {
         commands: [
             { id: "clipboard.toggle", name: "Clipboard History", description: "Search and restore clipboard entries", icon: "edit-paste", key: "SUPER + V", keywords: ["copy", "paste", "cliphist"] },
             { id: "audio.mixer", name: "Application Mixer", description: "Control live PipeWire playback streams", icon: "multimedia-volume-control", key: "SUPER + SHIFT + V", keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"] },
+            { id: "session.lock", name: "Lock Session", description: "Secure the current Wayland session", icon: "system-lock-screen", key: "SUPER + L", keywords: ["lock", "security", "password"] },
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
             { id: "media.playPause", name: "Play / Pause", description: "Toggle the selected media player", icon: "media-playback-start", key: "SUPER + ALT + X", keywords: ["music", "media", "pause"] },
             { id: "media.next", name: "Next Track", description: "Skip to the next track", icon: "media-skip-forward", key: "SUPER + ALT + C", keywords: ["music", "media", "skip"] },
@@ -213,6 +214,13 @@ ShellRoot {
         name: "audio-mixer"
         description: "Open application audio mixer"
         onPressed: actions.toggleAudioMixer()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "lock"
+        description: "Lock the current session"
+        onPressed: actions.lockSession()
     }
 
     GlobalShortcut {
