@@ -22,6 +22,10 @@ ShellRoot {
         runtime: runtime
     }
 
+    ScreenRouter {
+        id: screens
+    }
+
     WallpaperLayer {
         runtime: runtime
         theme: theme
@@ -68,12 +72,14 @@ ShellRoot {
 
     PrototypeSurface {
         id: prototype
+        screen: screens.focusedScreen
         runtime: runtime
         theme: theme
     }
 
     ShortcutCheatsheet {
         id: cheatsheet
+        screen: screens.focusedScreen
         runtime: runtime
         theme: theme
         motion: motion
@@ -81,6 +87,7 @@ ShellRoot {
 
     ClipboardPanel {
         id: clipboardPanel
+        screen: screens.focusedScreen
         runtime: runtime
         theme: theme
         motion: motion
@@ -88,6 +95,7 @@ ShellRoot {
 
     AudioMixerPanel {
         id: audioMixerPanel
+        screen: screens.focusedScreen
         system: system
         runtime: runtime
         theme: theme
@@ -96,6 +104,7 @@ ShellRoot {
 
     MediaPanel {
         id: mediaPanel
+        screen: screens.focusedScreen
         media: media
         spectrum: spectrum
         runtime: runtime
@@ -105,6 +114,7 @@ ShellRoot {
 
     SystemPanel {
         id: systemPanel
+        screen: screens.focusedScreen
         system: system
         brightness: brightness
         runtime: runtime
@@ -114,6 +124,7 @@ ShellRoot {
 
     NotificationPopup {
         id: notificationPopup
+        screen: screens.focusedScreen
         notificationState: notifications
         runtime: runtime
         theme: theme
@@ -123,6 +134,7 @@ ShellRoot {
 
     NotificationCenter {
         id: notificationCenter
+        screen: screens.focusedScreen
         notificationState: notifications
         runtime: runtime
         theme: theme
@@ -131,6 +143,7 @@ ShellRoot {
 
     OsdPopup {
         id: osdPopup
+        screen: screens.focusedScreen
         osd: osd
         runtime: runtime
         theme: theme
@@ -139,6 +152,7 @@ ShellRoot {
 
     CommandPalette {
         id: launcher
+        screen: screens.focusedScreen
         runtime: runtime
         theme: theme
         motion: motion
