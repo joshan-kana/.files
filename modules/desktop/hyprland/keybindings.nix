@@ -170,7 +170,7 @@ in
     keys = "SPACE";
     action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
-    description = "Command palette";
+    description = "App & command launcher";
   })
   (mk {
     keys = "V";
@@ -181,9 +181,9 @@ in
   (mk {
     keys = "ALT + SPACE";
     mainMod = false;
-    action = exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh";
+    action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
-    description = "Desktop launcher";
+    description = "App & command launcher";
   })
 
   (mk {
