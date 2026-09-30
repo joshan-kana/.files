@@ -9,6 +9,7 @@ PanelWindow {
     required property QtObject theme
     required property QtObject motion
     required property QtObject system
+    required property QtObject brightness
 
     property bool open: false
     property bool closing: false
@@ -79,7 +80,7 @@ PanelWindow {
 
     SquircleSurface {
         width: Math.min(panel.width - 70, 500)
-        height: 430
+        height: brightness.supported ? 530 : 430
 
         anchors {
             top: parent.top
@@ -196,6 +197,79 @@ PanelWindow {
                                 radius: parent.radius
                                 width: parent.width * Math.max(0, Math.min(1, system.volume))
                                 color: system.muted ? theme.warning : theme.accent
+
+                                Behavior on width {
+                                    NumberAnimation {
+                                        duration: motion.fast
+                                        easing.type: motion.enterType
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SquircleSurface {
+                    width: parent.width
+                    height: 82
+                    visible: brightness.supported
+                    exponent: theme.squircleExponent
+                    cornerRadius: theme.radiusLarge
+                    fillColor: theme.background
+                    borderColor: theme.outline
+                    borderWidth: 1
+
+                    Item {
+                        anchors.fill: parent
+                        anchors.margins: theme.spacing4
+
+                        Row {
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: parent.right
+                            }
+
+                            Text {
+                                text: "DISPLAY // " + brightness.percent + "%"
+                                color: theme.textStrong
+                                font.family: runtime.fontMono
+                                font.pixelSize: 11
+                                font.weight: Font.DemiBold
+                            }
+
+                            Item {
+                                width: parent.width - parent.children[0].width - brightnessDevice.width
+                                height: 1
+                            }
+
+                            Text {
+                                id: brightnessDevice
+                                width: Math.min(220, implicitWidth)
+                                text: brightness.device
+                                horizontalAlignment: Text.AlignRight
+                                elide: Text.ElideRight
+                                color: theme.textMuted
+                                font.family: runtime.fontMono
+                                font.pixelSize: 9
+                            }
+                        }
+
+                        Rectangle {
+                            anchors {
+                                right: parent.right
+                                bottom: parent.bottom
+                                left: parent.left
+                            }
+                            height: 7
+                            radius: height / 2
+                            color: theme.surfaceRaised
+
+                            Rectangle {
+                                height: parent.height
+                                radius: parent.radius
+                                width: parent.width * brightness.percent / 100
+                                color: theme.positive
 
                                 Behavior on width {
                                     NumberAnimation {
@@ -334,6 +408,15 @@ PanelWindow {
                 }
 
                 Text {
+                    visible: brightness.supported
+                    text: "↑/↓  BRIGHTNESS"
+                    color: theme.textMuted
+                    font.family: runtime.fontMono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -359,6 +442,12 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
                         system.toggleMute();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Up && brightness.supported) {
+                        brightness.adjust(5);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Down && brightness.supported) {
+                        brightness.adjust(-5);
                         event.accepted = true;
                     }
                 }

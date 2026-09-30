@@ -9,6 +9,7 @@ QtObject {
     required property QtObject mediaPanel
     required property QtObject systemPanel
     required property QtObject systemState
+    required property QtObject brightnessState
     required property QtObject notificationCenter
     required property QtObject notificationState
     required property QtObject motion
@@ -65,6 +66,14 @@ QtObject {
         systemState.toggleMute();
     }
 
+    function brightnessUp(): void {
+        brightnessState.adjust(5);
+    }
+
+    function brightnessDown(): void {
+        brightnessState.adjust(-5);
+    }
+
     function invokeCommand(commandId: string): void {
         if (commandId === "media.toggle")
             toggleMedia();
@@ -84,6 +93,10 @@ QtObject {
             volumeDown();
         else if (commandId === "audio.toggleMute")
             toggleMute();
+        else if (commandId === "brightness.up")
+            brightnessUp();
+        else if (commandId === "brightness.down")
+            brightnessDown();
         else if (commandId === "terminal.open")
             launchTerminal();
     }
