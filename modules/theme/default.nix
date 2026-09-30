@@ -1,35 +1,202 @@
 {
+  config,
   lib,
   pkgs,
-  scopeConfig,
+  themeVariant ? null,
   ...
 }:
 
 let
-  themeRegistry = import ./registry.nix { inherit lib pkgs; };
-  activeTheme = themeRegistry.resolve scopeConfig.name;
-  activeAssets = activeTheme.assets;
+  themeRegistry = import ./themes.nix;
+  extendModules = config._module.args.extendModules;
+  activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
+  activeTheme = themeRegistry.variants.${activeThemeName};
+  primaryUser = config.dotfiles.users.primary.name;
+  hyprlandEnabled = lib.attrByPath [
+    "desktop"
+    "hyprland"
+    "enable"
+  ] false config.dotfiles.resolvedScopes;
+  buildRuntimeVariants = hyprlandEnabled && themeVariant == null;
+
+  variantConfigurations =
+    if buildRuntimeVariants then
+      lib.mapAttrs (
+        name: _:
+        (extendModules {
+          specialArgs.themeVariant = name;
+        }).config
+      ) themeRegistry.variants
+    else
+      { };
+
+  variantActivations = lib.mapAttrs (
+    _: variantConfig: variantConfig.home-manager.users.${primaryUser}.home.activationPackage
+  ) variantConfigurations;
+
+  themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
+    builtins.toJSON {
+      inherit (themeRegistry) default;
+      themes = lib.mapAttrsToList (
+        name: value:
+        let
+          colors = variantConfigurations.${name}.lib.stylix.colors.withHashtag;
+        in
+        {
+          inherit name;
+          inherit (value) label;
+          preview = {
+            background = colors.base00;
+            surface = colors.base01;
+            outline = colors.base03;
+            text = colors.base05;
+            swatches = [
+              colors.base08
+              colors.base0A
+              colors.base0B
+              colors.base0D
+              colors.base0E
+            ];
+          };
+        }
+      ) themeRegistry.variants;
+    }
+  );
+
+  themeCases = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (name: activation: ''
+      ${name})
+        activation=${lib.escapeShellArg (toString activation)}
+        ;;
+    '') variantActivations
+  );
+
+  themeSet = pkgs.writeShellApplication {
+    name = "theme-set";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      defaultTheme=${lib.escapeShellArg themeRegistry.default}
+      expectedUser=${lib.escapeShellArg primaryUser}
+      manifest=${lib.escapeShellArg (toString themeManifest)}
+      stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+      stateFile="$stateDir/theme"
+
+      resolve_theme() {
+        case "$1" in
+      ${themeCases}
+          *)
+            return 1
+            ;;
+        esac
+      }
+
+      current_theme() {
+        if [ -s "$stateFile" ]; then
+          selected="$(cat "$stateFile")"
+          if resolve_theme "$selected"; then
+            printf '%s\n' "$selected"
+            return
+          fi
+        fi
+
+        printf '%s\n' "$defaultTheme"
+      }
+
+      apply_theme() {
+        selected="$1"
+
+        if [ "''${USER:-}" != "$expectedUser" ]; then
+          printf 'theme-set is configured for user %s, not %s\n' "$expectedUser" "''${USER:-unknown}" >&2
+          exit 1
+        fi
+
+        if ! resolve_theme "$selected"; then
+          printf 'Unknown theme: %s\n' "$selected" >&2
+          exit 2
+        fi
+
+        "$activation/activate" --driver-version 1
+
+        umask 077
+        install -d -m 0700 "$stateDir"
+        tmp="$(mktemp "$stateDir/theme.XXXXXX")"
+        printf '%s\n' "$selected" > "$tmp"
+        mv "$tmp" "$stateFile"
+
+        printf '%s\n' "$selected"
+      }
+
+      case "''${1:-}" in
+        list)
+          if [ "''${2:-}" = "--json" ]; then
+            cat "$manifest"
+          else
+            while IFS= read -r name; do
+              printf '%s\n' "$name"
+            done <<'EOF'
+      ${lib.concatStringsSep "\n" (builtins.attrNames themeRegistry.variants)}
+      EOF
+          fi
+          ;;
+        current)
+          current_theme
+          ;;
+        restore)
+          selected="$(current_theme)"
+          if [ "$selected" != "$defaultTheme" ]; then
+            apply_theme "$selected" >/dev/null
+          fi
+          ;;
+        "")
+          printf 'Usage: theme-set [list [--json]|current|restore|<theme>]\n' >&2
+          exit 2
+          ;;
+        *)
+          apply_theme "$1"
+          ;;
+      esac
+    '';
+  };
 in
 {
-  scopeOptions.name = lib.mkOption {
-    type = lib.types.enum (builtins.attrNames themeRegistry.variants);
-    inherit (themeRegistry) default;
-    description = "Selected visual theme.";
-  };
-
   stylix = {
     enable = true;
-    image = activeAssets.wallpaper;
+    image = ./wallpaper.png;
+    base16Scheme = activeTheme.scheme;
 
-    inherit (activeTheme) fonts polarity;
-    inherit (activeAssets) cursor;
-  }
-  // lib.optionalAttrs (activeTheme ? colors) {
-    base16Scheme = {
-      system = "base16";
-      name = activeTheme.label;
-      variant = activeTheme.polarity;
-      palette = activeTheme.colors;
+    fonts = {
+      serif = config.stylix.fonts.monospace;
+      sansSerif = config.stylix.fonts.monospace;
+      monospace = {
+        package = pkgs.monaspace;
+        name = "Monaspace Neon Frozen";
+      };
+      emoji = {
+        package = pkgs.noto-fonts-color-emoji;
+        name = "Noto Color Emoji";
+      };
+    };
+
+    polarity = "dark";
+
+    cursor = {
+      package = pkgs.google-cursor;
+      name = "GoogleDot-Black";
+      size = 30;
+    };
+  };
+
+  environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
+
+  systemd.user.services.theme-restore = lib.mkIf buildRuntimeVariants {
+    description = "Restore selected desktop theme";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session-pre.target" ];
+    unitConfig.ConditionUser = primaryUser;
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${lib.getExe themeSet} restore";
     };
   };
 
@@ -270,7 +437,10 @@ in
       gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
 
-        iconTheme = activeAssets.icons;
+        iconTheme = {
+          package = pkgs.gruvbox-dark-icons-gtk;
+          name = "oomox-gruvbox-dark";
+        };
       };
     };
 
