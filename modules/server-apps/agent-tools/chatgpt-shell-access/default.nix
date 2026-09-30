@@ -12,11 +12,15 @@ let
   serviceUser = "chatgpt-shell";
   tunnelSecret = "${server.secretsDir}/chatgpt-shell-tunnel.env";
   macSshKeySecret = "${server.secretsDir}/chatgpt-shell-mac";
+  parallelsSshKeySecret = "${server.secretsDir}/chatgpt-shell-nixos-arm-parallels";
+  parallelsSudoSshKeySecret = "${server.secretsDir}/nixos-arm-parallels-sudo";
   sudoSshKeySecret = "${server.secretsDir}/chatgpt-shell-sudo";
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   knownHostsFile = "${config.users.users.${primary.name}.home}/.ssh/known_hosts";
+  remoteSudoAgentSocket = "/run/chatgpt-shell-access/remote-sudo-agent.sock";
 
   macHost = "mac.home";
+  parallelsHost = "nixos-arm-parallels.home";
 
   remoteTargets = {
     mac = {
@@ -24,6 +28,12 @@ let
       credential = macSshKeySecret;
       shell = "/bin/zsh";
       sudo = false;
+    };
+    nixos-arm-parallels = {
+      sshTarget = "${primary.name}@${parallelsHost}";
+      credential = parallelsSshKeySecret;
+      shell = "/run/current-system/sw/bin/bash";
+      sudo = true;
     };
   };
   remoteTargetConfig = lib.mapAttrs (name: target: {
@@ -99,6 +109,7 @@ in
     unitConfig.AssertPathExists = [
       tunnelSecret
       sudoSshKeySecret
+      parallelsSudoSshKeySecret
       githubSecret
       knownHostsFile
     ]
@@ -115,6 +126,7 @@ in
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_USER = primary.name;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
+      CHATGPT_SHELL_REMOTE_SUDO_AGENT = remoteSudoAgentSocket;
       CHATGPT_SHELL_REMOTE_TARGETS = builtins.toJSON remoteTargetConfig;
     };
 
@@ -131,21 +143,27 @@ in
         lib.mapAttrsToList (name: target: "chatgpt-shell-${name}:${target.credential}") remoteTargets
         ++ [
           "chatgpt-shell-sudo:${sudoSshKeySecret}"
+          "nixos-arm-parallels-sudo:${parallelsSudoSshKeySecret}"
           "chatgpt-shell-known-hosts:${knownHostsFile}"
         ];
       ExecStart = pkgs.writeShellScript "chatgpt-shell-access-start" ''
         set -euo pipefail
-        rm -f "$SSH_AUTH_SOCK"
+        rm -f "$SSH_AUTH_SOCK" "$CHATGPT_SHELL_REMOTE_SUDO_AGENT"
         /run/wrappers/bin/sudo -n -H -u ${primary.name} -- ${pkgs.bash}/bin/bash -c \
           'exec ${pkgs.openssh}/bin/ssh-agent -D -a "$1"' _ "$SSH_AUTH_SOCK" >/dev/null &
+        ${pkgs.openssh}/bin/ssh-agent -D -a "$CHATGPT_SHELL_REMOTE_SUDO_AGENT" >/dev/null &
         for _ in $(seq 1 100); do
-          [ -S "$SSH_AUTH_SOCK" ] && break
+          [ -S "$SSH_AUTH_SOCK" ] && [ -S "$CHATGPT_SHELL_REMOTE_SUDO_AGENT" ] && break
           sleep 0.05
         done
         [ -S "$SSH_AUTH_SOCK" ]
+        [ -S "$CHATGPT_SHELL_REMOTE_SUDO_AGENT" ]
         cat "$CREDENTIALS_DIRECTORY/chatgpt-shell-sudo" | \
           /run/wrappers/bin/sudo -n -H -u ${primary.name} -- ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$SSH_AUTH_SOCK"
+        cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
+          ${pkgs.bash}/bin/bash -c \
+            'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_SUDO_AGENT"
         exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";
