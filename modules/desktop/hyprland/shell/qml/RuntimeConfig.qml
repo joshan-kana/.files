@@ -31,6 +31,7 @@ QtObject {
     readonly property color positive: data.theme.positive
     readonly property color accent: data.theme.accent
 
+    readonly property real textScale: data.accessibility.textScale
     readonly property bool animationsEnabled: data.motion.animationsEnabled
     readonly property var keybindings: data.keybindings
 
@@ -45,6 +46,10 @@ QtObject {
 
             property JsonObject assets: JsonObject {
                 property string spectrumFieldShader: ""
+            }
+
+            property JsonObject accessibility: JsonObject {
+                property real textScale: 1.0
             }
 
             property JsonObject defaults: JsonObject {

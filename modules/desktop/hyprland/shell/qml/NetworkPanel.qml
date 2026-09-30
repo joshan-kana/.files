@@ -211,7 +211,7 @@ Item {
                 text: system.networkConnected ? system.networkName : "OFFLINE"
                 color: theme.text
                 font.family: runtime.fontMono
-                font.pixelSize: 9
+                font.pixelSize: theme.fontSize(9)
             }
 
             Text {
@@ -219,7 +219,7 @@ Item {
                 text: system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
                 color: system.wifiEnabled ? theme.accent : theme.critical
                 font.family: runtime.fontMono
-                font.pixelSize: 9
+                font.pixelSize: theme.fontSize(9)
             }
 
             Text {
@@ -227,7 +227,7 @@ Item {
                 text: "HARDWARE DISABLED"
                 color: theme.critical
                 font.family: runtime.fontMono
-                font.pixelSize: 9
+                font.pixelSize: theme.fontSize(9)
             }
         }
     }
@@ -304,7 +304,7 @@ Item {
                                 text: modelData.name
                                 color: theme.textStrong
                                 font.family: runtime.fontSans
-                                font.pixelSize: 13
+                                font.pixelSize: theme.fontSize(13)
                                 font.weight: modelData.connected ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
                             }
@@ -316,7 +316,7 @@ Item {
                                     : (modelData.known ? "KNOWN" : "")
                                 color: modelData.connected ? theme.positive : theme.textMuted
                                 font.family: runtime.fontMono
-                                font.pixelSize: 8
+                                font.pixelSize: theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -328,7 +328,7 @@ Item {
                                 + Math.round(modelData.signalStrength * 100)
                             color: theme.textMuted
                             font.family: runtime.fontMono
-                            font.pixelSize: 8
+                            font.pixelSize: theme.fontSize(8)
                             elide: Text.ElideRight
                         }
                     }
@@ -342,7 +342,7 @@ Item {
                             : (modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
                         color: modelData.stateChanging ? theme.warning : theme.accent
                         font.family: runtime.fontMono
-                        font.pixelSize: 8
+                        font.pixelSize: theme.fontSize(8)
                         font.weight: Font.DemiBold
                     }
                 }
@@ -389,7 +389,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 color: theme.textStrong
                 font.family: runtime.fontSans
-                font.pixelSize: 18
+                font.pixelSize: theme.fontSize(18)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -402,7 +402,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 9
+                font.pixelSize: theme.fontSize(9)
                 font.letterSpacing: 1
             }
 
@@ -432,7 +432,7 @@ Item {
                     selectionColor: theme.accent
                     selectedTextColor: theme.background
                     font.family: runtime.fontSans
-                    font.pixelSize: 15
+                    font.pixelSize: theme.fontSize(15)
                     clip: true
 
                     onTextEdited: panel.password = text
@@ -464,7 +464,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
@@ -479,7 +479,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             color: system.networkConnected ? theme.text : theme.textMuted
             font.family: runtime.fontMono
-            font.pixelSize: 10
+            font.pixelSize: theme.fontSize(10)
             font.letterSpacing: 0.8
         }
 
@@ -495,7 +495,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             color: system.wifiHardwareEnabled ? theme.warning : theme.critical
             font.family: runtime.fontMono
-            font.pixelSize: 10
+            font.pixelSize: theme.fontSize(10)
             font.letterSpacing: 0.8
         }
     }
@@ -517,7 +517,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             color: panel.statusError ? theme.critical : theme.accent
             font.family: runtime.fontMono
-            font.pixelSize: 8
+            font.pixelSize: theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.8
             elide: Text.ElideRight
@@ -532,7 +532,7 @@ Item {
                 text: "↑↓  SELECT   ENTER  JOIN/DROP"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -541,7 +541,7 @@ Item {
                 text: "W  WI-FI"
                 color: theme.accent
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -549,7 +549,7 @@ Item {
                 text: "A  ADVANCED"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -557,7 +557,7 @@ Item {
                 text: "ESC  BACK"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }

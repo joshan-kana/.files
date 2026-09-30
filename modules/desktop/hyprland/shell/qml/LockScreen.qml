@@ -165,7 +165,7 @@ WlSessionLock {
                     text: Qt.formatDateTime(lock.clock.date, "HH:mm")
                     color: lock.theme.textStrong
                     font.family: lock.runtime.fontSans
-                    font.pixelSize: Math.max(62, Math.min(104, parent.parent.width * 0.055))
+                    font.pixelSize: theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))
                     font.weight: Font.Light
                     font.letterSpacing: -2
                 }
@@ -175,7 +175,7 @@ WlSessionLock {
                     text: Qt.formatDateTime(lock.clock.date, "dddd, d MMMM").toUpperCase()
                     color: lock.theme.textMuted
                     font.family: lock.runtime.fontMono
-                    font.pixelSize: 11
+                    font.pixelSize: theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 2
                 }
@@ -212,7 +212,7 @@ WlSessionLock {
                             horizontalAlignment: Text.AlignHCenter
                             color: lock.theme.accent
                             font.family: lock.runtime.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 2
                         }
@@ -223,7 +223,7 @@ WlSessionLock {
                             horizontalAlignment: Text.AlignHCenter
                             color: lock.theme.textStrong
                             font.family: lock.runtime.fontSans
-                            font.pixelSize: 23
+                            font.pixelSize: theme.fontSize(23)
                             font.weight: Font.DemiBold
                         }
 
@@ -258,7 +258,7 @@ WlSessionLock {
                                 selectionColor: lock.theme.accent
                                 selectedTextColor: lock.theme.background
                                 font.family: lock.runtime.fontSans
-                                font.pixelSize: 17
+                                font.pixelSize: theme.fontSize(17)
                                 clip: true
 
                                 onTextEdited: lock.password = text
@@ -300,7 +300,7 @@ WlSessionLock {
                             verticalAlignment: Text.AlignVCenter
                             color: lock.statusError ? lock.theme.critical : lock.theme.textMuted
                             font.family: lock.runtime.fontMono
-                            font.pixelSize: 9
+                            font.pixelSize: theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.2
                             elide: Text.ElideRight
@@ -316,7 +316,7 @@ WlSessionLock {
                         text: lock.secure ? "SECURE SESSION LOCK" : "LOCKING SESSION…"
                         color: lock.secure ? lock.theme.positive : lock.theme.warning
                         font.family: lock.runtime.fontMono
-                        font.pixelSize: 8
+                        font.pixelSize: theme.fontSize(8)
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.3
                     }
