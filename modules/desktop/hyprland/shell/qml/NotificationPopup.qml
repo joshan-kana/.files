@@ -72,7 +72,7 @@ PanelWindow {
         cornerRadius: 30
         fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
         borderColor: Qt.rgba(popup.urgencyColor.r, popup.urgencyColor.g, popup.urgencyColor.b, 0.48)
-        borderWidth: 1
+        borderWidth: theme.borderThin
 
         opacity: notificationState.popupVisible ? 1 : 0
         scale: notificationState.popupVisible ? 1 : 0.965
