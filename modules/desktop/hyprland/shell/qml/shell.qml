@@ -70,13 +70,6 @@ ShellRoot {
         onSystemRequested: actions.toggleSystem()
     }
 
-    PrototypeSurface {
-        id: prototype
-        screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-    }
-
     ShortcutCheatsheet {
         id: cheatsheet
         screen: screens.focusedScreen
@@ -189,7 +182,6 @@ ShellRoot {
     Actions {
         id: actions
         runtime: runtime
-        prototype: prototype
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
@@ -353,18 +345,6 @@ ShellRoot {
 
     IpcHandler {
         target: "desktop"
-
-        function showPrototype(): void {
-            actions.showPrototype();
-        }
-
-        function hidePrototype(): void {
-            actions.hidePrototype();
-        }
-
-        function togglePrototype(): void {
-            actions.togglePrototype();
-        }
 
         function toggleCheatsheet(): void {
             actions.toggleCheatsheet();
