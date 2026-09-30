@@ -134,6 +134,7 @@
         keybindings = cheatsheetBindings;
 
         tools = {
+          bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
           brightnessctl = lib.getExe pkgs.brightnessctl;
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
