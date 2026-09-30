@@ -17,6 +17,7 @@ PanelWindow {
     property int trayIndex: 0
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
+    readonly property bool networkOpen: networkPanel.open
 
     visible: open || closing
     color: "transparent"
@@ -49,6 +50,7 @@ PanelWindow {
 
     function hide(): void {
         trayMenu.closeMenu();
+        networkPanel.closeView();
         open = false;
 
         if (motion.fast === 0)
@@ -64,6 +66,11 @@ PanelWindow {
             hide();
         else
             show();
+    }
+
+    function openNetwork(): void {
+        trayMenu.closeMenu();
+        networkPanel.openView();
     }
 
     function activateTrayItem(): void {
@@ -137,7 +144,7 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
-                visible: !trayMenu.open
+                visible: !trayMenu.open && !networkPanel.open
                 spacing: theme.spacing4
 
                 Text {
@@ -309,11 +316,13 @@ PanelWindow {
                     Repeater {
                         model: [
                             {
+                                id: "network",
                                 label: "NETWORK",
                                 value: system.networkConnected ? system.networkName : "OFFLINE",
                                 active: system.networkConnected
                             },
                             {
+                                id: "bluetooth",
                                 label: "BLUETOOTH",
                                 value: system.bluetoothEnabled ? system.bluetoothConnectedCount + " CONNECTED" : "OFF",
                                 active: system.bluetoothEnabled
@@ -330,6 +339,13 @@ PanelWindow {
                             fillColor: theme.background
                             borderColor: modelData.active ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.30) : theme.outline
                             borderWidth: 1
+
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: modelData.id === "network"
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: panel.openNetwork()
+                            }
 
                             Column {
                                 anchors {
@@ -510,6 +526,19 @@ PanelWindow {
                 }
             }
 
+            NetworkPanel {
+                id: networkPanel
+
+                anchors.fill: parent
+
+                system: panel.system
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+
+                onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            }
+
             TrayMenuView {
                 id: trayMenu
 
@@ -523,7 +552,7 @@ PanelWindow {
             Row {
                 id: footer
 
-                visible: !trayMenu.open
+                visible: !trayMenu.open && !networkPanel.open
 
                 anchors {
                     right: parent.right
@@ -566,6 +595,14 @@ PanelWindow {
                 }
 
                 Text {
+                    text: "N  NETWORK"
+                    color: theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -580,6 +617,35 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    if (networkPanel.open) {
+                        if (networkPanel.passwordPrompt)
+                            return;
+
+                        if (event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Backspace) {
+                            networkPanel.closeView();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Up) {
+                            networkPanel.moveSelection(-1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            networkPanel.moveSelection(1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter) {
+                            networkPanel.activateSelected();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_W) {
+                            networkPanel.toggleWifi();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_A) {
+                            Quickshell.execDetached(["nm-connection-editor"]);
+                            event.accepted = true;
+                        }
+
+                        return;
+                    }
+
                     if (trayMenu.open) {
                         if (event.key === Qt.Key_Escape
                             || event.key === Qt.Key_Backspace
@@ -613,6 +679,9 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
                         system.toggleMute();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_N) {
+                        panel.openNetwork();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up && brightness.supported) {
                         brightness.adjust(5);
