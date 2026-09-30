@@ -436,6 +436,14 @@ in
     description = "Lock";
   })
   (mk {
+    keys = "CTRL + ALT + DELETE";
+    mainMod = false;
+    action = global "linux-desktop:session";
+    section = "SYSTEM";
+    description = "Session menu";
+    label = "CTRL + ALT + DELETE";
+  })
+  (mk {
     keys = "SHIFT + E";
     action = exec "code ${repoPath}/edit_config.code-workspace";
     section = "SYSTEM";
