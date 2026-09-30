@@ -9,6 +9,7 @@ QtObject {
     readonly property string editor: data.defaults.editor
     readonly property string wallpaper: data.wallpaper
     readonly property string spectrumFieldShader: data.assets.spectrumFieldShader
+    readonly property string bluetoothctl: data.tools.bluetoothctl
     readonly property string brightnessctl: data.tools.brightnessctl
     readonly property string cliphist: data.tools.cliphist
     readonly property string clipboardCopy: data.tools.clipboardCopy
@@ -81,6 +82,7 @@ QtObject {
             }
 
             property JsonObject tools: JsonObject {
+                property string bluetoothctl: ""
                 property string brightnessctl: ""
                 property string cliphist: ""
                 property string clipboardCopy: ""
