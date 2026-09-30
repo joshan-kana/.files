@@ -83,7 +83,7 @@ assert lib.assertMsg (
 {
   stylix = {
     enable = true;
-    image = ./wallpaper.png;
+    image = activeAssets.wallpaper;
 
     fonts = {
       serif = config.stylix.fonts.monospace;
@@ -100,11 +100,7 @@ assert lib.assertMsg (
 
     polarity = "dark";
 
-    cursor = {
-      package = pkgs.google-cursor;
-      name = "GoogleDot-Black";
-      size = 30;
-    };
+    inherit (activeAssets) cursor;
 
     base16Scheme = activeTheme.scheme;
   };
