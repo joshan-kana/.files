@@ -125,7 +125,7 @@ WlSessionLock {
 
             Rectangle {
                 anchors.fill: parent
-                color: Qt.rgba(0, 0, 0, 0.56)
+                color: theme.scrimStrong
             }
 
             Rectangle {
