@@ -431,7 +431,7 @@ in
   })
   (mk {
     keys = "L";
-    action = exec "swaylock";
+    action = global "linux-desktop:lock";
     section = "SYSTEM";
     description = "Lock";
   })
