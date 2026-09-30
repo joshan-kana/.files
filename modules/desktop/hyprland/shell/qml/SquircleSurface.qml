@@ -11,7 +11,7 @@ Item {
     property real borderWidth: 0
     property real cornerRadius: 28
     property real exponent: 4.5
-    property int cornerSamples: 10
+    property int cornerSamples: 16
 
     readonly property string pathData: buildPath()
 
