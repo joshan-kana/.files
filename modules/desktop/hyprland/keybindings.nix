@@ -450,10 +450,11 @@ in
     description = "Edit desktop configuration";
   })
   (mk {
-    keys = "/";
+    keys = "slash";
     action = global "linux-desktop:cheatsheet";
     section = "SYSTEM";
     description = "Show keyboard shortcuts";
+    label = "SUPER + /";
   })
   (mk {
     keys = "Escape";
