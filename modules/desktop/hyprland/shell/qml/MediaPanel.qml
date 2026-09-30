@@ -173,7 +173,7 @@ PanelWindow {
                         text: "♫"
                         color: theme.accent
                         font.family: runtime.fontSans
-                        font.pixelSize: 36
+                        font.pixelSize: theme.fontSize(36)
                     }
                 }
 
@@ -186,7 +186,7 @@ PanelWindow {
                         text: media.available ? "NOW PLAYING" : "MEDIA IDLE"
                         color: theme.accent
                         font.family: runtime.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: theme.fontSize(11)
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.8
                     }
@@ -196,7 +196,7 @@ PanelWindow {
                         text: media.title
                         color: theme.textStrong
                         font.family: runtime.fontSans
-                        font.pixelSize: 22
+                        font.pixelSize: theme.fontSize(22)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
@@ -206,7 +206,7 @@ PanelWindow {
                         text: media.artist || media.identity || "No MPRIS player connected"
                         color: theme.textMuted
                         font.family: runtime.fontSans
-                        font.pixelSize: 13
+                        font.pixelSize: theme.fontSize(13)
                         elide: Text.ElideRight
                     }
 
@@ -217,7 +217,7 @@ PanelWindow {
                         color: theme.textMuted
                         opacity: 0.72
                         font.family: runtime.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: theme.fontSize(10)
                         elide: Text.ElideRight
                     }
                 }
@@ -240,7 +240,7 @@ PanelWindow {
                         text: "SPECTRUM // 20 Hz → 20 kHz"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: theme.fontSize(10)
                         font.letterSpacing: 1.2
                     }
 
@@ -256,7 +256,7 @@ PanelWindow {
                             + (spectrum.connected ? "LIVE // " + spectrum.sampleRate / 1000 + " kHz" : "STANDBY")
                         color: spectrum.connected ? theme.positive : theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 9
+                        font.pixelSize: theme.fontSize(9)
                         font.letterSpacing: 1
                     }
                 }
@@ -356,7 +356,7 @@ PanelWindow {
                                 color: theme.textMuted
                                 opacity: 0.62
                                 font.family: runtime.fontMono
-                                font.pixelSize: 8
+                                font.pixelSize: theme.fontSize(8)
                             }
                         }
                     }
@@ -406,7 +406,7 @@ PanelWindow {
                         text: panel.formatTime(media.position)
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: theme.fontSize(10)
                     }
 
                     Item {
@@ -418,7 +418,7 @@ PanelWindow {
                         text: panel.formatTime(media.length)
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: theme.fontSize(10)
                     }
                 }
 
@@ -430,14 +430,14 @@ PanelWindow {
                         text: "←  −5s"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: theme.fontSize(11)
                     }
 
                     Text {
                         text: "SPACE  " + (media.playing ? "PAUSE" : "PLAY")
                         color: media.available ? theme.accent : theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: theme.fontSize(11)
                         font.weight: Font.DemiBold
                     }
 
@@ -445,7 +445,7 @@ PanelWindow {
                         text: "+5s  →"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: theme.fontSize(11)
                     }
                 }
             }
@@ -461,7 +461,7 @@ PanelWindow {
                     text: media.available ? media.identity.toUpperCase() : "MPRIS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -477,7 +477,7 @@ PanelWindow {
                         text: "V  " + panel.visualizerMode.toUpperCase()
                         color: theme.accent
                         font.family: runtime.fontMono
-                        font.pixelSize: 9
+                        font.pixelSize: theme.fontSize(9)
                         font.letterSpacing: 1
                     }
 
@@ -485,7 +485,7 @@ PanelWindow {
                         text: "ESC  CLOSE"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 9
+                        font.pixelSize: theme.fontSize(9)
                         font.letterSpacing: 1
                     }
                 }
