@@ -146,7 +146,7 @@ PanelWindow {
                     text: "PIPEWIRE // " + panel.streams.length + " PLAYBACK STREAM" + (panel.streams.length === 1 ? "" : "S")
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 11
+                    font.pixelSize: theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.8
                 }
@@ -155,7 +155,7 @@ PanelWindow {
                     text: "Application mixer"
                     color: theme.textStrong
                     font.family: runtime.fontSans
-                    font.pixelSize: 27
+                    font.pixelSize: theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
 
