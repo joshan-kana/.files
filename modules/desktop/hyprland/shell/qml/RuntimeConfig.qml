@@ -11,6 +11,7 @@ QtObject {
     readonly property string brightnessctl: data.tools.brightnessctl
     readonly property string cliphist: data.tools.cliphist
     readonly property string clipboardCopy: data.tools.clipboardCopy
+    readonly property string lockSession: data.tools.lockSession
 
     readonly property string fontSans: data.fonts.sans
     readonly property string fontMono: data.fonts.mono
@@ -71,6 +72,7 @@ QtObject {
                 property string brightnessctl: ""
                 property string cliphist: ""
                 property string clipboardCopy: ""
+                property string lockSession: ""
             }
 
             property var keybindings: []
