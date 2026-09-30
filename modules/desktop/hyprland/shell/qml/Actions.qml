@@ -45,6 +45,11 @@ QtObject {
         audioMixerPanel.toggle();
     }
 
+    function lockSession(): void {
+        if (runtime.lockSession.length > 0)
+            Quickshell.execDetached([runtime.lockSession]);
+    }
+
     function toggleMedia(): void {
         mediaPanel.toggle();
     }
@@ -114,7 +119,9 @@ QtObject {
     }
 
     function invokeCommand(commandId: string): void {
-        if (commandId === "audio.mixer")
+        if (commandId === "session.lock")
+            lockSession();
+        else if (commandId === "audio.mixer")
             toggleAudioMixer();
         else if (commandId === "clipboard.toggle")
             toggleClipboard();
