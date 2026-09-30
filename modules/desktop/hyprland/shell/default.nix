@@ -112,6 +112,7 @@
           brightnessctl = lib.getExe pkgs.brightnessctl;
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
+          lockSession = lib.getExe lockCommand;
         };
 
         wallpaper = toString osConfig.stylix.image;
@@ -134,11 +135,29 @@
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
+
+      lockServiceLauncher = pkgs.writeShellApplication {
+        name = "linux-desktop-lock-shell";
+        runtimeInputs = [ pkgs.quickshell ];
+        text = ''
+          export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          exec qs --no-duplicate --path "${productionShellPath}/lock.qml"
+        '';
+      };
+
+      lockCommand = pkgs.writeShellApplication {
+        name = "linux-desktop-lock";
+        runtimeInputs = [ pkgs.systemd ];
+        text = ''
+          exec systemctl --user start linux-desktop-lock.service
+        '';
+      };
     in
     {
       home.packages = [
         launcher
         developmentLauncher
+        lockCommand
         clipboardCopy
         pkgs.quickshell
         spectrumAnalyzer
@@ -164,6 +183,19 @@
           };
 
           Install.WantedBy = [ "hyprland-session.target" ];
+        };
+
+        linux-desktop-lock = {
+          Unit = {
+            Description = "Hyprland desktop session lock";
+            PartOf = [ "hyprland-session.target" ];
+            After = [ "hyprland-session.target" ];
+          };
+
+          Service = {
+            ExecStart = lib.getExe lockServiceLauncher;
+            Restart = "no";
+          };
         };
 
         linux-desktop = {
