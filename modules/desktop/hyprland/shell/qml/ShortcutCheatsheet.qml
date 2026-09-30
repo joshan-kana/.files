@@ -98,12 +98,12 @@ PanelWindow {
         height: Math.min(window.height - 80, 920)
         anchors.centerIn: parent
 
-        fillColor: theme.surface
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.34)
-        borderWidth: 1
-        cornerRadius: theme.radiusLarge
+        fillColor: theme.panelFill
+        borderColor: theme.panelBorder
+        borderWidth: theme.borderThin
+        cornerRadius: theme.radiusPanel
 
-        scale: window.open ? 1 : 0.965
+        scale: window.open ? 1 : theme.panelClosedScale
 
         Behavior on scale {
             NumberAnimation {
@@ -196,13 +196,14 @@ PanelWindow {
                                     width: parent.width
                                     spacing: theme.spacing3
 
-                                    Rectangle {
+                                    SquircleSurface {
                                         width: 142
                                         height: 28
-                                        radius: 8
-                                        color: theme.surfaceRaised
-                                        border.width: 1
-                                        border.color: theme.outline
+                                        exponent: theme.squircleExponent
+                                        cornerRadius: theme.radiusSmall
+                                        fillColor: theme.surfaceRaised
+                                        borderWidth: theme.borderThin
+                                        borderColor: theme.outline
 
                                         Text {
                                             anchors.centerIn: parent
