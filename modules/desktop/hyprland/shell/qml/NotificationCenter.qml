@@ -118,12 +118,12 @@ PanelWindow {
         }
 
         exponent: theme.squircleExponent
-        cornerRadius: 36
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.38)
-        borderWidth: 1
+        cornerRadius: theme.radiusPanel
+        fillColor: theme.panelFill
+        borderColor: theme.panelBorder
+        borderWidth: theme.borderThin
 
-        scale: center.open ? 1 : 0.96
+        scale: center.open ? 1 : theme.panelClosedScale
         opacity: center.open ? 1 : 0
 
         Behavior on scale {
@@ -201,9 +201,7 @@ PanelWindow {
                     height: Math.max(92, itemBody.implicitHeight + theme.spacing4 * 2)
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: index === center.selectedIndex
-                        ? Qt.rgba(theme.surfaceRaised.r, theme.surfaceRaised.g, theme.surfaceRaised.b, 0.96)
-                        : theme.background
+                    fillColor: index === center.selectedIndex ? theme.focusFill : theme.background
                     borderColor: {
                         if (index === center.selectedIndex)
                             return theme.accent;
@@ -211,7 +209,7 @@ PanelWindow {
                             return Qt.rgba(theme.critical.r, theme.critical.g, theme.critical.b, 0.42);
                         return theme.outline;
                     }
-                    borderWidth: 1
+                    borderWidth: index === center.selectedIndex ? theme.borderFocus : theme.borderThin
 
                     MouseArea {
                         anchors.fill: parent
