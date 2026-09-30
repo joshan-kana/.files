@@ -113,8 +113,8 @@ PanelWindow {
         anchors {
             top: parent.top
             right: parent.right
-            topMargin: 82
-            rightMargin: 24
+            topMargin: theme.panelTopOffset
+            rightMargin: theme.panelSideOffset
         }
 
         exponent: theme.squircleExponent
