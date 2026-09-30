@@ -197,12 +197,14 @@ Item {
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusSmall
                 fillColor: entryDelegate.index === view.selectedIndex
-                    ? theme.surfaceRaised
+                    ? theme.focusFill
                     : "transparent"
                 borderColor: entryDelegate.index === view.selectedIndex
-                    ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.38)
+                    ? theme.accent
                     : "transparent"
-                borderWidth: 1
+                borderWidth: entryDelegate.index === view.selectedIndex
+                    ? theme.borderFocus
+                    : theme.borderThin
                 opacity: modelData.enabled ? 1 : 0.42
 
                 MouseArea {
