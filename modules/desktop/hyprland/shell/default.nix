@@ -66,6 +66,15 @@
         meta.mainProgram = "linux-desktop-spectrum";
       };
 
+      spectrumFieldShader =
+        pkgs.runCommand "linux-desktop-spectrum-field.frag.qsb"
+          {
+            nativeBuildInputs = [ pkgs.qt6.qtshadertools ];
+          }
+          ''
+            qsb --qt6 ${./qml/spectrum-field.frag} -o "$out"
+          '';
+
       keybindings = import ../keybindings.nix {
         repoPath = osConfig.dotfiles.paths.repoPath;
         terminal = osConfig.dotfiles.defaults.terminal;
@@ -104,6 +113,8 @@
           sans = config.stylix.fonts.sansSerif.name;
           mono = config.stylix.fonts.monospace.name;
         };
+
+        assets.spectrumFieldShader = "file://${spectrumFieldShader}";
 
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         keybindings = cheatsheetBindings;
