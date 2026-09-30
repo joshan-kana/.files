@@ -90,6 +90,18 @@ PanelWindow {
                         width: 24
                         height: 28
 
+                        MouseArea {
+                            anchors.fill: parent
+                            z: 1
+                            cursorShape: Qt.PointingHandCursor
+
+                            onClicked: Hyprland.dispatch(
+                                Hyprland.usingLua
+                                    ? 'hl.dsp.focus({ workspace = "' + workspace.number + '" })'
+                                    : "workspace " + workspace.number
+                            )
+                        }
+
                         SquircleSurface {
                             anchors.centerIn: parent
                             width: workspace.active ? 24 : 9
@@ -170,6 +182,7 @@ PanelWindow {
                 spacing: theme.spacing2
 
                 Text {
+                    anchors.verticalCenter: parent.verticalCenter
                     text: Qt.formatDateTime(clock.date, "ddd dd MMM").toUpperCase()
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -178,6 +191,7 @@ PanelWindow {
                 }
 
                 Text {
+                    anchors.verticalCenter: parent.verticalCenter
                     text: "//"
                     color: theme.accent
                     font.family: runtime.fontMono
@@ -186,6 +200,7 @@ PanelWindow {
                 }
 
                 Text {
+                    anchors.verticalCenter: parent.verticalCenter
                     text: Qt.formatDateTime(clock.date, "HH:mm")
                     color: theme.textStrong
                     font.family: runtime.fontMono
