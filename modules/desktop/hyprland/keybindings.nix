@@ -1,5 +1,4 @@
 {
-  repoPath,
   terminal,
 }:
 
@@ -10,6 +9,7 @@ let
       action,
       section,
       description,
+      id ? null,
       mainMod ? true,
       flags ? { },
       label ? null,
@@ -21,6 +21,7 @@ let
         cheatsheet
         description
         flags
+        id
         keys
         label
         mainMod
@@ -107,6 +108,7 @@ in
 [
   (mk {
     keys = "ALT + 1";
+    id = "terminal.open";
     action = exec terminal;
     section = "APPS";
     description = "Terminal";
@@ -155,6 +157,7 @@ in
   })
   (mk {
     keys = "SHIFT + V";
+    id = "audio.mixer";
     action = global "linux-desktop:audio-mixer";
     section = "AUDIO";
     description = "Application mixer";
@@ -174,6 +177,7 @@ in
   })
   (mk {
     keys = "V";
+    id = "clipboard.toggle";
     action = global "linux-desktop:clipboard";
     section = "LAUNCHERS";
     description = "Clipboard history";
@@ -234,7 +238,7 @@ in
     flags.mouse = true;
     section = "WINDOWS";
     description = "Drag window";
-    label = "SUPER + LMB";
+    label = "LMB";
   })
   (mk {
     keys = "mouse:273";
@@ -242,7 +246,7 @@ in
     flags.mouse = true;
     section = "WINDOWS";
     description = "Resize window";
-    label = "SUPER + RMB";
+    label = "RMB";
   })
 
   (mk {
@@ -318,14 +322,14 @@ in
     action = dispatcher ''hl.dsp.focus({ workspace = "e+1" })'';
     section = "WORKSPACES";
     description = "Next workspace";
-    label = "SUPER + WHEEL ↓";
+    label = "WHEEL ↓";
   })
   (mk {
     keys = "mouse_up";
     action = dispatcher ''hl.dsp.focus({ workspace = "e-1" })'';
     section = "WORKSPACES";
     description = "Previous workspace";
-    label = "SUPER + WHEEL ↑";
+    label = "WHEEL ↑";
   })
   (mk {
     keys = "CTRL + A";
@@ -343,6 +347,7 @@ in
   (mk {
     keys = "XF86AudioRaiseVolume";
     mainMod = false;
+    id = "audio.volumeUp";
     action = global "linux-desktop:volume-up";
     flags.repeating = true;
     section = "AUDIO";
@@ -352,6 +357,7 @@ in
   (mk {
     keys = "XF86AudioLowerVolume";
     mainMod = false;
+    id = "audio.volumeDown";
     action = global "linux-desktop:volume-down";
     flags.repeating = true;
     section = "AUDIO";
@@ -361,6 +367,7 @@ in
   (mk {
     keys = "XF86AudioMute";
     mainMod = false;
+    id = "audio.toggleMute";
     action = global "linux-desktop:volume-mute";
     section = "AUDIO";
     description = "Mute";
@@ -368,24 +375,28 @@ in
   })
   (mk {
     keys = "ALT + X";
+    id = "media.playPause";
     action = global "linux-desktop:media-play-pause";
     section = "MEDIA";
     description = "Play / pause";
   })
   (mk {
     keys = "ALT + C";
+    id = "media.next";
     action = global "linux-desktop:media-next";
     section = "MEDIA";
     description = "Next track";
   })
   (mk {
     keys = "ALT + Z";
+    id = "media.previous";
     action = global "linux-desktop:media-previous";
     section = "MEDIA";
     description = "Previous track";
   })
   (mk {
     keys = "ALT + D";
+    id = "media.seekForward";
     action = global "linux-desktop:media-seek-forward";
     flags.repeating = true;
     section = "MEDIA";
@@ -393,6 +404,7 @@ in
   })
   (mk {
     keys = "ALT + S";
+    id = "media.seekBackward";
     action = global "linux-desktop:media-seek-backward";
     flags.repeating = true;
     section = "MEDIA";
@@ -400,12 +412,14 @@ in
   })
   (mk {
     keys = "ALT + W";
+    id = "media.shuffle";
     action = global "linux-desktop:media-shuffle";
     section = "MEDIA";
     description = "Toggle shuffle";
   })
   (mk {
     keys = "ALT + F";
+    id = "media.cyclePlayer";
     action = global "linux-desktop:media-cycle-player";
     section = "MEDIA";
     description = "Switch media player";
@@ -414,6 +428,7 @@ in
   (mk {
     keys = "XF86MonBrightnessUp";
     mainMod = false;
+    id = "brightness.up";
     action = global "linux-desktop:brightness-up";
     flags.repeating = true;
     section = "DISPLAY";
@@ -423,6 +438,7 @@ in
   (mk {
     keys = "XF86MonBrightnessDown";
     mainMod = false;
+    id = "brightness.down";
     action = global "linux-desktop:brightness-down";
     flags.repeating = true;
     section = "DISPLAY";
@@ -431,6 +447,7 @@ in
   })
   (mk {
     keys = "L";
+    id = "session.lock";
     action = global "linux-desktop:lock";
     section = "SYSTEM";
     description = "Lock";
@@ -438,6 +455,7 @@ in
   (mk {
     keys = "CTRL + ALT + DELETE";
     mainMod = false;
+    id = "session.toggle";
     action = global "linux-desktop:session";
     section = "SYSTEM";
     description = "Session menu";
@@ -445,16 +463,17 @@ in
   })
   (mk {
     keys = "SHIFT + E";
-    action = exec "code ${repoPath}/edit_config.code-workspace";
+    action = exec "edit-config";
     section = "SYSTEM";
     description = "Edit desktop configuration";
   })
   (mk {
     keys = "slash";
+    id = "shortcuts.toggle";
     action = global "linux-desktop:cheatsheet";
     section = "SYSTEM";
     description = "Show keyboard shortcuts";
-    label = "SUPER + /";
+    label = "/";
   })
   (mk {
     keys = "Escape";
