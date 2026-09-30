@@ -29,6 +29,21 @@ QtObject {
     }
 
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
+    readonly property var wifiDevice: {
+        for (const device of networkDevices) {
+            if (device.type === DeviceType.Wifi)
+                return device;
+        }
+
+        return null;
+    }
+    readonly property bool wifiAvailable: wifiDevice !== null
+    readonly property bool wifiEnabled: Networking.wifiEnabled
+    readonly property bool wifiHardwareEnabled: Networking.wifiHardwareEnabled
+    readonly property var wifiNetworks: wifiDevice && wifiDevice.networks
+        ? wifiDevice.networks.values
+        : []
+    readonly property string connectivityText: NetworkConnectivity.toString(Networking.connectivity)
     readonly property var connectedNetworkDevice: {
         let wired = null;
 
@@ -90,6 +105,10 @@ QtObject {
 
     readonly property var trayItems: SystemTray.items ? SystemTray.items.values : []
     readonly property int trayCount: trayItems.length
+
+    function setWifiEnabled(enabled: bool): void {
+        Networking.wifiEnabled = enabled;
+    }
 
     function streamDisplayName(stream): string {
         if (!stream)
