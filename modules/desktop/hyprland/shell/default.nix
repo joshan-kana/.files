@@ -5,8 +5,6 @@
 }:
 
 {
-  enable = false;
-
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
