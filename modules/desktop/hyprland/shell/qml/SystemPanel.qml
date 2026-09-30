@@ -146,12 +146,12 @@ PanelWindow {
         }
 
         exponent: theme.squircleExponent
-        cornerRadius: 36
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.38)
-        borderWidth: 1
+        cornerRadius: theme.radiusPanel
+        fillColor: theme.panelFill
+        borderColor: theme.panelBorder
+        borderWidth: theme.borderThin
 
-        scale: panel.open ? 1 : 0.96
+        scale: panel.open ? 1 : theme.panelClosedScale
         opacity: panel.open ? 1 : 0
 
         Behavior on scale {
@@ -478,9 +478,9 @@ PanelWindow {
                                 height: 66
                                 exponent: theme.squircleExponent
                                 cornerRadius: theme.radiusMedium
-                                fillColor: index === panel.trayIndex ? theme.surfaceRaised : theme.background
+                                fillColor: index === panel.trayIndex ? theme.focusFill : theme.background
                                 borderColor: index === panel.trayIndex ? theme.accent : theme.outline
-                                borderWidth: 1
+                                borderWidth: index === panel.trayIndex ? theme.borderFocus : theme.borderThin
 
                                 Behavior on fillColor {
                                     ColorAnimation {
