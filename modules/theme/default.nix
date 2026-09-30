@@ -7,12 +7,14 @@
 }:
 
 let
-  themeRegistry = import ./themes.nix;
+  themeRegistry = import ./themes.nix { inherit pkgs; };
   extendModules = config._module.args.extendModules;
   activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
   activeTheme = themeRegistry.variants.${activeThemeName};
+  activeAssets = themeRegistry.assets // (activeTheme.assets or { });
   wallpaperTheme = themeRegistry.variants.wallpaper;
-  wallpaperSha256 = builtins.hashFile "sha256" ./wallpaper.png;
+  wallpaperThemeAssets = themeRegistry.assets // (wallpaperTheme.assets or { });
+  wallpaperSha256 = builtins.hashFile "sha256" wallpaperThemeAssets.wallpaper;
   primaryUser = config.dotfiles.users.primary.name;
   hyprlandEnabled = lib.attrByPath [
     "desktop"
@@ -166,7 +168,7 @@ assert lib.assertMsg (
 {
   stylix = {
     enable = true;
-    image = ./wallpaper.png;
+    image = activeAssets.wallpaper;
 
     fonts = {
       serif = config.stylix.fonts.monospace;
@@ -183,11 +185,7 @@ assert lib.assertMsg (
 
     polarity = "dark";
 
-    cursor = {
-      package = pkgs.google-cursor;
-      name = "GoogleDot-Black";
-      size = 30;
-    };
+    inherit (activeAssets) cursor;
 
     base16Scheme = activeTheme.scheme;
   };
@@ -434,10 +432,7 @@ assert lib.assertMsg (
       gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
 
-        iconTheme = {
-          package = pkgs.gruvbox-dark-icons-gtk;
-          name = "oomox-gruvbox-dark";
-        };
+        iconTheme = activeAssets.icons;
       };
     };
 
