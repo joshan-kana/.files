@@ -83,6 +83,9 @@ let
       </plist>
     '';
 in
+assert lib.assertMsg (
+  wallpaperTheme.wallpaperSha256 == wallpaperSha256
+) "modules/theme/wallpaper-base16.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
   bootSplash =
     { config, pkgs, ... }:
@@ -339,7 +342,6 @@ in
   stylix = {
     enable = true;
     image = ./wallpaper.png;
-    base16Scheme = activeTheme.scheme;
 
     fonts = {
       serif = config.stylix.fonts.monospace;
@@ -361,6 +363,8 @@ in
       name = "GoogleDot-Black";
       size = 30;
     };
+
+    base16Scheme = activeTheme.scheme;
   };
 
   environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
