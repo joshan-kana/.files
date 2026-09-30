@@ -6,6 +6,7 @@ QtObject {
     required property QtObject prototype
     required property QtObject cheatsheet
     required property QtObject launcher
+    required property QtObject clipboardPanel
     required property QtObject mediaPanel
     required property QtObject systemPanel
     required property QtObject systemState
@@ -32,6 +33,10 @@ QtObject {
 
     function toggleLauncher(): void {
         launcher.toggle();
+    }
+
+    function toggleClipboard(): void {
+        clipboardPanel.toggle();
     }
 
     function toggleMedia(): void {
@@ -75,7 +80,9 @@ QtObject {
     }
 
     function invokeCommand(commandId: string): void {
-        if (commandId === "media.toggle")
+        if (commandId === "clipboard.toggle")
+            toggleClipboard();
+        else if (commandId === "media.toggle")
             toggleMedia();
         else if (commandId === "system.toggle")
             toggleSystem();
