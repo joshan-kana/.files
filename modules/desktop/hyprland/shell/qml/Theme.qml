@@ -15,6 +15,12 @@ QtObject {
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
 
+    readonly property real textScale: runtime.textScale
+
+    function fontSize(size: real): int {
+        return Math.max(1, Math.round(size * textScale));
+    }
+
     readonly property int radiusSmall: 10
     readonly property int radiusMedium: 18
     readonly property int radiusLarge: 30
@@ -28,10 +34,10 @@ QtObject {
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, 0.96)
     readonly property real panelClosedScale: 0.965
 
-    readonly property int fontPanelEyebrow: 11
-    readonly property int fontPanelTitle: 27
-    readonly property int fontSubpanelEyebrow: 10
-    readonly property int fontSubpanelTitle: 24
+    readonly property int fontPanelEyebrow: fontSize(11)
+    readonly property int fontPanelTitle: fontSize(27)
+    readonly property int fontSubpanelEyebrow: fontSize(10)
+    readonly property int fontSubpanelTitle: fontSize(24)
 
     readonly property int panelTopOffset: 82
     readonly property int panelSideOffset: 24
