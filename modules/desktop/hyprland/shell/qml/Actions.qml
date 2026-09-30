@@ -9,6 +9,8 @@ QtObject {
     required property QtObject mediaPanel
     required property QtObject systemPanel
     required property QtObject systemState
+    required property QtObject notificationCenter
+    required property QtObject notificationState
     required property QtObject motion
 
     function showPrototype(): void {
@@ -39,6 +41,18 @@ QtObject {
         systemPanel.toggle();
     }
 
+    function showNotifications(): void {
+        notificationCenter.show();
+    }
+
+    function toggleNotifications(): void {
+        notificationCenter.toggle();
+    }
+
+    function clearNotifications(): void {
+        notificationState.clearAll();
+    }
+
     function volumeUp(): void {
         systemState.adjustVolume(0.05);
     }
@@ -56,6 +70,10 @@ QtObject {
             toggleMedia();
         else if (commandId === "system.toggle")
             toggleSystem();
+        else if (commandId === "notifications.toggle")
+            toggleNotifications();
+        else if (commandId === "notifications.clear")
+            clearNotifications();
         else if (commandId === "shortcuts.toggle")
             toggleCheatsheet();
         else if (commandId === "animations.toggle")

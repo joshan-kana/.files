@@ -30,6 +30,10 @@ ShellRoot {
         id: system
     }
 
+    NotificationState {
+        id: notifications
+    }
+
     SpectrumState {
         id: spectrum
         active: media.playing || mediaPanel.open
@@ -76,6 +80,23 @@ ShellRoot {
         motion: motion
     }
 
+    NotificationPopup {
+        id: notificationPopup
+        notificationState: notifications
+        runtime: runtime
+        theme: theme
+        motion: motion
+        onCenterRequested: actions.showNotifications()
+    }
+
+    NotificationCenter {
+        id: notificationCenter
+        notificationState: notifications
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     CommandPalette {
         id: launcher
         runtime: runtime
@@ -84,6 +105,8 @@ ShellRoot {
         commands: [
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
             { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery"] },
+            { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
+            { id: "notifications.clear", name: "Clear Notifications", description: "Dismiss stored notification history", icon: "edit-clear-all", keywords: ["alerts", "dismiss", "history"] },
             { id: "audio.volumeUp", name: "Volume Up", description: "Increase output volume by 5%", icon: "audio-volume-high", key: "VOLUME +", keywords: ["audio", "sound", "louder"] },
             { id: "audio.volumeDown", name: "Volume Down", description: "Decrease output volume by 5%", icon: "audio-volume-low", key: "VOLUME −", keywords: ["audio", "sound", "quieter"] },
             { id: "audio.toggleMute", name: "Toggle Mute", description: "Mute or unmute output audio", icon: "audio-volume-muted", key: "MUTE", keywords: ["audio", "sound", "silence"] },
@@ -103,6 +126,8 @@ ShellRoot {
         mediaPanel: mediaPanel
         systemPanel: systemPanel
         systemState: system
+        notificationCenter: notificationCenter
+        notificationState: notifications
         motion: motion
     }
 
@@ -134,6 +159,13 @@ ShellRoot {
         onPressed: actions.toggleSystem()
     }
 
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "notifications"
+        description: "Open notification history"
+        onPressed: actions.toggleNotifications()
+    }
+
     IpcHandler {
         target: "desktop"
 
@@ -163,6 +195,22 @@ ShellRoot {
 
         function toggleSystem(): void {
             actions.toggleSystem();
+        }
+
+        function toggleNotifications(): void {
+            actions.toggleNotifications();
+        }
+
+        function notificationsOpen(): bool {
+            return notificationCenter.open;
+        }
+
+        function notificationCount(): int {
+            return notifications.count;
+        }
+
+        function clearNotifications(): void {
+            actions.clearNotifications();
         }
 
         function toggleAnimations(): void {
