@@ -12,6 +12,7 @@ QtObject {
     readonly property string cliphist: data.tools.cliphist
     readonly property string clipboardCopy: data.tools.clipboardCopy
     readonly property string lockSession: data.tools.lockSession
+    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || data.tools.themeSet
 
     readonly property string fontSans: data.fonts.sans
     readonly property string fontMono: data.fonts.mono
@@ -73,6 +74,7 @@ QtObject {
                 property string cliphist: ""
                 property string clipboardCopy: ""
                 property string lockSession: ""
+                property string themeSet: ""
             }
 
             property var keybindings: []
