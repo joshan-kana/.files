@@ -134,15 +134,6 @@ in
     };
   };
 
-  dunst = _: {
-    home = { config, ... }: {
-      services.dunst.settings.global = {
-        mouse_right_click = "do_action";
-        dmenu = "${config.home.homeDirectory}/.nix-profile/bin/rofi -dmenu";
-      };
-    };
-  };
-
   avizo = _: {
     home = _: {
       services.avizo.settings.default = {
