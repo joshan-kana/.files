@@ -299,7 +299,7 @@ PanelWindow {
                         verticalCenter: parent.verticalCenter
                     }
 
-                    text: "SUPER + SPACE"
+                    text: "SUPER / ALT + SPACE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: 10
