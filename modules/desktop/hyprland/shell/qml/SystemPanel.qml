@@ -218,7 +218,7 @@ PanelWindow {
                                 text: system.muted ? "AUDIO // MUTED" : "AUDIO // " + system.volumePercent + "%"
                                 color: system.muted ? theme.warning : theme.textStrong
                                 font.family: runtime.fontMono
-                                font.pixelSize: 12
+                                font.pixelSize: theme.fontSize(12)
                                 font.weight: Font.DemiBold
                             }
 
@@ -235,7 +235,7 @@ PanelWindow {
                                 elide: Text.ElideRight
                                 color: theme.textMuted
                                 font.family: runtime.fontMono
-                                font.pixelSize: 9
+                                font.pixelSize: theme.fontSize(9)
                             }
                         }
 
@@ -291,7 +291,7 @@ PanelWindow {
                                 text: "DISPLAY // " + brightness.percent + "%"
                                 color: theme.textStrong
                                 font.family: runtime.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: theme.fontSize(11)
                                 font.weight: Font.DemiBold
                             }
 
@@ -308,7 +308,7 @@ PanelWindow {
                                 elide: Text.ElideRight
                                 color: theme.textMuted
                                 font.family: runtime.fontMono
-                                font.pixelSize: 9
+                                font.pixelSize: theme.fontSize(9)
                             }
                         }
 
@@ -412,7 +412,7 @@ PanelWindow {
                                     text: modelData.label
                                     color: modelData.active ? theme.accent : theme.textMuted
                                     font.family: runtime.fontMono
-                                    font.pixelSize: 10
+                                    font.pixelSize: theme.fontSize(10)
                                     font.weight: Font.DemiBold
                                     font.letterSpacing: 1.2
                                 }
@@ -423,7 +423,7 @@ PanelWindow {
                                     elide: Text.ElideRight
                                     color: theme.text
                                     font.family: runtime.fontSans
-                                    font.pixelSize: 13
+                                    font.pixelSize: theme.fontSize(13)
                                 }
                             }
                         }
@@ -442,7 +442,7 @@ PanelWindow {
                             text: "SYSTEM TRAY // " + system.trayCount
                             color: theme.textMuted
                             font.family: runtime.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.2
                         }
@@ -458,7 +458,7 @@ PanelWindow {
                             color: theme.textMuted
                             opacity: 0.62
                             font.family: runtime.fontMono
-                            font.pixelSize: 8
+                            font.pixelSize: theme.fontSize(8)
                         }
                     }
 
@@ -528,7 +528,7 @@ PanelWindow {
                                         elide: Text.ElideRight
                                         color: theme.text
                                         font.family: runtime.fontSans
-                                        font.pixelSize: 8
+                                        font.pixelSize: theme.fontSize(8)
                                     }
                                 }
                             }
@@ -558,7 +558,7 @@ PanelWindow {
                             text: "BATTERY"
                             color: theme.textMuted
                             font.family: runtime.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: theme.fontSize(10)
                             font.letterSpacing: 1.2
                         }
 
@@ -573,7 +573,7 @@ PanelWindow {
                             text: system.batteryPercent + "%"
                             color: system.batteryPercent <= 20 ? theme.warning : theme.textStrong
                             font.family: runtime.fontMono
-                            font.pixelSize: 13
+                            font.pixelSize: theme.fontSize(13)
                             font.weight: Font.DemiBold
                         }
                     }
@@ -642,7 +642,7 @@ PanelWindow {
                     text: "←/→  VOLUME"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -650,7 +650,7 @@ PanelWindow {
                     text: "M  MUTE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -659,7 +659,7 @@ PanelWindow {
                     text: "↑/↓  BRIGHTNESS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -668,7 +668,7 @@ PanelWindow {
                     text: "[/]  TRAY   T  OPEN"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -676,7 +676,7 @@ PanelWindow {
                     text: "N  NETWORK"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -684,7 +684,7 @@ PanelWindow {
                     text: "Y  THEME"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -692,7 +692,7 @@ PanelWindow {
                     text: "P  SESSION"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -700,7 +700,7 @@ PanelWindow {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }

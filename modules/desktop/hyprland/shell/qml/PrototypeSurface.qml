@@ -61,7 +61,7 @@ PanelWindow {
                 text: "Linux desktop prototype"
                 color: theme.textStrong
                 font.family: runtime.fontSans
-                font.pixelSize: 18
+                font.pixelSize: theme.fontSize(18)
                 font.weight: Font.DemiBold
             }
 
@@ -69,7 +69,7 @@ PanelWindow {
                 text: "Policy is live · terminal: " + runtime.terminal
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 13
+                font.pixelSize: theme.fontSize(13)
             }
         }
     }
