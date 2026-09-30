@@ -209,7 +209,7 @@ Item {
                 : "RESOLVING ACTIVE THEME"
             color: theme.textMuted
             font.family: runtime.fontMono
-            font.pixelSize: 9
+            font.pixelSize: theme.fontSize(9)
             font.letterSpacing: 0.8
         }
     }
@@ -286,7 +286,7 @@ Item {
                             text: modelData.label || modelData.name
                             color: modelData.preview ? modelData.preview.text : theme.textStrong
                             font.family: runtime.fontSans
-                            font.pixelSize: 14
+                            font.pixelSize: theme.fontSize(14)
                             font.weight: modelData.name === panel.currentTheme ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
                         }
@@ -298,7 +298,7 @@ Item {
                                 : (modelData.name === panel.defaultTheme ? "DEFAULT" : "")
                             color: modelData.name === panel.currentTheme ? theme.positive : theme.textMuted
                             font.family: runtime.fontMono
-                            font.pixelSize: 8
+                            font.pixelSize: theme.fontSize(8)
                             font.weight: Font.DemiBold
                         }
                     }
@@ -309,7 +309,7 @@ Item {
                         color: modelData.preview ? modelData.preview.text : theme.textMuted
                         opacity: 0.72
                         font.family: runtime.fontMono
-                        font.pixelSize: 8
+                        font.pixelSize: theme.fontSize(8)
                         font.letterSpacing: 0.7
                     }
                 }
@@ -358,7 +358,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: runtime.fontMono
-            font.pixelSize: 8
+            font.pixelSize: theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
         }
@@ -371,7 +371,7 @@ Item {
                 text: "↑/↓  SELECT"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -379,7 +379,7 @@ Item {
                 text: panel.applying ? "ENTER  APPLYING" : "ENTER  APPLY"
                 color: panel.applying ? theme.warning : theme.accent
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -387,7 +387,7 @@ Item {
                 text: "ESC  BACK"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
