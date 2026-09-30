@@ -308,19 +308,24 @@
           configurations = self.nixosConfigurations;
         };
 
-      docsToolsFor =
+      docsCommandsFor =
         system:
         let
           pkgs = pkgsFor system;
-          docsBuild = pkgs.writeShellApplication {
+        in
+        {
+          build = pkgs.writeShellApplication {
             name = "docs";
             runtimeInputs = [
               pkgs.git
               pkgs.nix
             ];
-            text = builtins.readFile ./scripts/docs;
+            text = ''
+              repo="$(git rev-parse --show-toplevel)"
+              exec nix build "path:$repo#docs" "$@"
+            '';
           };
-          docsServe = pkgs.writeShellApplication {
+          serve = pkgs.writeShellApplication {
             name = "docs-serve";
             runtimeInputs = [
               pkgs.coreutils
@@ -332,13 +337,6 @@
             ];
             text = builtins.readFile ./scripts/docs-serve;
           };
-        in
-        pkgs.symlinkJoin {
-          name = "dotfiles-docs-tools";
-          paths = [
-            docsBuild
-            docsServe
-          ];
         };
     in
     {
@@ -354,7 +352,6 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
-          docs-tools = docsToolsFor system;
         }
       );
 
@@ -364,6 +361,7 @@
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
           preCommit = preCommitFor system;
+          docsCommands = docsCommandsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
             name = "nf";
             runtimeInputs = with pkgs; [
@@ -403,7 +401,8 @@
               formatRepo
               repoOptionsFzf
               treefmt.config.build.wrapper
-              (docsToolsFor system)
+              docsCommands.build
+              docsCommands.serve
             ];
 
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
@@ -458,6 +457,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          docsCommands = docsCommandsFor system;
           plasmaRc2nix = lib.attrByPath [ system "rc2nix" ] null inputs.plasma-manager.packages;
 
           updateContainerLock = pkgs.writeShellApplication {
@@ -557,7 +557,7 @@
         {
           docs-serve = {
             type = "app";
-            program = "${docsToolsFor system}/bin/docs-serve";
+            program = lib.getExe docsCommands.serve;
             meta.description = "Build and live-preview the generated repository manual";
           };
           system-upgrade = {

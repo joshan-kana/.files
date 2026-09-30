@@ -29,11 +29,13 @@ chmod +x "$work/refresh"
 "$work/refresh" "$repo" "$book"
 
 watchexec \
+  --poll 1s \
   --watch "$repo/docs/manual" \
   --watch "$repo/docs/default.nix" \
   --watch "$repo/modules" \
   --watch "$repo/hosts" \
   --watch "$repo/lib" \
+  --watch "$repo/overlays" \
   --watch "$repo/flake.nix" \
   --watch "$repo/flake.lock" \
   --postpone \
@@ -41,6 +43,7 @@ watchexec \
   -- "$work/refresh" "$repo" "$book" &
 watch_pid=$!
 
+host="${DOCS_HOST:-0.0.0.0}"
 port="${DOCS_PORT:-38080}"
-printf 'Serving generated docs at http://127.0.0.1:%s\n' "$port"
-mdbook serve "$book" --hostname 127.0.0.1 --port "$port"
+printf 'Serving generated docs on %s:%s\n' "$host" "$port"
+mdbook serve "$book" --hostname "$host" --port "$port"
