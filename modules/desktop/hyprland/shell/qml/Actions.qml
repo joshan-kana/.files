@@ -120,6 +120,20 @@ QtObject {
             toggleClipboard();
         else if (commandId === "media.toggle")
             toggleMedia();
+        else if (commandId === "media.playPause")
+            mediaPlayPause();
+        else if (commandId === "media.next")
+            mediaNext();
+        else if (commandId === "media.previous")
+            mediaPrevious();
+        else if (commandId === "media.seekForward")
+            mediaSeekForward();
+        else if (commandId === "media.seekBackward")
+            mediaSeekBackward();
+        else if (commandId === "media.shuffle")
+            mediaToggleShuffle();
+        else if (commandId === "media.cyclePlayer")
+            mediaCyclePlayer();
         else if (commandId === "system.toggle")
             toggleSystem();
         else if (commandId === "notifications.toggle")
