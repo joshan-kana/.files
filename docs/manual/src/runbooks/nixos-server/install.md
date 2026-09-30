@@ -1,18 +1,21 @@
-# NixOS Server Install Guide
+# Installation guide for `nixos-server`
 
 This guide installs the current `nixos-server` configuration on the Dell
-OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected until
-the installed system has booted successfully.
+OptiPlex 7010 SFF from a NixOS installer. Keep the Vault HDDs disconnected while
+the installer modifies the internal system disk. After `nixos-install` succeeds,
+shut down, connect the Vault HDDs, and boot the installed system.
 
 ## Current evaluated target values
 
-The built manual injects these values from `nixosConfigurations.nixos-server`:
+The built manual injects these values from `nixosConfigurations.nixos-server`. Load this generated environment once in the installer shell:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
 ```
 
 Commands below that use these variables assume the block has been loaded in the current shell.
+
+If practical, enable [NixOS installer SSH](../common/nixos-installer-ssh.md) after networking is available and continue the installation remotely.
 
 ## Prepare The Target
 
@@ -43,59 +46,17 @@ sudo mkfs.btrfs -f -L ROOT "${DISK}p2"
 Mount the target and create the application-data subvolume:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 sudo mount /dev/disk/by-label/ROOT /mnt
 sudo mkdir -p /mnt/boot "$(dirname "/mnt$APP_DATA_ROOT")"
 sudo mount /dev/disk/by-label/BOOT /mnt/boot
 sudo btrfs subvolume create "/mnt$APP_DATA_ROOT"
 
-findmnt /mnt /mnt/boot
+findmnt -T /mnt
+findmnt -T /mnt/boot
 sudo btrfs subvolume list /mnt
 ```
 
-## Restore Bootstrap Credentials
-
-Retrieve the backup bootstrap material from the external recovery store. The
-current Nix backup configuration is the source of truth for credential locations
-and repository settings.
-
-Stage the credentials with root-only permissions at the configured target
-locations, then set the installer-shell variables below from that same
-configuration:
-
-```sh
-export RCLONE_CONFIG=<mounted-target-rclone-config>
-export SECRETS_PASSWORD_FILE=<mounted-target-secrets-password-file>
-export SECRETS_REPOSITORY=<configured-secrets-repository>
-```
-
-Restore the latest secrets snapshot:
-
-```sh
-sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
-  nix --extra-experimental-features "nix-command flakes" shell \
-  nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" \
-  --password-file "$SECRETS_PASSWORD_FILE" \
-  restore latest --target /mnt
-```
-
-Verify the restored primary-user secret tree and Unix account state before
-continuing. The secrets snapshot carries the account database so user and group
-identities and password hashes are retained across reinstalls.
-
-## Clone The Configuration
-
-Clone the repository using the restored GitHub SSH key:
-
-```sh
-{{#include ../generated/server-env.sh}}
-sudo env \
-  GIT_SSH_COMMAND="ssh -i /mnt$USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
-  git clone --recurse-submodules \
-  git@github.com:joshan-kana/.files.git \
-  "/mnt$DOTFILES_REPO"
-```
+{{#include ../_shared/restore-secrets-and-clone.inc}}
 
 ## Restore Application Data
 
@@ -103,7 +64,6 @@ Now that the repository is available, derive the app-backup settings directly
 from the target configuration instead of copying them into this guide:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 nix_eval() {
@@ -125,13 +85,11 @@ sudo env RCLONE_CONFIG="$RCLONE_CONFIG" \
 ```
 
 Backup creation, repository maintenance, and selective recovery procedures are
-kept in [Backup And Restore](backup-restore.md).
+kept in [Backup / application recovery](backup-recovery.md).
 
-Technitium's zones, DHCP scope and leases, DNS Apps, recursion, and forwarder
-policy are application-managed state. Restoring the server app-data backup
-before first boot restores that policy; Nix only owns the service boundary and
-first-start bootstrap inputs, not a second declarative copy of Technitium's
-runtime database.
+Some services keep mutable application-managed state outside the Nix
+configuration. Restoring the server application-data backup before first boot
+preserves that state without duplicating it declaratively in this runbook.
 
 ## Check Hardware Detection
 
@@ -148,7 +106,6 @@ cat /mnt/etc/nixos/hardware-configuration.nix
 Derive the bootstrap binary-cache settings from the target configuration:
 
 ```sh
-{{#include ../generated/server-env.sh}}
 cd "/mnt$DOTFILES_REPO"
 
 substituters="$(
@@ -173,32 +130,44 @@ sudo nixos-install \
   --flake .#nixos-server
 ```
 
+{{#include ../_shared/finalize-bare-install.inc}}
+
 ## First Boot
 
-Reboot from the internal NVMe with the Vault HDDs still disconnected. Then check
-the filesystems, network, restored backups, and failed units:
+After `nixos-install` succeeds, shut down the installer, connect the Vault HDDs,
+and boot from the internal NVMe. The configured Vault pool should import and
+mount automatically during normal boot.
+
+In the new shell, reload the generated environment:
 
 ```sh
-{{#include ../generated/server-env.sh}}
+{{#include ../../generated/server-env.sh}}
+```
+
+Verify the installed filesystems, Vault pool, network, restored backups, and
+failed units:
+
+```sh
 findmnt -T /
 findmnt -T /boot
 findmnt -T "$APP_DATA_ROOT"
+zpool status "$VAULT_POOL"
+zfs list -r "$VAULT_POOL"
+findmnt -T "$VAULT_ROOT"
 lsblk -f
 ip -br addr
-sudo restic-secrets snapshots --latest 1
 sudo restic-apps snapshots --latest 1
 systemctl is-system-running || true
 systemctl --failed --no-pager
 ```
 
-Fix ownership of the restored user files if needed:
+If the Vault pool was not imported or mounted, use
+[Vault / ZFS recovery](vault-zfs-recovery.md) to inspect and import
+the existing pool. Do not recreate the pool as a recovery step.
 
-```sh
-{{#include ../generated/server-env.sh}}
-sudo chown -R "$PRIMARY_USER:users" "$DOTFILES_REPO" "$USER_SECRETS_DIR"
-```
+Once the base system and Vault storage are healthy, restore any remaining
+application-managed or database-backed state using
+[Backup / application recovery](backup-recovery.md). Stop writers before
+replacing mutable application state.
 
-After the base system is healthy, connect the Vault HDDs and follow
-[Vault ZFS Storage](vault-storage.md) to import and verify the existing pool.
-Then restore the PostgreSQL-backed application databases using
-[Backup And Restore](backup-restore.md#postgresql-backed-applications).
+{{#include ../_shared/secrets-backup-first-boot.inc}}
