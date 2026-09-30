@@ -113,6 +113,7 @@
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
           lockSession = lib.getExe lockCommand;
+          sessionCommand = lib.getExe sessionCommand;
           themeSet = "/run/current-system/sw/bin/theme-set";
         };
 
@@ -153,12 +154,41 @@
           exec systemctl --user start linux-desktop-lock.service
         '';
       };
+
+      sessionCommand = pkgs.writeShellApplication {
+        name = "linux-desktop-session";
+        runtimeInputs = [
+          pkgs.hyprland
+          pkgs.systemd
+        ];
+        text = ''
+          case "''${1:-}" in
+            suspend)
+              exec systemctl suspend
+              ;;
+            logout)
+              exec hyprctl dispatch exit
+              ;;
+            reboot)
+              exec systemctl reboot
+              ;;
+            poweroff)
+              exec systemctl poweroff
+              ;;
+            *)
+              printf 'Usage: linux-desktop-session {suspend|logout|reboot|poweroff}\n' >&2
+              exit 2
+              ;;
+          esac
+        '';
+      };
     in
     {
       home.packages = [
         launcher
         developmentLauncher
         lockCommand
+        sessionCommand
         clipboardCopy
         pkgs.quickshell
         spectrumAnalyzer
