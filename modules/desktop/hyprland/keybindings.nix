@@ -343,7 +343,7 @@ in
   (mk {
     keys = "XF86AudioRaiseVolume";
     mainMod = false;
-    action = exec "volumectl + 5";
+    action = global "linux-desktop:volume-up";
     flags.repeating = true;
     section = "AUDIO";
     description = "Volume up";
@@ -352,7 +352,7 @@ in
   (mk {
     keys = "XF86AudioLowerVolume";
     mainMod = false;
-    action = exec "volumectl - 5";
+    action = global "linux-desktop:volume-down";
     flags.repeating = true;
     section = "AUDIO";
     description = "Volume down";
@@ -361,7 +361,7 @@ in
   (mk {
     keys = "XF86AudioMute";
     mainMod = false;
-    action = exec "volumectl %";
+    action = global "linux-desktop:volume-mute";
     section = "AUDIO";
     description = "Mute";
     label = "MUTE";
@@ -414,7 +414,7 @@ in
   (mk {
     keys = "XF86MonBrightnessUp";
     mainMod = false;
-    action = exec "lightctl + 5";
+    action = global "linux-desktop:brightness-up";
     flags.repeating = true;
     section = "DISPLAY";
     description = "Brightness up";
@@ -423,7 +423,7 @@ in
   (mk {
     keys = "XF86MonBrightnessDown";
     mainMod = false;
-    action = exec "lightctl - 5";
+    action = global "linux-desktop:brightness-down";
     flags.repeating = true;
     section = "DISPLAY";
     description = "Brightness down";

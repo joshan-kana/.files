@@ -30,6 +30,17 @@ ShellRoot {
         id: system
     }
 
+    BrightnessState {
+        id: brightness
+        runtime: runtime
+    }
+
+    OsdState {
+        id: osd
+        system: system
+        brightness: brightness
+    }
+
     NotificationState {
         id: notifications
     }
@@ -75,6 +86,7 @@ ShellRoot {
     SystemPanel {
         id: systemPanel
         system: system
+        brightness: brightness
         runtime: runtime
         theme: theme
         motion: motion
@@ -97,6 +109,14 @@ ShellRoot {
         motion: motion
     }
 
+    OsdPopup {
+        id: osdPopup
+        osd: osd
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     CommandPalette {
         id: launcher
         runtime: runtime
@@ -113,7 +133,10 @@ ShellRoot {
             { id: "shortcuts.toggle", name: "Keyboard Shortcuts", description: "Show the Hyprland key map", icon: "preferences-desktop-keyboard-shortcuts", key: "SUPER + /", keywords: ["keybinds", "cheatsheet"] },
             { id: "animations.toggle", name: "Toggle Animations", description: "Enable or disable desktop motion", icon: "preferences-desktop-effects", keywords: ["motion", "reduce motion"] },
             { id: "terminal.open", name: "Open Terminal", description: runtime.terminal, icon: "utilities-terminal", keywords: ["shell", "console"] }
-        ]
+        ].concat(brightness.supported ? [
+            { id: "brightness.up", name: "Brightness Up", description: "Increase hardware backlight by 5%", icon: "display-brightness", key: "BRIGHTNESS +", keywords: ["display", "backlight", "brighter"] },
+            { id: "brightness.down", name: "Brightness Down", description: "Decrease hardware backlight by 5%", icon: "display-brightness", key: "BRIGHTNESS −", keywords: ["display", "backlight", "dimmer"] }
+        ] : [])
         onCommandTriggered: commandId => actions.invokeCommand(commandId)
     }
 
@@ -126,6 +149,7 @@ ShellRoot {
         mediaPanel: mediaPanel
         systemPanel: systemPanel
         systemState: system
+        brightnessState: brightness
         notificationCenter: notificationCenter
         notificationState: notifications
         motion: motion
@@ -157,6 +181,41 @@ ShellRoot {
         name: "system"
         description: "Open system controls"
         onPressed: actions.toggleSystem()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "volume-up"
+        description: "Increase output volume"
+        onPressed: actions.volumeUp()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "volume-down"
+        description: "Decrease output volume"
+        onPressed: actions.volumeDown()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "volume-mute"
+        description: "Toggle output mute"
+        onPressed: actions.toggleMute()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "brightness-up"
+        description: "Increase display brightness"
+        onPressed: actions.brightnessUp()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "brightness-down"
+        description: "Decrease display brightness"
+        onPressed: actions.brightnessDown()
     }
 
     GlobalShortcut {
@@ -255,6 +314,34 @@ ShellRoot {
 
         function toggleMute(): void {
             actions.toggleMute();
+        }
+
+        function brightnessUp(): void {
+            actions.brightnessUp();
+        }
+
+        function brightnessDown(): void {
+            actions.brightnessDown();
+        }
+
+        function brightnessSupported(): bool {
+            return brightness.supported;
+        }
+
+        function brightnessPercent(): int {
+            return brightness.percent;
+        }
+
+        function osdVisible(): bool {
+            return osd.visible;
+        }
+
+        function osdKind(): string {
+            return osd.kind;
+        }
+
+        function osdValue(): int {
+            return osd.value;
         }
 
         function networkName(): string {
