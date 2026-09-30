@@ -28,6 +28,11 @@ QtObject {
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, 0.96)
     readonly property real panelClosedScale: 0.965
 
+    readonly property int fontPanelEyebrow: 11
+    readonly property int fontPanelTitle: 27
+    readonly property int fontSubpanelEyebrow: 10
+    readonly property int fontSubpanelTitle: 24
+
     readonly property int spacing1: 4
     readonly property int spacing2: 8
     readonly property int spacing3: 12
