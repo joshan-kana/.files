@@ -89,18 +89,29 @@
           '';
 
       keybindings = import ../keybindings.nix {
-        repoPath = osConfig.dotfiles.paths.repoPath;
         terminal = osConfig.dotfiles.defaults.terminal;
       };
+      mainModifier =
+        osConfig.home-manager.users.joshan.wayland.windowManager.hyprland.settings.mainMod._var;
+
+      renderShortcut =
+        binding:
+        let
+          key = if binding.label != null then binding.label else binding.keys;
+        in
+        "${lib.optionalString binding.mainMod "${mainModifier} + "}${key}";
 
       cheatsheetBindings = map (binding: {
-        key =
-          if binding.label != null then
-            binding.label
-          else
-            "${lib.optionalString binding.mainMod "SUPER + "}${binding.keys}";
+        key = renderShortcut binding;
         inherit (binding) description section;
       }) (lib.filter (binding: binding.cheatsheet) keybindings);
+
+      shortcuts = lib.listToAttrs (
+        map (binding: {
+          name = binding.id;
+          value = renderShortcut binding;
+        }) (lib.filter (binding: binding.id != null) keybindings)
+      );
 
       runtimeConfig = json.generate "linux-desktop-runtime.json" {
         defaults = {
@@ -132,6 +143,7 @@
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         keybindings = cheatsheetBindings;
+        inherit shortcuts;
 
         tools = {
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";

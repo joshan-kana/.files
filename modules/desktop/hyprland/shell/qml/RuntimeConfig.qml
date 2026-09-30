@@ -35,6 +35,12 @@ QtObject {
     readonly property real textScale: data.accessibility.textScale
     readonly property bool animationsEnabled: data.motion.animationsEnabled
     readonly property var keybindings: data.keybindings
+    readonly property var shortcuts: data.shortcuts
+
+    function shortcut(id) {
+        const value = shortcuts ? shortcuts[id] : undefined;
+        return value === undefined || value === null ? "" : String(value);
+    }
 
     property FileView configFile: FileView {
         path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
@@ -92,6 +98,7 @@ QtObject {
             }
 
             property var keybindings: []
+            property var shortcuts: ({})
             property string wallpaper: ""
         }
     }
