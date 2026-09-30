@@ -31,6 +31,11 @@ in
     wlr-randr
   ];
 
+  bluetooth = _: {
+    hardware.bluetooth.enable = true;
+    environment.systemPackages = [ pkgs.bluez ];
+  };
+
   shell = import ./shell;
 
   lock = _: {
