@@ -368,45 +368,45 @@ in
   })
   (mk {
     keys = "ALT + X";
-    action = exec "playerctl play-pause";
+    action = global "linux-desktop:media-play-pause";
     section = "MEDIA";
     description = "Play / pause";
   })
   (mk {
     keys = "ALT + C";
-    action = exec "playerctl next";
+    action = global "linux-desktop:media-next";
     section = "MEDIA";
     description = "Next track";
   })
   (mk {
     keys = "ALT + Z";
-    action = exec "playerctl previous";
+    action = global "linux-desktop:media-previous";
     section = "MEDIA";
     description = "Previous track";
   })
   (mk {
     keys = "ALT + D";
-    action = exec "playerctl position 10+";
+    action = global "linux-desktop:media-seek-forward";
     flags.repeating = true;
     section = "MEDIA";
     description = "Seek forward 10 seconds";
   })
   (mk {
     keys = "ALT + S";
-    action = exec "playerctl position 10-";
+    action = global "linux-desktop:media-seek-backward";
     flags.repeating = true;
     section = "MEDIA";
     description = "Seek backward 10 seconds";
   })
   (mk {
     keys = "ALT + W";
-    action = exec "playerctl shuffle toggle";
+    action = global "linux-desktop:media-shuffle";
     section = "MEDIA";
     description = "Toggle shuffle";
   })
   (mk {
     keys = "ALT + F";
-    action = exec "playerctld shift";
+    action = global "linux-desktop:media-cycle-player";
     section = "MEDIA";
     description = "Switch media player";
   })

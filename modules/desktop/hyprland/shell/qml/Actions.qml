@@ -9,6 +9,7 @@ QtObject {
     required property QtObject clipboardPanel
     required property QtObject audioMixerPanel
     required property QtObject mediaPanel
+    required property QtObject mediaState
     required property QtObject systemPanel
     required property QtObject systemState
     required property QtObject brightnessState
@@ -46,6 +47,34 @@ QtObject {
 
     function toggleMedia(): void {
         mediaPanel.toggle();
+    }
+
+    function mediaPlayPause(): void {
+        mediaState.togglePlaying();
+    }
+
+    function mediaNext(): void {
+        mediaState.next();
+    }
+
+    function mediaPrevious(): void {
+        mediaState.previous();
+    }
+
+    function mediaSeekForward(): void {
+        mediaState.seek(10);
+    }
+
+    function mediaSeekBackward(): void {
+        mediaState.seek(-10);
+    }
+
+    function mediaToggleShuffle(): void {
+        mediaState.toggleShuffle();
+    }
+
+    function mediaCyclePlayer(): void {
+        mediaState.cyclePlayer();
     }
 
     function toggleSystem(): void {

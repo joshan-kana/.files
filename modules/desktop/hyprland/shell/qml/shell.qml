@@ -171,6 +171,7 @@ ShellRoot {
         clipboardPanel: clipboardPanel
         audioMixerPanel: audioMixerPanel
         mediaPanel: mediaPanel
+        mediaState: media
         systemPanel: systemPanel
         systemState: system
         brightnessState: brightness
@@ -212,6 +213,55 @@ ShellRoot {
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-play-pause"
+        description: "Play or pause the selected media player"
+        onPressed: actions.mediaPlayPause()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-next"
+        description: "Skip to the next track"
+        onPressed: actions.mediaNext()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-previous"
+        description: "Return to the previous track"
+        onPressed: actions.mediaPrevious()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-seek-forward"
+        description: "Seek forward ten seconds"
+        onPressed: actions.mediaSeekForward()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-seek-backward"
+        description: "Seek backward ten seconds"
+        onPressed: actions.mediaSeekBackward()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-shuffle"
+        description: "Toggle shuffle for the selected media player"
+        onPressed: actions.mediaToggleShuffle()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "media-cycle-player"
+        description: "Select the next media player"
+        onPressed: actions.mediaCyclePlayer()
     }
 
     GlobalShortcut {
@@ -330,6 +380,62 @@ ShellRoot {
 
         function toggleMedia(): void {
             actions.toggleMedia();
+        }
+
+        function mediaPlayerCount(): int {
+            return media.players.length;
+        }
+
+        function mediaPlayerIdentity(): string {
+            return media.available ? media.identity : "";
+        }
+
+        function mediaPlayerId(): string {
+            return media.available ? media.playerId(media.player) : "";
+        }
+
+        function mediaPlaying(): bool {
+            return media.playing;
+        }
+
+        function mediaPositionSeconds(): int {
+            return media.available ? Math.round(media.position) : -1;
+        }
+
+        function mediaShuffleSupported(): bool {
+            return media.available && media.player.shuffleSupported;
+        }
+
+        function mediaShuffle(): bool {
+            return media.available && media.player.shuffleSupported ? media.player.shuffle : false;
+        }
+
+        function mediaPlayPause(): void {
+            actions.mediaPlayPause();
+        }
+
+        function mediaNext(): void {
+            actions.mediaNext();
+        }
+
+        function mediaPrevious(): void {
+            actions.mediaPrevious();
+        }
+
+        function mediaSeekForward(): void {
+            actions.mediaSeekForward();
+        }
+
+        function mediaSeekBackward(): void {
+            actions.mediaSeekBackward();
+        }
+
+        function mediaToggleShuffle(): void {
+            actions.mediaToggleShuffle();
+        }
+
+        function mediaCyclePlayer(): void {
+            actions.mediaCyclePlayer();
         }
 
         function toggleSystem(): void {
