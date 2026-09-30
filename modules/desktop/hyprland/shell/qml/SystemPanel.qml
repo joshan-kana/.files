@@ -18,6 +18,7 @@ PanelWindow {
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
     readonly property bool networkOpen: networkPanel.open
+    readonly property bool themeOpen: themePanel.open
 
     visible: open || closing
     color: "transparent"
@@ -51,6 +52,7 @@ PanelWindow {
     function hide(): void {
         trayMenu.closeMenu();
         networkPanel.closeView();
+        themePanel.closeView();
         open = false;
 
         if (motion.fast === 0)
@@ -70,7 +72,19 @@ PanelWindow {
 
     function openNetwork(): void {
         trayMenu.closeMenu();
+        themePanel.closeView();
         networkPanel.openView();
+    }
+
+    function openTheme(): void {
+        trayMenu.closeMenu();
+        networkPanel.closeView();
+        themePanel.openView();
+    }
+
+    function showTheme(): void {
+        show();
+        openTheme();
     }
 
     function activateTrayItem(): void {
@@ -144,7 +158,7 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
-                visible: !trayMenu.open && !networkPanel.open
+                visible: !trayMenu.open && !networkPanel.open && !themePanel.open
                 spacing: theme.spacing4
 
                 Text {
@@ -314,6 +328,8 @@ PanelWindow {
                     spacing: theme.spacing3
 
                     Repeater {
+                        id: controlTiles
+
                         model: [
                             {
                                 id: "network",
@@ -326,13 +342,19 @@ PanelWindow {
                                 label: "BLUETOOTH",
                                 value: system.bluetoothEnabled ? system.bluetoothConnectedCount + " CONNECTED" : "OFF",
                                 active: system.bluetoothEnabled
+                            },
+                            {
+                                id: "theme",
+                                label: "THEME",
+                                value: "PALETTE",
+                                active: true
                             }
                         ]
 
                         delegate: SquircleSurface {
                             required property var modelData
 
-                            width: (content.width - theme.spacing3) / 2
+                            width: (content.width - theme.spacing3 * (controlTiles.count - 1)) / controlTiles.count
                             height: 92
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusLarge
@@ -342,9 +364,15 @@ PanelWindow {
 
                             MouseArea {
                                 anchors.fill: parent
-                                enabled: modelData.id === "network"
+                                enabled: modelData.id === "network" || modelData.id === "theme"
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onClicked: panel.openNetwork()
+
+                                onClicked: {
+                                    if (modelData.id === "network")
+                                        panel.openNetwork();
+                                    else if (modelData.id === "theme")
+                                        panel.openTheme();
+                                }
                             }
 
                             Column {
@@ -539,6 +567,18 @@ PanelWindow {
                 onKeyboardRequested: keyboardFocus.forceActiveFocus()
             }
 
+            ThemePanel {
+                id: themePanel
+
+                anchors.fill: parent
+
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+
+                onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            }
+
             TrayMenuView {
                 id: trayMenu
 
@@ -552,7 +592,7 @@ PanelWindow {
             Row {
                 id: footer
 
-                visible: !trayMenu.open && !networkPanel.open
+                visible: !trayMenu.open && !networkPanel.open && !themePanel.open
 
                 anchors {
                     right: parent.right
@@ -603,6 +643,14 @@ PanelWindow {
                 }
 
                 Text {
+                    text: "Y  THEME"
+                    color: theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -617,6 +665,26 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    if (themePanel.open) {
+                        if (event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Backspace) {
+                            themePanel.closeView();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Up) {
+                            themePanel.moveSelection(-1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            themePanel.moveSelection(1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter) {
+                            themePanel.activateSelected();
+                            event.accepted = true;
+                        }
+
+                        return;
+                    }
+
                     if (networkPanel.open) {
                         if (networkPanel.passwordPrompt)
                             return;
@@ -682,6 +750,9 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_N) {
                         panel.openNetwork();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Y) {
+                        panel.openTheme();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up && brightness.supported) {
                         brightness.adjust(5);
