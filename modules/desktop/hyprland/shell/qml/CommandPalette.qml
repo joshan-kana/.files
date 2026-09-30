@@ -181,12 +181,12 @@ PanelWindow {
         }
 
         exponent: theme.squircleExponent
-        cornerRadius: theme.radiusLarge
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.42)
-        borderWidth: 1
+        cornerRadius: theme.radiusPanel
+        fillColor: theme.panelFill
+        borderColor: theme.panelBorder
+        borderWidth: theme.borderThin
 
-        scale: palette.open ? 1 : 0.965
+        scale: palette.open ? 1 : theme.panelClosedScale
         opacity: palette.open ? 1 : 0
 
         Behavior on scale {
@@ -220,7 +220,7 @@ PanelWindow {
                 cornerRadius: theme.radiusMedium
                 fillColor: theme.surfaceRaised
                 borderColor: search.activeFocus ? theme.accent : theme.outline
-                borderWidth: search.activeFocus ? 1.5 : 1
+                borderWidth: search.activeFocus ? theme.borderFocus : theme.borderThin
 
                 Behavior on borderColor {
                     ColorAnimation {
