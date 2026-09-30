@@ -19,7 +19,8 @@
       ...
     }:
     let
-      shellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
+      productionShellPath = ./qml;
+      developmentShellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
 
@@ -97,13 +98,23 @@
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          exec qs --path ${lib.escapeShellArg shellPath} "$@"
+          exec qs --path "${productionShellPath}" "$@"
+        '';
+      };
+
+      developmentLauncher = pkgs.writeShellApplication {
+        name = "linux-desktop-dev";
+        runtimeInputs = [ pkgs.quickshell ];
+        text = ''
+          export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
     in
     {
       home.packages = [
         launcher
+        developmentLauncher
         pkgs.quickshell
         spectrumAnalyzer
       ];
