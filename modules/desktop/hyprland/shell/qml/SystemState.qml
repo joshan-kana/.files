@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
+import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 
 QtObject {
@@ -77,6 +78,9 @@ QtObject {
     readonly property var battery: UPower.displayDevice
     readonly property bool batteryAvailable: battery !== null && battery.ready && battery.isLaptopBattery
     readonly property int batteryPercent: batteryAvailable ? Math.round(battery.percentage * 100) : 0
+
+    readonly property var trayItems: SystemTray.items ? SystemTray.items.values : []
+    readonly property int trayCount: trayItems.length
 
     function setVolume(value: real): void {
         if (!audioAvailable)
