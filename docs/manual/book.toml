@@ -1,0 +1,11 @@
+[book]
+title = ".files Manual"
+authors = ["Joshan Kana"]
+language = "en"
+src = "src"
+
+[build]
+create-missing = false
+
+[output.html]
+git-repository-url = "https://github.com/joshan-kana/.files"
