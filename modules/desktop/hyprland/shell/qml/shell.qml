@@ -86,6 +86,14 @@ ShellRoot {
         motion: motion
     }
 
+    AudioMixerPanel {
+        id: audioMixerPanel
+        system: system
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     MediaPanel {
         id: mediaPanel
         media: media
@@ -136,6 +144,7 @@ ShellRoot {
         motion: motion
         commands: [
             { id: "clipboard.toggle", name: "Clipboard History", description: "Search and restore clipboard entries", icon: "edit-paste", key: "SUPER + V", keywords: ["copy", "paste", "cliphist"] },
+            { id: "audio.mixer", name: "Application Mixer", description: "Control live PipeWire playback streams", icon: "multimedia-volume-control", key: "SUPER + SHIFT + V", keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"] },
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
             { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery", "tray", "status icons"] },
             { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
@@ -160,6 +169,7 @@ ShellRoot {
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
+        audioMixerPanel: audioMixerPanel
         mediaPanel: mediaPanel
         systemPanel: systemPanel
         systemState: system
@@ -188,6 +198,13 @@ ShellRoot {
         name: "clipboard"
         description: "Open clipboard history"
         onPressed: actions.toggleClipboard()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "audio-mixer"
+        description: "Open application audio mixer"
+        onPressed: actions.toggleAudioMixer()
     }
 
     GlobalShortcut {
@@ -279,6 +296,36 @@ ShellRoot {
 
         function clipboardCount(): int {
             return clipboardPanel.entries.length;
+        }
+
+        function toggleAudioMixer(): void {
+            actions.toggleAudioMixer();
+        }
+
+        function audioMixerOpen(): bool {
+            return audioMixerPanel.open;
+        }
+
+        function audioStreamCount(): int {
+            return system.audioStreams.length;
+        }
+
+        function selectedAudioStreamVolume(): int {
+            const stream = audioMixerPanel.selectedStream();
+            return stream && stream.audio ? Math.round(stream.audio.volume * 100) : -1;
+        }
+
+        function selectedAudioStreamMuted(): bool {
+            const stream = audioMixerPanel.selectedStream();
+            return stream && stream.audio ? stream.audio.muted : false;
+        }
+
+        function adjustSelectedAudioStream(deltaPercent: int): void {
+            audioMixerPanel.adjustSelected(deltaPercent / 100);
+        }
+
+        function toggleSelectedAudioStreamMute(): void {
+            audioMixerPanel.toggleSelectedMute();
         }
 
         function toggleMedia(): void {
