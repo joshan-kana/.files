@@ -7,10 +7,20 @@
 }:
 
 let
+  # Documentation pipeline:
+  # 1. Evaluate host configuration and semantic scopes into documentation facts.
+  # 2. Render generated Markdown pages and runbook environment snippets.
+  # 3. Overlay generated files onto the handwritten docs/manual source tree.
+  # 4. Render the assembled Markdown tree with mdBook.
   hostNames = builtins.attrNames configurations;
-  server = configurations.nixos-server;
-  serverConfig = server.config;
+  serverHost = configurations.nixos-server;
+  serverConfig = serverHost.config;
 
+  # Nix option reference
+  #
+  # Merge host-specific dotfiles options, but use the shared scope option tree so
+  # the reference describes the complete reusable interface rather than one
+  # host's resolved scope state.
   allScopeOptions = semanticScopeOptions.nixdOptions configurations;
   hostOptionTrees = map (
     name: semanticScopeOptions.nixdHostOptions configurations configurations.${name}
@@ -33,6 +43,9 @@ let
       option:
       option
       // {
+        # Declaration paths are display text here, not build inputs. Make them
+        # repo-relative and discard their original store-string context before
+        # nixosOptionsDoc turns them into links.
         declarations = map (
           declaration:
           builtins.unsafeDiscardStringContext (lib.removePrefix "${source}/" (toString declaration))
@@ -48,6 +61,10 @@ let
     ];
   };
 
+  # Semantic scope inventory
+  #
+  # A semantic scope node is an attrset with an enable option. Flatten the
+  # resolved tree so generated docs can compare scope state across hosts.
   scopeChildren = tree: lib.filterAttrs (_: value: builtins.isAttrs value && value ? enable) tree;
   flattenScopes =
     prefix: tree:
@@ -81,7 +98,8 @@ let
       row: lib.concatStringsSep "." row.path == scopeName && row.enabled
     ) hostScopeRows.${hostName};
 
-  filesystem = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
+  # Markdown formatting helpers
+  filesystemAt = config: mountPoint: lib.attrByPath [ mountPoint ] null config.fileSystems;
   packageNames = packages: lib.sort builtins.lessThan (lib.unique (map lib.getName packages));
   codeList =
     values:
@@ -110,6 +128,8 @@ let
     else
       lib.concatStringsSep ", " (map (range: "${toString range.from}-${toString range.to}") values);
   htmlEscape = value: lib.replaceStrings [ "&" "<" ">" ] [ "&amp;" "&lt;" "&gt;" ] value;
+  # Package lists live inside raw HTML <details> blocks, so render the list
+  # itself as HTML rather than relying on Markdown parsing inside those blocks.
   htmlPackageList =
     values:
     if values == [ ] then
@@ -156,6 +176,10 @@ let
       ) (builtins.attrNames root)
     );
 
+  # Evaluated host facts
+  #
+  # Keep page renderers independent from the full NixOS configuration shape.
+  # This is the documentation-facing projection of each evaluated host.
   hostFacts = lib.mapAttrs (
     name: host:
     let
@@ -171,6 +195,8 @@ let
         pruneOpts = backup.pruneOpts or [ ];
         checkOpts = backup.checkOpts or [ ];
       }) config.services.restic.backups;
+      # Restic maintenance uses the same NixOS backup attrset, but has no
+      # backup paths and only prune/check work. Keep it out of backup coverage.
       backupJobs = builtins.filter (backup: backup.paths != [ ]) resticJobs;
       maintenanceJobs = builtins.filter (
         backup: backup.paths == [ ] && (backup.pruneOpts != [ ] || backup.checkOpts != [ ])
@@ -259,14 +285,16 @@ let
     }
   ) configurations;
 
-  storage = serverConfig.dotfiles.server.storage;
-  lan = serverConfig.dotfiles.server.lan;
+  # Server-only values used by recovery runbooks.
+  serverStorage = serverConfig.dotfiles.server.storage;
+  serverLan = serverConfig.dotfiles.server.lan;
   immichMediaRoot = serverConfig.services.immich.mediaLocation;
   paperlessDataRoot = serverConfig.services.paperless.dataDir;
   paperlessMediaRoot = serverConfig.services.paperless.mediaDir;
   paperlessConsumeRoot = serverConfig.services.paperless.consumptionDir;
   paperlessBackupRoot = serverConfig.services.postgresqlBackup.location;
 
+  # Reusable Markdown fragments
   filesystemTable =
     facts:
     if facts.filesystems == [ ] then
@@ -308,6 +336,7 @@ let
         ) facts.backupJobs}
       '';
 
+  # Generated reference pages
   fleetMarkdown = ''
     # Fleet
 
@@ -418,8 +447,10 @@ let
       See [Semantic scopes](../configuration/scopes.md).
     '';
 
-  hostMarkdown = lib.mapAttrs (name: _: systemMarkdown name) configurations;
-
+  # Runbook environment snippets
+  #
+  # Installation/recovery guides include these generated shell exports so paths
+  # and backup capability always match the evaluated target host.
   hostRunbookEnvironment =
     name: host:
     let
@@ -427,10 +458,10 @@ let
       primaryUser = config.dotfiles.users.primary;
       secretsBackup = lib.attrByPath [ "secrets" ] null config.services.restic.backups;
       backupValue = field: if secretsBackup == null then "" else toString secretsBackup.${field};
-      value = fs: field: if fs == null then "" else fs.${field};
-      rootFs = filesystem config "/";
-      bootFs = filesystem config "/boot";
-      homeFs = filesystem config "/home";
+      filesystemValue = fs: field: if fs == null then "" else fs.${field};
+      rootFs = filesystemAt config "/";
+      bootFs = filesystemAt config "/boot";
+      homeFs = filesystemAt config "/home";
     in
     ''
       export HOST_NAME=${lib.escapeShellArg name}
@@ -446,14 +477,15 @@ let
       export SECRETS_REPOSITORY=${lib.escapeShellArg (backupValue "repository")}
       export SECRETS_PASSWORD_FILE=${lib.escapeShellArg (backupValue "passwordFile")}
       export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg (backupValue "rcloneConfigFile")}
-      export ROOT_DEVICE=${lib.escapeShellArg (value rootFs "device")}
-      export ROOT_FS=${lib.escapeShellArg (value rootFs "fsType")}
-      export BOOT_DEVICE=${lib.escapeShellArg (value bootFs "device")}
-      export BOOT_FS=${lib.escapeShellArg (value bootFs "fsType")}
-      export HOME_DEVICE=${lib.escapeShellArg (value homeFs "device")}
-      export HOME_FS=${lib.escapeShellArg (value homeFs "fsType")}
+      export ROOT_DEVICE=${lib.escapeShellArg (filesystemValue rootFs "device")}
+      export ROOT_FS=${lib.escapeShellArg (filesystemValue rootFs "fsType")}
+      export BOOT_DEVICE=${lib.escapeShellArg (filesystemValue bootFs "device")}
+      export BOOT_FS=${lib.escapeShellArg (filesystemValue bootFs "fsType")}
+      export HOME_DEVICE=${lib.escapeShellArg (filesystemValue homeFs "device")}
+      export HOME_FS=${lib.escapeShellArg (filesystemValue homeFs "fsType")}
     '';
 
+  # Cross-host infrastructure pages
   networkingMarkdown = ''
     # Networking
 
@@ -642,6 +674,7 @@ let
     ) hostNames}
   '';
 
+  # Runbook navigation
   commonRunbookIndexMarkdown = ''
     # Common runbooks
 
@@ -667,6 +700,10 @@ let
       ${serverRecovery}
     '';
 
+  # mdBook navigation
+  #
+  # Host entries come from nixosConfigurations, so adding a host automatically
+  # adds its system page and runbook section to the book.
   summaryMarkdown = ''
     # Summary
 
@@ -706,14 +743,14 @@ let
     - [dotfiles options](configuration/options.md)
   '';
 
-  runbookEnvironment = ''
-    ${hostRunbookEnvironment "nixos-server" server}
-    export APP_DATA_ROOT=${lib.escapeShellArg storage.appData.root}
-    export VAULT_ROOT=${lib.escapeShellArg storage.dataRoot.path}
-    export VAULT_POOL=${lib.escapeShellArg storage.dataRoot.poolName}
-    export VAULT_DATASET=${lib.escapeShellArg "${storage.dataRoot.poolName}/data"}
+  serverRunbookEnvironment = ''
+    ${hostRunbookEnvironment "nixos-server" serverHost}
+    export APP_DATA_ROOT=${lib.escapeShellArg serverStorage.appData.root}
+    export VAULT_ROOT=${lib.escapeShellArg serverStorage.dataRoot.path}
+    export VAULT_POOL=${lib.escapeShellArg serverStorage.dataRoot.poolName}
+    export VAULT_DATASET=${lib.escapeShellArg "${serverStorage.dataRoot.poolName}/data"}
     export SERVER_SECRETS_DIR=${lib.escapeShellArg serverConfig.dotfiles.server.secretsDir}
-    export SERVER_IP=${lib.escapeShellArg lan.serverIp}
+    export SERVER_IP=${lib.escapeShellArg serverLan.serverIp}
     export IMMICH_MEDIA_ROOT=${lib.escapeShellArg immichMediaRoot}
     export IMMICH_BACKUP_ROOT=${lib.escapeShellArg "${immichMediaRoot}/backups"}
     export PAPERLESS_DATA_ROOT=${lib.escapeShellArg paperlessDataRoot}
@@ -722,10 +759,21 @@ let
     export PAPERLESS_BACKUP_ROOT=${lib.escapeShellArg paperlessBackupRoot}
   '';
 
+  # Generated file assembly
+  systemFiles = lib.mapAttrs' (
+    name: _: lib.nameValuePair "systems/${name}.md" (systemMarkdown name)
+  ) configurations;
+  hostRunbookIndexFiles = lib.genAttrs' hostNames (
+    name: lib.nameValuePair "runbooks/${name}/index.md" (hostRunbookIndexMarkdown name)
+  );
+  hostEnvironmentFiles = lib.mapAttrs' (
+    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
+  ) configurations;
+
   generatedFiles = {
     "SUMMARY.md" = summaryMarkdown;
     "configuration/scopes.md" = semanticScopesMarkdown;
-    "generated/server-env.sh" = runbookEnvironment;
+    "generated/server-env.sh" = serverRunbookEnvironment;
     "infrastructure/backups.md" = backupsMarkdown;
     "infrastructure/firewall.md" = firewallMarkdown;
     "infrastructure/networking.md" = networkingMarkdown;
@@ -734,22 +782,22 @@ let
     "overview/fleet.md" = fleetMarkdown;
     "runbooks/common/index.md" = commonRunbookIndexMarkdown;
   }
-  // lib.mapAttrs' (name: markdown: lib.nameValuePair "systems/${name}.md" markdown) hostMarkdown
-  // lib.genAttrs' hostNames (
-    name: lib.nameValuePair "runbooks/${name}/index.md" (hostRunbookIndexMarkdown name)
-  )
-  // lib.mapAttrs' (
-    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
-  ) configurations;
+  // systemFiles
+  // hostRunbookIndexFiles
+  // hostEnvironmentFiles;
 
-  generatedFileSources = lib.mapAttrs (
+  # Materialize generated strings as store files so docsSource can overlay them
+  # onto the handwritten source tree with normal file operations.
+  generatedStoreFiles = lib.mapAttrs (
     path: contents: builtins.toFile "dotfiles-${lib.replaceStrings [ "/" ] [ "-" ] path}" contents
   ) generatedFiles;
 
+  # Every configured host must have one human-authored installation procedure.
   missingInstallRunbooks = lib.filter (
     name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/${name}/install.md")
   ) hostNames;
 
+  # Assemble the complete Markdown source tree.
   docsSource =
     assert lib.assertMsg (missingInstallRunbooks == [ ]) ''
       Missing install/recovery runbook(s) for: ${lib.concatStringsSep ", " missingInstallRunbooks}
@@ -761,14 +809,25 @@ let
       }
       ''
         set -euo pipefail
+
+        # Start with the handwritten mdBook source tree, then make the copy
+        # writable so generated pages can be overlaid into it.
         cp -R ${source}/docs/manual/. "$out"
         chmod -R u+w "$out/src"
+
+        # Overlay pages and shell snippets derived from evaluated configuration.
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (path: file: ''
             install -D -m 0644 ${file} "$out/src/${path}"
-          '') generatedFileSources
+          '') generatedStoreFiles
         )}
 
+        # nixosOptionsDoc already gives us CommonMark. These fixups make its
+        # declaration links and explicit anchors suitable for the assembled book:
+        # - strip the source store prefix from displayed declaration paths;
+        # - replace unusable file:// links with inline-code declaration names;
+        # - preserve option anchor IDs with explicit HTML <h2> elements;
+        # - remove escaped dots after the heading has become raw HTML.
         {
           echo '# dotfiles option reference'
           echo
@@ -780,12 +839,17 @@ let
             ${optionDocsCommonMark}
         } > "$out/src/configuration/options.md"
 
+        # Append RFC145 documentation from modules/ and lib/ to the semantic
+        # scopes page. Prefix anchors with the source path to avoid collisions
+        # between files, and demote nixdoc headings beneath each file heading.
         while IFS= read -r -d "" file; do
           grep -q '/\*\*' "$file" || continue
+
           relative="''${file#${source}/}"
           anchor="$(printf '%s' "$relative" | tr '/.' '--')"
           rendered="$(nixdoc --file "$file" --category "" --description "" --prefix "" --anchor-prefix "$anchor-")"
           [ -n "$(printf '%s' "$rendered" | tr -d '[:space:]')" ] || continue
+
           printf '\n## `%s`\n\n' "$relative" >> "$out/src/configuration/scopes.md"
           printf '%s\n' "$rendered" \
             | sed -E 's/^(#{1,5})([[:space:]])/#\1\2/' \
@@ -796,6 +860,8 @@ let
 
       '';
 
+  # Render separately so docsSource remains useful for editor previews,
+  # inspection, or a different renderer in the future.
   book =
     pkgs.runCommand "dotfiles-docs"
       {
