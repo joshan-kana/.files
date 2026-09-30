@@ -22,6 +22,11 @@ ShellRoot {
         runtime: runtime
     }
 
+    WallpaperLayer {
+        runtime: runtime
+        theme: theme
+    }
+
     MediaState {
         id: media
     }
