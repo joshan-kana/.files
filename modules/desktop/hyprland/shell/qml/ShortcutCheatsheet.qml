@@ -125,7 +125,7 @@ PanelWindow {
                     text: "HYPRLAND SHORTCUTS"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 13
+                    font.pixelSize: theme.fontSize(13)
                     font.letterSpacing: 2
                 }
 
@@ -133,7 +133,7 @@ PanelWindow {
                     text: "Global keyboard map"
                     color: theme.textStrong
                     font.family: runtime.fontSans
-                    font.pixelSize: 28
+                    font.pixelSize: theme.fontSize(28)
                     font.weight: Font.DemiBold
                 }
 
@@ -141,7 +141,7 @@ PanelWindow {
                     text: "Generated from the same binding data Hyprland uses · Esc to dismiss"
                     color: theme.textMuted
                     font.family: runtime.fontSans
-                    font.pixelSize: 13
+                    font.pixelSize: theme.fontSize(13)
                 }
             }
 
@@ -182,7 +182,7 @@ PanelWindow {
                                 text: modelData.title
                                 color: theme.accent
                                 font.family: runtime.fontMono
-                                font.pixelSize: 12
+                                font.pixelSize: theme.fontSize(12)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.6
                             }
@@ -210,7 +210,7 @@ PanelWindow {
                                             text: modelData.key
                                             color: theme.textStrong
                                             font.family: runtime.fontMono
-                                            font.pixelSize: 11
+                                            font.pixelSize: theme.fontSize(11)
                                             font.weight: Font.Medium
                                         }
                                     }
@@ -221,7 +221,7 @@ PanelWindow {
                                         text: modelData.description
                                         color: theme.text
                                         font.family: runtime.fontSans
-                                        font.pixelSize: 13
+                                        font.pixelSize: theme.fontSize(13)
                                         elide: Text.ElideRight
                                     }
                                 }
@@ -243,14 +243,14 @@ PanelWindow {
                     text: runtime.keybindings.length + " bindings"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 12
+                    font.pixelSize: theme.fontSize(12)
                 }
 
                 Text {
                     text: "SUPER + /"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 12
+                    font.pixelSize: theme.fontSize(12)
                     font.weight: Font.DemiBold
                 }
             }

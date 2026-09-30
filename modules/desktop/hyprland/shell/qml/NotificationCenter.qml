@@ -169,7 +169,7 @@ PanelWindow {
                     text: "↑↓ navigate  ·  Enter action  ·  Delete dismiss  ·  C clear  ·  Esc close"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                 }
             }
 
@@ -240,7 +240,7 @@ PanelWindow {
                                     ? theme.critical
                                     : theme.accent
                                 font.family: runtime.fontMono
-                                font.pixelSize: 9
+                                font.pixelSize: theme.fontSize(9)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.2
                             }
@@ -257,7 +257,7 @@ PanelWindow {
                                     : ""
                                 color: theme.textMuted
                                 font.family: runtime.fontMono
-                                font.pixelSize: 8
+                                font.pixelSize: theme.fontSize(8)
                             }
                         }
 
@@ -267,7 +267,7 @@ PanelWindow {
                             textFormat: Text.PlainText
                             color: theme.textStrong
                             font.family: runtime.fontSans
-                            font.pixelSize: 14
+                            font.pixelSize: theme.fontSize(14)
                             font.weight: Font.DemiBold
                             wrapMode: Text.Wrap
                         }
@@ -281,7 +281,7 @@ PanelWindow {
                             color: theme.text
                             opacity: 0.78
                             font.family: runtime.fontSans
-                            font.pixelSize: 11
+                            font.pixelSize: theme.fontSize(11)
                             wrapMode: Text.Wrap
                             elide: Text.ElideRight
                         }
@@ -297,7 +297,7 @@ PanelWindow {
                 text: "NO NOTIFICATIONS // QUIET FOR ONCE"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 11
+                font.pixelSize: theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -313,7 +313,7 @@ PanelWindow {
                     text: notificationState.count + " STORED"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -321,7 +321,7 @@ PanelWindow {
                     text: "C  CLEAR"
                     color: notificationState.count > 0 ? theme.accent : theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
