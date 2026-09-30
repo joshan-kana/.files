@@ -19,6 +19,7 @@ PanelWindow {
     readonly property int trayMenuItemCount: trayMenu.itemCount
     readonly property bool networkOpen: networkPanel.open
     readonly property bool themeOpen: themePanel.open
+    readonly property bool sessionOpen: sessionPanel.open
 
     visible: open || closing
     color: "transparent"
@@ -53,6 +54,7 @@ PanelWindow {
         trayMenu.closeMenu();
         networkPanel.closeView();
         themePanel.closeView();
+        sessionPanel.closeView();
         open = false;
 
         if (motion.fast === 0)
@@ -73,18 +75,32 @@ PanelWindow {
     function openNetwork(): void {
         trayMenu.closeMenu();
         themePanel.closeView();
+        sessionPanel.closeView();
         networkPanel.openView();
     }
 
     function openTheme(): void {
         trayMenu.closeMenu();
         networkPanel.closeView();
+        sessionPanel.closeView();
         themePanel.openView();
     }
 
     function showTheme(): void {
         show();
         openTheme();
+    }
+
+    function openSession(): void {
+        trayMenu.closeMenu();
+        networkPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.openView();
+    }
+
+    function showSession(): void {
+        show();
+        openSession();
     }
 
     function activateTrayItem(): void {
@@ -158,7 +174,7 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
-                visible: !trayMenu.open && !networkPanel.open && !themePanel.open
+                visible: !trayMenu.open && !networkPanel.open && !themePanel.open && !sessionPanel.open
                 spacing: theme.spacing4
 
                 Text {
@@ -348,6 +364,12 @@ PanelWindow {
                                 label: "THEME",
                                 value: "PALETTE",
                                 active: true
+                            },
+                            {
+                                id: "session",
+                                label: "SESSION",
+                                value: "POWER",
+                                active: true
                             }
                         ]
 
@@ -364,7 +386,9 @@ PanelWindow {
 
                             MouseArea {
                                 anchors.fill: parent
-                                enabled: modelData.id === "network" || modelData.id === "theme"
+                                enabled: modelData.id === "network"
+                                    || modelData.id === "theme"
+                                    || modelData.id === "session"
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
 
                                 onClicked: {
@@ -372,6 +396,8 @@ PanelWindow {
                                         panel.openNetwork();
                                     else if (modelData.id === "theme")
                                         panel.openTheme();
+                                    else if (modelData.id === "session")
+                                        panel.openSession();
                                 }
                             }
 
@@ -579,6 +605,18 @@ PanelWindow {
                 onKeyboardRequested: keyboardFocus.forceActiveFocus()
             }
 
+            SessionPanel {
+                id: sessionPanel
+
+                anchors.fill: parent
+
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+
+                onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            }
+
             TrayMenuView {
                 id: trayMenu
 
@@ -592,7 +630,7 @@ PanelWindow {
             Row {
                 id: footer
 
-                visible: !trayMenu.open && !networkPanel.open && !themePanel.open
+                visible: !trayMenu.open && !networkPanel.open && !themePanel.open && !sessionPanel.open
 
                 anchors {
                     right: parent.right
@@ -651,6 +689,14 @@ PanelWindow {
                 }
 
                 Text {
+                    text: "P  SESSION"
+                    color: theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -665,6 +711,26 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    if (sessionPanel.open) {
+                        if (event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Backspace) {
+                            sessionPanel.closeView();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Up) {
+                            sessionPanel.moveSelection(-1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            sessionPanel.moveSelection(1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter) {
+                            sessionPanel.activateSelected();
+                            event.accepted = true;
+                        }
+
+                        return;
+                    }
+
                     if (themePanel.open) {
                         if (event.key === Qt.Key_Escape
                             || event.key === Qt.Key_Backspace) {
@@ -753,6 +819,9 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Y) {
                         panel.openTheme();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_P) {
+                        panel.openSession();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up && brightness.supported) {
                         brightness.adjust(5);
