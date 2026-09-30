@@ -155,6 +155,7 @@ ShellRoot {
             { id: "media.shuffle", name: "Toggle Shuffle", description: "Toggle shuffle on the selected player", icon: "media-playlist-shuffle", key: "SUPER + ALT + W", keywords: ["music", "media", "random"] },
             { id: "media.cyclePlayer", name: "Cycle Media Player", description: "Control the next MPRIS player", icon: "media-playlist-repeat", key: "SUPER + ALT + F", keywords: ["music", "media", "player", "switch"] },
             { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery", "tray", "status icons"] },
+            { id: "theme.toggle", name: "Theme Picker", description: "Switch the active Stylix palette", icon: "preferences-desktop-theme", keywords: ["theme", "stylix", "palette", "colour", "color"] },
             { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
             { id: "notifications.clear", name: "Clear Notifications", description: "Dismiss stored notification history", icon: "edit-clear-all", keywords: ["alerts", "dismiss", "history"] },
             { id: "audio.volumeUp", name: "Volume Up", description: "Increase output volume by 5%", icon: "audio-volume-high", key: "VOLUME +", keywords: ["audio", "sound", "louder"] },
@@ -455,6 +456,14 @@ ShellRoot {
 
         function toggleSystem(): void {
             actions.toggleSystem();
+        }
+
+        function showTheme(): void {
+            actions.showTheme();
+        }
+
+        function themeOpen(): bool {
+            return systemPanel.themeOpen;
         }
 
         function toggleNotifications(): void {
