@@ -90,6 +90,9 @@
 
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         keybindings = cheatsheetBindings;
+
+        tools.brightnessctl = lib.getExe pkgs.brightnessctl;
+
         wallpaper = toString osConfig.stylix.image;
       };
 
