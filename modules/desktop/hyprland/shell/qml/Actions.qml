@@ -7,6 +7,8 @@ QtObject {
     required property QtObject cheatsheet
     required property QtObject launcher
     required property QtObject mediaPanel
+    required property QtObject systemPanel
+    required property QtObject systemState
     required property QtObject motion
 
     function showPrototype(): void {
@@ -33,13 +35,37 @@ QtObject {
         mediaPanel.toggle();
     }
 
+    function toggleSystem(): void {
+        systemPanel.toggle();
+    }
+
+    function volumeUp(): void {
+        systemState.adjustVolume(0.05);
+    }
+
+    function volumeDown(): void {
+        systemState.adjustVolume(-0.05);
+    }
+
+    function toggleMute(): void {
+        systemState.toggleMute();
+    }
+
     function invokeCommand(commandId: string): void {
         if (commandId === "media.toggle")
             toggleMedia();
+        else if (commandId === "system.toggle")
+            toggleSystem();
         else if (commandId === "shortcuts.toggle")
             toggleCheatsheet();
         else if (commandId === "animations.toggle")
             toggleAnimations();
+        else if (commandId === "audio.volumeUp")
+            volumeUp();
+        else if (commandId === "audio.volumeDown")
+            volumeDown();
+        else if (commandId === "audio.toggleMute")
+            toggleMute();
         else if (commandId === "terminal.open")
             launchTerminal();
     }
