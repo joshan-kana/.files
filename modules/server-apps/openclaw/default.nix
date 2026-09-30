@@ -94,6 +94,8 @@ in
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
+  # OpenClaw is intentionally host-root-equivalent. Passwordless sudo and the
+  # mapped primary home are operational capabilities, not a security boundary.
   security.sudo.extraRules = [
     {
       users = [ openclawUser ];
@@ -106,6 +108,7 @@ in
     }
   ];
 
+  # bindfs maps OpenClaw writes back to the primary user to preserve ownership.
   fileSystems.${mappedHome} = {
     device = primaryHome;
     fsType = "fuse.bindfs";
