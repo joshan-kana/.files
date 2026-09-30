@@ -149,7 +149,13 @@ PanelWindow {
 
     SquircleSurface {
         width: Math.min(panel.width - 70, 500)
-        height: Math.min(panel.height - 110, 430 + (brightness.supported ? 100 : 0) + (system.trayCount > 0 ? 116 : 0))
+        height: Math.min(
+            panel.height - 110,
+            theme.spacing5 * 2
+                + content.implicitHeight
+                + theme.spacing3
+                + footer.implicitHeight
+        )
 
         anchors {
             top: parent.top
@@ -660,9 +666,10 @@ PanelWindow {
                 motion: panel.motion
             }
 
-            Row {
+            Column {
                 id: footer
 
+                width: parent.width
                 visible: !trayMenu.open
                     && !networkPanel.open
                     && !bluetoothPanel.open
@@ -670,83 +677,94 @@ PanelWindow {
                     && !sessionPanel.open
 
                 anchors {
+                    left: parent.left
                     right: parent.right
                     bottom: parent.bottom
                 }
-                spacing: theme.spacing4
+                spacing: theme.spacing1
 
-                Text {
-                    text: "←/→  VOLUME"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
+                Row {
+                    anchors.right: parent.right
+                    spacing: theme.spacing4
+
+                    Text {
+                        text: "←/→  VOLUME"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
+
+                    Text {
+                        text: "M  MUTE"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
+
+                    Text {
+                        visible: brightness.supported
+                        text: "↑/↓  BRIGHTNESS"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
+
+                    Text {
+                        visible: system.trayCount > 0
+                        text: "[/]  TRAY   T  OPEN"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
                 }
 
-                Text {
-                    text: "M  MUTE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                Row {
+                    anchors.right: parent.right
+                    spacing: theme.spacing4
 
-                Text {
-                    visible: brightness.supported
-                    text: "↑/↓  BRIGHTNESS"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                    Text {
+                        text: "N  NETWORK"
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
 
-                Text {
-                    visible: system.trayCount > 0
-                    text: "[/]  TRAY   T  OPEN"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                    Text {
+                        text: "B  BLUETOOTH"
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
 
-                Text {
-                    text: "N  NETWORK"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                    Text {
+                        text: "Y  THEME"
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
 
-                Text {
-                    text: "B  BLUETOOTH"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                    Text {
+                        text: "P  SESSION"
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
 
-                Text {
-                    text: "Y  THEME"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "P  SESSION"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
+                    Text {
+                        text: "ESC  CLOSE"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+                    }
                 }
             }
 
