@@ -113,6 +113,7 @@
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
           lockSession = lib.getExe lockCommand;
+          themeSet = "/run/current-system/sw/bin/theme-set";
         };
 
         wallpaper = toString osConfig.stylix.image;
