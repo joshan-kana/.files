@@ -33,35 +33,6 @@ in
 
   shell = import ./shell;
 
-  eww = _: {
-    home = _: {
-      programs.eww = {
-        package = pkgs.eww;
-        yuckConfig = builtins.readFile ./eww/eww.yuck;
-        scssConfig = builtins.readFile ./eww/eww.scss;
-      };
-    };
-  };
-
-  wofi = _: {
-    home = _: {
-      programs.wofi.settings = {
-        allow_images = true;
-        matching = "fuzzy";
-      };
-    };
-  };
-
-  rofi = _: {
-    home = _: {
-      programs.rofi = {
-        package = pkgs.rofi;
-        settings.terminal = terminal;
-        plugins = with pkgs; [ rofi-calc ];
-      };
-    };
-  };
-
   swaylock = _: {
     security.pam.services.swaylock = { };
 
