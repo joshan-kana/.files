@@ -71,7 +71,6 @@ in
         modBind = keys: dispatcher: bind (mod keys) dispatcher;
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
         keybindings = import ./keybindings.nix {
-          repoPath = config.dotfiles.paths.repoPath;
           inherit terminal;
         };
         actionDispatcher =
