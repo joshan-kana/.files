@@ -188,17 +188,8 @@ in
 
   environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
 
-  systemd.user.services.theme-restore = lib.mkIf buildRuntimeVariants {
-    description = "Restore selected desktop theme";
-    wantedBy = [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
-    after = [ "graphical-session-pre.target" ];
-    unitConfig.ConditionUser = primaryUser;
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${lib.getExe themeSet} restore";
-    };
-  };
+  systemd.services."home-manager-${primaryUser}".serviceConfig.ExecStartPost =
+    lib.mkIf buildRuntimeVariants "${lib.getExe themeSet} restore";
 
   config = lib.optionalAttrs isLinux {
     stylix.cursor = activeAssets.cursor;
