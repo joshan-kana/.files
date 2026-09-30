@@ -1,8 +1,8 @@
 {
+  config,
   lib,
   pkgs,
-  scopeConfig,
-  system,
+  themeVariant ? null,
   ...
 }:
 
@@ -78,24 +78,44 @@ let
     '';
 in
 {
-  scopeOptions.name = lib.mkOption {
-    type = lib.types.enum (builtins.attrNames themeRegistry.variants);
-    inherit (themeRegistry) default;
-    description = "Selected visual theme.";
-  };
-
   stylix = {
     enable = true;
-    image = activeAssets.wallpaper;
+    image = ./wallpaper.png;
+    base16Scheme = activeTheme.scheme;
 
-    inherit (activeTheme) fonts polarity;
-  }
-  // lib.optionalAttrs (activeTheme ? colors) {
-    base16Scheme = {
-      system = "base16";
-      name = activeTheme.label;
-      variant = activeTheme.polarity;
-      palette = activeTheme.colors;
+    fonts = {
+      serif = config.stylix.fonts.monospace;
+      sansSerif = config.stylix.fonts.monospace;
+      monospace = {
+        package = pkgs.monaspace;
+        name = "Monaspace Neon Frozen";
+      };
+      emoji = {
+        package = pkgs.noto-fonts-color-emoji;
+        name = "Noto Color Emoji";
+      };
+    };
+
+    polarity = "dark";
+
+    cursor = {
+      package = pkgs.google-cursor;
+      name = "GoogleDot-Black";
+      size = 30;
+    };
+  };
+
+  environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
+
+  systemd.user.services.theme-restore = lib.mkIf buildRuntimeVariants {
+    description = "Restore selected desktop theme";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session-pre.target" ];
+    unitConfig.ConditionUser = primaryUser;
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${lib.getExe themeSet} restore";
     };
   };
 
