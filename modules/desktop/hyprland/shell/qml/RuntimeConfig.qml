@@ -8,6 +8,7 @@ QtObject {
     readonly property string terminal: data.defaults.terminal
     readonly property string editor: data.defaults.editor
     readonly property string wallpaper: data.wallpaper
+    readonly property string brightnessctl: data.tools.brightnessctl
 
     readonly property string fontSans: data.fonts.sans
     readonly property string fontMono: data.fonts.mono
@@ -62,6 +63,10 @@ QtObject {
 
             property JsonObject motion: JsonObject {
                 property bool animationsEnabled: true
+            }
+
+            property JsonObject tools: JsonObject {
+                property string brightnessctl: ""
             }
 
             property var keybindings: []
