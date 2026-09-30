@@ -18,7 +18,7 @@ MAX_JOBS = 64
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
-Host = Literal["nixos-server", "mac"]
+Host = Literal["nixos-server", "mac", "nixos-arm-parallels"]
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,7 @@ class RemoteTarget:
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
+REMOTE_SUDO_AGENT = os.environ["CHATGPT_SHELL_REMOTE_SUDO_AGENT"]
 COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
 LOCAL = [
     "/run/wrappers/bin/sudo",
@@ -138,7 +139,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
     target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        f"-oForwardAgent={'yes' if target.sudo else 'no'}",
+        f"-oForwardAgent={REMOTE_SUDO_AGENT if target.sudo else 'no'}",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
