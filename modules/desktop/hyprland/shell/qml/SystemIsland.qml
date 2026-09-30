@@ -40,7 +40,7 @@ Item {
                 text: "SYS"
                 color: theme.accent
                 font.family: runtime.fontMono
-                font.pixelSize: 11
+                font.pixelSize: theme.fontSize(11)
                 font.weight: Font.Bold
                 font.letterSpacing: 1.4
             }
@@ -57,7 +57,7 @@ Item {
                 text: (system.muted ? "MUTE" : "VOL " + system.volumePercent)
                 color: system.muted ? theme.warning : theme.text
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
                 font.weight: Font.DemiBold
             }
 
@@ -66,7 +66,7 @@ Item {
                 text: "//"
                 color: theme.outline
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
             }
 
             Text {
@@ -76,7 +76,7 @@ Item {
                 elide: Text.ElideRight
                 color: system.networkConnected ? theme.text : theme.critical
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
             }
 
             Text {
@@ -84,7 +84,7 @@ Item {
                 text: system.bluetoothEnabled ? "BT " + system.bluetoothConnectedCount : "BT OFF"
                 color: system.bluetoothEnabled ? theme.textMuted : theme.critical
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
             }
 
             Text {
@@ -93,7 +93,7 @@ Item {
                 text: "BAT " + system.batteryPercent
                 color: system.batteryPercent <= 20 ? theme.warning : theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
             }
 
             Text {
@@ -102,7 +102,7 @@ Item {
                 text: "TRAY " + system.trayCount
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
             }
         }
     }

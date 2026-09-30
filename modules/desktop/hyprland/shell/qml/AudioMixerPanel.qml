@@ -163,7 +163,7 @@ PanelWindow {
                     text: "Live PipeWire streams · no polling"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                 }
             }
 
@@ -224,7 +224,7 @@ PanelWindow {
                                     text: system.streamDisplayName(modelData)
                                     color: modelData.audio && modelData.audio.muted ? theme.warning : theme.textStrong
                                     font.family: runtime.fontSans
-                                    font.pixelSize: 14
+                                    font.pixelSize: theme.fontSize(14)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -235,7 +235,7 @@ PanelWindow {
                                     color: theme.textMuted
                                     opacity: 0.70
                                     font.family: runtime.fontMono
-                                    font.pixelSize: 9
+                                    font.pixelSize: theme.fontSize(9)
                                     elide: Text.ElideMiddle
                                 }
                             }
@@ -250,7 +250,7 @@ PanelWindow {
                                     : "—"
                                 color: modelData.audio && modelData.audio.muted ? theme.warning : theme.accent
                                 font.family: runtime.fontMono
-                                font.pixelSize: 11
+                                font.pixelSize: theme.fontSize(11)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -294,7 +294,7 @@ PanelWindow {
                 text: "NO ACTIVE PLAYBACK STREAMS"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 11
+                font.pixelSize: theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -311,7 +311,7 @@ PanelWindow {
                     text: "↑↓  STREAM"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -319,7 +319,7 @@ PanelWindow {
                     text: "←/→  VOLUME"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -327,7 +327,7 @@ PanelWindow {
                     text: "M  MUTE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -335,7 +335,7 @@ PanelWindow {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
