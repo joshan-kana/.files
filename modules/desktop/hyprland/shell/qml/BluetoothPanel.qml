@@ -182,7 +182,7 @@ Item {
         Quickshell.execDetached([
             runtime.terminal,
             "-e",
-            "bluetoothctl",
+            runtime.bluetoothctl,
             "--agent",
             "KeyboardDisplay",
             "pair",
