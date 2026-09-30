@@ -69,7 +69,7 @@ PanelWindow {
         anchors.fill: parent
 
         exponent: theme.squircleExponent
-        cornerRadius: 30
+        cornerRadius: theme.radiusLarge
         fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
         borderColor: Qt.rgba(popup.urgencyColor.r, popup.urgencyColor.g, popup.urgencyColor.b, 0.48)
         borderWidth: theme.borderThin
