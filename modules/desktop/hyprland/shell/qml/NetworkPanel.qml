@@ -190,7 +190,7 @@ Item {
             text: "NETWORK // " + system.connectivityText.toUpperCase()
             color: system.networkConnected ? theme.positive : theme.warning
             font.family: runtime.fontMono
-            font.pixelSize: 10
+            font.pixelSize: theme.fontSubpanelEyebrow
             font.weight: Font.DemiBold
             font.letterSpacing: 1.6
         }
@@ -199,7 +199,7 @@ Item {
             text: system.wifiAvailable ? "Wi-Fi" : "Network"
             color: theme.textStrong
             font.family: runtime.fontSans
-            font.pixelSize: 24
+            font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
 
