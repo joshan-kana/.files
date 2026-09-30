@@ -18,6 +18,7 @@ PanelWindow {
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
     readonly property bool networkOpen: networkPanel.open
+    readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
     readonly property bool sessionOpen: sessionPanel.open
 
@@ -53,6 +54,7 @@ PanelWindow {
     function hide(): void {
         trayMenu.closeMenu();
         networkPanel.closeView();
+        bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.closeView();
         open = false;
@@ -74,14 +76,24 @@ PanelWindow {
 
     function openNetwork(): void {
         trayMenu.closeMenu();
+        bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.closeView();
         networkPanel.openView();
     }
 
+    function openBluetooth(): void {
+        trayMenu.closeMenu();
+        networkPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        bluetoothPanel.openView();
+    }
+
     function openTheme(): void {
         trayMenu.closeMenu();
         networkPanel.closeView();
+        bluetoothPanel.closeView();
         sessionPanel.closeView();
         themePanel.openView();
     }
@@ -94,6 +106,7 @@ PanelWindow {
     function openSession(): void {
         trayMenu.closeMenu();
         networkPanel.closeView();
+        bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.openView();
     }
@@ -174,7 +187,11 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
-                visible: !trayMenu.open && !networkPanel.open && !themePanel.open && !sessionPanel.open
+                visible: !trayMenu.open
+                    && !networkPanel.open
+                    && !bluetoothPanel.open
+                    && !themePanel.open
+                    && !sessionPanel.open
                 spacing: theme.spacing4
 
                 Text {
@@ -387,6 +404,7 @@ PanelWindow {
                             MouseArea {
                                 anchors.fill: parent
                                 enabled: modelData.id === "network"
+                                    || modelData.id === "bluetooth"
                                     || modelData.id === "theme"
                                     || modelData.id === "session"
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -394,6 +412,8 @@ PanelWindow {
                                 onClicked: {
                                     if (modelData.id === "network")
                                         panel.openNetwork();
+                                    else if (modelData.id === "bluetooth")
+                                        panel.openBluetooth();
                                     else if (modelData.id === "theme")
                                         panel.openTheme();
                                     else if (modelData.id === "session")
@@ -593,6 +613,19 @@ PanelWindow {
                 onKeyboardRequested: keyboardFocus.forceActiveFocus()
             }
 
+            BluetoothPanel {
+                id: bluetoothPanel
+
+                anchors.fill: parent
+
+                system: panel.system
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+
+                onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            }
+
             ThemePanel {
                 id: themePanel
 
@@ -630,7 +663,11 @@ PanelWindow {
             Row {
                 id: footer
 
-                visible: !trayMenu.open && !networkPanel.open && !themePanel.open && !sessionPanel.open
+                visible: !trayMenu.open
+                    && !networkPanel.open
+                    && !bluetoothPanel.open
+                    && !themePanel.open
+                    && !sessionPanel.open
 
                 anchors {
                     right: parent.right
@@ -681,6 +718,14 @@ PanelWindow {
                 }
 
                 Text {
+                    text: "B  BLUETOOTH"
+                    color: theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(9)
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "Y  THEME"
                     color: theme.accent
                     font.family: runtime.fontMono
@@ -711,6 +756,41 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    if (bluetoothPanel.open) {
+                        if (event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Backspace) {
+                            bluetoothPanel.closeView();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Up) {
+                            bluetoothPanel.moveSelection(-1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            bluetoothPanel.moveSelection(1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter) {
+                            bluetoothPanel.activateSelected();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_B) {
+                            bluetoothPanel.toggleBluetooth();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_D) {
+                            bluetoothPanel.toggleDiscovery();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_P) {
+                            bluetoothPanel.pairSelected();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_T) {
+                            bluetoothPanel.toggleTrust();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_F) {
+                            bluetoothPanel.forgetSelected();
+                            event.accepted = true;
+                        }
+
+                        return;
+                    }
+
                     if (sessionPanel.open) {
                         if (event.key === Qt.Key_Escape
                             || event.key === Qt.Key_Backspace) {
@@ -816,6 +896,9 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_N) {
                         panel.openNetwork();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_B) {
+                        panel.openBluetooth();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Y) {
                         panel.openTheme();

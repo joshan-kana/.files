@@ -88,7 +88,12 @@ QtObject {
     }
 
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
-    readonly property bool bluetoothEnabled: bluetoothAdapter !== null && bluetoothAdapter.enabled
+    readonly property bool bluetoothAvailable: bluetoothAdapter !== null
+    readonly property bool bluetoothEnabled: bluetoothAvailable && bluetoothAdapter.enabled
+    readonly property bool bluetoothDiscovering: bluetoothAvailable && bluetoothAdapter.discovering
+    readonly property var bluetoothAdapterDevices: bluetoothAvailable && bluetoothAdapter.devices
+        ? bluetoothAdapter.devices.values
+        : []
     readonly property var bluetoothDevices: Bluetooth.devices ? Bluetooth.devices.values : []
     readonly property int bluetoothConnectedCount: {
         let count = 0;
@@ -108,6 +113,16 @@ QtObject {
 
     function setWifiEnabled(enabled: bool): void {
         Networking.wifiEnabled = enabled;
+    }
+
+    function setBluetoothEnabled(enabled: bool): void {
+        if (bluetoothAvailable)
+            bluetoothAdapter.enabled = enabled;
+    }
+
+    function setBluetoothDiscovering(discovering: bool): void {
+        if (bluetoothAvailable && bluetoothAdapter.enabled)
+            bluetoothAdapter.discovering = discovering;
     }
 
     function streamDisplayName(stream): string {
