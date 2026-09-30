@@ -90,6 +90,10 @@ QtObject {
         systemPanel.showTheme();
     }
 
+    function showSession(): void {
+        systemPanel.showSession();
+    }
+
     function showNotifications(): void {
         notificationCenter.show();
     }
@@ -149,6 +153,8 @@ QtObject {
             toggleSystem();
         else if (commandId === "theme.toggle")
             showTheme();
+        else if (commandId === "session.toggle")
+            showSession();
         else if (commandId === "notifications.toggle")
             toggleNotifications();
         else if (commandId === "notifications.clear")
