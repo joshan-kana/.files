@@ -26,6 +26,10 @@ ShellRoot {
         id: media
     }
 
+    SystemState {
+        id: system
+    }
+
     SpectrumState {
         id: spectrum
         active: media.playing || mediaPanel.open
@@ -37,7 +41,9 @@ ShellRoot {
         theme: theme
         motion: motion
         media: media
+        system: system
         onMediaRequested: actions.toggleMedia()
+        onSystemRequested: actions.toggleSystem()
     }
 
     PrototypeSurface {
@@ -62,6 +68,14 @@ ShellRoot {
         motion: motion
     }
 
+    SystemPanel {
+        id: systemPanel
+        system: system
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     CommandPalette {
         id: launcher
         runtime: runtime
@@ -69,6 +83,10 @@ ShellRoot {
         motion: motion
         commands: [
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
+            { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery"] },
+            { id: "audio.volumeUp", name: "Volume Up", description: "Increase output volume by 5%", icon: "audio-volume-high", key: "VOLUME +", keywords: ["audio", "sound", "louder"] },
+            { id: "audio.volumeDown", name: "Volume Down", description: "Decrease output volume by 5%", icon: "audio-volume-low", key: "VOLUME −", keywords: ["audio", "sound", "quieter"] },
+            { id: "audio.toggleMute", name: "Toggle Mute", description: "Mute or unmute output audio", icon: "audio-volume-muted", key: "MUTE", keywords: ["audio", "sound", "silence"] },
             { id: "shortcuts.toggle", name: "Keyboard Shortcuts", description: "Show the Hyprland key map", icon: "preferences-desktop-keyboard-shortcuts", key: "SUPER + /", keywords: ["keybinds", "cheatsheet"] },
             { id: "animations.toggle", name: "Toggle Animations", description: "Enable or disable desktop motion", icon: "preferences-desktop-effects", keywords: ["motion", "reduce motion"] },
             { id: "terminal.open", name: "Open Terminal", description: runtime.terminal, icon: "utilities-terminal", keywords: ["shell", "console"] }
@@ -83,6 +101,8 @@ ShellRoot {
         cheatsheet: cheatsheet
         launcher: launcher
         mediaPanel: mediaPanel
+        systemPanel: systemPanel
+        systemState: system
         motion: motion
     }
 
@@ -105,6 +125,13 @@ ShellRoot {
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "system"
+        description: "Open system controls"
+        onPressed: actions.toggleSystem()
     }
 
     IpcHandler {
@@ -134,6 +161,10 @@ ShellRoot {
             actions.toggleMedia();
         }
 
+        function toggleSystem(): void {
+            actions.toggleSystem();
+        }
+
         function toggleAnimations(): void {
             actions.toggleAnimations();
         }
@@ -152,6 +183,46 @@ ShellRoot {
 
         function spectrumSequence(): int {
             return spectrum.sequence;
+        }
+
+        function systemOpen(): bool {
+            return systemPanel.open;
+        }
+
+        function volumePercent(): int {
+            return system.volumePercent;
+        }
+
+        function audioMuted(): bool {
+            return system.muted;
+        }
+
+        function volumeUp(): void {
+            actions.volumeUp();
+        }
+
+        function volumeDown(): void {
+            actions.volumeDown();
+        }
+
+        function toggleMute(): void {
+            actions.toggleMute();
+        }
+
+        function networkName(): string {
+            return system.networkName;
+        }
+
+        function bluetoothConnectedCount(): int {
+            return system.bluetoothConnectedCount;
+        }
+
+        function batteryAvailable(): bool {
+            return system.batteryAvailable;
+        }
+
+        function batteryPercent(): int {
+            return system.batteryPercent;
         }
 
         function launchTerminal(): void {
