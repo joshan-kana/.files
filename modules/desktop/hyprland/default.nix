@@ -134,17 +134,6 @@ in
     };
   };
 
-  avizo = _: {
-    home = _: {
-      services.avizo.settings.default = {
-        time = 1.0;
-        fade-in = 0.1;
-        fade-out = 0.2;
-        padding = 10;
-      };
-    };
-  };
-
   home = _: {
     home.packages = with pkgs; [
       wl-clipboard
@@ -372,7 +361,6 @@ in
                   hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
                   hl.exec_cmd("dunst")
-                  hl.exec_cmd("avizo-service")
                   hl.exec_cmd("wl-paste --type text --watch cliphist store")
                   hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
