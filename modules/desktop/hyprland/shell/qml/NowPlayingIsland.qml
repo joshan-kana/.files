@@ -56,7 +56,7 @@ Item {
             SquircleSurface {
                 anchors.fill: parent
                 exponent: theme.squircleExponent
-                cornerRadius: 9
+                cornerRadius: theme.radiusSmall
                 fillColor: theme.surfaceRaised
                 borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
                 borderWidth: theme.borderThin
@@ -148,14 +148,14 @@ Item {
 
                     NumberAnimation {
                         to: 0.38
-                        duration: 520
-                        easing.type: Easing.InOutSine
+                        duration: motion.pulse
+                        easing.type: motion.pulseType
                     }
 
                     NumberAnimation {
                         to: 1
-                        duration: 520
-                        easing.type: Easing.InOutSine
+                        duration: motion.pulse
+                        easing.type: motion.pulseType
                     }
                 }
             }
