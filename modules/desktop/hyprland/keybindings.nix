@@ -174,7 +174,7 @@ in
   })
   (mk {
     keys = "V";
-    action = exec "cliphist list | tofi | cliphist decode | wl-copy";
+    action = global "linux-desktop:clipboard";
     section = "LAUNCHERS";
     description = "Clipboard history";
   })
