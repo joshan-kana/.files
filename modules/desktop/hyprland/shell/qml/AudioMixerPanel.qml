@@ -112,12 +112,12 @@ PanelWindow {
         anchors.centerIn: parent
 
         exponent: theme.squircleExponent
-        cornerRadius: 38
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.99)
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.42)
-        borderWidth: 1
+        cornerRadius: theme.radiusPanel
+        fillColor: theme.panelFill
+        borderColor: theme.panelBorder
+        borderWidth: theme.borderThin
 
-        scale: panel.open ? 1 : 0.965
+        scale: panel.open ? 1 : theme.panelClosedScale
         opacity: panel.open ? 1 : 0
 
         Behavior on scale {
@@ -195,11 +195,9 @@ PanelWindow {
                     height: 92
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: index === panel.selectedIndex
-                        ? Qt.rgba(theme.surfaceRaised.r, theme.surfaceRaised.g, theme.surfaceRaised.b, 0.96)
-                        : theme.background
+                    fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
                     borderColor: index === panel.selectedIndex ? theme.accent : theme.outline
-                    borderWidth: 1
+                    borderWidth: index === panel.selectedIndex ? theme.borderFocus : theme.borderThin
 
                     MouseArea {
                         anchors.fill: parent
