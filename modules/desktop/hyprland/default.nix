@@ -295,7 +295,6 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
                   hl.exec_cmd("nm-applet --indicator")
                   hl.exec_cmd("wl-paste --type text --watch cliphist store")
                   hl.exec_cmd("wl-paste --type image --watch cliphist store")
