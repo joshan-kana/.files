@@ -86,6 +86,10 @@ QtObject {
         systemPanel.toggle();
     }
 
+    function showTheme(): void {
+        systemPanel.showTheme();
+    }
+
     function showNotifications(): void {
         notificationCenter.show();
     }
@@ -143,6 +147,8 @@ QtObject {
             mediaCyclePlayer();
         else if (commandId === "system.toggle")
             toggleSystem();
+        else if (commandId === "theme.toggle")
+            showTheme();
         else if (commandId === "notifications.toggle")
             toggleNotifications();
         else if (commandId === "notifications.clear")
