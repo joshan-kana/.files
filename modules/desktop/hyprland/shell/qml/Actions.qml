@@ -7,6 +7,7 @@ QtObject {
     required property QtObject cheatsheet
     required property QtObject launcher
     required property QtObject clipboardPanel
+    required property QtObject audioMixerPanel
     required property QtObject mediaPanel
     required property QtObject systemPanel
     required property QtObject systemState
@@ -37,6 +38,10 @@ QtObject {
 
     function toggleClipboard(): void {
         clipboardPanel.toggle();
+    }
+
+    function toggleAudioMixer(): void {
+        audioMixerPanel.toggle();
     }
 
     function toggleMedia(): void {
@@ -80,7 +85,9 @@ QtObject {
     }
 
     function invokeCommand(commandId: string): void {
-        if (commandId === "clipboard.toggle")
+        if (commandId === "audio.mixer")
+            toggleAudioMixer();
+        else if (commandId === "clipboard.toggle")
             toggleClipboard();
         else if (commandId === "media.toggle")
             toggleMedia();
