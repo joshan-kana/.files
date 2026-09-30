@@ -84,7 +84,7 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.48)
+        color: theme.scrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
