@@ -246,7 +246,9 @@ Item {
             borderColor: modelData.name === panel.currentTheme
                 ? theme.positive
                 : (index === panel.selectedIndex ? theme.accent : theme.outline)
-            borderWidth: index === panel.selectedIndex || modelData.name === panel.currentTheme ? 1.5 : 1
+            borderWidth: index === panel.selectedIndex || modelData.name === panel.currentTheme
+                ? theme.borderFocus
+                : theme.borderThin
 
             MouseArea {
                 anchors.fill: parent

@@ -267,13 +267,13 @@ Item {
                 height: 66
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
-                fillColor: index === panel.selectedIndex
-                    ? Qt.rgba(theme.surfaceRaised.r, theme.surfaceRaised.g, theme.surfaceRaised.b, 0.96)
-                    : theme.background
+                fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
                 borderColor: modelData.connected
                     ? theme.positive
                     : (index === panel.selectedIndex ? theme.accent : theme.outline)
-                borderWidth: 1
+                borderWidth: index === panel.selectedIndex || modelData.connected
+                    ? theme.borderFocus
+                    : theme.borderThin
 
                 MouseArea {
                     anchors.fill: parent
@@ -413,7 +413,7 @@ Item {
                 cornerRadius: theme.radiusMedium
                 fillColor: theme.background
                 borderColor: passwordInput.activeFocus ? theme.accent : theme.outline
-                borderWidth: 1
+                borderWidth: passwordInput.activeFocus ? theme.borderFocus : theme.borderThin
 
                 TextInput {
                     id: passwordInput

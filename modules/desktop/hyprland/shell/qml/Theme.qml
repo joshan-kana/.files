@@ -18,7 +18,15 @@ QtObject {
     readonly property int radiusSmall: 10
     readonly property int radiusMedium: 18
     readonly property int radiusLarge: 30
+    readonly property int radiusPanel: 38
     readonly property real squircleExponent: 4.5
+
+    readonly property real borderThin: 1
+    readonly property real borderFocus: 1.5
+    readonly property color panelFill: Qt.rgba(surface.r, surface.g, surface.b, 0.99)
+    readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, 0.42)
+    readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, 0.96)
+    readonly property real panelClosedScale: 0.965
 
     readonly property int spacing1: 4
     readonly property int spacing2: 8
