@@ -9,6 +9,8 @@ QtObject {
     readonly property string editor: data.defaults.editor
     readonly property string wallpaper: data.wallpaper
     readonly property string brightnessctl: data.tools.brightnessctl
+    readonly property string cliphist: data.tools.cliphist
+    readonly property string clipboardCopy: data.tools.clipboardCopy
 
     readonly property string fontSans: data.fonts.sans
     readonly property string fontMono: data.fonts.mono
@@ -67,6 +69,8 @@ QtObject {
 
             property JsonObject tools: JsonObject {
                 property string brightnessctl: ""
+                property string cliphist: ""
+                property string clipboardCopy: ""
             }
 
             property var keybindings: []
