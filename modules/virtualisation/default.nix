@@ -1,8 +1,14 @@
 { config, pkgs, ... }:
 
 {
+  /**
+    Shared OCI/Docker container runtime and image-locking support.
+  */
   containers = import ./containers;
 
+  /**
+    libvirt/QEMU virtual-machine support and virt-manager integration.
+  */
   libvirt = _: {
     virtualisation.libvirtd = {
       enable = true;
@@ -14,18 +20,30 @@
     users.users.${config.dotfiles.users.primary.name}.extraGroups = [ "libvirtd" ];
   };
 
+  /**
+    Quickemu tooling for disposable desktop virtual machines.
+  */
   quickemu = _: {
     environment.systemPackages = [ pkgs.quickemu ];
   };
 
+  /**
+    Distrobox tooling for user-managed development containers.
+  */
   distrobox = _: {
     environment.systemPackages = [ pkgs.distrobox ];
   };
 
+  /**
+    Bottles application support and required package overlay.
+  */
   bottles = _: {
     nixpkgs.overlays = (import ../../overlays/bottles.nix { }).nixpkgs.overlays;
     environment.systemPackages = [ pkgs.bottles ];
   };
 
+  /**
+    Shared NixOS VM-variant sizing, aliases, and safety defaults.
+  */
   vm = import ./vm.nix;
 }
