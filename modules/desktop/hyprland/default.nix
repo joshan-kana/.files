@@ -63,25 +63,6 @@ in
     };
   };
 
-  tofi = _: {
-    environment.systemPackages = [ pkgs.tofi ];
-
-    home = { config, ... }: {
-      home.file.".config/tofi/config".text = ''
-        font = ${config.stylix.fonts.monospace.name}
-        font-size = 18
-        background-color = #${config.lib.stylix.colors.base00}
-        text-color = #${config.lib.stylix.colors.base07}
-        selection-color = #${config.lib.stylix.colors.base0A}
-        width = 45%
-        height = 35%
-        border-width = 5
-        border-color = #${config.lib.stylix.colors.base03}
-        corner-radius = 20
-      '';
-    };
-  };
-
   swaylock = _: {
     security.pam.services.swaylock = { };
 
@@ -302,8 +283,6 @@ in
               (lua ''
                 function()
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("wl-paste --type text --watch cliphist store")
-                  hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
                   hl.exec_cmd("dropbox")
                   hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
