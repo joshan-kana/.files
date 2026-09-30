@@ -332,7 +332,7 @@ Item {
                             radius: 7
                             color: modelData
                             border.width: theme.borderThin
-                            border.color: Qt.rgba(1, 1, 1, 0.14)
+                            border.color: theme.subtleBorder
                         }
                     }
                 }
