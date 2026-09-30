@@ -147,7 +147,7 @@ Item {
             text: "↑↓ select  ·  Enter open  ·  Backspace back  ·  Esc back"
             color: theme.textMuted
             font.family: runtime.fontMono
-            font.pixelSize: 9
+            font.pixelSize: theme.fontSize(9)
         }
     }
 
@@ -245,7 +245,7 @@ Item {
                             : "○"
                         color: theme.accent
                         font.family: runtime.fontMono
-                        font.pixelSize: 11
+                        font.pixelSize: theme.fontSize(11)
                     }
 
                     Text {
@@ -257,7 +257,7 @@ Item {
                         text: modelData.text
                         color: theme.text
                         font.family: runtime.fontSans
-                        font.pixelSize: 12
+                        font.pixelSize: theme.fontSize(12)
                         elide: Text.ElideRight
                     }
 
@@ -267,7 +267,7 @@ Item {
                         text: "›"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 16
+                        font.pixelSize: theme.fontSize(16)
                     }
                 }
             }
@@ -287,7 +287,7 @@ Item {
             text: itemCount + " ENTRIES"
             color: theme.textMuted
             font.family: runtime.fontMono
-            font.pixelSize: 9
+            font.pixelSize: theme.fontSize(9)
             font.letterSpacing: 1
         }
 
@@ -295,7 +295,7 @@ Item {
             text: stack.length > 1 ? "BACKSPACE  UP" : "BACKSPACE  TRAY"
             color: theme.accent
             font.family: runtime.fontMono
-            font.pixelSize: 9
+            font.pixelSize: theme.fontSize(9)
             font.letterSpacing: 1
         }
     }
