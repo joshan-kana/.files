@@ -175,7 +175,7 @@ Item {
                 : "SELECT AN ACTION"
             color: armedAction.length > 0 ? theme.warning : theme.textMuted
             font.family: runtime.fontMono
-            font.pixelSize: 9
+            font.pixelSize: theme.fontSize(9)
             font.letterSpacing: 0.8
         }
     }
@@ -244,7 +244,7 @@ Item {
                         text: modelData.label
                         color: modelData.id === panel.armedAction ? theme.warning : theme.textStrong
                         font.family: runtime.fontSans
-                        font.pixelSize: 14
+                        font.pixelSize: theme.fontSize(14)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
@@ -254,7 +254,7 @@ Item {
                         text: modelData.description
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 8
+                        font.pixelSize: theme.fontSize(8)
                         elide: Text.ElideRight
                     }
                 }
@@ -269,7 +269,7 @@ Item {
                         : (modelData.destructive ? "ARM" : "RUN")
                     color: modelData.id === panel.armedAction ? theme.warning : theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.weight: Font.DemiBold
                 }
             }
@@ -296,7 +296,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: runtime.fontMono
-            font.pixelSize: 8
+            font.pixelSize: theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
         }
@@ -309,7 +309,7 @@ Item {
                 text: "↑/↓  SELECT"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -317,7 +317,7 @@ Item {
                 text: armedAction.length > 0 ? "ENTER  CONFIRM" : "ENTER  ARM/RUN"
                 color: armedAction.length > 0 ? theme.warning : theme.accent
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
@@ -325,7 +325,7 @@ Item {
                 text: "ESC  BACK"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 8
+                font.pixelSize: theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
