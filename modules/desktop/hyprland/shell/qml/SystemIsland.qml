@@ -25,7 +25,7 @@ Item {
         cornerRadius: theme.radiusMedium
         fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
         borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
-        borderWidth: 1
+        borderWidth: theme.borderThin
 
         Row {
             anchors {
