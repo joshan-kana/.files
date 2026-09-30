@@ -15,8 +15,17 @@ QtObject {
     readonly property int volumePercent: Math.round(volume * 100)
     readonly property bool muted: audioAvailable ? audioSink.audio.muted : false
 
+    readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
+    readonly property var audioStreams: pipewireNodes.filter(node =>
+        node !== null
+        && node.isStream
+        && node.isSink
+        && node.audio !== null)
+
     property PwObjectTracker audioTracker: PwObjectTracker {
         objects: [system.audioSink]
+            .filter(node => node !== null)
+            .concat(system.audioStreams)
     }
 
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
@@ -81,6 +90,53 @@ QtObject {
 
     readonly property var trayItems: SystemTray.items ? SystemTray.items.values : []
     readonly property int trayCount: trayItems.length
+
+    function streamDisplayName(stream): string {
+        if (!stream)
+            return "Unknown stream";
+
+        const properties = stream.properties || {};
+        return properties["application.name"]
+            || properties["media.name"]
+            || stream.description
+            || stream.nickname
+            || stream.name
+            || "Audio stream";
+    }
+
+    function streamTechnicalName(stream): string {
+        if (!stream)
+            return "";
+
+        const properties = stream.properties || {};
+        const process = properties["application.process.binary"]
+            || properties["application.process.id"]
+            || "";
+        const media = properties["media.name"] || "";
+
+        if (process && media && process !== media)
+            return process + " // " + media;
+        return process || media || stream.name || ("NODE " + stream.id);
+    }
+
+    function setStreamVolume(stream, value: real): void {
+        if (!stream || !stream.audio)
+            return;
+
+        stream.audio.volume = Math.max(0, Math.min(1, value));
+    }
+
+    function adjustStreamVolume(stream, delta: real): void {
+        if (!stream || !stream.audio)
+            return;
+
+        setStreamVolume(stream, stream.audio.volume + delta);
+    }
+
+    function toggleStreamMute(stream): void {
+        if (stream && stream.audio)
+            stream.audio.muted = !stream.audio.muted;
+    }
 
     function setVolume(value: real): void {
         if (!audioAvailable)
