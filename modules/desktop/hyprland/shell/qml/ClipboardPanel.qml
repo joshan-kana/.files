@@ -266,7 +266,7 @@ PanelWindow {
                         selectionColor: theme.accent
                         selectedTextColor: theme.background
                         font.family: runtime.fontSans
-                        font.pixelSize: 14
+                        font.pixelSize: theme.fontSize(14)
                         clip: true
 
                         Text {
@@ -355,7 +355,7 @@ PanelWindow {
                             text: modelData.kind
                             color: modelData.kind === "BINARY" ? theme.warning : theme.accent
                             font.family: runtime.fontMono
-                            font.pixelSize: 9
+                            font.pixelSize: theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 0.8
                         }
@@ -366,7 +366,7 @@ PanelWindow {
                             text: modelData.preview
                             color: theme.text
                             font.family: runtime.fontSans
-                            font.pixelSize: 12
+                            font.pixelSize: theme.fontSize(12)
                             elide: Text.ElideRight
                         }
                     }
@@ -381,7 +381,7 @@ PanelWindow {
                 text: search.text.length > 0 ? "NO MATCHES" : "CLIPBOARD HISTORY IS EMPTY"
                 color: theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 11
+                font.pixelSize: theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -391,7 +391,7 @@ PanelWindow {
                 text: "LOADING HISTORY…"
                 color: theme.accent
                 font.family: runtime.fontMono
-                font.pixelSize: 11
+                font.pixelSize: theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -407,7 +407,7 @@ PanelWindow {
                     text: "↑↓  NAVIGATE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -415,7 +415,7 @@ PanelWindow {
                     text: "ENTER  COPY"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
@@ -423,7 +423,7 @@ PanelWindow {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 9
+                    font.pixelSize: theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }

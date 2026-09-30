@@ -143,7 +143,7 @@ PanelWindow {
                             : "SYSTEM"
                         color: popup.urgencyColor
                         font.family: runtime.fontMono
-                        font.pixelSize: 10
+                        font.pixelSize: theme.fontSize(10)
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.4
                     }
@@ -160,7 +160,7 @@ PanelWindow {
                             : "NOTIFICATION"
                         color: theme.textMuted
                         font.family: runtime.fontMono
-                        font.pixelSize: 9
+                        font.pixelSize: theme.fontSize(9)
                         font.letterSpacing: 0.8
                     }
                 }
@@ -171,7 +171,7 @@ PanelWindow {
                     textFormat: Text.PlainText
                     color: theme.textStrong
                     font.family: runtime.fontSans
-                    font.pixelSize: 15
+                    font.pixelSize: theme.fontSize(15)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -185,7 +185,7 @@ PanelWindow {
                     color: theme.text
                     opacity: 0.84
                     font.family: runtime.fontSans
-                    font.pixelSize: 12
+                    font.pixelSize: theme.fontSize(12)
                     wrapMode: Text.Wrap
                     elide: Text.ElideRight
                 }
@@ -200,7 +200,7 @@ PanelWindow {
                     color: theme.textMuted
                     opacity: 0.62
                     font.family: runtime.fontMono
-                    font.pixelSize: 8
+                    font.pixelSize: theme.fontSize(8)
                     font.letterSpacing: 0.8
                 }
             }
