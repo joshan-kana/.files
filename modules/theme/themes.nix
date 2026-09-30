@@ -1,5 +1,22 @@
+{ pkgs }:
+
 {
   default = "carbon";
+
+  assets = {
+    wallpaper = ./wallpaper.png;
+
+    cursor = {
+      package = pkgs.google-cursor;
+      name = "GoogleDot-Black";
+      size = 30;
+    };
+
+    icons = {
+      package = pkgs.gruvbox-dark-icons-gtk;
+      name = "oomox-gruvbox-dark";
+    };
+  };
 
   variants = {
     carbon = {
