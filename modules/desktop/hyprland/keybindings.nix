@@ -155,9 +155,9 @@ in
   })
   (mk {
     keys = "SHIFT + V";
-    action = exec "${repoPath}/scripts/volume_mixer";
+    action = global "linux-desktop:audio-mixer";
     section = "AUDIO";
-    description = "Volume mixer";
+    description = "Application mixer";
   })
   (mk {
     keys = "ALT + V";
