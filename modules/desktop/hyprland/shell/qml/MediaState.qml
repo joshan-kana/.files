@@ -66,8 +66,15 @@ QtObject {
     }
 
     function togglePlaying(): void {
-        if (available && player.canTogglePlaying)
-            player.togglePlaying();
+        if (!available)
+            return;
+
+        if (player.isPlaying) {
+            if (player.canPause)
+                player.pause();
+        } else if (player.canPlay) {
+            player.play();
+        }
     }
 
     function next(): void {
