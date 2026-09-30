@@ -204,7 +204,7 @@ PanelWindow {
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing4
+            anchors.margins: theme.spacing5
 
             SquircleSurface {
                 id: searchBox
@@ -320,7 +320,7 @@ PanelWindow {
                 }
 
                 model: resultModel
-                spacing: 4
+                spacing: theme.spacing1
                 clip: true
                 currentIndex: resultModel.values.length > 0 ? 0 : -1
                 highlightMoveDuration: motion.fast
@@ -331,7 +331,7 @@ PanelWindow {
                     cornerRadius: theme.radiusMedium
                     fillColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.13)
                     borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
-                    borderWidth: 1
+                    borderWidth: theme.borderThin
                 }
 
                 delegate: Item {

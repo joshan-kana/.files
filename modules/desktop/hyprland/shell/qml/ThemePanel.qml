@@ -331,7 +331,7 @@ Item {
                             height: 30
                             radius: 7
                             color: modelData
-                            border.width: 1
+                            border.width: theme.borderThin
                             border.color: Qt.rgba(1, 1, 1, 0.14)
                         }
                     }

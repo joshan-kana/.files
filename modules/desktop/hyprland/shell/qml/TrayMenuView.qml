@@ -164,7 +164,7 @@ Item {
         }
 
         model: view.items
-        spacing: 4
+        spacing: theme.spacing1
         clip: true
         currentIndex: view.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
