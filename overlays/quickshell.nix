@@ -17,6 +17,7 @@ _:
 
         patches = (old.patches or [ ]) ++ [
           ../patches/quickshell/networkmanager-restart.patch
+          ../patches/quickshell/bluez-late-start.patch
           ../patches/quickshell/wifi-security-live-ap.patch
         ];
       });
