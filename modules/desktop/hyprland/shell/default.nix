@@ -24,6 +24,23 @@
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
 
+      clipboardCopy = pkgs.writeShellApplication {
+        name = "linux-desktop-clipboard-copy";
+        runtimeInputs = [
+          pkgs.cliphist
+          pkgs.wl-clipboard
+        ];
+        text = ''
+          id="''${1:-}"
+
+          if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+            exit 2
+          fi
+
+          cliphist decode "$id" | wl-copy
+        '';
+      };
+
       spectrumAnalyzer = pkgs.stdenv.mkDerivation {
         pname = "linux-desktop-spectrum";
         version = "0.1.0";
@@ -91,7 +108,11 @@
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         keybindings = cheatsheetBindings;
 
-        tools.brightnessctl = lib.getExe pkgs.brightnessctl;
+        tools = {
+          brightnessctl = lib.getExe pkgs.brightnessctl;
+          cliphist = lib.getExe pkgs.cliphist;
+          clipboardCopy = lib.getExe clipboardCopy;
+        };
 
         wallpaper = toString osConfig.stylix.image;
       };
@@ -118,6 +139,7 @@
       home.packages = [
         launcher
         developmentLauncher
+        clipboardCopy
         pkgs.quickshell
         spectrumAnalyzer
       ];
