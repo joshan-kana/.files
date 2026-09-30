@@ -296,8 +296,6 @@ in
               (lua ''
                 function()
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("wl-paste --type text --watch cliphist store")
-                  hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
                   hl.exec_cmd("dropbox")
                   hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
