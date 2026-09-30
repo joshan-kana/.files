@@ -10,7 +10,7 @@ Item {
 
     signal activated()
 
-    implicitWidth: 382
+    implicitWidth: system.trayCount > 0 ? 440 : 382
     implicitHeight: 44
 
     MouseArea {
@@ -92,6 +92,15 @@ Item {
                 visible: system.batteryAvailable
                 text: "BAT " + system.batteryPercent
                 color: system.batteryPercent <= 20 ? theme.warning : theme.textMuted
+                font.family: runtime.fontMono
+                font.pixelSize: 10
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: system.trayCount > 0
+                text: "TRAY " + system.trayCount
+                color: theme.textMuted
                 font.family: runtime.fontMono
                 font.pixelSize: 10
             }

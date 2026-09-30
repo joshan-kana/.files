@@ -137,7 +137,7 @@ ShellRoot {
         commands: [
             { id: "clipboard.toggle", name: "Clipboard History", description: "Search and restore clipboard entries", icon: "edit-paste", key: "SUPER + V", keywords: ["copy", "paste", "cliphist"] },
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
-            { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery"] },
+            { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery", "tray", "status icons"] },
             { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
             { id: "notifications.clear", name: "Clear Notifications", description: "Dismiss stored notification history", icon: "edit-clear-all", keywords: ["alerts", "dismiss", "history"] },
             { id: "audio.volumeUp", name: "Volume Up", description: "Increase output volume by 5%", icon: "audio-volume-high", key: "VOLUME +", keywords: ["audio", "sound", "louder"] },
@@ -391,6 +391,22 @@ ShellRoot {
 
         function batteryPercent(): int {
             return system.batteryPercent;
+        }
+
+        function trayCount(): int {
+            return system.trayCount;
+        }
+
+        function trayMenuOpen(): bool {
+            return systemPanel.trayMenuOpen;
+        }
+
+        function trayMenuItemCount(): int {
+            return systemPanel.trayMenuItemCount;
+        }
+
+        function openSelectedTrayItem(): void {
+            systemPanel.activateTrayItem();
         }
 
         function launchTerminal(): void {
