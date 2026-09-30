@@ -24,7 +24,6 @@ in
     brightnessctl
     polkit_gnome
     networkmanagerapplet
-    playerctl
     grimblast
     nwg-panel
     nwg-dock-hyprland
@@ -283,7 +282,6 @@ in
               (lua ''
                 function()
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("playerctld daemon")
                   hl.exec_cmd("dropbox")
                   hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
                 end
