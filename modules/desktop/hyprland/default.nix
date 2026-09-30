@@ -83,68 +83,6 @@ in
     };
   };
 
-  waybar = _: {
-    home = _: {
-      programs.waybar.settings.mainBar = {
-        layer = "top";
-        spacing = 10;
-        modules-left = [
-          "hyprland/workspaces"
-          "mpris"
-        ];
-        modules-center = [ "clock" ];
-        modules-right = [
-          "backlight"
-          "wireplumber"
-          "battery"
-          "tray"
-        ];
-        "hyprland/workspaces" = {
-          on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'";
-          on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'";
-        };
-        mpris = {
-          interval = 1;
-          format = "{player}: {status_icon} {position}/{length}";
-          status-icons = {
-            playing = "▶";
-            paused = "⏸";
-          };
-        };
-        clock.format = "⎈ {:%a, %b %d |  %R}";
-        backlight = {
-          format = "{percent}% {icon}";
-          format-icons = [
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        battery = {
-          interval = 120;
-          format = "{capacity}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-            ""
-            ""
-          ];
-        };
-        wireplumber = {
-          format = "{volume}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        tray.spacing = 10;
-      };
-    };
-  };
-
   swaylock = _: {
     security.pam.services.swaylock = { };
 
@@ -365,9 +303,7 @@ in
               (lua ''
                 function()
                   hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
-                  hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("dunst")
                   hl.exec_cmd("wl-paste --type text --watch cliphist store")
                   hl.exec_cmd("wl-paste --type image --watch cliphist store")
                   hl.exec_cmd("playerctld daemon")
