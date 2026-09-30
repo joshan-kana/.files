@@ -5,6 +5,7 @@ QtObject {
     id: media
 
     readonly property var players: Mpris.players.values
+    property string preferredPlayerId: ""
     readonly property var player: selectPlayer()
 
     readonly property bool available: player !== null
@@ -18,9 +19,26 @@ QtObject {
     readonly property real position: available && player.positionSupported ? player.position : 0
     readonly property real length: available && player.lengthSupported ? player.length : 0
 
+    function playerId(candidate): string {
+        if (!candidate)
+            return "";
+
+        return candidate.dbusName
+            || candidate.uniqueId
+            || candidate.identity
+            || "";
+    }
+
     function selectPlayer(): var {
         if (players.length === 0)
             return null;
+
+        if (preferredPlayerId.length > 0) {
+            for (const candidate of players) {
+                if (playerId(candidate) === preferredPlayerId)
+                    return candidate;
+            }
+        }
 
         for (const candidate of players) {
             if (candidate.isPlaying)
@@ -33,6 +51,18 @@ QtObject {
         }
 
         return players[0];
+    }
+
+    function cyclePlayer(): void {
+        if (players.length === 0) {
+            preferredPlayerId = "";
+            return;
+        }
+
+        const current = player;
+        const index = players.indexOf(current);
+        const nextIndex = index < 0 ? 0 : (index + 1) % players.length;
+        preferredPlayerId = playerId(players[nextIndex]);
     }
 
     function togglePlaying(): void {
@@ -53,6 +83,11 @@ QtObject {
     function seek(seconds: real): void {
         if (available && player.canSeek)
             player.seek(seconds);
+    }
+
+    function toggleShuffle(): void {
+        if (available && player.shuffleSupported)
+            player.shuffle = !player.shuffle;
     }
 
     function refreshPosition(): void {
