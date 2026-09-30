@@ -13,6 +13,7 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    property string visualizerMode: "field"
 
     visible: open || closing
     color: "transparent"
@@ -65,6 +66,10 @@ PanelWindow {
             hide();
         else
             show();
+    }
+
+    function toggleVisualizer(): void {
+        visualizerMode = visualizerMode === "field" ? "bars" : "field";
     }
 
     function formatTime(seconds: real): string {
@@ -246,7 +251,9 @@ PanelWindow {
 
                     Text {
                         id: spectrumStatus
-                        text: spectrum.connected ? "LIVE // " + spectrum.sampleRate / 1000 + " kHz" : "STANDBY"
+                        text: panel.visualizerMode.toUpperCase()
+                            + " // "
+                            + (spectrum.connected ? "LIVE // " + spectrum.sampleRate / 1000 + " kHz" : "STANDBY")
                         color: spectrum.connected ? theme.positive : theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: 9
@@ -263,6 +270,36 @@ PanelWindow {
                     border.color: theme.outline
                     clip: true
 
+                    SpectrumField {
+                        id: spectrumField
+
+                        anchors {
+                            top: parent.top
+                            right: parent.right
+                            bottom: frequencyLabels.top
+                            left: parent.left
+                            topMargin: theme.spacing2
+                            rightMargin: theme.spacing2
+                            leftMargin: theme.spacing2
+                        }
+
+                        visible: panel.visualizerMode === "field" || opacity > 0.01
+                        opacity: panel.visualizerMode === "field" ? 1 : 0
+                        active: panel.open && panel.visualizerMode === "field"
+
+                        spectrum: panel.spectrum
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: motion.fast
+                                easing.type: motion.enterType
+                            }
+                        }
+                    }
+
                     SpectrumBars {
                         anchors {
                             top: parent.top
@@ -274,8 +311,17 @@ PanelWindow {
                             leftMargin: theme.spacing3
                         }
 
+                        opacity: panel.visualizerMode === "field" && spectrumField.ready ? 0.20 : 1.0
+
                         spectrum: panel.spectrum
                         theme: panel.theme
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: motion.fast
+                                easing.type: motion.enterType
+                            }
+                        }
                     }
 
                     Row {
@@ -424,12 +470,24 @@ PanelWindow {
                     height: 1
                 }
 
-                Text {
-                    text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
+                Row {
+                    spacing: theme.spacing4
+
+                    Text {
+                        text: "V  " + panel.visualizerMode.toUpperCase()
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: 9
+                        font.letterSpacing: 1
+                    }
+
+                    Text {
+                        text: "ESC  CLOSE"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: 9
+                        font.letterSpacing: 1
+                    }
                 }
             }
 
@@ -444,6 +502,9 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Space) {
                         media.togglePlaying();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_V) {
+                        panel.toggleVisualizer();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Left) {
                         media.seek(-5);
