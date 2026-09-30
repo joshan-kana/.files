@@ -83,7 +83,7 @@ Item {
                 text: "♫"
                 color: theme.accent
                 font.family: runtime.fontSans
-                font.pixelSize: 15
+                font.pixelSize: theme.fontSize(15)
             }
         }
 
@@ -102,7 +102,7 @@ Item {
                 text: media.title
                 color: theme.textStrong
                 font.family: runtime.fontSans
-                font.pixelSize: 12
+                font.pixelSize: theme.fontSize(12)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -112,7 +112,7 @@ Item {
                 text: media.artist
                 color: theme.textMuted
                 font.family: runtime.fontSans
-                font.pixelSize: 10
+                font.pixelSize: theme.fontSize(10)
                 elide: Text.ElideRight
             }
         }
@@ -130,7 +130,7 @@ Item {
                 text: media.playing ? "LIVE" : "HOLD"
                 color: media.playing ? theme.positive : theme.textMuted
                 font.family: runtime.fontMono
-                font.pixelSize: 9
+                font.pixelSize: theme.fontSize(9)
                 font.weight: Font.DemiBold
                 font.letterSpacing: 1.2
             }
