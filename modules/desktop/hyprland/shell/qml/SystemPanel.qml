@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 
 PanelWindow {
@@ -13,6 +14,9 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    property int trayIndex: 0
+    readonly property bool trayMenuOpen: trayMenu.open
+    readonly property int trayMenuItemCount: trayMenu.itemCount
 
     visible: open || closing
     color: "transparent"
@@ -38,11 +42,13 @@ PanelWindow {
     function show(): void {
         closeTimer.stop();
         closing = false;
+        trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
         open = true;
         keyboardFocus.forceActiveFocus();
     }
 
     function hide(): void {
+        trayMenu.closeMenu();
         open = false;
 
         if (motion.fast === 0)
@@ -58,6 +64,19 @@ PanelWindow {
             hide();
         else
             show();
+    }
+
+    function activateTrayItem(): void {
+        if (system.trayCount === 0)
+            return;
+
+        const index = Math.max(0, Math.min(trayIndex, system.trayCount - 1));
+        const item = system.trayItems[index];
+
+        if (item.hasMenu || item.onlyMenu)
+            trayMenu.openFor(item);
+        else
+            item.activate();
     }
 
     Rectangle {
@@ -80,7 +99,7 @@ PanelWindow {
 
     SquircleSurface {
         width: Math.min(panel.width - 70, 500)
-        height: brightness.supported ? 530 : 430
+        height: Math.min(panel.height - 110, 430 + (brightness.supported ? 100 : 0) + (system.trayCount > 0 ? 116 : 0))
 
         anchors {
             top: parent.top
@@ -118,6 +137,7 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
+                visible: !trayMenu.open
                 spacing: theme.spacing4
 
                 Text {
@@ -340,6 +360,112 @@ PanelWindow {
                     }
                 }
 
+                Column {
+                    width: parent.width
+                    visible: system.trayCount > 0
+                    spacing: theme.spacing2
+
+                    Row {
+                        width: parent.width
+
+                        Text {
+                            text: "SYSTEM TRAY // " + system.trayCount
+                            color: theme.textMuted
+                            font.family: runtime.fontMono
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1.2
+                        }
+
+                        Item {
+                            width: parent.width - parent.children[0].width - trayHint.width
+                            height: 1
+                        }
+
+                        Text {
+                            id: trayHint
+                            text: "[ / ] SELECT   T OPEN"
+                            color: theme.textMuted
+                            opacity: 0.62
+                            font.family: runtime.fontMono
+                            font.pixelSize: 8
+                        }
+                    }
+
+                    Row {
+                        spacing: theme.spacing2
+
+                        Repeater {
+                            model: system.trayItems
+
+                            delegate: SquircleSurface {
+                                id: trayItem
+
+                                required property var modelData
+                                required property int index
+
+                                width: 72
+                                height: 66
+                                exponent: theme.squircleExponent
+                                cornerRadius: theme.radiusMedium
+                                fillColor: index === panel.trayIndex ? theme.surfaceRaised : theme.background
+                                borderColor: index === panel.trayIndex ? theme.accent : theme.outline
+                                borderWidth: 1
+
+                                Behavior on fillColor {
+                                    ColorAnimation {
+                                        duration: motion.fast
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                                    onClicked: mouse => {
+                                        panel.trayIndex = trayItem.index;
+
+                                        if (mouse.button === Qt.RightButton) {
+                                            modelData.secondaryActivate();
+                                        } else if (modelData.hasMenu || modelData.onlyMenu) {
+                                            trayMenu.openFor(modelData);
+                                        } else {
+                                            modelData.activate();
+                                        }
+                                    }
+                                }
+
+                                Column {
+                                    anchors.centerIn: parent
+                                    width: parent.width - 10
+                                    spacing: 4
+
+                                    Image {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: 24
+                                        height: 24
+                                        source: modelData.icon.length > 0
+                                            ? modelData.icon
+                                            : Quickshell.iconPath("application-x-executable")
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        text: modelData.title || modelData.id
+                                        horizontalAlignment: Text.AlignHCenter
+                                        elide: Text.ElideRight
+                                        color: theme.text
+                                        font.family: runtime.fontSans
+                                        font.pixelSize: 8
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 SquircleSurface {
                     width: parent.width
                     height: 64
@@ -384,7 +510,21 @@ PanelWindow {
                 }
             }
 
+            TrayMenuView {
+                id: trayMenu
+
+                anchors.fill: parent
+
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+            }
+
             Row {
+                id: footer
+
+                visible: !trayMenu.open
+
                 anchors {
                     right: parent.right
                     bottom: parent.bottom
@@ -417,6 +557,15 @@ PanelWindow {
                 }
 
                 Text {
+                    visible: system.trayCount > 0
+                    text: "[/]  TRAY   T  OPEN"
+                    color: theme.textMuted
+                    font.family: runtime.fontMono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
@@ -431,6 +580,28 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    if (trayMenu.open) {
+                        if (event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Backspace
+                            || event.key === Qt.Key_Left) {
+                            trayMenu.goBack();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Up) {
+                            trayMenu.moveSelection(-1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            trayMenu.moveSelection(1);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter
+                            || event.key === Qt.Key_Right) {
+                            trayMenu.activateSelected();
+                            event.accepted = true;
+                        }
+
+                        return;
+                    }
+
                     if (event.key === Qt.Key_Escape) {
                         panel.hide();
                         event.accepted = true;
@@ -448,6 +619,15 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Down && brightness.supported) {
                         brightness.adjust(-5);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_BracketLeft && system.trayCount > 0) {
+                        panel.trayIndex = (panel.trayIndex - 1 + system.trayCount) % system.trayCount;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_BracketRight && system.trayCount > 0) {
+                        panel.trayIndex = (panel.trayIndex + 1) % system.trayCount;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_T && system.trayCount > 0) {
+                        panel.activateTrayItem();
                         event.accepted = true;
                     }
                 }
