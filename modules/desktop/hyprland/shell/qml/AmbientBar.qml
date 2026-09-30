@@ -10,8 +10,10 @@ PanelWindow {
     required property QtObject theme
     required property QtObject motion
     required property QtObject media
+    required property QtObject system
 
     signal mediaRequested()
+    signal systemRequested()
 
     implicitHeight: 64
     color: "transparent"
@@ -32,12 +34,6 @@ PanelWindow {
     }
 
     readonly property int focusedWorkspaceId: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
-    readonly property string activeTitle: {
-        if (!Hyprland.activeToplevel || !Hyprland.activeToplevel.title)
-            return "DESKTOP";
-        return Hyprland.activeToplevel.title;
-    }
-
     Item {
         anchors.fill: parent
         anchors {
@@ -200,90 +196,20 @@ PanelWindow {
             }
         }
 
-        SquircleSurface {
-            id: contextIsland
+        SystemIsland {
+            id: systemIsland
 
-            width: Math.min(430, Math.max(330, titleMetrics.advanceWidth + 150))
-            height: parent.height
-            anchors.right: parent.right
-
-            exponent: theme.squircleExponent
-            cornerRadius: theme.radiusMedium
-            fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
-            borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
-            borderWidth: 1
-
-            Behavior on width {
-                NumberAnimation {
-                    duration: motion.normal
-                    easing.type: motion.enterType
-                }
+            anchors {
+                right: parent.right
+                verticalCenter: parent.verticalCenter
             }
 
-            TextMetrics {
-                id: titleMetrics
-                font.family: runtime.fontSans
-                font.pixelSize: 12
-                text: bar.activeTitle
-            }
-
-            Row {
-                anchors {
-                    fill: parent
-                    leftMargin: theme.spacing4
-                    rightMargin: theme.spacing4
-                }
-                spacing: theme.spacing3
-
-                Item {
-                    width: 10
-                    height: parent.height
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 7
-                        height: 7
-                        radius: 3.5
-                        color: theme.positive
-                    }
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "HYPR"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: 11
-                    font.weight: Font.Bold
-                    font.letterSpacing: 1.4
-                }
-
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 1
-                    height: 20
-                    color: theme.outline
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(120, contextIsland.width - 166)
-                    text: bar.activeTitle
-                    elide: Text.ElideRight
-                    color: theme.text
-                    font.family: runtime.fontSans
-                    font.pixelSize: 12
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "WS " + bar.focusedWorkspaceId
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
-                }
-            }
+            runtime: bar.runtime
+            theme: bar.theme
+            motion: bar.motion
+            system: bar.system
+            onActivated: bar.systemRequested()
         }
+
     }
 }
