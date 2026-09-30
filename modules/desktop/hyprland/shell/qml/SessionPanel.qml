@@ -208,13 +208,13 @@ Item {
             height: 66
             exponent: theme.squircleExponent
             cornerRadius: theme.radiusMedium
-            fillColor: index === panel.selectedIndex
-                ? Qt.rgba(theme.surfaceRaised.r, theme.surfaceRaised.g, theme.surfaceRaised.b, 0.96)
-                : theme.background
+            fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
             borderColor: modelData.id === panel.armedAction
                 ? theme.warning
                 : (index === panel.selectedIndex ? theme.accent : theme.outline)
-            borderWidth: modelData.id === panel.armedAction || index === panel.selectedIndex ? 1.5 : 1
+            borderWidth: modelData.id === panel.armedAction || index === panel.selectedIndex
+                ? theme.borderFocus
+                : theme.borderThin
 
             MouseArea {
                 anchors.fill: parent

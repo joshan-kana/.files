@@ -193,10 +193,10 @@ WlSessionLock {
                 }
 
                 exponent: lock.theme.squircleExponent
-                cornerRadius: 36
+                cornerRadius: lock.theme.radiusPanel
                 fillColor: Qt.rgba(lock.theme.surface.r, lock.theme.surface.g, lock.theme.surface.b, 0.94)
-                borderColor: Qt.rgba(lock.theme.accent.r, lock.theme.accent.g, lock.theme.accent.b, 0.45)
-                borderWidth: 1
+                borderColor: lock.theme.panelBorder
+                borderWidth: lock.theme.borderThin
 
                 Item {
                     anchors.fill: parent
@@ -235,7 +235,9 @@ WlSessionLock {
                             cornerRadius: lock.theme.radiusMedium
                             fillColor: lock.theme.background
                             borderColor: passwordInput.activeFocus ? lock.theme.accent : lock.theme.outline
-                            borderWidth: 1
+                            borderWidth: passwordInput.activeFocus
+                                ? lock.theme.borderFocus
+                                : lock.theme.borderThin
 
                             TextInput {
                                 id: passwordInput
