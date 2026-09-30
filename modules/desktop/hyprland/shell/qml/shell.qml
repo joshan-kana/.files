@@ -79,6 +79,13 @@ ShellRoot {
         motion: motion
     }
 
+    ClipboardPanel {
+        id: clipboardPanel
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     MediaPanel {
         id: mediaPanel
         media: media
@@ -128,6 +135,7 @@ ShellRoot {
         theme: theme
         motion: motion
         commands: [
+            { id: "clipboard.toggle", name: "Clipboard History", description: "Search and restore clipboard entries", icon: "edit-paste", key: "SUPER + V", keywords: ["copy", "paste", "cliphist"] },
             { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
             { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery"] },
             { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
@@ -151,6 +159,7 @@ ShellRoot {
         prototype: prototype
         cheatsheet: cheatsheet
         launcher: launcher
+        clipboardPanel: clipboardPanel
         mediaPanel: mediaPanel
         systemPanel: systemPanel
         systemState: system
@@ -172,6 +181,13 @@ ShellRoot {
         name: "launcher"
         description: "Open command palette"
         onPressed: actions.toggleLauncher()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "clipboard"
+        description: "Open clipboard history"
+        onPressed: actions.toggleClipboard()
     }
 
     GlobalShortcut {
@@ -251,6 +267,18 @@ ShellRoot {
 
         function toggleLauncher(): void {
             actions.toggleLauncher();
+        }
+
+        function toggleClipboard(): void {
+            actions.toggleClipboard();
+        }
+
+        function clipboardOpen(): bool {
+            return clipboardPanel.open;
+        }
+
+        function clipboardCount(): int {
+            return clipboardPanel.entries.length;
         }
 
         function toggleMedia(): void {
