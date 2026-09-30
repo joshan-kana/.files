@@ -240,7 +240,7 @@ PanelWindow {
                     text: ">"
                     color: theme.accent
                     font.family: runtime.fontMono
-                    font.pixelSize: 20
+                    font.pixelSize: theme.fontSize(20)
                     font.weight: Font.Bold
                 }
 
@@ -259,7 +259,7 @@ PanelWindow {
                     selectionColor: theme.accent
                     selectedTextColor: theme.background
                     font.family: runtime.fontSans
-                    font.pixelSize: 18
+                    font.pixelSize: theme.fontSize(18)
                     clip: true
 
                     Text {
@@ -302,7 +302,7 @@ PanelWindow {
                     text: "SUPER / ALT + SPACE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 10
+                    font.pixelSize: theme.fontSize(10)
                     font.letterSpacing: 0.8
                 }
             }
@@ -376,7 +376,7 @@ PanelWindow {
                                 text: modelData.name
                                 color: theme.textStrong
                                 font.family: runtime.fontSans
-                                font.pixelSize: 14
+                                font.pixelSize: theme.fontSize(14)
                                 font.weight: result.ListView.isCurrentItem ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
                             }
@@ -387,7 +387,7 @@ PanelWindow {
                                 text: modelData.genericName
                                 color: theme.textMuted
                                 font.family: runtime.fontSans
-                                font.pixelSize: 11
+                                font.pixelSize: theme.fontSize(11)
                                 elide: Text.ElideRight
                             }
                         }
@@ -399,7 +399,7 @@ PanelWindow {
                             horizontalAlignment: Text.AlignRight
                             color: theme.accent
                             font.family: runtime.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: theme.fontSize(10)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 0.8
                         }
@@ -422,7 +422,7 @@ PanelWindow {
                     text: "NO MATCHES"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 12
+                    font.pixelSize: theme.fontSize(12)
                     font.letterSpacing: 1.5
                 }
             }
@@ -440,7 +440,7 @@ PanelWindow {
                     text: resultModel.values.length + " RESULTS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 10
+                    font.pixelSize: theme.fontSize(10)
                     font.letterSpacing: 1.2
                 }
 
@@ -454,7 +454,7 @@ PanelWindow {
                     text: "↑↓ NAVIGATE   ↵ OPEN   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: 10
+                    font.pixelSize: theme.fontSize(10)
                     font.letterSpacing: 0.7
                 }
             }
