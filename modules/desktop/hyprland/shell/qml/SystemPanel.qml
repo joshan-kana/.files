@@ -141,8 +141,8 @@ PanelWindow {
         anchors {
             top: parent.top
             right: parent.right
-            topMargin: 82
-            rightMargin: 24
+            topMargin: theme.panelTopOffset
+            rightMargin: theme.panelSideOffset
         }
 
         exponent: theme.squircleExponent
@@ -201,7 +201,7 @@ PanelWindow {
                     cornerRadius: theme.radiusLarge
                     fillColor: theme.background
                     borderColor: theme.outline
-                    borderWidth: 1
+                    borderWidth: theme.borderThin
 
                     Item {
                         anchors.fill: parent
@@ -274,7 +274,7 @@ PanelWindow {
                     cornerRadius: theme.radiusLarge
                     fillColor: theme.background
                     borderColor: theme.outline
-                    borderWidth: 1
+                    borderWidth: theme.borderThin
 
                     Item {
                         anchors.fill: parent
@@ -382,7 +382,7 @@ PanelWindow {
                             cornerRadius: theme.radiusLarge
                             fillColor: theme.background
                             borderColor: modelData.active ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.30) : theme.outline
-                            borderWidth: 1
+                            borderWidth: theme.borderThin
 
                             MouseArea {
                                 anchors.fill: parent
@@ -508,7 +508,7 @@ PanelWindow {
                                 Column {
                                     anchors.centerIn: parent
                                     width: parent.width - 10
-                                    spacing: 4
+                                    spacing: theme.spacing1
 
                                     Image {
                                         anchors.horizontalCenter: parent.horizontalCenter
@@ -544,7 +544,7 @@ PanelWindow {
                     cornerRadius: theme.radiusMedium
                     fillColor: theme.background
                     borderColor: theme.outline
-                    borderWidth: 1
+                    borderWidth: theme.borderThin
 
                     Row {
                         anchors {

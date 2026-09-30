@@ -33,6 +33,9 @@ QtObject {
     readonly property int fontSubpanelEyebrow: 10
     readonly property int fontSubpanelTitle: 24
 
+    readonly property int panelTopOffset: 82
+    readonly property int panelSideOffset: 24
+
     readonly property int spacing1: 4
     readonly property int spacing2: 8
     readonly property int spacing3: 12

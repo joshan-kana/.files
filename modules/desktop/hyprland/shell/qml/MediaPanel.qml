@@ -109,8 +109,8 @@ PanelWindow {
         anchors {
             top: parent.top
             right: parent.right
-            topMargin: 82
-            rightMargin: 24
+            topMargin: theme.panelTopOffset
+            rightMargin: theme.panelSideOffset
         }
 
         exponent: theme.squircleExponent
@@ -152,10 +152,10 @@ PanelWindow {
                     width: 132
                     height: 132
                     exponent: theme.squircleExponent
-                    cornerRadius: 28
+                    cornerRadius: theme.radiusLarge
                     fillColor: theme.surfaceRaised
                     borderColor: theme.outline
-                    borderWidth: 1
+                    borderWidth: theme.borderThin
 
                     Image {
                         anchors.fill: parent
@@ -266,7 +266,7 @@ PanelWindow {
                     height: 96
                     color: theme.background
                     radius: theme.radiusMedium
-                    border.width: 1
+                    border.width: theme.borderThin
                     border.color: theme.outline
                     clip: true
 
@@ -333,7 +333,7 @@ PanelWindow {
                             bottom: parent.bottom
                             left: parent.left
                             rightMargin: theme.spacing3
-                            bottomMargin: 3
+                            bottomMargin: theme.spacing1
                             leftMargin: theme.spacing3
                         }
 
