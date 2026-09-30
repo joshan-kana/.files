@@ -40,7 +40,7 @@ Item {
         cornerRadius: theme.radiusMedium
         fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
         borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
-        borderWidth: 1
+        borderWidth: theme.borderThin
 
         Item {
             id: artwork
@@ -59,7 +59,7 @@ Item {
                 cornerRadius: 9
                 fillColor: theme.surfaceRaised
                 borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
-                borderWidth: 1
+                borderWidth: theme.borderThin
             }
 
             Image {
