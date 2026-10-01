@@ -165,6 +165,7 @@
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --path "${productionShellPath}" "$@"
         '';
       };
@@ -174,6 +175,7 @@
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
@@ -183,6 +185,7 @@
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --no-duplicate --path "${productionShellPath}/lock.qml"
         '';
       };
