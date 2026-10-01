@@ -50,6 +50,9 @@ Variants {
         }
 
         readonly property int focusedWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 1
+        readonly property var normalWorkspaces: Hyprland.workspaces.values
+            .filter(workspace => workspace.id > 0)
+            .sort((a, b) => a.id - b.id)
         Item {
             anchors.fill: parent
             anchors {
@@ -62,7 +65,7 @@ Variants {
             SquircleSurface {
                 id: workspaceIsland
 
-                width: 348
+                width: workspaceRow.implicitWidth + theme.spacing4 * 2
                 height: parent.height
                 anchors.left: parent.left
 
@@ -73,6 +76,7 @@ Variants {
                 borderWidth: theme.borderThin
 
                 Row {
+                    id: workspaceRow
                     anchors.centerIn: parent
                     spacing: 5
 
@@ -94,13 +98,13 @@ Variants {
                     }
 
                     Repeater {
-                        model: 10
+                        model: bar.normalWorkspaces
 
                         delegate: Item {
                             id: workspace
-                            required property int index
+                            required property var modelData
 
-                            readonly property int number: index + 1
+                            readonly property int number: modelData.id
                             readonly property bool active: bar.focusedWorkspaceId === number
 
                             width: 24
@@ -111,11 +115,7 @@ Variants {
                                 z: 1
                                 cursorShape: Qt.PointingHandCursor
 
-                                onClicked: Hyprland.dispatch(
-                                    Hyprland.usingLua
-                                        ? 'hl.dsp.focus({ workspace = "' + workspace.number + '" })'
-                                        : "workspace " + workspace.number
-                                )
+                                onClicked: workspace.modelData.activate()
                             }
 
                             SquircleSurface {
