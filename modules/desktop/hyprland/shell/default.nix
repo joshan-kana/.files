@@ -151,6 +151,7 @@
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
           lockSession = lib.getExe lockCommand;
+          networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           sessionCommand = lib.getExe sessionCommand;
           themeSet = "/run/current-system/sw/bin/theme-set";
         };

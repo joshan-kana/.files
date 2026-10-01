@@ -871,7 +871,7 @@ PanelWindow {
                             networkPanel.toggleWifi();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_A) {
-                            Quickshell.execDetached(["nm-connection-editor"]);
+                            Quickshell.execDetached([runtime.networkConnectionEditor]);
                             event.accepted = true;
                         }
 
