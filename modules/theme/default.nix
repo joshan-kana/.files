@@ -119,7 +119,10 @@ let
           exit 2
         fi
 
-        "$activation/activate" --driver-version 1
+        # Variant activations do not replace the persistent Home Manager profile.
+        # Prefer the selected variant when Stylix resolves runtime theme assets.
+        XDG_DATA_DIRS="$activation/home-path/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}" \
+          "$activation/activate" --driver-version 1
 
         umask 077
         install -d -m 0700 "$stateDir"
