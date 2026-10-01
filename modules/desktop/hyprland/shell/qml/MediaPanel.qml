@@ -261,13 +261,14 @@ PanelWindow {
                     }
                 }
 
-                Rectangle {
+                SquircleSurface {
                     width: parent.width
                     height: 96
-                    color: theme.background
-                    radius: theme.radiusMedium
-                    border.width: theme.borderThin
-                    border.color: theme.outline
+                    exponent: theme.squircleExponent
+                    cornerRadius: theme.radiusMedium
+                    fillColor: theme.background
+                    borderWidth: theme.borderThin
+                    borderColor: theme.outline
                     clip: true
 
                     SpectrumField {
