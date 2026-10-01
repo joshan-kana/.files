@@ -91,8 +91,9 @@
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
       };
+      primaryUser = osConfig.dotfiles.users.primary.name;
       mainModifier =
-        osConfig.home-manager.users.joshan.wayland.windowManager.hyprland.settings.mainMod._var;
+        osConfig.home-manager.users.${primaryUser}.wayland.windowManager.hyprland.settings.mainMod._var;
 
       renderShortcut =
         binding:
