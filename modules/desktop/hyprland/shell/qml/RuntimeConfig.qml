@@ -5,6 +5,8 @@ import Quickshell.Io
 QtObject {
     id: root
 
+    signal themeChanged()
+
     readonly property string terminal: data.defaults.terminal
     readonly property string editor: data.defaults.editor
     readonly property string wallpaper: data.wallpaper
@@ -41,6 +43,15 @@ QtObject {
     function shortcut(id) {
         const value = shortcuts ? shortcuts[id] : undefined;
         return value === undefined || value === null ? "" : String(value);
+    }
+
+    property FileView themeStateFile: FileView {
+        path: Quickshell.env("LINUX_DESKTOP_THEME_STATE") || ""
+        watchChanges: true
+        onFileChanged: {
+            configFile.reload();
+            root.themeChanged();
+        }
     }
 
     property FileView configFile: FileView {
