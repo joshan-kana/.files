@@ -21,6 +21,14 @@ Item {
 
     readonly property bool applying: applyProcess.running
 
+    Connections {
+        target: panel.runtime
+
+        function onThemeChanged(): void {
+            panel.refreshCurrentTheme();
+        }
+    }
+
     visible: open
 
     property StdioCollector registryOutput: StdioCollector {}
@@ -123,6 +131,11 @@ Item {
         selectedIndex = 0;
     }
 
+    function refreshCurrentTheme(): void {
+        if (runtime.themeSet.length > 0 && !currentProcess.running)
+            currentProcess.exec([runtime.themeSet, "current"]);
+    }
+
     function refresh(): void {
         statusText = "";
         statusError = false;
@@ -135,8 +148,7 @@ Item {
         if (!registryProcess.running)
             registryProcess.exec([runtime.themeSet, "list", "--json"]);
 
-        if (!currentProcess.running)
-            currentProcess.exec([runtime.themeSet, "current"]);
+        refreshCurrentTheme();
     }
 
     function openView(): void {
