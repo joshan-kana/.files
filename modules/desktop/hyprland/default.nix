@@ -87,6 +87,8 @@ in
         keybindings = import ./keybindings.nix {
           inherit terminal;
         };
+        globalKeybindings = lib.filter (binding: binding.submap == null) keybindings;
+        launcherKeybindings = lib.filter (binding: binding.submap == "launcher") keybindings;
         actionDispatcher =
           action:
           if action.type == "exec" then
@@ -271,12 +273,15 @@ in
             ];
           };
 
-          bind = map renderBinding keybindings;
+          bind = map renderBinding globalKeybindings;
         };
 
-        submaps.passthru.settings.bind = [
-          (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
-        ];
+        submaps = {
+          launcher.settings.bind = map renderBinding launcherKeybindings;
+          passthru.settings.bind = [
+            (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
+          ];
+        };
 
         # nwg-displays writes ~/.config/hypr/monitors.lua for Hyprland 0.55+.
         extraConfig = ''
