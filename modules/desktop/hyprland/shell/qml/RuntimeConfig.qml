@@ -14,6 +14,7 @@ QtObject {
     readonly property string cliphist: data.tools.cliphist
     readonly property string clipboardCopy: data.tools.clipboardCopy
     readonly property string lockSession: data.tools.lockSession
+    readonly property string networkConnectionEditor: data.tools.networkConnectionEditor
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || data.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || data.tools.themeSet
 
@@ -93,6 +94,7 @@ QtObject {
                 property string cliphist: ""
                 property string clipboardCopy: ""
                 property string lockSession: ""
+                property string networkConnectionEditor: ""
                 property string sessionCommand: ""
                 property string themeSet: ""
             }
