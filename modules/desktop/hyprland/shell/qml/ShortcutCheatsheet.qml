@@ -52,6 +52,7 @@ PanelWindow {
     function show(): void {
         closeTimer.stop();
         closing = false;
+        flick.contentY = 0;
         open = true;
         keySink.forceActiveFocus();
     }
@@ -231,27 +232,79 @@ PanelWindow {
                 }
             }
 
-            Row {
+            Rectangle {
+                id: scrollTrack
+                anchors {
+                    top: flick.top
+                    right: flick.right
+                    bottom: flick.bottom
+                }
+                width: 3
+                radius: 2
+                color: theme.outline
+                opacity: 0.28
+                visible: flick.contentHeight > flick.height + 1
+
+                Rectangle {
+                    width: parent.width
+                    height: Math.max(36, parent.height * Math.min(1, flick.height / flick.contentHeight))
+                    y: {
+                        const maxScroll = Math.max(0, flick.contentHeight - flick.height);
+                        if (maxScroll === 0)
+                            return 0;
+
+                        return (parent.height - height) * Math.max(0, Math.min(1, flick.contentY / maxScroll));
+                    }
+                    radius: parent.radius
+                    color: theme.accent
+                    opacity: 0.82
+                }
+            }
+
+            Item {
                 id: footer
                 anchors {
                     right: parent.right
                     bottom: parent.bottom
+                    left: parent.left
                 }
-                spacing: theme.spacing3
+                height: Math.max(navigationHint.implicitHeight, footerMeta.implicitHeight)
 
                 Text {
-                    text: runtime.keybindings.length + " bindings"
+                    id: navigationHint
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                    }
+                    text: "↑ ↓  SCROLL    PGUP PGDN  PAGE    HOME END  JUMP    ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    font.pixelSize: theme.fontSize(10)
+                    font.letterSpacing: 0.4
                 }
 
-                Text {
-                    text: "SUPER + /"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
-                    font.weight: Font.DemiBold
+                Row {
+                    id: footerMeta
+                    anchors {
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    spacing: theme.spacing3
+
+                    Text {
+                        text: runtime.keybindings.length + " bindings"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(12)
+                    }
+
+                    Text {
+                        text: "TOGGLE " + runtime.shortcut("shortcuts.toggle")
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(12)
+                        font.weight: Font.DemiBold
+                    }
                 }
             }
 
@@ -275,6 +328,12 @@ PanelWindow {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_PageDown) {
                         flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * 0.8);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Home) {
+                        flick.contentY = 0;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_End) {
+                        flick.contentY = Math.max(0, flick.contentHeight - flick.height);
                         event.accepted = true;
                     }
                 }
