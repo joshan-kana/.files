@@ -21,6 +21,20 @@ in
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
+  systemd.user.services = {
+    xdg-desktop-portal-hyprland = {
+      overrideStrategy = "asDropin";
+      serviceConfig.RestartSec = 3;
+    };
+    xdg-desktop-portal-gtk = {
+      overrideStrategy = "asDropin";
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     wl-clipboard
     brightnessctl
