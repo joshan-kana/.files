@@ -256,11 +256,6 @@ Item {
 
                 onClicked: {
                     panel.selectedIndex = themeRow.index;
-                    panel.keyboardRequested();
-                }
-
-                onDoubleClicked: {
-                    panel.selectedIndex = themeRow.index;
                     panel.activateSelected();
                 }
             }
