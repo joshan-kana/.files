@@ -212,6 +212,69 @@ ShellRoot {
 
     GlobalShortcut {
         appid: "linux-desktop"
+        name: "launcher-slot-1"
+        description: "Open command palette result 1"
+        onPressed: launcher.launchIndex(0)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-2"
+        description: "Open command palette result 2"
+        onPressed: launcher.launchIndex(1)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-3"
+        description: "Open command palette result 3"
+        onPressed: launcher.launchIndex(2)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-4"
+        description: "Open command palette result 4"
+        onPressed: launcher.launchIndex(3)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-5"
+        description: "Open command palette result 5"
+        onPressed: launcher.launchIndex(4)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-6"
+        description: "Open command palette result 6"
+        onPressed: launcher.launchIndex(5)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-7"
+        description: "Open command palette result 7"
+        onPressed: launcher.launchIndex(6)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-8"
+        description: "Open command palette result 8"
+        onPressed: launcher.launchIndex(7)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "launcher-slot-9"
+        description: "Open command palette result 9"
+        onPressed: launcher.launchIndex(8)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
         name: "clipboard"
         description: "Open clipboard history"
         onPressed: actions.toggleClipboard()

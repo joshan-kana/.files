@@ -14,6 +14,7 @@ let
       flags ? { },
       label ? null,
       cheatsheet ? true,
+      submap ? null,
     }:
     {
       inherit
@@ -26,6 +27,7 @@ let
         label
         mainMod
         section
+        submap
         ;
     };
 
@@ -43,6 +45,18 @@ let
     type = "global";
     inherit value;
   };
+
+  launcherResults = builtins.genList (
+    index:
+    mk {
+      keys = toString (index + 1);
+      action = global "linux-desktop:launcher-slot-${toString (index + 1)}";
+      section = "LAUNCHERS";
+      description = "Open launcher result ${toString (index + 1)}";
+      cheatsheet = false;
+      submap = "launcher";
+    }
+  ) 9;
 
   workspaceKeys = [
     {
@@ -191,6 +205,24 @@ in
   })
 
   (mk {
+    keys = "SPACE";
+    action = global "linux-desktop:launcher";
+    section = "LAUNCHERS";
+    description = "Close app & command launcher";
+    cheatsheet = false;
+    submap = "launcher";
+  })
+  (mk {
+    keys = "ALT + SPACE";
+    mainMod = false;
+    action = global "linux-desktop:launcher";
+    section = "LAUNCHERS";
+    description = "Close app & command launcher";
+    cheatsheet = false;
+    submap = "launcher";
+  })
+
+  (mk {
     keys = "Q";
     action = dispatcher "hl.dsp.window.close()";
     section = "WINDOWS";
@@ -274,6 +306,7 @@ in
     description = "Focus down";
   })
 ]
+++ launcherResults
 ++ map focusWorkspace workspaceKeys
 ++ map moveToWorkspace workspaceKeys
 ++ [
