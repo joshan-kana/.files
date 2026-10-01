@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 
 PanelWindow {
@@ -111,9 +112,18 @@ PanelWindow {
             .slice(0, 9);
     }
 
+    function setLauncherSubmap(enabled: bool): void {
+        Hyprland.dispatch(
+            Hyprland.usingLua
+                ? 'hl.dsp.submap("' + (enabled ? "launcher" : "reset") + '")'
+                : "submap " + (enabled ? "launcher" : "reset")
+        );
+    }
+
     function show(): void {
         closeTimer.stop();
         closing = false;
+        setLauncherSubmap(true);
         open = true;
         search.text = "";
         results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
@@ -122,6 +132,7 @@ PanelWindow {
 
     function hide(): void {
         open = false;
+        setLauncherSubmap(false);
 
         if (motion.fast === 0) {
             closing = false;
@@ -136,6 +147,14 @@ PanelWindow {
             hide();
         else
             show();
+    }
+
+    function launchIndex(index: int): void {
+        if (!open || index < 0 || index >= resultModel.values.length)
+            return;
+
+        results.currentIndex = index;
+        launchCurrent();
     }
 
     function launchCurrent(): void {
@@ -351,6 +370,26 @@ PanelWindow {
                         }
                         spacing: theme.spacing3
 
+                        SquircleSurface {
+                            width: 28
+                            height: 28
+                            anchors.verticalCenter: parent.verticalCenter
+                            exponent: theme.squircleExponent
+                            cornerRadius: theme.radiusSmall
+                            fillColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12)
+                            borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.36)
+                            borderWidth: theme.borderThin
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: result.index + 1
+                                color: theme.accent
+                                font.family: runtime.fontMono
+                                font.pixelSize: theme.fontSize(11)
+                                font.weight: Font.Bold
+                            }
+                        }
+
                         Item {
                             width: 30
                             height: parent.height
@@ -368,7 +407,7 @@ PanelWindow {
 
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 150
+                            width: parent.width - 190
                             spacing: 1
 
                             Text {
@@ -451,7 +490,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: "↑↓ NAVIGATE   ↵ OPEN   ESC CLOSE"
+                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
