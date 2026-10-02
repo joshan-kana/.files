@@ -24,6 +24,11 @@
       scheme = ./carbon.yaml;
     };
 
+    catppuccin-mocha = {
+      label = "Catppuccin Mocha";
+      scheme = ./catppuccin-mocha.yaml;
+    };
+
     neon = {
       label = "Neon";
       scheme = ./neon.yaml;
