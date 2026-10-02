@@ -185,7 +185,7 @@ WlSessionLock {
                 id: authCard
 
                 width: Math.min(parent.width - 80, 430)
-                height: 270
+                height: contentColumn.implicitHeight + lock.theme.spacing5 * 2
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     bottom: parent.bottom
@@ -203,28 +203,31 @@ WlSessionLock {
                     anchors.margins: lock.theme.spacing5
 
                     Column {
+                        id: contentColumn
+
                         width: parent.width
                         spacing: lock.theme.spacing3
 
-                        Text {
-                            width: parent.width
-                            text: (Quickshell.env("USER") || "USER").toUpperCase()
-                            horizontalAlignment: Text.AlignHCenter
-                            color: lock.theme.accent
-                            font.family: lock.runtime.fontMono
-                            font.pixelSize: theme.fontSize(10)
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 2
-                        }
+                        Column {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            spacing: lock.theme.spacing1
 
-                        Text {
-                            width: parent.width
-                            text: "Session locked"
-                            horizontalAlignment: Text.AlignHCenter
-                            color: lock.theme.textStrong
-                            font.family: lock.runtime.fontSans
-                            font.pixelSize: theme.fontSize(23)
-                            font.weight: Font.DemiBold
+                            Image {
+                                width: 44
+                                height: 44
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                source: Quickshell.iconPath("system-lock-screen")
+                                fillMode: Image.PreserveAspectFit
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: Quickshell.env("USER") || "user"
+                                color: lock.theme.textStrong
+                                font.family: lock.runtime.fontSans
+                                font.pixelSize: theme.fontSize(18)
+                                font.weight: Font.DemiBold
+                            }
                         }
 
                         SquircleSurface {
@@ -307,19 +310,6 @@ WlSessionLock {
                         }
                     }
 
-                    Text {
-                        anchors {
-                            horizontalCenter: parent.horizontalCenter
-                            bottom: parent.bottom
-                        }
-
-                        text: lock.secure ? "SECURE SESSION LOCK" : "LOCKING SESSION…"
-                        color: lock.secure ? lock.theme.positive : lock.theme.warning
-                        font.family: lock.runtime.fontMono
-                        font.pixelSize: theme.fontSize(8)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.3
-                    }
                 }
             }
         }
