@@ -7,11 +7,18 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  chromiumSystemTheme = 2; # 0 = Classic, 1 = GTK, 2 = Qt
+  braveWithSystemTheme = pkgs.brave.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      cat > "$out/opt/brave.com/brave/initial_preferences" <<'EOF'
+      ${builtins.toJSON { extensions.theme.system_theme = chromiumSystemTheme; }}
+      EOF
+    '';
+  });
 in
 {
   brave = _: {
-    environment.systemPackages = [ pkgs.brave ];
+    environment.systemPackages = [ braveWithSystemTheme ];
   };
 
   bitwarden = _: {
@@ -40,8 +47,10 @@ in
     };
 
   chromium = _: {
-    config = lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.chromium ];
+    environment.systemPackages = [ pkgs.chromium ];
+    programs.chromium = {
+      enable = true;
+      initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
     };
   };
 
