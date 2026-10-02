@@ -10,6 +10,9 @@ let
   inherit (config.dotfiles) server;
   inherit (config.dotfiles.users) primary;
   gatewayPort = 18789;
+  internalTlsDir = "${server.secretsDir}/internal-tls";
+  openclawTlsCert = "${internalTlsDir}/nixos-server.home.crt";
+  openclawTlsKey = "${internalTlsDir}/nixos-server.home.key";
   openclawUser = "openclaw";
   openclawStateDir = "${server.storage.appData.root}/openclaw";
   openclawConfigFile = "${openclawStateDir}/openclaw.json";
@@ -83,11 +86,19 @@ in
 
   systemd.services.openclaw-gateway = {
     unitConfig = {
-      AssertPathExists = openclawSecrets ++ [ openclawConfigFile ];
+      AssertPathExists = openclawSecrets ++ [
+        openclawConfigFile
+        openclawTlsCert
+        openclawTlsKey
+      ];
       RequiresMountsFor = [ mappedHome ];
     };
     serviceConfig = {
       BindPaths = [ "${mappedHome}:${primaryHome}" ];
+      LoadCredential = [
+        "nixos-server.home.crt:${openclawTlsCert}"
+        "nixos-server.home.key:${openclawTlsKey}"
+      ];
       UMask = "0077";
     };
   };
@@ -156,30 +167,6 @@ in
       }
     '';
 
-    virtualHosts.openclaw = {
-      listen = [
-        {
-          addr = server.lan.serverIp;
-          port = gatewayPort;
-        }
-      ];
-
-      locations."/" = {
-        proxyPass = "http://127.0.0.1:${toString gatewayPort}";
-        proxyWebsockets = true;
-        extraConfig = ''
-          proxy_set_header X-Forwarded-User ${primary.name};
-
-          # OpenClaw ships script-src 'self' only, which blocks the Vite/rolldown
-          # bundle's runtime eval()-based dynamic imports and prevents
-          # <openclaw-app> from registering ("Control UI did not start" modal).
-          # Re-emit the upstream CSP with 'unsafe-eval' added to script-src; all
-          # other directives are preserved verbatim.
-          proxy_hide_header Content-Security-Policy;
-          add_header Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; worker-src 'self'; connect-src 'self' ws: wss: https://api.openai.com https://tweakcn.com" always;
-        '';
-      };
-    };
   };
 
 }
