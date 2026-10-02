@@ -294,6 +294,7 @@
             homeManagerInput.nixosModules.home-manager
             ./overlays/comin.nix
             ./overlays/libreoffice.nix
+            ./overlays/nixos-options-doc.nix
             (semantic.rootModule hostScopeWithFile)
           ]
           ++ extraModules;
