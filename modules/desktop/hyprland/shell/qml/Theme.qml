@@ -25,16 +25,16 @@ QtObject {
     readonly property int radiusMedium: 18
     readonly property int radiusLarge: 30
     readonly property int radiusPanel: 38
-    readonly property real squircleExponent: 4.5
+    readonly property real squircleExponent: runtime.squircleExponent
 
     readonly property real borderThin: 1
     readonly property real borderFocus: 1.5
-    readonly property color panelFill: Qt.rgba(surface.r, surface.g, surface.b, 0.99)
+    readonly property color panelFill: Qt.rgba(surface.r, surface.g, surface.b, runtime.panelOpacity)
     readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, 0.42)
-    readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, 0.96)
-    readonly property color scrim: Qt.rgba(background.r, background.g, background.b, 0.50)
-    readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, 0.56)
-    readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, 0.62)
+    readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, runtime.focusOpacity)
+    readonly property color scrim: Qt.rgba(background.r, background.g, background.b, runtime.scrimOpacity)
+    readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.06))
+    readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, 0.14)
     readonly property real panelClosedScale: 0.965
 
