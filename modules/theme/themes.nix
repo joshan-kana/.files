@@ -29,6 +29,11 @@
       scheme = ./catppuccin-mocha.yaml;
     };
 
+    kanagawa = {
+      label = "Kanagawa";
+      scheme = ./kanagawa.yaml;
+    };
+
     neon = {
       label = "Neon";
       scheme = ./neon.yaml;
