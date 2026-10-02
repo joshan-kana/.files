@@ -1,6 +1,7 @@
 {
   lib,
   scopeConfig,
+  themeVariant ? null,
   ...
 }:
 
@@ -36,6 +37,9 @@
       developmentShellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
+      themeRegistry = import ../../../theme/registry.nix { inherit lib pkgs; };
+      activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
+      activeTheme = themeRegistry.resolve activeThemeName;
 
       clipboardCopy = pkgs.writeShellApplication {
         name = "linux-desktop-clipboard-copy";
@@ -143,6 +147,7 @@
 
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
+        visual = activeTheme.shell;
         keybindings = cheatsheetBindings;
         inherit shortcuts;
 
