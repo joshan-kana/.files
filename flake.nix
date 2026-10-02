@@ -292,9 +292,14 @@
             ./modules/options
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
+            ./overlays/bottles.nix
             ./overlays/comin.nix
+            ./overlays/gh-dash.nix
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
+            ./overlays/nvtop.nix
+            ./overlays/tuicr.nix
+            ./overlays/webhook.nix
             (semantic.rootModule hostScopeWithFile)
           ]
           ++ extraModules;
