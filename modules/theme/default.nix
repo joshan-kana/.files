@@ -7,13 +7,13 @@
 }:
 
 let
-  themeRegistry = import ./registry.nix { inherit pkgs; };
+  themeRegistry = import ./registry.nix { inherit lib pkgs; };
   extendModules = config._module.args.extendModules;
   activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
-  activeTheme = themeRegistry.variants.${activeThemeName};
-  activeAssets = themeRegistry.assets // (activeTheme.assets or { });
-  wallpaperTheme = themeRegistry.variants.wallpaper;
-  wallpaperThemeAssets = themeRegistry.assets // (wallpaperTheme.assets or { });
+  activeTheme = themeRegistry.resolve activeThemeName;
+  activeAssets = activeTheme.assets;
+  wallpaperTheme = themeRegistry.resolve "wallpaper";
+  wallpaperThemeAssets = wallpaperTheme.assets;
   wallpaperSha256 = builtins.hashFile "sha256" wallpaperThemeAssets.wallpaper;
   primaryUser = config.dotfiles.users.primary.name;
   hyprlandEnabled = lib.attrByPath [
@@ -173,24 +173,13 @@ assert lib.assertMsg (
     enable = true;
     image = activeAssets.wallpaper;
 
-    fonts = {
-      serif = config.stylix.fonts.monospace;
-      sansSerif = config.stylix.fonts.monospace;
-      monospace = {
-        package = pkgs.monaspace;
-        name = "Monaspace Neon Frozen";
-      };
-      emoji = {
-        package = pkgs.noto-fonts-color-emoji;
-        name = "Noto Color Emoji";
-      };
-    };
+    inherit (activeTheme) fonts;
 
-    polarity = activeTheme.polarity or "dark";
+    inherit (activeTheme) polarity;
 
     inherit (activeAssets) cursor;
 
-    base16Scheme = activeTheme.scheme;
+    base16Scheme = activeTheme.palette;
   };
 
   environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
