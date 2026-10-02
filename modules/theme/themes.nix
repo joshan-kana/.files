@@ -34,6 +34,11 @@
       scheme = "${pkgs.base16-schemes}/share/themes/dracula.yaml";
     };
 
+    everforest-dark = {
+      label = "Everforest Dark";
+      scheme = "${pkgs.base16-schemes}/share/themes/everforest-dark-medium.yaml";
+    };
+
     gruvbox-material = {
       label = "Gruvbox Material";
       scheme = ./gruvbox-material.yaml;
