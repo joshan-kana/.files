@@ -29,6 +29,12 @@
       scheme = ./neon.yaml;
     };
 
+    rose = {
+      label = "Rose";
+      scheme = ./rose.yaml;
+      polarity = "light";
+    };
+
     wallpaper = {
       label = "Wallpaper";
       scheme = ./wallpaper-base16.yaml;
