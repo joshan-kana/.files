@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }:
@@ -480,12 +479,6 @@ in
       };
 
       tuicr = _: {
-        nixpkgs.overlays = [
-          (_final: prev: {
-            tuicr = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tuicr;
-          })
-        ];
-
         home = _: {
           home.packages = [ pkgs.tuicr ];
           programs.git.settings.alias.review = "!tuicr -w";
@@ -567,8 +560,6 @@ in
         pkgs.gh
         pkgs.gh-dash
       ];
-      nixpkgs.overlays = (import ../../overlays/gh-dash.nix { }).nixpkgs.overlays;
-
       home = _: {
         home.shellAliases = aliases;
         programs.gh.extensions = [

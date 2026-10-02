@@ -42,7 +42,6 @@
 
   cli = extendScope moduleRegistry.cli {
     nvtop = _: {
-      nixpkgs.overlays = (import ../../overlays/nvtop-overlay.nix { }).nixpkgs.overlays;
       environment.systemPackages = [ pkgs.nvtopPackages.full ];
     };
 

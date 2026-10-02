@@ -5,8 +5,6 @@
 }:
 
 {
-  nixpkgs.overlays = (import ../../../overlays/webhook.nix { }).nixpkgs.overlays;
-
   services.webhook = {
     package = pkgs.webhook;
     ip = "127.0.0.1";

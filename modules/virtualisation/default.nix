@@ -35,10 +35,9 @@
   };
 
   /**
-    Bottles application support and required package overlay.
+    Bottles application support.
   */
   bottles = _: {
-    nixpkgs.overlays = (import ../../overlays/bottles.nix { }).nixpkgs.overlays;
     environment.systemPackages = [ pkgs.bottles ];
   };
 
