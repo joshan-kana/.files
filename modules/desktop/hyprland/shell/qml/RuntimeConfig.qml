@@ -37,6 +37,10 @@ QtObject {
 
     readonly property real textScale: data.accessibility.textScale
     readonly property bool animationsEnabled: data.motion.animationsEnabled
+    readonly property real panelOpacity: data.visual.panelOpacity
+    readonly property real focusOpacity: data.visual.focusOpacity
+    readonly property real scrimOpacity: data.visual.scrimOpacity
+    readonly property real squircleExponent: data.visual.squircleExponent
     readonly property var keybindings: data.keybindings
     readonly property var shortcuts: data.shortcuts
 
@@ -97,6 +101,13 @@ QtObject {
 
             property JsonObject motion: JsonObject {
                 property bool animationsEnabled: true
+            }
+
+            property JsonObject visual: JsonObject {
+                property real panelOpacity: 0.99
+                property real focusOpacity: 0.96
+                property real scrimOpacity: 0.50
+                property real squircleExponent: 4.5
             }
 
             property JsonObject tools: JsonObject {
