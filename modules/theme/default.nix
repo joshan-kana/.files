@@ -79,30 +79,19 @@ let
 in
 assert lib.assertMsg (
   wallpaperTheme.wallpaperSha256 == wallpaperSha256
-) "modules/theme/wallpaper-base16.yaml is stale; regenerate it from modules/theme/wallpaper.png";
+) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
 
-    fonts = {
-      serif = config.stylix.fonts.monospace;
-      sansSerif = config.stylix.fonts.monospace;
-      monospace = {
-        package = pkgs.monaspace;
-        name = "Monaspace Neon Frozen";
-      };
-      emoji = {
-        package = pkgs.noto-fonts-color-emoji;
-        name = "Noto Color Emoji";
-      };
-    };
+    inherit (activeTheme) fonts;
 
-    polarity = activeTheme.polarity or "dark";
+    inherit (activeTheme) polarity;
 
     inherit (activeAssets) cursor;
 
-    base16Scheme = activeTheme.scheme;
+    base16Scheme = activeTheme.palette;
   };
 
   environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
