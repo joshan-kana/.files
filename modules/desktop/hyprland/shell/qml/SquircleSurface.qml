@@ -13,16 +13,33 @@ Item {
     property real exponent: 4.5
     property int cornerSamples: 32
 
-    readonly property string pathData: buildPath()
+    readonly property string fillPathData: buildPath(0)
+    readonly property string borderPathData: buildPath(Math.max(0, borderWidth / 2))
 
     function point(value: real): string {
         return Number(value).toFixed(4);
     }
 
+    // Uniform angle steps bunch most vertices into the middle of a superellipse
+    // and leave very long first/last segments. Reparameterise the quarter arc
+    // so samples are distributed much more evenly around the visible curve.
+    function cornerProgress(progress: real): real {
+        if (progress <= 0)
+            return 0;
+        if (progress >= 1)
+            return 1;
+
+        const power = exponent / 2;
+        const leading = Math.pow(progress, power);
+        const trailing = Math.pow(1 - progress, power);
+        return leading / (leading + trailing);
+    }
+
     function buildCorner(cx: real, cy: real, radius: real, start: real, end: real): string {
         let points = "";
         for (let i = 1; i <= cornerSamples; i++) {
-            const t = start + (end - start) * (i / cornerSamples);
+            const progress = cornerProgress(i / cornerSamples);
+            const t = start + (end - start) * progress;
             const c = Math.cos(t);
             const s = Math.sin(t);
             const px = cx + radius * Math.sign(c) * Math.pow(Math.abs(c), 2 / exponent);
@@ -32,20 +49,28 @@ Item {
         return points;
     }
 
-    function buildPath(): string {
-        const r = Math.min(cornerRadius, width / 2, height / 2);
-        if (width <= 0 || height <= 0 || r <= 0)
+    function buildPath(inset: real): string {
+        const innerWidth = width - inset * 2;
+        const innerHeight = height - inset * 2;
+        const r = Math.min(Math.max(0, cornerRadius - inset), innerWidth / 2, innerHeight / 2);
+
+        if (innerWidth <= 0 || innerHeight <= 0 || r <= 0)
             return "";
 
-        let path = "M " + point(r) + " 0";
-        path += " L " + point(width - r) + " 0";
-        path += buildCorner(width - r, r, r, -Math.PI / 2, 0);
-        path += " L " + point(width) + " " + point(height - r);
-        path += buildCorner(width - r, height - r, r, 0, Math.PI / 2);
-        path += " L " + point(r) + " " + point(height);
-        path += buildCorner(r, height - r, r, Math.PI / 2, Math.PI);
-        path += " L 0 " + point(r);
-        path += buildCorner(r, r, r, Math.PI, Math.PI * 1.5);
+        const left = inset;
+        const top = inset;
+        const right = width - inset;
+        const bottom = height - inset;
+
+        let path = "M " + point(left + r) + " " + point(top);
+        path += " L " + point(right - r) + " " + point(top);
+        path += buildCorner(right - r, top + r, r, -Math.PI / 2, 0);
+        path += " L " + point(right) + " " + point(bottom - r);
+        path += buildCorner(right - r, bottom - r, r, 0, Math.PI / 2);
+        path += " L " + point(left + r) + " " + point(bottom);
+        path += buildCorner(left + r, bottom - r, r, Math.PI / 2, Math.PI);
+        path += " L " + point(left) + " " + point(top + r);
+        path += buildCorner(left + r, top + r, r, Math.PI, Math.PI * 1.5);
         path += " Z";
         return path;
     }
@@ -57,16 +82,25 @@ Item {
 
         ShapePath {
             fillColor: root.fillColor
+            strokeColor: "transparent"
+            strokeWidth: 0
+
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
+
+        ShapePath {
+            fillColor: "transparent"
             strokeColor: root.borderColor
             strokeWidth: root.borderWidth
             joinStyle: ShapePath.RoundJoin
 
             PathSvg {
-                path: root.pathData
+                path: root.borderPathData
             }
         }
     }
-
     Item {
         id: content
         anchors.fill: parent
