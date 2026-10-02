@@ -7,7 +7,7 @@
 }:
 
 let
-  themeRegistry = import ./themes.nix { inherit pkgs; };
+  themeRegistry = import ./registry.nix { inherit pkgs; };
   extendModules = config._module.args.extendModules;
   activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
   activeTheme = themeRegistry.variants.${activeThemeName};
@@ -167,7 +167,7 @@ let
 in
 assert lib.assertMsg (
   wallpaperTheme.wallpaperSha256 == wallpaperSha256
-) "modules/theme/wallpaper-base16.yaml is stale; regenerate it from modules/theme/wallpaper.png";
+) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
   stylix = {
     enable = true;
