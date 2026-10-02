@@ -154,20 +154,25 @@ PanelWindow {
             return;
 
         results.currentIndex = index;
-        launchCurrent();
+        launchCurrent(false);
     }
 
-    function launchCurrent(): void {
+    function launchCurrent(keepOpen: bool): void {
         if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
             return;
 
         const entry = resultModel.values[results.currentIndex];
-        hide();
+
+        if (!keepOpen)
+            hide();
 
         if (entry.kind === "command")
             commandTriggered(entry.commandId);
         else if (entry.desktopEntry)
             entry.desktopEntry.execute();
+
+        if (keepOpen)
+            search.forceActiveFocus();
     }
 
     Rectangle {
@@ -303,7 +308,8 @@ PanelWindow {
                             results.currentIndex = Math.max(0, results.currentIndex - 1);
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            palette.launchCurrent();
+                            const keepOpen = (event.modifiers & Qt.ShiftModifier) !== 0;
+                            palette.launchCurrent(keepOpen);
                             event.accepted = true;
                         }
                     }
@@ -450,7 +456,7 @@ PanelWindow {
                         onEntered: results.currentIndex = result.index
                         onClicked: {
                             results.currentIndex = result.index;
-                            palette.launchCurrent();
+                            palette.launchCurrent(false);
                         }
                     }
                 }
@@ -490,7 +496,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   ESC CLOSE"
+                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
