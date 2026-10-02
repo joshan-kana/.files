@@ -40,6 +40,11 @@
       polarity = "light";
     };
 
+    rose-pine = {
+      label = "Rosé Pine";
+      scheme = ./rose-pine.yaml;
+    };
+
     wallpaper = {
       label = "Wallpaper";
       scheme = ./wallpaper-base16.yaml;
