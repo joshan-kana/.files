@@ -45,6 +45,11 @@
       scheme = ./rose-pine.yaml;
     };
 
+    tokyo-night = {
+      label = "Tokyo Night";
+      scheme = ./tokyo-night.yaml;
+    };
+
     wallpaper = {
       label = "Wallpaper";
       scheme = ./wallpaper-base16.yaml;
