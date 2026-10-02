@@ -11,12 +11,12 @@ Item {
     property real borderWidth: 0
     property real cornerRadius: 28
     property real exponent: 4.5
-    property int cornerSamples: 16
+    property int cornerSamples: 32
 
     readonly property string pathData: buildPath()
 
     function point(value: real): string {
-        return Number(value).toFixed(2);
+        return Number(value).toFixed(4);
     }
 
     function buildCorner(cx: real, cy: real, radius: real, start: real, end: real): string {
@@ -52,11 +52,14 @@ Item {
 
     Shape {
         anchors.fill: parent
+        antialiasing: true
+        preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
             fillColor: root.fillColor
             strokeColor: root.borderColor
             strokeWidth: root.borderWidth
+            joinStyle: ShapePath.RoundJoin
 
             PathSvg {
                 path: root.pathData
