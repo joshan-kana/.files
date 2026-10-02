@@ -29,6 +29,11 @@
       scheme = ./catppuccin-mocha.yaml;
     };
 
+    dracula = {
+      label = "Dracula";
+      scheme = "${pkgs.base16-schemes}/share/themes/dracula.yaml";
+    };
+
     gruvbox-material = {
       label = "Gruvbox Material";
       scheme = ./gruvbox-material.yaml;
