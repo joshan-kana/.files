@@ -29,6 +29,11 @@
       scheme = ./catppuccin-mocha.yaml;
     };
 
+    gruvbox-material = {
+      label = "Gruvbox Material";
+      scheme = ./gruvbox-material.yaml;
+    };
+
     kanagawa = {
       label = "Kanagawa";
       scheme = ./kanagawa.yaml;
