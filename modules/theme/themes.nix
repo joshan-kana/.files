@@ -39,6 +39,11 @@
       scheme = ./neon.yaml;
     };
 
+    nord = {
+      label = "Nord";
+      scheme = ./nord.yaml;
+    };
+
     rose = {
       label = "Rose";
       scheme = ./rose.yaml;
