@@ -16,11 +16,22 @@ let
     };
     mcp = {
       port = 4444;
-      policies.apiKey = {
-        mode = "strict";
-        keys = [
-          { key = "$CHATGPT_CLIENT_API_KEY"; }
-          { key = "$CODEX_CLIENT_API_KEY"; }
+      policies = {
+        apiKey = {
+          mode = "strict";
+          keys = [
+            {
+              key = "$CHATGPT_CLIENT_API_KEY";
+              metadata.client = "chatgpt";
+            }
+            {
+              key = "$CODEX_CLIENT_API_KEY";
+              metadata.client = "codex";
+            }
+          ];
+        };
+        mcpAuthorization.rules = [
+          ''apiKey.client != "chatgpt" || mcp.tool.target != "github" || mcp.tool.name != "get_file_contents"''
         ];
       };
       targets = [
