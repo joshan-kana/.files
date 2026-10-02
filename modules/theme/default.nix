@@ -98,7 +98,7 @@ assert lib.assertMsg (
       };
     };
 
-    polarity = "dark";
+    polarity = activeTheme.polarity or "dark";
 
     inherit (activeAssets) cursor;
 
