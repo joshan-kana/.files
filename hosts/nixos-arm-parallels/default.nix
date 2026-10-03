@@ -1,6 +1,5 @@
 {
   config,
-  editScope,
   lib,
   moduleRegistry,
   pkgs,
@@ -12,6 +11,7 @@
     system
     backups
     nix
+    theme
     cli
     networking
     appimage
@@ -24,10 +24,6 @@
   imports = [
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
-
-  theme = editScope moduleRegistry.theme {
-    runtimeSwitching = true;
-  };
 
   dotfiles = {
     defaults.terminal = "alacritty";

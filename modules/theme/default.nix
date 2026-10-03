@@ -2,7 +2,6 @@
   config,
   configurationName,
   lib,
-  options,
   pkgs,
   repoSource,
   scopeConfig,
@@ -47,8 +46,8 @@ let
     runtimeInputs = [
       pkgs.coreutils
       config.nix.package
-      pkgs.util-linux
-    ];
+    ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.util-linux ];
     text = ''
             if [ "$(id -u)" -ne 0 ]; then
               echo "dotfiles-theme-prepare-system must run as root" >&2
@@ -66,7 +65,7 @@ let
 
             rootDir=${lib.escapeShellArg themeRootDir}
             stateDir=${lib.escapeShellArg themeStateDir}
-      source=${lib.escapeShellArg themeSource}
+            source=${lib.escapeShellArg themeSource}
             sourceId=${lib.escapeShellArg themeSourceId}
             configurationName=${lib.escapeShellArg configurationName}
             configurationSet=${
@@ -81,10 +80,12 @@ let
               selected="$1"
               root="$rootDir/$selected"
               marker="$stateDir/$selected.source"
-              lock="/run/lock/dotfiles-theme-$selected.lock"
 
-              exec 9>"$lock"
-              flock 9
+              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                lock="/run/lock/dotfiles-theme-$selected.lock"
+                exec 9>"$lock"
+                flock 9
+              ''}
 
               if [ -L "$root" ] && [ -f "$marker" ] && [ "$(cat "$marker")" = "$sourceId" ]; then
                 return
@@ -277,16 +278,15 @@ in
 {
   scopeOptions.runtimeSwitching = lib.mkOption {
     type = lib.types.bool;
-    default = false;
+    default = true;
     description = "Prepare complete host theme specialisations lazily for runtime switching.";
   };
 
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
+
     inherit (activeTheme) fonts polarity;
-  }
-  // lib.optionalAttrs (lib.hasAttrByPath [ "stylix" "cursor" ] options) {
     inherit (activeAssets) cursor;
   }
   // lib.optionalAttrs (activeTheme ? colors) {
@@ -311,7 +311,7 @@ in
   );
 
   system.activationScripts =
-    if lib.hasAttrByPath [ "system" "darwinRelease" ] options then
+    if pkgs.stdenv.hostPlatform.isDarwin then
       { }
     else
       {
@@ -330,12 +330,7 @@ in
       };
 
   fonts =
-    {
-      lib,
-      options,
-      pkgs,
-      ...
-    }:
+    { lib, pkgs, ... }:
     let
       nerdSymbols =
         if builtins.hasAttr "nerd-fonts" pkgs then
@@ -344,11 +339,9 @@ in
           pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; };
     in
     {
-      # Stylix already installs its configured fonts. Keep the additional
-      # symbol fallback everywhere and Linux fontconfig defaults where available.
+      # Stylix already installs its configured fonts and sets the standard
+      # fontconfig defaults. Keep only the additional symbol fallback here.
       fonts.packages = [ nerdSymbols ];
-    }
-    // lib.optionalAttrs (lib.hasAttrByPath [ "fonts" "fontconfig" ] options) {
       fonts.fontconfig.defaultFonts.monospace = lib.mkAfter [
         "Symbols Nerd Font Mono"
         "Symbols Nerd Font"
@@ -367,12 +360,7 @@ in
     let
       toml = pkgs.formats.toml { };
       yaml = pkgs.formats.yaml { };
-      tuicrEnabled = lib.attrByPath [
-        "cli"
-        "git"
-        "tuicr"
-        "enable"
-      ] false osConfig.dotfiles.resolvedScopes;
+      tuicrEnabled = osConfig.dotfiles.resolvedScopes.cli.git.tuicr.enable;
       syntaxScope = name: selectors: color: ''
         <dict>
           <key>name</key><string>${name}</string>
@@ -439,11 +427,9 @@ in
     {
       # Shared Home Manager theme defaults moved here so all theme policy lives
       # in one module.
-      stylix.targets = {
-        vscode.enable = false;
-        bat.enable = false;
-        qt.platform = lib.mkIf pkgs.stdenv.hostPlatform.isLinux "kde";
-      };
+      stylix.targets.qt.platform = "kde";
+      stylix.targets.vscode.enable = false;
+      stylix.targets.bat.enable = false;
 
       programs.bat = {
         config.theme = "stylix";
@@ -593,22 +579,20 @@ in
         ...
       }:
       {
-        config =
-          lib.mkIf (lib.attrByPath [ "cli" "cava" "enable" ] false osConfig.dotfiles.resolvedScopes)
-            {
-              programs.cava.settings.color = {
-                gradient = 1;
-                gradient_count = 8;
-                gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
-                gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
-                gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
-                gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
-                gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
-                gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
-                gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
-                gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
-              };
-            };
+        config = lib.mkIf osConfig.dotfiles.resolvedScopes.cli.cava.enable {
+          programs.cava.settings.color = {
+            gradient = 1;
+            gradient_count = 8;
+            gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
+            gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
+            gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
+            gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
+            gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
+            gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
+            gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
+            gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
+          };
+        };
       };
   };
 
