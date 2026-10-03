@@ -70,7 +70,7 @@
         stateDir = "${config.xdg.stateHome}/dotfiles/theme";
       in
       {
-        stylix.targets.alacritty.enable = lib.mkIf runtimeThemeSwitching (lib.mkForce false);
+        stylix.targets.alacritty.enable = !runtimeThemeSwitching;
 
         programs.alacritty.settings = lib.mkIf runtimeThemeSwitching {
           general.import = [ "${stateDir}/alacritty.toml" ];
@@ -80,66 +80,50 @@
 
         xdg.configFile."dotfiles/theme-hooks/10-alacritty".source = lib.mkIf runtimeThemeSwitching (
           pkgs.writeShellScript "dotfiles-theme-alacritty" ''
-            pack="$1"
-            theme="$pack/theme.json"
+            theme="$1/theme.json"
             tmp=${lib.escapeShellArg stateDir}/alacritty.toml.tmp.$$
 
-            color() {
-              ${pkgs.jq}/bin/jq -r --arg key "$1" '.colors[$key]' "$theme"
-            }
-
-            fontName="$(${pkgs.jq}/bin/jq -r '.fonts.monospace.name' "$theme")"
-            base00="$(color base00)"
-            base02="$(color base02)"
-            base03="$(color base03)"
-            base05="$(color base05)"
-            base07="$(color base07)"
-            base08="$(color base08)"
-            base0A="$(color base0A)"
-            base0B="$(color base0B)"
-            base0C="$(color base0C)"
-            base0D="$(color base0D)"
-            base0E="$(color base0E)"
-
             install -d -m 0700 ${lib.escapeShellArg stateDir}
-            cat > "$tmp" <<EOF
-            [colors.primary]
-            background = "#$base00"
-            foreground = "#$base05"
-            bright_foreground = "#$base07"
-
-            [colors.cursor]
-            text = "#$base00"
-            cursor = "#$base05"
-
-            [colors.selection]
-            text = "#$base05"
-            background = "#$base02"
-
-            [colors.normal]
-            black = "#$base00"
-            red = "#$base08"
-            green = "#$base0B"
-            yellow = "#$base0A"
-            blue = "#$base0D"
-            magenta = "#$base0E"
-            cyan = "#$base0C"
-            white = "#$base05"
-
-            [colors.bright]
-            black = "#$base03"
-            red = "#$base08"
-            green = "#$base0B"
-            yellow = "#$base0A"
-            blue = "#$base0D"
-            magenta = "#$base0E"
-            cyan = "#$base0C"
-            white = "#$base07"
-
-            [font.normal]
-            family = "$fontName"
-            style = "Regular"
-            EOF
+            ${pkgs.jq}/bin/jq -r '
+              [
+                "[colors.primary]",
+                "background = \"#\(.colors.base00)\"",
+                "foreground = \"#\(.colors.base05)\"",
+                "bright_foreground = \"#\(.colors.base07)\"",
+                "",
+                "[colors.cursor]",
+                "text = \"#\(.colors.base00)\"",
+                "cursor = \"#\(.colors.base05)\"",
+                "",
+                "[colors.selection]",
+                "text = \"#\(.colors.base05)\"",
+                "background = \"#\(.colors.base02)\"",
+                "",
+                "[colors.normal]",
+                "black = \"#\(.colors.base00)\"",
+                "red = \"#\(.colors.base08)\"",
+                "green = \"#\(.colors.base0B)\"",
+                "yellow = \"#\(.colors.base0A)\"",
+                "blue = \"#\(.colors.base0D)\"",
+                "magenta = \"#\(.colors.base0E)\"",
+                "cyan = \"#\(.colors.base0C)\"",
+                "white = \"#\(.colors.base05)\"",
+                "",
+                "[colors.bright]",
+                "black = \"#\(.colors.base03)\"",
+                "red = \"#\(.colors.base08)\"",
+                "green = \"#\(.colors.base0B)\"",
+                "yellow = \"#\(.colors.base0A)\"",
+                "blue = \"#\(.colors.base0D)\"",
+                "magenta = \"#\(.colors.base0E)\"",
+                "cyan = \"#\(.colors.base0C)\"",
+                "white = \"#\(.colors.base07)\"",
+                "",
+                "[font.normal]",
+                "family = \(.fonts.monospace.name | @json)",
+                "style = \"Regular\""
+              ] | join("\n")
+            ' "$theme" > "$tmp"
             chmod 0600 "$tmp"
             mv -f "$tmp" ${lib.escapeShellArg stateDir}/alacritty.toml
           ''
