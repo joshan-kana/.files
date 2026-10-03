@@ -6,8 +6,6 @@ let
     name = "Monaspace Neon Frozen";
   };
 
-  # Theme packs contain only cross-desktop theme data. Application-specific
-  # presentation belongs to the semantic scope that owns that application.
   defaults = {
     assets = {
       wallpaper = ./wallpaper.png;
