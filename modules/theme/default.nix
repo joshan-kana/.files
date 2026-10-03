@@ -8,25 +8,22 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve themeRegistry.default;
   activeAssets = activeTheme.assets;
-  wallpaperTheme = themeRegistry.resolve "wallpaper";
-  wallpaperSha256 = builtins.hashFile "sha256" wallpaperTheme.assets.wallpaper;
-  wallpaperColorsSourceSha256 = "3aa9b8f969babc2f23b3a7d7161f99969450b0ded06e7fef9092bab7722d2423";
 in
-assert lib.assertMsg (wallpaperColorsSourceSha256 == wallpaperSha256)
-  "modules/theme/registry.nix wallpaper colors are stale; regenerate them from modules/theme/wallpaper.png";
 {
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
+
+    inherit (activeTheme) fonts polarity;
+    inherit (activeAssets) cursor;
+  }
+  // lib.optionalAttrs (activeTheme ? colors) {
     base16Scheme = {
       system = "base16";
       name = activeTheme.label;
       variant = activeTheme.polarity;
       palette = activeTheme.colors;
     };
-
-    inherit (activeTheme) fonts polarity;
-    inherit (activeAssets) cursor;
   };
 
   fonts =

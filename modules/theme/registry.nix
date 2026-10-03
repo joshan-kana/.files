@@ -261,24 +261,6 @@ let
 
     wallpaper = {
       label = "Wallpaper";
-      colors = {
-        base00 = "191c1d";
-        base01 = "252828";
-        base02 = "3c3d38";
-        base03 = "938775";
-        base04 = "baaa93";
-        base05 = "b9a58d";
-        base06 = "b8a68e";
-        base07 = "bba492";
-        base08 = "9d8d7e";
-        base09 = "a48e77";
-        base0A = "ab9484";
-        base0B = "a68e7c";
-        base0C = "978d82";
-        base0D = "a78876";
-        base0E = "9c8b77";
-        base0F = "ac907a";
-      };
     };
 
   };
