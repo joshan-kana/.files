@@ -1,34 +1,28 @@
 {
-  config,
+  lib,
   pkgs,
   ...
 }:
 
+let
+  themeRegistry = import ./registry.nix { inherit lib pkgs; };
+  activeTheme = themeRegistry.resolve themeRegistry.default;
+  activeAssets = activeTheme.assets;
+in
 {
   stylix = {
     enable = true;
-    image = ./wallpaper.png;
-    base16Scheme = ./carbon.yaml;
+    image = activeAssets.wallpaper;
 
-    fonts = {
-      serif = config.stylix.fonts.monospace;
-      sansSerif = config.stylix.fonts.monospace;
-      monospace = {
-        package = pkgs.monaspace;
-        name = "Monaspace Neon Frozen";
-      };
-      emoji = {
-        package = pkgs.noto-fonts-color-emoji;
-        name = "Noto Color Emoji";
-      };
-    };
-
-    polarity = "dark";
-
-    cursor = {
-      package = pkgs.google-cursor;
-      name = "GoogleDot-Black";
-      size = 30;
+    inherit (activeTheme) fonts polarity;
+    inherit (activeAssets) cursor;
+  }
+  // lib.optionalAttrs (activeTheme ? colors) {
+    base16Scheme = {
+      system = "base16";
+      name = activeTheme.label;
+      variant = activeTheme.polarity;
+      palette = activeTheme.colors;
     };
   };
 
@@ -269,10 +263,7 @@
       gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
 
-        iconTheme = {
-          package = pkgs.gruvbox-dark-icons-gtk;
-          name = "oomox-gruvbox-dark";
-        };
+        iconTheme = activeAssets.icons;
       };
     };
 
