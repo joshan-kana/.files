@@ -282,6 +282,7 @@
           inherit system;
           specialArgs = {
             inherit configurationName inputs;
+            repoSource = self.outPath;
             inherit (semantic)
               editScope
               extendScope
