@@ -8,6 +8,12 @@
 let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
+  runtimeThemeSwitching = config.dotfiles.theme.runtimeSwitching;
+  wallpaperCommand =
+    if runtimeThemeSwitching then
+      "awww-daemon && theme-set restore"
+    else
+      "awww-daemon && awww img ~/.config/home-manager/wallpaper.png";
   aliases = {
     h = "start-hyprland";
     HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
@@ -180,6 +186,18 @@ in
   home = _: {
     # disable hyprpaper target to prevent crash loops
     stylix.targets.hyprland.hyprpaper.enable = false;
+
+    xdg.configFile."dotfiles/theme-hooks/20-hyprland".source = lib.mkIf runtimeThemeSwitching (
+      pkgs.writeShellScript "dotfiles-theme-hyprland" ''
+        pack="$1"
+
+        if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+          exit 0
+        fi
+
+        ${pkgs.awww}/bin/awww img "$pack/wallpaper" >/dev/null
+      ''
+    );
 
     home.shellAliases = aliases;
 
@@ -366,7 +384,7 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
+                  hl.exec_cmd("${wallpaperCommand}")
                   hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
                   hl.exec_cmd("dunst")
