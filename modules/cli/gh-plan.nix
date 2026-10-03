@@ -65,7 +65,7 @@ pkgs.writeShellApplication {
 
     picker_bindings() {
       # shellcheck disable=SC2016 # Expanded by fzf's transform subprocess.
-      printf '%s' 'start:disable-search,j:down,k:up,q:abort,/:enable-search+unbind(j,k,q,f,i,d,v,o,c,?,/),esc:transform:[[ "$FZF_INPUT_STATE" == enabled ]] && echo "disable-search+rebind(j,k,q,f,i,d,v,o,c,?,/)" || echo abort'
+      printf '%s' 'start:disable-search,j:down,k:up,q:abort,/:enable-search+unbind(j,k,q,f,i,d,v,o,c,?,/),esc:transform:[[ "$FZF_INPUT_STATE" == enabled ]] && echo "disable-search+rebind(j,k,q,f,i,d,v,o,c,?,/)+clear-query" || echo abort'
     }
 
     pick() {
@@ -201,8 +201,32 @@ pkgs.writeShellApplication {
         '
     }
 
+    project_field_value() {
+      local url=$1 field=$2
+      gh project item-list "$project" --owner "$owner" --limit 500 --format json |
+        jq -er --arg url "$url" --arg field "$field" '
+          first(.items[] | select(.content.url == $url)) as $item
+          | if $item == null then error("Project item not found")
+            else ($item[($field | ascii_downcase)] // "")
+            end
+        '
+    }
+
+    verify_project_field() {
+      local url=$1 field=$2 expected=$3 current attempt
+      for (( attempt = 0; attempt < 5; attempt++ )); do
+        current=$(project_field_value "$url" "$field")
+        if [[ $current == "$expected" ]]; then
+          return 0
+        fi
+        sleep 0.25
+      done
+      printf 'Project field verification failed: %s expected %q, got %q.\n' "$field" "$expected" "$current" >&2
+      return 1
+    }
+
     edit_field() {
-      local url=$1 field value
+      local url=$1 field value expected
       field=$(printf '%s\n' "$fields_csv" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | pick 'Field › ') || return 0
       [[ -n $field ]] || return 0
 
@@ -211,12 +235,13 @@ pkgs.writeShellApplication {
 
       if [[ $value == '<clear>' ]]; then
         gh project item-edit "$project" --owner "$owner" --url "$url" --field "$field" --clear >/dev/null
+        expected=""
       else
         gh project item-edit "$project" --owner "$owner" --url "$url" --field "$field" --value "$value" >/dev/null
+        expected=$value
       fi
 
-      gh project item-list "$project" --owner "$owner" --limit 500 --format json \
-        | jq -e --arg url "$url" 'any(.items[]; .content.url == $url)' >/dev/null
+      verify_project_field "$url" "$field" "$expected"
     }
 
     relationship_json() {
@@ -317,22 +342,68 @@ pkgs.writeShellApplication {
       done
     }
 
+    relation_contains() {
+      local issue_url=$1 relation=$2 target=$3 json status
+      json=$(relationship_json "$issue_url") || return 2
+      if jq -e --arg relation "$relation" --arg target "$target" '
+        if $relation == "parent" then
+          (.parent.url // "") == $target
+        else
+          any(.[$relation].nodes[]?; .url == $target)
+        end
+      ' <<<"$json" >/dev/null; then
+        return 0
+      else
+        status=$?
+        (( status == 1 )) && return 1
+        return 2
+      fi
+    }
+
+    verify_relation_state() {
+      local issue_url=$1 relation=$2 target=$3 expected=$4 attempt present status
+      for (( attempt = 0; attempt < 5; attempt++ )); do
+        if relation_contains "$issue_url" "$relation" "$target"; then
+          present=true
+        else
+          status=$?
+          if (( status == 2 )); then
+            printf 'Relationship verification read failed for %s -> %s.\n' "$relation" "$target" >&2
+            return 1
+          fi
+          present=false
+        fi
+        if [[ $present == "$expected" ]]; then
+          return 0
+        fi
+        sleep 0.25
+      done
+      printf 'Relationship verification failed: %s -> %s expected present=%s.\n' "$relation" "$target" "$expected" >&2
+      return 1
+    }
+
     remove_relation() {
       local issue_url=$1 relation=$2 flag=$3 row target
       if [[ $relation == parent ]]; then
+        row=$(relation_existing_rows "$issue_url" "$relation")
+        [[ -n $row ]] || return 0
+        target=''${row%%$'\t'*}
         gh issue edit "$issue_url" "$flag" >/dev/null
+        verify_relation_state "$issue_url" "$relation" "$target" false
         return
       fi
       row=$(relation_existing_rows "$issue_url" "$relation" | fzf --layout=reverse --border --height='~60%' --delimiter=$'\t' --with-nth=2.. --prompt='Remove › ' --bind="$(picker_bindings)") || return 0
       [[ -n $row ]] || return 0
       target=''${row%%$'\t'*}
       gh issue edit "$issue_url" "$flag" "$target" >/dev/null
+      verify_relation_state "$issue_url" "$relation" "$target" false
     }
 
     add_relation() {
       local issue_url=$1 relation=$2 flag=$3 target
       target=$(target_picker "$issue_url" "$relation") || return 0
       gh issue edit "$issue_url" "$flag" "$target" >/dev/null
+      verify_relation_state "$issue_url" "$relation" "$target" true
     }
 
     relationships() {
@@ -360,7 +431,6 @@ pkgs.writeShellApplication {
           remove_relation "$url" "$relation" "$flag"
         fi
 
-        relationship_json "$url" >/dev/null
         return 0
       done
     }
