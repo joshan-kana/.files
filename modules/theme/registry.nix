@@ -40,7 +40,6 @@ let
   variants = {
     carbon = {
       label = "Carbon";
-      author = "Framer (darkened bg + saturated by Josh)";
       colors = {
         base00 = "111111";
         base01 = "1a1a1a";
@@ -63,7 +62,6 @@ let
 
     catppuccin-mocha = {
       label = "Catppuccin Mocha";
-      author = "https://github.com/catppuccin/catppuccin";
       colors = {
         base00 = "1e1e2e";
         base01 = "181825";
@@ -86,7 +84,6 @@ let
 
     dracula = {
       label = "Dracula";
-      author = "Jamy Golden (http://github.com/JamyGolden), based on Dracula Theme (http://github.com/dracula)";
       colors = {
         base00 = "282a36";
         base01 = "363447";
@@ -109,7 +106,6 @@ let
 
     gruvbox-material = {
       label = "Gruvbox Material";
-      author = "Mayush Kumar (https://github.com/MayushKumar), sainnhe (https://github.com/sainnhe/gruvbox-material-vscode)";
       colors = {
         base00 = "292828";
         base01 = "32302f";
@@ -132,7 +128,6 @@ let
 
     kanagawa = {
       label = "Kanagawa";
-      author = "Tommaso Laurenzi (https://github.com/rebelot)";
       colors = {
         base00 = "1f1f28";
         base01 = "16161d";
@@ -155,7 +150,6 @@ let
 
     neon = {
       label = "Neon";
-      author = "Hybrid: Hammerspoon bg + vscode-framer-2 fg (by Steven Phan & TSUYUSATO Kitsune)";
       colors = {
         base00 = "111111";
         base01 = "1a1a1a";
@@ -178,7 +172,6 @@ let
 
     nord = {
       label = "Nord";
-      author = "arcticicestudio";
       colors = {
         base00 = "2e3440";
         base01 = "3b4252";
@@ -201,7 +194,6 @@ let
 
     rose = {
       label = "Rose";
-      author = "Sakura palette by Misterio77 (http://github.com/Misterio77)";
       polarity = "light";
       colors = {
         base00 = "feedf3";
@@ -225,7 +217,6 @@ let
 
     rose-pine = {
       label = "Rosé Pine";
-      author = "Emilia Dunfelt <edun@dunfelt.se>";
       colors = {
         base00 = "191724";
         base01 = "1f1d2e";
@@ -248,7 +239,6 @@ let
 
     tokyo-night = {
       label = "Tokyo Night";
-      author = "Michaël Ball";
       colors = {
         base00 = "1a1b26";
         base01 = "16161e";
@@ -271,7 +261,6 @@ let
 
     wallpaper = {
       label = "Wallpaper";
-      author = "Stylix palette generator, contrast-adjusted";
       colors = {
         base00 = "191c1d";
         base01 = "252828";

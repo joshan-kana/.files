@@ -21,7 +21,6 @@ assert lib.assertMsg (wallpaperColorsSourceSha256 == wallpaperSha256)
     base16Scheme = {
       system = "base16";
       name = activeTheme.label;
-      inherit (activeTheme) author;
       variant = activeTheme.polarity;
       palette = activeTheme.colors;
     };
