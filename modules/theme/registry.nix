@@ -49,6 +49,26 @@ let
       palette = ./palettes/carbon.yaml;
     };
 
+    catppuccin-mocha = {
+      label = "Catppuccin Mocha";
+      palette = ./palettes/catppuccin-mocha.yaml;
+    };
+
+    dracula = {
+      label = "Dracula";
+      palette = ./palettes/dracula.yaml;
+    };
+
+    gruvbox-material = {
+      label = "Gruvbox Material";
+      palette = ./palettes/gruvbox-material.yaml;
+    };
+
+    kanagawa = {
+      label = "Kanagawa";
+      palette = ./palettes/kanagawa.yaml;
+    };
+
     neon = {
       label = "Neon";
       palette = ./palettes/neon.yaml;
@@ -58,6 +78,33 @@ let
         scrimOpacity = 0.44;
         squircleExponent = 5.0;
       };
+    };
+
+    nord = {
+      label = "Nord";
+      palette = ./palettes/nord.yaml;
+    };
+
+    rose = {
+      label = "Rose";
+      palette = ./palettes/rose.yaml;
+      polarity = "light";
+    };
+
+    rose-pine = {
+      label = "Rosé Pine";
+      palette = ./palettes/rose-pine.yaml;
+    };
+
+    tokyo-night = {
+      label = "Tokyo Night";
+      palette = ./palettes/tokyo-night.yaml;
+    };
+
+    wallpaper = {
+      label = "Wallpaper";
+      palette = ./palettes/wallpaper.yaml;
+      wallpaperSha256 = "3aa9b8f969babc2f23b3a7d7161f99969450b0ded06e7fef9092bab7722d2423";
     };
   };
 in

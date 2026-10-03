@@ -8,7 +8,12 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve themeRegistry.default;
   activeAssets = activeTheme.assets;
+  wallpaperTheme = themeRegistry.resolve "wallpaper";
+  wallpaperSha256 = builtins.hashFile "sha256" wallpaperTheme.assets.wallpaper;
 in
+assert lib.assertMsg (
+  wallpaperTheme.wallpaperSha256 == wallpaperSha256
+) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
   stylix = {
     enable = true;
