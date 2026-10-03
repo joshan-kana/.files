@@ -4,7 +4,6 @@
   lib,
   pkgs,
   repoSource,
-  scopeConfig,
   themeVariant ? null,
   ...
 }:
@@ -15,7 +14,7 @@ let
   activeTheme = themeRegistry.resolve activeThemeName;
   activeAssets = activeTheme.assets;
   primaryUser = config.dotfiles.users.primary.name;
-  inherit (scopeConfig) runtimeSwitching;
+  runtimeSwitching = config.dotfiles.theme.runtimeSwitching;
   isSpecialisation = config.isSpecialisation or false;
   prepareRuntimeVariants = runtimeSwitching && themeVariant == null && !isSpecialisation;
   themeNames = builtins.attrNames themeRegistry.variants;
@@ -276,12 +275,6 @@ let
 
 in
 {
-  scopeOptions.runtimeSwitching = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = "Prepare complete host theme specialisations lazily for runtime switching.";
-  };
-
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
