@@ -278,7 +278,7 @@ in
 {
   scopeOptions.runtimeSwitching = lib.mkOption {
     type = lib.types.bool;
-    default = true;
+    default = false;
     description = "Prepare complete host theme specialisations lazily for runtime switching.";
   };
 
