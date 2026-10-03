@@ -206,12 +206,25 @@ in
     ''
   );
 
-  system.activationScripts.dotfilesThemeVariants = lib.mkIf buildRuntimeVariants {
-    text = ''
-      install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
-      ${registerVariantProfiles}
-    '';
-  };
+  system.activationScripts =
+    if lib.hasAttrByPath [ "system" "darwinRelease" ] options then
+      {
+        extraActivation.text = lib.mkIf buildRuntimeVariants (
+          lib.mkAfter ''
+            install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
+            ${registerVariantProfiles}
+          ''
+        );
+      }
+    else
+      {
+        dotfilesThemeVariants = lib.mkIf buildRuntimeVariants {
+          text = ''
+            install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
+            ${registerVariantProfiles}
+          '';
+        };
+      };
 
   fonts =
     {
