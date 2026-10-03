@@ -68,10 +68,10 @@ let
           ;;
       esac
 
-      profile="/nix/var/nix/profiles/dotfiles-themes/$selected"
-      system="$(readlink -f "$profile")"
+      root="/nix/var/nix/gcroots/dotfiles-themes/$selected"
+      system="$(readlink -f "$root")"
       if [ ! -d "$system" ]; then
-        echo "Theme profile is not registered: $selected" >&2
+        echo "Theme variant is not registered: $selected" >&2
         exit 3
       fi
 
@@ -110,7 +110,7 @@ let
         esac
       }
 
-      current_theme() {
+      desired_theme() {
         if [ -s "$stateFile" ]; then
           selected="$(cat "$stateFile")"
           if valid_theme "$selected"; then
@@ -118,6 +118,18 @@ let
             return
           fi
         fi
+        printf '%s\n' "$defaultTheme"
+      }
+
+      current_theme() {
+        currentSystem="$(readlink -f /run/current-system 2>/dev/null || true)"
+        for selected in ${lib.escapeShellArgs (builtins.attrNames themeRegistry.variants)}; do
+          root="/nix/var/nix/gcroots/dotfiles-themes/$selected"
+          if [ -L "$root" ] && [ "$currentSystem" = "$(readlink -f "$root")" ]; then
+            printf '%s\n' "$selected"
+            return
+          fi
+        done
         printf '%s\n' "$defaultTheme"
       }
 
@@ -152,8 +164,8 @@ let
           ;;
         current) current_theme ;;
         restore)
-          selected="$(current_theme)"
-          if [ "$selected" != "$defaultTheme" ]; then apply_theme "$selected" >/dev/null; fi
+          selected="$(desired_theme)"
+          if [ "$selected" != "$(current_theme)" ]; then apply_theme "$selected" >/dev/null; fi
           ;;
         "")
           echo 'Usage: theme-set [list [--json]|current|restore|<theme>]' >&2
@@ -164,11 +176,16 @@ let
     '';
   };
 
-  registerVariantProfiles = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (name: system: ''
-      ${pkgs.nix}/bin/nix-env --profile /nix/var/nix/profiles/dotfiles-themes/${name} --set ${system}
-    '') variantSystems
-  );
+  themeRootDir = "/nix/var/nix/gcroots/dotfiles-themes";
+  registerVariantRoots = ''
+    install -d -m 0755 ${themeRootDir}
+    find ${themeRootDir} -mindepth 1 -maxdepth 1 -type l -delete
+    ${lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (name: system: ''
+        ln -s ${system} ${themeRootDir}/${name}
+      '') variantSystems
+    )}
+  '';
 in
 {
   scopeOptions.runtimeSwitching = lib.mkOption {
@@ -211,8 +228,7 @@ in
       {
         extraActivation.text = lib.mkIf buildRuntimeVariants (
           lib.mkAfter ''
-            install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
-            ${registerVariantProfiles}
+            ${registerVariantRoots}
           ''
         );
       }
@@ -220,8 +236,7 @@ in
       {
         dotfilesThemeVariants = lib.mkIf buildRuntimeVariants {
           text = ''
-            install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
-            ${registerVariantProfiles}
+            ${registerVariantRoots}
           '';
         };
       };
