@@ -1,20 +1,189 @@
 {
+  config,
   lib,
+  options,
   pkgs,
+  scopeConfig,
+  themeVariant ? null,
   ...
 }:
 
 let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
-  activeTheme = themeRegistry.resolve themeRegistry.default;
+  activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
+  activeTheme = themeRegistry.resolve activeThemeName;
   activeAssets = activeTheme.assets;
+  primaryUser = config.dotfiles.users.primary.name;
+  inherit (scopeConfig) runtimeSwitching;
+  buildRuntimeVariants = runtimeSwitching && themeVariant == null;
+  extendModules = config._module.args.extendModules;
+
+  variantConfigurations =
+    if buildRuntimeVariants then
+      lib.mapAttrs (
+        name: _:
+        (extendModules {
+          specialArgs.themeVariant = name;
+        }).config
+      ) themeRegistry.variants
+    else
+      { };
+
+  variantSystems = lib.mapAttrs (
+    _: variantConfig: variantConfig.system.build.toplevel
+  ) variantConfigurations;
+  validThemePattern = lib.concatStringsSep "|" (builtins.attrNames themeRegistry.variants);
+
+  themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
+    builtins.toJSON {
+      inherit (themeRegistry) default;
+      themes = lib.mapAttrsToList (
+        name: _:
+        let
+          theme = themeRegistry.resolve name;
+        in
+        {
+          inherit name;
+          inherit (theme) label polarity;
+        }
+      ) themeRegistry.variants;
+    }
+  );
+
+  themeActivateSystem = pkgs.writeShellApplication {
+    name = "dotfiles-theme-activate-system";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      if [ "$(id -u)" -ne 0 ]; then
+        echo "dotfiles-theme-activate-system must run as root" >&2
+        exit 1
+      fi
+
+      selected="''${1:-}"
+      case "$selected" in
+        ${validThemePattern}) ;;
+        *)
+          echo "Unknown theme: $selected" >&2
+          exit 2
+          ;;
+      esac
+
+      profile="/nix/var/nix/profiles/dotfiles-themes/$selected"
+      system="$(readlink -f "$profile")"
+      if [ ! -d "$system" ]; then
+        echo "Theme profile is not registered: $selected" >&2
+        exit 3
+      fi
+
+      ${
+        if pkgs.stdenv.hostPlatform.isDarwin then
+          ''
+            exec "$system/activate"
+          ''
+        else
+          ''
+            exec "$system/bin/switch-to-configuration" test
+          ''
+      }
+    '';
+  };
+
+  themeActivatorExe = lib.getExe themeActivateSystem;
+  themeSudoCommands = lib.concatMapStringsSep ", " (name: "${themeActivatorExe} ${name}") (
+    builtins.attrNames themeRegistry.variants
+  );
+
+  themeSet = pkgs.writeShellApplication {
+    name = "theme-set";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      defaultTheme=${lib.escapeShellArg themeRegistry.default}
+      expectedUser=${lib.escapeShellArg primaryUser}
+      manifest=${lib.escapeShellArg (toString themeManifest)}
+      stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+      stateFile="$stateDir/theme"
+
+      valid_theme() {
+        case "$1" in
+          ${validThemePattern}) return 0 ;;
+          *) return 1 ;;
+        esac
+      }
+
+      current_theme() {
+        if [ -s "$stateFile" ]; then
+          selected="$(cat "$stateFile")"
+          if valid_theme "$selected"; then
+            printf '%s\n' "$selected"
+            return
+          fi
+        fi
+        printf '%s\n' "$defaultTheme"
+      }
+
+      apply_theme() {
+        selected="$1"
+        if [ "''${USER:-}" != "$expectedUser" ]; then
+          printf 'theme-set is configured for user %s, not %s\n' "$expectedUser" "''${USER:-unknown}" >&2
+          exit 1
+        fi
+        if ! valid_theme "$selected"; then
+          printf 'Unknown theme: %s\n' "$selected" >&2
+          exit 2
+        fi
+
+        sudo -n ${themeActivatorExe} "$selected"
+
+        umask 077
+        install -d -m 0700 "$stateDir"
+        tmp="$(mktemp "$stateDir/theme.XXXXXX")"
+        printf '%s\n' "$selected" > "$tmp"
+        mv "$tmp" "$stateFile"
+        printf '%s\n' "$selected"
+      }
+
+      case "''${1:-}" in
+        list)
+          if [ "''${2:-}" = "--json" ]; then cat "$manifest"; else
+            ${lib.concatMapStringsSep "\n" (name: "printf '%s\n' ${lib.escapeShellArg name}") (
+              builtins.attrNames themeRegistry.variants
+            )}
+          fi
+          ;;
+        current) current_theme ;;
+        restore)
+          selected="$(current_theme)"
+          if [ "$selected" != "$defaultTheme" ]; then apply_theme "$selected" >/dev/null; fi
+          ;;
+        "")
+          echo 'Usage: theme-set [list [--json]|current|restore|<theme>]' >&2
+          exit 2
+          ;;
+        *) apply_theme "$1" ;;
+      esac
+    '';
+  };
+
+  registerVariantProfiles = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (name: system: ''
+      ${pkgs.nix}/bin/nix-env --profile /nix/var/nix/profiles/dotfiles-themes/${name} --set ${system}
+    '') variantSystems
+  );
 in
 {
+  scopeOptions.runtimeSwitching = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Prebuild and expose complete host theme variants for immediate runtime switching.";
+  };
+
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
 
     inherit (activeTheme) fonts polarity;
+  }
+  // lib.optionalAttrs (lib.hasAttrByPath [ "stylix" "cursor" ] options) {
     inherit (activeAssets) cursor;
   }
   // lib.optionalAttrs (activeTheme ? colors) {
@@ -26,8 +195,31 @@ in
     };
   };
 
+  environment.systemPackages = lib.optionals runtimeSwitching [
+    themeSet
+    themeActivateSystem
+  ];
+
+  security.sudo.extraConfig = lib.mkIf runtimeSwitching (
+    lib.mkAfter ''
+      ${primaryUser} ALL=(root) NOPASSWD: ${themeSudoCommands}
+    ''
+  );
+
+  system.activationScripts.dotfilesThemeVariants = lib.mkIf buildRuntimeVariants {
+    text = ''
+      install -d -m 0755 /nix/var/nix/profiles/dotfiles-themes
+      ${registerVariantProfiles}
+    '';
+  };
+
   fonts =
-    { lib, pkgs, ... }:
+    {
+      lib,
+      options,
+      pkgs,
+      ...
+    }:
     let
       nerdSymbols =
         if builtins.hasAttr "nerd-fonts" pkgs then
@@ -36,9 +228,11 @@ in
           pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; };
     in
     {
-      # Stylix already installs its configured fonts and sets the standard
-      # fontconfig defaults. Keep only the additional symbol fallback here.
+      # Stylix already installs its configured fonts. Keep the additional
+      # symbol fallback everywhere and Linux fontconfig defaults where available.
       fonts.packages = [ nerdSymbols ];
+    }
+    // lib.optionalAttrs (lib.hasAttrByPath [ "fonts" "fontconfig" ] options) {
       fonts.fontconfig.defaultFonts.monospace = lib.mkAfter [
         "Symbols Nerd Font Mono"
         "Symbols Nerd Font"
@@ -57,7 +251,12 @@ in
     let
       toml = pkgs.formats.toml { };
       yaml = pkgs.formats.yaml { };
-      tuicrEnabled = osConfig.dotfiles.resolvedScopes.cli.git.tuicr.enable;
+      tuicrEnabled = lib.attrByPath [
+        "cli"
+        "git"
+        "tuicr"
+        "enable"
+      ] false osConfig.dotfiles.resolvedScopes;
       syntaxScope = name: selectors: color: ''
         <dict>
           <key>name</key><string>${name}</string>
@@ -124,9 +323,11 @@ in
     {
       # Shared Home Manager theme defaults moved here so all theme policy lives
       # in one module.
-      stylix.targets.qt.platform = "kde";
-      stylix.targets.vscode.enable = false;
-      stylix.targets.bat.enable = false;
+      stylix.targets = {
+        vscode.enable = false;
+        bat.enable = false;
+        qt.platform = lib.mkIf pkgs.stdenv.hostPlatform.isLinux "kde";
+      };
 
       programs.bat = {
         config.theme = "stylix";
@@ -276,20 +477,22 @@ in
         ...
       }:
       {
-        config = lib.mkIf osConfig.dotfiles.resolvedScopes.cli.cava.enable {
-          programs.cava.settings.color = {
-            gradient = 1;
-            gradient_count = 8;
-            gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
-            gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
-            gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
-            gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
-            gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
-            gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
-            gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
-            gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
-          };
-        };
+        config =
+          lib.mkIf (lib.attrByPath [ "cli" "cava" "enable" ] false osConfig.dotfiles.resolvedScopes)
+            {
+              programs.cava.settings.color = {
+                gradient = 1;
+                gradient_count = 8;
+                gradient_color_1 = "'#${config.lib.stylix.colors.base01}'";
+                gradient_color_2 = "'#${config.lib.stylix.colors.base02}'";
+                gradient_color_3 = "'#${config.lib.stylix.colors.base03}'";
+                gradient_color_4 = "'#${config.lib.stylix.colors.base04}'";
+                gradient_color_5 = "'#${config.lib.stylix.colors.base05}'";
+                gradient_color_6 = "'#${config.lib.stylix.colors.base06}'";
+                gradient_color_7 = "'#${config.lib.stylix.colors.base07}'";
+                gradient_color_8 = "'#${config.lib.stylix.colors.base08}'";
+              };
+            };
       };
   };
 
