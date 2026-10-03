@@ -446,7 +446,6 @@
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
-          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
@@ -454,6 +453,7 @@
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }
       );
