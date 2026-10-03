@@ -154,6 +154,13 @@ in
       description = "Default editor executable used by command-line tools.";
     };
 
+    theme.runtimeSwitching = mkOption {
+      type = types.bool;
+      default = false;
+      internal = true;
+      description = "Effective runtime theme-switching state from the theme semantic scope.";
+    };
+
     services.ollama.url = mkOption {
       type = types.str;
       default = "http://localhost:11434/v1";

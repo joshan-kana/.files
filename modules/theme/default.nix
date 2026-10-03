@@ -1,6 +1,8 @@
 {
+  config,
   lib,
   pkgs,
+  scopeConfig,
   ...
 }:
 
@@ -8,8 +10,29 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve themeRegistry.default;
   activeAssets = activeTheme.assets;
+  inherit (scopeConfig) runtimeSwitching;
+  runtime = import ./runtime.nix {
+    inherit
+      config
+      lib
+      pkgs
+      themeRegistry
+      ;
+  };
 in
 {
+  scopeOptions.runtimeSwitching = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Expose immutable runtime theme packs and theme-set.";
+  };
+
+  config.dotfiles.theme.runtimeSwitching = runtimeSwitching;
+
+  environment.systemPackages = lib.optionals runtimeSwitching (
+    [ runtime.themeSet ] ++ runtime.assetPackages
+  );
+
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
@@ -36,9 +59,9 @@ in
           pkgs.nerdfonts.override { fonts = [ "NerdFontsSymbolsOnly" ]; };
     in
     {
-      # Stylix already installs its configured fonts and sets the standard
-      # fontconfig defaults. Keep only the additional symbol fallback here.
-      fonts.packages = [ nerdSymbols ];
+      # Keep every runtime theme font available to fontconfig, plus the
+      # additional symbol fallback.
+      fonts.packages = [ nerdSymbols ] ++ lib.optionals runtimeSwitching runtime.fontPackages;
       fonts.fontconfig.defaultFonts.monospace = lib.mkAfter [
         "Symbols Nerd Font Mono"
         "Symbols Nerd Font"
@@ -127,6 +150,12 @@ in
       stylix.targets.qt.platform = "kde";
       stylix.targets.vscode.enable = false;
       stylix.targets.bat.enable = false;
+
+      home.activation.dotfilesRuntimeTheme = lib.mkIf runtimeSwitching (
+        lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          run ${lib.getExe runtime.themeSet} restore
+        ''
+      );
 
       programs.bat = {
         config.theme = "stylix";
