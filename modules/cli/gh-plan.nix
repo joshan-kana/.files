@@ -65,7 +65,7 @@ pkgs.writeShellApplication {
 
     picker_bindings() {
       # shellcheck disable=SC2016 # Expanded by fzf's transform subprocess.
-      printf '%s' 'start:disable-search,j:down,k:up,q:abort,/:enable-search+unbind(j,k,q,/),esc:transform:[[ "$FZF_INPUT_STATE" == enabled ]] && echo "disable-search+rebind(j,k,q,/)+clear-query" || echo abort'
+      printf '%s' 'start:disable-search,j:down,k:up,q:abort,/:enable-search+unbind(j,k,q,f,i,d,v,o,c,?,/),esc:transform:[[ "$FZF_INPUT_STATE" == enabled ]] && echo "disable-search+rebind(j,k,q,f,i,d,v,o,c,?,/)" || echo abort'
     }
 
     pick() {
@@ -407,7 +407,7 @@ pkgs.writeShellApplication {
       export GH_PLAN_SELF="$self"
       rows | fzf --ansi --layout=reverse --border --delimiter=$'\t' --with-nth=2.. --header-lines=1 \
         --prompt='GitHub › ' --preview="$self _preview {1}" --preview-window='right,60%,wrap' \
-        --bind="$(picker_bindings),ctrl-r:reload($self _rows),f:execute($self _edit-field {1})+reload($self _rows),i:execute($self _relationships {1})+reload($self _rows),d:execute($self _diff {1}),v:execute($self _view {1}),o:execute-silent($self _open {1}),c:execute($self _checkout {1}),?:execute($self _help)" >/dev/null || true
+        --bind="ctrl-r:reload($self _rows),f:execute($self _edit-field {1})+reload($self _rows),i:execute($self _relationships {1})+reload($self _rows),d:execute($self _diff {1}),v:execute($self _view {1}),o:execute-silent($self _open {1}),c:execute($self _checkout {1}),?:execute($self _help),$(picker_bindings)" >/dev/null || true
     }
 
     while [[ $# -gt 0 ]]; do
