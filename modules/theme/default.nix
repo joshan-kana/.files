@@ -1,8 +1,10 @@
 {
   config,
+  configurationName,
   lib,
   options,
   pkgs,
+  repoSource,
   scopeConfig,
   themeVariant ? null,
   ...
@@ -15,24 +17,14 @@ let
   activeAssets = activeTheme.assets;
   primaryUser = config.dotfiles.users.primary.name;
   inherit (scopeConfig) runtimeSwitching;
-  buildRuntimeVariants = runtimeSwitching && themeVariant == null;
-  extendModules = config._module.args.extendModules;
-
-  variantConfigurations =
-    if buildRuntimeVariants then
-      lib.mapAttrs (
-        name: _:
-        (extendModules {
-          specialArgs.themeVariant = name;
-        }).config
-      ) themeRegistry.variants
-    else
-      { };
-
-  variantSystems = lib.mapAttrs (
-    _: variantConfig: variantConfig.system.build.toplevel
-  ) variantConfigurations;
-  validThemePattern = lib.concatStringsSep "|" (builtins.attrNames themeRegistry.variants);
+  isSpecialisation = config.isSpecialisation or false;
+  prepareRuntimeVariants = runtimeSwitching && themeVariant == null && !isSpecialisation;
+  themeNames = builtins.attrNames themeRegistry.variants;
+  validThemePattern = lib.concatStringsSep "|" themeNames;
+  themeRootDir = "/nix/var/nix/gcroots/dotfiles-themes";
+  themeStateDir = "/var/lib/dotfiles-theme-variants";
+  themeSource = toString repoSource;
+  themeSourceId = builtins.baseNameOf themeSource;
 
   themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
     builtins.toJSON {
@@ -49,6 +41,104 @@ let
       ) themeRegistry.variants;
     }
   );
+
+  themePrepareSystem = pkgs.writeShellApplication {
+    name = "dotfiles-theme-prepare-system";
+    runtimeInputs = [
+      pkgs.coreutils
+      config.nix.package
+      pkgs.util-linux
+    ];
+    text = ''
+            if [ "$(id -u)" -ne 0 ]; then
+              echo "dotfiles-theme-prepare-system must run as root" >&2
+              exit 1
+            fi
+
+            selected="''${1:-all}"
+            case "$selected" in
+              all|${validThemePattern}) ;;
+              *)
+                echo "Unknown theme: $selected" >&2
+                exit 2
+                ;;
+            esac
+
+            rootDir=${lib.escapeShellArg themeRootDir}
+            stateDir=${lib.escapeShellArg themeStateDir}
+      source=${lib.escapeShellArg themeSource}
+            sourceId=${lib.escapeShellArg themeSourceId}
+            configurationName=${lib.escapeShellArg configurationName}
+            configurationSet=${
+              lib.escapeShellArg (
+                if pkgs.stdenv.hostPlatform.isDarwin then "darwinConfigurations" else "nixosConfigurations"
+              )
+            }
+
+            install -d -m 0755 "$rootDir" "$stateDir"
+
+            prepare_theme() {
+              selected="$1"
+              root="$rootDir/$selected"
+              marker="$stateDir/$selected.source"
+              lock="/run/lock/dotfiles-theme-$selected.lock"
+
+              exec 9>"$lock"
+              flock 9
+
+              if [ -L "$root" ] && [ -f "$marker" ] && [ "$(cat "$marker")" = "$sourceId" ]; then
+                return
+              fi
+
+              if [ "$configurationSet" = nixosConfigurations ]; then
+                expression="$(
+                  cat <<EOF
+      let
+        f = builtins.getFlake "path:$source";
+        base = builtins.getAttr "$configurationName" f.nixosConfigurations;
+        themed = base.extendModules {
+          specialArgs.themeVariant = "$selected";
+          modules = [
+            {
+              specialisation."$selected".configuration = { };
+            }
+          ];
+        };
+      in
+        themed.config.specialisation."$selected".configuration.system.build.toplevel
+      EOF
+                )"
+              else
+                expression="$(
+                  cat <<EOF
+      let
+        f = builtins.getFlake "path:$source";
+        base = builtins.getAttr "$configurationName" f.darwinConfigurations;
+        themed = base.extendModules {
+          specialArgs.themeVariant = "$selected";
+        };
+      in
+        themed.config.system.build.toplevel
+      EOF
+                )"
+              fi
+
+              nix build --impure --out-link "$root" --expr "$expression"
+
+              tmpMarker="$marker.tmp.$$"
+              printf '%s\n' "$sourceId" > "$tmpMarker"
+              mv -f "$tmpMarker" "$marker"
+            }
+
+            if [ "$selected" = all ]; then
+              for selected in ${lib.escapeShellArgs themeNames}; do
+                prepare_theme "$selected"
+              done
+            else
+              prepare_theme "$selected"
+            fi
+    '';
+  };
 
   themeActivateSystem = pkgs.writeShellApplication {
     name = "dotfiles-theme-activate-system";
@@ -68,7 +158,14 @@ let
           ;;
       esac
 
-      root="/nix/var/nix/gcroots/dotfiles-themes/$selected"
+      root=${lib.escapeShellArg themeRootDir}/$selected
+      marker=${lib.escapeShellArg themeStateDir}/$selected.source
+      sourceId=${lib.escapeShellArg themeSourceId}
+
+      if [ ! -L "$root" ] || [ ! -f "$marker" ] || [ "$(cat "$marker")" != "$sourceId" ]; then
+        ${lib.getExe themePrepareSystem} "$selected"
+      fi
+
       system="$(readlink -f "$root")"
       if [ ! -d "$system" ]; then
         echo "Theme variant is not registered: $selected" >&2
@@ -176,28 +273,17 @@ let
     '';
   };
 
-  themeRootDir = "/nix/var/nix/gcroots/dotfiles-themes";
-  registerVariantRoots = ''
-    install -d -m 0755 ${themeRootDir}
-    find ${themeRootDir} -mindepth 1 -maxdepth 1 -type l -delete
-    ${lib.concatStringsSep "\n" (
-      lib.mapAttrsToList (name: system: ''
-        ln -s ${system} ${themeRootDir}/${name}
-      '') variantSystems
-    )}
-  '';
 in
 {
   scopeOptions.runtimeSwitching = lib.mkOption {
     type = lib.types.bool;
     default = false;
-    description = "Prebuild and expose complete host theme variants for immediate runtime switching.";
+    description = "Prepare complete host theme specialisations lazily for runtime switching.";
   };
 
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
-
     inherit (activeTheme) fonts polarity;
   }
   // lib.optionalAttrs (lib.hasAttrByPath [ "stylix" "cursor" ] options) {
@@ -215,6 +301,7 @@ in
   environment.systemPackages = lib.optionals runtimeSwitching [
     themeSet
     themeActivateSystem
+    themePrepareSystem
   ];
 
   security.sudo.extraConfig = lib.mkIf runtimeSwitching (
@@ -225,18 +312,19 @@ in
 
   system.activationScripts =
     if lib.hasAttrByPath [ "system" "darwinRelease" ] options then
-      {
-        extraActivation.text = lib.mkIf buildRuntimeVariants (
-          lib.mkAfter ''
-            ${registerVariantRoots}
-          ''
-        );
-      }
+      { }
     else
       {
-        dotfilesThemeVariants = lib.mkIf buildRuntimeVariants {
+        dotfilesThemeVariants = lib.mkIf prepareRuntimeVariants {
           text = ''
-            ${registerVariantRoots}
+            ${pkgs.systemd}/bin/systemd-run \
+              --quiet \
+              --collect \
+              --unit=dotfiles-theme-variants-${themeSourceId} \
+              --property=Nice=10 \
+              --property=IOSchedulingClass=idle \
+              --property=MemoryHigh=25% \
+              ${lib.getExe themePrepareSystem} all || true
           '';
         };
       };
