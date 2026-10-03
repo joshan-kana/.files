@@ -27,7 +27,6 @@
 
   dotfiles = {
     defaults.terminal = "alacritty";
-    theme.runtimeSwitching = true;
   };
 
   hardware = import ./hardware.nix;
