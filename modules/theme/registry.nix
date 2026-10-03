@@ -1,11 +1,6 @@
 { lib, pkgs }:
 
 let
-  monaspace = {
-    package = pkgs.monaspace;
-    name = "Monaspace Neon Frozen";
-  };
-
   defaults = {
     assets = {
       wallpaper = ./wallpaper.png;
@@ -22,15 +17,22 @@ let
       };
     };
 
-    fonts = {
-      serif = monaspace;
-      sansSerif = monaspace;
-      monospace = monaspace;
-      emoji = {
-        package = pkgs.noto-fonts-color-emoji;
-        name = "Noto Color Emoji";
+    fonts =
+      let
+        font = {
+          package = pkgs.monaspace;
+          name = "Monaspace Neon Frozen";
+        };
+      in
+      {
+        serif = font;
+        sansSerif = font;
+        monospace = font;
+        emoji = {
+          package = pkgs.noto-fonts-color-emoji;
+          name = "Noto Color Emoji";
+        };
       };
-    };
 
     polarity = "dark";
   };
