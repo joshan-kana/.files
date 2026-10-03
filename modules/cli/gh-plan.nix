@@ -248,8 +248,11 @@ pkgs.writeShellApplication {
 
     search_global() {
       local query=''${1:-}
+      local -a query_args
       [[ -n $query ]] || return 0
-      gh search issues "$query" --limit 100 --json number,repository,state,title,url 2>/dev/null |
+      read -r -a query_args <<<"$query"
+      (( ''${#query_args[@]} > 0 )) || return 0
+      gh search issues "''${query_args[@]}" --limit 100 --json number,repository,state,title,url 2>/dev/null |
         jq -r '.[] | [.url, .repository.nameWithOwner, ("#"+(.number|tostring)), .state, .title] | @tsv' || true
     }
 
