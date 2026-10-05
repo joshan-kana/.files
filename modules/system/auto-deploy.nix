@@ -31,6 +31,10 @@
     ];
   };
 
+  environment.shellAliases = {
+    cw = "comin watch";
+  };
+
   webhook =
     _:
 
