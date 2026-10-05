@@ -115,6 +115,7 @@
 
       semantic = import ./lib/semantic-scopes.nix { inherit lib; };
       semanticScopeOptions = import ./modules/options/semantic-scopes.nix { inherit lib; };
+      moduleRegistry = import ./modules;
 
       systems = [
         "x86_64-linux"
@@ -265,6 +266,8 @@
           nixpkgsInput ? nixpkgs,
           homeManagerInput ? home-manager,
           stylixInput ? stylix,
+          moduleRegistryInput ? moduleRegistry,
+          configurationOutputName ? configurationName,
           extraModules ? [ ],
         }:
         let
@@ -281,12 +284,12 @@
         nixpkgsInput.lib.nixosSystem {
           inherit system;
           specialArgs = {
-            inherit configurationName inputs;
+            inherit configurationName configurationOutputName inputs;
             inherit (semantic)
               editScope
               extendScope
               ;
-            moduleRegistry = import ./modules;
+            moduleRegistry = moduleRegistryInput;
           };
           modules = [
             ./modules/options
@@ -305,13 +308,75 @@
           ++ extraModules;
         };
 
+      nixosHostSpecs = {
+        nixos = {
+          system = "x86_64-linux";
+          hostModule = ./hosts/nixos;
+        };
+
+        nixos-arm-parallels = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-arm-parallels;
+        };
+
+        nixos-orbstack = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-orbstack;
+        };
+
+        nixos-server = {
+          nixpkgsInput = nixpkgs-stable;
+          homeManagerInput = home-manager-stable;
+          stylixInput = stylix-stable;
+          system = "x86_64-linux";
+          hostModule = ./hosts/nixos-server;
+        };
+      };
+
+      canonicalNixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
+
+      themeScope = moduleRegistry.theme {
+        inherit lib;
+        pkgs = null;
+        scopeConfig = { };
+      };
+      themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
+
+      themedNixosConfigurations = builtins.listToAttrs (
+        lib.concatLists (
+          lib.mapAttrsToList (
+            configurationName: hostSpec:
+            map (
+              themeName:
+              let
+                outputName = "${configurationName}-${themeName}";
+              in
+              {
+                name = outputName;
+                value = nixosHost configurationName (
+                  hostSpec
+                  // {
+                    moduleRegistryInput = moduleRegistry // {
+                      theme = semantic.editScope moduleRegistry.theme {
+                        name = themeName;
+                      };
+                    };
+                    configurationOutputName = outputName;
+                  }
+                );
+              }
+            ) themeNames
+          ) nixosHostSpecs
+        )
+      );
+
       docsFor =
         system:
         import ./docs {
           inherit lib semanticScopeOptions;
           pkgs = pkgsFor system;
           source = self;
-          configurations = self.nixosConfigurations;
+          configurations = canonicalNixosConfigurations;
         };
 
       docsCommandsFor =
@@ -435,7 +500,7 @@
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
             inherit inputs;
-            configurations = self.nixosConfigurations;
+            configurations = canonicalNixosConfigurations;
           };
           serverAppStandardsTest = import ./tests/server-app-standards.nix {
             inherit inputs;
@@ -445,7 +510,7 @@
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
-          ) self.nixosConfigurations) pkgs.emptyFile;
+          ) canonicalNixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
@@ -592,29 +657,6 @@
           };
         }
       );
-      nixosConfigurations = lib.mapAttrs nixosHost {
-        nixos = {
-          system = "x86_64-linux";
-          hostModule = ./hosts/nixos;
-        };
-
-        nixos-arm-parallels = {
-          system = "aarch64-linux";
-          hostModule = ./hosts/nixos-arm-parallels;
-        };
-
-        nixos-orbstack = {
-          system = "aarch64-linux";
-          hostModule = ./hosts/nixos-orbstack;
-        };
-
-        nixos-server = {
-          nixpkgsInput = nixpkgs-stable;
-          homeManagerInput = home-manager-stable;
-          stylixInput = stylix-stable;
-          system = "x86_64-linux";
-          hostModule = ./hosts/nixos-server;
-        };
-      };
+      nixosConfigurations = canonicalNixosConfigurations // themedNixosConfigurations;
     };
 }
