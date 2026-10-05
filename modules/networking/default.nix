@@ -24,6 +24,16 @@ _: {
     };
 
   /**
+    Tailscale client daemon for ordinary hosts.
+  */
+  tailscaleClient = _: {
+    services.tailscale = {
+      enable = true;
+      openFirewall = true;
+    };
+  };
+
+  /**
     Key-only OpenSSH server access with the firewall opening owned by the service.
   */
   ssh = _: {

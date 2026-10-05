@@ -24,7 +24,10 @@
     paths.repoPath = "/Users/joshan/.files";
     services.ollama.url = "http://host.orb.internal:11434/v1";
     scopes = {
-      networking.mdns.enable = false;
+      networking = {
+        mdns.enable = false;
+        tailscaleClient.enable = false;
+      };
       virtualisation = {
         children.enable = false;
         vm.enable = true;

@@ -24,6 +24,7 @@
   ];
 
   dotfiles = {
+    scopes.networking.tailscaleClient.enable = false;
     scopes.virtualisation = {
       children.enable = false;
       containers.enable = true;
