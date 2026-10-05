@@ -290,6 +290,7 @@
           };
           modules = [
             ./modules/options
+            ./modules/theme/specialisations.nix
             stylixInput.nixosModules.stylix
             homeManagerInput.nixosModules.home-manager
             ./overlays/bottles.nix
