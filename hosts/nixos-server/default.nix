@@ -331,6 +331,8 @@
         {
           networking.firewall.trustedInterfaces = [ config.services.tailscale.interfaceName ];
 
+          systemd.services.tailscaled.path = [ pkgs.iputils ];
+
           services.tailscale = {
             enable = true;
             openFirewall = true;
