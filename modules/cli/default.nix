@@ -1,5 +1,6 @@
 {
   config,
+  configurationOutputName,
   pkgs,
   ...
 }:
@@ -98,7 +99,7 @@ let
     DOTFILES = repoPath;
     EDITOR = editor;
     VISUAL = editor;
-    FLK_PROFILE = dotfiles.profile.name;
+    FLK_PROFILE = configurationOutputName;
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
