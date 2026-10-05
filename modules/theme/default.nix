@@ -1,15 +1,22 @@
 {
   lib,
   pkgs,
+  scopeConfig,
   ...
 }:
 
 let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
-  activeTheme = themeRegistry.resolve themeRegistry.default;
+  activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
 in
 {
+  scopeOptions.name = lib.mkOption {
+    type = lib.types.enum (builtins.attrNames themeRegistry.variants);
+    inherit (themeRegistry) default;
+    description = "Selected visual theme.";
+  };
+
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;

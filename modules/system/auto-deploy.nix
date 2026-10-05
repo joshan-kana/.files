@@ -1,5 +1,6 @@
 {
   config,
+  configurationOutputName,
   lib,
   pkgs,
   ...
@@ -11,7 +12,7 @@
 
   services.comin = {
     enable = true;
-    hostname = config.dotfiles.profile.name;
+    hostname = configurationOutputName;
     allowForcePush = true;
 
     remotes = [
