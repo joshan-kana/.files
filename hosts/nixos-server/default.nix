@@ -414,6 +414,7 @@
                 description = "Expose the YouTrack calendar sync webhook through Tailscale Funnel";
                 after = [
                   "tailscaled-autoconnect.service"
+                  "tailscale-funnel-webhooks.service"
                   "docker-n8n.service"
                 ];
                 wants = [ "docker-n8n.service" ];
