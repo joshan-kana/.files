@@ -688,6 +688,7 @@ let
     let
       serverRecovery = lib.optionalString (name == "nixos-server") ''
         - [Backup / application recovery](backup-recovery.md)
+        - [Jellyfin](jellyfin.md)
         - [Vault / ZFS recovery](vault-zfs-recovery.md)
       '';
     in
@@ -720,7 +721,7 @@ let
       let
         serverRecovery =
           lib.optionalString (name == "nixos-server")
-            "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
+            "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Jellyfin](runbooks/nixos-server/jellyfin.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
       in
       "- [`${name}`](runbooks/${name}/index.md)\n  - [Installation guide](runbooks/${name}/install.md)${serverRecovery}"
     ) hostNames}
