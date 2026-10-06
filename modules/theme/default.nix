@@ -1,8 +1,7 @@
 {
-  config,
   lib,
   pkgs,
-  themeVariant ? null,
+  scopeConfig,
   ...
 }:
 
@@ -77,30 +76,27 @@ let
       </plist>
     '';
 in
-assert lib.assertMsg (
-  wallpaperTheme.wallpaperSha256 == wallpaperSha256
-) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
+  scopeOptions.name = lib.mkOption {
+    type = lib.types.enum (builtins.attrNames themeRegistry.variants);
+    inherit (themeRegistry) default;
+    description = "Selected visual theme.";
+  };
+
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
 
-    inherit (activeTheme) fonts;
-
-    inherit (activeTheme) polarity;
-
+    inherit (activeTheme) fonts polarity;
     inherit (activeAssets) cursor;
-
-    base16Scheme = activeTheme.palette;
-  };
-
-  environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
-
-  systemd.services."home-manager-${primaryUser}".serviceConfig.ExecStartPost =
-    lib.mkIf buildRuntimeVariants "${lib.getExe themeSet} restore";
-
-  config = lib.optionalAttrs isLinux {
-    stylix.cursor = activeAssets.cursor;
+  }
+  // lib.optionalAttrs (activeTheme ? colors) {
+    base16Scheme = {
+      system = "base16";
+      name = activeTheme.label;
+      variant = activeTheme.polarity;
+      palette = activeTheme.colors;
+    };
   };
 
   fonts =
