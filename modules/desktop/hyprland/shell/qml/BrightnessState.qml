@@ -43,11 +43,7 @@ QtObject {
     Component.onCompleted: refresh()
 
     function parseInfo(output: string): bool {
-        const lines = output
-            .trim()
-            .split("\n")
-            .map(line => line.trim())
-            .filter(line => line.length > 0);
+        const lines = output.trim().split("\n").map(line => line.trim()).filter(line => line.length > 0);
 
         if (lines.length === 0)
             return false;
@@ -75,13 +71,7 @@ QtObject {
         if (runtime.brightnessctl.length === 0 || queryProcess.running)
             return;
 
-        queryProcess.exec([
-            runtime.brightnessctl,
-            "-c",
-            "backlight",
-            "-m",
-            "info"
-        ]);
+        queryProcess.exec([runtime.brightnessctl, "-c", "backlight", "-m", "info"]);
     }
 
     function adjust(delta: int): void {
@@ -101,17 +91,8 @@ QtObject {
         const delta = Math.max(-100, Math.min(100, pendingDelta));
         pendingDelta -= delta;
 
-        const value = delta > 0
-            ? "+" + delta + "%"
-            : Math.abs(delta) + "%-";
+        const value = delta > 0 ? "+" + delta + "%" : Math.abs(delta) + "%-";
 
-        adjustProcess.exec([
-            runtime.brightnessctl,
-            "-c",
-            "backlight",
-            "-m",
-            "set",
-            value
-        ]);
+        adjustProcess.exec([runtime.brightnessctl, "-c", "backlight", "-m", "set", value]);
     }
 }
