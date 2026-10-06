@@ -8,7 +8,7 @@ Item {
     required property QtObject theme
     required property QtObject motion
 
-    signal keyboardRequested()
+    signal keyboardRequested
 
     property bool open: false
     property int selectedIndex: 0
@@ -170,9 +170,7 @@ Item {
         }
 
         Text {
-            text: armedAction.length > 0
-                ? "CONFIRMATION ARMED // 5 SECOND WINDOW"
-                : "SELECT AN ACTION"
+            text: armedAction.length > 0 ? "CONFIRMATION ARMED // 5 SECOND WINDOW" : "SELECT AN ACTION"
             color: armedAction.length > 0 ? theme.warning : theme.textMuted
             font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(9)
@@ -209,12 +207,8 @@ Item {
             exponent: theme.squircleExponent
             cornerRadius: theme.radiusMedium
             fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
-            borderColor: modelData.id === panel.armedAction
-                ? theme.warning
-                : (index === panel.selectedIndex ? theme.accent : theme.outline)
-            borderWidth: modelData.id === panel.armedAction || index === panel.selectedIndex
-                ? theme.borderFocus
-                : theme.borderThin
+            borderColor: modelData.id === panel.armedAction ? theme.warning : (index === panel.selectedIndex ? theme.accent : theme.outline)
+            borderWidth: modelData.id === panel.armedAction || index === panel.selectedIndex ? theme.borderFocus : theme.borderThin
 
             MouseArea {
                 anchors.fill: parent
@@ -264,9 +258,7 @@ Item {
                     width: 112
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignRight
-                    text: modelData.id === panel.armedAction
-                        ? "CONFIRM"
-                        : (modelData.destructive ? "ARM" : "RUN")
+                    text: modelData.id === panel.armedAction ? "CONFIRM" : (modelData.destructive ? "ARM" : "RUN")
                     color: modelData.id === panel.armedAction ? theme.warning : theme.accent
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(9)
