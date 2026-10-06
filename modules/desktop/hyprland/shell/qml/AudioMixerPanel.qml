@@ -143,12 +143,11 @@ PanelWindow {
                 spacing: theme.spacing1
 
                 Text {
-                    text: "PIPEWIRE // " + panel.streams.length + " PLAYBACK STREAM" + (panel.streams.length === 1 ? "" : "S")
+                    text: "Audio · " + panel.streams.length + (panel.streams.length === 1 ? " active source" : " active sources")
                     color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.8
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(12)
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -160,7 +159,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: "Live PipeWire streams · no polling"
+                    text: "Per-application volume and mute"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(9)
@@ -285,7 +284,7 @@ PanelWindow {
             Text {
                 anchors.centerIn: list
                 visible: panel.streams.length === 0
-                text: "NO ACTIVE PLAYBACK STREAMS"
+                text: "Nothing is playing"
                 color: theme.textMuted
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(11)
