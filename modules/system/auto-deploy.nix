@@ -1,5 +1,6 @@
 {
   config,
+  configurationFlakeSubdirectory,
   configurationOutputName,
   lib,
   pkgs,
@@ -13,6 +14,7 @@
   services.comin = {
     enable = true;
     hostname = configurationOutputName;
+    repositorySubdir = lib.mkIf (configurationFlakeSubdirectory != null) configurationFlakeSubdirectory;
     allowForcePush = true;
 
     remotes = [
