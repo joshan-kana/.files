@@ -238,9 +238,7 @@ WlSessionLock {
                             cornerRadius: lock.theme.radiusMedium
                             fillColor: lock.theme.background
                             borderColor: passwordInput.activeFocus ? lock.theme.accent : lock.theme.outline
-                            borderWidth: passwordInput.activeFocus
-                                ? lock.theme.borderFocus
-                                : lock.theme.borderThin
+                            borderWidth: passwordInput.activeFocus ? lock.theme.borderFocus : lock.theme.borderThin
 
                             TextInput {
                                 id: passwordInput
@@ -296,9 +294,7 @@ WlSessionLock {
                         Text {
                             width: parent.width
                             height: 18
-                            text: lock.statusText.length > 0
-                                ? lock.statusText
-                                : (lock.authenticating ? "AUTHENTICATING" : "ENTER PASSWORD")
+                            text: lock.statusText.length > 0 ? lock.statusText : (lock.authenticating ? "AUTHENTICATING" : "ENTER PASSWORD")
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             color: lock.statusError ? lock.theme.critical : lock.theme.textMuted
@@ -309,7 +305,6 @@ WlSessionLock {
                             elide: Text.ElideRight
                         }
                     }
-
                 }
             }
         }
