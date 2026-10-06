@@ -149,12 +149,11 @@ PanelWindow {
                 spacing: theme.spacing1
 
                 Text {
-                    text: "NOTIFICATIONS // " + notificationState.count
+                    text: "Notifications · " + notificationState.count
                     color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.8
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(12)
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -290,7 +289,7 @@ PanelWindow {
             Text {
                 anchors.centerIn: list
                 visible: notificationState.count === 0
-                text: "NO NOTIFICATIONS // QUIET FOR ONCE"
+                text: "You’re all caught up"
                 color: theme.textMuted
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(11)
