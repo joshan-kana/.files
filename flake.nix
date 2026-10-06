@@ -159,6 +159,7 @@
             csharpier.enable = true;
             nixfmt.enable = true;
             prettier.enable = true;
+            qmlformat.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
@@ -209,6 +210,43 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+
+              qmlformat.priority = 1;
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options = [
+                  "-I"
+                  "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                ]
+                ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  "-I"
+                  "${pkgs.quickshell}/lib/qt-6/qml"
+                ]
+                ++ [
+                  "--unqualified"
+                  "disable"
+                  "--missing-property"
+                  "disable"
+                  "--missing-type"
+                  "disable"
+                  "--required"
+                  "disable"
+                  "--unresolved-type"
+                  "disable"
+                  "--unused-imports"
+                  "disable"
+                  "--uncreatable-type"
+                  "disable"
+                  "--signal-handler-parameters"
+                  "disable"
+                  "--import"
+                  "disable"
+                  "--max-warnings"
+                  "0"
+                ];
+                priority = 2;
+              };
 
               ruff-check.options = [
                 "--isolated"
@@ -265,7 +303,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|lock|md|nix|py|qml|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
