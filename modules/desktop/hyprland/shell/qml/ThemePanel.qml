@@ -8,7 +8,7 @@ Item {
     required property QtObject theme
     required property QtObject motion
 
-    signal keyboardRequested()
+    signal keyboardRequested
 
     property bool open: false
     property var themes: []
@@ -216,9 +216,7 @@ Item {
         }
 
         Text {
-            text: currentTheme.length > 0
-                ? "ACTIVE // " + panel.themeLabel(currentTheme).toUpperCase()
-                : "RESOLVING ACTIVE THEME"
+            text: currentTheme.length > 0 ? "ACTIVE // " + panel.themeLabel(currentTheme).toUpperCase() : "RESOLVING ACTIVE THEME"
             color: theme.textMuted
             font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(9)
@@ -255,12 +253,8 @@ Item {
             exponent: theme.squircleExponent
             cornerRadius: theme.radiusMedium
             fillColor: modelData.preview ? modelData.preview.background : theme.background
-            borderColor: modelData.name === panel.currentTheme
-                ? theme.positive
-                : (index === panel.selectedIndex ? theme.accent : theme.outline)
-            borderWidth: index === panel.selectedIndex || modelData.name === panel.currentTheme
-                ? theme.borderFocus
-                : theme.borderThin
+            borderColor: modelData.name === panel.currentTheme ? theme.positive : (index === panel.selectedIndex ? theme.accent : theme.outline)
+            borderWidth: index === panel.selectedIndex || modelData.name === panel.currentTheme ? theme.borderFocus : theme.borderThin
 
             MouseArea {
                 anchors.fill: parent
@@ -300,9 +294,7 @@ Item {
 
                         Text {
                             id: stateBadge
-                            text: modelData.name === panel.currentTheme
-                                ? "ACTIVE"
-                                : (modelData.name === panel.defaultTheme ? "DEFAULT" : "")
+                            text: modelData.name === panel.currentTheme ? "ACTIVE" : (modelData.name === panel.defaultTheme ? "DEFAULT" : "")
                             color: modelData.name === panel.currentTheme ? theme.positive : theme.textMuted
                             font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(8)
@@ -311,8 +303,7 @@ Item {
                     }
 
                     Text {
-                        text: modelData.name.toUpperCase()
-                            + (index === panel.selectedIndex ? " // SELECTED" : "")
+                        text: modelData.name.toUpperCase() + (index === panel.selectedIndex ? " // SELECTED" : "")
                         color: modelData.preview ? modelData.preview.text : theme.textMuted
                         opacity: 0.72
                         font.family: runtime.fontMono

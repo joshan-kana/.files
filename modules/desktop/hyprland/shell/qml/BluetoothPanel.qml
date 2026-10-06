@@ -10,7 +10,7 @@ Item {
     required property QtObject theme
     required property QtObject motion
 
-    signal keyboardRequested()
+    signal keyboardRequested
 
     property bool open: false
     property int selectedIndex: 0
@@ -77,9 +77,7 @@ Item {
         clearTransientState();
         selectedIndex = selectedDeviceIndex();
 
-        startedDiscovery = adapterAvailable
-            && adapter.enabled
-            && !adapter.discovering;
+        startedDiscovery = adapterAvailable && adapter.enabled && !adapter.discovering;
 
         if (startedDiscovery)
             system.setBluetoothDiscovering(true);
@@ -88,9 +86,7 @@ Item {
     }
 
     function closeView(): void {
-        if (startedDiscovery
-            && adapterAvailable
-            && adapter.discovering) {
+        if (startedDiscovery && adapterAvailable && adapter.discovering) {
             system.setBluetoothDiscovering(false);
         }
 
@@ -179,15 +175,7 @@ Item {
         }
 
         statusText = "PAIRING AGENT // " + displayName(device);
-        Quickshell.execDetached([
-            runtime.terminal,
-            "-e",
-            runtime.bluetoothctl,
-            "--agent",
-            "KeyboardDisplay",
-            "pair",
-            device.address
-        ]);
+        Quickshell.execDetached([runtime.terminal, "-e", runtime.bluetoothctl, "--agent", "KeyboardDisplay", "pair", device.address]);
     }
 
     function toggleTrust(): void {
@@ -221,10 +209,7 @@ Item {
     }
 
     onDevicesChanged: {
-        selectedIndex = Math.max(
-            0,
-            Math.min(selectedIndex, Math.max(0, devices.length - 1))
-        );
+        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, devices.length - 1)));
     }
 
     Column {
@@ -234,10 +219,7 @@ Item {
         spacing: theme.spacing1
 
         Text {
-            text: "BLUETOOTH // "
-                + (adapterAvailable
-                    ? BluetoothAdapterState.toString(adapter.state).toUpperCase()
-                    : "NO ADAPTER")
+            text: "BLUETOOTH // " + (adapterAvailable ? BluetoothAdapterState.toString(adapter.state).toUpperCase() : "NO ADAPTER")
             color: adapterAvailable && adapter.enabled ? theme.positive : theme.warning
             font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelEyebrow
@@ -246,9 +228,7 @@ Item {
         }
 
         Text {
-            text: adapterAvailable
-                ? (adapter.name || adapter.adapterId || "Bluetooth")
-                : "Bluetooth"
+            text: adapterAvailable ? (adapter.name || adapter.adapterId || "Bluetooth") : "Bluetooth"
             color: theme.textStrong
             font.family: runtime.fontSans
             font.pixelSize: theme.fontSubpanelTitle
@@ -317,9 +297,7 @@ Item {
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
                 fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
-                borderColor: modelData.connected
-                    ? theme.positive
-                    : (index === panel.selectedIndex ? theme.accent : theme.outline)
+                borderColor: modelData.connected ? theme.positive : (index === panel.selectedIndex ? theme.accent : theme.outline)
                 borderWidth: index === panel.selectedIndex ? theme.borderFocus : theme.borderThin
 
                 MouseArea {
@@ -381,9 +359,7 @@ Item {
                             }
 
                             Text {
-                                text: modelData.pairing
-                                    ? "PAIRING"
-                                    : (modelData.paired ? "PAIRED" : "UNPAIRED")
+                                text: modelData.pairing ? "PAIRING" : (modelData.paired ? "PAIRED" : "UNPAIRED")
                                 color: modelData.paired || modelData.pairing ? theme.accent : theme.warning
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(8)
@@ -409,11 +385,7 @@ Item {
                         Text {
                             width: parent.width
                             horizontalAlignment: Text.AlignRight
-                            text: modelData.pairing
-                                ? "P  CANCEL"
-                                : (!modelData.paired
-                                    ? "P  PAIR"
-                                    : (modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
+                            text: modelData.pairing ? "P  CANCEL" : (!modelData.paired ? "P  PAIR" : (modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
                             color: modelData.pairing || !modelData.paired ? theme.warning : theme.accent
                             font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(8)
@@ -464,9 +436,7 @@ Item {
             anchors.centerIn: parent
             visible: adapterAvailable && system.bluetoothEnabled && devices.length === 0
             width: parent.width
-            text: system.bluetoothDiscovering
-                ? "SCANNING // NO DEVICES YET"
-                : "NO DEVICES // PRESS D TO SCAN"
+            text: system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS D TO SCAN"
             horizontalAlignment: Text.AlignHCenter
             color: theme.textMuted
             font.family: runtime.fontMono
