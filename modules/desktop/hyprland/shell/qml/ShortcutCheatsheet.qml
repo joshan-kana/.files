@@ -126,11 +126,11 @@ PanelWindow {
                 spacing: theme.spacing1
 
                 Text {
-                    text: "HYPRLAND SHORTCUTS"
+                    text: "Keyboard"
                     color: theme.accent
-                    font.family: runtime.fontMono
+                    font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(13)
-                    font.letterSpacing: 2
+                    font.weight: Font.Medium
                 }
 
                 Text {
