@@ -1,191 +1,37 @@
 {
-  config,
   lib,
   pkgs,
-  themeVariant ? null,
+  scopeConfig,
   ...
 }:
 
 let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
-  extendModules = config._module.args.extendModules;
-  activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
-  activeTheme = themeRegistry.resolve activeThemeName;
+  activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
-  wallpaperTheme = themeRegistry.resolve "wallpaper";
-  wallpaperThemeAssets = wallpaperTheme.assets;
-  wallpaperSha256 = builtins.hashFile "sha256" wallpaperThemeAssets.wallpaper;
-  primaryUser = config.dotfiles.users.primary.name;
-  hyprlandEnabled = lib.attrByPath [
-    "desktop"
-    "hyprland"
-    "enable"
-  ] false config.dotfiles.resolvedScopes;
-  buildRuntimeVariants = hyprlandEnabled && themeVariant == null;
-
-  variantConfigurations =
-    if buildRuntimeVariants then
-      lib.mapAttrs (
-        name: _:
-        (extendModules {
-          specialArgs.themeVariant = name;
-        }).config
-      ) themeRegistry.variants
-    else
-      { };
-
-  variantActivations = lib.mapAttrs (
-    _: variantConfig: variantConfig.home-manager.users.${primaryUser}.home.activationPackage
-  ) variantConfigurations;
-
-  themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
-    builtins.toJSON {
-      inherit (themeRegistry) default;
-      themes = lib.mapAttrsToList (
-        name: value:
-        let
-          colors = variantConfigurations.${name}.lib.stylix.colors.withHashtag;
-        in
-        {
-          inherit name;
-          inherit (value) label;
-          preview = {
-            background = colors.base00;
-            surface = colors.base01;
-            outline = colors.base03;
-            text = colors.base05;
-            swatches = [
-              colors.base08
-              colors.base0A
-              colors.base0B
-              colors.base0D
-              colors.base0E
-            ];
-          };
-        }
-      ) themeRegistry.variants;
-    }
-  );
-
-  themeCases = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (name: activation: ''
-      ${name})
-        activation=${lib.escapeShellArg (toString activation)}
-        ;;
-    '') variantActivations
-  );
-
-  themeSet = pkgs.writeShellApplication {
-    name = "theme-set";
-    runtimeInputs = [ pkgs.coreutils ];
-    text = ''
-      defaultTheme=${lib.escapeShellArg themeRegistry.default}
-      expectedUser=${lib.escapeShellArg primaryUser}
-      manifest=${lib.escapeShellArg (toString themeManifest)}
-      stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
-      stateFile="$stateDir/theme"
-
-      resolve_theme() {
-        case "$1" in
-      ${themeCases}
-          *)
-            return 1
-            ;;
-        esac
-      }
-
-      current_theme() {
-        if [ -s "$stateFile" ]; then
-          selected="$(cat "$stateFile")"
-          if resolve_theme "$selected"; then
-            printf '%s\n' "$selected"
-            return
-          fi
-        fi
-
-        printf '%s\n' "$defaultTheme"
-      }
-
-      apply_theme() {
-        selected="$1"
-
-        if [ "''${USER:-}" != "$expectedUser" ]; then
-          printf 'theme-set is configured for user %s, not %s\n' "$expectedUser" "''${USER:-unknown}" >&2
-          exit 1
-        fi
-
-        if ! resolve_theme "$selected"; then
-          printf 'Unknown theme: %s\n' "$selected" >&2
-          exit 2
-        fi
-
-        # Variant activations do not replace the persistent Home Manager profile.
-        # Prefer the selected variant when Stylix resolves runtime theme assets.
-        XDG_DATA_DIRS="$activation/home-path/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}" \
-          "$activation/activate" --driver-version 1
-
-        umask 077
-        install -d -m 0700 "$stateDir"
-        tmp="$(mktemp "$stateDir/theme.XXXXXX")"
-        printf '%s\n' "$selected" > "$tmp"
-        mv "$tmp" "$stateFile"
-
-        printf '%s\n' "$selected"
-      }
-
-      case "''${1:-}" in
-        list)
-          if [ "''${2:-}" = "--json" ]; then
-            cat "$manifest"
-          else
-            while IFS= read -r name; do
-              printf '%s\n' "$name"
-            done <<'EOF'
-      ${lib.concatStringsSep "\n" (builtins.attrNames themeRegistry.variants)}
-      EOF
-          fi
-          ;;
-        current)
-          current_theme
-          ;;
-        restore)
-          selected="$(current_theme)"
-          if [ "$selected" != "$defaultTheme" ]; then
-            apply_theme "$selected" >/dev/null
-          fi
-          ;;
-        "")
-          printf 'Usage: theme-set [list [--json]|current|restore|<theme>]\n' >&2
-          exit 2
-          ;;
-        *)
-          apply_theme "$1"
-          ;;
-      esac
-    '';
-  };
 in
-assert lib.assertMsg (
-  wallpaperTheme.wallpaperSha256 == wallpaperSha256
-) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
+  scopeOptions.name = lib.mkOption {
+    type = lib.types.enum (builtins.attrNames themeRegistry.variants);
+    inherit (themeRegistry) default;
+    description = "Selected visual theme.";
+  };
+
   stylix = {
     enable = true;
     image = activeAssets.wallpaper;
 
-    inherit (activeTheme) fonts;
-
-    inherit (activeTheme) polarity;
-
+    inherit (activeTheme) fonts polarity;
     inherit (activeAssets) cursor;
-
-    base16Scheme = activeTheme.palette;
+  }
+  // lib.optionalAttrs (activeTheme ? colors) {
+    base16Scheme = {
+      system = "base16";
+      name = activeTheme.label;
+      variant = activeTheme.polarity;
+      palette = activeTheme.colors;
+    };
   };
-
-  environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
-
-  systemd.services."home-manager-${primaryUser}".serviceConfig.ExecStartPost =
-    lib.mkIf buildRuntimeVariants "${lib.getExe themeSet} restore";
 
   fonts =
     { lib, pkgs, ... }:
