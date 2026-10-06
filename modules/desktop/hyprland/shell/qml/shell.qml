@@ -105,6 +105,14 @@ ShellRoot {
         motion: motion
     }
 
+    ResizeOverlay {
+        id: resizeOverlay
+        screen: screens.focusedScreen
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     SystemPanel {
         id: systemPanel
         screen: screens.focusedScreen
@@ -150,31 +158,193 @@ ShellRoot {
         theme: theme
         motion: motion
         commands: [
-            { id: "clipboard.toggle", name: "Clipboard History", description: "Search and restore clipboard entries", icon: "edit-paste", key: runtime.shortcut("clipboard.toggle"), keywords: ["copy", "paste", "cliphist"] },
-            { id: "audio.mixer", name: "Application Mixer", description: "Control live PipeWire playback streams", icon: "multimedia-volume-control", key: runtime.shortcut("audio.mixer"), keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"] },
-            { id: "session.lock", name: "Lock Session", description: "Secure the current Wayland session", icon: "system-lock-screen", key: runtime.shortcut("session.lock"), keywords: ["lock", "security", "password"] },
-            { id: "session.toggle", name: "Power & Session", description: "Suspend, log out, reboot, or power off", icon: "system-shutdown", key: runtime.shortcut("session.toggle"), keywords: ["power", "session", "logout", "suspend", "reboot", "shutdown"] },
-            { id: "media.toggle", name: "Now Playing", description: "Open media controls", icon: "multimedia-player", keywords: ["music", "spotify", "media"] },
-            { id: "media.playPause", name: "Play / Pause", description: "Toggle the selected media player", icon: "media-playback-start", key: runtime.shortcut("media.playPause"), keywords: ["music", "media", "pause"] },
-            { id: "media.next", name: "Next Track", description: "Skip to the next track", icon: "media-skip-forward", key: runtime.shortcut("media.next"), keywords: ["music", "media", "skip"] },
-            { id: "media.previous", name: "Previous Track", description: "Return to the previous track", icon: "media-skip-backward", key: runtime.shortcut("media.previous"), keywords: ["music", "media", "back"] },
-            { id: "media.seekForward", name: "Seek Forward 10 Seconds", description: "Seek the selected player forward", icon: "media-seek-forward", key: runtime.shortcut("media.seekForward"), keywords: ["music", "media", "seek"] },
-            { id: "media.seekBackward", name: "Seek Backward 10 Seconds", description: "Seek the selected player backward", icon: "media-seek-backward", key: runtime.shortcut("media.seekBackward"), keywords: ["music", "media", "seek"] },
-            { id: "media.shuffle", name: "Toggle Shuffle", description: "Toggle shuffle on the selected player", icon: "media-playlist-shuffle", key: runtime.shortcut("media.shuffle"), keywords: ["music", "media", "random"] },
-            { id: "media.cyclePlayer", name: "Cycle Media Player", description: "Control the next MPRIS player", icon: "media-playlist-repeat", key: runtime.shortcut("media.cyclePlayer"), keywords: ["music", "media", "player", "switch"] },
-            { id: "system.toggle", name: "System Controls", description: "Open audio and connectivity status", icon: "preferences-system", keywords: ["volume", "wifi", "network", "bluetooth", "battery", "tray", "status icons"] },
-            { id: "theme.toggle", name: "Theme Picker", description: "Switch the active Stylix palette", icon: "preferences-desktop-theme", keywords: ["theme", "stylix", "palette", "colour", "color"] },
-            { id: "notifications.toggle", name: "Notifications", description: "Open notification history", icon: "preferences-system-notifications", keywords: ["alerts", "history", "messages"] },
-            { id: "notifications.clear", name: "Clear Notifications", description: "Dismiss stored notification history", icon: "edit-clear-all", keywords: ["alerts", "dismiss", "history"] },
-            { id: "audio.volumeUp", name: "Volume Up", description: "Increase output volume by 5%", icon: "audio-volume-high", key: runtime.shortcut("audio.volumeUp"), keywords: ["audio", "sound", "louder"] },
-            { id: "audio.volumeDown", name: "Volume Down", description: "Decrease output volume by 5%", icon: "audio-volume-low", key: runtime.shortcut("audio.volumeDown"), keywords: ["audio", "sound", "quieter"] },
-            { id: "audio.toggleMute", name: "Toggle Mute", description: "Mute or unmute output audio", icon: "audio-volume-muted", key: runtime.shortcut("audio.toggleMute"), keywords: ["audio", "sound", "silence"] },
-            { id: "shortcuts.toggle", name: "Keyboard Shortcuts", description: "Show the Hyprland key map", icon: "preferences-desktop-keyboard-shortcuts", key: runtime.shortcut("shortcuts.toggle"), keywords: ["keybinds", "cheatsheet"] },
-            { id: "animations.toggle", name: "Toggle Animations", description: "Enable or disable desktop motion", icon: "preferences-desktop-effects", keywords: ["motion", "reduce motion"] },
-            { id: "terminal.open", name: "Open Terminal", description: runtime.terminal, icon: "utilities-terminal", key: runtime.shortcut("terminal.open"), keywords: ["shell", "console"] }
+            {
+                id: "clipboard.toggle",
+                name: "Clipboard History",
+                description: "Search and restore clipboard entries",
+                icon: "edit-paste",
+                key: runtime.shortcut("clipboard.toggle"),
+                keywords: ["copy", "paste", "cliphist"]
+            },
+            {
+                id: "audio.mixer",
+                name: "Application Mixer",
+                description: "Control live PipeWire playback streams",
+                icon: "multimedia-volume-control",
+                key: runtime.shortcut("audio.mixer"),
+                keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"]
+            },
+            {
+                id: "session.lock",
+                name: "Lock Session",
+                description: "Secure the current Wayland session",
+                icon: "system-lock-screen",
+                key: runtime.shortcut("session.lock"),
+                keywords: ["lock", "security", "password"]
+            },
+            {
+                id: "session.toggle",
+                name: "Power & Session",
+                description: "Suspend, log out, reboot, or power off",
+                icon: "system-shutdown",
+                key: runtime.shortcut("session.toggle"),
+                keywords: ["power", "session", "logout", "suspend", "reboot", "shutdown"]
+            },
+            {
+                id: "media.toggle",
+                name: "Now Playing",
+                description: "Open media controls",
+                icon: "multimedia-player",
+                keywords: ["music", "spotify", "media"]
+            },
+            {
+                id: "media.playPause",
+                name: "Play / Pause",
+                description: "Toggle the selected media player",
+                icon: "media-playback-start",
+                key: runtime.shortcut("media.playPause"),
+                keywords: ["music", "media", "pause"]
+            },
+            {
+                id: "media.next",
+                name: "Next Track",
+                description: "Skip to the next track",
+                icon: "media-skip-forward",
+                key: runtime.shortcut("media.next"),
+                keywords: ["music", "media", "skip"]
+            },
+            {
+                id: "media.previous",
+                name: "Previous Track",
+                description: "Return to the previous track",
+                icon: "media-skip-backward",
+                key: runtime.shortcut("media.previous"),
+                keywords: ["music", "media", "back"]
+            },
+            {
+                id: "media.seekForward",
+                name: "Seek Forward 10 Seconds",
+                description: "Seek the selected player forward",
+                icon: "media-seek-forward",
+                key: runtime.shortcut("media.seekForward"),
+                keywords: ["music", "media", "seek"]
+            },
+            {
+                id: "media.seekBackward",
+                name: "Seek Backward 10 Seconds",
+                description: "Seek the selected player backward",
+                icon: "media-seek-backward",
+                key: runtime.shortcut("media.seekBackward"),
+                keywords: ["music", "media", "seek"]
+            },
+            {
+                id: "media.shuffle",
+                name: "Toggle Shuffle",
+                description: "Toggle shuffle on the selected player",
+                icon: "media-playlist-shuffle",
+                key: runtime.shortcut("media.shuffle"),
+                keywords: ["music", "media", "random"]
+            },
+            {
+                id: "media.cyclePlayer",
+                name: "Cycle Media Player",
+                description: "Control the next MPRIS player",
+                icon: "media-playlist-repeat",
+                key: runtime.shortcut("media.cyclePlayer"),
+                keywords: ["music", "media", "player", "switch"]
+            },
+            {
+                id: "system.toggle",
+                name: "System Controls",
+                description: "Open audio and connectivity status",
+                icon: "preferences-system",
+                keywords: ["volume", "wifi", "network", "bluetooth", "battery", "tray", "status icons"]
+            },
+            {
+                id: "theme.toggle",
+                name: "Theme Picker",
+                description: "Switch the active Stylix palette",
+                icon: "preferences-desktop-theme",
+                keywords: ["theme", "stylix", "palette", "colour", "color"]
+            },
+            {
+                id: "notifications.toggle",
+                name: "Notifications",
+                description: "Open notification history",
+                icon: "preferences-system-notifications",
+                keywords: ["alerts", "history", "messages"]
+            },
+            {
+                id: "notifications.clear",
+                name: "Clear Notifications",
+                description: "Dismiss stored notification history",
+                icon: "edit-clear-all",
+                keywords: ["alerts", "dismiss", "history"]
+            },
+            {
+                id: "audio.volumeUp",
+                name: "Volume Up",
+                description: "Increase output volume by 5%",
+                icon: "audio-volume-high",
+                key: runtime.shortcut("audio.volumeUp"),
+                keywords: ["audio", "sound", "louder"]
+            },
+            {
+                id: "audio.volumeDown",
+                name: "Volume Down",
+                description: "Decrease output volume by 5%",
+                icon: "audio-volume-low",
+                key: runtime.shortcut("audio.volumeDown"),
+                keywords: ["audio", "sound", "quieter"]
+            },
+            {
+                id: "audio.toggleMute",
+                name: "Toggle Mute",
+                description: "Mute or unmute output audio",
+                icon: "audio-volume-muted",
+                key: runtime.shortcut("audio.toggleMute"),
+                keywords: ["audio", "sound", "silence"]
+            },
+            {
+                id: "shortcuts.toggle",
+                name: "Keyboard Shortcuts",
+                description: "Show the Hyprland key map",
+                icon: "preferences-desktop-keyboard-shortcuts",
+                key: runtime.shortcut("shortcuts.toggle"),
+                keywords: ["keybinds", "cheatsheet"]
+            },
+            {
+                id: "animations.toggle",
+                name: "Toggle Animations",
+                description: "Enable or disable desktop motion",
+                icon: "preferences-desktop-effects",
+                keywords: ["motion", "reduce motion"]
+            },
+            {
+                id: "terminal.open",
+                name: "Open Terminal",
+                description: runtime.terminal,
+                icon: "utilities-terminal",
+                key: runtime.shortcut("terminal.open"),
+                keywords: ["shell", "console"]
+            }
         ].concat(brightness.supported ? [
-            { id: "brightness.up", name: "Brightness Up", description: "Increase hardware backlight by 5%", icon: "display-brightness", key: runtime.shortcut("brightness.up"), keywords: ["display", "backlight", "brighter"] },
-            { id: "brightness.down", name: "Brightness Down", description: "Decrease hardware backlight by 5%", icon: "display-brightness", key: runtime.shortcut("brightness.down"), keywords: ["display", "backlight", "dimmer"] }
+            {
+                id: "brightness.up",
+                name: "Brightness Up",
+                description: "Increase hardware backlight by 5%",
+                icon: "display-brightness",
+                key: runtime.shortcut("brightness.up"),
+                keywords: ["display", "backlight", "brighter"]
+            },
+            {
+                id: "brightness.down",
+                name: "Brightness Down",
+                description: "Decrease hardware backlight by 5%",
+                icon: "display-brightness",
+                key: runtime.shortcut("brightness.down"),
+                keywords: ["display", "backlight", "dimmer"]
+            }
         ] : [])
         onCommandTriggered: commandId => actions.invokeCommand(commandId)
     }
@@ -306,6 +476,20 @@ ShellRoot {
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "resize-mode"
+        description: "Show resize mode hints"
+        onPressed: resizeOverlay.open = true
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "resize-mode-exit"
+        description: "Hide resize mode hints"
+        onPressed: resizeOverlay.open = false
     }
 
     GlobalShortcut {
