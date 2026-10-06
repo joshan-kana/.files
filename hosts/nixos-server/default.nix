@@ -54,12 +54,11 @@
     jellyfin =
       {
         config,
-        lib,
         pkgs,
         ...
       }:
       {
-        config = lib.mkIf config.services.jellyfin.enable {
+        config = {
           hardware.graphics = {
             enable = true;
             extraPackages = [ pkgs.intel-media-driver ];

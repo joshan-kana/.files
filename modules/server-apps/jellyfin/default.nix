@@ -15,15 +15,11 @@ in
     openFirewall = false;
   };
 
-  users.users = lib.mkIf config.services.jellyfin.enable {
-    ${config.services.jellyfin.user}.extraGroups = [ dataRoot.group.name ];
-  };
+  users.users.${config.services.jellyfin.user}.extraGroups = [ dataRoot.group.name ];
 
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts =
-    lib.optionals config.services.jellyfin.enable
-      [ port ];
+  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ port ];
 
-  systemd = lib.mkIf config.services.jellyfin.enable {
+  systemd = {
     services.jellyfin = {
       unitConfig.RequiresMountsFor = [ mediaRoot ];
       serviceConfig.ReadOnlyPaths = [ mediaRoot ];
@@ -34,5 +30,5 @@ in
     ];
   };
 
-  virtualisation.vmVariant.services.jellyfin.enable = lib.mkForce false;
+  virtualisation.vmVariant.dotfiles.scopes.serverApps.jellyfin.enable = lib.mkForce false;
 }
