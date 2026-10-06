@@ -33,6 +33,7 @@ QtObject {
     readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, 0.42)
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, runtime.focusOpacity)
     readonly property color scrim: Qt.rgba(background.r, background.g, background.b, runtime.scrimOpacity)
+    readonly property color contextualScrim: Qt.rgba(background.r, background.g, background.b, Math.min(0.18, runtime.scrimOpacity))
     readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.06))
     readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, 0.14)
@@ -52,5 +53,4 @@ QtObject {
     readonly property int spacing4: 16
     readonly property int spacing5: 24
     readonly property int spacing6: 32
-
 }

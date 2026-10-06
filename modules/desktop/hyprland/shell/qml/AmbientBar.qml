@@ -12,8 +12,8 @@ Variants {
     required property QtObject media
     required property QtObject system
 
-    signal mediaRequested()
-    signal systemRequested()
+    signal mediaRequested
+    signal systemRequested
 
     model: Quickshell.screens
 
@@ -31,10 +31,10 @@ Variants {
         readonly property QtObject system: bars.system
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
 
-        implicitHeight: 64
+        implicitHeight: 56
         color: "transparent"
         exclusionMode: ExclusionMode.Normal
-        exclusiveZone: 64
+        exclusiveZone: 56
 
         anchors {
             top: true
@@ -50,52 +50,34 @@ Variants {
         }
 
         readonly property int focusedWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 1
-        readonly property var normalWorkspaces: Hyprland.workspaces.values
-            .filter(workspace => workspace.id > 0)
-            .sort((a, b) => a.id - b.id)
+        readonly property var normalWorkspaces: Hyprland.workspaces.values.filter(workspace => workspace.id > 0).sort((a, b) => a.id - b.id)
+
         Item {
             anchors.fill: parent
             anchors {
                 leftMargin: 14
                 rightMargin: 14
-                topMargin: 10
-                bottomMargin: 10
+                topMargin: 8
+                bottomMargin: 8
             }
 
             SquircleSurface {
                 id: workspaceIsland
 
-                width: workspaceRow.implicitWidth + theme.spacing4 * 2
+                width: workspaceRow.implicitWidth + theme.spacing3 * 2
                 height: parent.height
                 anchors.left: parent.left
 
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
-                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
-                borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
+                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
+                borderColor: theme.subtleBorder
                 borderWidth: theme.borderThin
 
                 Row {
                     id: workspaceRow
                     anchors.centerIn: parent
-                    spacing: 5
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "WS"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.5
-                    }
-
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 1
-                        height: 20
-                        color: theme.outline
-                    }
+                    spacing: 6
 
                     Repeater {
                         model: bar.normalWorkspaces
@@ -107,26 +89,25 @@ Variants {
                             readonly property int number: modelData.id
                             readonly property bool active: bar.focusedWorkspaceId === number
 
-                            width: 24
+                            width: active ? 28 : 16
                             height: 28
 
                             MouseArea {
                                 anchors.fill: parent
                                 z: 1
                                 cursorShape: Qt.PointingHandCursor
-
                                 onClicked: workspace.modelData.activate()
                             }
 
                             SquircleSurface {
                                 anchors.centerIn: parent
-                                width: workspace.active ? 24 : 9
-                                height: workspace.active ? 24 : 9
+                                width: workspace.active ? 28 : 8
+                                height: workspace.active ? 28 : 8
 
                                 exponent: theme.squircleExponent
-                                cornerRadius: workspace.active ? 8 : 4.5
-                                fillColor: workspace.active ? theme.accent : theme.outline
-                                borderColor: workspace.active ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, 0.18) : "transparent"
+                                cornerRadius: workspace.active ? 9 : 4
+                                fillColor: workspace.active ? theme.accent : Qt.rgba(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, 0.55)
+                                borderColor: workspace.active ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, 0.16) : "transparent"
                                 borderWidth: workspace.active ? 1 : 0
 
                                 Behavior on width {
@@ -154,9 +135,9 @@ Variants {
                                     visible: workspace.active
                                     text: workspace.number
                                     color: theme.background
-                                    font.family: runtime.fontMono
+                                    font.family: runtime.fontSans
                                     font.pixelSize: theme.fontSize(11)
-                                    font.weight: Font.Bold
+                                    font.weight: Font.DemiBold
                                 }
                             }
                         }
@@ -183,14 +164,14 @@ Variants {
             SquircleSurface {
                 id: clockIsland
 
-                width: 236
+                width: 184
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
-                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
-                borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
+                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
+                borderColor: theme.subtleBorder
                 borderWidth: theme.borderThin
 
                 Row {
@@ -199,30 +180,27 @@ Variants {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Qt.formatDateTime(clock.date, "ddd dd MMM").toUpperCase()
+                        text: Qt.formatDateTime(clock.date, "ddd d MMM")
                         color: theme.textMuted
-                        font.family: runtime.fontMono
+                        font.family: runtime.fontSans
                         font.pixelSize: theme.fontSize(11)
-                        font.letterSpacing: 1.1
                     }
 
-                    Text {
+                    Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "//"
+                        width: 4
+                        height: 4
+                        radius: 2
                         color: theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(12)
-                        font.weight: Font.Bold
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         color: theme.textStrong
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(14)
+                        font.family: runtime.fontSans
+                        font.pixelSize: theme.fontSize(13)
                         font.weight: Font.DemiBold
-                        font.letterSpacing: 0.8
                     }
                 }
             }
@@ -241,7 +219,6 @@ Variants {
                 system: bar.system
                 onActivated: bars.systemRequested()
             }
-
         }
     }
 }

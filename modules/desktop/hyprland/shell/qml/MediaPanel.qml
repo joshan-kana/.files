@@ -13,7 +13,30 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    property bool helpOpen: false
     property string visualizerMode: "field"
+    readonly property var helpBindings: [
+        {
+            key: "SPACE",
+            action: media.playing ? "Pause playback" : "Play"
+        },
+        {
+            key: "← / →",
+            action: "Seek five seconds"
+        },
+        {
+            key: ", / .",
+            action: "Previous / next track"
+        },
+        {
+            key: "V",
+            action: "Switch visualizer"
+        },
+        {
+            key: "ESC",
+            action: "Close now playing"
+        }
+    ]
 
     visible: open || closing
     color: "transparent"
@@ -46,11 +69,13 @@ PanelWindow {
     function show(): void {
         closeTimer.stop();
         closing = false;
+        helpOpen = false;
         open = true;
         keyboardFocus.forceActiveFocus();
     }
 
     function hide(): void {
+        helpOpen = false;
         open = false;
 
         if (motion.fast === 0) {
@@ -84,7 +109,7 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrim
+        color: theme.contextualScrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
@@ -103,20 +128,20 @@ PanelWindow {
     SquircleSurface {
         id: card
 
-        width: Math.min(panel.width - 70, 560)
+        width: Math.min(panel.width - 70, 640)
         height: Math.min(panel.height - 120, 520)
 
         anchors {
-            top: parent.top
-            right: parent.right
-            topMargin: theme.panelTopOffset
-            rightMargin: theme.panelSideOffset
+            left: parent.left
+            bottom: parent.bottom
+            leftMargin: theme.panelSideOffset
+            bottomMargin: theme.panelSideOffset
         }
 
         exponent: theme.squircleExponent
         cornerRadius: theme.radiusPanel
         fillColor: theme.panelFill
-        borderColor: theme.panelBorder
+        borderColor: theme.subtleBorder
         borderWidth: theme.borderThin
 
         scale: panel.open ? 1 : theme.panelClosedScale
@@ -183,12 +208,11 @@ PanelWindow {
                     spacing: theme.spacing2
 
                     Text {
-                        text: media.available ? "NOW PLAYING" : "MEDIA IDLE"
+                        text: media.available ? "Now playing" : "Media"
                         color: theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.8
+                        font.family: runtime.fontSans
+                        font.pixelSize: theme.fontSize(12)
+                        font.weight: Font.Medium
                     }
 
                     Text {
@@ -237,7 +261,7 @@ PanelWindow {
                     width: parent.width
 
                     Text {
-                        text: "SPECTRUM // 20 Hz → 20 kHz"
+                        text: "Spectrum  ·  20 Hz → 20 kHz"
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(10)
@@ -251,9 +275,7 @@ PanelWindow {
 
                     Text {
                         id: spectrumStatus
-                        text: panel.visualizerMode.toUpperCase()
-                            + " // "
-                            + (spectrum.connected ? "LIVE // " + spectrum.sampleRate / 1000 + " kHz" : "STANDBY")
+                        text: panel.visualizerMode + "  ·  " + (spectrum.connected ? "live  ·  " + spectrum.sampleRate / 1000 + " kHz" : "standby")
                         color: spectrum.connected ? theme.positive : theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(9)
@@ -339,14 +361,7 @@ PanelWindow {
                         }
 
                         Repeater {
-                            model: [
-                                "20",
-                                "60",
-                                "250",
-                                "1K",
-                                "4K",
-                                "20K"
-                            ]
+                            model: ["20", "60", "250", "1K", "4K", "20K"]
 
                             delegate: Text {
                                 required property string modelData
@@ -375,9 +390,11 @@ PanelWindow {
                 spacing: theme.spacing3
 
                 Rectangle {
+                    id: progressTrack
+
                     width: parent.width
-                    height: 4
-                    radius: 2
+                    height: 6
+                    radius: 3
                     color: theme.surfaceRaised
 
                     Rectangle {
@@ -397,6 +414,14 @@ PanelWindow {
                                 easing.type: Easing.Linear
                             }
                         }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        enabled: media.available && media.length > 0
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: mouse => media.seekTo(media.length * Math.max(0, Math.min(1, mouse.x / width)))
                     }
                 }
 
@@ -425,28 +450,79 @@ PanelWindow {
 
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: theme.spacing4
+                    spacing: theme.spacing2
 
-                    Text {
-                        text: "←  −5s"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
-                    }
+                    Repeater {
+                        model: [
+                            {
+                                label: ",  ◀",
+                                enabled: media.available,
+                                action: "previous"
+                            },
+                            {
+                                label: "←  −5s",
+                                enabled: media.available,
+                                action: "back"
+                            },
+                            {
+                                label: "SPACE  " + (media.playing ? "PAUSE" : "PLAY"),
+                                enabled: media.available,
+                                action: "play"
+                            },
+                            {
+                                label: "+5s  →",
+                                enabled: media.available,
+                                action: "forward"
+                            },
+                            {
+                                label: "▶  .",
+                                enabled: media.available,
+                                action: "next"
+                            }
+                        ]
 
-                    Text {
-                        text: "SPACE  " + (media.playing ? "PAUSE" : "PLAY")
-                        color: media.available ? theme.accent : theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
-                        font.weight: Font.DemiBold
-                    }
+                        delegate: SquircleSurface {
+                            required property var modelData
 
-                    Text {
-                        text: "+5s  →"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
+                            width: Math.max(66, controlLabel.implicitWidth + theme.spacing4 * 2)
+                            height: modelData.action === "play" ? 40 : 36
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            exponent: theme.squircleExponent
+                            cornerRadius: theme.radiusSmall
+                            fillColor: modelData.action === "play" ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.16) : theme.surfaceRaised
+                            borderColor: modelData.action === "play" ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.34) : theme.subtleBorder
+                            borderWidth: theme.borderThin
+                            opacity: modelData.enabled ? 1 : 0.45
+
+                            Text {
+                                id: controlLabel
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                color: modelData.action === "play" ? theme.accent : theme.text
+                                font.family: runtime.fontMono
+                                font.pixelSize: theme.fontSize(10)
+                                font.weight: modelData.action === "play" ? Font.DemiBold : Font.Normal
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: modelData.enabled
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: {
+                                    if (modelData.action === "previous")
+                                        media.previous();
+                                    else if (modelData.action === "back")
+                                        media.seek(-5);
+                                    else if (modelData.action === "play")
+                                        media.togglePlaying();
+                                    else if (modelData.action === "forward")
+                                        media.seek(5);
+                                    else if (modelData.action === "next")
+                                        media.next();
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -459,7 +535,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: media.available ? media.identity.toUpperCase() : "MPRIS"
+                    text: media.available ? media.identity : "MPRIS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(9)
@@ -480,6 +556,28 @@ PanelWindow {
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(9)
                         font.letterSpacing: 1
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: panel.toggleVisualizer()
+                        }
+                    }
+
+                    Text {
+                        text: "?  HELP"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: panel.helpOpen = true
+                        }
                     }
 
                     Text {
@@ -498,7 +596,20 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Escape) {
+                    const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
+
+                    if (panel.helpOpen) {
+                        if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                            panel.helpOpen = false;
+                            event.accepted = true;
+                        }
+                        return;
+                    }
+
+                    if (helpKey) {
+                        panel.helpOpen = true;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Escape) {
                         panel.hide();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Space) {
@@ -522,6 +633,17 @@ PanelWindow {
                     }
                 }
             }
+        }
+
+        WidgetHelp {
+            anchors.fill: parent
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            open: panel.helpOpen
+            title: "Now Playing controls"
+            bindings: panel.helpBindings
+            onDismissed: panel.helpOpen = false
         }
     }
 }
