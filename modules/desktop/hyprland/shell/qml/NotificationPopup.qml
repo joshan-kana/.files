@@ -11,7 +11,7 @@ PanelWindow {
     required property QtObject theme
     required property QtObject motion
 
-    signal centerRequested()
+    signal centerRequested
 
     property bool closing: false
     readonly property var notification: notificationState.latest
@@ -138,9 +138,7 @@ PanelWindow {
                     width: parent.width
 
                     Text {
-                        text: popup.notification
-                            ? (popup.notification.appName || "SYSTEM").toUpperCase()
-                            : "SYSTEM"
+                        text: popup.notification ? (popup.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
                         color: popup.urgencyColor
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(10)
@@ -155,9 +153,7 @@ PanelWindow {
 
                     Text {
                         id: actionHint
-                        text: popup.notification && popup.notification.actions.length > 0
-                            ? popup.notification.actions.length + " ACTION" + (popup.notification.actions.length === 1 ? "" : "S")
-                            : "NOTIFICATION"
+                        text: popup.notification && popup.notification.actions.length > 0 ? popup.notification.actions.length + " ACTION" + (popup.notification.actions.length === 1 ? "" : "S") : "NOTIFICATION"
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(9)

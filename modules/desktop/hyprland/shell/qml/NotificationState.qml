@@ -26,9 +26,7 @@ QtObject {
             root.latest = notification;
             root.popupVisible = true;
 
-            popupTimer.interval = notification.urgency === NotificationUrgency.Critical
-                ? 9000
-                : 5000;
+            popupTimer.interval = notification.urgency === NotificationUrgency.Critical ? 9000 : 5000;
             popupTimer.restart();
         }
     }
