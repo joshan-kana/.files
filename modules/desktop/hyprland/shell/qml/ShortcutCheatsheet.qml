@@ -39,7 +39,10 @@ PanelWindow {
 
         for (const binding of runtime.keybindings || []) {
             if (!byName[binding.section]) {
-                const group = { title: binding.section, items: [] };
+                const group = {
+                    title: binding.section,
+                    items: []
+                };
                 byName[binding.section] = group;
                 groups.push(group);
             }
