@@ -134,9 +134,9 @@ in
         rebuild =
           action:
           if isDarwin then
-            ''nh darwin ${action} "$NH_OS_FLAKE#$FLK_PROFILE"''
+            ''nh darwin ${action} --hostname "$FLK_PROFILE"''
           else if isLinux then
-            ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS''
+            ''nh os ${action} --hostname "$FLK_PROFILE" $NIXOS_REBUILD_FLAGS''
           else
             null;
       };
