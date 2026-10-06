@@ -59,12 +59,7 @@ QtObject {
     }
 
     function showAudio(): void {
-        show(
-            "volume",
-            system.muted ? "AUDIO // MUTED" : "VOLUME",
-            system.volumePercent,
-            system.muted
-        );
+        show("volume", system.muted ? "AUDIO // MUTED" : "VOLUME", system.volumePercent, system.muted);
     }
 
     function showBrightness(): void {

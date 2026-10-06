@@ -158,6 +158,7 @@
           programs = {
             deadnix.enable = true;
             nixfmt.enable = true;
+            qmlformat.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -207,6 +208,43 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
+              qmlformat.priority = 1;
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options = [
+                  "-I"
+                  "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                ]
+                ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  "-I"
+                  "${pkgs.quickshell}/lib/qt-6/qml"
+                ]
+                ++ [
+                  "--unqualified"
+                  "disable"
+                  "--missing-property"
+                  "disable"
+                  "--missing-type"
+                  "disable"
+                  "--required"
+                  "disable"
+                  "--unresolved-type"
+                  "disable"
+                  "--unused-imports"
+                  "disable"
+                  "--uncreatable-type"
+                  "disable"
+                  "--signal-handler-parameters"
+                  "disable"
+                  "--import"
+                  "disable"
+                  "--max-warnings"
+                  "0"
+                ];
+                priority = 2;
+              };
+
               ruff-check.options = [
                 "--isolated"
                 "--select"
@@ -243,7 +281,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };

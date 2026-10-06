@@ -236,9 +236,7 @@ PanelWindow {
 
                             Text {
                                 text: (modelData.appName || "SYSTEM").toUpperCase()
-                                color: modelData.urgency === NotificationUrgency.Critical
-                                    ? theme.critical
-                                    : theme.accent
+                                color: modelData.urgency === NotificationUrgency.Critical ? theme.critical : theme.accent
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(9)
                                 font.weight: Font.DemiBold
@@ -252,9 +250,7 @@ PanelWindow {
 
                             Text {
                                 id: actionsLabel
-                                text: modelData.actions.length > 0
-                                    ? modelData.actions.length + " ACTION" + (modelData.actions.length === 1 ? "" : "S")
-                                    : ""
+                                text: modelData.actions.length > 0 ? modelData.actions.length + " ACTION" + (modelData.actions.length === 1 ? "" : "S") : ""
                                 color: theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(8)

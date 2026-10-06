@@ -22,11 +22,7 @@ PanelWindow {
         if (query.length === 0)
             return source.slice(0, 100);
 
-        return source
-            .filter(entry =>
-                entry.preview.toLowerCase().includes(query)
-                || entry.kind.toLowerCase().includes(query))
-            .slice(0, 100);
+        return source.filter(entry => entry.preview.toLowerCase().includes(query) || entry.kind.toLowerCase().includes(query)).slice(0, 100);
     }
 
     visible: open || closing
@@ -77,14 +73,13 @@ PanelWindow {
     }
 
     function sanitisePreview(raw: string): var {
-        const compact = raw
-            .replace(/\r/g, " ")
-            .replace(/\n/g, " ")
-            .replace(/\s+/g, " ")
-            .trim();
+        const compact = raw.replace(/\r/g, " ").replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
         if (compact.length === 0)
-            return { kind: "TEXT", preview: "[empty clipboard item]" };
+            return {
+                kind: "TEXT",
+                preview: "[empty clipboard item]"
+            };
 
         let suspicious = 0;
         const sample = compact.slice(0, 160);
@@ -96,9 +91,15 @@ PanelWindow {
         }
 
         if (suspicious >= 3 || suspicious / sample.length > 0.08)
-            return { kind: "BINARY", preview: "[image or binary clipboard item]" };
+            return {
+                kind: "BINARY",
+                preview: "[image or binary clipboard item]"
+            };
 
-        return { kind: "TEXT", preview: compact };
+        return {
+            kind: "TEXT",
+            preview: compact
+        };
     }
 
     function parseHistory(output: string): var {
@@ -284,10 +285,7 @@ PanelWindow {
                                 panel.hide();
                                 event.accepted = true;
                             } else if (event.key === Qt.Key_Down) {
-                                panel.selectedIndex = Math.min(
-                                    panel.filteredEntries.length - 1,
-                                    panel.selectedIndex + 1
-                                );
+                                panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                                 event.accepted = true;
                             } else if (event.key === Qt.Key_Up) {
                                 panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
