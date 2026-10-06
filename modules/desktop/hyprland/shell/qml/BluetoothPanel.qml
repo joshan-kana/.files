@@ -219,12 +219,11 @@ Item {
         spacing: theme.spacing1
 
         Text {
-            text: "BLUETOOTH // " + (adapterAvailable ? BluetoothAdapterState.toString(adapter.state).toUpperCase() : "NO ADAPTER")
+            text: adapterAvailable ? "Bluetooth · " + (adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
             color: adapterAvailable && adapter.enabled ? theme.positive : theme.warning
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelEyebrow
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.6
+            font.family: runtime.fontSans
+            font.pixelSize: theme.fontSize(11)
+            font.weight: Font.Medium
         }
 
         Text {
@@ -241,7 +240,7 @@ Item {
 
             Text {
                 visible: adapterAvailable
-                text: system.bluetoothEnabled ? "RADIO ON" : "RADIO OFF"
+                text: system.bluetoothEnabled ? "Radio on" : "Radio off"
                 color: system.bluetoothEnabled ? theme.accent : theme.critical
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(9)
@@ -412,7 +411,7 @@ Item {
             anchors.centerIn: parent
             visible: !adapterAvailable
             width: parent.width
-            text: "NO BLUETOOTH ADAPTER"
+            text: "No Bluetooth adapter"
             horizontalAlignment: Text.AlignHCenter
             color: theme.textMuted
             font.family: runtime.fontMono
@@ -424,7 +423,7 @@ Item {
             anchors.centerIn: parent
             visible: adapterAvailable && !system.bluetoothEnabled
             width: parent.width
-            text: "BLUETOOTH DISABLED // PRESS B"
+            text: "Bluetooth is off · press B to enable"
             horizontalAlignment: Text.AlignHCenter
             color: theme.warning
             font.family: runtime.fontMono
