@@ -1,5 +1,6 @@
 {
   config,
+  configurationFlakeSubdirectory,
   configurationOutputName,
   pkgs,
   ...
@@ -100,6 +101,11 @@ let
     EDITOR = editor;
     VISUAL = editor;
     FLK_PROFILE = configurationOutputName;
+    NH_OS_FLAKE =
+      if configurationFlakeSubdirectory == null then
+        repoPath
+      else
+        "${repoPath}/${configurationFlakeSubdirectory}";
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
@@ -117,8 +123,7 @@ in
       commands = {
         cd = "cd $DOTFILES";
         flakeUpdate = "nix run ${repoPath}#system-upgrade --";
-        rebuild =
-          action: "nh os ${action} \"$DOTFILES\" --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+        rebuild = action: "nh os ${action} --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
       };
       aliases = {
         syscd = commands.cd;
@@ -168,7 +173,7 @@ in
             name = "build-vm";
             text = ''
               read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
-              sudo nixos-rebuild --flake "$DOTFILES#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
+              sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
             '';
           };
         in
