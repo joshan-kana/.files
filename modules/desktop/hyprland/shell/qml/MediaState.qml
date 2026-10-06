@@ -23,10 +23,7 @@ QtObject {
         if (!candidate)
             return "";
 
-        return candidate.dbusName
-            || candidate.uniqueId
-            || candidate.identity
-            || "";
+        return candidate.dbusName || candidate.uniqueId || candidate.identity || "";
     }
 
     function selectPlayer(): var {
@@ -90,6 +87,13 @@ QtObject {
     function seek(seconds: real): void {
         if (available && player.canSeek)
             player.seek(seconds);
+    }
+
+    function seekTo(seconds: real): void {
+        if (!available || !player.canSeek || !player.positionSupported || !player.lengthSupported)
+            return;
+
+        player.position = Math.max(0, Math.min(player.length, seconds));
     }
 
     function toggleShuffle(): void {
