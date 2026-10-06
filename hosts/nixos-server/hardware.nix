@@ -35,7 +35,7 @@
         configurationLimit = 10;
       };
       efi.canTouchEfiVariables = true;
-      timeout = 1;
+      timeout = lib.mkDefault 1;
     };
 
     supportedFilesystems = [ "btrfs" ];
