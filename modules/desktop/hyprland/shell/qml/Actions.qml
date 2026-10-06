@@ -16,19 +16,44 @@ QtObject {
     required property QtObject notificationState
     required property QtObject motion
 
+    function hideTransient(except: string): void {
+        if (except !== "cheatsheet")
+            cheatsheet.hide();
+        if (except !== "launcher")
+            launcher.hide();
+        if (except !== "clipboard")
+            clipboardPanel.hide();
+        if (except !== "audio")
+            audioMixerPanel.hide();
+        if (except !== "media")
+            mediaPanel.hide();
+        if (except !== "system")
+            systemPanel.hide();
+        if (except !== "notifications")
+            notificationCenter.hide();
+    }
+
     function toggleCheatsheet(): void {
+        if (!cheatsheet.open)
+            hideTransient("cheatsheet");
         cheatsheet.toggle();
     }
 
     function toggleLauncher(): void {
+        if (!launcher.open)
+            hideTransient("launcher");
         launcher.toggle();
     }
 
     function toggleClipboard(): void {
+        if (!clipboardPanel.open)
+            hideTransient("clipboard");
         clipboardPanel.toggle();
     }
 
     function toggleAudioMixer(): void {
+        if (!audioMixerPanel.open)
+            hideTransient("audio");
         audioMixerPanel.toggle();
     }
 
@@ -38,6 +63,8 @@ QtObject {
     }
 
     function toggleMedia(): void {
+        if (!mediaPanel.open)
+            hideTransient("media");
         mediaPanel.toggle();
     }
 
@@ -70,22 +97,29 @@ QtObject {
     }
 
     function toggleSystem(): void {
+        if (!systemPanel.open)
+            hideTransient("system");
         systemPanel.toggle();
     }
 
     function showTheme(): void {
+        hideTransient("system");
         systemPanel.showTheme();
     }
 
     function showSession(): void {
+        hideTransient("system");
         systemPanel.showSession();
     }
 
     function showNotifications(): void {
+        hideTransient("notifications");
         notificationCenter.show();
     }
 
     function toggleNotifications(): void {
+        if (!notificationCenter.open)
+            hideTransient("notifications");
         notificationCenter.toggle();
     }
 
