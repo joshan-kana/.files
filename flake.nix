@@ -268,6 +268,7 @@
           stylixInput ? stylix,
           moduleRegistryInput ? moduleRegistry,
           configurationOutputName ? configurationName,
+          configurationFlakeSubdirectory ? null,
           extraModules ? [ ],
         }:
         let
@@ -284,7 +285,12 @@
         nixpkgsInput.lib.nixosSystem {
           inherit system;
           specialArgs = {
-            inherit configurationName configurationOutputName inputs;
+            inherit
+              configurationFlakeSubdirectory
+              configurationName
+              configurationOutputName
+              inputs
+              ;
             inherit (semantic)
               editScope
               extendScope
@@ -333,8 +339,6 @@
         };
       };
 
-      canonicalNixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
-
       themeScope = moduleRegistry.theme {
         inherit lib;
         pkgs = null;
@@ -362,6 +366,7 @@
                       };
                     };
                     configurationOutputName = outputName;
+                    configurationFlakeSubdirectory = "themes";
                   }
                 );
               }
@@ -376,7 +381,7 @@
           inherit lib semanticScopeOptions;
           pkgs = pkgsFor system;
           source = self;
-          configurations = canonicalNixosConfigurations;
+          configurations = self.nixosConfigurations;
         };
 
       docsCommandsFor =
@@ -411,7 +416,9 @@
         };
     in
     {
-      lib.semanticScopeOptions = semanticScopeOptions;
+      lib = {
+        inherit semanticScopeOptions themedNixosConfigurations;
+      };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
 
@@ -500,7 +507,7 @@
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
             inherit inputs;
-            configurations = canonicalNixosConfigurations;
+            configurations = self.nixosConfigurations;
           };
           serverAppStandardsTest = import ./tests/server-app-standards.nix {
             inherit inputs;
@@ -510,7 +517,7 @@
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
-          ) canonicalNixosConfigurations) pkgs.emptyFile;
+          ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
@@ -657,6 +664,6 @@
           };
         }
       );
-      nixosConfigurations = canonicalNixosConfigurations // themedNixosConfigurations;
+      nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
     };
 }
