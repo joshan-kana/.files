@@ -8,10 +8,10 @@ Item {
     required property QtObject motion
     required property QtObject media
 
-    signal activated()
+    signal activated
 
-    width: media.available ? 390 : 0
-    height: 44
+    width: media.available ? 326 : 0
+    height: 40
     visible: width > 1
     opacity: media.available ? 1 : 0
 
@@ -30,6 +30,7 @@ Item {
 
     MouseArea {
         anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
         onClicked: island.activated()
     }
 
@@ -38,8 +39,8 @@ Item {
 
         exponent: theme.squircleExponent
         cornerRadius: theme.radiusMedium
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.94)
-        borderColor: Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.76)
+        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
+        borderColor: theme.subtleBorder
         borderWidth: theme.borderThin
 
         Item {
@@ -49,7 +50,7 @@ Item {
             height: 32
             anchors {
                 left: parent.left
-                leftMargin: 7
+                leftMargin: 4
                 verticalCenter: parent.verticalCenter
             }
 
@@ -58,16 +59,13 @@ Item {
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusSmall
                 fillColor: theme.surfaceRaised
-                borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
+                borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.20)
                 borderWidth: theme.borderThin
             }
 
             Image {
-                anchors {
-                    fill: parent
-                    margins: 2
-                }
-
+                anchors.fill: parent
+                anchors.margins: 1
                 visible: media.artUrl.length > 0
                 source: media.artUrl
                 sourceSize.width: 56
@@ -83,7 +81,7 @@ Item {
                 text: "♫"
                 color: theme.accent
                 font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(15)
+                font.pixelSize: theme.fontSize(14)
             }
         }
 
@@ -95,14 +93,14 @@ Item {
                 rightMargin: theme.spacing3
                 verticalCenter: parent.verticalCenter
             }
-            spacing: 1
+            spacing: 0
 
             Text {
                 width: parent.width
                 text: media.title
                 color: theme.textStrong
                 font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(12)
+                font.pixelSize: theme.fontSize(11)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -112,52 +110,35 @@ Item {
                 text: media.artist
                 color: theme.textMuted
                 font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(10)
+                font.pixelSize: theme.fontSize(9)
                 elide: Text.ElideRight
             }
         }
 
-        Row {
+        SquircleSurface {
             id: state
+
+            width: 30
+            height: 30
             anchors {
                 right: parent.right
-                rightMargin: theme.spacing3
+                rightMargin: 5
                 verticalCenter: parent.verticalCenter
             }
-            spacing: 7
+
+            exponent: theme.squircleExponent
+            cornerRadius: theme.radiusSmall
+            fillColor: media.playing ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.16) : theme.surfaceRaised
+            borderColor: "transparent"
+            borderWidth: 0
 
             Text {
-                text: media.playing ? "LIVE" : "HOLD"
-                color: media.playing ? theme.positive : theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1.2
-            }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 7
-                height: 7
-                radius: 3.5
-                color: media.playing ? theme.positive : theme.outline
-
-                SequentialAnimation on opacity {
-                    running: media.playing && motion.enabled
-                    loops: Animation.Infinite
-
-                    NumberAnimation {
-                        to: 0.38
-                        duration: motion.pulse
-                        easing.type: motion.pulseType
-                    }
-
-                    NumberAnimation {
-                        to: 1
-                        duration: motion.pulse
-                        easing.type: motion.pulseType
-                    }
-                }
+                anchors.centerIn: parent
+                text: media.playing ? "Ⅱ" : "▶"
+                color: media.playing ? theme.accent : theme.textMuted
+                font.family: runtime.fontSans
+                font.pixelSize: theme.fontSize(10)
+                font.weight: Font.Bold
             }
         }
     }

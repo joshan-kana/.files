@@ -253,7 +253,7 @@ in
     description = "Toggle pseudo tiling";
   })
   (mk {
-    keys = "J";
+    keys = "T";
     action = dispatcher ''hl.dsp.layout("togglesplit")'';
     section = "WINDOWS";
     description = "Toggle split direction";
@@ -282,62 +282,70 @@ in
   })
 
   (mk {
-    keys = "A";
-    action = dispatcher ''hl.dsp.focus({ direction = "l" })'';
-    section = "FOCUS";
+    keys = "H";
+    action = dispatcher ''hl.dsp.focus({ direction = "left" })'';
+    section = "WINDOWS";
     description = "Focus left";
   })
   (mk {
-    keys = "D";
-    action = dispatcher ''hl.dsp.focus({ direction = "r" })'';
-    section = "FOCUS";
-    description = "Focus right";
+    keys = "J";
+    action = dispatcher ''hl.dsp.focus({ direction = "down" })'';
+    section = "WINDOWS";
+    description = "Focus down";
   })
   (mk {
-    keys = "W";
-    action = dispatcher ''hl.dsp.focus({ direction = "u" })'';
-    section = "FOCUS";
+    keys = "K";
+    action = dispatcher ''hl.dsp.focus({ direction = "up" })'';
+    section = "WINDOWS";
     description = "Focus up";
   })
   (mk {
-    keys = "S";
-    action = dispatcher ''hl.dsp.focus({ direction = "d" })'';
-    section = "FOCUS";
-    description = "Focus down";
+    keys = "L";
+    action = dispatcher ''hl.dsp.focus({ direction = "right" })'';
+    section = "WINDOWS";
+    description = "Focus right";
+  })
+
+  (mk {
+    keys = "SHIFT + H";
+    action = dispatcher ''hl.dsp.window.move({ direction = "left" })'';
+    section = "WINDOWS";
+    description = "Move window left";
+  })
+  (mk {
+    keys = "SHIFT + J";
+    action = dispatcher ''hl.dsp.window.move({ direction = "down" })'';
+    section = "WINDOWS";
+    description = "Move window down";
+  })
+  (mk {
+    keys = "SHIFT + K";
+    action = dispatcher ''hl.dsp.window.move({ direction = "up" })'';
+    section = "WINDOWS";
+    description = "Move window up";
+  })
+  (mk {
+    keys = "SHIFT + L";
+    action = dispatcher ''hl.dsp.window.move({ direction = "right" })'';
+    section = "WINDOWS";
+    description = "Move window right";
+  })
+
+  (mk {
+    keys = "R";
+    action = dispatcher ''
+      function()
+            hl.dispatch(hl.dsp.submap("resize"))
+            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode"))
+          end'';
+    section = "WINDOWS";
+    description = "Resize mode";
   })
 ]
 ++ launcherResults
 ++ map focusWorkspace workspaceKeys
 ++ map moveToWorkspace workspaceKeys
 ++ [
-  (mk {
-    keys = "SHIFT + D";
-    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "WINDOWS";
-    description = "Grow window right";
-  })
-  (mk {
-    keys = "SHIFT + A";
-    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "WINDOWS";
-    description = "Shrink window right";
-  })
-  (mk {
-    keys = "SHIFT + W";
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
-    flags.repeating = true;
-    section = "WINDOWS";
-    description = "Shrink window down";
-  })
-  (mk {
-    keys = "SHIFT + S";
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
-    flags.repeating = true;
-    section = "WINDOWS";
-    description = "Grow window down";
-  })
   (mk {
     keys = "X";
     action = dispatcher ''hl.dsp.workspace.toggle_special("magic")'';
@@ -346,9 +354,9 @@ in
   })
   (mk {
     keys = "SHIFT + X";
-    action = dispatcher ''hl.dsp.window.move({ workspace = "special:magic", follow = true })'';
+    action = dispatcher ''hl.dsp.window.move({ workspace = "special:magic", follow = false })'';
     section = "WORKSPACES";
-    description = "Move window to special workspace";
+    description = "Send window to special workspace";
   })
   (mk {
     keys = "mouse_down";
@@ -479,7 +487,7 @@ in
     label = "BRIGHTNESS −";
   })
   (mk {
-    keys = "L";
+    keys = "SHIFT + C";
     id = "session.lock";
     action = global "linux-desktop:lock";
     section = "SYSTEM";
@@ -513,5 +521,133 @@ in
     action = dispatcher ''hl.dsp.submap("passthru")'';
     section = "SYSTEM";
     description = "Enter passthrough mode";
+  })
+  (mk {
+    keys = "H";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Narrower";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "J";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Taller";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "K";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Shorter";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "L";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Wider";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "SHIFT + H";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Resize opposite left";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "SHIFT + J";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Resize opposite down";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "SHIFT + K";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Resize opposite up";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "SHIFT + L";
+    mainMod = false;
+    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
+    flags.repeating = true;
+    section = "RESIZE MODE";
+    description = "Resize opposite right";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "B";
+    mainMod = false;
+    action = dispatcher ''hl.dsp.layout("splitratio 1.0 exact")'';
+    section = "RESIZE MODE";
+    description = "Balance split";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "Escape";
+    mainMod = false;
+    action = dispatcher ''
+      function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
+          end'';
+    section = "RESIZE MODE";
+    description = "Exit resize mode";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "Return";
+    mainMod = false;
+    action = dispatcher ''
+      function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
+          end'';
+    section = "RESIZE MODE";
+    description = "Exit resize mode";
+    cheatsheet = false;
+    submap = "resize";
+  })
+  (mk {
+    keys = "R";
+    mainMod = false;
+    action = dispatcher ''
+      function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
+          end'';
+    section = "RESIZE MODE";
+    description = "Exit resize mode";
+    cheatsheet = false;
+    submap = "resize";
   })
 ]
