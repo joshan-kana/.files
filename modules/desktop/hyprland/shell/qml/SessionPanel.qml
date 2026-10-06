@@ -153,12 +153,11 @@ Item {
         spacing: theme.spacing1
 
         Text {
-            text: "SESSION // LOCAL"
+            text: "Session"
             color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelEyebrow
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.6
+            font.family: runtime.fontSans
+            font.pixelSize: theme.fontSize(11)
+            font.weight: Font.Medium
         }
 
         Text {
@@ -170,7 +169,7 @@ Item {
         }
 
         Text {
-            text: armedAction.length > 0 ? "CONFIRMATION ARMED // 5 SECOND WINDOW" : "SELECT AN ACTION"
+            text: armedAction.length > 0 ? "Confirm within 5 seconds" : "Choose an action"
             color: armedAction.length > 0 ? theme.warning : theme.textMuted
             font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(9)
