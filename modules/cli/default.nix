@@ -11,6 +11,8 @@ let
   inherit (dotfiles.defaults) editor;
   inherit (dotfiles.users) primary;
   repoPath = dotfiles.paths.repoPath;
+  rebuildFlakeSuffix =
+    if configurationFlakeSubdirectory == null then "" else "/${configurationFlakeSubdirectory}";
   gitSettings = {
     user = {
       name = primary.fullName;
@@ -123,7 +125,7 @@ in
       commands = {
         cd = "cd $DOTFILES";
         flakeUpdate = "nix run ${repoPath}#system-upgrade --";
-        rebuild = action: "nh os ${action} --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+        rebuild = action: "system-rebuild ${action}";
       };
       aliases = {
         syscd = commands.cd;
@@ -142,6 +144,44 @@ in
         sedit = "edit-config";
         sysedit = "edit-config";
       };
+      systemRebuild = pkgs.writeShellApplication {
+        name = "system-rebuild";
+        runtimeInputs = [ pkgs.nh ];
+        text = ''
+          action="''${1:-}"
+          case "$action" in
+            build | boot | switch | test) ;;
+            *)
+              echo "usage: system-rebuild {build|boot|switch|test} [checkout]" >&2
+              exit 2
+              ;;
+          esac
+          shift
+
+          case "$#" in
+            0)
+              target=()
+              ;;
+            1)
+              flake="$1${rebuildFlakeSuffix}"
+              if [[ ! -f "$flake/flake.nix" ]]; then
+                echo "system-rebuild: flake not found: $flake/flake.nix" >&2
+                exit 1
+              fi
+              target=("$flake")
+              ;;
+            *)
+              echo "usage: system-rebuild {build|boot|switch|test} [checkout]" >&2
+              exit 2
+              ;;
+          esac
+
+          read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
+          exec nh os "$action" "''${target[@]}" \
+            --hostname "''${FLK_PROFILE:?FLK_PROFILE is not set}" \
+            -- "''${rebuildFlags[@]}"
+        '';
+      };
       editConfig = pkgs.writeShellApplication {
         name = "edit-config";
         text = ''
@@ -155,10 +195,16 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [ editConfig ];
+      environment.systemPackages = [
+        editConfig
+        systemRebuild
+      ];
 
       home = _: {
-        home.packages = [ editConfig ];
+        home.packages = [
+          editConfig
+          systemRebuild
+        ];
         home.shellAliases = aliases;
       };
 
