@@ -1,11 +1,184 @@
 {
+  config,
+  configurationFlakeSubdirectory ? null,
+  configurationName,
+  configurationOutputName,
+  inputs,
   lib,
+  pkgs,
   scopeConfig,
-  themeVariant ? null,
   ...
 }:
 
+let
+  themeRegistry = import ../../../theme/registry.nix { inherit lib pkgs; };
+  primaryUser = config.dotfiles.users.primary.name;
+  configuredTheme =
+    if configurationFlakeSubdirectory == "themes" then
+      lib.removePrefix "${configurationName}-" configurationOutputName
+    else
+      themeRegistry.default;
+  themeFlake = "path:${inputs.self.outPath}?dir=themes";
+  themeNames = builtins.attrNames themeRegistry.variants;
+
+  themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
+    builtins.toJSON {
+      inherit (themeRegistry) default;
+      themes = lib.mapAttrsToList (
+        name: value:
+        {
+          inherit name;
+          inherit (value) label;
+        }
+        // lib.optionalAttrs (value ? colors) {
+          preview =
+            let
+              inherit (value) colors;
+            in
+            {
+              background = "#${colors.base00}";
+              surface = "#${colors.base01}";
+              outline = "#${colors.base03}";
+              text = "#${colors.base05}";
+              swatches = [
+                "#${colors.base08}"
+                "#${colors.base0A}"
+                "#${colors.base0B}"
+                "#${colors.base0D}"
+                "#${colors.base0E}"
+              ];
+            };
+        }
+      ) themeRegistry.variants;
+    }
+  );
+
+  themeSet = pkgs.writeShellApplication {
+    name = "theme-set";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.nix
+    ];
+    text = ''
+      defaultTheme=${lib.escapeShellArg themeRegistry.default}
+      configuredTheme=${lib.escapeShellArg configuredTheme}
+      expectedUser=${lib.escapeShellArg primaryUser}
+      themeFlake=${lib.escapeShellArg themeFlake}
+      manifest=${lib.escapeShellArg (toString themeManifest)}
+      stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+      stateFile="$stateDir/theme"
+
+      resolve_theme() {
+        case "$1" in
+          ${lib.concatStringsSep "|" themeNames})
+            return 0
+            ;;
+          *)
+            return 1
+            ;;
+        esac
+      }
+
+      write_state() {
+        selected="$1"
+        umask 077
+        install -d -m 0700 "$stateDir"
+        tmp="$(mktemp "$stateDir/theme.XXXXXX")"
+        printf '%s\n' "$selected" > "$tmp"
+        mv "$tmp" "$stateFile"
+      }
+
+      current_theme() {
+        if [ -s "$stateFile" ]; then
+          selected="$(cat "$stateFile")"
+          if resolve_theme "$selected"; then
+            printf '%s\n' "$selected"
+            return
+          fi
+        fi
+
+        printf '%s\n' "$configuredTheme"
+      }
+
+      apply_theme() {
+        selected="$1"
+
+        if [ "''${USER:-}" != "$expectedUser" ]; then
+          printf 'theme-set is configured for user %s, not %s\n' "$expectedUser" "''${USER:-unknown}" >&2
+          exit 1
+        fi
+
+        if ! resolve_theme "$selected"; then
+          printf 'Unknown theme: %s\n' "$selected" >&2
+          exit 2
+        fi
+
+        activation="$(
+          nix build \
+            --no-link \
+            --print-out-paths \
+            "$themeFlake#nixosConfigurations.${configurationName}-$selected.config.home-manager.users.${primaryUser}.home.activationPackage"
+        )"
+
+        XDG_DATA_DIRS="$activation/home-path/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}" \
+          "$activation/activate" --driver-version 1
+
+        write_state "$selected"
+        printf '%s\n' "$selected"
+      }
+
+      case "''${1:-}" in
+        list)
+          if [ "''${2:-}" = "--json" ]; then
+            cat "$manifest"
+          else
+            while IFS= read -r name; do
+              printf '%s\n' "$name"
+            done <<'EOF'
+      ${lib.concatStringsSep "\n" themeNames}
+      EOF
+          fi
+          ;;
+        current)
+          current_theme
+          ;;
+        restore)
+          # A full themed NixOS generation is authoritative. Record it rather
+          # than overriding it with an older runtime-only selection.
+          if [ "$configuredTheme" != "$defaultTheme" ]; then
+            write_state "$configuredTheme"
+            exit 0
+          fi
+
+          selected="$(current_theme)"
+          if [ "$selected" != "$configuredTheme" ]; then
+            apply_theme "$selected" >/dev/null
+          fi
+          ;;
+        "")
+          printf 'Usage: theme-set [list [--json]|current|restore|<theme>]\n' >&2
+          exit 2
+          ;;
+        *)
+          apply_theme "$1"
+          ;;
+      esac
+    '';
+  };
+
+  shellVisual = {
+    panelOpacity = 0.99;
+    focusOpacity = 0.96;
+    scrimOpacity = 0.50;
+    squircleExponent = 4.5;
+  };
+in
 {
+  environment.systemPackages = [ themeSet ];
+
+  systemd.services."home-manager-${primaryUser}".serviceConfig.ExecStartPost =
+    "${lib.getExe themeSet} restore";
+
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
@@ -37,9 +210,6 @@
       developmentShellPath = "${osConfig.dotfiles.paths.repoPath}/modules/desktop/hyprland/shell/qml";
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
-      themeRegistry = import ../../../theme/registry.nix { inherit lib pkgs; };
-      activeThemeName = if themeVariant == null then themeRegistry.default else themeVariant;
-      activeTheme = themeRegistry.resolve activeThemeName;
 
       clipboardCopy = pkgs.writeShellApplication {
         name = "linux-desktop-clipboard-copy";
@@ -95,7 +265,6 @@
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
       };
-      primaryUser = osConfig.dotfiles.users.primary.name;
       mainModifier =
         osConfig.home-manager.users.${primaryUser}.wayland.windowManager.hyprland.settings.mainMod._var;
 
@@ -147,7 +316,7 @@
 
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
-        visual = activeTheme.shell;
+        visual = shellVisual;
         keybindings = cheatsheetBindings;
         inherit shortcuts;
 
@@ -159,7 +328,7 @@
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           sessionCommand = lib.getExe sessionCommand;
-          themeSet = "/run/current-system/sw/bin/theme-set";
+          themeSet = lib.getExe themeSet;
         };
 
         wallpaper = toString osConfig.stylix.image;
