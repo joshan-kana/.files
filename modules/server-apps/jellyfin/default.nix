@@ -20,10 +20,7 @@ in
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ port ];
 
   systemd = {
-    services.jellyfin = {
-      unitConfig.RequiresMountsFor = [ mediaRoot ];
-      serviceConfig.ReadOnlyPaths = [ mediaRoot ];
-    };
+    services.jellyfin.unitConfig.RequiresMountsFor = [ mediaRoot ];
 
     tmpfiles.rules = [
       "d ${mediaRoot} 2770 root ${dataRoot.group.name} - -"
