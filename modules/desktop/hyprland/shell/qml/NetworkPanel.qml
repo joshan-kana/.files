@@ -10,7 +10,7 @@ Item {
     required property QtObject theme
     required property QtObject motion
 
-    signal keyboardRequested()
+    signal keyboardRequested
 
     property bool open: false
     property int selectedIndex: 0
@@ -74,23 +74,14 @@ Item {
     }
 
     function supportsPsk(network): bool {
-        return network
-            && (network.security === WifiSecurityType.WpaPsk
-                || network.security === WifiSecurityType.Wpa2Psk
-                || network.security === WifiSecurityType.Sae);
+        return network && (network.security === WifiSecurityType.WpaPsk || network.security === WifiSecurityType.Wpa2Psk || network.security === WifiSecurityType.Sae);
     }
 
     function needsAdvancedConfiguration(network): bool {
         if (!network || network.known)
             return false;
 
-        return network.security === WifiSecurityType.WpaEap
-            || network.security === WifiSecurityType.Wpa2Eap
-            || network.security === WifiSecurityType.Wpa3SuiteB192
-            || network.security === WifiSecurityType.StaticWep
-            || network.security === WifiSecurityType.DynamicWep
-            || network.security === WifiSecurityType.Leap
-            || network.security === WifiSecurityType.Unknown;
+        return network.security === WifiSecurityType.WpaEap || network.security === WifiSecurityType.Wpa2Eap || network.security === WifiSecurityType.Wpa3SuiteB192 || network.security === WifiSecurityType.StaticWep || network.security === WifiSecurityType.DynamicWep || network.security === WifiSecurityType.Leap || network.security === WifiSecurityType.Unknown;
     }
 
     function promptForPassword(network, message): void {
@@ -138,9 +129,7 @@ Item {
             return;
         }
 
-        if (network.known
-            || network.security === WifiSecurityType.Open
-            || network.security === WifiSecurityType.Owe) {
+        if (network.known || network.security === WifiSecurityType.Open || network.security === WifiSecurityType.Owe) {
             statusText = "CONNECTING // " + network.name;
             network.connect();
             return;
@@ -173,10 +162,7 @@ Item {
         target: system
 
         function onWifiNetworksChanged(): void {
-            panel.selectedIndex = Math.max(
-                0,
-                Math.min(panel.selectedIndex, Math.max(0, panel.networks.length - 1))
-            );
+            panel.selectedIndex = Math.max(0, Math.min(panel.selectedIndex, Math.max(0, panel.networks.length - 1)));
         }
     }
 
@@ -248,9 +234,7 @@ Item {
             id: networkList
 
             anchors.fill: parent
-            visible: system.wifiAvailable
-                && system.wifiEnabled
-                && !panel.passwordPrompt
+            visible: system.wifiAvailable && system.wifiEnabled && !panel.passwordPrompt
             model: panel.networks
             spacing: theme.spacing2
             clip: true
@@ -268,12 +252,8 @@ Item {
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
                 fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
-                borderColor: modelData.connected
-                    ? theme.positive
-                    : (index === panel.selectedIndex ? theme.accent : theme.outline)
-                borderWidth: index === panel.selectedIndex || modelData.connected
-                    ? theme.borderFocus
-                    : theme.borderThin
+                borderColor: modelData.connected ? theme.positive : (index === panel.selectedIndex ? theme.accent : theme.outline)
+                borderWidth: index === panel.selectedIndex || modelData.connected ? theme.borderFocus : theme.borderThin
 
                 MouseArea {
                     anchors.fill: parent
@@ -311,9 +291,7 @@ Item {
 
                             Text {
                                 id: statusBadge
-                                text: modelData.connected
-                                    ? "CONNECTED"
-                                    : (modelData.known ? "KNOWN" : "")
+                                text: modelData.connected ? "CONNECTED" : (modelData.known ? "KNOWN" : "")
                                 color: modelData.connected ? theme.positive : theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(8)
@@ -323,9 +301,7 @@ Item {
 
                         Text {
                             width: parent.width
-                            text: WifiSecurityType.toString(modelData.security).toUpperCase()
-                                + " // SIG "
-                                + Math.round(modelData.signalStrength * 100)
+                            text: WifiSecurityType.toString(modelData.security).toUpperCase() + " // SIG " + Math.round(modelData.signalStrength * 100)
                             color: theme.textMuted
                             font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(8)
@@ -337,9 +313,7 @@ Item {
                         width: 100
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
-                        text: modelData.stateChanging
-                            ? ConnectionState.toString(modelData.state).toUpperCase()
-                            : (modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
+                        text: modelData.stateChanging ? ConnectionState.toString(modelData.state).toUpperCase() : (modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
                         color: modelData.stateChanging ? theme.warning : theme.accent
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(8)
@@ -351,12 +325,8 @@ Item {
                     target: modelData
 
                     function onConnectionFailed(reason): void {
-                        if (reason === ConnectionFailReason.NoSecrets
-                            && panel.supportsPsk(modelData)) {
-                            panel.promptForPassword(
-                                modelData,
-                                "AUTH REQUIRED // " + modelData.name
-                            );
+                        if (reason === ConnectionFailReason.NoSecrets && panel.supportsPsk(modelData)) {
+                            panel.promptForPassword(modelData, "AUTH REQUIRED // " + modelData.name);
                             return;
                         }
 
@@ -396,9 +366,7 @@ Item {
 
             Text {
                 width: parent.width
-                text: pendingNetwork
-                    ? WifiSecurityType.toString(pendingNetwork.security).toUpperCase()
-                    : ""
+                text: pendingNetwork ? WifiSecurityType.toString(pendingNetwork.security).toUpperCase() : ""
                 horizontalAlignment: Text.AlignHCenter
                 color: theme.textMuted
                 font.family: runtime.fontMono
@@ -473,9 +441,7 @@ Item {
             anchors.centerIn: parent
             visible: !system.wifiAvailable && !panel.passwordPrompt
             width: parent.width
-            text: system.networkConnected
-                ? "WIRED LINK // " + system.networkName
-                : "NO WI-FI DEVICE // NETWORK OFFLINE"
+            text: system.networkConnected ? "WIRED LINK // " + system.networkName : "NO WI-FI DEVICE // NETWORK OFFLINE"
             horizontalAlignment: Text.AlignHCenter
             color: system.networkConnected ? theme.text : theme.textMuted
             font.family: runtime.fontMono
@@ -485,13 +451,9 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            visible: system.wifiAvailable
-                && !system.wifiEnabled
-                && !panel.passwordPrompt
+            visible: system.wifiAvailable && !system.wifiEnabled && !panel.passwordPrompt
             width: parent.width
-            text: system.wifiHardwareEnabled
-                ? "WI-FI RADIO DISABLED // PRESS W"
-                : "WI-FI DISABLED BY HARDWARE"
+            text: system.wifiHardwareEnabled ? "WI-FI RADIO DISABLED // PRESS W" : "WI-FI DISABLED BY HARDWARE"
             horizontalAlignment: Text.AlignHCenter
             color: system.wifiHardwareEnabled ? theme.warning : theme.critical
             font.family: runtime.fontMono

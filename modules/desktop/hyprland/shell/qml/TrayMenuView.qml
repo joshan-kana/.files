@@ -12,12 +12,8 @@ Item {
     property var stack: []
     property int selectedIndex: 0
 
-    readonly property var currentHandle: open && stack.length > 0
-        ? stack[stack.length - 1].handle
-        : null
-    readonly property string currentTitle: open && stack.length > 0
-        ? stack[stack.length - 1].label
-        : "Tray"
+    readonly property var currentHandle: open && stack.length > 0 ? stack[stack.length - 1].handle : null
+    readonly property string currentTitle: open && stack.length > 0 ? stack[stack.length - 1].label : "Tray"
     readonly property var items: opener.children ? opener.children.values : []
     readonly property int itemCount: items.length
 
@@ -68,10 +64,12 @@ Item {
         if (!item || !item.hasMenu)
             return;
 
-        stack = [{
-            handle: item.menu,
-            label: item.title || item.id || "Tray"
-        }];
+        stack = [
+            {
+                handle: item.menu,
+                label: item.title || item.id || "Tray"
+            }
+        ];
         selectedIndex = 0;
         open = true;
         Qt.callLater(selectFirst);
@@ -103,10 +101,12 @@ Item {
         const entry = items[selectedIndex];
 
         if (entry.hasChildren) {
-            stack = [...stack, {
-                handle: entry,
-                label: entry.text || "Submenu"
-            }];
+            stack = [...stack,
+                {
+                    handle: entry,
+                    label: entry.text || "Submenu"
+                }
+            ];
             selectedIndex = 0;
             Qt.callLater(selectFirst);
             return;
@@ -196,15 +196,9 @@ Item {
 
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusSmall
-                fillColor: entryDelegate.index === view.selectedIndex
-                    ? theme.focusFill
-                    : "transparent"
-                borderColor: entryDelegate.index === view.selectedIndex
-                    ? theme.accent
-                    : "transparent"
-                borderWidth: entryDelegate.index === view.selectedIndex
-                    ? theme.borderFocus
-                    : theme.borderThin
+                fillColor: entryDelegate.index === view.selectedIndex ? theme.focusFill : "transparent"
+                borderColor: entryDelegate.index === view.selectedIndex ? theme.accent : "transparent"
+                borderWidth: entryDelegate.index === view.selectedIndex ? theme.borderFocus : theme.borderThin
                 opacity: modelData.enabled ? 1 : 0.42
 
                 MouseArea {
@@ -230,9 +224,7 @@ Item {
                         visible: modelData.icon.length > 0
                         width: 20
                         height: 20
-                        source: modelData.icon.length > 0
-                            ? modelData.icon
-                            : Quickshell.iconPath("application-x-executable")
+                        source: modelData.icon.length > 0 ? modelData.icon : Quickshell.iconPath("application-x-executable")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                     }
@@ -240,9 +232,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: modelData.buttonType !== QsMenuButtonType.None
-                        text: modelData.checkState === Qt.Checked
-                            ? (modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓")
-                            : "○"
+                        text: modelData.checkState === Qt.Checked ? (modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓") : "○"
                         color: theme.accent
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(11)
@@ -250,10 +240,7 @@ Item {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                            - (modelData.icon.length > 0 ? 20 + parent.spacing : 0)
-                            - (modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0)
-                            - (modelData.hasChildren ? 18 : 0)
+                        width: parent.width - (modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (modelData.hasChildren ? 18 : 0)
                         text: modelData.text
                         color: theme.text
                         font.family: runtime.fontSans
