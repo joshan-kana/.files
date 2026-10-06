@@ -199,12 +199,11 @@ Item {
         spacing: theme.spacing1
 
         Text {
-            text: "THEME // STYLIX"
+            text: "Appearance"
             color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelEyebrow
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.6
+            font.family: runtime.fontSans
+            font.pixelSize: theme.fontSize(11)
+            font.weight: Font.Medium
         }
 
         Text {
@@ -216,7 +215,7 @@ Item {
         }
 
         Text {
-            text: currentTheme.length > 0 ? "ACTIVE // " + panel.themeLabel(currentTheme).toUpperCase() : "RESOLVING ACTIVE THEME"
+            text: currentTheme.length > 0 ? "Active · " + panel.themeLabel(currentTheme) : "Resolving active theme…"
             color: theme.textMuted
             font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(9)
