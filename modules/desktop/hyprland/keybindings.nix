@@ -190,7 +190,7 @@ in
     description = "App & command launcher";
   })
   (mk {
-    keys = "V";
+    keys = "C";
     id = "clipboard.toggle";
     action = global "linux-desktop:clipboard";
     section = "LAUNCHERS";
@@ -229,12 +229,6 @@ in
     description = "Close window";
   })
   (mk {
-    keys = "M";
-    action = dispatcher "hl.dsp.exit()";
-    section = "SYSTEM";
-    description = "Exit Hyprland";
-  })
-  (mk {
     keys = "SHIFT + F";
     action = dispatcher "hl.dsp.window.float()";
     section = "WINDOWS";
@@ -247,7 +241,7 @@ in
     description = "Pin window";
   })
   (mk {
-    keys = "P";
+    keys = "CTRL + P";
     action = dispatcher "hl.dsp.window.pseudo()";
     section = "WINDOWS";
     description = "Toggle pseudo tiling";
@@ -347,6 +341,32 @@ in
 ++ map moveToWorkspace workspaceKeys
 ++ [
   (mk {
+    keys = "B";
+    action = dispatcher ''hl.dsp.window.move({ monitor = "+1", follow = false })'';
+    section = "DISPLAYS";
+    description = "Move window to next display";
+  })
+  (mk {
+    keys = "V";
+    action = dispatcher ''hl.dsp.focus({ monitor = "+1" })'';
+    section = "DISPLAYS";
+    description = "Focus next display";
+  })
+  (mk {
+    keys = "left";
+    action = dispatcher ''hl.dsp.focus({ workspace = "e-1" })'';
+    section = "WORKSPACES";
+    description = "Previous workspace";
+    label = "←";
+  })
+  (mk {
+    keys = "right";
+    action = dispatcher ''hl.dsp.focus({ workspace = "e+1" })'';
+    section = "WORKSPACES";
+    description = "Next workspace";
+    label = "→";
+  })
+  (mk {
     keys = "X";
     action = dispatcher ''hl.dsp.workspace.toggle_special("magic")'';
     section = "WORKSPACES";
@@ -371,18 +391,6 @@ in
     section = "WORKSPACES";
     description = "Previous workspace";
     label = "WHEEL ↑";
-  })
-  (mk {
-    keys = "CTRL + A";
-    action = dispatcher ''hl.dsp.focus({ workspace = "e-1" })'';
-    section = "WORKSPACES";
-    description = "Previous workspace";
-  })
-  (mk {
-    keys = "CTRL + D";
-    action = dispatcher ''hl.dsp.focus({ workspace = "e+1" })'';
-    section = "WORKSPACES";
-    description = "Next workspace";
   })
 
   (mk {
@@ -415,55 +423,56 @@ in
     label = "MUTE";
   })
   (mk {
-    keys = "ALT + X";
-    id = "media.playPause";
-    action = global "linux-desktop:media-play-pause";
+    keys = "N";
+    id = "media.toggle";
+    action = global "linux-desktop:media";
     section = "MEDIA";
-    description = "Play / pause";
+    description = "Now playing";
   })
   (mk {
-    keys = "ALT + C";
-    id = "media.next";
-    action = global "linux-desktop:media-next";
-    section = "MEDIA";
-    description = "Next track";
-  })
-  (mk {
-    keys = "ALT + Z";
-    id = "media.previous";
-    action = global "linux-desktop:media-previous";
-    section = "MEDIA";
-    description = "Previous track";
-  })
-  (mk {
-    keys = "ALT + D";
-    id = "media.seekForward";
-    action = global "linux-desktop:media-seek-forward";
-    flags.repeating = true;
-    section = "MEDIA";
-    description = "Seek forward 10 seconds";
-  })
-  (mk {
-    keys = "ALT + S";
+    keys = "bracketleft";
     id = "media.seekBackward";
     action = global "linux-desktop:media-seek-backward";
     flags.repeating = true;
     section = "MEDIA";
     description = "Seek backward 10 seconds";
+    label = "[";
   })
   (mk {
-    keys = "ALT + W";
-    id = "media.shuffle";
-    action = global "linux-desktop:media-shuffle";
+    keys = "bracketright";
+    id = "media.seekForward";
+    action = global "linux-desktop:media-seek-forward";
+    flags.repeating = true;
     section = "MEDIA";
-    description = "Toggle shuffle";
+    description = "Seek forward 10 seconds";
+    label = "]";
   })
   (mk {
-    keys = "ALT + F";
-    id = "media.cyclePlayer";
-    action = global "linux-desktop:media-cycle-player";
+    keys = "XF86AudioPlay";
+    mainMod = false;
+    id = "media.playPause";
+    action = global "linux-desktop:media-play-pause";
     section = "MEDIA";
-    description = "Switch media player";
+    description = "Play / pause";
+    cheatsheet = false;
+  })
+  (mk {
+    keys = "XF86AudioNext";
+    mainMod = false;
+    id = "media.next";
+    action = global "linux-desktop:media-next";
+    section = "MEDIA";
+    description = "Next track";
+    cheatsheet = false;
+  })
+  (mk {
+    keys = "XF86AudioPrev";
+    mainMod = false;
+    id = "media.previous";
+    action = global "linux-desktop:media-previous";
+    section = "MEDIA";
+    description = "Previous track";
+    cheatsheet = false;
   })
 
   (mk {
