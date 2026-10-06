@@ -173,12 +173,11 @@ Item {
         spacing: theme.spacing1
 
         Text {
-            text: "NETWORK // " + system.connectivityText.toUpperCase()
+            text: "Network · " + system.connectivityText.toLowerCase()
             color: system.networkConnected ? theme.positive : theme.warning
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelEyebrow
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.6
+            font.family: runtime.fontSans
+            font.pixelSize: theme.fontSize(11)
+            font.weight: Font.Medium
         }
 
         Text {
@@ -194,7 +193,7 @@ Item {
             spacing: theme.spacing3
 
             Text {
-                text: system.networkConnected ? system.networkName : "OFFLINE"
+                text: system.networkConnected ? system.networkName : "Offline"
                 color: theme.text
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(9)
@@ -210,7 +209,7 @@ Item {
 
             Text {
                 visible: system.wifiAvailable && !system.wifiHardwareEnabled
-                text: "HARDWARE DISABLED"
+                text: "Wi-Fi hardware unavailable"
                 color: theme.critical
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(9)
