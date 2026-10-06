@@ -228,12 +228,11 @@ PanelWindow {
                 spacing: theme.spacing2
 
                 Text {
-                    text: "CLIPBOARD // " + entries.length + " ITEMS"
+                    text: "Clipboard · " + entries.length + (entries.length === 1 ? " item" : " items")
                     color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.8
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(12)
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -386,7 +385,7 @@ PanelWindow {
             Text {
                 anchors.centerIn: list
                 visible: queryProcess.running
-                text: "LOADING HISTORY…"
+                text: "Loading history…"
                 color: theme.accent
                 font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(11)
