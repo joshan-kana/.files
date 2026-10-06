@@ -30,6 +30,11 @@ _: {
   immich = import ./immich;
 
   /**
+    Private Jellyfin media service.
+  */
+  jellyfin = import ./jellyfin;
+
+  /**
     Matrix bridge services.
   */
   matrix = import ./matrix;

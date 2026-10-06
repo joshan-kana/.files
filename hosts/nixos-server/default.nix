@@ -10,7 +10,6 @@
     system
     theme
     cli
-    serverApps
     ;
 
   imports = [
@@ -49,6 +48,29 @@
       nixTree.enable = false;
       python3.enable = false;
     };
+  };
+
+  serverApps = editScope moduleRegistry.serverApps {
+    jellyfin =
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      {
+        config = lib.mkIf config.services.jellyfin.enable {
+          hardware.graphics = {
+            enable = true;
+            extraPackages = [ pkgs.intel-media-driver ];
+          };
+
+          users.users.${config.services.jellyfin.user}.extraGroups = [
+            "render"
+            "video"
+          ];
+        };
+      };
   };
 
   backups = editScope moduleRegistry.backups {
