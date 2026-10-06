@@ -89,6 +89,7 @@ in
         };
         globalKeybindings = lib.filter (binding: binding.submap == null) keybindings;
         launcherKeybindings = lib.filter (binding: binding.submap == "launcher") keybindings;
+        resizeKeybindings = lib.filter (binding: binding.submap == "resize") keybindings;
         actionDispatcher =
           action:
           if action.type == "exec" then
@@ -278,6 +279,7 @@ in
 
         submaps = {
           launcher.settings.bind = map renderBinding launcherKeybindings;
+          resize.settings.bind = map renderBinding resizeKeybindings;
           passthru.settings.bind = [
             (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
           ];
