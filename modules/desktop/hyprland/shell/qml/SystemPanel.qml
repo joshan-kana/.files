@@ -14,6 +14,7 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    property bool helpOpen: false
     property int trayIndex: 0
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
@@ -21,6 +22,118 @@ PanelWindow {
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
     readonly property bool sessionOpen: sessionPanel.open
+    readonly property string helpTitle: bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls"))))
+    readonly property var helpBindings: bluetoothPanel.open ? [
+        {
+            key: "↑ / ↓",
+            action: "Select device"
+        },
+        {
+            key: "ENTER",
+            action: "Connect / disconnect"
+        },
+        {
+            key: "B / D",
+            action: "Bluetooth radio / discovery"
+        },
+        {
+            key: "P / T / F",
+            action: "Pair / trust / forget"
+        },
+        {
+            key: "ESC",
+            action: "Back"
+        }
+    ] : (networkPanel.open ? [
+            {
+                key: "↑ / ↓",
+                action: "Select network"
+            },
+            {
+                key: "ENTER",
+                action: "Join / disconnect"
+            },
+            {
+                key: "W",
+                action: "Toggle Wi-Fi"
+            },
+            {
+                key: "A",
+                action: "Advanced network editor"
+            },
+            {
+                key: "ESC",
+                action: "Back"
+            }
+        ] : (themePanel.open ? [
+                {
+                    key: "↑ / ↓",
+                    action: "Select theme"
+                },
+                {
+                    key: "ENTER",
+                    action: "Apply theme"
+                },
+                {
+                    key: "ESC",
+                    action: "Back"
+                }
+            ] : (sessionPanel.open ? [
+                    {
+                        key: "↑ / ↓",
+                        action: "Select action"
+                    },
+                    {
+                        key: "ENTER",
+                        action: "Activate / confirm"
+                    },
+                    {
+                        key: "ESC",
+                        action: "Back"
+                    }
+                ] : (trayMenu.open ? [
+                        {
+                            key: "↑ / ↓",
+                            action: "Select item"
+                        },
+                        {
+                            key: "ENTER / →",
+                            action: "Activate / open submenu"
+                        },
+                        {
+                            key: "← / ESC",
+                            action: "Back"
+                        }
+                    ] : [
+                        {
+                            key: "← / →",
+                            action: "Volume down / up"
+                        },
+                        {
+                            key: "↑ / ↓",
+                            action: "Brightness up / down"
+                        },
+                        {
+                            key: "M",
+                            action: "Mute / unmute"
+                        },
+                        {
+                            key: "N / B",
+                            action: "Network / Bluetooth"
+                        },
+                        {
+                            key: "Y / P",
+                            action: "Theme / session"
+                        },
+                        {
+                            key: "[ / ] / T",
+                            action: "Select / open tray item"
+                        },
+                        {
+                            key: "ESC",
+                            action: "Close"
+                        }
+                    ]))))
 
     visible: open || closing
     color: "transparent"
@@ -47,11 +160,13 @@ PanelWindow {
         closeTimer.stop();
         closing = false;
         trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
+        helpOpen = false;
         open = true;
         keyboardFocus.forceActiveFocus();
     }
 
     function hide(): void {
+        helpOpen = false;
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -75,6 +190,7 @@ PanelWindow {
     }
 
     function openNetwork(): void {
+        helpOpen = false;
         trayMenu.closeMenu();
         bluetoothPanel.closeView();
         themePanel.closeView();
@@ -83,6 +199,7 @@ PanelWindow {
     }
 
     function openBluetooth(): void {
+        helpOpen = false;
         trayMenu.closeMenu();
         networkPanel.closeView();
         themePanel.closeView();
@@ -91,6 +208,7 @@ PanelWindow {
     }
 
     function openTheme(): void {
+        helpOpen = false;
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -104,6 +222,7 @@ PanelWindow {
     }
 
     function openSession(): void {
+        helpOpen = false;
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -131,7 +250,7 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrim
+        color: theme.contextualScrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
@@ -148,14 +267,10 @@ PanelWindow {
     }
 
     SquircleSurface {
+        id: card
+
         width: Math.min(panel.width - 70, 500)
-        height: Math.min(
-            panel.height - 110,
-            theme.spacing5 * 2
-                + content.implicitHeight
-                + theme.spacing3
-                + footer.implicitHeight
-        )
+        height: Math.min(panel.height - 110, theme.spacing5 * 2 + content.implicitHeight + theme.spacing3 + footer.implicitHeight)
 
         anchors {
             top: parent.top
@@ -167,7 +282,7 @@ PanelWindow {
         exponent: theme.squircleExponent
         cornerRadius: theme.radiusPanel
         fillColor: theme.panelFill
-        borderColor: theme.panelBorder
+        borderColor: theme.subtleBorder
         borderWidth: theme.borderThin
 
         scale: panel.open ? 1 : theme.panelClosedScale
@@ -193,20 +308,15 @@ PanelWindow {
             Column {
                 id: content
                 width: parent.width
-                visible: !trayMenu.open
-                    && !networkPanel.open
-                    && !bluetoothPanel.open
-                    && !themePanel.open
-                    && !sessionPanel.open
+                visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open
                 spacing: theme.spacing4
 
                 Text {
-                    text: "SYSTEM // LIVE"
+                    text: "System"
                     color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.8
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(12)
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -238,10 +348,10 @@ PanelWindow {
                             }
 
                             Text {
-                                text: system.muted ? "AUDIO // MUTED" : "AUDIO // " + system.volumePercent + "%"
+                                text: system.muted ? "Sound · muted" : "Sound  " + system.volumePercent + "%"
                                 color: system.muted ? theme.warning : theme.textStrong
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(12)
+                                font.family: runtime.fontSans
+                                font.pixelSize: theme.fontSize(13)
                                 font.weight: Font.DemiBold
                             }
 
@@ -253,7 +363,7 @@ PanelWindow {
                             Text {
                                 id: sinkName
                                 width: Math.min(220, implicitWidth)
-                                text: system.audioAvailable && system.audioSink ? (system.audioSink.description || system.audioSink.name) : "NO SINK"
+                                text: system.audioAvailable && system.audioSink ? (system.audioSink.description || system.audioSink.name) : "No output"
                                 horizontalAlignment: Text.AlignRight
                                 elide: Text.ElideRight
                                 color: theme.textMuted
@@ -311,7 +421,7 @@ PanelWindow {
                             }
 
                             Text {
-                                text: "DISPLAY // " + brightness.percent + "%"
+                                text: "Display  " + brightness.percent + "%"
                                 color: theme.textStrong
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
@@ -372,26 +482,26 @@ PanelWindow {
                         model: [
                             {
                                 id: "network",
-                                label: "NETWORK",
-                                value: system.networkConnected ? system.networkName : "OFFLINE",
+                                label: "Network",
+                                value: system.networkConnected ? system.networkName : "Offline",
                                 active: system.networkConnected
                             },
                             {
                                 id: "bluetooth",
-                                label: "BLUETOOTH",
-                                value: system.bluetoothEnabled ? system.bluetoothConnectedCount + " CONNECTED" : "OFF",
+                                label: "Bluetooth",
+                                value: system.bluetoothEnabled ? system.bluetoothConnectedCount + " connected" : "Off",
                                 active: system.bluetoothEnabled
                             },
                             {
                                 id: "theme",
-                                label: "THEME",
-                                value: "PALETTE",
+                                label: "Theme",
+                                value: "Palette",
                                 active: true
                             },
                             {
                                 id: "session",
-                                label: "SESSION",
-                                value: "POWER",
+                                label: "Session",
+                                value: "Power",
                                 active: true
                             }
                         ]
@@ -409,10 +519,7 @@ PanelWindow {
 
                             MouseArea {
                                 anchors.fill: parent
-                                enabled: modelData.id === "network"
-                                    || modelData.id === "bluetooth"
-                                    || modelData.id === "theme"
-                                    || modelData.id === "session"
+                                enabled: modelData.id === "network" || modelData.id === "bluetooth" || modelData.id === "theme" || modelData.id === "session"
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
 
                                 onClicked: {
@@ -437,10 +544,9 @@ PanelWindow {
                                 Text {
                                     text: modelData.label
                                     color: modelData.active ? theme.accent : theme.textMuted
-                                    font.family: runtime.fontMono
-                                    font.pixelSize: theme.fontSize(10)
+                                    font.family: runtime.fontSans
+                                    font.pixelSize: theme.fontSize(11)
                                     font.weight: Font.DemiBold
-                                    font.letterSpacing: 1.2
                                 }
 
                                 Text {
@@ -465,7 +571,7 @@ PanelWindow {
                         width: parent.width
 
                         Text {
-                            text: "SYSTEM TRAY // " + system.trayCount
+                            text: "Tray  " + system.trayCount
                             color: theme.textMuted
                             font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(10)
@@ -540,9 +646,7 @@ PanelWindow {
                                         anchors.horizontalCenter: parent.horizontalCenter
                                         width: 24
                                         height: 24
-                                        source: modelData.icon.length > 0
-                                            ? modelData.icon
-                                            : Quickshell.iconPath("application-x-executable")
+                                        source: modelData.icon.length > 0 ? modelData.icon : Quickshell.iconPath("application-x-executable")
                                         fillMode: Image.PreserveAspectFit
                                         asynchronous: true
                                     }
@@ -581,7 +685,7 @@ PanelWindow {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "BATTERY"
+                            text: "Battery"
                             color: theme.textMuted
                             font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(10)
@@ -670,11 +774,7 @@ PanelWindow {
                 id: footer
 
                 width: parent.width
-                visible: !trayMenu.open
-                    && !networkPanel.open
-                    && !bluetoothPanel.open
-                    && !themePanel.open
-                    && !sessionPanel.open
+                visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open
 
                 anchors {
                     left: parent.left
@@ -759,6 +859,21 @@ PanelWindow {
                     }
 
                     Text {
+                        text: "?  HELP"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                        font.letterSpacing: 1
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: panel.helpOpen = true
+                        }
+                    }
+
+                    Text {
                         text: "ESC  CLOSE"
                         color: theme.textMuted
                         font.family: runtime.fontMono
@@ -774,9 +889,24 @@ PanelWindow {
                 focus: panel.open
 
                 Keys.onPressed: event => {
+                    const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
+
+                    if (panel.helpOpen) {
+                        if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                            panel.helpOpen = false;
+                            event.accepted = true;
+                        }
+                        return;
+                    }
+
+                    if (helpKey) {
+                        panel.helpOpen = true;
+                        event.accepted = true;
+                        return;
+                    }
+
                     if (bluetoothPanel.open) {
-                        if (event.key === Qt.Key_Escape
-                            || event.key === Qt.Key_Backspace) {
+                        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                             bluetoothPanel.closeView();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
@@ -785,8 +915,7 @@ PanelWindow {
                         } else if (event.key === Qt.Key_Down) {
                             bluetoothPanel.moveSelection(1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return
-                            || event.key === Qt.Key_Enter) {
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             bluetoothPanel.activateSelected();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_B) {
@@ -810,8 +939,7 @@ PanelWindow {
                     }
 
                     if (sessionPanel.open) {
-                        if (event.key === Qt.Key_Escape
-                            || event.key === Qt.Key_Backspace) {
+                        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                             sessionPanel.closeView();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
@@ -820,8 +948,7 @@ PanelWindow {
                         } else if (event.key === Qt.Key_Down) {
                             sessionPanel.moveSelection(1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return
-                            || event.key === Qt.Key_Enter) {
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             sessionPanel.activateSelected();
                             event.accepted = true;
                         }
@@ -830,8 +957,7 @@ PanelWindow {
                     }
 
                     if (themePanel.open) {
-                        if (event.key === Qt.Key_Escape
-                            || event.key === Qt.Key_Backspace) {
+                        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                             themePanel.closeView();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
@@ -840,8 +966,7 @@ PanelWindow {
                         } else if (event.key === Qt.Key_Down) {
                             themePanel.moveSelection(1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return
-                            || event.key === Qt.Key_Enter) {
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             themePanel.activateSelected();
                             event.accepted = true;
                         }
@@ -853,8 +978,7 @@ PanelWindow {
                         if (networkPanel.passwordPrompt)
                             return;
 
-                        if (event.key === Qt.Key_Escape
-                            || event.key === Qt.Key_Backspace) {
+                        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                             networkPanel.closeView();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
@@ -863,8 +987,7 @@ PanelWindow {
                         } else if (event.key === Qt.Key_Down) {
                             networkPanel.moveSelection(1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return
-                            || event.key === Qt.Key_Enter) {
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             networkPanel.activateSelected();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_W) {
@@ -879,9 +1002,7 @@ PanelWindow {
                     }
 
                     if (trayMenu.open) {
-                        if (event.key === Qt.Key_Escape
-                            || event.key === Qt.Key_Backspace
-                            || event.key === Qt.Key_Left) {
+                        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || event.key === Qt.Key_Left) {
                             trayMenu.goBack();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Up) {
@@ -890,9 +1011,7 @@ PanelWindow {
                         } else if (event.key === Qt.Key_Down) {
                             trayMenu.moveSelection(1);
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Return
-                            || event.key === Qt.Key_Enter
-                            || event.key === Qt.Key_Right) {
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Right) {
                             trayMenu.activateSelected();
                             event.accepted = true;
                         }
@@ -942,6 +1061,17 @@ PanelWindow {
                     }
                 }
             }
+        }
+
+        WidgetHelp {
+            anchors.fill: parent
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            open: panel.helpOpen
+            title: panel.helpTitle
+            bindings: panel.helpBindings
+            onDismissed: panel.helpOpen = false
         }
     }
 }
