@@ -5,7 +5,7 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    signal themeChanged()
+    signal themeChanged
 
     readonly property string terminal: data.defaults.terminal
     readonly property string editor: data.defaults.editor

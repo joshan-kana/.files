@@ -11,9 +11,7 @@ PanelWindow {
     required property QtObject motion
 
     property bool closing: false
-    readonly property color accentColor: osd.muted
-        ? theme.warning
-        : (osd.kind === "brightness" ? theme.positive : theme.accent)
+    readonly property color accentColor: osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.positive : theme.accent)
 
     visible: osd.visible || closing
     color: "transparent"

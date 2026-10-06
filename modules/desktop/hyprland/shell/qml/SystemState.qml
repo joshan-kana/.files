@@ -16,16 +16,10 @@ QtObject {
     readonly property bool muted: audioAvailable ? audioSink.audio.muted : false
 
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
-    readonly property var audioStreams: pipewireNodes.filter(node =>
-        node !== null
-        && node.isStream
-        && node.isSink
-        && node.audio !== null)
+    readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null)
 
     property PwObjectTracker audioTracker: PwObjectTracker {
-        objects: [system.audioSink]
-            .filter(node => node !== null)
-            .concat(system.audioStreams)
+        objects: [system.audioSink].filter(node => node !== null).concat(system.audioStreams)
     }
 
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
@@ -40,9 +34,7 @@ QtObject {
     readonly property bool wifiAvailable: wifiDevice !== null
     readonly property bool wifiEnabled: Networking.wifiEnabled
     readonly property bool wifiHardwareEnabled: Networking.wifiHardwareEnabled
-    readonly property var wifiNetworks: wifiDevice && wifiDevice.networks
-        ? wifiDevice.networks.values
-        : []
+    readonly property var wifiNetworks: wifiDevice && wifiDevice.networks ? wifiDevice.networks.values : []
     readonly property string connectivityText: NetworkConnectivity.toString(Networking.connectivity)
     readonly property var connectedNetworkDevice: {
         let wired = null;
@@ -91,9 +83,7 @@ QtObject {
     readonly property bool bluetoothAvailable: bluetoothAdapter !== null
     readonly property bool bluetoothEnabled: bluetoothAvailable && bluetoothAdapter.enabled
     readonly property bool bluetoothDiscovering: bluetoothAvailable && bluetoothAdapter.discovering
-    readonly property var bluetoothAdapterDevices: bluetoothAvailable && bluetoothAdapter.devices
-        ? bluetoothAdapter.devices.values
-        : []
+    readonly property var bluetoothAdapterDevices: bluetoothAvailable && bluetoothAdapter.devices ? bluetoothAdapter.devices.values : []
     readonly property var bluetoothDevices: Bluetooth.devices ? Bluetooth.devices.values : []
     readonly property int bluetoothConnectedCount: {
         let count = 0;
@@ -130,12 +120,7 @@ QtObject {
             return "Unknown stream";
 
         const properties = stream.properties || {};
-        return properties["application.name"]
-            || properties["media.name"]
-            || stream.description
-            || stream.nickname
-            || stream.name
-            || "Audio stream";
+        return properties["application.name"] || properties["media.name"] || stream.description || stream.nickname || stream.name || "Audio stream";
     }
 
     function streamTechnicalName(stream): string {
@@ -143,9 +128,7 @@ QtObject {
             return "";
 
         const properties = stream.properties || {};
-        const process = properties["application.process.binary"]
-            || properties["application.process.id"]
-            || "";
+        const process = properties["application.process.binary"] || properties["application.process.id"] || "";
         const media = properties["media.name"] || "";
 
         if (process && media && process !== media)

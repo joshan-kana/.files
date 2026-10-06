@@ -243,11 +243,7 @@ PanelWindow {
                             Text {
                                 id: volumeLabel
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.audio
-                                    ? (modelData.audio.muted
-                                        ? "MUTED"
-                                        : Math.round(modelData.audio.volume * 100) + "%")
-                                    : "—"
+                                text: modelData.audio ? (modelData.audio.muted ? "MUTED" : Math.round(modelData.audio.volume * 100) + "%") : "—"
                                 color: modelData.audio && modelData.audio.muted ? theme.warning : theme.accent
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
@@ -269,9 +265,7 @@ PanelWindow {
                             Rectangle {
                                 height: parent.height
                                 radius: parent.radius
-                                width: modelData.audio
-                                    ? parent.width * Math.max(0, Math.min(1, modelData.audio.volume))
-                                    : 0
+                                width: modelData.audio ? parent.width * Math.max(0, Math.min(1, modelData.audio.volume)) : 0
                                 color: modelData.audio && modelData.audio.muted ? theme.warning : theme.accent
 
                                 Behavior on width {

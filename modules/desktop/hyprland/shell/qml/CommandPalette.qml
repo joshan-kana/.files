@@ -64,60 +64,48 @@ PanelWindow {
         const query = search.text.trim().toLowerCase();
 
         const commandItems = (commands || []).map(command => ({
-            kind: "command",
-            name: command.name,
-            genericName: command.description || "Desktop action",
-            icon: command.icon || "system-run",
-            key: command.key || "",
-            commandId: command.id,
-            keywords: command.keywords || []
-        }));
+                    kind: "command",
+                    name: command.name,
+                    genericName: command.description || "Desktop action",
+                    icon: command.icon || "system-run",
+                    key: command.key || "",
+                    commandId: command.id,
+                    keywords: command.keywords || []
+                }));
 
         const applicationItems = [...DesktopEntries.applications.values].map(entry => ({
-            kind: "application",
-            name: entry.name,
-            genericName: entry.genericName || entry.comment || "Application",
-            icon: entry.icon || "application-x-executable",
-            key: "",
-            desktopEntry: entry,
-            keywords: entry.keywords || []
-        }));
+                    kind: "application",
+                    name: entry.name,
+                    genericName: entry.genericName || entry.comment || "Application",
+                    icon: entry.icon || "application-x-executable",
+                    key: "",
+                    desktopEntry: entry,
+                    keywords: entry.keywords || []
+                }));
 
         const items = commandItems.concat(applicationItems);
 
         if (query.length === 0)
             return items.slice(0, 9);
 
-        return items
-            .filter(item => {
-                const haystack = [
-                    item.name,
-                    item.genericName || "",
-                    item.key || "",
-                    ...(item.keywords || [])
-                ].join(" ").toLowerCase();
+        return items.filter(item => {
+            const haystack = [item.name, item.genericName || "", item.key || "", ...(item.keywords || [])].join(" ").toLowerCase();
 
-                return haystack.includes(query);
-            })
-            .sort((a, b) => {
-                const rank = score(a, query) - score(b, query);
-                if (rank !== 0)
-                    return rank;
+            return haystack.includes(query);
+        }).sort((a, b) => {
+            const rank = score(a, query) - score(b, query);
+            if (rank !== 0)
+                return rank;
 
-                if (a.kind !== b.kind)
-                    return a.kind === "command" ? -1 : 1;
+            if (a.kind !== b.kind)
+                return a.kind === "command" ? -1 : 1;
 
-                return a.name.localeCompare(b.name);
-            })
-            .slice(0, 9);
+            return a.name.localeCompare(b.name);
+        }).slice(0, 9);
     }
 
     function setLauncherSubmap(enabled: bool): void {
-        Hyprland.dispatch(
-            Hyprland.usingLua
-                ? 'hl.dsp.submap("' + (enabled ? "launcher" : "reset") + '")'
-                : "submap " + (enabled ? "launcher" : "reset")
-        );
+        Hyprland.dispatch(Hyprland.usingLua ? 'hl.dsp.submap("' + (enabled ? "launcher" : "reset") + '")' : "submap " + (enabled ? "launcher" : "reset"));
     }
 
     function show(): void {
