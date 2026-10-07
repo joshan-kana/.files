@@ -10,7 +10,6 @@ QtObject {
     readonly property string terminal: data.defaults.terminal
     readonly property string editor: data.defaults.editor
     readonly property string wallpaper: data.wallpaper
-    readonly property string spectrumFieldShader: data.assets.spectrumFieldShader
     readonly property string bluetoothctl: data.tools.bluetoothctl
     readonly property string brightnessctl: data.tools.brightnessctl
     readonly property string cliphist: data.tools.cliphist
@@ -66,10 +65,6 @@ QtObject {
 
         JsonAdapter {
             id: data
-
-            property JsonObject assets: JsonObject {
-                property string spectrumFieldShader: ""
-            }
 
             property JsonObject accessibility: JsonObject {
                 property real textScale: 1.0
