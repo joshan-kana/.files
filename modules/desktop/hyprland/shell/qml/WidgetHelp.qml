@@ -69,7 +69,7 @@ Item {
                 width: parent.width
                 text: help.title
                 color: theme.textStrong
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(19)
                 font.weight: Font.DemiBold
             }
@@ -114,7 +114,7 @@ Item {
                         anchors.verticalCenter: parent.children[0].verticalCenter
                         text: modelData.action
                         color: theme.text
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(12)
                         elide: Text.ElideRight
                     }
@@ -126,7 +126,7 @@ Item {
                 text: "? or Esc to return"
                 horizontalAlignment: Text.AlignRight
                 color: theme.textMuted
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(10)
             }
         }
