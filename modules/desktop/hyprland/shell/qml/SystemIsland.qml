@@ -34,19 +34,23 @@ Item {
             anchors.centerIn: parent
             spacing: theme.spacing2
 
-            Text {
-                text: system.muted ? "Muted" : system.volumePercent + "%"
-                color: system.muted ? theme.warning : theme.text
-                font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(11)
-                font.weight: Font.DemiBold
-            }
+            Row {
+                spacing: theme.spacing1
 
-            Text {
-                text: "•"
-                color: theme.outline
-                font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(10)
+                Text {
+                    text: system.muted ? "󰖁" : "󰕾"
+                    color: system.muted ? theme.warning : theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(12)
+                }
+
+                Text {
+                    text: system.muted ? "Muted" : system.volumePercent + "%"
+                    color: system.muted ? theme.warning : theme.text
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(11)
+                    font.weight: Font.DemiBold
+                }
             }
 
             Text {
@@ -58,29 +62,44 @@ Item {
                 font.pixelSize: theme.fontSize(11)
             }
 
-            Text {
+            Row {
                 visible: system.bluetoothEnabled
-                text: "•  BT" + (system.bluetoothConnectedCount > 0 ? " " + system.bluetoothConnectedCount : "")
-                color: system.bluetoothConnectedCount > 0 ? theme.text : theme.textMuted
-                font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(11)
+                spacing: theme.spacing1
+
+                Text {
+                    text: "󰂯"
+                    color: system.bluetoothConnectedCount > 0 ? theme.accent : theme.text
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(11)
+                }
+
+                Text {
+                    visible: system.bluetoothConnectedCount > 0
+                    text: system.bluetoothConnectedCount
+                    color: theme.text
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(11)
+                }
             }
 
-            Text {
+            Row {
                 visible: system.batteryAvailable
-                text: "•  " + system.batteryPercent + "%"
-                color: system.batteryPercent <= 20 ? theme.warning : theme.textMuted
-                font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(11)
-            }
+                spacing: theme.spacing1
 
-            Text {
-                visible: system.trayCount > 0
-                text: "•••"
-                color: theme.textMuted
-                font.family: runtime.fontSans
-                font.pixelSize: theme.fontSize(10)
-                font.weight: Font.Bold
+                Text {
+                    text: "󰁹"
+                    color: system.batteryPercent <= 20 ? theme.warning : theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(12)
+                }
+
+                Text {
+                    text: system.batteryPercent + "%"
+                    color: system.batteryPercent <= 20 ? theme.warning : theme.text
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(11)
+                    font.weight: Font.DemiBold
+                }
             }
         }
     }
