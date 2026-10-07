@@ -61,6 +61,9 @@ PanelWindow {
     }
 
     function hide(): void {
+        if (!open)
+            return;
+
         open = false;
         if (motion.fast === 0) {
             closing = false;
