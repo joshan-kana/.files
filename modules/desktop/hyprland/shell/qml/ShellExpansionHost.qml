@@ -117,7 +117,7 @@ PanelWindow {
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        outlined: true
+        outlined: false
 
         Loader {
             id: contentLoader
