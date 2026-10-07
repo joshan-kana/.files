@@ -113,18 +113,17 @@ Variants {
                 bottomMargin: 8
             }
 
-            SquircleSurface {
+            ShellSurface {
                 id: workspaceIsland
 
                 width: workspaceRow.implicitWidth + theme.spacing3 * 2
                 height: parent.height
                 anchors.left: parent.left
 
-                exponent: theme.squircleExponent
+                theme: bar.theme
+                motion: bar.motion
+                surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusMedium
-                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
-                borderColor: theme.subtleBorder
-                borderWidth: theme.borderThin
 
                 Row {
                     id: workspaceRow
@@ -159,8 +158,8 @@ Variants {
                                 exponent: theme.squircleExponent
                                 cornerRadius: workspace.active ? 9 : 4
                                 fillColor: workspace.active ? theme.accent : Qt.rgba(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, 0.55)
-                                borderColor: workspace.active ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, 0.16) : "transparent"
-                                borderWidth: workspace.active ? 1 : 0
+                                borderColor: "transparent"
+                                borderWidth: 0
 
                                 Behavior on width {
                                     NumberAnimation {
@@ -216,18 +215,17 @@ Variants {
                 onActivated: bars.mediaRequested(bar.modelData, bars.originFor(bar.modelData, "media"))
             }
 
-            SquircleSurface {
+            ShellSurface {
                 id: clockIsland
 
                 width: 184
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                exponent: theme.squircleExponent
+                theme: bar.theme
+                motion: bar.motion
+                surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusMedium
-                fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
-                borderColor: theme.subtleBorder
-                borderWidth: theme.borderThin
 
                 Row {
                     anchors.centerIn: parent

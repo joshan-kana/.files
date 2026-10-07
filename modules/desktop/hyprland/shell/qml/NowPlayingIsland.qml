@@ -35,20 +35,13 @@ Item {
         highHz: spectrum.highHz
     }
 
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: island.activated()
-    }
-
-    SquircleSurface {
+    ShellSurface {
         anchors.fill: parent
 
-        exponent: theme.squircleExponent
+        theme: island.theme
+        motion: island.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusMedium
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
-        borderColor: theme.subtleBorder
-        borderWidth: theme.borderThin
 
         Item {
             id: artwork
@@ -61,18 +54,18 @@ Item {
                 verticalCenter: parent.verticalCenter
             }
 
-            SquircleSurface {
+            ShellSurface {
                 anchors.fill: parent
-                exponent: theme.squircleExponent
+                theme: island.theme
+                motion: island.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusSmall
-                fillColor: theme.surfaceRaised
-                borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.20)
-                borderWidth: theme.borderThin
+                clip: true
             }
 
             Image {
                 anchors.fill: parent
-                anchors.margins: 1
+                anchors.margins: 0
                 visible: media.artUrl.length > 0
                 source: media.artUrl
                 sourceSize.width: 56
@@ -150,7 +143,7 @@ Item {
             }
         }
 
-        SquircleSurface {
+        ShellSurface {
             id: state
 
             width: 30
@@ -161,11 +154,11 @@ Item {
                 verticalCenter: parent.verticalCenter
             }
 
-            exponent: theme.squircleExponent
+            theme: island.theme
+            motion: island.motion
+            surfaceLayer: ShellSurface.Control
+            selected: media.playing
             cornerRadius: theme.radiusSmall
-            fillColor: media.playing ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.16) : theme.surfaceRaised
-            borderColor: "transparent"
-            borderWidth: 0
 
             Text {
                 anchors.centerIn: parent
@@ -175,6 +168,12 @@ Item {
                 font.pixelSize: theme.fontSize(10)
                 font.weight: Font.Bold
             }
+        }
+
+        StateLayer {
+            theme: island.theme
+            motion: island.motion
+            onActivated: island.activated()
         }
     }
 }
