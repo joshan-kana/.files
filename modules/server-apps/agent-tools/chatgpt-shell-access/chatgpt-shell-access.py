@@ -62,10 +62,17 @@ _ALLOWED_ENV = {
     "NIX_CONFIG",
     "NIX_PATH",
     "PATH",
-    "SSH_AUTH_SOCK",
     "TZ",
 }
 COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWED_ENV or key.startswith("LC_")}
+
+
+def _command_env(host: Host) -> dict[str, str]:
+    environment = COMMAND_ENV.copy()
+    if host != "nixos-server" and REMOTE_TARGETS[host].sudo:
+        environment["SSH_AUTH_SOCK"] = REMOTE_SUDO_AGENT
+    return environment
+
 
 mcp = MCPServer("chatgpt-shell")
 
@@ -139,7 +146,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
     target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        f"-oForwardAgent={REMOTE_SUDO_AGENT if target.sudo else 'no'}",
+        f"-oForwardAgent={'yes' if target.sudo else 'no'}",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,
@@ -203,7 +210,7 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
             stdin=asyncio.subprocess.PIPE if stdin is not None else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
-            env=COMMAND_ENV,
+            env=_command_env(job.host),
             start_new_session=True,
         )
         reader = asyncio.create_task(_read_output(job, marker))
@@ -284,7 +291,7 @@ kill_tree {job.target_pid}
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
-            env=COMMAND_ENV,
+            env=_command_env(job.host),
             start_new_session=True,
         )
         await asyncio.wait_for(process.wait(), timeout=5)
