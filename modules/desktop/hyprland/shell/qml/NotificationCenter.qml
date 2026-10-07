@@ -147,7 +147,7 @@ PanelWindow {
                 spacing: theme.spacing1
 
                 Text {
-                    text: "Notifications · " + notificationState.count
+                    text: notificationState.count + " stored"
                     color: theme.accent
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(12)
@@ -155,7 +155,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: "Notification history"
+                    text: "Notifications"
                     color: theme.textStrong
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontPanelTitle
@@ -289,9 +289,8 @@ PanelWindow {
                 visible: notificationState.count === 0
                 text: "You’re all caught up"
                 color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
-                font.letterSpacing: 1.1
+                font.family: runtime.fontSans
+                font.pixelSize: theme.fontSize(12)
             }
 
             Row {
