@@ -450,7 +450,7 @@ in
           Unit = {
             Description = "Hyprland desktop shell";
             PartOf = [ "hyprland-session.target" ];
-            Requires = [ "linux-desktop-spectrum.service" ];
+            Wants = [ "linux-desktop-spectrum.service" ];
             After = [
               "hyprland-session.target"
               "linux-desktop-spectrum.service"
