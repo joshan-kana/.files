@@ -314,7 +314,7 @@ PanelWindow {
                         verticalCenter: parent.verticalCenter
                     }
 
-                    text: runtime.shortcut("launcher.toggle") + "  /  ALT + SPACE"
+                    text: runtime.shortcut("launcher.toggle")
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)

@@ -193,7 +193,8 @@ in
   })
 
   (mk {
-    keys = "SPACE";
+    keys = "SUPER + SPACE";
+    mainMod = false;
     id = "launcher.toggle";
     action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
@@ -207,23 +208,7 @@ in
     description = "Clipboard history";
   })
   (mk {
-    keys = "ALT + SPACE";
-    mainMod = false;
-    action = global "linux-desktop:launcher";
-    section = "LAUNCHERS";
-    description = "App & command launcher";
-  })
-
-  (mk {
-    keys = "SPACE";
-    action = global "linux-desktop:launcher";
-    section = "LAUNCHERS";
-    description = "Close app & command launcher";
-    cheatsheet = false;
-    submap = "launcher";
-  })
-  (mk {
-    keys = "ALT + SPACE";
+    keys = "SUPER + SPACE";
     mainMod = false;
     action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
