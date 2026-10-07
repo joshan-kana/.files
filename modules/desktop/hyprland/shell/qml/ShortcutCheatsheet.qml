@@ -187,7 +187,7 @@ PanelWindow {
                     id: headerHint
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "SUPER + /   ·   ESC CLOSE"
+                    text: runtime.shortcut("shortcuts.toggle") + "   ·   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
