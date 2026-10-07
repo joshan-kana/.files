@@ -520,6 +520,13 @@ in
     description = "Theme picker";
   })
   (mk {
+    keys = "SHIFT + B";
+    id = "bar.toggle";
+    action = global "linux-desktop:bar";
+    section = "SYSTEM";
+    description = "Toggle top bar";
+  })
+  (mk {
     keys = "slash";
     id = "shortcuts.toggle";
     action = global "linux-desktop:cheatsheet";
