@@ -7,10 +7,11 @@ Item {
     required property QtObject theme
     required property QtObject motion
     required property QtObject media
+    required property QtObject spectrum
 
     signal activated
 
-    width: media.available ? 326 : 0
+    width: media.available ? 382 : 0
     height: 40
     visible: width > 1
     opacity: media.available ? 1 : 0
@@ -26,6 +27,12 @@ Item {
         NumberAnimation {
             duration: motion.fast
         }
+    }
+
+    SpectrumScale {
+        id: spectrumScale
+        lowHz: spectrum.lowHz
+        highHz: spectrum.highHz
     }
 
     MouseArea {
@@ -88,7 +95,7 @@ Item {
         Column {
             anchors {
                 left: artwork.right
-                right: state.left
+                right: miniSpectrum.left
                 leftMargin: theme.spacing3
                 rightMargin: theme.spacing3
                 verticalCenter: parent.verticalCenter
@@ -112,6 +119,34 @@ Item {
                 font.family: runtime.fontSans
                 font.pixelSize: theme.fontSize(9)
                 elide: Text.ElideRight
+            }
+        }
+
+        Item {
+            id: miniSpectrum
+
+            width: 72
+            height: 22
+            anchors {
+                right: state.left
+                rightMargin: theme.spacing2
+                verticalCenter: parent.verticalCenter
+            }
+            visible: media.playing
+            opacity: media.playing && spectrum.connected ? 0.95 : 0
+
+            SpectrumBars {
+                anchors.fill: parent
+                spectrum: island.spectrum
+                theme: island.theme
+                frequencyScale: spectrumScale
+                barCount: 16
+            }
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: motion.fast
+                }
             }
         }
 
