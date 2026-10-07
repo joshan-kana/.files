@@ -184,7 +184,7 @@ Variants {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
-                        color: theme.positive
+                        color: theme.accent
                         font.family: runtime.fontSans
                         font.pixelSize: theme.fontSize(11)
                     }
