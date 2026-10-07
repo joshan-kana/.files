@@ -10,6 +10,7 @@ Variants {
     required property QtObject theme
     required property QtObject motion
     required property QtObject media
+    required property QtObject spectrum
     required property QtObject system
 
     signal mediaRequested
@@ -28,6 +29,7 @@ Variants {
         readonly property QtObject theme: bars.theme
         readonly property QtObject motion: bars.motion
         readonly property QtObject media: bars.media
+        readonly property QtObject spectrum: bars.spectrum
         readonly property QtObject system: bars.system
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
 
@@ -158,6 +160,7 @@ Variants {
                 theme: bar.theme
                 motion: bar.motion
                 media: bar.media
+                spectrum: bar.spectrum
                 onActivated: bars.mediaRequested()
             }
 
