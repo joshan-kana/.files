@@ -55,7 +55,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     text: system.muted ? "Muted" : system.volumePercent + "%"
                     color: system.muted ? theme.warning : theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
@@ -66,7 +66,7 @@ Item {
                 text: system.networkConnected ? system.networkName : "Offline"
                 elide: Text.ElideRight
                 color: system.networkConnected ? theme.text : theme.critical
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(11)
             }
 
@@ -93,7 +93,7 @@ Item {
                     visible: system.bluetoothConnectedCount > 0
                     text: system.bluetoothConnectedCount
                     color: theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                 }
             }
@@ -120,7 +120,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     text: system.batteryPercent + "%"
                     color: system.batteryPercent <= 20 ? theme.warning : theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }

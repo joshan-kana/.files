@@ -49,7 +49,7 @@ PanelWindow {
                 Text {
                     text: "Resize"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(17)
                     font.weight: Font.DemiBold
                 }
@@ -57,7 +57,7 @@ PanelWindow {
                 Text {
                     text: "Window stays focused"
                     color: theme.textMuted
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
                 }
             }
@@ -83,7 +83,7 @@ PanelWindow {
                 Text {
                     text: "left"
                     color: theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                 }
                 Text {
@@ -96,7 +96,7 @@ PanelWindow {
                 Text {
                     text: "down"
                     color: theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                 }
                 Text {
@@ -109,7 +109,7 @@ PanelWindow {
                 Text {
                     text: "up"
                     color: theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                 }
                 Text {
@@ -122,7 +122,7 @@ PanelWindow {
                 Text {
                     text: "right"
                     color: theme.text
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(11)
                 }
             }
@@ -137,7 +137,7 @@ PanelWindow {
             }
             text: "Shift reverses  ·  B balance  ·  Enter / Esc / R done"
             color: theme.textMuted
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(9)
         }
     }
