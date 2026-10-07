@@ -5,9 +5,9 @@ Item {
 
     required property QtObject spectrum
     required property QtObject theme
+    required property var frequencyScale
 
     property int barCount: 48
-    property real gap: 3
 
     Canvas {
         id: canvas
@@ -23,17 +23,31 @@ Item {
             if (values.length === 0)
                 return;
 
-            const count = Math.min(root.barCount, Math.floor(values.length / 2));
-            const totalGap = root.gap * Math.max(0, count - 1);
-            const barWidth = Math.max(1, (width - totalGap) / count);
-            const floorHeight = 2;
+            const count = Math.min(root.barCount, Math.ceil(values.length / 2));
+            if (count < 1)
+                return;
+
+            const centers = [];
+            const sources = [];
+            for (let index = 0; index < count; index++) {
+                const source = Math.min(values.length - 1, index * 2);
+                const t = source / Math.max(1, values.length - 1);
+                sources.push(source);
+                centers.push(root.frequencyScale.fromNormalized(t) * width);
+            }
 
             for (let index = 0; index < count; index++) {
-                const source = index * 2;
-                const raw = Math.max(values[source] || 0, values[source + 1] || 0);
+                const source = sources[index];
+                const nextSource = Math.min(values.length - 1, source + 1);
+                const raw = Math.max(values[source] || 0, values[nextSource] || 0);
                 const level = Math.pow(Math.max(0, Math.min(1, raw)), 0.88);
-                const barHeight = Math.max(floorHeight, level * height);
-                const x = index * (barWidth + root.gap);
+                const barHeight = Math.max(2, level * height);
+                const center = centers[index];
+                const leftEdge = index === 0 ? 0 : (centers[index - 1] + center) / 2;
+                const rightEdge = index === count - 1 ? width : (center + centers[index + 1]) / 2;
+                const cellWidth = Math.max(1, rightEdge - leftEdge);
+                const barWidth = Math.max(1, cellWidth * 0.70);
+                const x = Math.max(0, Math.min(width - barWidth, center - barWidth / 2));
                 const y = height - barHeight;
 
                 const mix = count <= 1 ? 0 : index / (count - 1);

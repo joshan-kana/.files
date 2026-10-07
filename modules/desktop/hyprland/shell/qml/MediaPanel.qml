@@ -14,7 +14,9 @@ PanelWindow {
     property bool open: false
     property bool closing: false
     property bool helpOpen: false
-    property string visualizerMode: "field"
+    property string visualizerMode: "bars"
+    property bool scrubbing: false
+    property real scrubFraction: 0
     readonly property var helpBindings: [
         {
             key: "SPACE",
@@ -53,6 +55,12 @@ PanelWindow {
     WlrLayershell.namespace: "linux-desktop-media"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    SpectrumScale {
+        id: spectrumScale
+        lowHz: spectrum.lowHz
+        highHz: spectrum.highHz
+    }
+
     Timer {
         id: closeTimer
         interval: motion.fast
@@ -76,6 +84,7 @@ PanelWindow {
 
     function hide(): void {
         helpOpen = false;
+        scrubbing = false;
         open = false;
 
         if (motion.fast === 0) {
@@ -94,7 +103,20 @@ PanelWindow {
     }
 
     function toggleVisualizer(): void {
-        visualizerMode = visualizerMode === "field" ? "bars" : "field";
+        visualizerMode = visualizerMode === "bars" ? "curve" : "bars";
+    }
+
+    function updateScrubFraction(mouseX: real, trackWidth: real): void {
+        if (trackWidth <= 0)
+            return;
+
+        scrubFraction = Math.max(0, Math.min(1, mouseX / trackWidth));
+    }
+
+    function displayedPosition(): real {
+        if (scrubbing && media.length > 0)
+            return media.length * scrubFraction;
+        return media.position;
     }
 
     function formatTime(seconds: real): string {
@@ -287,31 +309,27 @@ PanelWindow {
                     borderColor: theme.outline
                     clip: true
 
-                    SpectrumField {
-                        id: spectrumField
-
+                    SpectrumCurve {
                         anchors {
                             top: parent.top
                             right: parent.right
                             bottom: frequencyLabels.top
                             left: parent.left
-                            topMargin: theme.spacing2
-                            rightMargin: theme.spacing2
-                            leftMargin: theme.spacing2
+                            topMargin: theme.spacing3
+                            rightMargin: theme.spacing3
+                            leftMargin: theme.spacing3
                         }
 
-                        visible: panel.visualizerMode === "field" || opacity > 0.01
-                        opacity: panel.visualizerMode === "field" ? 1 : 0
-                        active: panel.open && panel.visualizerMode === "field"
+                        visible: panel.visualizerMode === "curve" || opacity > 0.01
+                        opacity: panel.visualizerMode === "curve" ? 1 : 0
 
                         spectrum: panel.spectrum
-                        runtime: panel.runtime
                         theme: panel.theme
-                        motion: panel.motion
+                        frequencyScale: spectrumScale
 
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: motion.fast
+                                duration: panel.scrubbing ? 0 : motion.fast
                                 easing.type: motion.enterType
                             }
                         }
@@ -328,10 +346,12 @@ PanelWindow {
                             leftMargin: theme.spacing3
                         }
 
-                        opacity: panel.visualizerMode === "field" && spectrumField.ready ? 0.20 : 1.0
+                        visible: panel.visualizerMode === "bars" || opacity > 0.01
+                        opacity: panel.visualizerMode === "bars" ? 1 : 0
 
                         spectrum: panel.spectrum
                         theme: panel.theme
+                        frequencyScale: spectrumScale
 
                         Behavior on opacity {
                             NumberAnimation {
@@ -341,7 +361,7 @@ PanelWindow {
                         }
                     }
 
-                    Row {
+                    Item {
                         id: frequencyLabels
 
                         height: 18
@@ -355,14 +375,38 @@ PanelWindow {
                         }
 
                         Repeater {
-                            model: ["20", "60", "250", "1K", "4K", "20K"]
+                            model: [
+                                {
+                                    label: "20",
+                                    hz: 20
+                                },
+                                {
+                                    label: "60",
+                                    hz: 60
+                                },
+                                {
+                                    label: "250",
+                                    hz: 250
+                                },
+                                {
+                                    label: "1K",
+                                    hz: 1000
+                                },
+                                {
+                                    label: "4K",
+                                    hz: 4000
+                                },
+                                {
+                                    label: "20K",
+                                    hz: 20000
+                                }
+                            ]
 
                             delegate: Text {
-                                required property string modelData
+                                required property var modelData
 
-                                width: frequencyLabels.width / 6
-                                text: modelData
-                                horizontalAlignment: Text.AlignHCenter
+                                x: Math.max(0, Math.min(frequencyLabels.width - implicitWidth, spectrumScale.fromFrequency(modelData.hz) * frequencyLabels.width - implicitWidth / 2))
+                                text: modelData.label
                                 color: theme.textMuted
                                 opacity: 0.62
                                 font.family: runtime.fontMono
@@ -399,7 +443,8 @@ PanelWindow {
                             if (!media.available || media.length <= 0)
                                 return 0;
 
-                            return parent.width * Math.max(0, Math.min(1, media.position / media.length));
+                            const fraction = panel.scrubbing ? panel.scrubFraction : media.position / media.length;
+                            return parent.width * Math.max(0, Math.min(1, fraction));
                         }
 
                         Behavior on width {
@@ -412,10 +457,25 @@ PanelWindow {
 
                     MouseArea {
                         anchors.fill: parent
-                        anchors.margins: -6
-                        enabled: media.available && media.length > 0
+                        anchors.margins: -8
+                        enabled: media.seekable && media.length > 0
                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: mouse => media.seekTo(media.length * Math.max(0, Math.min(1, mouse.x / width)))
+
+                        onPressed: mouse => {
+                            panel.scrubbing = true;
+                            panel.updateScrubFraction(mouse.x, width);
+                        }
+                        onPositionChanged: mouse => {
+                            if (pressed)
+                                panel.updateScrubFraction(mouse.x, width);
+                        }
+                        onReleased: mouse => {
+                            panel.updateScrubFraction(mouse.x, width);
+                            const target = media.length * panel.scrubFraction;
+                            panel.scrubbing = false;
+                            media.seekTo(target);
+                        }
+                        onCanceled: panel.scrubbing = false
                     }
                 }
 
@@ -423,7 +483,7 @@ PanelWindow {
                     width: parent.width
 
                     Text {
-                        text: panel.formatTime(media.position)
+                        text: panel.formatTime(panel.displayedPosition())
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(10)
@@ -449,27 +509,32 @@ PanelWindow {
                     Repeater {
                         model: [
                             {
-                                label: ",  ◀",
+                                label: "◀",
+                                hint: ",",
                                 enabled: media.available,
                                 action: "previous"
                             },
                             {
-                                label: "←  −5s",
-                                enabled: media.available,
+                                label: "−5s",
+                                hint: "←",
+                                enabled: media.seekable,
                                 action: "back"
                             },
                             {
-                                label: "SPACE  " + (media.playing ? "PAUSE" : "PLAY"),
+                                label: media.playing ? "Pause" : "Play",
+                                hint: "Space",
                                 enabled: media.available,
                                 action: "play"
                             },
                             {
-                                label: "+5s  →",
-                                enabled: media.available,
+                                label: "+5s",
+                                hint: "→",
+                                enabled: media.seekable,
                                 action: "forward"
                             },
                             {
-                                label: "▶  .",
+                                label: "▶",
+                                hint: ".",
                                 enabled: media.available,
                                 action: "next"
                             }
@@ -479,7 +544,7 @@ PanelWindow {
                             required property var modelData
 
                             width: Math.max(66, controlLabel.implicitWidth + theme.spacing4 * 2)
-                            height: modelData.action === "play" ? 40 : 36
+                            height: 44
                             anchors.verticalCenter: parent.verticalCenter
 
                             exponent: theme.squircleExponent
@@ -494,9 +559,23 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: modelData.label
                                 color: modelData.action === "play" ? theme.accent : theme.text
+                                font.family: runtime.fontSans
+                                font.pixelSize: theme.fontSize(11)
+                                font.weight: modelData.action === "play" ? Font.DemiBold : Font.Medium
+                            }
+
+                            Text {
+                                anchors {
+                                    top: parent.top
+                                    right: parent.right
+                                    topMargin: 4
+                                    rightMargin: 6
+                                }
+                                text: modelData.hint
+                                color: theme.textMuted
+                                opacity: 0.62
                                 font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(10)
-                                font.weight: modelData.action === "play" ? Font.DemiBold : Font.Normal
+                                font.pixelSize: theme.fontSize(7)
                             }
 
                             MouseArea {
