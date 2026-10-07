@@ -121,50 +121,58 @@ let
 in
 [
   (mk {
-    keys = "ALT + 1";
+    keys = "SUPER + ALT + 1";
+    mainMod = false;
     id = "terminal.open";
     action = exec terminal;
     section = "APPS";
     description = "Terminal";
   })
   (mk {
-    keys = "ALT + 2";
+    keys = "SUPER + ALT + 2";
+    mainMod = false;
     action = exec "spotify";
     section = "APPS";
     description = "Spotify";
   })
   (mk {
-    keys = "ALT + 3";
+    keys = "SUPER + ALT + 3";
+    mainMod = false;
     action = exec "brave";
     section = "APPS";
     description = "Brave";
   })
   (mk {
-    keys = "ALT + 4";
+    keys = "SUPER + ALT + 4";
+    mainMod = false;
     action = exec "floorp";
     section = "APPS";
     description = "Floorp";
   })
   (mk {
-    keys = "ALT + 5";
+    keys = "SUPER + ALT + 5";
+    mainMod = false;
     action = exec "thunderbird";
     section = "APPS";
     description = "Thunderbird";
   })
   (mk {
-    keys = "ALT + 6";
+    keys = "SUPER + ALT + 6";
+    mainMod = false;
     action = exec "code";
     section = "APPS";
     description = "Visual Studio Code";
   })
   (mk {
-    keys = "ALT + 7";
+    keys = "SUPER + ALT + 7";
+    mainMod = false;
     action = exec "obsidian --disable-gpu";
     section = "APPS";
     description = "Obsidian";
   })
   (mk {
-    keys = "ALT + E";
+    keys = "SUPER + ALT + E";
+    mainMod = false;
     action = exec "nautilus";
     section = "APPS";
     description = "Files";
@@ -177,7 +185,8 @@ in
     description = "Application mixer";
   })
   (mk {
-    keys = "ALT + V";
+    keys = "SUPER + ALT + V";
+    mainMod = false;
     action = exec "[float] easyeffects";
     section = "AUDIO";
     description = "Audio effects";
@@ -185,6 +194,7 @@ in
 
   (mk {
     keys = "SPACE";
+    id = "launcher.toggle";
     action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
     description = "App & command launcher";

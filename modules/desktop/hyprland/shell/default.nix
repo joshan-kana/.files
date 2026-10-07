@@ -265,15 +265,14 @@ in
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
       };
-      mainModifier =
-        osConfig.home-manager.users.${primaryUser}.wayland.windowManager.hyprland.settings.mainMod._var;
+      mainModifierLabel = "HYPER";
 
       renderShortcut =
         binding:
         let
           key = if binding.label != null then binding.label else binding.keys;
         in
-        "${lib.optionalString binding.mainMod "${mainModifier} + "}${key}";
+        "${lib.optionalString binding.mainMod "${mainModifierLabel} + "}${key}";
 
       cheatsheetBindings = map (binding: {
         key = renderShortcut binding;
