@@ -108,7 +108,11 @@ PanelWindow {
         id: card
 
         width: Math.min(center.width - 120, 720)
-        height: Math.min(center.height - 140, 720)
+        height: {
+            const visibleItems = Math.min(center.items.length, 5);
+            const desired = visibleItems === 0 ? 300 : 190 + visibleItems * 116;
+            return Math.min(center.height - 140, Math.max(300, desired));
+        }
         anchors.centerIn: parent
 
         exponent: theme.squircleExponent
