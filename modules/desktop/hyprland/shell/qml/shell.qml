@@ -65,6 +65,7 @@ ShellRoot {
         theme: theme
         motion: motion
         media: media
+        spectrum: spectrum
         system: system
         onMediaRequested: actions.toggleMedia()
         onSystemRequested: actions.toggleSystem()
