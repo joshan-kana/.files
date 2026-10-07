@@ -175,7 +175,7 @@ Item {
         Text {
             text: "Network · " + system.connectivityText.toLowerCase()
             color: system.networkConnected ? theme.positive : theme.warning
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(11)
             font.weight: Font.Medium
         }
@@ -183,7 +183,7 @@ Item {
         Text {
             text: system.wifiAvailable ? "Wi-Fi" : "Network"
             color: theme.textStrong
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
@@ -282,7 +282,7 @@ Item {
                                 width: parent.width - statusBadge.width - parent.spacing
                                 text: modelData.name
                                 color: theme.textStrong
-                                font.family: runtime.fontSans
+                                font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(13)
                                 font.weight: modelData.connected ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
@@ -357,7 +357,7 @@ Item {
                 text: pendingNetwork ? pendingNetwork.name : ""
                 horizontalAlignment: Text.AlignHCenter
                 color: theme.textStrong
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(18)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -398,7 +398,7 @@ Item {
                     color: theme.textStrong
                     selectionColor: theme.accent
                     selectedTextColor: theme.background
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(15)
                     clip: true
 

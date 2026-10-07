@@ -150,7 +150,7 @@ PanelWindow {
                 Text {
                     text: "Audio · " + panel.streams.length + (panel.streams.length === 1 ? " active source" : " active sources")
                     color: theme.accent
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     font.weight: Font.Medium
                 }
@@ -158,7 +158,7 @@ PanelWindow {
                 Text {
                     text: "Application mixer"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -227,7 +227,7 @@ PanelWindow {
                                     width: parent.width
                                     text: system.streamDisplayName(modelData)
                                     color: modelData.audio && modelData.audio.muted ? theme.warning : theme.textStrong
-                                    font.family: runtime.fontSans
+                                    font.family: runtime.fontMono
                                     font.pixelSize: theme.fontSize(14)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
