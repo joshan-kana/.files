@@ -486,7 +486,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: "HYPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
+                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)

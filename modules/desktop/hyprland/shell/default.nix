@@ -256,7 +256,7 @@ in
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
       };
-      mainModifierLabel = "HYPER";
+      mainModifierLabel = "SUPER";
 
       renderShortcut =
         binding:
