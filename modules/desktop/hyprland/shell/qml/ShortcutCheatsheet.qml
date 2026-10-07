@@ -178,7 +178,7 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Shortcuts"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(28)
                     font.weight: Font.DemiBold
                 }
@@ -220,7 +220,7 @@ PanelWindow {
                     visible: search.text.length === 0
                     text: "Search shortcuts…"
                     color: theme.textMuted
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(13)
                 }
 
@@ -237,7 +237,7 @@ PanelWindow {
                     color: theme.text
                     selectionColor: theme.accent
                     selectedTextColor: theme.background
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(13)
                     onTextChanged: {
                         window.query = text;
@@ -322,7 +322,7 @@ PanelWindow {
                                         anchors.verticalCenter: parent.children[0].verticalCenter
                                         text: modelData.description
                                         color: theme.text
-                                        font.family: runtime.fontSans
+                                        font.family: runtime.fontMono
                                         font.pixelSize: theme.fontSize(13)
                                         elide: Text.ElideRight
                                     }
@@ -338,7 +338,7 @@ PanelWindow {
                 visible: window.query.trim().length > 0 && window.filteredBindingCount === 0
                 text: "No matching shortcuts"
                 color: theme.textMuted
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(14)
             }
 

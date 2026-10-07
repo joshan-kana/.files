@@ -155,7 +155,7 @@ Item {
         Text {
             text: "Session"
             color: theme.accent
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(11)
             font.weight: Font.Medium
         }
@@ -163,7 +163,7 @@ Item {
         Text {
             text: "Power & session"
             color: theme.textStrong
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
@@ -236,7 +236,7 @@ Item {
                         width: parent.width
                         text: modelData.label
                         color: modelData.id === panel.armedAction ? theme.warning : theme.textStrong
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(14)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
