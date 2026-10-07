@@ -181,14 +181,14 @@ in
     keys = "SHIFT + V";
     id = "audio.mixer";
     action = global "linux-desktop:audio-mixer";
-    section = "AUDIO";
+    section = "AUDIO & MEDIA";
     description = "Application mixer";
   })
   (mk {
     keys = "SUPER + ALT + V";
     mainMod = false;
     action = exec "[float] easyeffects";
-    section = "AUDIO";
+    section = "AUDIO & MEDIA";
     description = "Audio effects";
   })
 
@@ -394,7 +394,7 @@ in
     id = "audio.volumeUp";
     action = global "linux-desktop:volume-up";
     flags.repeating = true;
-    section = "AUDIO";
+    section = "AUDIO & MEDIA";
     description = "Volume up";
     label = "VOLUME +";
   })
@@ -404,7 +404,7 @@ in
     id = "audio.volumeDown";
     action = global "linux-desktop:volume-down";
     flags.repeating = true;
-    section = "AUDIO";
+    section = "AUDIO & MEDIA";
     description = "Volume down";
     label = "VOLUME −";
   })
@@ -413,7 +413,7 @@ in
     mainMod = false;
     id = "audio.toggleMute";
     action = global "linux-desktop:volume-mute";
-    section = "AUDIO";
+    section = "AUDIO & MEDIA";
     description = "Mute";
     label = "MUTE";
   })
@@ -421,7 +421,7 @@ in
     keys = "N";
     id = "media.toggle";
     action = global "linux-desktop:media";
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Now playing";
   })
   (mk {
@@ -429,7 +429,7 @@ in
     id = "media.seekBackward";
     action = global "linux-desktop:media-seek-backward";
     flags.repeating = true;
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Seek backward 10 seconds";
     label = "[";
   })
@@ -438,7 +438,7 @@ in
     id = "media.seekForward";
     action = global "linux-desktop:media-seek-forward";
     flags.repeating = true;
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Seek forward 10 seconds";
     label = "]";
   })
@@ -447,7 +447,7 @@ in
     mainMod = false;
     id = "media.playPause";
     action = global "linux-desktop:media-play-pause";
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Play / pause";
     cheatsheet = false;
   })
@@ -456,7 +456,7 @@ in
     mainMod = false;
     id = "media.next";
     action = global "linux-desktop:media-next";
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Next track";
     cheatsheet = false;
   })
@@ -465,7 +465,7 @@ in
     mainMod = false;
     id = "media.previous";
     action = global "linux-desktop:media-previous";
-    section = "MEDIA";
+    section = "AUDIO & MEDIA";
     description = "Previous track";
     cheatsheet = false;
   })
