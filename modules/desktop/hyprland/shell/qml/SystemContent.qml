@@ -12,6 +12,7 @@ FocusScope {
     required property QtObject brightness
 
     property bool engaged: false
+    property string requestedView: ""
     property bool helpOpen: false
     property int trayIndex: 0
     readonly property bool trayMenuOpen: trayMenu.open
@@ -143,11 +144,33 @@ FocusScope {
     implicitHeight: content.implicitHeight + theme.spacing3 + footer.implicitHeight
     focus: engaged
 
+    function applyRequestedView(): void {
+        if (!engaged)
+            return;
+
+        if (requestedView === "theme")
+            openTheme();
+        else if (requestedView === "session")
+            openSession();
+        else if (requestedView === "network")
+            openNetwork();
+        else if (requestedView === "bluetooth")
+            openBluetooth();
+        else if (requestedView.length === 0) {
+            trayMenu.closeMenu();
+            networkPanel.closeView();
+            bluetoothPanel.closeView();
+            themePanel.closeView();
+            sessionPanel.closeView();
+        }
+    }
+
     onEngagedChanged: {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
             helpOpen = false;
             keyboardFocus.forceActiveFocus();
+            Qt.callLater(applyRequestedView);
         } else {
             helpOpen = false;
             trayMenu.closeMenu();
@@ -157,6 +180,8 @@ FocusScope {
             sessionPanel.closeView();
         }
     }
+
+    onRequestedViewChanged: Qt.callLater(applyRequestedView)
 
     function openNetwork(): void {
         helpOpen = false;
