@@ -11,7 +11,9 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
-    readonly property var sections: buildSections()
+    property string query: ""
+    readonly property var sections: buildSections(query)
+    readonly property int filteredBindingCount: countBindings(sections)
 
     visible: open || closing
     color: "transparent"
@@ -33,31 +35,73 @@ PanelWindow {
         onTriggered: window.closing = false
     }
 
-    function buildSections(): var {
+    function buildSections(searchQuery: string): var {
         const groups = [];
         const byName = {};
+        const normalized = (searchQuery || "").trim().toLowerCase();
 
         for (const binding of runtime.keybindings || []) {
-            if (!byName[binding.section]) {
+            const section = String(binding.section || "");
+            const key = String(binding.key || "");
+            const description = String(binding.description || "");
+            const haystack = (section + " " + key + " " + description).toLowerCase();
+
+            if (normalized.length > 0 && haystack.indexOf(normalized) === -1)
+                continue;
+
+            if (!byName[section]) {
                 const group = {
-                    title: binding.section,
+                    title: section,
                     items: []
                 };
-                byName[binding.section] = group;
+                byName[section] = group;
                 groups.push(group);
             }
-            byName[binding.section].items.push(binding);
+            byName[section].items.push(binding);
         }
 
         return groups;
     }
 
+    function countBindings(groups: var): int {
+        let count = 0;
+        for (const group of groups || [])
+            count += group.items.length;
+        return count;
+    }
+
+    function handleNavigation(event: var): void {
+        if (event.key === Qt.Key_Escape) {
+            if (search.text.length > 0) {
+                search.text = "";
+                flick.contentY = 0;
+                search.forceActiveFocus();
+            } else {
+                window.hide();
+            }
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Up) {
+            flick.contentY = Math.max(0, flick.contentY - 72);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Down) {
+            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_PageUp) {
+            flick.contentY = Math.max(0, flick.contentY - flick.height * 0.8);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_PageDown) {
+            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * 0.8);
+            event.accepted = true;
+        }
+    }
+
     function show(): void {
         closeTimer.stop();
         closing = false;
+        search.text = "";
         flick.contentY = 0;
         open = true;
-        keySink.forceActiveFocus();
+        search.forceActiveFocus();
     }
 
     function hide(): void {
@@ -151,14 +195,66 @@ PanelWindow {
                 }
             }
 
-            Flickable {
-                id: flick
+            SquircleSurface {
+                id: searchBox
+
+                height: 42
                 anchors {
                     top: header.bottom
                     right: parent.right
+                    left: parent.left
+                    topMargin: theme.spacing3
+                }
+
+                fillColor: theme.surface
+                borderColor: search.activeFocus ? theme.accent : theme.outline
+                borderWidth: theme.borderThin
+                cornerRadius: theme.radiusSmall
+
+                Text {
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                        leftMargin: theme.spacing3
+                    }
+                    visible: search.text.length === 0
+                    text: "Search shortcuts…"
+                    color: theme.textMuted
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(13)
+                }
+
+                TextInput {
+                    id: search
+
+                    anchors {
+                        fill: parent
+                        leftMargin: theme.spacing3
+                        rightMargin: theme.spacing3
+                    }
+                    verticalAlignment: TextInput.AlignVCenter
+                    clip: true
+                    color: theme.text
+                    selectionColor: theme.accent
+                    selectedTextColor: theme.background
+                    font.family: runtime.fontSans
+                    font.pixelSize: theme.fontSize(13)
+                    onTextChanged: {
+                        window.query = text;
+                        flick.contentY = 0;
+                    }
+                    Keys.onPressed: event => window.handleNavigation(event)
+                }
+            }
+
+            Flickable {
+                id: flick
+                anchors {
+                    top: searchBox.bottom
+                    right: parent.right
                     bottom: footer.top
                     left: parent.left
-                    topMargin: theme.spacing5
+                    topMargin: theme.spacing4
                     bottomMargin: theme.spacing4
                 }
 
@@ -237,6 +333,15 @@ PanelWindow {
                 }
             }
 
+            Text {
+                anchors.centerIn: flick
+                visible: window.query.trim().length > 0 && window.filteredBindingCount === 0
+                text: "No matching shortcuts"
+                color: theme.textMuted
+                font.family: runtime.fontSans
+                font.pixelSize: theme.fontSize(14)
+            }
+
             Rectangle {
                 id: scrollTrack
                 anchors {
@@ -281,7 +386,7 @@ PanelWindow {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
                     }
-                    text: "↑ ↓  SCROLL    PGUP PGDN  PAGE    HOME END  JUMP    ESC  CLOSE"
+                    text: "TYPE  SEARCH    ↑ ↓  SCROLL    PGUP PGDN  PAGE    ESC  CLEAR / CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
@@ -297,7 +402,7 @@ PanelWindow {
                     spacing: theme.spacing3
 
                     Text {
-                        text: runtime.keybindings.length + " bindings"
+                        text: window.filteredBindingCount + " / " + runtime.keybindings.length + " bindings"
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(12)
@@ -318,30 +423,7 @@ PanelWindow {
                 anchors.fill: parent
                 focus: window.open
 
-                Keys.onPressed: event => {
-                    if (event.key === Qt.Key_Escape) {
-                        window.hide();
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
-                        flick.contentY = Math.max(0, flick.contentY - 72);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
-                        flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_PageUp) {
-                        flick.contentY = Math.max(0, flick.contentY - flick.height * 0.8);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_PageDown) {
-                        flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * 0.8);
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Home) {
-                        flick.contentY = 0;
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_End) {
-                        flick.contentY = Math.max(0, flick.contentHeight - flick.height);
-                        event.accepted = true;
-                    }
-                }
+                Keys.onPressed: event => window.handleNavigation(event)
             }
         }
     }
