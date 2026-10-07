@@ -26,6 +26,18 @@ ShellRoot {
         id: screens
     }
 
+    ShellExpansionState {
+        id: expansionState
+    }
+
+    ShellExpansionHost {
+        id: expansionHost
+        runtime: runtime
+        theme: theme
+        motion: motion
+        expansionState: expansionState
+    }
+
     WallpaperLayer {
         runtime: runtime
         theme: theme
