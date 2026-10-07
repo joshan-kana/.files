@@ -35,9 +35,14 @@ Item {
             spacing: theme.spacing2
 
             Row {
+                id: volumeStatus
                 spacing: theme.spacing1
+                height: Math.max(volumeIcon.implicitHeight, volumeValue.implicitHeight)
 
                 Text {
+                    id: volumeIcon
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     text: system.muted ? "󰖁" : "󰕾"
                     color: system.muted ? theme.warning : theme.accent
                     font.family: runtime.fontMono
@@ -45,6 +50,9 @@ Item {
                 }
 
                 Text {
+                    id: volumeValue
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     text: system.muted ? "Muted" : system.volumePercent + "%"
                     color: system.muted ? theme.warning : theme.text
                     font.family: runtime.fontSans
@@ -63,10 +71,15 @@ Item {
             }
 
             Row {
+                id: bluetoothStatus
                 visible: system.bluetoothEnabled
                 spacing: theme.spacing1
+                height: Math.max(bluetoothIcon.implicitHeight, bluetoothValue.implicitHeight)
 
                 Text {
+                    id: bluetoothIcon
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     text: "󰂯"
                     color: system.bluetoothConnectedCount > 0 ? theme.accent : theme.text
                     font.family: runtime.fontMono
@@ -74,6 +87,9 @@ Item {
                 }
 
                 Text {
+                    id: bluetoothValue
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     visible: system.bluetoothConnectedCount > 0
                     text: system.bluetoothConnectedCount
                     color: theme.text
@@ -83,10 +99,15 @@ Item {
             }
 
             Row {
+                id: batteryStatus
                 visible: system.batteryAvailable
                 spacing: theme.spacing1
+                height: Math.max(batteryIcon.implicitHeight, batteryValue.implicitHeight)
 
                 Text {
+                    id: batteryIcon
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     text: "󰁹"
                     color: system.batteryPercent <= 20 ? theme.warning : theme.accent
                     font.family: runtime.fontMono
@@ -94,6 +115,9 @@ Item {
                 }
 
                 Text {
+                    id: batteryValue
+                    height: parent.height
+                    verticalAlignment: Text.AlignVCenter
                     text: system.batteryPercent + "%"
                     color: system.batteryPercent <= 20 ? theme.warning : theme.text
                     font.family: runtime.fontSans
