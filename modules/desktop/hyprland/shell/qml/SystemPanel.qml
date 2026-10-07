@@ -126,8 +126,12 @@ PanelWindow {
                             action: "Theme / session"
                         },
                         {
-                            key: "[ / ] / T",
-                            action: "Select / open tray item"
+                            key: "[ / ]",
+                            action: "Select tray item"
+                        },
+                        {
+                            key: "ENTER",
+                            action: "Open tray item"
                         },
                         {
                             key: "ESC",
@@ -580,7 +584,7 @@ PanelWindow {
 
                         Text {
                             id: trayHint
-                            text: "[ / ] SELECT   T OPEN"
+                            text: "[ / ] SELECT   ENTER OPEN"
                             color: theme.textMuted
                             opacity: 0.62
                             font.family: runtime.fontMono
@@ -808,7 +812,7 @@ PanelWindow {
 
                     Text {
                         visible: system.trayCount > 0
-                        text: "[/]  TRAY   T  OPEN"
+                        text: "[/]  TRAY   ENTER  OPEN"
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(9)
@@ -1049,7 +1053,7 @@ PanelWindow {
                     } else if (event.key === Qt.Key_BracketRight && system.trayCount > 0) {
                         panel.trayIndex = (panel.trayIndex + 1) % system.trayCount;
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_T && system.trayCount > 0) {
+                    } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && system.trayCount > 0) {
                         panel.activateTrayItem();
                         event.accepted = true;
                     }
