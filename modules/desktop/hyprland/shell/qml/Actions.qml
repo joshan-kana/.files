@@ -17,19 +17,19 @@ QtObject {
     required property QtObject motion
 
     function hideTransient(except: string): void {
-        if (except !== "cheatsheet")
+        if (except !== "cheatsheet" && cheatsheet.open)
             cheatsheet.hide();
-        if (except !== "launcher")
+        if (except !== "launcher" && launcher.open)
             launcher.hide();
-        if (except !== "clipboard")
+        if (except !== "clipboard" && clipboardPanel.open)
             clipboardPanel.hide();
-        if (except !== "audio")
+        if (except !== "audio" && audioMixerPanel.open)
             audioMixerPanel.hide();
-        if (except !== "media")
+        if (except !== "media" && mediaPanel.open)
             mediaPanel.hide();
-        if (except !== "system")
+        if (except !== "system" && systemPanel.open)
             systemPanel.hide();
-        if (except !== "notifications")
+        if (except !== "notifications" && notificationCenter.open)
             notificationCenter.hide();
     }
 
