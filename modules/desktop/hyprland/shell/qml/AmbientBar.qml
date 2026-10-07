@@ -13,6 +13,8 @@ Variants {
     required property QtObject spectrum
     required property QtObject system
 
+    property bool shown: true
+
     signal mediaRequested
     signal systemRequested
 
@@ -33,10 +35,11 @@ Variants {
         readonly property QtObject system: bars.system
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
 
+        visible: bars.shown
         implicitHeight: 56
         color: "transparent"
         exclusionMode: ExclusionMode.Normal
-        exclusiveZone: 56
+        exclusiveZone: bars.shown ? 56 : 0
 
         anchors {
             top: true
