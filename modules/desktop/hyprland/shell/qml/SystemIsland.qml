@@ -13,20 +13,13 @@ Item {
     implicitWidth: statusRow.implicitWidth + theme.spacing4 * 2
     implicitHeight: 40
 
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: island.activated()
-    }
-
-    SquircleSurface {
+    ShellSurface {
         anchors.fill: parent
 
-        exponent: theme.squircleExponent
+        theme: island.theme
+        motion: island.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusMedium
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.92)
-        borderColor: theme.subtleBorder
-        borderWidth: theme.borderThin
 
         Row {
             id: statusRow
@@ -125,6 +118,12 @@ Item {
                     font.weight: Font.DemiBold
                 }
             }
+        }
+
+        StateLayer {
+            theme: island.theme
+            motion: island.motion
+            onActivated: island.activated()
         }
     }
 }
