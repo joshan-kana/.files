@@ -13,6 +13,8 @@ ShellRoot {
     readonly property QtObject motionRef: motion
     readonly property QtObject mediaRef: media
     readonly property QtObject spectrumRef: spectrum
+    readonly property QtObject systemRef: system
+    readonly property QtObject brightnessRef: brightness
 
     RuntimeConfig {
         id: runtime
@@ -50,6 +52,21 @@ ShellRoot {
         }
     }
 
+    Component {
+        id: systemExpansionComponent
+
+        SystemContent {
+            runtime: root.runtimeRef
+            theme: root.themeRef
+            motion: root.motionRef
+            system: root.systemRef
+            brightness: root.brightnessRef
+            engaged: expansionState.hasCurrent && expansionState.currentName === "system"
+            requestedView: expansionState.currentView
+            onCloseRequested: expansionState.close()
+        }
+    }
+
     ShellExpansionHost {
         id: expansionHost
         runtime: runtime
@@ -57,6 +74,7 @@ ShellRoot {
         motion: motion
         expansionState: expansionState
         mediaComponent: mediaExpansionComponent
+        systemComponent: systemExpansionComponent
     }
 
     WallpaperLayer {
@@ -101,7 +119,7 @@ ShellRoot {
         spectrum: spectrum
         system: system
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
-        onSystemRequested: (screen, origin) => actions.toggleSystem()
+        onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
     }
 
     ShortcutCheatsheet {
@@ -763,7 +781,7 @@ ShellRoot {
         }
 
         function themeOpen(): bool {
-            return systemPanel.themeOpen;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.themeOpen : false;
         }
 
         function showSession(): void {
@@ -771,7 +789,7 @@ ShellRoot {
         }
 
         function sessionOpen(): bool {
-            return systemPanel.sessionOpen;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.sessionOpen : false;
         }
 
         function toggleNotifications(): void {
@@ -811,7 +829,7 @@ ShellRoot {
         }
 
         function systemOpen(): bool {
-            return systemPanel.open;
+            return expansionState.hasCurrent && expansionState.currentName === "system";
         }
 
         function volumePercent(): int {
@@ -883,15 +901,16 @@ ShellRoot {
         }
 
         function trayMenuOpen(): bool {
-            return systemPanel.trayMenuOpen;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.trayMenuOpen : false;
         }
 
         function trayMenuItemCount(): int {
-            return systemPanel.trayMenuItemCount;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.trayMenuItemCount : 0;
         }
 
         function openSelectedTrayItem(): void {
-            systemPanel.activateTrayItem();
+            if (expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent)
+                expansionHost.loadedContent.activateTrayItem();
         }
 
         function launchTerminal(): void {

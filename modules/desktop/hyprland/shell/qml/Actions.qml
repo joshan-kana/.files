@@ -30,9 +30,11 @@ QtObject {
             audioMixerPanel.hide();
         if (except !== "media" && expansionState.hasCurrent && expansionState.currentName === "media")
             expansionState.close();
+        if (except !== "system" && expansionState.hasCurrent && expansionState.currentName === "system")
+            expansionState.close();
         if (mediaPanel.open)
             mediaPanel.hide();
-        if (except !== "system" && systemPanel.open)
+        if (systemPanel.open)
             systemPanel.hide();
         if (except !== "notifications" && notificationCenter.open)
             notificationCenter.hide();
@@ -77,7 +79,7 @@ QtObject {
         if (opening)
             hideTransient("media");
 
-        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height);
+        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
     function mediaPlayPause(): void {
@@ -108,20 +110,35 @@ QtObject {
         mediaState.cyclePlayer();
     }
 
-    function toggleSystem(): void {
-        if (!systemPanel.open)
+    function showSystem(targetScreen: var, origin: var, view: string): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "system");
+        hideTransient("system");
+        expansionState.show("system", screen, geometry.center, geometry.width, geometry.height, view || "");
+    }
+
+    function toggleSystem(targetScreen: var, origin: var): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "system");
+        const opening = !(expansionState.hasCurrent && expansionState.currentName === "system" && expansionState.screen === screen);
+        if (opening)
             hideTransient("system");
-        systemPanel.toggle();
+
+        expansionState.toggle("system", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
     function showTheme(): void {
-        hideTransient("system");
-        systemPanel.showTheme();
+        showSystem(null, null, "theme");
     }
 
     function showSession(): void {
-        hideTransient("system");
-        systemPanel.showSession();
+        showSystem(null, null, "session");
     }
 
     function showNotifications(): void {
