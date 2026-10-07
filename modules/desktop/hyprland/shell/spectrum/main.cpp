@@ -32,7 +32,7 @@ constexpr float kLowHz = 20.0F;
 constexpr float kHighHz = 20000.0F;
 constexpr float kFloorDb = -72.0F;
 constexpr float kAttackSeconds = 0.004F;
-constexpr float kReleaseSeconds = 0.085F;
+constexpr float kReleaseSeconds = 0.045F;
 constexpr float kRmsSeconds = 0.030F;
 constexpr unsigned kPublishHz = 120;
 
