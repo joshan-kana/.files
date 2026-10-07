@@ -486,7 +486,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
+                    text: runtime.shortcutHint("launcherSlots") + " OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
