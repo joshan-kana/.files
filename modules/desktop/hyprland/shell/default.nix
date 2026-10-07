@@ -340,10 +340,7 @@ in
           accent = colors.base0D;
         };
 
-        fonts = {
-          sans = config.stylix.fonts.sansSerif.name;
-          mono = config.stylix.fonts.monospace.name;
-        };
+        fonts.mono = config.stylix.fonts.monospace.name;
 
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
