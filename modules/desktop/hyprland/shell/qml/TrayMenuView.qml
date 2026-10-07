@@ -136,7 +136,7 @@ Item {
         Text {
             text: currentTitle
             color: theme.textStrong
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -243,7 +243,7 @@ Item {
                         width: parent.width - (modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (modelData.hasChildren ? 18 : 0)
                         text: modelData.text
                         color: theme.text
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(12)
                         elide: Text.ElideRight
                     }

@@ -87,7 +87,7 @@ Item {
                 visible: media.artUrl.length === 0
                 text: "♫"
                 color: theme.accent
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(14)
             }
         }
@@ -106,7 +106,7 @@ Item {
                 width: parent.width
                 text: media.title
                 color: theme.textStrong
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(11)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -116,7 +116,7 @@ Item {
                 width: parent.width
                 text: media.artist
                 color: theme.textMuted
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(9)
                 elide: Text.ElideRight
             }
@@ -171,7 +171,7 @@ Item {
                 anchors.centerIn: parent
                 text: media.playing ? "Ⅱ" : "▶"
                 color: media.playing ? theme.accent : theme.textMuted
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(10)
                 font.weight: Font.Bold
             }

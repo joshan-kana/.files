@@ -166,7 +166,7 @@ PanelWindow {
                     text: popup.notification ? popup.notification.summary : ""
                     textFormat: Text.PlainText
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(15)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -180,7 +180,7 @@ PanelWindow {
                     visible: text.length > 0
                     color: theme.text
                     opacity: 0.84
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     wrapMode: Text.Wrap
                     elide: Text.ElideRight

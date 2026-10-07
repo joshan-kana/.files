@@ -230,7 +230,7 @@ PanelWindow {
                 Text {
                     text: entries.length + (entries.length === 1 ? " item" : " items")
                     color: theme.accent
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     font.weight: Font.Medium
                 }
@@ -238,7 +238,7 @@ PanelWindow {
                 Text {
                     text: "Clipboard"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -265,7 +265,7 @@ PanelWindow {
                         color: theme.textStrong
                         selectionColor: theme.accent
                         selectedTextColor: theme.background
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(14)
                         clip: true
 
@@ -362,7 +362,7 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.preview
                             color: theme.text
-                            font.family: runtime.fontSans
+                            font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(12)
                             elide: Text.ElideRight
                         }
