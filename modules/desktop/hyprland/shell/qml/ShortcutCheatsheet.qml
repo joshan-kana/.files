@@ -101,8 +101,8 @@ PanelWindow {
     SquircleSurface {
         id: card
 
-        width: Math.min(window.width - 80, 1500)
-        height: Math.min(window.height - 80, 920)
+        width: Math.min(window.width - 120, 1380)
+        height: Math.min(window.height - 120, 820)
         anchors.centerIn: parent
 
         fillColor: theme.panelFill
@@ -123,21 +123,16 @@ PanelWindow {
             anchors.fill: parent
             anchors.margins: theme.spacing5
 
-            Column {
+            Item {
                 id: header
                 width: parent.width
-                spacing: theme.spacing1
+                height: Math.max(title.implicitHeight, headerHint.implicitHeight)
 
                 Text {
-                    text: "Keyboard"
-                    color: theme.accent
-                    font.family: runtime.fontSans
-                    font.pixelSize: theme.fontSize(13)
-                    font.weight: Font.Medium
-                }
-
-                Text {
-                    text: "Global keyboard map"
+                    id: title
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Shortcuts"
                     color: theme.textStrong
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(28)
@@ -145,10 +140,14 @@ PanelWindow {
                 }
 
                 Text {
-                    text: "Generated from the same binding data Hyprland uses · Esc to dismiss"
+                    id: headerHint
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "HYPER + /   ·   ESC CLOSE"
                     color: theme.textMuted
-                    font.family: runtime.fontSans
-                    font.pixelSize: theme.fontSize(13)
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(10)
+                    font.letterSpacing: 0.6
                 }
             }
 
