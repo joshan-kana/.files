@@ -143,7 +143,7 @@ PanelWindow {
                     id: headerHint
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "HYPER + /   ·   ESC CLOSE"
+                    text: "SUPER + /   ·   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
