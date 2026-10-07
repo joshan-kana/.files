@@ -318,7 +318,7 @@ Item {
         currentIndex: panel.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
 
-        delegate: SquircleSurface {
+        delegate: ShellSurface {
             id: themeRow
 
             required property var modelData
@@ -326,11 +326,11 @@ Item {
 
             width: ListView.view.width
             height: 82
-            exponent: theme.squircleExponent
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Control
             cornerRadius: theme.radiusMedium
-            fillColor: modelData.preview ? modelData.preview.background : theme.background
-            borderColor: modelData.name === panel.currentTheme ? theme.positive : (index === panel.selectedIndex ? theme.accent : theme.outline)
-            borderWidth: index === panel.selectedIndex || modelData.name === panel.currentTheme ? theme.borderFocus : theme.borderThin
+            fillColor: index === panel.selectedIndex ? theme.selectionFill : (modelData.preview ? modelData.preview.background : theme.layer3)
 
             MouseArea {
                 anchors.fill: parent
