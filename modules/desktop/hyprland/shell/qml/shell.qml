@@ -474,6 +474,13 @@ ShellRoot {
 
     GlobalShortcut {
         appid: "linux-desktop"
+        name: "theme"
+        description: "Open theme picker"
+        onPressed: actions.showTheme()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
