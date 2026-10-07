@@ -481,6 +481,13 @@ ShellRoot {
 
     GlobalShortcut {
         appid: "linux-desktop"
+        name: "bar"
+        description: "Toggle top bar"
+        onPressed: ambientBar.shown = !ambientBar.shown
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
         name: "media"
         description: "Open now playing"
         onPressed: actions.toggleMedia()
