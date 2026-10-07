@@ -164,7 +164,7 @@ WlSessionLock {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(lock.clock.date, "HH:mm")
                     color: lock.theme.textStrong
-                    font.family: lock.runtime.fontSans
+                    font.family: lock.runtime.fontMono
                     font.pixelSize: theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))
                     font.weight: Font.Light
                     font.letterSpacing: -2
@@ -224,7 +224,7 @@ WlSessionLock {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Quickshell.env("USER") || "user"
                                 color: lock.theme.textStrong
-                                font.family: lock.runtime.fontSans
+                                font.family: lock.runtime.fontMono
                                 font.pixelSize: theme.fontSize(18)
                                 font.weight: Font.DemiBold
                             }
@@ -258,7 +258,7 @@ WlSessionLock {
                                 color: lock.theme.textStrong
                                 selectionColor: lock.theme.accent
                                 selectedTextColor: lock.theme.background
-                                font.family: lock.runtime.fontSans
+                                font.family: lock.runtime.fontMono
                                 font.pixelSize: theme.fontSize(17)
                                 clip: true
 
