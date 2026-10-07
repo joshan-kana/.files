@@ -11,7 +11,7 @@ Item {
 
     signal activated
 
-    width: media.available ? 382 : 0
+    width: media.available ? 414 : 0
     height: 40
     visible: width > 1
     opacity: media.available ? 1 : 0
@@ -125,8 +125,8 @@ Item {
         Item {
             id: miniSpectrum
 
-            width: 72
-            height: 22
+            width: 104
+            height: 28
             anchors {
                 right: state.left
                 rightMargin: theme.spacing2
@@ -140,7 +140,7 @@ Item {
                 spectrum: island.spectrum
                 theme: island.theme
                 frequencyScale: spectrumScale
-                barCount: 16
+                barCount: 20
             }
 
             Behavior on opacity {
