@@ -41,9 +41,15 @@ QtObject {
     readonly property real squircleExponent: data.visual.squircleExponent
     readonly property var keybindings: data.keybindings
     readonly property var shortcuts: data.shortcuts
+    readonly property var shortcutHints: data.shortcutHints
 
     function shortcut(id) {
         const value = shortcuts ? shortcuts[id] : undefined;
+        return value === undefined || value === null ? "" : String(value);
+    }
+
+    function shortcutHint(id) {
+        const value = shortcutHints ? shortcutHints[id] : undefined;
         return value === undefined || value === null ? "" : String(value);
     }
 
@@ -116,6 +122,7 @@ QtObject {
 
             property var keybindings: []
             property var shortcuts: ({})
+            property var shortcutHints: ({})
             property string wallpaper: ""
         }
     }
