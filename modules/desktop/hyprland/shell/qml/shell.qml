@@ -147,29 +147,9 @@ ShellRoot {
         motion: motion
     }
 
-    MediaPanel {
-        id: mediaPanel
-        screen: screens.focusedScreen
-        media: media
-        spectrum: spectrum
-        runtime: runtime
-        theme: theme
-        motion: motion
-    }
-
     ResizeOverlay {
         id: resizeOverlay
         screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
-    }
-
-    SystemPanel {
-        id: systemPanel
-        screen: screens.focusedScreen
-        system: system
-        brightness: brightness
         runtime: runtime
         theme: theme
         motion: motion
@@ -411,9 +391,7 @@ ShellRoot {
         launcher: launcher
         clipboardPanel: clipboardPanel
         audioMixerPanel: audioMixerPanel
-        mediaPanel: mediaPanel
         mediaState: media
-        systemPanel: systemPanel
         systemState: system
         brightnessState: brightness
         notificationCenter: notificationCenter
