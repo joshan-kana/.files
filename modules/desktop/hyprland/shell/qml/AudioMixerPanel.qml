@@ -107,8 +107,13 @@ PanelWindow {
     SquircleSurface {
         id: card
 
-        width: Math.min(panel.width - 80, 760)
-        height: Math.min(panel.height - 120, 660)
+        width: Math.min(panel.width - 120, 760)
+        height: {
+            const visibleRows = Math.min(Math.max(panel.streams.length, 1), 5);
+            const rowsHeight = visibleRows * 92 + Math.max(0, visibleRows - 1) * theme.spacing3;
+            const desired = theme.spacing5 * 2 + header.implicitHeight + theme.spacing4 * 2 + rowsHeight + footer.implicitHeight;
+            return Math.min(panel.height - 140, Math.max(280, desired));
+        }
         anchors.centerIn: parent
 
         exponent: theme.squircleExponent
