@@ -8,6 +8,12 @@ import Quickshell.Io
 ShellRoot {
     id: root
 
+    readonly property QtObject runtimeRef: runtime
+    readonly property QtObject themeRef: theme
+    readonly property QtObject motionRef: motion
+    readonly property QtObject mediaRef: media
+    readonly property QtObject spectrumRef: spectrum
+
     RuntimeConfig {
         id: runtime
     }
@@ -30,12 +36,27 @@ ShellRoot {
         id: expansionState
     }
 
+    Component {
+        id: mediaExpansionComponent
+
+        MediaContent {
+            media: root.mediaRef
+            spectrum: root.spectrumRef
+            runtime: root.runtimeRef
+            theme: root.themeRef
+            motion: root.motionRef
+            engaged: expansionState.hasCurrent && expansionState.currentName === "media"
+            onCloseRequested: expansionState.close()
+        }
+    }
+
     ShellExpansionHost {
         id: expansionHost
         runtime: runtime
         theme: theme
         motion: motion
         expansionState: expansionState
+        mediaComponent: mediaExpansionComponent
     }
 
     WallpaperLayer {
@@ -68,7 +89,7 @@ ShellRoot {
 
     SpectrumState {
         id: spectrum
-        active: media.playing || mediaPanel.open
+        active: media.playing || (expansionState.hasCurrent && expansionState.currentName === "media")
     }
 
     AmbientBar {
@@ -79,8 +100,8 @@ ShellRoot {
         media: media
         spectrum: spectrum
         system: system
-        onMediaRequested: actions.toggleMedia()
-        onSystemRequested: actions.toggleSystem()
+        onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
+        onSystemRequested: (screen, origin) => actions.toggleSystem()
     }
 
     ShortcutCheatsheet {
@@ -365,6 +386,9 @@ ShellRoot {
     Actions {
         id: actions
         runtime: runtime
+        screenRouter: screens
+        ambientBar: ambientBar
+        expansionState: expansionState
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
@@ -775,7 +799,7 @@ ShellRoot {
         }
 
         function mediaOpen(): bool {
-            return mediaPanel.open;
+            return expansionState.hasCurrent && expansionState.currentName === "media";
         }
 
         function spectrumConnected(): bool {

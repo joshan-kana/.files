@@ -14,9 +14,43 @@ Variants {
     required property QtObject system
 
     property bool shown: true
+    property var origins: ({})
 
-    signal mediaRequested
-    signal systemRequested
+    signal mediaRequested(var screen, var origin)
+    signal systemRequested(var screen, var origin)
+
+    function screenKey(screen: var): string {
+        return screen && screen.name ? String(screen.name) : "";
+    }
+
+    function setOrigin(screen: var, name: string, center: real, width: real, height: real): void {
+        const key = screenKey(screen);
+        if (key.length === 0)
+            return;
+
+        const next = Object.assign({}, origins);
+        const screenOrigins = Object.assign({}, next[key] || {});
+        screenOrigins[name] = {
+            center: center,
+            width: width,
+            height: height
+        };
+        next[key] = screenOrigins;
+        origins = next;
+    }
+
+    function originFor(screen: var, name: string): var {
+        const key = screenKey(screen);
+        const value = key.length > 0 && origins[key] ? origins[key][name] : null;
+        if (value)
+            return value;
+
+        return {
+            center: screen ? screen.width / 2 : 0,
+            width: 40,
+            height: 40
+        };
+    }
 
     model: Quickshell.screens
 
@@ -34,6 +68,17 @@ Variants {
         readonly property QtObject spectrum: bars.spectrum
         readonly property QtObject system: bars.system
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
+
+        function publishOrigins(): void {
+            if (!barContent || !mediaIsland || !systemIsland)
+                return;
+
+            bars.setOrigin(modelData, "media", barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
+            bars.setOrigin(modelData, "system", barContent.x + systemIsland.x + systemIsland.width / 2, systemIsland.width, systemIsland.height);
+        }
+
+        Component.onCompleted: Qt.callLater(publishOrigins)
+        onWidthChanged: Qt.callLater(publishOrigins)
 
         visible: bars.shown
         implicitHeight: 56
@@ -58,6 +103,8 @@ Variants {
         readonly property var normalWorkspaces: Hyprland.workspaces.values.filter(workspace => workspace.id > 0).sort((a, b) => a.id - b.id)
 
         Item {
+            id: barContent
+
             anchors.fill: parent
             anchors {
                 leftMargin: 14
@@ -164,7 +211,9 @@ Variants {
                 motion: bar.motion
                 media: bar.media
                 spectrum: bar.spectrum
-                onActivated: bars.mediaRequested()
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onActivated: bars.mediaRequested(bar.modelData, bars.originFor(bar.modelData, "media"))
             }
 
             SquircleSurface {
@@ -224,7 +273,9 @@ Variants {
                 theme: bar.theme
                 motion: bar.motion
                 system: bar.system
-                onActivated: bars.systemRequested()
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))
             }
         }
     }
