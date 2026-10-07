@@ -113,8 +113,10 @@ PanelWindow {
         closing = false;
         setLauncherSubmap(true);
         open = true;
-        search.text = "";
-        results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
+        if (resultModel.values.length === 0)
+            results.currentIndex = -1;
+        else if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
+            results.currentIndex = 0;
         search.forceActiveFocus();
     }
 
@@ -312,7 +314,7 @@ PanelWindow {
                         verticalCenter: parent.verticalCenter
                     }
 
-                    text: "SUPER / ALT + SPACE"
+                    text: runtime.shortcut("launcher.toggle") + "  /  ALT + SPACE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
@@ -484,7 +486,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: "SUPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
+                    text: "HYPER + 1–9 OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
