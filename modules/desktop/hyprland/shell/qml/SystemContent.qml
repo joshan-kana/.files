@@ -265,147 +265,66 @@ FocusScope {
                 font.weight: Font.DemiBold
             }
 
-            SquircleSurface {
+            ShellSurface {
                 width: parent.width
-                height: 112
-                exponent: theme.squircleExponent
+                height: 98
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
-                fillColor: theme.background
-                borderColor: theme.outline
-                borderWidth: theme.borderThin
 
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: theme.spacing4
-
-                    Row {
-                        anchors {
-                            top: parent.top
-                            left: parent.left
-                            right: parent.right
-                        }
-
-                        Text {
-                            text: system.muted ? "Sound · muted" : "Sound  " + system.volumePercent + "%"
-                            color: system.muted ? theme.warning : theme.textStrong
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(13)
-                            font.weight: Font.DemiBold
-                        }
-
-                        Item {
-                            width: parent.width - parent.children[0].width - sinkName.width
-                            height: 1
-                        }
-
-                        Text {
-                            id: sinkName
-                            width: Math.min(220, implicitWidth)
-                            text: system.audioAvailable && system.audioSink ? (system.audioSink.description || system.audioSink.name) : "No output"
-                            horizontalAlignment: Text.AlignRight
-                            elide: Text.ElideRight
-                            color: theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(9)
-                        }
+                ShellSection {
+                    anchors {
+                        fill: parent
+                        margins: theme.spacing4
                     }
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: system.muted ? "Sound · muted" : "Sound  " + system.volumePercent + "%"
+                    detail: system.audioAvailable && system.audioSink ? (system.audioSink.description || system.audioSink.name) : "No output"
 
-                    Rectangle {
-                        anchors {
-                            right: parent.right
-                            bottom: parent.bottom
-                            left: parent.left
-                        }
-                        height: 7
-                        radius: height / 2
-                        color: theme.surfaceRaised
-
-                        Rectangle {
-                            height: parent.height
-                            radius: parent.radius
-                            width: parent.width * Math.max(0, Math.min(1, system.volume))
-                            color: system.muted ? theme.warning : theme.accent
-
-                            Behavior on width {
-                                NumberAnimation {
-                                    duration: motion.fast
-                                    easing.type: motion.enterType
-                                }
-                            }
-                        }
+                    ShellSlider {
+                        width: parent.width
+                        theme: root.theme
+                        motion: root.motion
+                        value: system.volume
+                        enabled: system.audioAvailable
+                        accentColor: system.muted ? theme.warning : theme.accent
+                        trackHeight: 8
+                        handleSize: 18
+                        onValueRequested: value => system.setVolume(value)
                     }
                 }
             }
 
-            SquircleSurface {
+            ShellSurface {
                 width: parent.width
-                height: 82
+                height: 84
                 visible: brightness.supported
-                exponent: theme.squircleExponent
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
-                fillColor: theme.background
-                borderColor: theme.outline
-                borderWidth: theme.borderThin
 
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: theme.spacing4
-
-                    Row {
-                        anchors {
-                            top: parent.top
-                            left: parent.left
-                            right: parent.right
-                        }
-
-                        Text {
-                            text: "Display  " + brightness.percent + "%"
-                            color: theme.textStrong
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(11)
-                            font.weight: Font.DemiBold
-                        }
-
-                        Item {
-                            width: parent.width - parent.children[0].width - brightnessDevice.width
-                            height: 1
-                        }
-
-                        Text {
-                            id: brightnessDevice
-                            width: Math.min(220, implicitWidth)
-                            text: brightness.device
-                            horizontalAlignment: Text.AlignRight
-                            elide: Text.ElideRight
-                            color: theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(9)
-                        }
+                ShellSection {
+                    anchors {
+                        fill: parent
+                        margins: theme.spacing4
                     }
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Display  " + brightness.percent + "%"
+                    detail: brightness.device
 
-                    Rectangle {
-                        anchors {
-                            right: parent.right
-                            bottom: parent.bottom
-                            left: parent.left
-                        }
-                        height: 7
-                        radius: height / 2
-                        color: theme.surfaceRaised
-
-                        Rectangle {
-                            height: parent.height
-                            radius: parent.radius
-                            width: parent.width * brightness.percent / 100
-                            color: theme.positive
-
-                            Behavior on width {
-                                NumberAnimation {
-                                    duration: motion.fast
-                                    easing.type: motion.enterType
-                                }
-                            }
-                        }
+                    ShellSlider {
+                        width: parent.width
+                        theme: root.theme
+                        motion: root.motion
+                        value: brightness.percent / 100
+                        interactive: false
+                        accentColor: theme.positive
+                        trackHeight: 8
+                        handleSize: 0
                     }
                 }
             }
@@ -444,57 +363,27 @@ FocusScope {
                         }
                     ]
 
-                    delegate: SquircleSurface {
+                    delegate: ShellAction {
                         required property var modelData
 
                         width: (content.width - theme.spacing3 * (controlTiles.count - 1)) / controlTiles.count
-                        height: 92
-                        exponent: theme.squircleExponent
-                        cornerRadius: theme.radiusLarge
-                        fillColor: theme.background
-                        borderColor: modelData.active ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.30) : theme.outline
-                        borderWidth: theme.borderThin
+                        height: 78
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        title: modelData.label
+                        subtitle: modelData.value
+                        active: modelData.active
 
-                        MouseArea {
-                            anchors.fill: parent
-                            enabled: modelData.id === "network" || modelData.id === "bluetooth" || modelData.id === "theme" || modelData.id === "session"
-                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-
-                            onClicked: {
-                                if (modelData.id === "network")
-                                    root.openNetwork();
-                                else if (modelData.id === "bluetooth")
-                                    root.openBluetooth();
-                                else if (modelData.id === "theme")
-                                    root.openTheme();
-                                else if (modelData.id === "session")
-                                    root.openSession();
-                            }
-                        }
-
-                        Column {
-                            anchors {
-                                fill: parent
-                                margins: theme.spacing4
-                            }
-                            spacing: theme.spacing2
-
-                            Text {
-                                text: modelData.label
-                                color: modelData.active ? theme.accent : theme.textMuted
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(11)
-                                font.weight: Font.DemiBold
-                            }
-
-                            Text {
-                                width: parent.width
-                                text: modelData.value
-                                elide: Text.ElideRight
-                                color: theme.text
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(13)
-                            }
+                        onActivated: {
+                            if (modelData.id === "network")
+                                root.openNetwork();
+                            else if (modelData.id === "bluetooth")
+                                root.openBluetooth();
+                            else if (modelData.id === "theme")
+                                root.openTheme();
+                            else if (modelData.id === "session")
+                                root.openSession();
                         }
                     }
                 }
@@ -538,7 +427,7 @@ FocusScope {
                     Repeater {
                         model: system.trayItems
 
-                        delegate: SquircleSurface {
+                        delegate: ShellSurface {
                             id: trayItem
 
                             required property var modelData
@@ -546,17 +435,11 @@ FocusScope {
 
                             width: 72
                             height: 66
-                            exponent: theme.squircleExponent
+                            theme: root.theme
+                            motion: root.motion
+                            surfaceLayer: ShellSurface.Control
+                            selected: index === root.trayIndex
                             cornerRadius: theme.radiusMedium
-                            fillColor: index === root.trayIndex ? theme.focusFill : theme.background
-                            borderColor: index === root.trayIndex ? theme.accent : theme.outline
-                            borderWidth: index === root.trayIndex ? theme.borderFocus : theme.borderThin
-
-                            Behavior on fillColor {
-                                ColorAnimation {
-                                    duration: motion.fast
-                                }
-                            }
 
                             MouseArea {
                                 anchors.fill: parent
@@ -604,15 +487,14 @@ FocusScope {
                 }
             }
 
-            SquircleSurface {
+            ShellSurface {
                 width: parent.width
                 height: 64
                 visible: system.batteryAvailable
-                exponent: theme.squircleExponent
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusMedium
-                fillColor: theme.background
-                borderColor: theme.outline
-                borderWidth: theme.borderThin
 
                 Row {
                     anchors {
