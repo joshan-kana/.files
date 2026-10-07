@@ -37,6 +37,11 @@ QtObject {
     readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.06))
     readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, 0.14)
+    readonly property color layer0: background
+    readonly property color layer1: surface
+    readonly property color layer2: surfaceRaised
+    readonly property color layer3: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, 0.08)
+    readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontPanelEyebrow: fontSize(11)
