@@ -137,7 +137,7 @@ Variants {
                                     visible: workspace.active
                                     text: workspace.number
                                     color: theme.background
-                                    font.family: runtime.fontSans
+                                    font.family: runtime.fontMono
                                     font.pixelSize: theme.fontSize(11)
                                     font.weight: Font.DemiBold
                                 }
@@ -185,7 +185,7 @@ Variants {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
                         color: theme.accent
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(13)
                         font.weight: Font.Medium
                     }
@@ -202,7 +202,7 @@ Variants {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "h:mm AP")
                         color: theme.textStrong
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(13)
                         font.weight: Font.DemiBold
                     }

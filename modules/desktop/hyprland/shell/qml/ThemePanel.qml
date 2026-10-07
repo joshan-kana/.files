@@ -278,7 +278,7 @@ Item {
         Text {
             text: "Appearance"
             color: theme.accent
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(11)
             font.weight: Font.Medium
         }
@@ -286,7 +286,7 @@ Item {
         Text {
             text: "Palette switcher"
             color: theme.textStrong
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
@@ -362,7 +362,7 @@ Item {
                             width: parent.width - stateBadge.width - parent.spacing
                             text: modelData.label || modelData.name
                             color: modelData.preview ? modelData.preview.text : theme.textStrong
-                            font.family: runtime.fontSans
+                            font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(14)
                             font.weight: modelData.name === panel.currentTheme ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
