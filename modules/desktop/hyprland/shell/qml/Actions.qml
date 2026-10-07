@@ -10,9 +10,7 @@ QtObject {
     required property QtObject launcher
     required property QtObject clipboardPanel
     required property QtObject audioMixerPanel
-    required property QtObject mediaPanel
     required property QtObject mediaState
-    required property QtObject systemPanel
     required property QtObject systemState
     required property QtObject brightnessState
     required property QtObject notificationCenter
@@ -32,10 +30,6 @@ QtObject {
             expansionState.close();
         if (except !== "system" && expansionState.hasCurrent && expansionState.currentName === "system")
             expansionState.close();
-        if (mediaPanel.open)
-            mediaPanel.hide();
-        if (systemPanel.open)
-            systemPanel.hide();
         if (except !== "notifications" && notificationCenter.open)
             notificationCenter.hide();
     }
