@@ -299,7 +299,18 @@ in
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
       };
-      mainModifierLabel = "SUPER";
+      mainModifierLabel = config.wayland.windowManager.hyprland.settings.mainMod._var;
+      launcherSlotBindings = lib.filter (
+        binding:
+        binding.submap == "launcher"
+        && binding.action.type == "global"
+        && lib.hasPrefix "linux-desktop:launcher-slot-" binding.action.value
+      ) keybindings;
+      launcherSlotsHint =
+        if launcherSlotBindings == [ ] then
+          ""
+        else
+          "${mainModifierLabel} + ${(builtins.head launcherSlotBindings).keys}–${(lib.last launcherSlotBindings).keys}";
 
       renderShortcut =
         binding:
@@ -346,6 +357,7 @@ in
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         visual = shellVisual;
         keybindings = cheatsheetBindings;
+        shortcutHints.launcherSlots = launcherSlotsHint;
         inherit shortcuts;
 
         tools = {
