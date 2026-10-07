@@ -30,16 +30,19 @@ Item {
             const centers = [];
             const sources = [];
             for (let index = 0; index < count; index++) {
-                const source = Math.min(values.length - 1, index * 2);
-                const t = source / Math.max(1, values.length - 1);
+                const t = count <= 1 ? 0 : index / (count - 1);
+                const source = Math.round(t * Math.max(0, values.length - 1));
                 sources.push(source);
                 centers.push(root.frequencyScale.fromNormalized(t) * width);
             }
 
             for (let index = 0; index < count; index++) {
                 const source = sources[index];
-                const nextSource = Math.min(values.length - 1, source + 1);
-                const raw = Math.max(values[source] || 0, values[nextSource] || 0);
+                const previousSource = index > 0 ? Math.floor((sources[index - 1] + source) / 2) : source;
+                const nextSource = index < count - 1 ? Math.ceil((source + sources[index + 1]) / 2) : source;
+                let raw = 0;
+                for (let sample = previousSource; sample <= nextSource; sample++)
+                    raw = Math.max(raw, values[sample] || 0);
                 const level = Math.pow(Math.max(0, Math.min(1, raw)), 0.88);
                 const barHeight = Math.max(2, level * height);
                 const center = centers[index];
