@@ -149,7 +149,7 @@ PanelWindow {
                 Text {
                     text: notificationState.count + " stored"
                     color: theme.accent
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     font.weight: Font.Medium
                 }
@@ -157,7 +157,7 @@ PanelWindow {
                 Text {
                     text: "Notifications"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -259,7 +259,7 @@ PanelWindow {
                             text: modelData.summary
                             textFormat: Text.PlainText
                             color: theme.textStrong
-                            font.family: runtime.fontSans
+                            font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(14)
                             font.weight: Font.DemiBold
                             wrapMode: Text.Wrap
@@ -273,7 +273,7 @@ PanelWindow {
                             textFormat: Text.PlainText
                             color: theme.text
                             opacity: 0.78
-                            font.family: runtime.fontSans
+                            font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(11)
                             wrapMode: Text.Wrap
                             elide: Text.ElideRight
@@ -289,7 +289,7 @@ PanelWindow {
                 visible: notificationState.count === 0
                 text: "You’re all caught up"
                 color: theme.textMuted
-                font.family: runtime.fontSans
+                font.family: runtime.fontMono
                 font.pixelSize: theme.fontSize(12)
             }
 
