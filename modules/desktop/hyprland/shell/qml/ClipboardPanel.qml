@@ -228,7 +228,7 @@ PanelWindow {
                 spacing: theme.spacing2
 
                 Text {
-                    text: "Clipboard · " + entries.length + (entries.length === 1 ? " item" : " items")
+                    text: entries.length + (entries.length === 1 ? " item" : " items")
                     color: theme.accent
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontSize(12)
@@ -236,7 +236,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: "Clipboard history"
+                    text: "Clipboard"
                     color: theme.textStrong
                     font.family: runtime.fontSans
                     font.pixelSize: theme.fontPanelTitle
