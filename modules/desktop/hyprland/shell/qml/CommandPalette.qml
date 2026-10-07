@@ -272,7 +272,7 @@ PanelWindow {
                     color: theme.textStrong
                     selectionColor: theme.accent
                     selectedTextColor: theme.background
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(18)
                     clip: true
 
@@ -410,7 +410,7 @@ PanelWindow {
                                 width: parent.width
                                 text: modelData.name
                                 color: theme.textStrong
-                                font.family: runtime.fontSans
+                                font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(14)
                                 font.weight: result.ListView.isCurrentItem ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
@@ -421,7 +421,7 @@ PanelWindow {
                                 visible: modelData.genericName && modelData.genericName.length > 0
                                 text: modelData.genericName
                                 color: theme.textMuted
-                                font.family: runtime.fontSans
+                                font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
                                 elide: Text.ElideRight
                             }
