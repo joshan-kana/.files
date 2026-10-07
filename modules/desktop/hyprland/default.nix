@@ -138,9 +138,7 @@ in
         configType = "lua";
 
         settings = {
-          # Match the Mac Hammerspoon Hyper chord: Cmd+Alt+Ctrl there,
-          # Super+Alt+Ctrl here. Explicit Super-only chords remain explicit.
-          mainMod._var = "SUPER + ALT + CTRL";
+          mainMod._var = "SUPER";
 
           config = {
             xwayland.force_zero_scaling = true;
