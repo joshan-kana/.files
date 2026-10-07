@@ -513,6 +513,13 @@ in
     description = "Edit desktop configuration";
   })
   (mk {
+    keys = "Y";
+    id = "theme.toggle";
+    action = global "linux-desktop:theme";
+    section = "SYSTEM";
+    description = "Theme picker";
+  })
+  (mk {
     keys = "slash";
     id = "shortcuts.toggle";
     action = global "linux-desktop:cheatsheet";
