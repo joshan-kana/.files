@@ -186,7 +186,8 @@ Variants {
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
                         color: theme.accent
                         font.family: runtime.fontSans
-                        font.pixelSize: theme.fontSize(11)
+                        font.pixelSize: theme.fontSize(13)
+                        font.weight: Font.Medium
                     }
 
                     Rectangle {
