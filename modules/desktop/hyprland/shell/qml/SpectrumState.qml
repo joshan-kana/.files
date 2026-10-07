@@ -7,7 +7,7 @@ QtObject {
 
     property bool active: false
     property bool connectionGate: true
-    readonly property bool connected: socket.connected
+    readonly property bool connected: socketLoader.item ? socketLoader.item.connected : false
 
     property var bands: []
     property real rms: 0
@@ -19,36 +19,55 @@ QtObject {
     property int sampleRate: 0
     property int sequence: 0
 
-    property Socket socket: Socket {
-        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-spectrum.sock"
-        connected: spectrum.active && spectrum.connectionGate
+    property Component socketComponent: Component {
+        Socket {
+            id: spectrumSocket
 
-        parser: SplitParser {
-            onRead: message => {
-                try {
-                    const frame = JSON.parse(message);
-                    spectrum.sequence = frame.seq || 0;
-                    spectrum.sampleRate = frame.rate || 0;
-                    spectrum.rms = frame.rms || 0;
-                    spectrum.peak = frame.peak || 0;
-                    spectrum.sub = frame.sub || 0;
-                    spectrum.bass = frame.bass || 0;
-                    spectrum.mid = frame.mid || 0;
-                    spectrum.high = frame.high || 0;
-                    spectrum.bands = frame.bands || [];
-                } catch (error) {
-                    console.warn("spectrum: invalid frame:", error);
+            path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-spectrum.sock"
+            connected: false
+
+            Component.onCompleted: Qt.callLater(() => {
+                if (spectrum.active && socketLoader.item === spectrumSocket)
+                    spectrumSocket.connected = true;
+            })
+
+            parser: SplitParser {
+                onRead: message => {
+                    try {
+                        const frame = JSON.parse(message);
+                        spectrum.sequence = frame.seq || 0;
+                        spectrum.sampleRate = frame.rate || 0;
+                        spectrum.rms = frame.rms || 0;
+                        spectrum.peak = frame.peak || 0;
+                        spectrum.sub = frame.sub || 0;
+                        spectrum.bass = frame.bass || 0;
+                        spectrum.mid = frame.mid || 0;
+                        spectrum.high = frame.high || 0;
+                        spectrum.bands = frame.bands || [];
+                    } catch (error) {
+                        console.warn("spectrum: invalid frame:", error);
+                    }
                 }
             }
-        }
 
-        onError: error => {
-            if (!spectrum.active)
-                return;
+            onError: error => {
+                if (!spectrum.active)
+                    return;
 
-            spectrum.connectionGate = false;
-            reconnectTimer.restart();
+                Qt.callLater(() => {
+                    if (!spectrum.active || socketLoader.item !== spectrumSocket)
+                        return;
+
+                    spectrum.connectionGate = false;
+                    reconnectTimer.restart();
+                });
+            }
         }
+    }
+
+    property Loader socketLoader: Loader {
+        active: spectrum.active && spectrum.connectionGate
+        sourceComponent: socketComponent
     }
 
     property Timer reconnectTimer: Timer {
