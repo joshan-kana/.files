@@ -100,7 +100,7 @@ let
         printf '%s\n' "$configuredTheme"
       }
 
-      apply_theme() {
+      validate_theme_request() {
         selected="$1"
 
         if [ "''${USER:-}" != "$expectedUser" ]; then
@@ -112,19 +112,48 @@ let
           printf 'Unknown theme: %s\n' "$selected" >&2
           exit 2
         fi
+      }
 
-        activation="$(
-          nix build \
-            --no-link \
-            --print-out-paths \
-            "$themeFlake#nixosConfigurations.${configurationName}-$selected.config.home-manager.users.${primaryUser}.home.activationPackage"
-        )"
+      build_theme() {
+        selected="$1"
+        validate_theme_request "$selected"
+
+        nix build \
+          --no-link \
+          --print-out-paths \
+          "$themeFlake#nixosConfigurations.${configurationName}-$selected.config.home-manager.users.${primaryUser}.home.activationPackage"
+      }
+
+      activate_built_theme() {
+        selected="$1"
+        activation="$2"
+        validate_theme_request "$selected"
+
+        case "$activation" in
+          /nix/store/*)
+            ;;
+          *)
+            printf 'Invalid theme activation path: %s\n' "$activation" >&2
+            exit 3
+            ;;
+        esac
+
+        if [ ! -x "$activation/activate" ]; then
+          printf 'Theme activation is not executable: %s/activate\n' "$activation" >&2
+          exit 3
+        fi
 
         XDG_DATA_DIRS="$activation/home-path/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}" \
           "$activation/activate" --driver-version 1
 
         write_state "$selected"
         printf '%s\n' "$selected"
+      }
+
+      apply_theme() {
+        selected="$1"
+        activation="$(build_theme "$selected")"
+        activate_built_theme "$selected" "$activation"
       }
 
       case "''${1:-}" in
@@ -142,6 +171,20 @@ let
         current)
           current_theme
           ;;
+        build)
+          if [ -z "''${2:-}" ]; then
+            printf 'Usage: theme-set build <theme>\n' >&2
+            exit 2
+          fi
+          build_theme "$2"
+          ;;
+        activate-built)
+          if [ -z "''${2:-}" ] || [ -z "''${3:-}" ]; then
+            printf 'Usage: theme-set activate-built <theme> <activation-path>\n' >&2
+            exit 2
+          fi
+          activate_built_theme "$2" "$3"
+          ;;
         restore)
           # A full themed NixOS generation is authoritative. Record it rather
           # than overriding it with an older runtime-only selection.
@@ -156,7 +199,7 @@ let
           fi
           ;;
         "")
-          printf 'Usage: theme-set [list [--json]|current|restore|<theme>]\n' >&2
+          printf 'Usage: theme-set [list [--json]|current|restore|build <theme>|activate-built <theme> <activation-path>|<theme>]\n' >&2
           exit 2
           ;;
         *)
