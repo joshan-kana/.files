@@ -9,6 +9,7 @@ Item {
     property real from: 0
     property real to: 1
     property real value: 0
+    property bool interactive: true
     property color accentColor: theme.accent
     property real trackHeight: 10
     property real handleSize: 20
@@ -86,7 +87,7 @@ Item {
     MouseArea {
         id: interaction
         anchors.fill: parent
-        enabled: root.enabled
+        enabled: root.enabled && root.interactive
         hoverEnabled: true
         cursorShape: enabled ? (pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor) : Qt.ArrowCursor
 
