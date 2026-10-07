@@ -128,15 +128,9 @@ PanelWindow {
     SquircleSurface {
         id: card
 
-        width: Math.min(panel.width - 70, 640)
-        height: Math.min(panel.height - 120, 520)
-
-        anchors {
-            left: parent.left
-            bottom: parent.bottom
-            leftMargin: theme.panelSideOffset
-            bottomMargin: theme.panelSideOffset
-        }
+        width: Math.min(panel.width - 120, 860)
+        height: Math.min(panel.height - 140, 470)
+        anchors.centerIn: parent
 
         exponent: theme.squircleExponent
         cornerRadius: theme.radiusPanel
@@ -174,8 +168,8 @@ PanelWindow {
                 spacing: theme.spacing4
 
                 SquircleSurface {
-                    width: 132
-                    height: 132
+                    width: 112
+                    height: 112
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusLarge
                     fillColor: theme.surfaceRaised
@@ -285,7 +279,7 @@ PanelWindow {
 
                 SquircleSurface {
                     width: parent.width
-                    height: 96
+                    height: 118
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
                     fillColor: theme.background
