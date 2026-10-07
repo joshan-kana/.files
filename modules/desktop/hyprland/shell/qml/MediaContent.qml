@@ -69,12 +69,6 @@ FocusScope {
         visualizerMode = visualizerMode === "bars" ? "curve" : "bars";
     }
 
-    function updateScrubFraction(mouseX: real, trackWidth: real): void {
-        if (trackWidth <= 0)
-            return;
-        scrubFraction = Math.max(0, Math.min(1, mouseX / trackWidth));
-    }
-
     function displayedPosition(): real {
         if (scrubbing && media.length > 0)
             return media.length * scrubFraction;
@@ -102,18 +96,18 @@ FocusScope {
             }
             spacing: theme.spacing4
 
-            SquircleSurface {
+            ShellSurface {
                 width: 112
                 height: 112
-                exponent: theme.squircleExponent
+                theme: content.theme
+                motion: content.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
-                fillColor: theme.surfaceRaised
-                borderColor: theme.outline
-                borderWidth: theme.borderThin
+                clip: true
 
                 Image {
                     anchors.fill: parent
-                    anchors.margins: 1
+                    anchors.margins: 0
                     source: media.artUrl
                     asynchronous: true
                     cache: true
@@ -186,14 +180,13 @@ FocusScope {
             }
             spacing: 0
 
-            SquircleSurface {
+            ShellSurface {
                 width: parent.width
                 height: 118
-                exponent: theme.squircleExponent
+                theme: content.theme
+                motion: content.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusMedium
-                fillColor: theme.background
-                borderWidth: theme.borderThin
-                borderColor: theme.outline
                 clip: true
 
                 SpectrumCurve {
@@ -314,55 +307,34 @@ FocusScope {
             }
             spacing: theme.spacing3
 
-            Rectangle {
+            ShellSlider {
                 id: progressTrack
 
                 width: parent.width
-                height: 6
-                radius: 3
-                color: theme.surfaceRaised
-
-                Rectangle {
-                    height: parent.height
-                    radius: parent.radius
-                    color: theme.accent
-                    width: {
-                        if (!media.available || media.length <= 0)
-                            return 0;
-
-                        const fraction = content.scrubbing ? content.scrubFraction : media.position / media.length;
-                        return parent.width * Math.max(0, Math.min(1, fraction));
-                    }
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: motion.fast
-                            easing.type: Easing.Linear
-                        }
-                    }
+                theme: content.theme
+                motion: content.motion
+                from: 0
+                to: 1
+                value: {
+                    if (!media.available || media.length <= 0)
+                        return 0;
+                    return content.scrubbing ? content.scrubFraction : Math.max(0, Math.min(1, media.position / media.length));
                 }
+                enabled: media.seekable && media.length > 0
+                accentColor: theme.accent
+                trackHeight: 8
+                handleSize: 18
 
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -8
-                    enabled: media.seekable && media.length > 0
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-
-                    onPressed: mouse => {
-                        content.scrubbing = true;
-                        content.updateScrubFraction(mouse.x, width);
-                    }
-                    onPositionChanged: mouse => {
-                        if (pressed)
-                            content.updateScrubFraction(mouse.x, width);
-                    }
-                    onReleased: mouse => {
-                        content.updateScrubFraction(mouse.x, width);
-                        const target = media.length * content.scrubFraction;
-                        content.scrubbing = false;
-                        media.seekTo(target);
-                    }
-                    onCanceled: content.scrubbing = false
+                onInteractionStarted: value => {
+                    content.scrubbing = true;
+                    content.scrubFraction = value;
+                }
+                onInteractionUpdated: value => content.scrubFraction = value
+                onInteractionFinished: value => {
+                    content.scrubFraction = value;
+                    const target = media.length * value;
+                    content.scrubbing = false;
+                    media.seekTo(target);
                 }
             }
 
@@ -427,60 +399,31 @@ FocusScope {
                         }
                     ]
 
-                    delegate: SquircleSurface {
+                    delegate: ShellAction {
                         required property var modelData
 
-                        width: Math.max(66, controlLabel.implicitWidth + theme.spacing4 * 2)
-                        height: 44
+                        width: modelData.action === "play" ? 108 : 76
+                        height: 40
                         anchors.verticalCenter: parent.verticalCenter
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        compact: true
+                        title: modelData.hint + "  " + modelData.label
+                        active: modelData.action === "play"
+                        enabled: modelData.enabled
 
-                        exponent: theme.squircleExponent
-                        cornerRadius: theme.radiusSmall
-                        fillColor: modelData.action === "play" ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.16) : theme.surfaceRaised
-                        borderColor: modelData.action === "play" ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.34) : theme.subtleBorder
-                        borderWidth: theme.borderThin
-                        opacity: modelData.enabled ? 1 : 0.45
-
-                        Text {
-                            id: controlLabel
-                            anchors.centerIn: parent
-                            text: modelData.label
-                            color: modelData.action === "play" ? theme.accent : theme.text
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(11)
-                            font.weight: modelData.action === "play" ? Font.DemiBold : Font.Medium
-                        }
-
-                        Text {
-                            anchors {
-                                top: parent.top
-                                right: parent.right
-                                topMargin: 4
-                                rightMargin: 6
-                            }
-                            text: modelData.hint
-                            color: theme.textMuted
-                            opacity: 0.62
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(7)
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            enabled: modelData.enabled
-                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: {
-                                if (modelData.action === "previous")
-                                    media.previous();
-                                else if (modelData.action === "back")
-                                    media.seek(-5);
-                                else if (modelData.action === "play")
-                                    media.togglePlaying();
-                                else if (modelData.action === "forward")
-                                    media.seek(5);
-                                else if (modelData.action === "next")
-                                    media.next();
-                            }
+                        onActivated: {
+                            if (modelData.action === "previous")
+                                media.previous();
+                            else if (modelData.action === "back")
+                                media.seek(-5);
+                            else if (modelData.action === "play")
+                                media.togglePlaying();
+                            else if (modelData.action === "forward")
+                                media.seek(5);
+                            else if (modelData.action === "next")
+                                media.next();
                         }
                     }
                 }
@@ -508,44 +451,40 @@ FocusScope {
             }
 
             Row {
-                spacing: theme.spacing4
+                spacing: theme.spacing2
 
-                Text {
-                    text: "V  " + content.visualizerMode.toUpperCase()
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: content.toggleVisualizer()
-                    }
+                ShellAction {
+                    width: 94
+                    height: 30
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    title: "V  " + content.visualizerMode.toUpperCase()
+                    active: true
+                    onActivated: content.toggleVisualizer()
                 }
 
-                Text {
-                    text: "?  HELP"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: content.helpOpen = true
-                    }
+                ShellAction {
+                    width: 82
+                    height: 30
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    title: "?  HELP"
+                    onActivated: content.helpOpen = true
                 }
 
-                Text {
-                    text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
-                    font.letterSpacing: 1
+                ShellAction {
+                    width: 96
+                    height: 30
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    title: "ESC  CLOSE"
+                    onActivated: content.closeRequested()
                 }
             }
         }
