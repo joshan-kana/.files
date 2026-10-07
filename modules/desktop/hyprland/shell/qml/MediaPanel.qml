@@ -269,35 +269,9 @@ PanelWindow {
                     top: header.bottom
                     left: parent.left
                     right: parent.right
-                    topMargin: theme.spacing5
+                    topMargin: theme.spacing4
                 }
-                spacing: theme.spacing2
-
-                Row {
-                    width: parent.width
-
-                    Text {
-                        text: "Spectrum  ·  20 Hz → 20 kHz"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(10)
-                        font.letterSpacing: 1.2
-                    }
-
-                    Item {
-                        width: parent.width - parent.children[0].width - spectrumStatus.width
-                        height: 1
-                    }
-
-                    Text {
-                        id: spectrumStatus
-                        text: panel.visualizerMode + "  ·  " + (spectrum.connected ? "live  ·  " + spectrum.sampleRate / 1000 + " kHz" : "standby")
-                        color: spectrum.connected ? theme.positive : theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(9)
-                        font.letterSpacing: 1
-                    }
-                }
+                spacing: 0
 
                 SquircleSurface {
                     width: parent.width
