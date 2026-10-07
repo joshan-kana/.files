@@ -18,6 +18,7 @@ QtObject {
     readonly property string identity: available ? (player.identity || "") : ""
     readonly property real position: available && player.positionSupported ? player.position : 0
     readonly property real length: available && player.lengthSupported ? player.length : 0
+    readonly property bool seekable: available && player.canSeek && player.positionSupported && player.lengthSupported
 
     function playerId(candidate): string {
         if (!candidate)

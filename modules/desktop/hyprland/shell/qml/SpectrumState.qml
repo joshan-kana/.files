@@ -17,6 +17,8 @@ QtObject {
     property real mid: 0
     property real high: 0
     property int sampleRate: 0
+    property real lowHz: 20
+    property real highHz: 20000
     property int sequence: 0
 
     property Component socketComponent: Component {
@@ -37,6 +39,8 @@ QtObject {
                         const frame = JSON.parse(message);
                         spectrum.sequence = frame.seq || 0;
                         spectrum.sampleRate = frame.rate || 0;
+                        spectrum.lowHz = frame.lowHz || 20;
+                        spectrum.highHz = frame.highHz || 20000;
                         spectrum.rms = frame.rms || 0;
                         spectrum.peak = frame.peak || 0;
                         spectrum.sub = frame.sub || 0;
