@@ -19,7 +19,6 @@ QtObject {
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || data.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || data.tools.themeSet
 
-    readonly property string fontSans: data.fonts.sans
     readonly property string fontMono: data.fonts.mono
 
     readonly property color background: data.theme.background
@@ -90,7 +89,6 @@ QtObject {
             }
 
             property JsonObject fonts: JsonObject {
-                property string sans: "sans-serif"
                 property string mono: "monospace"
             }
 

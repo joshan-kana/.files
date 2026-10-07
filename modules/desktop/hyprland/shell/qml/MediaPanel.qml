@@ -213,7 +213,7 @@ PanelWindow {
                         visible: media.artUrl.length === 0
                         text: "♫"
                         color: theme.accent
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(36)
                     }
                 }
@@ -226,7 +226,7 @@ PanelWindow {
                     Text {
                         text: media.available ? "Now playing" : "Media"
                         color: theme.accent
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(12)
                         font.weight: Font.Medium
                     }
@@ -235,7 +235,7 @@ PanelWindow {
                         width: parent.width
                         text: media.title
                         color: theme.textStrong
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(22)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
@@ -245,7 +245,7 @@ PanelWindow {
                         width: parent.width
                         text: media.artist || media.identity || "No MPRIS player connected"
                         color: theme.textMuted
-                        font.family: runtime.fontSans
+                        font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(13)
                         elide: Text.ElideRight
                     }
@@ -533,7 +533,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: modelData.label
                                 color: modelData.action === "play" ? theme.accent : theme.text
-                                font.family: runtime.fontSans
+                                font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
                                 font.weight: modelData.action === "play" ? Font.DemiBold : Font.Medium
                             }
