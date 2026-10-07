@@ -3,6 +3,9 @@ import Quickshell
 
 QtObject {
     required property QtObject runtime
+    required property QtObject screenRouter
+    required property QtObject ambientBar
+    required property QtObject expansionState
     required property QtObject cheatsheet
     required property QtObject launcher
     required property QtObject clipboardPanel
@@ -25,7 +28,9 @@ QtObject {
             clipboardPanel.hide();
         if (except !== "audio" && audioMixerPanel.open)
             audioMixerPanel.hide();
-        if (except !== "media" && mediaPanel.open)
+        if (except !== "media" && expansionState.hasCurrent && expansionState.currentName === "media")
+            expansionState.close();
+        if (mediaPanel.open)
             mediaPanel.hide();
         if (except !== "system" && systemPanel.open)
             systemPanel.hide();
@@ -62,10 +67,17 @@ QtObject {
             Quickshell.execDetached([runtime.lockSession]);
     }
 
-    function toggleMedia(): void {
-        if (!mediaPanel.open)
+    function toggleMedia(targetScreen: var, origin: var): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "media");
+        const opening = !(expansionState.hasCurrent && expansionState.currentName === "media" && expansionState.screen === screen);
+        if (opening)
             hideTransient("media");
-        mediaPanel.toggle();
+
+        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height);
     }
 
     function mediaPlayPause(): void {
