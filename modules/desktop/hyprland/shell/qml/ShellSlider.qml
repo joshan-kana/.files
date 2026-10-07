@@ -15,6 +15,9 @@ Item {
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
 
     signal valueRequested(real value)
+    signal interactionStarted(real value)
+    signal interactionUpdated(real value)
+    signal interactionFinished(real value)
 
     implicitHeight: Math.max(handleSize, 28)
     opacity: enabled ? 1 : 0.42
@@ -87,10 +90,23 @@ Item {
         hoverEnabled: true
         cursorShape: enabled ? (pressed ? Qt.ClosedHandCursor : Qt.PointingHandCursor) : Qt.ArrowCursor
 
-        onPressed: event => root.valueRequested(root.valueForX(event.x))
-        onPositionChanged: event => {
-            if (pressed)
-                root.valueRequested(root.valueForX(event.x));
+        onPressed: event => {
+            const next = root.valueForX(event.x);
+            root.interactionStarted(next);
+            root.valueRequested(next);
         }
+        onPositionChanged: event => {
+            if (!pressed)
+                return;
+            const next = root.valueForX(event.x);
+            root.interactionUpdated(next);
+            root.valueRequested(next);
+        }
+        onReleased: event => {
+            const next = root.valueForX(event.x);
+            root.interactionFinished(next);
+            root.valueRequested(next);
+        }
+        onCanceled: root.interactionFinished(root.value)
     }
 }
