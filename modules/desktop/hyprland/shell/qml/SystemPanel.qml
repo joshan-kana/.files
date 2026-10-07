@@ -312,7 +312,7 @@ PanelWindow {
                 Text {
                     text: "System"
                     color: theme.accent
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     font.weight: Font.Medium
                 }
@@ -320,7 +320,7 @@ PanelWindow {
                 Text {
                     text: "Control centre"
                     color: theme.textStrong
-                    font.family: runtime.fontSans
+                    font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
@@ -348,7 +348,7 @@ PanelWindow {
                             Text {
                                 text: system.muted ? "Sound · muted" : "Sound  " + system.volumePercent + "%"
                                 color: system.muted ? theme.warning : theme.textStrong
-                                font.family: runtime.fontSans
+                                font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(13)
                                 font.weight: Font.DemiBold
                             }
@@ -542,7 +542,7 @@ PanelWindow {
                                 Text {
                                     text: modelData.label
                                     color: modelData.active ? theme.accent : theme.textMuted
-                                    font.family: runtime.fontSans
+                                    font.family: runtime.fontMono
                                     font.pixelSize: theme.fontSize(11)
                                     font.weight: Font.DemiBold
                                 }
@@ -552,7 +552,7 @@ PanelWindow {
                                     text: modelData.value
                                     elide: Text.ElideRight
                                     color: theme.text
-                                    font.family: runtime.fontSans
+                                    font.family: runtime.fontMono
                                     font.pixelSize: theme.fontSize(13)
                                 }
                             }
@@ -655,7 +655,7 @@ PanelWindow {
                                         horizontalAlignment: Text.AlignHCenter
                                         elide: Text.ElideRight
                                         color: theme.text
-                                        font.family: runtime.fontSans
+                                        font.family: runtime.fontMono
                                         font.pixelSize: theme.fontSize(8)
                                     }
                                 }

@@ -221,7 +221,7 @@ Item {
         Text {
             text: adapterAvailable ? "Bluetooth · " + (adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
             color: adapterAvailable && adapter.enabled ? theme.positive : theme.warning
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSize(11)
             font.weight: Font.Medium
         }
@@ -229,7 +229,7 @@ Item {
         Text {
             text: adapterAvailable ? (adapter.name || adapter.adapterId || "Bluetooth") : "Bluetooth"
             color: theme.textStrong
-            font.family: runtime.fontSans
+            font.family: runtime.fontMono
             font.pixelSize: theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
@@ -331,7 +331,7 @@ Item {
                             width: parent.width
                             text: panel.displayName(modelData)
                             color: theme.textStrong
-                            font.family: runtime.fontSans
+                            font.family: runtime.fontMono
                             font.pixelSize: theme.fontSize(13)
                             font.weight: modelData.connected ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
