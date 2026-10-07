@@ -16,6 +16,7 @@ PanelWindow {
     property bool contentExpanded: false
     property bool closing: false
 
+    readonly property var loadedContent: contentLoader.item
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
