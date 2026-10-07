@@ -199,7 +199,7 @@ Variants {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Qt.formatDateTime(clock.date, "HH:mm")
+                        text: Qt.formatDateTime(clock.date, "h:mm AP")
                         color: theme.textStrong
                         font.family: runtime.fontSans
                         font.pixelSize: theme.fontSize(13)
