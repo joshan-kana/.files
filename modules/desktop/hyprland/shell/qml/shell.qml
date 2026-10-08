@@ -102,6 +102,7 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             system: root.systemRef
+            media: root.mediaRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
             resourceState: root.resourcesRef

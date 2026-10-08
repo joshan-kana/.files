@@ -74,7 +74,6 @@ Item {
                 required property var modelData
                 width: root.compact ? (modelData.action === "play" ? 108 : 70) : (modelData.action === "play" ? 108 : 76)
                 height: 40
-                anchors.verticalCenter: parent.verticalCenter
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
