@@ -142,16 +142,16 @@ PanelWindow {
         }
     }
 
-    SquircleSurface {
+    ShellSurface {
         id: card
 
         width: Math.min(window.width - 120, 1380)
         height: Math.min(window.height - 120, 820)
         anchors.centerIn: parent
 
-        fillColor: theme.panelFill
-        borderColor: theme.panelBorder
-        borderWidth: theme.borderThin
+        theme: window.theme
+        motion: window.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
 
         scale: window.open ? 1 : theme.panelClosedScale
