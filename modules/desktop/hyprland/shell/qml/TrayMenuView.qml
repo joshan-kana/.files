@@ -1,12 +1,13 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 
 Item {
     id: view
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
     property var stack: []
@@ -127,13 +128,13 @@ Item {
         id: header
 
         width: parent.width
-        spacing: theme.spacing1
+        spacing: view.theme.spacing1
 
         Text {
-            text: "TRAY MENU // " + stack.map(level => level.label.toUpperCase()).join(" / ")
-            color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelEyebrow
+            text: "TRAY MENU // " + view.stack.map(level => level.label.toUpperCase()).join(" / ")
+            color: view.theme.accent
+            font.family: view.runtime.fontMono
+            font.pixelSize: view.theme.fontSubpanelEyebrow
             font.weight: Font.DemiBold
             font.letterSpacing: 1.4
             elide: Text.ElideMiddle
@@ -141,10 +142,10 @@ Item {
         }
 
         Text {
-            text: currentTitle
-            color: theme.textStrong
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelTitle
+            text: view.currentTitle
+            color: view.theme.textStrong
+            font.family: view.runtime.fontMono
+            font.pixelSize: view.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
             elide: Text.ElideRight
             width: parent.width
@@ -152,9 +153,9 @@ Item {
 
         Text {
             text: "↑↓ select  ·  Enter open  ·  Backspace back  ·  Esc back"
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            color: view.theme.textMuted
+            font.family: view.runtime.fontMono
+            font.pixelSize: view.theme.fontSize(9)
         }
     }
 
@@ -166,12 +167,12 @@ Item {
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: theme.spacing4
-            bottomMargin: theme.spacing3
+            topMargin: view.theme.spacing4
+            bottomMargin: view.theme.spacing3
         }
 
         model: view.items
-        spacing: theme.spacing1
+        spacing: view.theme.spacing1
         clip: true
         currentIndex: view.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
@@ -186,78 +187,78 @@ Item {
             height: modelData.isSeparator ? 12 : 42
 
             Rectangle {
-                visible: modelData.isSeparator
+                visible: entryDelegate.modelData.isSeparator
                 anchors {
                     left: parent.left
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
                 height: 1
-                color: theme.outline
+                color: view.theme.outline
                 opacity: 0.72
             }
 
             ShellSurface {
-                visible: !modelData.isSeparator
+                visible: !entryDelegate.modelData.isSeparator
                 anchors.fill: parent
                 theme: view.theme
                 motion: view.motion
                 surfaceLayer: ShellSurface.Control
                 selected: entryDelegate.index === view.selectedIndex
                 cornerRadius: theme.radiusSmall
-                opacity: modelData.enabled ? 1 : 0.42
+                opacity: entryDelegate.modelData.enabled ? 1 : 0.42
 
                 Row {
                     anchors {
                         fill: parent
-                        leftMargin: theme.spacing3
-                        rightMargin: theme.spacing3
+                        leftMargin: view.theme.spacing3
+                        rightMargin: view.theme.spacing3
                     }
-                    spacing: theme.spacing2
+                    spacing: view.theme.spacing2
 
                     Image {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: modelData.icon.length > 0
+                        visible: entryDelegate.modelData.icon.length > 0
                         width: 20
                         height: 20
-                        source: modelData.icon.length > 0 ? modelData.icon : Quickshell.iconPath("application-x-executable")
+                        source: entryDelegate.modelData.icon.length > 0 ? entryDelegate.modelData.icon : Quickshell.iconPath("application-x-executable")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: modelData.buttonType !== QsMenuButtonType.None
-                        text: modelData.checkState === Qt.Checked ? (modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓") : "○"
-                        color: theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(11)
+                        visible: entryDelegate.modelData.buttonType !== QsMenuButtonType.None
+                        text: entryDelegate.modelData.checkState === Qt.Checked ? (entryDelegate.modelData.buttonType === QsMenuButtonType.RadioButton ? "●" : "✓") : "○"
+                        color: view.theme.accent
+                        font.family: view.runtime.fontMono
+                        font.pixelSize: view.theme.fontSize(11)
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - (modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (modelData.hasChildren ? 18 : 0)
-                        text: modelData.text
-                        color: theme.text
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(12)
+                        width: parent.width - (entryDelegate.modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (entryDelegate.modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (entryDelegate.modelData.hasChildren ? 18 : 0)
+                        text: entryDelegate.modelData.text
+                        color: view.theme.text
+                        font.family: view.runtime.fontMono
+                        font.pixelSize: view.theme.fontSize(12)
                         elide: Text.ElideRight
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: modelData.hasChildren
+                        visible: entryDelegate.modelData.hasChildren
                         text: "›"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(16)
+                        color: view.theme.textMuted
+                        font.family: view.runtime.fontMono
+                        font.pixelSize: view.theme.fontSize(16)
                     }
                 }
 
                 StateLayer {
                     theme: view.theme
                     motion: view.motion
-                    disabled: !modelData.enabled
+                    disabled: !entryDelegate.modelData.enabled
                     selected: entryDelegate.index === view.selectedIndex
                     onActivated: {
                         view.selectedIndex = entryDelegate.index;
@@ -275,21 +276,21 @@ Item {
             right: parent.right
             bottom: parent.bottom
         }
-        spacing: theme.spacing4
+        spacing: view.theme.spacing4
 
         Text {
-            text: itemCount + " ENTRIES"
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            text: view.itemCount + " ENTRIES"
+            color: view.theme.textMuted
+            font.family: view.runtime.fontMono
+            font.pixelSize: view.theme.fontSize(9)
             font.letterSpacing: 1
         }
 
         Text {
-            text: stack.length > 1 ? "BACKSPACE  UP" : "BACKSPACE  TRAY"
-            color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            text: view.stack.length > 1 ? "BACKSPACE  UP" : "BACKSPACE  TRAY"
+            color: view.theme.accent
+            font.family: view.runtime.fontMono
+            font.pixelSize: view.theme.fontSize(9)
             font.letterSpacing: 1
         }
     }

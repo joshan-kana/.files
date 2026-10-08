@@ -3,9 +3,9 @@ import QtQuick
 Item {
     id: root
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property string title: ""
     property string subtitle: ""
@@ -36,7 +36,7 @@ Item {
             leftMargin: root.horizontalPadding
             rightMargin: root.horizontalPadding
         }
-        spacing: theme.spacing1
+        spacing: root.theme.spacing1
 
         ShellText {
             runtime: root.runtime
