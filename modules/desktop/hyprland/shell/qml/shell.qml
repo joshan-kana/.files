@@ -16,6 +16,7 @@ ShellRoot {
     readonly property SpectrumState spectrumRef: spectrum
     readonly property SystemState systemRef: system
     readonly property BrightnessState brightnessRef: brightness
+    readonly property WeatherState weatherRef: weather
 
     RuntimeConfig {
         id: runtime
@@ -33,6 +34,11 @@ ShellRoot {
 
     ScreenRouter {
         id: screens
+    }
+
+    WeatherState {
+        id: weather
+        runtime: runtime
     }
 
     ShellExpansionState {
@@ -60,7 +66,23 @@ ShellRoot {
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
+            weather: root.weatherRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "calendar"
+            onForecastRequested: actions.toggleWeather()
+            onCloseRequested: expansionState.close()
+        }
+    }
+
+    Component {
+        id: weatherExpansionComponent
+
+        WeatherContent {
+            runtime: root.runtimeRef
+            theme: root.themeRef
+            motion: root.motionRef
+            weather: root.weatherRef
+            engaged: expansionState.hasCurrent && expansionState.currentName === "weather"
+            onCalendarRequested: actions.toggleCalendar()
             onCloseRequested: expansionState.close()
         }
     }
@@ -89,6 +111,7 @@ ShellRoot {
         mediaComponent: mediaExpansionComponent
         systemComponent: systemExpansionComponent
         calendarComponent: calendarExpansionComponent
+        weatherComponent: weatherExpansionComponent
     }
 
     WallpaperLayer {
@@ -315,6 +338,13 @@ ShellRoot {
                 description: "Switch the active Stylix palette",
                 icon: "preferences-desktop-theme",
                 keywords: ["theme", "stylix", "palette", "colour", "color"]
+            },
+            {
+                id: "weather.toggle",
+                name: "Weather",
+                description: "Current conditions and seven-day forecast",
+                icon: "weather-clear",
+                keywords: ["forecast", "temperature", "rain", "sunrise", "climate"]
             },
             {
                 id: "calendar.toggle",
@@ -789,6 +819,30 @@ ShellRoot {
 
         function toggleCalendar(): void {
             actions.toggleCalendar();
+        }
+
+        function toggleWeather(): void {
+            actions.toggleWeather();
+        }
+
+        function weatherOpen(): bool {
+            return expansionState.hasCurrent && expansionState.currentName === "weather";
+        }
+
+        function weatherAvailable(): bool {
+            return weather.available;
+        }
+
+        function weatherCity(): string {
+            return weather.city;
+        }
+
+        function weatherTemperature(): string {
+            return weather.available ? weather.temperatureText(weather.temperature) : weather.status;
+        }
+
+        function weatherForecastCount(): int {
+            return weather.forecast.length;
         }
 
         function calendarOpen(): bool {
