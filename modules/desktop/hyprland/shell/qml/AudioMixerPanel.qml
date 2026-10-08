@@ -346,16 +346,21 @@ PanelWindow {
                     if (event.key === Qt.Key_Escape) {
                         panel.hide();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         panel.selectedIndex = Math.min(panel.streams.length - 1, panel.selectedIndex + 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Left) {
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                        const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
+                        const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+                        panel.selectedIndex = Math.max(0, Math.min(panel.streams.length - 1, panel.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                        event.accepted = true;
+                    } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                         panel.adjustSelected(-0.05);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Right) {
+                    } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
                         panel.adjustSelected(0.05);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
