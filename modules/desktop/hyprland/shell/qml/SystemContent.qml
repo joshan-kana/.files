@@ -9,6 +9,7 @@ FocusScope {
     required property Theme theme
     required property Motion motion
     required property SystemState system
+    required property MediaState media
     required property NotificationState notificationState
     required property BrightnessState brightness
     required property ResourceState resourceState
@@ -157,7 +158,11 @@ FocusScope {
                         },
                         {
                             key: "G / V / A",
-                            action: "Resources / media / app mixer"
+                            action: "Resources / media details / app mixer"
+                        },
+                        {
+                            key: "SPACE / , / .",
+                            action: "Play-pause / previous / next media"
                         },
                         {
                             key: "Q / I",
@@ -555,14 +560,128 @@ FocusScope {
                 }
             }
 
+            ShellSurface {
+                width: parent.width
+                height: 170
+                visible: root.media.available
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: theme.radiusLarge
+
+                Column {
+                    anchors {
+                        fill: parent
+                        margins: root.theme.spacing4
+                    }
+                    spacing: root.theme.spacing3
+
+                    Row {
+                        width: parent.width
+                        height: 64
+                        spacing: root.theme.spacing3
+
+                        ShellSurface {
+                            width: 64
+                            height: 64
+                            theme: root.theme
+                            motion: root.motion
+                            surfaceLayer: ShellSurface.Control
+                            cornerRadius: theme.radiusMedium
+                            clip: true
+
+                            Image {
+                                anchors.fill: parent
+                                source: root.media.artUrl
+                                asynchronous: true
+                                cache: true
+                                fillMode: Image.PreserveAspectCrop
+                                visible: root.media.artUrl.length > 0
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                visible: root.media.artUrl.length === 0
+                                text: "♫"
+                                color: root.theme.accent
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(28)
+                            }
+                        }
+
+                        Column {
+                            width: Math.max(1, parent.width - 64 - detailsButton.width - parent.spacing * 2)
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: root.theme.spacing1
+
+                            Text {
+                                text: root.media.identity || "Now playing"
+                                width: parent.width
+                                color: root.theme.accent
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(10)
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: root.media.title
+                                width: parent.width
+                                color: root.theme.textStrong
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(13)
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: root.media.artist
+                                width: parent.width
+                                color: root.theme.textMuted
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(10)
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        ShellAction {
+                            id: detailsButton
+                            width: 94
+                            height: 40
+                            anchors.verticalCenter: parent.verticalCenter
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                            title: "V  Detail ↗"
+                            onActivated: root.mediaRequested()
+                        }
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 40
+
+                        MediaTransport {
+                            anchors.centerIn: parent
+                            media: root.media
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                        }
+                    }
+                }
+            }
+
             ShellAction {
                 width: parent.width
                 height: 54
+                visible: !root.media.available
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
                 title: "󰝚  Media & visualiser"
-                subtitle: "Artwork · playback · seek · visualiser"
+                subtitle: "No player connected · V for detailed view"
                 onActivated: root.mediaRequested()
             }
 
@@ -1160,6 +1279,15 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_G) {
                     root.openResources();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Space) {
+                    root.media.togglePlaying();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Comma) {
+                    root.media.previous();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Period) {
+                    root.media.next();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_V) {
                     root.mediaRequested();
