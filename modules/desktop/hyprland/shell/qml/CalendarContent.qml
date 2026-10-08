@@ -139,6 +139,9 @@ FocusScope {
             } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
                 calendar.browseDays(1);
                 event.accepted = true;
+            } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                agendaView.scrollEvents(event.key === Qt.Key_U ? -1 : 1);
+                event.accepted = true;
             } else if (event.key === Qt.Key_R) {
                 agenda.refresh();
                 event.accepted = true;
@@ -267,6 +270,7 @@ FocusScope {
         }
 
         AgendaList {
+            id: agendaView
             width: parent.width
             runtime: calendar.runtime
             theme: calendar.theme
@@ -280,8 +284,9 @@ FocusScope {
 
             Text {
                 id: dateCaption
-                text: calendar.selectedDay > 0 ? Qt.formatDate(new Date(calendar.viewingDate.getFullYear(), calendar.viewingDate.getMonth(), calendar.selectedDay), "ddd d MMMM") : "J/K months · H/L days · T today · R events"
-                color: calendar.theme.textMuted
+                text: calendar.selectedDay > 0 ? Qt.formatDate(new Date(calendar.viewingDate.getFullYear(), calendar.viewingDate.getMonth(), calendar.selectedDay), "ddd d MMMM") : "J/K months · H/L days · U/D events"
+                color: calendar.theme.textStrong
+                opacity: 0.85
                 font.family: calendar.runtime.fontMono
                 font.pixelSize: calendar.theme.fontSize(11)
             }
