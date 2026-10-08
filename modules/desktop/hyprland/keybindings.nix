@@ -208,6 +208,14 @@ in
     description = "Clipboard history";
   })
   (mk {
+    keys = "SUPER + SHIFT + S";
+    mainMod = false;
+    id = "capture.region";
+    action = global "linux-desktop:capture-region";
+    section = "UTILITIES";
+    description = "Copy selected screen region to clipboard";
+  })
+  (mk {
     keys = "SUPER + SPACE";
     mainMod = false;
     action = global "linux-desktop:launcher";
