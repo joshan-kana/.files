@@ -101,6 +101,7 @@ ShellRoot {
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
             requestedView: expansionState.currentView
             onCloseRequested: expansionState.close()
+            onMediaRequested: actions.toggleMedia()
         }
     }
 
