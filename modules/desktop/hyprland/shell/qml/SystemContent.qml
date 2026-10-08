@@ -10,6 +10,7 @@ FocusScope {
     required property Motion motion
     required property SystemState system
     required property BrightnessState brightness
+    required property ResourceState resourceState
 
     property bool engaged: false
     property string requestedView: ""
@@ -21,8 +22,18 @@ FocusScope {
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
     readonly property bool sessionOpen: sessionPanel.open
-    readonly property string helpTitle: bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls"))))
-    readonly property var helpBindings: bluetoothPanel.open ? [
+    readonly property bool resourcesOpen: resourcesPanel.open
+    readonly property string helpTitle: resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property var helpBindings: resourcesPanel.open ? [
+        {
+            key: "R",
+            action: "Refresh now"
+        },
+        {
+            key: "ESC",
+            action: "Back to controls"
+        }
+    ] : bluetoothPanel.open ? [
         {
             key: "J/K · U/D",
             action: "Select device"
@@ -125,6 +136,10 @@ FocusScope {
                             action: "Theme / session"
                         },
                         {
+                            key: "G",
+                            action: "Resource monitor"
+                        },
+                        {
                             key: "[ / ]",
                             action: "Select tray item"
                         },
@@ -141,7 +156,7 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 512
-    implicitHeight: content.implicitHeight + theme.spacing3 + footer.implicitHeight
+    implicitHeight: resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
     focus: engaged
 
     function applyRequestedView(): void {
@@ -156,12 +171,15 @@ FocusScope {
             openNetwork();
         else if (requestedView === "bluetooth")
             openBluetooth();
+        else if (requestedView === "resources")
+            openResources();
         else if (requestedView.length === 0) {
             trayMenu.closeMenu();
             networkPanel.closeView();
             bluetoothPanel.closeView();
             themePanel.closeView();
             sessionPanel.closeView();
+            resourcesPanel.closeView();
         }
     }
 
@@ -178,6 +196,7 @@ FocusScope {
             bluetoothPanel.closeView();
             themePanel.closeView();
             sessionPanel.closeView();
+            resourcesPanel.closeView();
         }
     }
 
@@ -185,6 +204,7 @@ FocusScope {
 
     function openNetwork(): void {
         helpOpen = false;
+        resourcesPanel.closeView();
         trayMenu.closeMenu();
         bluetoothPanel.closeView();
         themePanel.closeView();
@@ -194,6 +214,7 @@ FocusScope {
 
     function openBluetooth(): void {
         helpOpen = false;
+        resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
         themePanel.closeView();
@@ -203,6 +224,7 @@ FocusScope {
 
     function openTheme(): void {
         helpOpen = false;
+        resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -216,6 +238,7 @@ FocusScope {
 
     function openSession(): void {
         helpOpen = false;
+        resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -225,6 +248,16 @@ FocusScope {
 
     function showSession(): void {
         openSession();
+    }
+
+    function openResources(): void {
+        helpOpen = false;
+        trayMenu.closeMenu();
+        networkPanel.closeView();
+        bluetoothPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        resourcesPanel.openView();
     }
 
     function activateTrayItem(): void {
@@ -246,7 +279,7 @@ FocusScope {
         Column {
             id: content
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open
             spacing: root.theme.spacing4
 
             Text {
@@ -387,6 +420,17 @@ FocusScope {
                         }
                     }
                 }
+            }
+
+            ShellAction {
+                width: parent.width
+                height: 54
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
+                title: "󰍛  Resource monitor"
+                subtitle: "CPU · memory · activity history    G ↗"
+                onActivated: root.openResources()
             }
 
             Column {
@@ -530,6 +574,16 @@ FocusScope {
             }
         }
 
+        ResourceDashboard {
+            id: resourcesPanel
+            anchors.fill: parent
+            runtime: root.runtime
+            theme: root.theme
+            motion: root.motion
+            resourceState: root.resourceState
+            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+        }
+
         NetworkPanel {
             id: networkPanel
 
@@ -594,7 +648,7 @@ FocusScope {
             id: footer
 
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open
 
             anchors {
                 left: parent.left
@@ -722,6 +776,17 @@ FocusScope {
                 if (helpKey) {
                     root.helpOpen = true;
                     event.accepted = true;
+                    return;
+                }
+
+                if (resourcesPanel.open) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        resourcesPanel.closeView();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_R) {
+                        root.resourceState.refresh();
+                        event.accepted = true;
+                    }
                     return;
                 }
 
@@ -877,6 +942,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_P) {
                     root.openSession();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_G) {
+                    root.openResources();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && root.brightness.supported) {
                     root.brightness.adjust(5);
