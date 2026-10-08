@@ -22,7 +22,7 @@ Variants {
     signal systemRequested(var screen, var origin)
     signal trayMenuRequested(var screen, var origin, int index)
     signal calendarRequested(var screen, var origin)
-    signal notificationsRequested
+    signal notificationsRequested(var screen, var origin)
 
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
@@ -82,6 +82,7 @@ Variants {
             bars.setOrigin(modelData, "media", barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
             bars.setOrigin(modelData, "system", barContent.x + systemIsland.x + systemIsland.width / 2, systemIsland.width, systemIsland.height);
             bars.setOrigin(modelData, "calendar", barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
+            bars.setOrigin(modelData, "activity", barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
         }
 
         Component.onCompleted: Qt.callLater(publishOrigins)
@@ -287,6 +288,8 @@ Variants {
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: bars.theme.radiusMedium
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
 
                 Row {
                     id: notificationRow
@@ -319,7 +322,7 @@ Variants {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: bars.notificationsRequested()
+                    onClicked: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
                 }
             }
 

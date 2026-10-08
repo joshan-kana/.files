@@ -11,7 +11,7 @@ Item {
     required property Motion motion
     property string currentTab: ""
 
-    readonly property int selectedIndex: currentTab === "home" ? 0 : 1
+    readonly property int selectedIndex: currentTab === "home" ? 0 : currentTab === "activity" ? 2 : 1
 
     signal tabRequested(string destination)
 
@@ -45,6 +45,10 @@ Item {
                 {
                     text: "CONTROLS",
                     name: "controls"
+                },
+                {
+                    text: "ACTIVITY",
+                    name: "activity"
                 }
             ]
 
@@ -87,9 +91,9 @@ Item {
         id: indicator
         anchors.top: tabs.bottom
         anchors.topMargin: root.theme.spacing1
-        width: tabs.width / 2
+        width: tabs.width / 3
         height: 3
-        x: tabs.width / 2 * root.selectedIndex
+        x: tabs.width / 3 * root.selectedIndex
 
         Behavior on x {
             Anim {
