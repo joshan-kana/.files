@@ -1,7 +1,7 @@
 import QtQuick
 
 QtObject {
-    required property QtObject runtime
+    required property RuntimeConfig runtime
 
     readonly property color background: runtime.background
     readonly property color surface: runtime.surface

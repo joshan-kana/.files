@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
@@ -6,10 +7,10 @@ import Quickshell.Wayland
 PanelWindow {
     id: center
 
-    required property QtObject notificationState
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property NotificationState notificationState
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
     property bool closing: false
@@ -37,7 +38,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: center.motion.fast
         onTriggered: center.closing = false
     }
 
@@ -88,13 +89,13 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrim
+        color: center.theme.scrim
         opacity: center.open ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: center.open ? motion.enterType : motion.exitType
+                duration: center.motion.fast
+                easing.type: center.open ? center.motion.enterType : center.motion.exitType
             }
         }
 
@@ -125,47 +126,47 @@ PanelWindow {
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.normal
-                easing.type: motion.enterType
+                duration: center.motion.normal
+                easing.type: center.motion.enterType
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
+                duration: center.motion.fast
             }
         }
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing5
+            anchors.margins: center.theme.spacing5
 
             Column {
                 id: header
                 width: parent.width
-                spacing: theme.spacing1
+                spacing: center.theme.spacing1
 
                 Text {
-                    text: notificationState.count + " stored"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    text: center.notificationState.count + " stored"
+                    color: center.theme.accent
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(12)
                     font.weight: Font.Medium
                 }
 
                 Text {
                     text: "Notifications"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelTitle
+                    color: center.theme.textStrong
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
 
                 Text {
                     text: "↑↓ navigate  ·  Enter action  ·  Delete dismiss  ·  C clear  ·  Esc close"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: center.theme.textMuted
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(9)
                 }
             }
 
@@ -177,12 +178,12 @@ PanelWindow {
                     right: parent.right
                     bottom: footer.top
                     left: parent.left
-                    topMargin: theme.spacing4
-                    bottomMargin: theme.spacing4
+                    topMargin: center.theme.spacing4
+                    bottomMargin: center.theme.spacing4
                 }
 
                 model: center.items
-                spacing: theme.spacing3
+                spacing: center.theme.spacing3
                 clip: true
                 currentIndex: center.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
@@ -194,25 +195,25 @@ PanelWindow {
                     required property int index
 
                     width: ListView.view.width
-                    height: Math.max(92, itemBody.implicitHeight + theme.spacing4 * 2)
-                    exponent: theme.squircleExponent
-                    cornerRadius: theme.radiusMedium
-                    fillColor: index === center.selectedIndex ? theme.focusFill : theme.background
+                    height: Math.max(92, itemBody.implicitHeight + center.theme.spacing4 * 2)
+                    exponent: center.theme.squircleExponent
+                    cornerRadius: center.theme.radiusMedium
+                    fillColor: index === center.selectedIndex ? center.theme.focusFill : center.theme.background
                     borderColor: {
                         if (index === center.selectedIndex)
-                            return theme.accent;
+                            return center.theme.accent;
                         if (modelData.urgency === NotificationUrgency.Critical)
-                            return Qt.rgba(theme.critical.r, theme.critical.g, theme.critical.b, 0.42);
-                        return theme.outline;
+                            return Qt.rgba(center.theme.critical.r, center.theme.critical.g, center.theme.critical.b, 0.42);
+                        return center.theme.outline;
                     }
-                    borderWidth: index === center.selectedIndex ? theme.borderFocus : theme.borderThin
+                    borderWidth: index === center.selectedIndex ? center.theme.borderFocus : center.theme.borderThin
 
                     MouseArea {
                         anchors.fill: parent
                         onClicked: center.selectedIndex = item.index
                         onDoubleClicked: {
                             center.selectedIndex = item.index;
-                            notificationState.invokeDefault(modelData);
+                            center.notificationState.invokeDefault(item.modelData);
                         }
                     }
 
@@ -223,18 +224,18 @@ PanelWindow {
                             top: parent.top
                             right: parent.right
                             left: parent.left
-                            margins: theme.spacing4
+                            margins: center.theme.spacing4
                         }
-                        spacing: theme.spacing2
+                        spacing: center.theme.spacing2
 
                         Row {
                             width: parent.width
 
                             Text {
-                                text: (modelData.appName || "SYSTEM").toUpperCase()
-                                color: modelData.urgency === NotificationUrgency.Critical ? theme.critical : theme.accent
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(9)
+                                text: (item.modelData.appName || "SYSTEM").toUpperCase()
+                                color: item.modelData.urgency === NotificationUrgency.Critical ? center.theme.critical : center.theme.accent
+                                font.family: center.runtime.fontMono
+                                font.pixelSize: center.theme.fontSize(9)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.2
                             }
@@ -246,20 +247,20 @@ PanelWindow {
 
                             Text {
                                 id: actionsLabel
-                                text: modelData.actions.length > 0 ? modelData.actions.length + " ACTION" + (modelData.actions.length === 1 ? "" : "S") : ""
-                                color: theme.textMuted
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(8)
+                                text: item.modelData.actions.length > 0 ? item.modelData.actions.length + " ACTION" + (item.modelData.actions.length === 1 ? "" : "S") : ""
+                                color: center.theme.textMuted
+                                font.family: center.runtime.fontMono
+                                font.pixelSize: center.theme.fontSize(8)
                             }
                         }
 
                         Text {
                             width: parent.width
-                            text: modelData.summary
+                            text: item.modelData.summary
                             textFormat: Text.PlainText
-                            color: theme.textStrong
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(14)
+                            color: center.theme.textStrong
+                            font.family: center.runtime.fontMono
+                            font.pixelSize: center.theme.fontSize(14)
                             font.weight: Font.DemiBold
                             wrapMode: Text.Wrap
                         }
@@ -268,12 +269,12 @@ PanelWindow {
                             width: parent.width
                             visible: text.length > 0
                             maximumLineCount: 4
-                            text: modelData.body
+                            text: item.modelData.body
                             textFormat: Text.PlainText
-                            color: theme.text
+                            color: center.theme.text
                             opacity: 0.78
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(11)
+                            font.family: center.runtime.fontMono
+                            font.pixelSize: center.theme.fontSize(11)
                             wrapMode: Text.Wrap
                             elide: Text.ElideRight
                         }
@@ -285,11 +286,11 @@ PanelWindow {
 
             Text {
                 anchors.centerIn: list
-                visible: notificationState.count === 0
+                visible: center.notificationState.count === 0
                 text: "You’re all caught up"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(12)
+                color: center.theme.textMuted
+                font.family: center.runtime.fontMono
+                font.pixelSize: center.theme.fontSize(12)
             }
 
             Row {
@@ -298,21 +299,21 @@ PanelWindow {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                spacing: theme.spacing4
+                spacing: center.theme.spacing4
 
                 Text {
-                    text: notificationState.count + " STORED"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    text: center.notificationState.count + " STORED"
+                    color: center.theme.textMuted
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "C  CLEAR"
-                    color: notificationState.count > 0 ? theme.accent : theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: center.notificationState.count > 0 ? center.theme.accent : center.theme.textMuted
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
@@ -338,13 +339,13 @@ PanelWindow {
                         center.selectedIndex = Math.max(0, Math.min(center.items.length - 1, center.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        notificationState.invokeDefault(center.selectedNotification());
+                        center.notificationState.invokeDefault(center.selectedNotification());
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                         center.dismissSelected();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_C) {
-                        notificationState.clearAll();
+                        center.notificationState.clearAll();
                         center.selectedIndex = 0;
                         event.accepted = true;
                     }

@@ -1,12 +1,13 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 
 Item {
     id: panel
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     signal keyboardRequested
 
@@ -156,29 +157,29 @@ Item {
         id: header
 
         width: parent.width
-        spacing: theme.spacing1
+        spacing: panel.theme.spacing1
 
         Text {
             text: "Session"
-            color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(11)
+            color: panel.theme.accent
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.Medium
         }
 
         Text {
             text: "Power & session"
-            color: theme.textStrong
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelTitle
+            color: panel.theme.textStrong
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
 
         Text {
-            text: armedAction.length > 0 ? "Confirm within 5 seconds" : "Choose an action"
-            color: armedAction.length > 0 ? theme.warning : theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            text: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : "Choose an action"
+            color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(9)
             font.letterSpacing: 0.8
         }
     }
@@ -191,12 +192,12 @@ Item {
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: theme.spacing4
-            bottomMargin: theme.spacing3
+            topMargin: panel.theme.spacing4
+            bottomMargin: panel.theme.spacing3
         }
 
         model: panel.entries
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
         clip: true
         currentIndex: panel.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
@@ -229,9 +230,9 @@ Item {
             Row {
                 anchors {
                     fill: parent
-                    margins: theme.spacing3
+                    margins: panel.theme.spacing3
                 }
-                spacing: theme.spacing3
+                spacing: panel.theme.spacing3
 
                 Column {
                     width: parent.width - actionState.width - parent.spacing
@@ -240,20 +241,20 @@ Item {
 
                     Text {
                         width: parent.width
-                        text: modelData.label
-                        color: modelData.id === panel.armedAction ? theme.warning : theme.textStrong
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(14)
+                        text: actionRow.modelData.label
+                        color: actionRow.modelData.id === panel.armedAction ? panel.theme.warning : panel.theme.textStrong
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(14)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
 
                     Text {
                         width: parent.width
-                        text: modelData.description
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(8)
+                        text: actionRow.modelData.description
+                        color: panel.theme.textMuted
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(8)
                         elide: Text.ElideRight
                     }
                 }
@@ -263,10 +264,10 @@ Item {
                     width: 112
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignRight
-                    text: modelData.id === panel.armedAction ? "CONFIRM" : (modelData.destructive ? "ARM" : "RUN")
-                    color: modelData.id === panel.armedAction ? theme.warning : theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    text: actionRow.modelData.id === panel.armedAction ? "CONFIRM" : (actionRow.modelData.destructive ? "ARM" : "RUN")
+                    color: actionRow.modelData.id === panel.armedAction ? panel.theme.warning : panel.theme.accent
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.weight: Font.DemiBold
                 }
             }
@@ -283,46 +284,46 @@ Item {
             bottom: parent.bottom
             left: parent.left
         }
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
 
         Text {
             width: parent.width
-            visible: statusText.length > 0
-            text: statusText
-            color: statusError ? theme.critical : theme.warning
+            visible: panel.statusText.length > 0
+            text: panel.statusText
+            color: panel.statusError ? panel.theme.critical : panel.theme.warning
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(8)
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
         }
 
         Row {
             anchors.right: parent.right
-            spacing: theme.spacing4
+            spacing: panel.theme.spacing4
 
             Text {
                 text: "↑/↓  SELECT"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
-                text: armedAction.length > 0 ? "ENTER  CONFIRM" : "ENTER  ARM/RUN"
-                color: armedAction.length > 0 ? theme.warning : theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                text: panel.armedAction.length > 0 ? "ENTER  CONFIRM" : "ENTER  ARM/RUN"
+                color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
                 text: "ESC  BACK"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }

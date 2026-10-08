@@ -25,48 +25,48 @@ Item {
             id: statusRow
 
             anchors.centerIn: parent
-            spacing: theme.spacing2
+            spacing: island.theme.spacing2
 
             Row {
                 id: volumeStatus
-                spacing: theme.spacing1
+                spacing: island.theme.spacing1
                 height: Math.max(volumeIcon.implicitHeight, volumeValue.implicitHeight)
 
                 Text {
                     id: volumeIcon
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
-                    text: system.muted ? "󰖁" : "󰕾"
-                    color: system.muted ? theme.warning : theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    text: island.system.muted ? "󰖁" : "󰕾"
+                    color: island.system.muted ? island.theme.warning : island.theme.accent
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(12)
                 }
 
                 Text {
                     id: volumeValue
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
-                    text: system.muted ? "Muted" : system.volumePercent + "%"
-                    color: system.muted ? theme.warning : theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    text: island.system.muted ? "Muted" : island.system.volumePercent + "%"
+                    color: island.system.muted ? island.theme.warning : island.theme.text
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
             }
 
             Text {
                 width: 108
-                text: system.networkConnected ? system.networkName : "Offline"
+                text: island.system.networkConnected ? island.system.networkName : "Offline"
                 elide: Text.ElideRight
-                color: system.networkConnected ? theme.text : theme.critical
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
+                color: island.system.networkConnected ? island.theme.text : island.theme.critical
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(11)
             }
 
             Row {
                 id: bluetoothStatus
-                visible: system.bluetoothEnabled
-                spacing: theme.spacing1
+                visible: island.system.bluetoothEnabled
+                spacing: island.theme.spacing1
                 height: Math.max(bluetoothIcon.implicitHeight, bluetoothValue.implicitHeight)
 
                 Text {
@@ -74,27 +74,27 @@ Item {
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
                     text: "󰂯"
-                    color: system.bluetoothConnectedCount > 0 ? theme.accent : theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    color: island.system.bluetoothConnectedCount > 0 ? island.theme.accent : island.theme.text
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
                 }
 
                 Text {
                     id: bluetoothValue
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
-                    visible: system.bluetoothConnectedCount > 0
-                    text: system.bluetoothConnectedCount
-                    color: theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    visible: island.system.bluetoothConnectedCount > 0
+                    text: island.system.bluetoothConnectedCount
+                    color: island.theme.text
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
                 }
             }
 
             Row {
                 id: batteryStatus
-                visible: system.batteryAvailable
-                spacing: theme.spacing1
+                visible: island.system.batteryAvailable
+                spacing: island.theme.spacing1
                 height: Math.max(batteryIcon.implicitHeight, batteryValue.implicitHeight)
 
                 Text {
@@ -102,19 +102,19 @@ Item {
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
                     text: "󰁹"
-                    color: system.batteryPercent <= 20 ? theme.warning : theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(12)
                 }
 
                 Text {
                     id: batteryValue
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
-                    text: system.batteryPercent + "%"
-                    color: system.batteryPercent <= 20 ? theme.warning : theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    text: island.system.batteryPercent + "%"
+                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.text
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
             }
