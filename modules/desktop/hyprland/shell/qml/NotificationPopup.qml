@@ -43,6 +43,14 @@ PanelWindow {
 
     WlrLayershell.namespace: "linux-desktop-notification-popup"
 
+    function concealForActivity(): void {
+        // Activity replaces this toast with the complete notification history.
+        // Close the layer immediately so its exit animation cannot steal hub focus.
+        notificationState.hidePopup();
+        closeTimer.stop();
+        closing = false;
+    }
+
     Timer {
         id: closeTimer
         interval: popup.motion.fast

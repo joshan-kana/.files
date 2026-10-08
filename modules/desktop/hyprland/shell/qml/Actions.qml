@@ -14,6 +14,7 @@ QtObject {
     required property SystemState systemState
     required property BrightnessState brightnessState
     required property NotificationState notificationState
+    required property NotificationPopup notificationPopup
     required property Motion motion
 
     function hideTransient(except: string): void {
@@ -174,6 +175,7 @@ QtObject {
             return;
 
         const geometry = origin || ambientBar.originFor(screen, "activity");
+        notificationPopup.concealForActivity();
         hideTransient("activity");
         expansionState.show("activity", screen, geometry.center, geometry.width, geometry.height, "");
     }
@@ -185,8 +187,10 @@ QtObject {
 
         const geometry = origin || ambientBar.originFor(screen, "activity");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "activity" && expansionState.screen === screen);
-        if (opening)
+        if (opening) {
+            notificationPopup.concealForActivity();
             hideTransient("activity");
+        }
         expansionState.toggle("activity", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
