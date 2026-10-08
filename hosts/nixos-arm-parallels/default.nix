@@ -24,7 +24,9 @@
     (moduleRegistry.profiles { }).desktop
   ];
 
-  dotfiles.defaults.terminal = "alacritty";
+  dotfiles = {
+    defaults.terminal = "alacritty";
+  };
 
   hardware = import ./hardware.nix;
 
