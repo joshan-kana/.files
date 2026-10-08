@@ -14,6 +14,7 @@ MouseArea {
     property color stateColor: selected ? theme.accent : theme.textStrong
     property real hoverOpacity: 0.08
     property real pressOpacity: 0.12
+    property real cornerRadius: theme.radiusMedium
 
     signal activated(var event)
 
@@ -24,10 +25,11 @@ MouseArea {
 
     onClicked: event => activated(event)
 
-    Rectangle {
+    SquircleSurface {
         anchors.fill: parent
-        radius: Math.min(width, height) / 2
-        color: root.stateColor
+        cornerRadius: root.cornerRadius
+        exponent: root.theme.squircleExponent
+        fillColor: root.stateColor
         opacity: {
             if (root.pressed || root.manualPress)
                 return root.pressOpacity;
