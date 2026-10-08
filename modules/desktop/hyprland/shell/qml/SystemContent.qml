@@ -9,6 +9,7 @@ FocusScope {
     required property Theme theme
     required property Motion motion
     required property SystemState system
+    required property NotificationState notificationState
     required property BrightnessState brightness
     required property ResourceState resourceState
 
@@ -484,6 +485,18 @@ FocusScope {
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
+                title: "󰂛  Do not disturb"
+                subtitle: root.notificationState.silent ? "Popups paused · history still recorded    Q" : "Popups enabled · press Q to pause"
+                active: root.notificationState.silent
+                onActivated: root.notificationState.toggleSilent()
+            }
+
+            ShellAction {
+                width: parent.width
+                height: 54
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
                 title: "󰝚  Media & visualiser"
                 subtitle: "Artwork · playback · seek · visualiser"
                 onActivated: root.mediaRequested()
@@ -791,6 +804,14 @@ FocusScope {
                 spacing: root.theme.spacing4
 
                 Text {
+                    text: "Q  QUIET"
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "N  NETWORK"
                     color: root.theme.accent
                     font.family: root.runtime.fontMono
@@ -1029,6 +1050,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M) {
                     root.system.toggleMute();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Q) {
+                    root.notificationState.toggleSilent();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N) {
                     root.openNetwork();
