@@ -491,6 +491,13 @@ in
     label = "BRIGHTNESS −";
   })
   (mk {
+    keys = "SHIFT + N";
+    id = "notifications.toggle";
+    action = global "linux-desktop:notifications";
+    section = "SYSTEM";
+    description = "Notification centre";
+  })
+  (mk {
     keys = "SHIFT + C";
     id = "session.lock";
     action = global "linux-desktop:lock";
