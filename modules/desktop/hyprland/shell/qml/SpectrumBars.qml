@@ -1,11 +1,12 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
     id: root
 
-    required property QtObject spectrum
-    required property QtObject theme
-    required property var frequencyScale
+    required property SpectrumState spectrum
+    required property Theme theme
+    required property SpectrumScale frequencyScale
 
     property int barCount: 48
     readonly property var values: spectrum.bands || []

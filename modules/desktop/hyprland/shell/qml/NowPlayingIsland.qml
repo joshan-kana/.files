@@ -3,11 +3,11 @@ import QtQuick
 Item {
     id: island
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
-    required property QtObject media
-    required property QtObject spectrum
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    required property MediaState media
+    required property SpectrumState spectrum
 
     signal activated
 
