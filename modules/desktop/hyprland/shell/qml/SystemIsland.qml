@@ -3,10 +3,10 @@ import QtQuick
 Item {
     id: island
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
-    required property QtObject system
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    required property SystemState system
 
     signal activated
 

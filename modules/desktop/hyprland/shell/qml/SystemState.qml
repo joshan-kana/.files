@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
