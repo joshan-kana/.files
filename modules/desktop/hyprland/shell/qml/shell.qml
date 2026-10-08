@@ -54,6 +54,18 @@ ShellRoot {
     }
 
     Component {
+        id: calendarExpansionComponent
+
+        CalendarContent {
+            runtime: root.runtimeRef
+            theme: root.themeRef
+            motion: root.motionRef
+            engaged: expansionState.hasCurrent && expansionState.currentName === "calendar"
+            onCloseRequested: expansionState.close()
+        }
+    }
+
+    Component {
         id: systemExpansionComponent
 
         SystemContent {
@@ -76,6 +88,7 @@ ShellRoot {
         expansionState: expansionState
         mediaComponent: mediaExpansionComponent
         systemComponent: systemExpansionComponent
+        calendarComponent: calendarExpansionComponent
     }
 
     WallpaperLayer {
@@ -122,6 +135,7 @@ ShellRoot {
         notificationState: notifications
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
+        onCalendarRequested: (screen, origin) => actions.toggleCalendar(screen, origin)
         onNotificationsRequested: actions.toggleNotifications()
     }
 
@@ -301,6 +315,13 @@ ShellRoot {
                 description: "Switch the active Stylix palette",
                 icon: "preferences-desktop-theme",
                 keywords: ["theme", "stylix", "palette", "colour", "color"]
+            },
+            {
+                id: "calendar.toggle",
+                name: "Calendar",
+                description: "Browse months and select dates",
+                icon: "x-office-calendar",
+                keywords: ["clock", "date", "month", "today", "schedule"]
             },
             {
                 id: "notifications.toggle",
@@ -764,6 +785,14 @@ ShellRoot {
 
         function toggleSystem(): void {
             actions.toggleSystem();
+        }
+
+        function toggleCalendar(): void {
+            actions.toggleCalendar();
+        }
+
+        function calendarOpen(): bool {
+            return expansionState.hasCurrent && expansionState.currentName === "calendar";
         }
 
         function showTheme(): void {
