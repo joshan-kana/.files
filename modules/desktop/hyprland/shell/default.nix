@@ -354,6 +354,42 @@ in
         '';
       };
 
+      agendaQuery = pkgs.writeShellApplication {
+        name = "linux-desktop-agenda-query";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.jq
+          pkgs.khal
+        ];
+        text = ''
+          if [ "$#" -ne 1 ] || [[ ! "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            printf 'Usage: linux-desktop-agenda-query YYYY-MM-DD\n' >&2
+            exit 2
+          fi
+
+          # Khal reads local iCalendar vdirs, including recurrence and time zones.
+          # Calendar synchronisation and credentials belong to the calendar client.
+          if [ ! -f "''${XDG_CONFIG_HOME:-$HOME/.config}/khal/config" ]; then
+            printf '{"configured":false,"events":[]}\n'
+            exit 0
+          fi
+
+          # khal's end date is inclusive; seven calendar days means +6 days.
+          endDate="$(date -d "$1 + 6 days" +%Y-%m-%d)"
+          khal list \
+            --json title --json start-date --json start-time \
+            --json end-time --json location \
+            "$1" "$endDate" \
+            | jq -sc '{configured:true,events: (add | map({
+                date: .["start-date"],
+                time: .["start-time"],
+                endTime: .["end-time"],
+                title: .title,
+                location: .location
+              }) | sort_by(.date, .time, .title))}'
+        '';
+      };
+
       clipboardCopy = pkgs.writeShellApplication {
         name = "linux-desktop-clipboard-copy";
         runtimeInputs = [
@@ -463,6 +499,7 @@ in
         tools = {
           bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
           weatherCurl = lib.getExe pkgs.curl;
+          agendaQuery = lib.getExe agendaQuery;
           brightnessctl = lib.getExe pkgs.brightnessctl;
           cliphist = lib.getExe pkgs.cliphist;
           clipboardCopy = lib.getExe clipboardCopy;
