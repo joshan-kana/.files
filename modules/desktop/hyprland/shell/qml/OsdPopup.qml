@@ -20,7 +20,7 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
 
     anchors.top: true
-    margins.top: 82
+    margins.top: theme.panelTopOffset
 
     WlrLayershell.namespace: "linux-desktop-osd"
 
@@ -46,14 +46,12 @@ PanelWindow {
         }
     }
 
-    SquircleSurface {
+    ShellSurface {
         anchors.fill: parent
-
-        exponent: theme.squircleExponent
+        theme: popup.theme
+        motion: popup.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
-        borderColor: Qt.rgba(popup.accentColor.r, popup.accentColor.g, popup.accentColor.b, 0.44)
-        borderWidth: theme.borderThin
 
         opacity: osd.visible ? 1 : 0
         scale: osd.visible ? 1 : 0.97
