@@ -37,8 +37,8 @@ PanelWindow {
     }
 
     margins {
-        top: 82
-        right: 24
+        top: theme.panelTopOffset
+        right: theme.panelSideOffset
     }
 
     WlrLayershell.namespace: "linux-desktop-notification-popup"
@@ -65,14 +65,12 @@ PanelWindow {
         }
     }
 
-    SquircleSurface {
+    ShellSurface {
         anchors.fill: parent
-
-        exponent: theme.squircleExponent
+        theme: popup.theme
+        motion: popup.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.985)
-        borderColor: Qt.rgba(popup.urgencyColor.r, popup.urgencyColor.g, popup.urgencyColor.b, 0.48)
-        borderWidth: theme.borderThin
 
         opacity: notificationState.popupVisible ? 1 : 0
         scale: notificationState.popupVisible ? 1 : 0.965
