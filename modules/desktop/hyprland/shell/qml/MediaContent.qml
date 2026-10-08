@@ -3,11 +3,11 @@ import QtQuick
 FocusScope {
     id: content
 
-    required property QtObject media
-    required property QtObject spectrum
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property MediaState media
+    required property SpectrumState spectrum
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool engaged: false
     property bool helpOpen: false
