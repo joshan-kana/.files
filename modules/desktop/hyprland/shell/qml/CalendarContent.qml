@@ -9,6 +9,7 @@ FocusScope {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property WeatherState weather
     property bool engaged: false
     property int monthShift: 0
     property int selectedDay: 0
@@ -20,6 +21,7 @@ FocusScope {
     property bool sliding: false
 
     signal closeRequested
+    signal forecastRequested
 
     implicitWidth: 356
     implicitHeight: content.implicitHeight
@@ -109,6 +111,9 @@ FocusScope {
                 event.accepted = true;
             } else if (event.key === Qt.Key_T) {
                 calendar.today();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_F || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                calendar.forecastRequested();
                 event.accepted = true;
             }
         }
@@ -218,6 +223,14 @@ FocusScope {
                 monthLayout: calendar.outgoingLayout
                 y: -calendar.slideDirection * monthViewport.height * calendar.slideProgress
             }
+        }
+
+        WeatherSummary {
+            width: parent.width
+            theme: calendar.theme
+            motion: calendar.motion
+            weather: calendar.weather
+            onForecastRequested: calendar.forecastRequested()
         }
 
         Row {
