@@ -71,7 +71,16 @@ PanelWindow {
     }
 
     function handleNavigation(event: var): void {
-        if (event.key === Qt.Key_Escape) {
+        if (event.key === Qt.Key_Tab) {
+            if (search.activeFocus)
+                keySink.forceActiveFocus();
+            else
+                search.forceActiveFocus();
+            event.accepted = true;
+        } else if (!search.activeFocus && (event.key === Qt.Key_I || event.key === Qt.Key_Slash)) {
+            search.forceActiveFocus();
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Escape) {
             if (search.text.length > 0) {
                 search.text = "";
                 flick.contentY = 0;
@@ -80,17 +89,17 @@ PanelWindow {
                 window.hide();
             }
             event.accepted = true;
-        } else if (event.key === Qt.Key_Up) {
+        } else if ((event.key === Qt.Key_Up || (!search.activeFocus && event.key === Qt.Key_K))) {
             flick.contentY = Math.max(0, flick.contentY - 72);
             event.accepted = true;
-        } else if (event.key === Qt.Key_Down) {
+        } else if ((event.key === Qt.Key_Down || (!search.activeFocus && event.key === Qt.Key_J))) {
             flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
             event.accepted = true;
-        } else if (event.key === Qt.Key_PageUp) {
-            flick.contentY = Math.max(0, flick.contentY - flick.height * 0.8);
+        } else if ((event.key === Qt.Key_PageUp || (!search.activeFocus && event.key === Qt.Key_U))) {
+            flick.contentY = Math.max(0, flick.contentY - flick.height * (event.key === Qt.Key_U ? 0.5 : 0.8));
             event.accepted = true;
-        } else if (event.key === Qt.Key_PageDown) {
-            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * 0.8);
+        } else if ((event.key === Qt.Key_PageDown || (!search.activeFocus && event.key === Qt.Key_D))) {
+            flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * (event.key === Qt.Key_D ? 0.5 : 0.8));
             event.accepted = true;
         }
     }
@@ -388,7 +397,7 @@ PanelWindow {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
                     }
-                    text: "TYPE  SEARCH    ↑ ↓  SCROLL    PGUP PGDN  PAGE    ESC  CLEAR / CLOSE"
+                    text: search.activeFocus ? "TYPE  SEARCH   TAB  NAV   PGUP/PGDN  PAGE" : "J/K  SCROLL   U/D  HALF PAGE   /  SEARCH   ESC  CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
