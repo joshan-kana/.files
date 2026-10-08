@@ -13,6 +13,7 @@ FocusScope {
     required property ResourceState resourceState
 
     property bool engaged: false
+    property bool mixerOpen: false
     property string requestedView: ""
     property bool helpOpen: false
     property int trayIndex: 0
@@ -23,8 +24,25 @@ FocusScope {
     readonly property bool themeOpen: themePanel.open
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
-    readonly property string helpTitle: resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: resourcesPanel.open ? [
+    readonly property string helpTitle: mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property var helpBindings: mixerOpen ? [
+        {
+            key: "J/K · U/D",
+            action: "Select stream / half page"
+        },
+        {
+            key: "H/L · ←/→",
+            action: "Adjust volume"
+        },
+        {
+            key: "M",
+            action: "Mute selected stream"
+        },
+        {
+            key: "ESC",
+            action: "Back to Controls"
+        }
+    ] : resourcesPanel.open ? [
         {
             key: "R",
             action: "Refresh now"
@@ -136,8 +154,8 @@ FocusScope {
                             action: "Theme / session"
                         },
                         {
-                            key: "G / V",
-                            action: "Resources / media controls"
+                            key: "G / V / A",
+                            action: "Resources / media / app mixer"
                         },
                         {
                             key: "CTRL+TAB",
@@ -161,7 +179,7 @@ FocusScope {
     signal mediaRequested
 
     implicitWidth: 512
-    implicitHeight: resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
+    implicitHeight: mixerOpen ? mixerView.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
     focus: engaged
 
     function applyRequestedView(): void {
@@ -178,6 +196,8 @@ FocusScope {
             openBluetooth();
         else if (requestedView === "resources")
             openResources();
+        else if (requestedView === "mixer")
+            openMixer();
         else if (requestedView.length === 0) {
             trayMenu.closeMenu();
             networkPanel.closeView();
@@ -185,6 +205,7 @@ FocusScope {
             themePanel.closeView();
             sessionPanel.closeView();
             resourcesPanel.closeView();
+            mixerOpen = false;
         }
     }
 
@@ -202,6 +223,7 @@ FocusScope {
             themePanel.closeView();
             sessionPanel.closeView();
             resourcesPanel.closeView();
+            mixerOpen = false;
         }
     }
 
@@ -209,6 +231,7 @@ FocusScope {
 
     function openNetwork(): void {
         helpOpen = false;
+        mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
         bluetoothPanel.closeView();
@@ -219,6 +242,7 @@ FocusScope {
 
     function openBluetooth(): void {
         helpOpen = false;
+        mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
@@ -229,6 +253,7 @@ FocusScope {
 
     function openTheme(): void {
         helpOpen = false;
+        mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
@@ -243,6 +268,7 @@ FocusScope {
 
     function openSession(): void {
         helpOpen = false;
+        mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
         networkPanel.closeView();
@@ -257,12 +283,29 @@ FocusScope {
 
     function openResources(): void {
         helpOpen = false;
+        mixerOpen = false;
         trayMenu.closeMenu();
         networkPanel.closeView();
         bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.closeView();
         resourcesPanel.openView();
+    }
+
+    function openMixer(): void {
+        helpOpen = false;
+        trayMenu.closeMenu();
+        resourcesPanel.closeView();
+        networkPanel.closeView();
+        bluetoothPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        mixerOpen = true;
+    }
+
+    function closeMixer(): void {
+        mixerOpen = false;
+        keyboardFocus.forceActiveFocus();
     }
 
     function activateTrayItem(): void {
@@ -284,7 +327,7 @@ FocusScope {
         Column {
             id: content
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
             spacing: root.theme.spacing4
 
             Text {
@@ -444,6 +487,17 @@ FocusScope {
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
+                title: "󰕾  Application audio mixer"
+                subtitle: "Individual streams · volume · mute    A ↗"
+                onActivated: root.openMixer()
+            }
+
+            ShellAction {
+                width: parent.width
+                height: 54
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
                 title: "󰍛  Resource monitor"
                 subtitle: "CPU · memory · activity history    G ↗"
                 onActivated: root.openResources()
@@ -590,6 +644,18 @@ FocusScope {
             }
         }
 
+        AudioMixerContent {
+            id: mixerView
+            anchors.fill: parent
+            visible: root.mixerOpen
+            active: root.engaged && root.mixerOpen
+            system: root.system
+            runtime: root.runtime
+            theme: root.theme
+            motion: root.motion
+            onCloseRequested: root.closeMixer()
+        }
+
         ResourceDashboard {
             id: resourcesPanel
             anchors.fill: parent
@@ -664,7 +730,7 @@ FocusScope {
             id: footer
 
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
 
             anchors {
                 left: parent.left
@@ -794,6 +860,9 @@ FocusScope {
                     event.accepted = true;
                     return;
                 }
+
+                if (root.mixerOpen)
+                    return;
 
                 if (resourcesPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
@@ -964,6 +1033,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_V) {
                     root.mediaRequested();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_A) {
+                    root.openMixer();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && root.brightness.supported) {
                     root.brightness.adjust(5);
