@@ -354,6 +354,7 @@ ShellRoot {
                 name: "Toggle Animations",
                 description: "Enable or disable desktop motion",
                 icon: "preferences-desktop-effects",
+                key: runtime.shortcut("animations.toggle"),
                 keywords: ["motion", "reduce motion"]
             },
             {
@@ -632,6 +633,13 @@ ShellRoot {
         name: "brightness-down"
         description: "Decrease display brightness"
         onPressed: actions.brightnessDown()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "animations"
+        description: "Toggle desktop animations"
+        onPressed: actions.toggleAnimations()
     }
 
     GlobalShortcut {
