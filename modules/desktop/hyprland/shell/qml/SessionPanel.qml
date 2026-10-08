@@ -90,8 +90,8 @@ Item {
     }
 
     function moveHalfPage(direction: int): void {
-        const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
-        const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+        const rowHeight = actionList.currentItem ? actionList.currentItem.height + actionList.spacing : 64;
+        const rows = Math.max(1, Math.floor(actionList.height / Math.max(1, rowHeight) / 2));
         moveSelection(direction * rows);
     }
 
