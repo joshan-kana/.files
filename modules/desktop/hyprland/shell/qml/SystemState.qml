@@ -8,6 +8,12 @@ import Quickshell.Services.UPower
 QtObject {
     id: system
 
+    // Only valid for the current shell session; do not persist an accidental stay-awake.
+    property bool idleInhibited: false
+    function toggleIdleInhibited(): void {
+        idleInhibited = !idleInhibited;
+    }
+
     readonly property var audioSink: Pipewire.defaultAudioSink
     readonly property bool audioAvailable: audioSink !== null && audioSink.audio !== null
     readonly property real volume: audioAvailable ? audioSink.audio.volume : 0
