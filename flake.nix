@@ -349,7 +349,7 @@
             ./overlays/comin.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
-            ./overlays/quickshell.nix
+            quickshellOverlayModule
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             ./overlays/arc.nix
