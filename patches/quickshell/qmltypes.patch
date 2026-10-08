@@ -1,0 +1,117 @@
+--- a/Quickshell/Bluetooth/qmldir
++++ b/Quickshell/Bluetooth/qmldir
+@@ -5,2 +5,3 @@
+ typeinfo quickshell-bluetooth.qmltypes
++depends Quickshell
+ depends QtQml
+--- a/Quickshell/Bluetooth/quickshell-bluetooth.qmltypes
++++ b/Quickshell/Bluetooth/quickshell-bluetooth.qmltypes
+@@ -9,7 +9,7 @@
+     Component {
+         file: "adapter.hpp"
+         lineNumber: 57
+-        name: "qs::bluetooth::BluetoothAdapter"
++        name: "BluetoothAdapter"
+         accessSemantics: "reference"
+         prototype: "QObject"
+         exports: ["Quickshell.Bluetooth/BluetoothAdapter 0.0"]
+--- a/Quickshell/Hyprland/_GlobalShortcuts/qmldir
++++ b/Quickshell/Hyprland/_GlobalShortcuts/qmldir
+@@ -7,2 +7,3 @@
+ prefer :/qt/qml/Quickshell/Hyprland/_GlobalShortcuts/
++depends Quickshell
+ depends QtQuick
+--- a/Quickshell/Io/quickshell-io.qmltypes
++++ b/Quickshell/Io/quickshell-io.qmltypes
+@@ -141,7 +141,7 @@
+             name: "exited"
+             lineNumber: 221
+             Parameter { name: "exitCode"; type: "int" }
+-            Parameter { name: "exitStatus"; type: "QProcess::ExitStatus" }
++            Parameter { name: "exitStatus"; type: "int" }
+         }
+         Signal { name: "runningChanged"; lineNumber: 223 }
+         Signal { name: "processIdChanged"; lineNumber: 224 }
+@@ -157,7 +157,7 @@
+             name: "onFinished"
+             lineNumber: 235
+             Parameter { name: "exitCode"; type: "int" }
+-            Parameter { name: "exitStatus"; type: "QProcess::ExitStatus" }
++            Parameter { name: "exitStatus"; type: "int" }
+         }
+         Method {
+             name: "onErrorOccurred"
+@@ -220,7 +220,7 @@
+         Signal {
+             name: "error"
+             lineNumber: 56
+-            Parameter { name: "error"; type: "QLocalSocket::LocalSocketError" }
++            Parameter { name: "error"; type: "int" }
+         }
+         Signal { name: "connectionStateChanged"; lineNumber: 58 }
+         Signal { name: "pathChanged"; lineNumber: 59 }
+@@ -229,7 +229,7 @@
+         Method {
+             name: "onSocketError"
+             lineNumber: 67
+-            Parameter { name: "error"; type: "QLocalSocket::LocalSocketError" }
++            Parameter { name: "error"; type: "int" }
+         }
+         Method {
+             name: "write"
+@@ -506,7 +506,7 @@
+     Component {
+         file: "fileview.hpp"
+         lineNumber: 436
+-        name: "qs::io::FileViewAdapter"
++        name: "FileViewAdapter"
+         accessSemantics: "reference"
+         prototype: "QObject"
+         exports: ["Quickshell.Io/FileViewAdapter 0.0"]
+@@ -549,7 +549,7 @@
+         lineNumber: 89
+         name: "qs::io::JsonAdapter"
+         accessSemantics: "reference"
+-        prototype: "qs::io::FileViewAdapter"
++        prototype: "FileViewAdapter"
+         interfaces: ["QQmlParserStatus"]
+         exports: ["Quickshell.Io/JsonAdapter 0.0"]
+         exportMetaObjectRevisions: [0]
+--- a/Quickshell/_Window/quickshell-window.qmltypes
++++ b/Quickshell/_Window/quickshell-window.qmltypes
+@@ -136,7 +136,6 @@
+         defaultProperty: "data"
+         prototype: "WindowInterface"
+         exports: ["Quickshell._Window/PanelWindow 0.0"]
+-        isCreatable: false
+         exportMetaObjectRevisions: [0]
+         Property {
+             name: "anchors"
+--- a/Quickshell/quickshell-core.qmltypes
++++ b/Quickshell/quickshell-core.qmltypes
+@@ -614,7 +614,7 @@
+         lineNumber: 53
+         name: "Margins"
+         accessSemantics: "value"
+-        exports: ["Quickshell/margins 0.0"]
++        exports: ["Quickshell/margins 0.0", "Quickshell/Margins 0.0"]
+         exportMetaObjectRevisions: [0]
+         Property { name: "left"; type: "int"; index: 0; lineNumber: 55 }
+         Property { name: "right"; type: "int"; index: 1; lineNumber: 56 }
+@@ -881,6 +881,7 @@
+         name: "PostReloadHook"
+         accessSemantics: "reference"
+         prototype: "QObject"
++        exports: ["Quickshell/PostReloadHook 0.0"]
+         interfaces: ["QQmlParserStatus"]
+         Method { name: "postReload"; lineNumber: 137 }
+     }
+@@ -1631,7 +1632,7 @@
+         name: "UntypedObjectModel"
+         accessSemantics: "reference"
+         prototype: "QAbstractListModel"
+-        exports: ["Quickshell/ObjectModel 0.0"]
++        exports: ["Quickshell/ObjectModel 0.0", "Quickshell/UntypedObjectModel 0.0"]
+         isCreatable: false
+         exportMetaObjectRevisions: [0]
+         Property {
