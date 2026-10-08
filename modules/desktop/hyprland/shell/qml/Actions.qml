@@ -13,7 +13,6 @@ QtObject {
     required property MediaState mediaState
     required property SystemState systemState
     required property BrightnessState brightnessState
-    required property NotificationCenter notificationCenter
     required property NotificationState notificationState
     required property Motion motion
 
@@ -34,8 +33,8 @@ QtObject {
             expansionState.close();
         if (except !== "weather" && expansionState.hasCurrent && expansionState.currentName === "weather")
             expansionState.close();
-        if (except !== "notifications" && notificationCenter.open)
-            notificationCenter.hide();
+        if (except !== "activity" && expansionState.hasCurrent && expansionState.currentName === "activity")
+            expansionState.close();
     }
 
     function toggleCheatsheet(): void {
@@ -169,15 +168,26 @@ QtObject {
         showSystem(null, null, "session");
     }
 
-    function showNotifications(): void {
-        hideTransient("notifications");
-        notificationCenter.show();
+    function showNotifications(targetScreen: var, origin: var): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "activity");
+        hideTransient("activity");
+        expansionState.show("activity", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
-    function toggleNotifications(): void {
-        if (!notificationCenter.open)
-            hideTransient("notifications");
-        notificationCenter.toggle();
+    function toggleNotifications(targetScreen: var, origin: var): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "activity");
+        const opening = !(expansionState.hasCurrent && expansionState.currentName === "activity" && expansionState.screen === screen);
+        if (opening)
+            hideTransient("activity");
+        expansionState.toggle("activity", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
     function clearNotifications(): void {

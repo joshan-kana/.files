@@ -16,6 +16,7 @@ PanelWindow {
     property Component systemComponent: null
     property Component calendarComponent: null
     property Component weatherComponent: null
+    property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
     property bool switchingTab: false
@@ -32,11 +33,13 @@ PanelWindow {
             return calendarComponent;
         case "weather":
             return weatherComponent;
+        case "activity":
+            return activityComponent;
         default:
             return null;
         }
     }
-    readonly property string currentTab: expansionState.currentName === "calendar" || expansionState.currentName === "weather" ? "home" : "controls"
+    readonly property string currentTab: expansionState.currentName === "activity" ? "activity" : expansionState.currentName === "calendar" || expansionState.currentName === "weather" ? "home" : "controls"
     readonly property real contentWidth: loadedContent ? Math.max(loadedContent.implicitWidth, 560) + theme.spacing5 * 2 : expansionState.originWidth
     readonly property real contentHeight: loadedContent ? loadedContent.implicitHeight + tabs.implicitHeight + theme.spacing3 + theme.spacing5 * 2 : expansionState.originHeight
     readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
@@ -77,7 +80,7 @@ PanelWindow {
     }
 
     function navigate(destination: string): void {
-        const next = destination === "home" ? "calendar" : "system";
+        const next = destination === "home" ? "calendar" : destination === "activity" ? "activity" : "system";
         if (next === expansionState.currentName)
             return;
 
@@ -87,11 +90,17 @@ PanelWindow {
         switchingTab = false;
     }
 
+    function cycleTab(direction: int): void {
+        const destinations = ["home", "controls", "activity"];
+        const index = destinations.indexOf(currentTab);
+        navigate(destinations[(index + direction + destinations.length) % destinations.length]);
+    }
+
     Shortcut {
         sequence: "Ctrl+Tab"
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent
-        onActivated: host.navigate(host.currentTab === "home" ? "controls" : "home")
+        onActivated: host.cycleTab(1)
     }
 
     HyprlandFocusGrab {
@@ -140,7 +149,7 @@ PanelWindow {
         Keys.priority: Keys.AfterItem
         Keys.onPressed: event => {
             if (host.expansionState.hasCurrent && event.key === Qt.Key_Tab && (event.modifiers & Qt.ControlModifier)) {
-                host.navigate(host.currentTab === "home" ? "controls" : "home");
+                host.cycleTab((event.modifiers & Qt.ShiftModifier) ? -1 : 1);
                 event.accepted = true;
             }
         }
