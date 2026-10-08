@@ -35,7 +35,7 @@ PanelWindow {
         if (!screen)
             return 0;
 
-        const desired = expansionState.originCenter - implicitWidth / 2;
+        const desired = contentExpanded ? (screen.width - implicitWidth) / 2 : expansionState.originCenter - implicitWidth / 2;
         const edge = theme.spacing4;
         return Math.max(edge, Math.min(desired, screen.width - implicitWidth - edge));
     }
