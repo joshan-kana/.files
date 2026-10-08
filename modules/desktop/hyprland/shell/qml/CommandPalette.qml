@@ -6,9 +6,9 @@ import Quickshell.Wayland
 PanelWindow {
     id: palette
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property var commands: []
     signal commandTriggered(string commandId)
