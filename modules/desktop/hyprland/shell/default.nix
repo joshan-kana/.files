@@ -586,7 +586,7 @@ in
           };
 
           Service = {
-            ExecStart = "${lib.getExe pkgs.mpvpaper} -l bottom -o ${lib.escapeShellArg "no-audio loop-file=inf hwdec=auto"} ${lib.escapeShellArg "*"} ${lib.escapeShellArg scopeConfig.videoWallpaper}";
+            ExecStart = "${lib.getExe pkgs.mpvpaper} -l bottom -o ${lib.escapeShellArg "no-audio loop-file=inf hwdec=auto panscan=1"} ${lib.escapeShellArg "*"} ${lib.escapeShellArg scopeConfig.videoWallpaper}";
             Restart = "on-failure";
             RestartSec = 2;
           };
