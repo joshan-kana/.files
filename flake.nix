@@ -116,6 +116,7 @@
       semantic = import ./lib/semantic-scopes.nix { inherit lib; };
       semanticScopeOptions = import ./modules/options/semantic-scopes.nix { inherit lib; };
       moduleRegistry = import ./modules;
+      quickshellOverlayModule = import ./overlays/quickshell.nix { };
 
       systems = [
         "x86_64-linux"
@@ -125,7 +126,13 @@
 
       forAllSystems = f: lib.genAttrs systems f;
 
-      pkgsFor = system: import nixpkgs { inherit system; };
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          # Lint the same Quickshell version that hosts actually deploy.
+          overlays = quickshellOverlayModule.nixpkgs.overlays;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -211,14 +218,19 @@
               qml-lint = {
                 command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
                 includes = [ "*.qml" ];
-                options = [
-                  "-I"
-                  "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
-                ]
-                ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-                  "-I"
-                  "${pkgs.quickshell}/lib/qt-6/qml"
-                ];
+                options =
+                  lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "--max-warnings"
+                    "0"
+                  ]
+                  ++ [
+                    "-I"
+                    "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "-I"
+                    "${pkgs.quickshell}/lib/qt-6/qml"
+                  ];
                 priority = 2;
               };
 
@@ -322,7 +334,7 @@
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/nvtop.nix
-            ./overlays/quickshell.nix
+            quickshellOverlayModule
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             (semantic.rootModule hostScopeWithFile)
