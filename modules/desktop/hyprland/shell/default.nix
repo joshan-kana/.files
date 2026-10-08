@@ -490,9 +490,9 @@ in
         sessionCommand
         clipboardCopy
         pkgs.quickshell
+        pkgs.mpvpaper
         spectrumAnalyzer
-      ]
-      ++ lib.optional (scopeConfig.videoWallpaper != null) pkgs.mpvpaper;
+      ];
 
       xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
 
