@@ -1,15 +1,14 @@
 import QtQuick
 import Quickshell
-import Quickshell.Services.SystemTray
 
 FocusScope {
     id: root
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
-    required property QtObject system
-    required property QtObject brightness
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    required property SystemState system
+    required property BrightnessState brightness
 
     property bool engaged: false
     property string requestedView: ""
