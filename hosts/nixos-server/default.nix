@@ -364,10 +364,6 @@
               ephemeral = true;
               preauthorized = true;
             };
-            extraDaemonFlags = [
-              "--state=mem:"
-              "--statedir=/var/lib/tailscale"
-            ];
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
