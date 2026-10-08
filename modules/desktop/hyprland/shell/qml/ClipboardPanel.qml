@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,9 +7,9 @@ import Quickshell.Wayland
 PanelWindow {
     id: panel
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
     property bool closing: false
@@ -64,7 +65,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: panel.motion.fast
         onTriggered: panel.closing = false
     }
 
@@ -173,13 +174,13 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrim
+        color: panel.theme.scrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: panel.open ? motion.enterType : motion.exitType
+                duration: panel.motion.fast
+                easing.type: panel.open ? panel.motion.enterType : panel.motion.exitType
             }
         }
 
@@ -206,66 +207,66 @@ PanelWindow {
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.normal
-                easing.type: motion.enterType
+                duration: panel.motion.normal
+                easing.type: panel.motion.enterType
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
+                duration: panel.motion.fast
             }
         }
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing5
+            anchors.margins: panel.theme.spacing5
 
             Column {
                 id: header
                 width: parent.width
-                spacing: theme.spacing2
+                spacing: panel.theme.spacing2
 
                 Text {
-                    text: entries.length + (entries.length === 1 ? " item" : " items")
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    text: panel.entries.length + (panel.entries.length === 1 ? " item" : " items")
+                    color: panel.theme.accent
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(12)
                     font.weight: Font.Medium
                 }
 
                 Text {
                     text: "Clipboard"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelTitle
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
 
                 SquircleSurface {
                     width: parent.width
                     height: 50
-                    exponent: theme.squircleExponent
-                    cornerRadius: theme.radiusMedium
-                    fillColor: theme.background
-                    borderColor: search.activeFocus ? theme.accent : theme.outline
-                    borderWidth: search.activeFocus ? theme.borderFocus : theme.borderThin
+                    exponent: panel.theme.squircleExponent
+                    cornerRadius: panel.theme.radiusMedium
+                    fillColor: panel.theme.background
+                    borderColor: search.activeFocus ? panel.theme.accent : panel.theme.outline
+                    borderWidth: search.activeFocus ? panel.theme.borderFocus : panel.theme.borderThin
 
                     TextInput {
                         id: search
 
                         anchors {
                             fill: parent
-                            leftMargin: theme.spacing4
-                            rightMargin: theme.spacing4
+                            leftMargin: panel.theme.spacing4
+                            rightMargin: panel.theme.spacing4
                         }
 
                         verticalAlignment: TextInput.AlignVCenter
-                        color: theme.textStrong
-                        selectionColor: theme.accent
-                        selectedTextColor: theme.background
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(14)
+                        color: panel.theme.textStrong
+                        selectionColor: panel.theme.accent
+                        selectedTextColor: panel.theme.background
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(14)
                         clip: true
 
                         Text {
@@ -273,7 +274,7 @@ PanelWindow {
                             verticalAlignment: Text.AlignVCenter
                             text: "Search clipboard…"
                             visible: search.text.length === 0
-                            color: theme.textMuted
+                            color: panel.theme.textMuted
                             opacity: 0.55
                             font: search.font
                         }
@@ -308,12 +309,12 @@ PanelWindow {
                     right: parent.right
                     bottom: footer.top
                     left: parent.left
-                    topMargin: theme.spacing4
-                    bottomMargin: theme.spacing4
+                    topMargin: panel.theme.spacing4
+                    bottomMargin: panel.theme.spacing4
                 }
 
                 model: panel.filteredEntries
-                spacing: theme.spacing2
+                spacing: panel.theme.spacing2
                 clip: true
                 currentIndex: panel.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
@@ -348,11 +349,11 @@ PanelWindow {
 
                     width: ListView.view.width
                     height: 62
-                    exponent: theme.squircleExponent
-                    cornerRadius: theme.radiusMedium
-                    fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
-                    borderColor: index === panel.selectedIndex ? theme.accent : theme.outline
-                    borderWidth: index === panel.selectedIndex ? theme.borderFocus : theme.borderThin
+                    exponent: panel.theme.squircleExponent
+                    cornerRadius: panel.theme.radiusMedium
+                    fillColor: index === panel.selectedIndex ? panel.theme.focusFill : panel.theme.background
+                    borderColor: index === panel.selectedIndex ? panel.theme.accent : panel.theme.outline
+                    borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus : panel.theme.borderThin
 
                     MouseArea {
                         anchors.fill: parent
@@ -366,17 +367,17 @@ PanelWindow {
                     Row {
                         anchors {
                             fill: parent
-                            margins: theme.spacing3
+                            margins: panel.theme.spacing3
                         }
-                        spacing: theme.spacing3
+                        spacing: panel.theme.spacing3
 
                         Text {
                             width: 56
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.kind
-                            color: modelData.kind === "BINARY" ? theme.warning : theme.accent
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(9)
+                            text: item.modelData.kind
+                            color: item.modelData.kind === "BINARY" ? panel.theme.warning : panel.theme.accent
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 0.8
                         }
@@ -384,10 +385,10 @@ PanelWindow {
                         Text {
                             width: parent.width - 56 - parent.spacing
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.preview
-                            color: theme.text
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(12)
+                            text: item.modelData.preview
+                            color: panel.theme.text
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(12)
                             elide: Text.ElideRight
                         }
                     }
@@ -398,21 +399,21 @@ PanelWindow {
 
             Text {
                 anchors.centerIn: list
-                visible: !queryProcess.running && panel.filteredEntries.length === 0
+                visible: !panel.queryProcess.running && panel.filteredEntries.length === 0
                 text: search.text.length > 0 ? "NO MATCHES" : "CLIPBOARD HISTORY IS EMPTY"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
             Text {
                 anchors.centerIn: list
-                visible: queryProcess.running
+                visible: panel.queryProcess.running
                 text: "Loading history…"
-                color: theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -422,29 +423,29 @@ PanelWindow {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                spacing: theme.spacing4
+                spacing: panel.theme.spacing4
 
                 Text {
                     text: search.activeFocus ? "TAB  NAVIGATE" : "J/K  MOVE   U/D  HALF PAGE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "ENTER  COPY"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.accent
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }

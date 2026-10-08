@@ -1,13 +1,14 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell.Networking
 
 Item {
     id: panel
 
-    required property QtObject system
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property SystemState system
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     signal keyboardRequested
 
@@ -164,7 +165,7 @@ Item {
     }
 
     Connections {
-        target: system
+        target: panel.system
 
         function onWifiNetworksChanged(): void {
             panel.selectedIndex = Math.max(0, Math.min(panel.selectedIndex, Math.max(0, panel.networks.length - 1)));
@@ -175,49 +176,49 @@ Item {
         id: header
 
         width: parent.width
-        spacing: theme.spacing1
+        spacing: panel.theme.spacing1
 
         Text {
-            text: "Network · " + system.connectivityText.toLowerCase()
-            color: system.networkConnected ? theme.positive : theme.warning
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(11)
+            text: "Network · " + panel.system.connectivityText.toLowerCase()
+            color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.Medium
         }
 
         Text {
-            text: system.wifiAvailable ? "Wi-Fi" : "Network"
-            color: theme.textStrong
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelTitle
+            text: panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+            color: panel.theme.textStrong
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
 
         Row {
             width: parent.width
-            spacing: theme.spacing3
+            spacing: panel.theme.spacing3
 
             Text {
-                text: system.networkConnected ? system.networkName : "Offline"
-                color: theme.text
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                text: panel.system.networkConnected ? panel.system.networkName : "Offline"
+                color: panel.theme.text
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
 
             Text {
-                visible: system.wifiAvailable
-                text: system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
-                color: system.wifiEnabled ? theme.accent : theme.critical
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                visible: panel.system.wifiAvailable
+                text: panel.system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
+                color: panel.system.wifiEnabled ? panel.theme.accent : panel.theme.critical
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
 
             Text {
-                visible: system.wifiAvailable && !system.wifiHardwareEnabled
+                visible: panel.system.wifiAvailable && !panel.system.wifiHardwareEnabled
                 text: "Wi-Fi hardware unavailable"
-                color: theme.critical
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                color: panel.theme.critical
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
         }
     }
@@ -230,17 +231,17 @@ Item {
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: theme.spacing4
-            bottomMargin: theme.spacing3
+            topMargin: panel.theme.spacing4
+            bottomMargin: panel.theme.spacing3
         }
 
         ListView {
             id: networkList
 
             anchors.fill: parent
-            visible: system.wifiAvailable && system.wifiEnabled && !panel.passwordPrompt
+            visible: panel.system.wifiAvailable && panel.system.wifiEnabled && !panel.passwordPrompt
             model: panel.networks
-            spacing: theme.spacing2
+            spacing: panel.theme.spacing2
             clip: true
             currentIndex: panel.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
@@ -270,9 +271,9 @@ Item {
                 Row {
                     anchors {
                         fill: parent
-                        margins: theme.spacing3
+                        margins: panel.theme.spacing3
                     }
-                    spacing: theme.spacing3
+                    spacing: panel.theme.spacing3
 
                     Column {
                         width: parent.width - 112
@@ -281,34 +282,34 @@ Item {
 
                         Row {
                             width: parent.width
-                            spacing: theme.spacing2
+                            spacing: panel.theme.spacing2
 
                             Text {
                                 width: parent.width - statusBadge.width - parent.spacing
-                                text: modelData.name
-                                color: theme.textStrong
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(13)
-                                font.weight: modelData.connected ? Font.DemiBold : Font.Normal
+                                text: networkRow.modelData.name
+                                color: panel.theme.textStrong
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(13)
+                                font.weight: networkRow.modelData.connected ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
                             }
 
                             Text {
                                 id: statusBadge
-                                text: modelData.connected ? "CONNECTED" : (modelData.known ? "KNOWN" : "")
-                                color: modelData.connected ? theme.positive : theme.textMuted
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(8)
+                                text: networkRow.modelData.connected ? "CONNECTED" : (networkRow.modelData.known ? "KNOWN" : "")
+                                color: networkRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
                         }
 
                         Text {
                             width: parent.width
-                            text: WifiSecurityType.toString(modelData.security).toUpperCase() + " // SIG " + Math.round(modelData.signalStrength * 100)
-                            color: theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            text: WifiSecurityType.toString(networkRow.modelData.security).toUpperCase() + " // SIG " + Math.round(networkRow.modelData.signalStrength * 100)
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
                             elide: Text.ElideRight
                         }
                     }
@@ -317,20 +318,20 @@ Item {
                         width: 100
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
-                        text: modelData.stateChanging ? ConnectionState.toString(modelData.state).toUpperCase() : (modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
-                        color: modelData.stateChanging ? theme.warning : theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(8)
+                        text: networkRow.modelData.stateChanging ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : (networkRow.modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
+                        color: networkRow.modelData.stateChanging ? panel.theme.warning : panel.theme.accent
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(8)
                         font.weight: Font.DemiBold
                     }
                 }
 
                 Connections {
-                    target: modelData
+                    target: networkRow.modelData
 
                     function onConnectionFailed(reason): void {
-                        if (reason === ConnectionFailReason.NoSecrets && panel.supportsPsk(modelData)) {
-                            panel.promptForPassword(modelData, "AUTH REQUIRED // " + modelData.name);
+                        if (reason === ConnectionFailReason.NoSecrets && panel.supportsPsk(networkRow.modelData)) {
+                            panel.promptForPassword(networkRow.modelData, "AUTH REQUIRED // " + networkRow.modelData.name);
                             return;
                         }
 
@@ -340,8 +341,8 @@ Item {
                     }
 
                     function onConnectedChanged(): void {
-                        if (modelData.connected) {
-                            panel.statusText = "CONNECTED // " + modelData.name;
+                        if (networkRow.modelData.connected) {
+                            panel.statusText = "CONNECTED // " + networkRow.modelData.name;
                             panel.statusError = false;
                         }
                     }
@@ -355,26 +356,26 @@ Item {
             anchors.centerIn: parent
             width: parent.width
             visible: panel.passwordPrompt
-            spacing: theme.spacing3
+            spacing: panel.theme.spacing3
 
             Text {
                 width: parent.width
-                text: pendingNetwork ? pendingNetwork.name : ""
+                text: panel.pendingNetwork ? panel.pendingNetwork.name : ""
                 horizontalAlignment: Text.AlignHCenter
-                color: theme.textStrong
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(18)
+                color: panel.theme.textStrong
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(18)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
 
             Text {
                 width: parent.width
-                text: pendingNetwork ? WifiSecurityType.toString(pendingNetwork.security).toUpperCase() : ""
+                text: panel.pendingNetwork ? WifiSecurityType.toString(panel.pendingNetwork.security).toUpperCase() : ""
                 horizontalAlignment: Text.AlignHCenter
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
                 font.letterSpacing: 1
             }
 
@@ -393,19 +394,19 @@ Item {
 
                     anchors {
                         fill: parent
-                        leftMargin: theme.spacing4
-                        rightMargin: theme.spacing4
+                        leftMargin: panel.theme.spacing4
+                        rightMargin: panel.theme.spacing4
                     }
 
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: TextInput.Password
                     passwordCharacter: "●"
                     inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
-                    color: theme.textStrong
-                    selectionColor: theme.accent
-                    selectedTextColor: theme.background
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(15)
+                    color: panel.theme.textStrong
+                    selectionColor: panel.theme.accent
+                    selectedTextColor: panel.theme.background
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(15)
                     clip: true
 
                     onTextEdited: panel.password = text
@@ -435,34 +436,34 @@ Item {
                 width: parent.width
                 text: "ENTER  CONNECT   //   ESC  CANCEL"
                 horizontalAlignment: Text.AlignHCenter
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
 
         Text {
             anchors.centerIn: parent
-            visible: !system.wifiAvailable && !panel.passwordPrompt
+            visible: !panel.system.wifiAvailable && !panel.passwordPrompt
             width: parent.width
-            text: system.networkConnected ? "WIRED LINK // " + system.networkName : "NO WI-FI DEVICE // NETWORK OFFLINE"
+            text: panel.system.networkConnected ? "WIRED LINK // " + panel.system.networkName : "NO WI-FI DEVICE // NETWORK OFFLINE"
             horizontalAlignment: Text.AlignHCenter
-            color: system.networkConnected ? theme.text : theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(10)
+            color: panel.system.networkConnected ? panel.theme.text : panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
 
         Text {
             anchors.centerIn: parent
-            visible: system.wifiAvailable && !system.wifiEnabled && !panel.passwordPrompt
+            visible: panel.system.wifiAvailable && !panel.system.wifiEnabled && !panel.passwordPrompt
             width: parent.width
-            text: system.wifiHardwareEnabled ? "WI-FI RADIO DISABLED // PRESS W" : "WI-FI DISABLED BY HARDWARE"
+            text: panel.system.wifiHardwareEnabled ? "WI-FI RADIO DISABLED // PRESS W" : "WI-FI DISABLED BY HARDWARE"
             horizontalAlignment: Text.AlignHCenter
-            color: system.wifiHardwareEnabled ? theme.warning : theme.critical
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(10)
+            color: panel.system.wifiHardwareEnabled ? panel.theme.warning : panel.theme.critical
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
     }
@@ -475,16 +476,16 @@ Item {
             bottom: parent.bottom
             left: parent.left
         }
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
 
         Text {
             width: parent.width
             visible: panel.statusText.length > 0
             text: panel.statusText
             horizontalAlignment: Text.AlignHCenter
-            color: panel.statusError ? theme.critical : theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(8)
+            color: panel.statusError ? panel.theme.critical : panel.theme.accent
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.8
             elide: Text.ElideRight
@@ -492,39 +493,39 @@ Item {
 
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: theme.spacing4
+            spacing: panel.theme.spacing4
 
             Text {
-                visible: system.wifiAvailable
+                visible: panel.system.wifiAvailable
                 text: "↑↓  SELECT   ENTER  JOIN/DROP"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
-                visible: system.wifiAvailable
+                visible: panel.system.wifiAvailable
                 text: "W  WI-FI"
-                color: theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
                 text: "A  ADVANCED"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
                 text: "ESC  BACK"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
