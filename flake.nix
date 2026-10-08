@@ -345,6 +345,7 @@
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/nvtop.nix
+            ./overlays/quickshell.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             (semantic.rootModule hostScopeWithFile)

@@ -15,8 +15,6 @@ let
   };
 in
 {
-  nixpkgs.overlays = (import ../../../overlays/quickshell.nix { }).nixpkgs.overlays;
-
   environment.shellAliases = aliases;
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
