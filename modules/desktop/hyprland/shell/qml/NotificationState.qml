@@ -53,10 +53,14 @@ QtObject {
     }
 
     function invokeDefault(notification): void {
-        if (!notification || !notification.actions || notification.actions.length === 0)
+        invokeAction(notification, 0);
+    }
+
+    function invokeAction(notification, index: int): void {
+        if (!notification || !notification.actions || index < 0 || index >= notification.actions.length)
             return;
 
-        notification.actions[0].invoke();
+        notification.actions[index].invoke();
     }
 
     function clearAll(): void {
