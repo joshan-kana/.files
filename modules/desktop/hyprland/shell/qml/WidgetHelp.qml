@@ -38,18 +38,16 @@ Item {
         }
     }
 
-    SquircleSurface {
+    ShellSurface {
         id: helpCard
 
         width: Math.min(parent.width - theme.spacing5 * 2, 430)
         height: Math.min(parent.height - theme.spacing5 * 2, Math.max(180, content.implicitHeight + theme.spacing5 * 2))
         anchors.centerIn: parent
-
-        exponent: theme.squircleExponent
+        theme: help.theme
+        motion: help.motion
+        surfaceLayer: ShellSurface.Group
         cornerRadius: theme.radiusLarge
-        fillColor: theme.panelFill
-        borderColor: theme.subtleBorder
-        borderWidth: theme.borderThin
 
         MouseArea {
             anchors.fill: parent
@@ -89,14 +87,14 @@ Item {
                     width: content.width
                     spacing: theme.spacing3
 
-                    SquircleSurface {
+                    ShellSurface {
                         width: Math.max(64, Math.min(132, keyLabel.implicitWidth + theme.spacing4))
                         height: 30
-                        exponent: theme.squircleExponent
+                        theme: help.theme
+                        motion: help.motion
+                        surfaceLayer: ShellSurface.Control
+                        selected: true
                         cornerRadius: theme.radiusSmall
-                        fillColor: theme.focusFill
-                        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
-                        borderWidth: theme.borderThin
 
                         Text {
                             id: keyLabel
