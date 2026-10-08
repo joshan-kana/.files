@@ -208,6 +208,20 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options = [
+                  "-I"
+                  "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                ]
+                ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  "-I"
+                  "${pkgs.quickshell}/lib/qt-6/qml"
+                ];
+                priority = 2;
+              };
+
               ruff-check.options = [
                 "--isolated"
                 "--select"
