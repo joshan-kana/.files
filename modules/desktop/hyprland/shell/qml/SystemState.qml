@@ -19,8 +19,21 @@ QtObject {
     readonly property real volume: audioAvailable ? audioSink.audio.volume : 0
     readonly property int volumePercent: Math.round(volume * 100)
     readonly property bool muted: audioAvailable ? audioSink.audio.muted : false
-    readonly property var audioSource: Pipewire.defaultAudioSource
-    readonly property bool microphoneMuted: audioSource !== null && audioSource.audio !== null && audioSource.audio.muted
+    readonly property var audioSource: {
+        const preferred = Pipewire.defaultAudioSource;
+        if (preferred && preferred.audio)
+            return preferred;
+        // A virtual default source can lack a controllable audio interface.
+        for (const node of pipewireNodes) {
+            if (node && !node.isStream && !node.isSink && node.audio)
+                return node;
+        }
+        return preferred;
+    }
+    readonly property bool microphoneAvailable: audioSource !== null && audioSource.audio !== null
+    readonly property real microphoneVolume: microphoneAvailable ? audioSource.audio.volume : 0
+    readonly property int microphoneVolumePercent: Math.round(microphoneVolume * 100)
+    readonly property bool microphoneMuted: microphoneAvailable && audioSource.audio.muted
 
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
     readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null)
@@ -177,5 +190,15 @@ QtObject {
     function toggleMute(): void {
         if (audioAvailable)
             audioSink.audio.muted = !audioSink.audio.muted;
+    }
+
+    function setMicrophoneVolume(value: real): void {
+        if (microphoneAvailable)
+            audioSource.audio.volume = Math.max(0, Math.min(1, value));
+    }
+
+    function toggleMicrophoneMute(): void {
+        if (microphoneAvailable)
+            audioSource.audio.muted = !audioSource.audio.muted;
     }
 }
