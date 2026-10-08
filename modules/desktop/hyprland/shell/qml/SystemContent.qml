@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 
@@ -246,21 +247,21 @@ FocusScope {
             id: content
             width: parent.width
             visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open
-            spacing: theme.spacing4
+            spacing: root.theme.spacing4
 
             Text {
                 text: "System"
-                color: theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(12)
+                color: root.theme.accent
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontSize(12)
                 font.weight: Font.Medium
             }
 
             Text {
                 text: "Control centre"
-                color: theme.textStrong
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontPanelTitle
+                color: root.theme.textStrong
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontPanelTitle
                 font.weight: Font.DemiBold
             }
 
@@ -279,19 +280,19 @@ FocusScope {
                     }
                     runtime: root.runtime
                     theme: root.theme
-                    title: system.muted ? "Sound · muted" : "Sound  " + system.volumePercent + "%"
-                    detail: system.audioAvailable && system.audioSink ? (system.audioSink.description || system.audioSink.name) : "No output"
+                    title: root.system.muted ? "Sound · muted" : "Sound  " + root.system.volumePercent + "%"
+                    detail: root.system.audioAvailable && root.system.audioSink ? (root.system.audioSink.description || root.system.audioSink.name) : "No output"
 
                     ShellSlider {
                         width: parent.width
                         theme: root.theme
                         motion: root.motion
-                        value: system.volume
-                        enabled: system.audioAvailable
-                        accentColor: system.muted ? theme.warning : theme.accent
+                        value: root.system.volume
+                        enabled: root.system.audioAvailable
+                        accentColor: root.system.muted ? theme.warning : theme.accent
                         trackHeight: 8
                         handleSize: 18
-                        onValueRequested: value => system.setVolume(value)
+                        onValueRequested: value => root.system.setVolume(value)
                     }
                 }
             }
@@ -299,7 +300,7 @@ FocusScope {
             ShellSurface {
                 width: parent.width
                 height: 84
-                visible: brightness.supported
+                visible: root.brightness.supported
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
@@ -312,14 +313,14 @@ FocusScope {
                     }
                     runtime: root.runtime
                     theme: root.theme
-                    title: "Display  " + brightness.percent + "%"
-                    detail: brightness.device
+                    title: "Display  " + root.brightness.percent + "%"
+                    detail: root.brightness.device
 
                     ShellSlider {
                         width: parent.width
                         theme: root.theme
                         motion: root.motion
-                        value: brightness.percent / 100
+                        value: root.brightness.percent / 100
                         interactive: false
                         accentColor: theme.positive
                         trackHeight: 8
@@ -330,7 +331,7 @@ FocusScope {
 
             Row {
                 width: parent.width
-                spacing: theme.spacing3
+                spacing: root.theme.spacing3
 
                 Repeater {
                     id: controlTiles
@@ -339,14 +340,14 @@ FocusScope {
                         {
                             id: "network",
                             label: "Network",
-                            value: system.networkConnected ? system.networkName : "Offline",
-                            active: system.networkConnected
+                            value: root.system.networkConnected ? root.system.networkName : "Offline",
+                            active: root.system.networkConnected
                         },
                         {
                             id: "bluetooth",
                             label: "Bluetooth",
-                            value: system.bluetoothEnabled ? system.bluetoothConnectedCount + " connected" : "Off",
-                            active: system.bluetoothEnabled
+                            value: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected" : "Off",
+                            active: root.system.bluetoothEnabled
                         },
                         {
                             id: "theme",
@@ -390,17 +391,17 @@ FocusScope {
 
             Column {
                 width: parent.width
-                visible: system.trayCount > 0
-                spacing: theme.spacing2
+                visible: root.system.trayCount > 0
+                spacing: root.theme.spacing2
 
                 Row {
                     width: parent.width
 
                     Text {
-                        text: "Tray  " + system.trayCount
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(10)
+                        text: "Tray  " + root.system.trayCount
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(10)
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.2
                     }
@@ -413,18 +414,18 @@ FocusScope {
                     Text {
                         id: trayHint
                         text: "[ / ] SELECT   ENTER OPEN"
-                        color: theme.textMuted
+                        color: root.theme.textMuted
                         opacity: 0.62
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(8)
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(8)
                     }
                 }
 
                 Row {
-                    spacing: theme.spacing2
+                    spacing: root.theme.spacing2
 
                     Repeater {
-                        model: system.trayItems
+                        model: root.system.trayItems
 
                         delegate: ShellSurface {
                             id: trayItem
@@ -448,11 +449,11 @@ FocusScope {
                                     root.trayIndex = trayItem.index;
 
                                     if (mouse.button === Qt.RightButton) {
-                                        modelData.secondaryActivate();
-                                    } else if (modelData.hasMenu || modelData.onlyMenu) {
-                                        trayMenu.openFor(modelData);
+                                        trayItem.modelData.secondaryActivate();
+                                    } else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu) {
+                                        trayMenu.openFor(trayItem.modelData);
                                     } else {
-                                        modelData.activate();
+                                        trayItem.modelData.activate();
                                     }
                                 }
                             }
@@ -460,25 +461,25 @@ FocusScope {
                             Column {
                                 anchors.centerIn: parent
                                 width: parent.width - 10
-                                spacing: theme.spacing1
+                                spacing: root.theme.spacing1
 
                                 Image {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     width: 24
                                     height: 24
-                                    source: modelData.icon.length > 0 ? modelData.icon : Quickshell.iconPath("application-x-executable")
+                                    source: trayItem.modelData.icon.length > 0 ? trayItem.modelData.icon : Quickshell.iconPath("application-x-executable")
                                     fillMode: Image.PreserveAspectFit
                                     asynchronous: true
                                 }
 
                                 Text {
                                     width: parent.width
-                                    text: modelData.title || modelData.id
+                                    text: trayItem.modelData.title || trayItem.modelData.id
                                     horizontalAlignment: Text.AlignHCenter
                                     elide: Text.ElideRight
-                                    color: theme.text
-                                    font.family: runtime.fontMono
-                                    font.pixelSize: theme.fontSize(8)
+                                    color: root.theme.text
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(8)
                                 }
                             }
                         }
@@ -489,7 +490,7 @@ FocusScope {
             ShellSurface {
                 width: parent.width
                 height: 64
-                visible: system.batteryAvailable
+                visible: root.system.batteryAvailable
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
@@ -498,16 +499,16 @@ FocusScope {
                 Row {
                     anchors {
                         fill: parent
-                        leftMargin: theme.spacing4
-                        rightMargin: theme.spacing4
+                        leftMargin: root.theme.spacing4
+                        rightMargin: root.theme.spacing4
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Battery"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(10)
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(10)
                         font.letterSpacing: 1.2
                     }
 
@@ -519,10 +520,10 @@ FocusScope {
                     Text {
                         id: batteryValue
                         anchors.verticalCenter: parent.verticalCenter
-                        text: system.batteryPercent + "%"
-                        color: system.batteryPercent <= 20 ? theme.warning : theme.textStrong
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(13)
+                        text: root.system.batteryPercent + "%"
+                        color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(13)
                         font.weight: Font.DemiBold
                     }
                 }
@@ -600,88 +601,88 @@ FocusScope {
                 right: parent.right
                 bottom: parent.bottom
             }
-            spacing: theme.spacing1
+            spacing: root.theme.spacing1
 
             Row {
                 anchors.right: parent.right
-                spacing: theme.spacing4
+                spacing: root.theme.spacing4
 
                 Text {
                     text: "←/→  VOLUME"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "M  MUTE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
-                    visible: brightness.supported
+                    visible: root.brightness.supported
                     text: "↑/↓  BRIGHTNESS"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
-                    visible: system.trayCount > 0
+                    visible: root.system.trayCount > 0
                     text: "[/]  TRAY   ENTER  OPEN"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
 
             Row {
                 anchors.right: parent.right
-                spacing: theme.spacing4
+                spacing: root.theme.spacing4
 
                 Text {
                     text: "N  NETWORK"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "B  BLUETOOTH"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "Y  THEME"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "P  SESSION"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "?  HELP"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
 
                     MouseArea {
@@ -694,9 +695,9 @@ FocusScope {
 
                 Text {
                     text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
@@ -825,7 +826,7 @@ FocusScope {
                         networkPanel.toggleWifi();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_A) {
-                        Quickshell.execDetached([runtime.networkConnectionEditor]);
+                        Quickshell.execDetached([root.runtime.networkConnectionEditor]);
                         event.accepted = true;
                     }
 
@@ -857,13 +858,13 @@ FocusScope {
                     root.closeRequested();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                    system.adjustVolume(-0.05);
+                    root.system.adjustVolume(-0.05);
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                    system.adjustVolume(0.05);
+                    root.system.adjustVolume(0.05);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M) {
-                    system.toggleMute();
+                    root.system.toggleMute();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N) {
                     root.openNetwork();
@@ -877,19 +878,19 @@ FocusScope {
                 } else if (event.key === Qt.Key_P) {
                     root.openSession();
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && brightness.supported) {
-                    brightness.adjust(5);
+                } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && root.brightness.supported) {
+                    root.brightness.adjust(5);
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J) && brightness.supported) {
-                    brightness.adjust(-5);
+                } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J) && root.brightness.supported) {
+                    root.brightness.adjust(-5);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_BracketLeft && system.trayCount > 0) {
-                    root.trayIndex = (root.trayIndex - 1 + system.trayCount) % system.trayCount;
+                } else if (event.key === Qt.Key_BracketLeft && root.system.trayCount > 0) {
+                    root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                     event.accepted = true;
-                } else if (event.key === Qt.Key_BracketRight && system.trayCount > 0) {
-                    root.trayIndex = (root.trayIndex + 1) % system.trayCount;
+                } else if (event.key === Qt.Key_BracketRight && root.system.trayCount > 0) {
+                    root.trayIndex = (root.trayIndex + 1) % root.system.trayCount;
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && system.trayCount > 0) {
+                } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.system.trayCount > 0) {
                     root.activateTrayItem();
                     event.accepted = true;
                 }

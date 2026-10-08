@@ -18,21 +18,21 @@ Item {
 
     Behavior on width {
         NumberAnimation {
-            duration: motion.normal
-            easing.type: motion.enterType
+            duration: island.motion.normal
+            easing.type: island.motion.enterType
         }
     }
 
     Behavior on opacity {
         NumberAnimation {
-            duration: motion.fast
+            duration: island.motion.fast
         }
     }
 
     SpectrumScale {
         id: spectrumScale
-        lowHz: spectrum.lowHz
-        highHz: spectrum.highHz
+        lowHz: island.spectrum.lowHz
+        highHz: island.spectrum.highHz
     }
 
     ShellSurface {
@@ -66,8 +66,8 @@ Item {
             Image {
                 anchors.fill: parent
                 anchors.margins: 0
-                visible: media.artUrl.length > 0
-                source: media.artUrl
+                visible: island.media.artUrl.length > 0
+                source: island.media.artUrl
                 sourceSize.width: 56
                 sourceSize.height: 56
                 fillMode: Image.PreserveAspectCrop
@@ -77,11 +77,11 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: media.artUrl.length === 0
+                visible: island.media.artUrl.length === 0
                 text: "♫"
-                color: theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(14)
+                color: island.theme.accent
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(14)
             }
         }
 
@@ -89,28 +89,28 @@ Item {
             anchors {
                 left: artwork.right
                 right: miniSpectrum.left
-                leftMargin: theme.spacing3
-                rightMargin: theme.spacing3
+                leftMargin: island.theme.spacing3
+                rightMargin: island.theme.spacing3
                 verticalCenter: parent.verticalCenter
             }
             spacing: 0
 
             Text {
                 width: parent.width
-                text: media.title
-                color: theme.textStrong
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
+                text: island.media.title
+                color: island.theme.textStrong
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(11)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
 
             Text {
                 width: parent.width
-                text: media.artist
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                text: island.media.artist
+                color: island.theme.textMuted
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(9)
                 elide: Text.ElideRight
             }
         }
@@ -122,11 +122,11 @@ Item {
             height: 32
             anchors {
                 right: state.left
-                rightMargin: theme.spacing2
+                rightMargin: island.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
-            visible: media.playing
-            opacity: media.playing && spectrum.connected ? 0.95 : 0
+            visible: island.media.playing
+            opacity: island.media.playing && island.spectrum.connected ? 0.95 : 0
 
             SpectrumBars {
                 anchors.fill: parent
@@ -138,7 +138,7 @@ Item {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: motion.fast
+                    duration: island.motion.fast
                 }
             }
         }
@@ -157,15 +157,15 @@ Item {
             theme: island.theme
             motion: island.motion
             surfaceLayer: ShellSurface.Control
-            selected: media.playing
+            selected: island.media.playing
             cornerRadius: theme.radiusSmall
 
             Text {
                 anchors.centerIn: parent
-                text: media.playing ? "Ⅱ" : "▶"
-                color: media.playing ? theme.accent : theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(10)
+                text: island.media.playing ? "Ⅱ" : "▶"
+                color: island.media.playing ? island.theme.accent : island.theme.textMuted
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(10)
                 font.weight: Font.Bold
             }
         }

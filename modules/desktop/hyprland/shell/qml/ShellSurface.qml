@@ -10,8 +10,8 @@ SquircleSurface {
         Control
     }
 
-    required property QtObject theme
-    required property QtObject motion
+    required property Theme theme
+    required property Motion motion
     property int surfaceLayer: ShellSurface.Pane
     property bool selected: false
     property bool outlined: false

@@ -3,8 +3,8 @@ import QtQuick
 Column {
     id: root
 
-    required property QtObject runtime
-    required property QtObject theme
+    required property RuntimeConfig runtime
+    required property Theme theme
 
     property string title: ""
     property string detail: ""
@@ -15,7 +15,7 @@ Column {
 
     Row {
         width: parent.width
-        spacing: theme.spacing2
+        spacing: root.theme.spacing2
 
         ShellText {
             runtime: root.runtime
@@ -45,6 +45,6 @@ Column {
     Column {
         id: body
         width: parent.width
-        spacing: theme.spacing2
+        spacing: root.theme.spacing2
     }
 }

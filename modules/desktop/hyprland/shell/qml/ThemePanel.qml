@@ -1,12 +1,13 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell.Io
 
 Item {
     id: panel
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     signal keyboardRequested
 
@@ -120,7 +121,7 @@ Item {
             panel.pendingTheme = completedTheme;
             panel.statusText = "ACTIVATING // " + panel.themeLabel(completedTheme).toUpperCase();
             panel.statusError = false;
-            activateProcess.exec([runtime.themeSet, "activate-built", completedTheme, activation]);
+            panel.activateProcess.exec([panel.runtime.themeSet, "activate-built", completedTheme, activation]);
         }
     }
 
@@ -279,29 +280,29 @@ Item {
         id: header
 
         width: parent.width
-        spacing: theme.spacing1
+        spacing: panel.theme.spacing1
 
         Text {
             text: "Appearance"
-            color: theme.accent
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(11)
+            color: panel.theme.accent
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.Medium
         }
 
         Text {
             text: "Palette switcher"
-            color: theme.textStrong
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelTitle
+            color: panel.theme.textStrong
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
 
         Text {
-            text: currentTheme.length > 0 ? "Active · " + panel.themeLabel(currentTheme) : "Resolving active theme…"
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            text: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(9)
             font.letterSpacing: 0.8
         }
     }
@@ -314,12 +315,12 @@ Item {
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: theme.spacing4
-            bottomMargin: theme.spacing3
+            topMargin: panel.theme.spacing4
+            bottomMargin: panel.theme.spacing3
         }
 
         model: panel.themes
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
         clip: true
         currentIndex: panel.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
@@ -351,9 +352,9 @@ Item {
             Row {
                 anchors {
                     fill: parent
-                    margins: theme.spacing3
+                    margins: panel.theme.spacing3
                 }
-                spacing: theme.spacing3
+                spacing: panel.theme.spacing3
 
                 Column {
                     width: parent.width - swatchPreview.width - parent.spacing
@@ -362,34 +363,34 @@ Item {
 
                     Row {
                         width: parent.width
-                        spacing: theme.spacing2
+                        spacing: panel.theme.spacing2
 
                         Text {
                             width: parent.width - stateBadge.width - parent.spacing
-                            text: modelData.label || modelData.name
-                            color: modelData.preview ? modelData.preview.text : theme.textStrong
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(14)
-                            font.weight: modelData.name === panel.currentTheme ? Font.DemiBold : Font.Normal
+                            text: themeRow.modelData.label || themeRow.modelData.name
+                            color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(14)
+                            font.weight: themeRow.modelData.name === panel.currentTheme ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
                         }
 
                         Text {
                             id: stateBadge
-                            text: modelData.name === panel.currentTheme ? "ACTIVE" : (modelData.name === panel.defaultTheme ? "DEFAULT" : "")
-                            color: modelData.name === panel.currentTheme ? theme.positive : theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            text: themeRow.modelData.name === panel.currentTheme ? "ACTIVE" : (themeRow.modelData.name === panel.defaultTheme ? "DEFAULT" : "")
+                            color: themeRow.modelData.name === panel.currentTheme ? panel.theme.positive : panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
                             font.weight: Font.DemiBold
                         }
                     }
 
                     Text {
-                        text: modelData.name.toUpperCase() + (index === panel.selectedIndex ? " // SELECTED" : "")
-                        color: modelData.preview ? modelData.preview.text : theme.textMuted
+                        text: themeRow.modelData.name.toUpperCase() + (themeRow.index === panel.selectedIndex ? " // SELECTED" : "")
+                        color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textMuted
                         opacity: 0.72
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(8)
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(8)
                         font.letterSpacing: 0.7
                     }
                 }
@@ -402,7 +403,7 @@ Item {
                     spacing: 5
 
                     Repeater {
-                        model: modelData.preview ? modelData.preview.swatches : []
+                        model: themeRow.modelData.preview ? themeRow.modelData.preview.swatches : []
 
                         delegate: Rectangle {
                             required property var modelData
@@ -411,8 +412,8 @@ Item {
                             height: 30
                             radius: 7
                             color: modelData
-                            border.width: theme.borderThin
-                            border.color: theme.subtleBorder
+                            border.width: panel.theme.borderThin
+                            border.color: panel.theme.subtleBorder
                         }
                     }
                 }
@@ -428,46 +429,46 @@ Item {
             bottom: parent.bottom
             left: parent.left
         }
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
 
         Text {
             width: parent.width
-            visible: statusText.length > 0
-            text: statusText
-            color: statusError ? theme.critical : (applying ? theme.warning : theme.positive)
+            visible: panel.statusText.length > 0
+            text: panel.statusText
+            color: panel.statusError ? panel.theme.critical : (panel.applying ? panel.theme.warning : panel.theme.positive)
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(8)
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
         }
 
         Row {
             anchors.right: parent.right
-            spacing: theme.spacing4
+            spacing: panel.theme.spacing4
 
             Text {
                 text: "↑/↓  SELECT"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
                 text: panel.applying ? "ENTER  QUEUE" : "ENTER  APPLY"
-                color: panel.applying ? theme.warning : theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.applying ? panel.theme.warning : panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
 
             Text {
                 text: "ESC  BACK"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
                 font.letterSpacing: 0.8
             }
         }
