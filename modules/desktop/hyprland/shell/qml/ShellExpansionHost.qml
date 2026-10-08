@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -7,16 +8,16 @@ PanelWindow {
     id: host
 
     required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
-    required property QtObject expansionState
+    required property Theme theme
+    required property Motion motion
+    required property ShellExpansionState expansionState
 
     property Component mediaComponent: null
     property Component systemComponent: null
     property bool contentExpanded: false
     property bool closing: false
 
-    readonly property var loadedContent: contentLoader.item
+    readonly property Item loadedContent: contentLoader.item as Item
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
@@ -27,8 +28,8 @@ PanelWindow {
             return null;
         }
     }
-    readonly property real contentWidth: contentLoader.item ? contentLoader.item.implicitWidth + theme.spacing5 * 2 : expansionState.originWidth
-    readonly property real contentHeight: contentLoader.item ? contentLoader.item.implicitHeight + theme.spacing5 * 2 : expansionState.originHeight
+    readonly property real contentWidth: loadedContent ? loadedContent.implicitWidth + theme.spacing5 * 2 : expansionState.originWidth
+    readonly property real contentHeight: loadedContent ? loadedContent.implicitHeight + theme.spacing5 * 2 : expansionState.originHeight
     readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
     readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
     readonly property real horizontalMargin: {
@@ -67,26 +68,26 @@ PanelWindow {
     }
 
     HyprlandFocusGrab {
-        active: expansionState.hasCurrent
+        active: host.expansionState.hasCurrent
         windows: [host]
-        onCleared: expansionState.close()
+        onCleared: host.expansionState.close()
     }
 
     Timer {
         id: closeTimer
-        interval: motion.spatialNormal
+        interval: host.motion.spatialNormal
         repeat: false
         onTriggered: {
             host.closing = false;
-            expansionState.finishClose();
+            host.expansionState.finishClose();
         }
     }
 
     Connections {
-        target: expansionState
+        target: host.expansionState
 
         function onHasCurrentChanged(): void {
-            if (expansionState.hasCurrent) {
+            if (host.expansionState.hasCurrent) {
                 closeTimer.stop();
                 host.closing = false;
                 host.contentExpanded = false;
@@ -98,7 +99,7 @@ PanelWindow {
         }
 
         function onCurrentNameChanged(): void {
-            if (!expansionState.hasCurrent)
+            if (!host.expansionState.hasCurrent)
                 return;
 
             host.contentExpanded = false;
@@ -110,8 +111,8 @@ PanelWindow {
         id: shellSurface
 
         anchors.fill: parent
-        scale: host.contentExpanded && expansionState.hasCurrent ? 1 : 0.94
-        opacity: host.contentExpanded && expansionState.hasCurrent ? 1 : 0
+        scale: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0.94
+        opacity: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0
 
         Behavior on scale {
             Anim {
@@ -129,7 +130,7 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        cornerRadius: theme.radiusLarge
+        cornerRadius: host.theme.radiusLarge
         outlined: false
 
         Loader {
@@ -137,7 +138,7 @@ PanelWindow {
 
             anchors {
                 fill: parent
-                margins: theme.spacing5
+                margins: host.theme.spacing5
             }
 
             active: host.visible && host.currentComponent !== null
