@@ -16,6 +16,7 @@ ShellRoot {
     readonly property SpectrumState spectrumRef: spectrum
     readonly property SystemState systemRef: system
     readonly property ResourceState resourcesRef: resources
+    readonly property PowerProfileState powerProfileRef: powerProfile
     readonly property BrightnessState brightnessRef: brightness
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
@@ -104,6 +105,7 @@ ShellRoot {
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
             resourceState: root.resourcesRef
+            powerProfile: root.powerProfileRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
             requestedView: expansionState.currentView
             onCloseRequested: expansionState.close()
@@ -143,6 +145,12 @@ ShellRoot {
 
     SystemState {
         id: system
+    }
+
+    PowerProfileState {
+        id: powerProfile
+        runtime: runtime
+        active: expansionState.hasCurrent && expansionState.currentName === "system"
     }
 
     ResourceState {
@@ -917,6 +925,18 @@ ShellRoot {
 
         function idleInhibited(): bool {
             return system.idleInhibited;
+        }
+
+        function powerProfileCurrent(): string {
+            return powerProfile.current;
+        }
+
+        function powerProfileCount(): int {
+            return powerProfile.profiles.length;
+        }
+
+        function cyclePowerProfile(): void {
+            powerProfile.cycle();
         }
 
         function toggleIdleInhibited(): void {

@@ -505,6 +505,7 @@ in
           clipboardCopy = lib.getExe clipboardCopy;
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
+          powerprofilesctl = lib.getExe' pkgs.power-profiles-daemon "powerprofilesctl";
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
         };
