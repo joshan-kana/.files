@@ -1,11 +1,30 @@
 import QtQuick
+import Quickshell
 import Quickshell.Services.Notifications
+import Qt.labs.settings
 
 QtObject {
     id: root
 
     property var latest: null
     property bool popupVisible: false
+    readonly property bool silent: settings.silent
+
+    property Settings preferences: Settings {
+        id: settings
+        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
+        category: "Notifications"
+        property bool silent: false
+    }
+
+    onSilentChanged: {
+        if (silent)
+            hidePopup();
+    }
+
+    function toggleSilent(): void {
+        settings.silent = !settings.silent;
+    }
     readonly property var history: server.trackedNotifications.values
     readonly property int count: history.length
 
@@ -24,10 +43,11 @@ QtObject {
         onNotification: notification => {
             notification.tracked = !notification.transient;
             root.latest = notification;
-            root.popupVisible = true;
-
-            root.popupTimer.interval = notification.urgency === NotificationUrgency.Critical ? 9000 : 5000;
-            root.popupTimer.restart();
+            if (!root.silent) {
+                root.popupVisible = true;
+                root.popupTimer.interval = notification.urgency === NotificationUrgency.Critical ? 9000 : 5000;
+                root.popupTimer.restart();
+            }
         }
     }
 
