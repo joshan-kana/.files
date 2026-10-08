@@ -190,26 +190,15 @@ Item {
                 opacity: 0.72
             }
 
-            SquircleSurface {
+            ShellSurface {
                 visible: !modelData.isSeparator
                 anchors.fill: parent
-
-                exponent: theme.squircleExponent
+                theme: view.theme
+                motion: view.motion
+                surfaceLayer: ShellSurface.Control
+                selected: entryDelegate.index === view.selectedIndex
                 cornerRadius: theme.radiusSmall
-                fillColor: entryDelegate.index === view.selectedIndex ? theme.focusFill : "transparent"
-                borderColor: entryDelegate.index === view.selectedIndex ? theme.accent : "transparent"
-                borderWidth: entryDelegate.index === view.selectedIndex ? theme.borderFocus : theme.borderThin
                 opacity: modelData.enabled ? 1 : 0.42
-
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: modelData.enabled
-
-                    onClicked: {
-                        view.selectedIndex = entryDelegate.index;
-                        view.activateSelected();
-                    }
-                }
 
                 Row {
                     anchors {
@@ -255,6 +244,17 @@ Item {
                         color: theme.textMuted
                         font.family: runtime.fontMono
                         font.pixelSize: theme.fontSize(16)
+                    }
+                }
+
+                StateLayer {
+                    theme: view.theme
+                    motion: view.motion
+                    disabled: !modelData.enabled
+                    selected: entryDelegate.index === view.selectedIndex
+                    onActivated: {
+                        view.selectedIndex = entryDelegate.index;
+                        view.activateSelected();
                     }
                 }
             }
