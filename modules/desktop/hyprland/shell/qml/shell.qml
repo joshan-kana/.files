@@ -114,11 +114,6 @@ ShellRoot {
         weatherComponent: weatherExpansionComponent
     }
 
-    WallpaperLayer {
-        runtime: runtime
-        theme: theme
-    }
-
     MediaState {
         id: media
     }
