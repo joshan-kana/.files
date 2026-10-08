@@ -18,6 +18,7 @@ ShellRoot {
     readonly property ResourceState resourcesRef: resources
     readonly property BrightnessState brightnessRef: brightness
     readonly property WeatherState weatherRef: weather
+    readonly property NotificationState notificationsRef: notifications
 
     RuntimeConfig {
         id: runtime
@@ -105,6 +106,19 @@ ShellRoot {
         }
     }
 
+    Component {
+        id: activityExpansionComponent
+
+        NotificationContent {
+            notificationState: root.notificationsRef
+            runtime: root.runtimeRef
+            theme: root.themeRef
+            motion: root.motionRef
+            engaged: expansionState.hasCurrent && expansionState.currentName === "activity"
+            onCloseRequested: expansionState.close()
+        }
+    }
+
     ShellExpansionHost {
         id: expansionHost
         runtime: runtime
@@ -115,6 +129,7 @@ ShellRoot {
         systemComponent: systemExpansionComponent
         calendarComponent: calendarExpansionComponent
         weatherComponent: weatherExpansionComponent
+        activityComponent: activityExpansionComponent
     }
 
     MediaState {
@@ -163,7 +178,7 @@ ShellRoot {
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
         onTrayMenuRequested: (screen, origin, index) => actions.showSystem(screen, origin, "tray:" + index)
         onCalendarRequested: (screen, origin) => actions.toggleCalendar(screen, origin)
-        onNotificationsRequested: actions.toggleNotifications()
+        onNotificationsRequested: (screen, origin) => actions.toggleNotifications(screen, origin)
     }
 
     ShortcutCheatsheet {
@@ -207,15 +222,6 @@ ShellRoot {
         theme: theme
         motion: motion
         onCenterRequested: actions.showNotifications()
-    }
-
-    NotificationCenter {
-        id: notificationCenter
-        screen: screens.focusedScreen
-        notificationState: notifications
-        runtime: runtime
-        theme: theme
-        motion: motion
     }
 
     OsdPopup {
@@ -461,7 +467,6 @@ ShellRoot {
         mediaState: media
         systemState: system
         brightnessState: brightness
-        notificationCenter: notificationCenter
         notificationState: notifications
         motion: motion
     }
@@ -885,7 +890,7 @@ ShellRoot {
         }
 
         function notificationsOpen(): bool {
-            return notificationCenter.open;
+            return expansionState.hasCurrent && expansionState.currentName === "activity";
         }
 
         function notificationCount(): int {
