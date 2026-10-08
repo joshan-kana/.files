@@ -195,8 +195,12 @@ PanelWindow {
                 }
             }
 
-            SquircleSurface {
+            ShellSurface {
                 id: searchBox
+
+                theme: window.theme
+                motion: window.motion
+                surfaceLayer: ShellSurface.Group
 
                 height: 42
                 anchors {
@@ -206,9 +210,8 @@ PanelWindow {
                     topMargin: theme.spacing3
                 }
 
-                fillColor: theme.surface
-                borderColor: search.activeFocus ? theme.accent : theme.outline
-                borderWidth: theme.borderThin
+                outlined: search.activeFocus
+                borderColor: search.activeFocus ? theme.accent : theme.subtleBorder
                 cornerRadius: theme.radiusSmall
 
                 Text {
@@ -298,14 +301,13 @@ PanelWindow {
                                     width: parent.width
                                     spacing: theme.spacing3
 
-                                    SquircleSurface {
+                                    ShellSurface {
                                         width: 142
                                         height: 28
-                                        exponent: theme.squircleExponent
+                                        theme: window.theme
+                                        motion: window.motion
+                                        surfaceLayer: ShellSurface.Group
                                         cornerRadius: theme.radiusSmall
-                                        fillColor: theme.surfaceRaised
-                                        borderWidth: theme.borderThin
-                                        borderColor: theme.outline
 
                                         Text {
                                             anchors.centerIn: parent
