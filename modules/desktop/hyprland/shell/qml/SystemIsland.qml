@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell
 
 Item {
     id: island
@@ -10,6 +11,7 @@ Item {
     required property SystemState system
 
     signal activated
+    signal trayMenuRequested(int index)
 
     implicitWidth: statusRow.implicitWidth + theme.spacing4 * 2
     implicitHeight: 40
@@ -23,6 +25,7 @@ Item {
 
         Row {
             id: statusRow
+            z: 1
             anchors.centerIn: parent
             spacing: island.theme.spacing3
 
@@ -89,26 +92,71 @@ Item {
                 }
             }
 
-            // The existing Control Centre owns the tray items and menu interactions.
+            // end-4-style direct app indicators. The existing Control Centre
+            // remains the sole owner of tray menus and their keyboard handling.
             Row {
                 visible: island.system.trayCount > 0
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: island.theme.spacing1
 
-                Text {
-                    text: "󰀻"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: island.theme.accent
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: island.theme.fontSize(15)
+                Repeater {
+                    model: island.system.trayItems.slice(0, 4)
+
+                    delegate: Item {
+                        id: trayButton
+                        required property var modelData
+                        required property int index
+                        width: 23
+                        height: 23
+
+                        ShellSurface {
+                            anchors.fill: parent
+                            theme: island.theme
+                            motion: island.motion
+                            surfaceLayer: ShellSurface.Control
+                            cornerRadius: island.theme.radiusSmall
+                            opacity: trayPointer.containsMouse ? 1 : 0
+                        }
+
+                        Image {
+                            anchors.centerIn: parent
+                            width: 18
+                            height: 18
+                            source: trayButton.modelData.icon && trayButton.modelData.icon.length > 0 ? trayButton.modelData.icon : Quickshell.iconPath("application-x-executable")
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                        }
+
+                        MouseArea {
+                            id: trayPointer
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: event => {
+                                if (event.button === Qt.RightButton) {
+                                    if (trayButton.modelData.hasMenu)
+                                        island.trayMenuRequested(trayButton.index);
+                                    else
+                                        trayButton.modelData.secondaryActivate();
+                                } else if (trayButton.modelData.hasMenu || trayButton.modelData.onlyMenu) {
+                                    island.trayMenuRequested(trayButton.index);
+                                } else {
+                                    trayButton.modelData.activate();
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Text {
-                    text: island.system.trayCount
+                    visible: island.system.trayCount > 4
+                    text: "+" + (island.system.trayCount - 4)
+                    color: island.theme.accent
                     anchors.verticalCenter: parent.verticalCenter
-                    color: island.theme.textStrong
                     font.family: island.runtime.fontMono
                     font.pixelSize: island.theme.fontSize(10)
+                    font.weight: Font.DemiBold
                 }
             }
 
