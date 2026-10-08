@@ -356,6 +356,7 @@
 
           services.tailscale = {
             enable = true;
+            package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.tailscale;
             openFirewall = true;
             useRoutingFeatures = "server";
             authKeyFile = "${server.secretsDir}/tailscale-oauth-client-secret";
