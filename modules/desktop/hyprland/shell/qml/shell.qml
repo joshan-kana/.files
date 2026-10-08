@@ -97,6 +97,7 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             system: root.systemRef
+            notificationState: root.notificationsRef
             brightness: root.brightnessRef
             resourceState: root.resourcesRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
@@ -896,6 +897,10 @@ ShellRoot {
 
         function notificationCount(): int {
             return notifications.count;
+        }
+
+        function notificationsSilent(): bool {
+            return notifications.silent;
         }
 
         function clearNotifications(): void {
