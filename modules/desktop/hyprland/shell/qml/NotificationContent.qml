@@ -151,7 +151,7 @@ FocusScope {
             }
 
             Text {
-                text: "J/K apps · H/L items · E expand · 1–9 actions · Enter default · Del dismiss · Esc close"
+                text: "J/K apps · H/L items · E expand · 1–9 act · S quiet · Del dismiss · Esc back"
                 color: center.theme.textMuted
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(9)
@@ -319,12 +319,23 @@ FocusScope {
                 font.pixelSize: center.theme.fontSize(9)
                 font.letterSpacing: 1
             }
-            Text {
-                text: "C  CLEAR"
-                color: center.notificationState.count > 0 ? center.theme.accent : center.theme.textMuted
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontSize(9)
-                font.letterSpacing: 1
+            ShellAction {
+                runtime: center.runtime
+                theme: center.theme
+                motion: center.motion
+                compact: true
+                active: center.notificationState.silent
+                title: center.notificationState.silent ? "󰂛  Resume alerts" : "󰂚  Pause alerts"
+                onActivated: center.notificationState.toggleSilent()
+            }
+            ShellAction {
+                runtime: center.runtime
+                theme: center.theme
+                motion: center.motion
+                compact: true
+                enabled: center.notificationState.count > 0
+                title: "C  Clear all"
+                onActivated: center.notificationState.clearAll()
             }
         }
 
@@ -364,6 +375,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                     center.dismissSelected();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_S) {
+                    center.notificationState.toggleSilent();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_C) {
                     center.notificationState.clearAll();
