@@ -26,6 +26,12 @@ FocusScope {
         }
     }
 
+    onItemsChanged: {
+        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
+        if (engaged)
+            Qt.callLater(focusKeyboard);
+    }
+
     function focusKeyboard(): void {
         if (engaged)
             keySink.forceActiveFocus();
@@ -42,7 +48,10 @@ FocusScope {
         if (!notification)
             return;
         notificationState.dismiss(notification);
-        Qt.callLater(() => selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1))));
+        Qt.callLater(() => {
+            selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
+            focusKeyboard();
+        });
     }
 
     Item {
