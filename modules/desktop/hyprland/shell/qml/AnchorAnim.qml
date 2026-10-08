@@ -9,7 +9,7 @@ AnchorAnimation {
         SlowSpatial
     }
 
-    required property QtObject motion
+    required property Motion motion
     property int type: AnchorAnim.DefaultSpatial
 
     duration: {

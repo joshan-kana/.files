@@ -6,10 +6,10 @@ import Quickshell.Wayland
 PanelWindow {
     id: popup
 
-    required property QtObject notificationState
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property NotificationState notificationState
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     signal centerRequested
 
@@ -45,18 +45,18 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: popup.motion.fast
         onTriggered: popup.closing = false
     }
 
     Connections {
-        target: notificationState
+        target: popup.notificationState
 
         function onPopupVisibleChanged(): void {
-            if (notificationState.popupVisible) {
+            if (popup.notificationState.popupVisible) {
                 closeTimer.stop();
                 popup.closing = false;
-            } else if (motion.fast > 0) {
+            } else if (popup.motion.fast > 0) {
                 popup.closing = true;
                 closeTimer.restart();
             } else {
@@ -72,33 +72,33 @@ PanelWindow {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
 
-        opacity: notificationState.popupVisible ? 1 : 0
-        scale: notificationState.popupVisible ? 1 : 0.965
+        opacity: popup.notificationState.popupVisible ? 1 : 0
+        scale: popup.notificationState.popupVisible ? 1 : 0.965
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: notificationState.popupVisible ? motion.enterType : motion.exitType
+                duration: popup.motion.fast
+                easing.type: popup.notificationState.popupVisible ? popup.motion.enterType : popup.motion.exitType
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.normal
-                easing.type: motion.enterType
+                duration: popup.motion.normal
+                easing.type: popup.motion.enterType
             }
         }
 
         MouseArea {
             anchors.fill: parent
-            enabled: notificationState.popupVisible
+            enabled: popup.notificationState.popupVisible
             acceptedButtons: Qt.LeftButton | Qt.RightButton
 
             onClicked: mouse => {
                 if (mouse.button === Qt.RightButton) {
-                    notificationState.dismiss(popup.notification);
+                    popup.notificationState.dismiss(popup.notification);
                 } else {
-                    notificationState.hidePopup();
+                    popup.notificationState.hidePopup();
                     popup.centerRequested();
                 }
             }
@@ -106,7 +106,7 @@ PanelWindow {
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing4
+            anchors.margins: popup.theme.spacing4
 
             Rectangle {
                 id: accent
@@ -128,9 +128,9 @@ PanelWindow {
                     right: parent.right
                     bottom: parent.bottom
                     left: accent.right
-                    leftMargin: theme.spacing4
+                    leftMargin: popup.theme.spacing4
                 }
-                spacing: theme.spacing2
+                spacing: popup.theme.spacing2
 
                 Row {
                     width: parent.width
@@ -138,8 +138,8 @@ PanelWindow {
                     Text {
                         text: popup.notification ? (popup.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
                         color: popup.urgencyColor
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(10)
+                        font.family: popup.runtime.fontMono
+                        font.pixelSize: popup.theme.fontSize(10)
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.4
                     }
@@ -152,9 +152,9 @@ PanelWindow {
                     Text {
                         id: actionHint
                         text: popup.notification && popup.notification.actions.length > 0 ? popup.notification.actions.length + " ACTION" + (popup.notification.actions.length === 1 ? "" : "S") : "NOTIFICATION"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(9)
+                        color: popup.theme.textMuted
+                        font.family: popup.runtime.fontMono
+                        font.pixelSize: popup.theme.fontSize(9)
                         font.letterSpacing: 0.8
                     }
                 }
@@ -163,9 +163,9 @@ PanelWindow {
                     width: parent.width
                     text: popup.notification ? popup.notification.summary : ""
                     textFormat: Text.PlainText
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(15)
+                    color: popup.theme.textStrong
+                    font.family: popup.runtime.fontMono
+                    font.pixelSize: popup.theme.fontSize(15)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -176,10 +176,10 @@ PanelWindow {
                     text: popup.notification ? popup.notification.body : ""
                     textFormat: Text.PlainText
                     visible: text.length > 0
-                    color: theme.text
+                    color: popup.theme.text
                     opacity: 0.84
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    font.family: popup.runtime.fontMono
+                    font.pixelSize: popup.theme.fontSize(12)
                     wrapMode: Text.Wrap
                     elide: Text.ElideRight
                 }
@@ -191,10 +191,10 @@ PanelWindow {
 
                 Text {
                     text: "CLICK  HISTORY   //   RMB  DISMISS"
-                    color: theme.textMuted
+                    color: popup.theme.textMuted
                     opacity: 0.62
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(8)
+                    font.family: popup.runtime.fontMono
+                    font.pixelSize: popup.theme.fontSize(8)
                     font.letterSpacing: 0.8
                 }
             }
