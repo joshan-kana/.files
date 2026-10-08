@@ -260,6 +260,7 @@ Item {
                     motion: view.motion
                     disabled: !entryDelegate.modelData.enabled
                     selected: entryDelegate.index === view.selectedIndex
+                    cornerRadius: view.theme.radiusSmall
                     onActivated: {
                         view.selectedIndex = entryDelegate.index;
                         view.activateSelected();
