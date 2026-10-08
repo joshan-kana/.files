@@ -145,8 +145,8 @@ FocusScope {
                             action: "Brightness up / down"
                         },
                         {
-                            key: "M",
-                            action: "Mute / unmute"
+                            key: "M / X",
+                            action: "Output mute / microphone mute"
                         },
                         {
                             key: "N / B",
@@ -371,7 +371,7 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: 98
+                height: root.system.microphoneAvailable ? 168 : 98
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
@@ -379,7 +379,9 @@ FocusScope {
 
                 ShellSection {
                     anchors {
-                        fill: parent
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
                         margins: theme.spacing4
                     }
                     runtime: root.runtime
@@ -397,6 +399,50 @@ FocusScope {
                         trackHeight: 8
                         handleSize: 18
                         onValueRequested: value => root.system.setVolume(value)
+                    }
+                }
+
+                ShellSection {
+                    visible: root.system.microphoneAvailable
+                    anchors {
+                        bottom: parent.bottom
+                        left: parent.left
+                        right: parent.right
+                        margins: theme.spacing4
+                    }
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: root.system.microphoneMuted ? "Microphone · muted" : "Microphone  " + root.system.microphoneVolumePercent + "%"
+                    detail: root.system.audioSource ? (root.system.audioSource.description || root.system.audioSource.name) : "No input"
+
+                    Row {
+                        width: parent.width
+                        spacing: root.theme.spacing3
+
+                        ShellSlider {
+                            width: Math.max(1, parent.width - micMute.width - parent.spacing)
+                            theme: root.theme
+                            motion: root.motion
+                            value: root.system.microphoneVolume
+                            enabled: root.system.microphoneAvailable
+                            accentColor: root.system.microphoneMuted ? theme.warning : theme.accent
+                            trackHeight: 8
+                            handleSize: 16
+                            onValueRequested: value => root.system.setMicrophoneVolume(value)
+                        }
+
+                        ShellAction {
+                            id: micMute
+                            width: 96
+                            height: 34
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                            active: root.system.microphoneMuted
+                            title: root.system.microphoneMuted ? "X  Unmute" : "X  Mute"
+                            onActivated: root.system.toggleMicrophoneMute()
+                        }
                     }
                 }
             }
@@ -956,6 +1002,15 @@ FocusScope {
                 }
 
                 Text {
+                    text: "X  MIC"
+                    visible: root.system.microphoneAvailable
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "M  MUTE"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
@@ -1255,6 +1310,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M) {
                     root.system.toggleMute();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_X) {
+                    root.system.toggleMicrophoneMute();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Q) {
                     root.notificationState.toggleSilent();
