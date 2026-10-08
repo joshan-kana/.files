@@ -225,11 +225,9 @@ WlSessionLock {
                     spacing: lock.theme.spacing2
                     opacity: lock.authRevealed ? 0 : 1
 
-                    Image {
+                    LockGlyph {
                         width: 20
                         height: 20
-                        source: Quickshell.iconPath("system-lock-screen")
-                        fillMode: Image.PreserveAspectFit
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -270,12 +268,10 @@ WlSessionLock {
                             anchors.horizontalCenter: parent.horizontalCenter
                             spacing: lock.theme.spacing1
 
-                            Image {
+                            LockGlyph {
                                 width: 44
                                 height: 44
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                source: Quickshell.iconPath("system-lock-screen")
-                                fillMode: Image.PreserveAspectFit
                             }
 
                             Text {
@@ -322,7 +318,11 @@ WlSessionLock {
 
                                 onTextEdited: {
                                     lock.password = text;
-                                    lock.authRevealed = true;
+                                    lock.authRevealed = text.length > 0;
+                                    if (text.length === 0) {
+                                        lock.statusText = "";
+                                        lock.statusError = false;
+                                    }
                                 }
 
                                 Keys.onPressed: event => {
@@ -332,9 +332,12 @@ WlSessionLock {
                                         else
                                             lock.submitPassword();
                                         event.accepted = true;
-                                    } else if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U) {
+                                    } else if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
                                         lock.password = "";
                                         text = "";
+                                        lock.authRevealed = false;
+                                        lock.statusText = "";
+                                        lock.statusError = false;
                                         event.accepted = true;
                                     }
                                 }
