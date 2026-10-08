@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import Quickshell.Services.Notifications
 
 FocusScope {
     id: center
@@ -12,25 +11,51 @@ FocusScope {
 
     property bool engaged: false
     property int selectedIndex: 0
-    property var expandedNotification: null
-    readonly property var items: [...(notificationState.history || [])].reverse()
-    signal closeRequested
+    property int selectedMemberIndex: 0
+    property string expandedGroupKey: ""
 
+    readonly property var items: [...(notificationState.history || [])].reverse()
+    // Like end-4's grouped history, but backed by the single Quickshell notification server.
+    readonly property var groups: {
+        const grouped = [];
+        const byApp = new Map();
+        for (const notification of items) {
+            if (!notification)
+                continue;
+            const app = notification.appName || "SYSTEM";
+            const key = app.toLowerCase();
+            if (!byApp.has(key)) {
+                const group = {
+                    key: key,
+                    name: app,
+                    notifications: []
+                };
+                byApp.set(key, group);
+                grouped.push(group);
+            }
+            byApp.get(key).notifications.push(notification);
+        }
+        return grouped;
+    }
+
+    signal closeRequested
     implicitWidth: 620
-    implicitHeight: Math.max(252, 142 + Math.min(items.length, 5) * 116)
+    implicitHeight: Math.max(252, 142 + Math.min(groups.length, 5) * 116)
     focus: engaged
 
     onEngagedChanged: {
-        if (engaged) {
-            selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
+        if (engaged)
             Qt.callLater(focusKeyboard);
-        }
     }
 
-    onItemsChanged: {
-        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
-        if (expandedNotification && items.indexOf(expandedNotification) < 0)
-            expandedNotification = null;
+    onGroupsChanged: {
+        if (!groups)
+            return;
+        selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
+        const group = selectedGroup();
+        selectedMemberIndex = group ? Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1)) : 0;
+        if (!groups.some(group => group.key === expandedGroupKey))
+            expandedGroupKey = "";
         if (engaged)
             Qt.callLater(focusKeyboard);
     }
@@ -40,16 +65,43 @@ FocusScope {
             keySink.forceActiveFocus();
     }
 
+    function ensureSelectedVisible(): void {
+        const groupItem = list.itemAtIndex(selectedIndex);
+        if (!groupItem || !groupItem.expanded)
+            return;
+
+        const card = groupItem.memberAt(selectedMemberIndex);
+        if (!card)
+            return;
+        const top = groupItem.y + card.y;
+        const bottom = top + card.height;
+        if (bottom > list.contentY + list.height)
+            list.contentY = Math.min(Math.max(0, list.contentHeight - list.height), bottom - list.height);
+        else if (top < list.contentY)
+            list.contentY = Math.max(0, top);
+    }
+
+    onSelectedMemberIndexChanged: Qt.callLater(ensureSelectedVisible)
+    onExpandedGroupKeyChanged: Qt.callLater(ensureSelectedVisible)
+
+    function selectedGroup(): var {
+        return groups && groups.length > 0 ? groups[Math.max(0, Math.min(selectedIndex, groups.length - 1))] : null;
+    }
+
     function selectedNotification(): var {
-        if (items.length === 0)
-            return null;
-        return items[Math.max(0, Math.min(selectedIndex, items.length - 1))];
+        const group = selectedGroup();
+        return group ? group.notifications[Math.max(0, Math.min(selectedMemberIndex, group.notifications.length - 1))] : null;
+    }
+
+    function selectGroup(delta: int): void {
+        selectedIndex = Math.max(0, Math.min(groups.length - 1, selectedIndex + delta));
+        selectedMemberIndex = 0;
     }
 
     function toggleExpanded(): void {
-        const notification = selectedNotification();
-        if (notification)
-            expandedNotification = expandedNotification === notification ? null : notification;
+        const group = selectedGroup();
+        if (group)
+            expandedGroupKey = expandedGroupKey === group.key ? "" : group.key;
     }
 
     function dismissSelected(): void {
@@ -58,7 +110,9 @@ FocusScope {
             return;
         notificationState.dismiss(notification);
         Qt.callLater(() => {
-            selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
+            selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
+            const group = selectedGroup();
+            selectedMemberIndex = group ? Math.min(selectedMemberIndex, group.notifications.length - 1) : 0;
             focusKeyboard();
         });
     }
@@ -72,7 +126,7 @@ FocusScope {
             spacing: center.theme.spacing1
 
             Text {
-                text: center.notificationState.count + " stored"
+                text: center.notificationState.count + " stored · " + center.groups.length + " apps"
                 color: center.theme.accent
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(12)
@@ -88,7 +142,7 @@ FocusScope {
             }
 
             Text {
-                text: "J/K select · E expand · 1–9 actions · Enter default · Del dismiss · C clear · Esc close"
+                text: "J/K apps · H/L items · E expand · 1–9 actions · Enter default · Del dismiss · Esc close"
                 color: center.theme.textMuted
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(9)
@@ -97,7 +151,6 @@ FocusScope {
 
         ListView {
             id: list
-
             anchors {
                 top: header.bottom
                 right: parent.right
@@ -106,22 +159,29 @@ FocusScope {
                 topMargin: center.theme.spacing4
                 bottomMargin: center.theme.spacing4
             }
-
-            model: center.items
+            model: center.groups
             spacing: center.theme.spacing3
             clip: true
             currentIndex: center.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
 
-            delegate: SquircleSurface {
-                id: item
-
+            delegate: Item {
+                id: groupItem
                 required property var modelData
                 required property int index
-
+                readonly property bool expanded: center.expandedGroupKey === modelData.key
                 width: ListView.view.width
-                readonly property bool expanded: center.expandedNotification === modelData
-                height: Math.max(92, itemBody.implicitHeight + center.theme.spacing4 * 2)
+                implicitHeight: groupColumn.implicitHeight
+                height: implicitHeight
+                clip: true
+
+                function memberAt(index: int): var {
+                    return members.itemAt(index);
+                }
+                onHeightChanged: {
+                    if (expanded && center.selectedIndex === index && center.selectedMemberIndex > 0)
+                        center.ensureSelectedVisible();
+                }
 
                 Behavior on height {
                     Anim {
@@ -129,117 +189,77 @@ FocusScope {
                         type: Anim.FastSpatial
                     }
                 }
-                exponent: center.theme.squircleExponent
-                cornerRadius: center.theme.radiusMedium
-                fillColor: index === center.selectedIndex ? center.theme.focusFill : center.theme.background
-                borderColor: {
-                    if (index === center.selectedIndex)
-                        return center.theme.accent;
-                    if (modelData.urgency === NotificationUrgency.Critical)
-                        return Qt.rgba(center.theme.critical.r, center.theme.critical.g, center.theme.critical.b, 0.42);
-                    return center.theme.outline;
-                }
-                borderWidth: index === center.selectedIndex ? center.theme.borderFocus : center.theme.borderThin
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        center.selectedIndex = item.index;
-                        center.toggleExpanded();
-                    }
-                    onDoubleClicked: {
-                        center.selectedIndex = item.index;
-                        center.notificationState.invokeDefault(item.modelData);
-                    }
-                }
 
                 Column {
-                    id: itemBody
-
-                    anchors {
-                        top: parent.top
-                        right: parent.right
-                        left: parent.left
-                        margins: center.theme.spacing4
-                    }
+                    id: groupColumn
+                    width: parent.width
                     spacing: center.theme.spacing2
 
-                    Row {
+                    Item {
                         width: parent.width
+                        height: visible ? 32 : 0
+                        visible: groupItem.modelData.notifications.length > 1
 
-                        Text {
-                            text: (item.modelData.appName || "SYSTEM").toUpperCase()
-                            color: item.modelData.urgency === NotificationUrgency.Critical ? center.theme.critical : center.theme.accent
-                            font.family: center.runtime.fontMono
-                            font.pixelSize: center.theme.fontSize(9)
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 1.2
-                        }
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: center.theme.spacing2
 
-                        Item {
-                            width: parent.width - parent.children[0].width - actionsLabel.width
-                            height: 1
-                        }
-
-                        Text {
-                            id: actionsLabel
-                            text: (item.expanded ? "󰅃" : "󰅀") + (item.modelData.actions.length > 0 ? "  " + item.modelData.actions.length + " ACTIONS" : "  EXPAND")
-                            color: center.theme.textMuted
-                            font.family: center.runtime.fontMono
-                            font.pixelSize: center.theme.fontSize(8)
-                        }
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: item.modelData.summary
-                        textFormat: Text.PlainText
-                        color: center.theme.textStrong
-                        font.family: center.runtime.fontMono
-                        font.pixelSize: center.theme.fontSize(14)
-                        font.weight: Font.DemiBold
-                        wrapMode: Text.Wrap
-                    }
-
-                    Text {
-                        width: parent.width
-                        visible: text.length > 0
-                        maximumLineCount: item.expanded ? 20 : 2
-                        text: item.modelData.body
-                        textFormat: Text.PlainText
-                        color: center.theme.text
-                        opacity: 0.78
-                        font.family: center.runtime.fontMono
-                        font.pixelSize: center.theme.fontSize(11)
-                        wrapMode: Text.Wrap
-                        elide: Text.ElideRight
-                    }
-
-                    Flow {
-                        id: actionButtons
-                        width: parent.width
-                        spacing: center.theme.spacing2
-                        visible: item.expanded && item.modelData.actions.length > 0
-
-                        Repeater {
-                            model: item.modelData.actions
-
-                            delegate: ShellAction {
-                                required property int index
-                                required property var modelData
-                                runtime: center.runtime
-                                theme: center.theme
-                                motion: center.motion
-                                compact: true
-                                title: (index + 1) + "  " + (modelData.text || "Action")
-                                width: Math.min(implicitWidth, actionButtons.width)
-                                onActivated: center.notificationState.invokeAction(item.modelData, index)
+                            Text {
+                                text: groupItem.modelData.name.toUpperCase()
+                                color: center.theme.accent
+                                font.family: center.runtime.fontMono
+                                font.pixelSize: center.theme.fontSize(10)
+                                font.weight: Font.DemiBold
                             }
+                            Text {
+                                text: groupItem.modelData.notifications.length + " notifications " + (groupItem.expanded ? "󰅃" : "󰅀")
+                                color: center.theme.textMuted
+                                font.family: center.runtime.fontMono
+                                font.pixelSize: center.theme.fontSize(9)
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                center.selectedIndex = groupItem.index;
+                                center.selectedMemberIndex = 0;
+                                center.toggleExpanded();
+                            }
+                        }
+                    }
+
+                    Repeater {
+                        id: members
+                        model: groupItem.expanded ? groupItem.modelData.notifications : groupItem.modelData.notifications.slice(0, 1)
+
+                        delegate: NotificationCard {
+                            id: notificationCard
+                            required property var modelData
+                            required property int index
+                            width: groupColumn.width
+                            notification: modelData
+                            runtime: center.runtime
+                            theme: center.theme
+                            motion: center.motion
+                            groupCount: groupItem.expanded ? 1 : groupItem.modelData.notifications.length
+                            selected: center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
+                            expanded: groupItem.expanded && selected
+                            onActivated: {
+                                const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === index;
+                                center.selectedIndex = groupItem.index;
+                                center.selectedMemberIndex = index;
+                                if (sameSelection)
+                                    center.toggleExpanded();
+                                else
+                                    center.expandedGroupKey = groupItem.modelData.key;
+                            }
+                            onDefaultRequested: center.notificationState.invokeDefault(modelData)
+                            onActionRequested: action => center.notificationState.invokeAction(modelData, action)
                         }
                     }
                 }
             }
-
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
         }
 
@@ -259,7 +279,6 @@ FocusScope {
                 bottom: parent.bottom
             }
             spacing: center.theme.spacing4
-
             Text {
                 text: center.notificationState.count + " STORED"
                 color: center.theme.textMuted
@@ -267,7 +286,6 @@ FocusScope {
                 font.pixelSize: center.theme.fontSize(9)
                 font.letterSpacing: 1
             }
-
             Text {
                 text: "C  CLEAR"
                 color: center.notificationState.count > 0 ? center.theme.accent : center.theme.textMuted
@@ -286,16 +304,21 @@ FocusScope {
                 if (event.key === Qt.Key_Escape) {
                     center.closeRequested();
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                    center.selectedIndex = Math.max(0, center.selectedIndex - 1);
+                } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                    center.selectGroup(-1);
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                    center.selectedIndex = Math.min(center.items.length - 1, center.selectedIndex + 1);
+                } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                    center.selectGroup(1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+                    const group = center.selectedGroup();
+                    if (group && center.expandedGroupKey === group.key)
+                        center.selectedMemberIndex = Math.max(0, Math.min(group.notifications.length - 1, center.selectedMemberIndex + ((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1)));
                     event.accepted = true;
                 } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                    const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
-                    const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                    center.selectedIndex = Math.max(0, Math.min(center.items.length - 1, center.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
+                    const steps = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+                    center.selectGroup((event.key === Qt.Key_D ? 1 : -1) * steps);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_E) {
                     center.toggleExpanded();
@@ -312,6 +335,7 @@ FocusScope {
                 } else if (event.key === Qt.Key_C) {
                     center.notificationState.clearAll();
                     center.selectedIndex = 0;
+                    center.selectedMemberIndex = 0;
                     event.accepted = true;
                 }
             }
