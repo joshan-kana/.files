@@ -157,6 +157,10 @@ QtObject {
         expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
+    function showResources(): void {
+        showSystem(null, null, "resources");
+    }
+
     function showTheme(): void {
         showSystem(null, null, "theme");
     }
@@ -229,6 +233,8 @@ QtObject {
             toggleCalendar();
         else if (commandId === "weather.toggle")
             toggleWeather();
+        else if (commandId === "resources.toggle")
+            showResources();
         else if (commandId === "theme.toggle")
             showTheme();
         else if (commandId === "session.toggle")
