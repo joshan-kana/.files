@@ -20,7 +20,7 @@ FocusScope {
             action: media.playing ? "Pause playback" : "Play"
         },
         {
-            key: "← / →",
+            key: "H/L · ←/→",
             action: "Seek five seconds"
         },
         {
@@ -517,10 +517,10 @@ FocusScope {
                 } else if (event.key === Qt.Key_V) {
                     content.toggleVisualizer();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Left) {
+                } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                     media.seek(-5);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Right) {
+                } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
                     media.seek(5);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Comma) {
