@@ -5,10 +5,10 @@ import Quickshell.Wayland
 PanelWindow {
     id: popup
 
-    required property QtObject osd
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property OsdState osd
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool closing: false
     readonly property color accentColor: osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.positive : theme.accent)
@@ -26,18 +26,18 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: popup.motion.fast
         onTriggered: popup.closing = false
     }
 
     Connections {
-        target: osd
+        target: popup.osd
 
         function onVisibleChanged(): void {
-            if (osd.visible) {
+            if (popup.osd.visible) {
                 closeTimer.stop();
                 popup.closing = false;
-            } else if (motion.fast > 0) {
+            } else if (popup.motion.fast > 0) {
                 popup.closing = true;
                 closeTimer.restart();
             } else {
@@ -53,26 +53,26 @@ PanelWindow {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
 
-        opacity: osd.visible ? 1 : 0
-        scale: osd.visible ? 1 : 0.97
+        opacity: popup.osd.visible ? 1 : 0
+        scale: popup.osd.visible ? 1 : 0.97
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: osd.visible ? motion.enterType : motion.exitType
+                duration: popup.motion.fast
+                easing.type: popup.osd.visible ? popup.motion.enterType : popup.motion.exitType
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: motion.enterType
+                duration: popup.motion.fast
+                easing.type: popup.motion.enterType
             }
         }
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing4
+            anchors.margins: popup.theme.spacing4
 
             Row {
                 anchors {
@@ -82,10 +82,10 @@ PanelWindow {
                 }
 
                 Text {
-                    text: osd.label
+                    text: popup.osd.label
                     color: popup.accentColor
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    font.family: popup.runtime.fontMono
+                    font.pixelSize: popup.theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.4
                 }
@@ -97,10 +97,10 @@ PanelWindow {
 
                 Text {
                     id: valueText
-                    text: osd.value + "%"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    text: popup.osd.value + "%"
+                    color: popup.theme.textStrong
+                    font.family: popup.runtime.fontMono
+                    font.pixelSize: popup.theme.fontSize(12)
                     font.weight: Font.DemiBold
                 }
             }
@@ -114,18 +114,18 @@ PanelWindow {
 
                 height: 7
                 radius: height / 2
-                color: theme.surfaceRaised
+                color: popup.theme.surfaceRaised
 
                 Rectangle {
                     height: parent.height
                     radius: parent.radius
-                    width: parent.width * osd.value / 100
+                    width: parent.width * popup.osd.value / 100
                     color: popup.accentColor
 
                     Behavior on width {
                         NumberAnimation {
-                            duration: motion.fast
-                            easing.type: motion.enterType
+                            duration: popup.motion.fast
+                            easing.type: popup.motion.enterType
                         }
                     }
                 }

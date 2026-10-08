@@ -1,4 +1,5 @@
 //@ pragma ShellId linux-desktop
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -8,13 +9,13 @@ import Quickshell.Io
 ShellRoot {
     id: root
 
-    readonly property QtObject runtimeRef: runtime
-    readonly property QtObject themeRef: theme
-    readonly property QtObject motionRef: motion
-    readonly property QtObject mediaRef: media
-    readonly property QtObject spectrumRef: spectrum
-    readonly property QtObject systemRef: system
-    readonly property QtObject brightnessRef: brightness
+    readonly property RuntimeConfig runtimeRef: runtime
+    readonly property Theme themeRef: theme
+    readonly property Motion motionRef: motion
+    readonly property MediaState mediaRef: media
+    readonly property SpectrumState spectrumRef: spectrum
+    readonly property SystemState systemRef: system
+    readonly property BrightnessState brightnessRef: brightness
 
     RuntimeConfig {
         id: runtime
@@ -759,7 +760,7 @@ ShellRoot {
         }
 
         function themeOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.themeOpen : false;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.themeOpen : false;
         }
 
         function showSession(): void {
@@ -767,7 +768,7 @@ ShellRoot {
         }
 
         function sessionOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.sessionOpen : false;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.sessionOpen : false;
         }
 
         function toggleNotifications(): void {
@@ -879,16 +880,16 @@ ShellRoot {
         }
 
         function trayMenuOpen(): bool {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.trayMenuOpen : false;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuOpen : false;
         }
 
         function trayMenuItemCount(): int {
-            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent ? expansionHost.loadedContent.trayMenuItemCount : 0;
+            return expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.trayMenuItemCount : 0;
         }
 
         function openSelectedTrayItem(): void {
             if (expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.loadedContent)
-                expansionHost.loadedContent.activateTrayItem();
+                expansionHost.systemContent.activateTrayItem();
         }
 
         function launchTerminal(): void {
