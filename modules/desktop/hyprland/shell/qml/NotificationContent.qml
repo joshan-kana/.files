@@ -12,6 +12,7 @@ FocusScope {
 
     property bool engaged: false
     property int selectedIndex: 0
+    property var expandedNotification: null
     readonly property var items: [...(notificationState.history || [])].reverse()
     signal closeRequested
 
@@ -28,6 +29,8 @@ FocusScope {
 
     onItemsChanged: {
         selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, items.length - 1)));
+        if (expandedNotification && items.indexOf(expandedNotification) < 0)
+            expandedNotification = null;
         if (engaged)
             Qt.callLater(focusKeyboard);
     }
@@ -41,6 +44,12 @@ FocusScope {
         if (items.length === 0)
             return null;
         return items[Math.max(0, Math.min(selectedIndex, items.length - 1))];
+    }
+
+    function toggleExpanded(): void {
+        const notification = selectedNotification();
+        if (notification)
+            expandedNotification = expandedNotification === notification ? null : notification;
     }
 
     function dismissSelected(): void {
@@ -79,7 +88,7 @@ FocusScope {
             }
 
             Text {
-                text: "↑↓ navigate  ·  Enter action  ·  Delete dismiss  ·  C clear  ·  Esc close"
+                text: "J/K select · E expand · 1–9 actions · Enter default · Del dismiss · C clear · Esc close"
                 color: center.theme.textMuted
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(9)
@@ -111,7 +120,15 @@ FocusScope {
                 required property int index
 
                 width: ListView.view.width
+                readonly property bool expanded: center.expandedNotification === modelData
                 height: Math.max(92, itemBody.implicitHeight + center.theme.spacing4 * 2)
+
+                Behavior on height {
+                    Anim {
+                        motion: center.motion
+                        type: Anim.FastSpatial
+                    }
+                }
                 exponent: center.theme.squircleExponent
                 cornerRadius: center.theme.radiusMedium
                 fillColor: index === center.selectedIndex ? center.theme.focusFill : center.theme.background
@@ -126,7 +143,10 @@ FocusScope {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: center.selectedIndex = item.index
+                    onClicked: {
+                        center.selectedIndex = item.index;
+                        center.toggleExpanded();
+                    }
                     onDoubleClicked: {
                         center.selectedIndex = item.index;
                         center.notificationState.invokeDefault(item.modelData);
@@ -163,7 +183,7 @@ FocusScope {
 
                         Text {
                             id: actionsLabel
-                            text: item.modelData.actions.length > 0 ? item.modelData.actions.length + " ACTION" + (item.modelData.actions.length === 1 ? "" : "S") : ""
+                            text: (item.expanded ? "󰅃" : "󰅀") + (item.modelData.actions.length > 0 ? "  " + item.modelData.actions.length + " ACTIONS" : "  EXPAND")
                             color: center.theme.textMuted
                             font.family: center.runtime.fontMono
                             font.pixelSize: center.theme.fontSize(8)
@@ -184,7 +204,7 @@ FocusScope {
                     Text {
                         width: parent.width
                         visible: text.length > 0
-                        maximumLineCount: 4
+                        maximumLineCount: item.expanded ? 20 : 2
                         text: item.modelData.body
                         textFormat: Text.PlainText
                         color: center.theme.text
@@ -193,6 +213,29 @@ FocusScope {
                         font.pixelSize: center.theme.fontSize(11)
                         wrapMode: Text.Wrap
                         elide: Text.ElideRight
+                    }
+
+                    Flow {
+                        id: actionButtons
+                        width: parent.width
+                        spacing: center.theme.spacing2
+                        visible: item.expanded && item.modelData.actions.length > 0
+
+                        Repeater {
+                            model: item.modelData.actions
+
+                            delegate: ShellAction {
+                                required property int index
+                                required property var modelData
+                                runtime: center.runtime
+                                theme: center.theme
+                                motion: center.motion
+                                compact: true
+                                title: (index + 1) + "  " + (modelData.text || "Action")
+                                width: Math.min(implicitWidth, actionButtons.width)
+                                onActivated: center.notificationState.invokeAction(item.modelData, index)
+                            }
+                        }
                     }
                 }
             }
@@ -253,6 +296,12 @@ FocusScope {
                     const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
                     const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
                     center.selectedIndex = Math.max(0, Math.min(center.items.length - 1, center.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_E) {
+                    center.toggleExpanded();
+                    event.accepted = true;
+                } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                    center.notificationState.invokeAction(center.selectedNotification(), event.key - Qt.Key_1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     center.notificationState.invokeDefault(center.selectedNotification());
