@@ -264,6 +264,35 @@ in
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
 
+      applyWallpaper = pkgs.writeShellApplication {
+        name = "linux-desktop-wallpaper-apply";
+        runtimeInputs = [
+          pkgs.awww
+          pkgs.coreutils
+          pkgs.jq
+        ];
+        text = ''
+          runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$runtime")"
+
+          if [ ! -f "$wallpaper" ]; then
+            printf 'Wallpaper does not exist: %s\n' "$wallpaper" >&2
+            exit 1
+          fi
+
+          # The service can start before the Wayland daemon has opened its socket.
+          for _ in {1..25}; do
+            if awww query >/dev/null 2>&1; then
+              exec awww img --transition-type fade --transition-duration 0.8 --transition-fps 165 "$wallpaper"
+            fi
+            sleep 0.2
+          done
+
+          printf 'awww daemon is not ready\n' >&2
+          exit 1
+        '';
+      };
+
       clipboardCopy = pkgs.writeShellApplication {
         name = "linux-desktop-clipboard-copy";
         runtimeInputs = [
@@ -452,6 +481,8 @@ in
       };
     in
     {
+      services.awww.enable = true;
+
       home.packages = [
         launcher
         developmentLauncher
@@ -465,7 +496,34 @@ in
 
       xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
 
+      systemd.user.paths.linux-desktop-wallpaper-image = {
+        Unit.Description = "Reload wallpaper when the selected theme changes";
+        Path.PathChanged = "%h/.config/linux-desktop";
+        Install.WantedBy = [ "hyprland-session.target" ];
+      };
+
       systemd.user.services = {
+        linux-desktop-wallpaper-image = {
+          Unit = {
+            Description = "Apply the Stylix wallpaper with awww transitions";
+            Wants = [ "awww.service" ];
+            After = [
+              "awww.service"
+              "hyprland-session.target"
+            ];
+            PartOf = [ "hyprland-session.target" ];
+          };
+
+          Service = {
+            Type = "oneshot";
+            ExecStart = lib.getExe applyWallpaper;
+            Restart = "on-failure";
+            RestartSec = 2;
+          };
+
+          Install.WantedBy = [ "hyprland-session.target" ];
+        };
+
         linux-desktop-spectrum = {
           Unit = {
             Description = "Hyprland desktop audio spectrum analyser";
