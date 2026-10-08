@@ -19,7 +19,6 @@ PanelWindow {
     property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
-    property bool switchingTab: false
 
     readonly property Item loadedContent: contentLoader.item as Item
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? contentLoader.item as SystemContent : null
@@ -48,9 +47,20 @@ PanelWindow {
         if (!screen)
             return 0;
 
-        const desired = contentExpanded ? (screen.width - implicitWidth) / 2 : expansionState.originCenter - implicitWidth / 2;
+        const width = contentExpanded ? contentWidth : expansionState.originWidth;
+        const desired = contentExpanded ? (screen.width - width) / 2 : expansionState.originCenter - width / 2;
         const edge = theme.spacing4;
-        return Math.max(edge, Math.min(desired, screen.width - implicitWidth - edge));
+        return Math.max(edge, Math.min(desired, screen.width - width - edge));
+    }
+    property real animatedMargin: horizontalMargin
+
+    Behavior on animatedMargin {
+        enabled: host.contentExpanded || host.closing
+
+        Anim {
+            motion: host.motion
+            type: Anim.DefaultSpatial
+        }
     }
 
     screen: expansionState.screen
@@ -61,6 +71,23 @@ PanelWindow {
     implicitWidth: Math.max(1, targetWidth)
     implicitHeight: Math.max(1, targetHeight)
 
+    Behavior on implicitWidth {
+        enabled: host.contentExpanded || host.closing
+
+        Anim {
+            motion: host.motion
+            type: Anim.DefaultSpatial
+        }
+    }
+    Behavior on implicitHeight {
+        enabled: host.contentExpanded || host.closing
+
+        Anim {
+            motion: host.motion
+            type: Anim.DefaultSpatial
+        }
+    }
+
     anchors {
         top: true
         left: true
@@ -68,7 +95,7 @@ PanelWindow {
 
     margins {
         top: 56 + theme.spacing1
-        left: host.horizontalMargin
+        left: host.animatedMargin
     }
 
     WlrLayershell.namespace: "linux-desktop-expansion"
@@ -84,10 +111,8 @@ PanelWindow {
         if (next === expansionState.currentName)
             return;
 
-        switchingTab = true;
         expansionState.currentView = "";
         expansionState.currentName = next;
-        switchingTab = false;
     }
 
     function cycleTab(direction: int): void {
@@ -130,16 +155,9 @@ PanelWindow {
                 Qt.callLater(() => host.contentExpanded = true);
             } else if (host.visible) {
                 host.closing = true;
+                host.contentExpanded = false;
                 closeTimer.restart();
             }
-        }
-
-        function onCurrentNameChanged(): void {
-            if (!host.expansionState.hasCurrent || host.switchingTab)
-                return;
-
-            host.contentExpanded = false;
-            Qt.callLater(() => host.contentExpanded = true);
         }
     }
 
@@ -174,8 +192,17 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        cornerRadius: host.theme.radiusLarge
+        cornerRadius: host.contentExpanded ? host.theme.radiusLarge : Math.min(host.theme.radiusLarge, host.expansionState.originHeight / 2)
         outlined: false
+
+        Behavior on cornerRadius {
+            enabled: host.contentExpanded || host.closing
+
+            Anim {
+                motion: host.motion
+                type: Anim.DefaultSpatial
+            }
+        }
 
         HubTabs {
             id: tabs
