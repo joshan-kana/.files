@@ -93,7 +93,6 @@ PanelWindow {
                 Qt.callLater(() => host.contentExpanded = true);
             } else if (host.visible) {
                 host.closing = true;
-                host.contentExpanded = false;
                 closeTimer.restart();
             }
         }
@@ -111,6 +110,22 @@ PanelWindow {
         id: shellSurface
 
         anchors.fill: parent
+        scale: host.contentExpanded && expansionState.hasCurrent ? 1 : 0.94
+        opacity: host.contentExpanded && expansionState.hasCurrent ? 1 : 0
+
+        Behavior on scale {
+            Anim {
+                motion: host.motion
+                type: Anim.DefaultSpatial
+            }
+        }
+        Behavior on opacity {
+            Anim {
+                motion: host.motion
+                type: Anim.DefaultEffects
+            }
+        }
+
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
@@ -127,35 +142,6 @@ PanelWindow {
 
             active: host.visible && host.currentComponent !== null
             sourceComponent: host.currentComponent
-            opacity: expansionState.hasCurrent && host.contentExpanded ? 1 : 0
-
-            Behavior on opacity {
-                Anim {
-                    motion: host.motion
-                    type: Anim.DefaultEffects
-                }
-            }
-        }
-    }
-
-    Behavior on implicitWidth {
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
-        }
-    }
-
-    Behavior on implicitHeight {
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
-        }
-    }
-
-    Behavior on margins.left {
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
         }
     }
 }
