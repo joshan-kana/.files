@@ -527,6 +527,13 @@ in
     description = "Theme picker";
   })
   (mk {
+    keys = "SHIFT + M";
+    id = "animations.toggle";
+    action = global "linux-desktop:animations";
+    section = "SYSTEM";
+    description = "Toggle animations";
+  })
+  (mk {
     keys = "SHIFT + B";
     id = "bar.toggle";
     action = global "linux-desktop:bar";
