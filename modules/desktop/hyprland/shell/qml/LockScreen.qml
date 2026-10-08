@@ -188,7 +188,7 @@ WlSessionLock {
             ShellSurface {
                 id: authCard
 
-                width: lock.authRevealed ? Math.min(parent.width - 80, 430) : 190
+                width: lock.authRevealed ? Math.min(parent.width - 80, 430) : 68
                 height: lock.authRevealed ? contentColumn.implicitHeight + lock.theme.spacing5 * 2 : 68
                 anchors {
                     horizontalCenter: parent.horizontalCenter
@@ -228,14 +228,6 @@ WlSessionLock {
                     LockGlyph {
                         width: 20
                         height: 20
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "TYPE TO UNLOCK"
-                        color: lock.theme.textStrong
-                        font.family: lock.runtime.fontMono
-                        font.pixelSize: lock.theme.fontSize(11)
-                        font.weight: Font.DemiBold
                     }
 
                     Behavior on opacity {
