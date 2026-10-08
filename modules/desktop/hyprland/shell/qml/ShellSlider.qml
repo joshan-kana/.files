@@ -3,8 +3,8 @@ import QtQuick
 Item {
     id: root
 
-    required property QtObject theme
-    required property QtObject motion
+    required property Theme theme
+    required property Motion motion
 
     property real from: 0
     property real to: 1
@@ -40,7 +40,7 @@ Item {
         }
         height: root.trackHeight
         radius: height / 2
-        color: theme.layer3
+        color: root.theme.layer3
 
         Rectangle {
             height: parent.height

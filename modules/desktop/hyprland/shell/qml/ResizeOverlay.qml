@@ -5,9 +5,9 @@ import Quickshell.Wayland
 PanelWindow {
     id: overlay
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
 
@@ -36,27 +36,27 @@ PanelWindow {
         Row {
             anchors {
                 fill: parent
-                margins: theme.spacing4
+                margins: overlay.theme.spacing4
             }
-            spacing: theme.spacing5
+            spacing: overlay.theme.spacing5
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: theme.spacing1
+                spacing: overlay.theme.spacing1
 
                 Text {
                     text: "Resize"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(17)
+                    color: overlay.theme.textStrong
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(17)
                     font.weight: Font.DemiBold
                 }
 
                 Text {
                     text: "Window stays focused"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    color: overlay.theme.textMuted
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(10)
                 }
             }
 
@@ -64,64 +64,64 @@ PanelWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 1
                 height: 54
-                color: theme.subtleBorder
+                color: overlay.theme.subtleBorder
             }
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: theme.spacing3
+                spacing: overlay.theme.spacing3
 
                 Text {
                     text: "H"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: overlay.theme.accent
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(12)
                     font.weight: Font.Bold
                 }
                 Text {
                     text: "left"
-                    color: theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    color: overlay.theme.text
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(11)
                 }
                 Text {
                     text: "J"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: overlay.theme.accent
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(12)
                     font.weight: Font.Bold
                 }
                 Text {
                     text: "down"
-                    color: theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    color: overlay.theme.text
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(11)
                 }
                 Text {
                     text: "K"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: overlay.theme.accent
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(12)
                     font.weight: Font.Bold
                 }
                 Text {
                     text: "up"
-                    color: theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    color: overlay.theme.text
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(11)
                 }
                 Text {
                     text: "L"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: overlay.theme.accent
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(12)
                     font.weight: Font.Bold
                 }
                 Text {
                     text: "right"
-                    color: theme.text
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    color: overlay.theme.text
+                    font.family: overlay.runtime.fontMono
+                    font.pixelSize: overlay.theme.fontSize(11)
                 }
             }
         }
@@ -130,13 +130,13 @@ PanelWindow {
             anchors {
                 right: parent.right
                 bottom: parent.bottom
-                rightMargin: theme.spacing4
-                bottomMargin: theme.spacing2
+                rightMargin: overlay.theme.spacing4
+                bottomMargin: overlay.theme.spacing2
             }
             text: "Shift reverses  ·  B balance  ·  Enter / Esc / R done"
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(9)
+            color: overlay.theme.textMuted
+            font.family: overlay.runtime.fontMono
+            font.pixelSize: overlay.theme.fontSize(9)
         }
     }
 }
