@@ -51,6 +51,15 @@ Item {
                 }
             }
 
+            Text {
+                visible: island.system.idleInhibited
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰅶"
+                color: island.theme.positive
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(15)
+            }
+
             // end-4's contextual muted-input indicator, sharing the same PipeWire state.
             Text {
                 visible: island.system.microphoneMuted

@@ -20,6 +20,10 @@ ShellRoot {
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
 
+    function toggleBar(): void {
+        ambientBar.shown = !ambientBar.shown;
+    }
+
     RuntimeConfig {
         id: runtime
     }
@@ -589,7 +593,7 @@ ShellRoot {
         appid: "linux-desktop"
         name: "bar"
         description: "Toggle top bar"
-        onPressed: ambientBar.shown = !ambientBar.shown
+        onPressed: root.toggleBar()
     }
 
     GlobalShortcut {
@@ -901,6 +905,22 @@ ShellRoot {
 
         function notificationsSilent(): bool {
             return notifications.silent;
+        }
+
+        function barShown(): bool {
+            return ambientBar.shown;
+        }
+
+        function toggleBar(): void {
+            root.toggleBar();
+        }
+
+        function idleInhibited(): bool {
+            return system.idleInhibited;
+        }
+
+        function toggleIdleInhibited(): void {
+            system.toggleIdleInhibited();
         }
 
         function clearNotifications(): void {

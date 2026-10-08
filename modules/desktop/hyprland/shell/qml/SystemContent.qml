@@ -479,16 +479,33 @@ FocusScope {
                 }
             }
 
-            ShellAction {
+            Row {
                 width: parent.width
-                height: 54
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                title: "󰂛  Do not disturb"
-                subtitle: root.notificationState.silent ? "Popups paused · history still recorded    Q" : "Popups enabled · press Q to pause"
-                active: root.notificationState.silent
-                onActivated: root.notificationState.toggleSilent()
+                spacing: root.theme.spacing3
+
+                ShellAction {
+                    width: (parent.width - parent.spacing) / 2
+                    height: 54
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "󰂛  Do not disturb"
+                    subtitle: root.notificationState.silent ? "Alerts paused · Q" : "Alerts enabled · Q"
+                    active: root.notificationState.silent
+                    onActivated: root.notificationState.toggleSilent()
+                }
+
+                ShellAction {
+                    width: (parent.width - parent.spacing) / 2
+                    height: 54
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "󰅶  Stay awake"
+                    subtitle: root.system.idleInhibited ? "Idle blocked · I" : "Normal idle · I"
+                    active: root.system.idleInhibited
+                    onActivated: root.system.toggleIdleInhibited()
+                }
             }
 
             ShellAction {
@@ -804,6 +821,14 @@ FocusScope {
                 spacing: root.theme.spacing4
 
                 Text {
+                    text: "I  AWAKE"
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "Q  QUIET"
                     color: root.theme.accent
                     font.family: root.runtime.fontMono
@@ -1053,6 +1078,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Q) {
                     root.notificationState.toggleSilent();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_I) {
+                    root.system.toggleIdleInhibited();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N) {
                     root.openNetwork();
