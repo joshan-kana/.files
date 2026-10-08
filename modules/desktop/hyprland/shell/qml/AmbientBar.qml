@@ -16,6 +16,11 @@ Variants {
     required property NotificationState notificationState
 
     property bool shown: true
+
+    onShownChanged: {
+        if (!shown)
+            system.idleInhibited = false;
+    }
     property var origins: ({})
 
     signal mediaRequested(var screen, var origin)
@@ -101,6 +106,12 @@ Variants {
         }
 
         WlrLayershell.namespace: "linux-desktop-bar"
+
+        // Wayland manages the inhibitor with the existing bar surface's lifetime.
+        IdleInhibitor {
+            window: bar
+            enabled: bars.system.idleInhibited && bar.visible
+        }
 
         SystemClock {
             id: clock
