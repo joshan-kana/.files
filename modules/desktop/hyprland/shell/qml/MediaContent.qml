@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 FocusScope {
@@ -54,15 +55,15 @@ FocusScope {
 
     SpectrumScale {
         id: spectrumScale
-        lowHz: spectrum.lowHz
-        highHz: spectrum.highHz
+        lowHz: content.spectrum.lowHz
+        highHz: content.spectrum.highHz
     }
 
     Timer {
         interval: 250
         repeat: true
-        running: content.engaged && media.playing && media.available
-        onTriggered: media.refreshPosition()
+        running: content.engaged && content.media.playing && content.media.available
+        onTriggered: content.media.refreshPosition()
     }
 
     function toggleVisualizer(): void {
@@ -94,7 +95,7 @@ FocusScope {
                 left: parent.left
                 right: parent.right
             }
-            spacing: theme.spacing4
+            spacing: content.theme.spacing4
 
             ShellSurface {
                 width: 112
@@ -108,63 +109,63 @@ FocusScope {
                 Image {
                     anchors.fill: parent
                     anchors.margins: 0
-                    source: media.artUrl
+                    source: content.media.artUrl
                     asynchronous: true
                     cache: true
                     fillMode: Image.PreserveAspectCrop
-                    visible: media.artUrl.length > 0
+                    visible: content.media.artUrl.length > 0
                 }
 
                 Text {
                     anchors.centerIn: parent
-                    visible: media.artUrl.length === 0
+                    visible: content.media.artUrl.length === 0
                     text: "♫"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(36)
+                    color: content.theme.accent
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(36)
                 }
             }
 
             Column {
                 width: header.width - 132 - header.spacing
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: theme.spacing2
+                spacing: content.theme.spacing2
 
                 Text {
-                    text: media.available ? "Now playing" : "Media"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    text: content.media.available ? "Now playing" : "Media"
+                    color: content.theme.accent
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(12)
                     font.weight: Font.Medium
                 }
 
                 Text {
                     width: parent.width
-                    text: media.title
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(22)
+                    text: content.media.title
+                    color: content.theme.textStrong
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(22)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
 
                 Text {
                     width: parent.width
-                    text: media.artist || media.identity || "No MPRIS player connected"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(13)
+                    text: content.media.artist || content.media.identity || "No MPRIS player connected"
+                    color: content.theme.textMuted
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(13)
                     elide: Text.ElideRight
                 }
 
                 Text {
                     width: parent.width
-                    visible: media.album.length > 0
-                    text: media.album
-                    color: theme.textMuted
+                    visible: content.media.album.length > 0
+                    text: content.media.album
+                    color: content.theme.textMuted
                     opacity: 0.72
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(10)
                     elide: Text.ElideRight
                 }
             }
@@ -176,7 +177,7 @@ FocusScope {
                 top: header.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: theme.spacing4
+                topMargin: content.theme.spacing4
             }
             spacing: 0
 
@@ -209,8 +210,8 @@ FocusScope {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: content.scrubbing ? 0 : motion.fast
-                            easing.type: motion.enterType
+                            duration: content.scrubbing ? 0 : content.motion.fast
+                            easing.type: content.motion.enterType
                         }
                     }
                 }
@@ -235,8 +236,8 @@ FocusScope {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: motion.fast
-                            easing.type: motion.enterType
+                            duration: content.motion.fast
+                            easing.type: content.motion.enterType
                         }
                     }
                 }
@@ -249,9 +250,9 @@ FocusScope {
                         right: parent.right
                         bottom: parent.bottom
                         left: parent.left
-                        rightMargin: theme.spacing3
-                        bottomMargin: theme.spacing1
-                        leftMargin: theme.spacing3
+                        rightMargin: content.theme.spacing3
+                        bottomMargin: content.theme.spacing1
+                        leftMargin: content.theme.spacing3
                     }
 
                     Repeater {
@@ -287,10 +288,10 @@ FocusScope {
 
                             x: Math.max(0, Math.min(frequencyLabels.width - implicitWidth, spectrumScale.fromFrequency(modelData.hz) * frequencyLabels.width - implicitWidth / 2))
                             text: modelData.label
-                            color: theme.textMuted
+                            color: content.theme.textMuted
                             opacity: 0.62
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            font.family: content.runtime.fontMono
+                            font.pixelSize: content.theme.fontSize(8)
                         }
                     }
                 }
@@ -303,9 +304,9 @@ FocusScope {
                 top: spectrumSlot.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: theme.spacing5
+                topMargin: content.theme.spacing5
             }
-            spacing: theme.spacing3
+            spacing: content.theme.spacing3
 
             ShellSlider {
                 id: progressTrack
@@ -316,11 +317,11 @@ FocusScope {
                 from: 0
                 to: 1
                 value: {
-                    if (!media.available || media.length <= 0)
+                    if (!content.media.available || content.media.length <= 0)
                         return 0;
-                    return content.scrubbing ? content.scrubFraction : Math.max(0, Math.min(1, media.position / media.length));
+                    return content.scrubbing ? content.scrubFraction : Math.max(0, Math.min(1, content.media.position / content.media.length));
                 }
-                enabled: media.seekable && media.length > 0
+                enabled: content.media.seekable && content.media.length > 0
                 accentColor: theme.accent
                 trackHeight: 8
                 handleSize: 18
@@ -332,9 +333,9 @@ FocusScope {
                 onInteractionUpdated: value => content.scrubFraction = value
                 onInteractionFinished: value => {
                     content.scrubFraction = value;
-                    const target = media.length * value;
+                    const target = content.media.length * value;
                     content.scrubbing = false;
-                    media.seekTo(target);
+                    content.media.seekTo(target);
                 }
             }
 
@@ -343,9 +344,9 @@ FocusScope {
 
                 Text {
                     text: content.formatTime(content.displayedPosition())
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    color: content.theme.textMuted
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(10)
                 }
 
                 Item {
@@ -354,47 +355,47 @@ FocusScope {
                 }
 
                 Text {
-                    text: content.formatTime(media.length)
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    text: content.formatTime(content.media.length)
+                    color: content.theme.textMuted
+                    font.family: content.runtime.fontMono
+                    font.pixelSize: content.theme.fontSize(10)
                 }
             }
 
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: theme.spacing2
+                spacing: content.theme.spacing2
 
                 Repeater {
                     model: [
                         {
                             label: "◀",
                             hint: ",",
-                            enabled: media.available,
+                            enabled: content.media.available,
                             action: "previous"
                         },
                         {
                             label: "−5s",
                             hint: "←",
-                            enabled: media.seekable,
+                            enabled: content.media.seekable,
                             action: "back"
                         },
                         {
-                            label: media.playing ? "Pause" : "Play",
+                            label: content.media.playing ? "Pause" : "Play",
                             hint: "Space",
-                            enabled: media.available,
+                            enabled: content.media.available,
                             action: "play"
                         },
                         {
                             label: "+5s",
                             hint: "→",
-                            enabled: media.seekable,
+                            enabled: content.media.seekable,
                             action: "forward"
                         },
                         {
                             label: "▶",
                             hint: ".",
-                            enabled: media.available,
+                            enabled: content.media.available,
                             action: "next"
                         }
                     ]
@@ -415,15 +416,15 @@ FocusScope {
 
                         onActivated: {
                             if (modelData.action === "previous")
-                                media.previous();
+                                content.media.previous();
                             else if (modelData.action === "back")
-                                media.seek(-5);
+                                content.media.seek(-5);
                             else if (modelData.action === "play")
-                                media.togglePlaying();
+                                content.media.togglePlaying();
                             else if (modelData.action === "forward")
-                                media.seek(5);
+                                content.media.seek(5);
                             else if (modelData.action === "next")
-                                media.next();
+                                content.media.next();
                         }
                     }
                 }
@@ -438,10 +439,10 @@ FocusScope {
             }
 
             Text {
-                text: media.available ? media.identity : "MPRIS"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                text: content.media.available ? content.media.identity : "MPRIS"
+                color: content.theme.textMuted
+                font.family: content.runtime.fontMono
+                font.pixelSize: content.theme.fontSize(9)
                 font.letterSpacing: 1
             }
 
@@ -451,7 +452,7 @@ FocusScope {
             }
 
             Row {
-                spacing: theme.spacing2
+                spacing: content.theme.spacing2
 
                 ShellAction {
                     width: 94
@@ -512,22 +513,22 @@ FocusScope {
                     content.closeRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Space) {
-                    media.togglePlaying();
+                    content.media.togglePlaying();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_V) {
                     content.toggleVisualizer();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                    media.seek(-5);
+                    content.media.seek(-5);
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                    media.seek(5);
+                    content.media.seek(5);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Comma) {
-                    media.previous();
+                    content.media.previous();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Period) {
-                    media.next();
+                    content.media.next();
                     event.accepted = true;
                 }
             }

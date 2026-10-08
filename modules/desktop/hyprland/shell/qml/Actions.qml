@@ -2,20 +2,20 @@ import QtQuick
 import Quickshell
 
 QtObject {
-    required property QtObject runtime
-    required property QtObject screenRouter
-    required property QtObject ambientBar
-    required property QtObject expansionState
-    required property QtObject cheatsheet
-    required property QtObject launcher
-    required property QtObject clipboardPanel
-    required property QtObject audioMixerPanel
-    required property QtObject mediaState
-    required property QtObject systemState
-    required property QtObject brightnessState
-    required property QtObject notificationCenter
-    required property QtObject notificationState
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property ScreenRouter screenRouter
+    required property AmbientBar ambientBar
+    required property ShellExpansionState expansionState
+    required property ShortcutCheatsheet cheatsheet
+    required property CommandPalette launcher
+    required property ClipboardPanel clipboardPanel
+    required property AudioMixerPanel audioMixerPanel
+    required property MediaState mediaState
+    required property SystemState systemState
+    required property BrightnessState brightnessState
+    required property NotificationCenter notificationCenter
+    required property NotificationState notificationState
+    required property Motion motion
 
     function hideTransient(except: string): void {
         if (except !== "cheatsheet" && cheatsheet.open)

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
@@ -5,10 +6,10 @@ import Quickshell.Bluetooth
 Item {
     id: panel
 
-    required property QtObject system
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property SystemState system
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     signal keyboardRequested
 
@@ -222,50 +223,50 @@ Item {
         id: header
 
         width: parent.width
-        spacing: theme.spacing1
+        spacing: panel.theme.spacing1
 
         Text {
-            text: adapterAvailable ? "Bluetooth · " + (adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
-            color: adapterAvailable && adapter.enabled ? theme.positive : theme.warning
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(11)
+            text: panel.adapterAvailable ? "Bluetooth · " + (panel.adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
+            color: panel.adapterAvailable && panel.adapter.enabled ? panel.theme.positive : panel.theme.warning
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.Medium
         }
 
         Text {
-            text: adapterAvailable ? (adapter.name || adapter.adapterId || "Bluetooth") : "Bluetooth"
-            color: theme.textStrong
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSubpanelTitle
+            text: panel.adapterAvailable ? (panel.adapter.name || panel.adapter.adapterId || "Bluetooth") : "Bluetooth"
+            color: panel.theme.textStrong
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
         }
 
         Row {
             width: parent.width
-            spacing: theme.spacing3
+            spacing: panel.theme.spacing3
 
             Text {
-                visible: adapterAvailable
-                text: system.bluetoothEnabled ? "Radio on" : "Radio off"
-                color: system.bluetoothEnabled ? theme.accent : theme.critical
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                visible: panel.adapterAvailable
+                text: panel.system.bluetoothEnabled ? "Radio on" : "Radio off"
+                color: panel.system.bluetoothEnabled ? panel.theme.accent : panel.theme.critical
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
 
             Text {
-                visible: adapterAvailable && system.bluetoothEnabled
-                text: system.bluetoothDiscovering ? "SCANNING" : "SCAN IDLE"
-                color: system.bluetoothDiscovering ? theme.positive : theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                visible: panel.adapterAvailable && panel.system.bluetoothEnabled
+                text: panel.system.bluetoothDiscovering ? "SCANNING" : "SCAN IDLE"
+                color: panel.system.bluetoothDiscovering ? panel.theme.positive : panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
 
             Text {
-                visible: adapterAvailable
-                text: system.bluetoothConnectedCount + " CONNECTED"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(9)
+                visible: panel.adapterAvailable
+                text: panel.system.bluetoothConnectedCount + " CONNECTED"
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
             }
         }
     }
@@ -276,17 +277,17 @@ Item {
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: theme.spacing4
-            bottomMargin: theme.spacing3
+            topMargin: panel.theme.spacing4
+            bottomMargin: panel.theme.spacing3
         }
 
         ListView {
             id: deviceList
 
             anchors.fill: parent
-            visible: adapterAvailable && adapter.enabled
+            visible: panel.adapterAvailable && panel.adapter.enabled
             model: panel.devices
-            spacing: theme.spacing2
+            spacing: panel.theme.spacing2
             clip: true
             currentIndex: panel.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
@@ -324,59 +325,59 @@ Item {
                 Row {
                     anchors {
                         fill: parent
-                        margins: theme.spacing3
+                        margins: panel.theme.spacing3
                     }
-                    spacing: theme.spacing3
+                    spacing: panel.theme.spacing3
 
                     Column {
                         width: parent.width - 126
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: theme.spacing1
+                        spacing: panel.theme.spacing1
 
                         Text {
                             width: parent.width
-                            text: panel.displayName(modelData)
-                            color: theme.textStrong
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(13)
-                            font.weight: modelData.connected ? Font.DemiBold : Font.Normal
+                            text: panel.displayName(deviceRow.modelData)
+                            color: panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(13)
+                            font.weight: deviceRow.modelData.connected ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
                         }
 
                         Text {
                             width: parent.width
-                            text: modelData.address
-                            color: theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            text: deviceRow.modelData.address
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
                             elide: Text.ElideRight
                         }
 
                         Row {
-                            spacing: theme.spacing2
+                            spacing: panel.theme.spacing2
 
                             Text {
-                                text: BluetoothDeviceState.toString(modelData.state).toUpperCase()
-                                color: modelData.connected ? theme.positive : theme.textMuted
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(8)
+                                text: BluetoothDeviceState.toString(deviceRow.modelData.state).toUpperCase()
+                                color: deviceRow.modelData.connected ? panel.theme.positive : panel.theme.textMuted
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
 
                             Text {
-                                text: modelData.pairing ? "PAIRING" : (modelData.paired ? "PAIRED" : "UNPAIRED")
-                                color: modelData.paired || modelData.pairing ? theme.accent : theme.warning
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(8)
+                                text: deviceRow.modelData.pairing ? "PAIRING" : (deviceRow.modelData.paired ? "PAIRED" : "UNPAIRED")
+                                color: deviceRow.modelData.paired || deviceRow.modelData.pairing ? panel.theme.accent : panel.theme.warning
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
 
                             Text {
-                                visible: modelData.trusted
+                                visible: deviceRow.modelData.trusted
                                 text: "TRUSTED"
-                                color: theme.accent
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(8)
+                                color: panel.theme.accent
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -385,26 +386,26 @@ Item {
                     Column {
                         width: 114
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: theme.spacing1
+                        spacing: panel.theme.spacing1
 
                         Text {
                             width: parent.width
                             horizontalAlignment: Text.AlignRight
-                            text: modelData.pairing ? "P  CANCEL" : (!modelData.paired ? "P  PAIR" : (modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
-                            color: modelData.pairing || !modelData.paired ? theme.warning : theme.accent
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            text: deviceRow.modelData.pairing ? "P  CANCEL" : (!deviceRow.modelData.paired ? "P  PAIR" : (deviceRow.modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
+                            color: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.theme.warning : panel.theme.accent
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
                             font.weight: Font.DemiBold
                         }
 
                         Text {
                             width: parent.width
-                            visible: modelData.batteryAvailable
+                            visible: deviceRow.modelData.batteryAvailable
                             horizontalAlignment: Text.AlignRight
-                            text: "BAT " + Math.round(modelData.battery * 100) + "%"
-                            color: modelData.battery <= 0.20 ? theme.warning : theme.textMuted
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(8)
+                            text: "BAT " + Math.round(deviceRow.modelData.battery * 100) + "%"
+                            color: deviceRow.modelData.battery <= 0.20 ? panel.theme.warning : panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(8)
                         }
                     }
                 }
@@ -415,37 +416,37 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            visible: !adapterAvailable
+            visible: !panel.adapterAvailable
             width: parent.width
             text: "No Bluetooth adapter"
             horizontalAlignment: Text.AlignHCenter
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(10)
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
 
         Text {
             anchors.centerIn: parent
-            visible: adapterAvailable && !system.bluetoothEnabled
+            visible: panel.adapterAvailable && !panel.system.bluetoothEnabled
             width: parent.width
             text: "Bluetooth is off · press B to enable"
             horizontalAlignment: Text.AlignHCenter
-            color: theme.warning
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(10)
+            color: panel.theme.warning
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
 
         Text {
             anchors.centerIn: parent
-            visible: adapterAvailable && system.bluetoothEnabled && devices.length === 0
+            visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length === 0
             width: parent.width
-            text: system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS D TO SCAN"
+            text: panel.system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS D TO SCAN"
             horizontalAlignment: Text.AlignHCenter
-            color: theme.textMuted
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(10)
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
         }
     }
@@ -458,16 +459,16 @@ Item {
             bottom: parent.bottom
             left: parent.left
         }
-        spacing: theme.spacing2
+        spacing: panel.theme.spacing2
 
         Text {
             width: parent.width
-            visible: statusText.length > 0
-            text: statusText
+            visible: panel.statusText.length > 0
+            text: panel.statusText
             horizontalAlignment: Text.AlignRight
-            color: statusError ? theme.critical : (forgetAddress.length > 0 ? theme.warning : theme.accent)
-            font.family: runtime.fontMono
-            font.pixelSize: theme.fontSize(8)
+            color: panel.statusError ? panel.theme.critical : (panel.forgetAddress.length > 0 ? panel.theme.warning : panel.theme.accent)
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
             elide: Text.ElideRight
@@ -475,67 +476,67 @@ Item {
 
         Row {
             anchors.right: parent.right
-            spacing: theme.spacing3
+            spacing: panel.theme.spacing3
 
             Text {
                 text: "↑/↓  SELECT"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
                 text: "ENTER  LINK"
-                color: theme.accent
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
                 text: "B  RADIO"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
                 text: "D  SCAN"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
         }
 
         Row {
             anchors.right: parent.right
-            spacing: theme.spacing3
+            spacing: panel.theme.spacing3
 
             Text {
                 text: "P  PAIR"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
                 text: "T  TRUST"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
-                text: forgetAddress.length > 0 ? "F  CONFIRM" : "F  FORGET"
-                color: forgetAddress.length > 0 ? theme.warning : theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                text: panel.forgetAddress.length > 0 ? "F  CONFIRM" : "F  FORGET"
+                color: panel.forgetAddress.length > 0 ? panel.theme.warning : panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
 
             Text {
                 text: "ESC  BACK"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(8)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(8)
             }
         }
     }

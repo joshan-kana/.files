@@ -3,8 +3,8 @@ import QtQuick
 MouseArea {
     id: root
 
-    required property QtObject theme
-    required property QtObject motion
+    required property Theme theme
+    required property Motion motion
 
     property bool disabled: false
     property bool selected: false
