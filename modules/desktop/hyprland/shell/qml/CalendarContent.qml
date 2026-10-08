@@ -101,10 +101,10 @@ FocusScope {
             if (event.key === Qt.Key_Escape) {
                 calendar.closeRequested();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_PageUp || event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_PageUp) {
                 calendar.browseMonths(-1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down || event.key === Qt.Key_PageDown || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down || event.key === Qt.Key_PageDown) {
                 calendar.browseMonths(1);
                 event.accepted = true;
             } else if (event.key === Qt.Key_T) {
