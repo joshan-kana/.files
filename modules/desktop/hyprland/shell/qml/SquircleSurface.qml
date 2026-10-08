@@ -11,10 +11,12 @@ Item {
     property real borderWidth: 0
     property real cornerRadius: 28
     property real exponent: 4.5
-    property int cornerSamples: 32
+    // Match arc detail to its size instead of tessellating tiny controls
+    // into the same number of segments as large panels.
+    readonly property int cornerSamples: Math.max(8, Math.min(20, Math.ceil(cornerRadius * 0.7)))
 
     readonly property string fillPathData: buildPath(0)
-    readonly property string borderPathData: buildPath(Math.max(0, borderWidth / 2))
+    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? buildPath(borderWidth / 2) : ""
 
     function point(value: real): string {
         return Number(value).toFixed(4);
