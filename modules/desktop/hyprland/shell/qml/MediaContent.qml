@@ -362,72 +362,12 @@ FocusScope {
                 }
             }
 
-            Row {
+            MediaTransport {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: content.theme.spacing2
-
-                Repeater {
-                    model: [
-                        {
-                            label: "◀",
-                            hint: ",",
-                            enabled: content.media.available,
-                            action: "previous"
-                        },
-                        {
-                            label: "−5s",
-                            hint: "←",
-                            enabled: content.media.seekable,
-                            action: "back"
-                        },
-                        {
-                            label: content.media.playing ? "Pause" : "Play",
-                            hint: "Space",
-                            enabled: content.media.available,
-                            action: "play"
-                        },
-                        {
-                            label: "+5s",
-                            hint: "→",
-                            enabled: content.media.seekable,
-                            action: "forward"
-                        },
-                        {
-                            label: "▶",
-                            hint: ".",
-                            enabled: content.media.available,
-                            action: "next"
-                        }
-                    ]
-
-                    delegate: ShellAction {
-                        required property var modelData
-
-                        width: modelData.action === "play" ? 108 : 76
-                        height: 40
-                        anchors.verticalCenter: parent.verticalCenter
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        compact: true
-                        title: modelData.hint + "  " + modelData.label
-                        active: modelData.action === "play"
-                        enabled: modelData.enabled
-
-                        onActivated: {
-                            if (modelData.action === "previous")
-                                content.media.previous();
-                            else if (modelData.action === "back")
-                                content.media.seek(-5);
-                            else if (modelData.action === "play")
-                                content.media.togglePlaying();
-                            else if (modelData.action === "forward")
-                                content.media.seek(5);
-                            else if (modelData.action === "next")
-                                content.media.next();
-                        }
-                    }
-                }
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                media: content.media
             }
         }
 
