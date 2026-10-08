@@ -373,14 +373,15 @@ Item {
                 font.letterSpacing: 1
             }
 
-            SquircleSurface {
+            ShellSurface {
                 width: parent.width
                 height: 50
-                exponent: theme.squircleExponent
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusMedium
-                fillColor: theme.background
-                borderColor: passwordInput.activeFocus ? theme.accent : theme.outline
-                borderWidth: passwordInput.activeFocus ? theme.borderFocus : theme.borderThin
+                outlined: passwordInput.activeFocus
+                borderColor: passwordInput.activeFocus ? theme.accent : theme.subtleBorder
 
                 TextInput {
                     id: passwordInput
