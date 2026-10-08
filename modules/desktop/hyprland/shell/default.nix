@@ -270,8 +270,12 @@ in
           pkgs.awww
           pkgs.coreutils
           pkgs.jq
+          pkgs.util-linux
         ];
         text = ''
+          exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
+          flock -n 9 || exit 0
+
           runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
           wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$runtime")"
 
@@ -290,6 +294,52 @@ in
 
           printf 'awww daemon is not ready\n' >&2
           exit 1
+        '';
+      };
+
+      videoWallpaper = pkgs.writeShellApplication {
+        name = "linux-desktop-wallpaper-video";
+        runtimeInputs = [
+          pkgs.awww
+          pkgs.coreutils
+          pkgs.mpvpaper
+          pkgs.systemd
+          pkgs.util-linux
+        ];
+        text = ''
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            printf 'Usage: linux-desktop-wallpaper-video <video-file>\n' >&2
+            exit 2
+          fi
+
+          exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
+          if ! flock -n 9; then
+            printf 'Another wallpaper operation is already in progress\n' >&2
+            exit 1
+          fi
+
+          # mpvpaper preserves video aspect ratio, leaving transparent borders.
+          # Cover those borders with a solid color, not the previous wallpaper.
+          for _ in {1..25}; do
+            if awww clear 000000 >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.2
+          done
+          if ! awww query >/dev/null 2>&1; then
+            printf 'awww daemon is not ready\n' >&2
+            exit 1
+          fi
+
+          restore() {
+            flock -u 9
+            systemctl --user start linux-desktop-wallpaper-image.service || true
+          }
+          trap restore EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+
+          mpvpaper -l bottom -o 'no-audio loop-file=inf hwdec=auto' '*' "$1"
         '';
       };
 
@@ -489,6 +539,7 @@ in
         lockCommand
         sessionCommand
         clipboardCopy
+        videoWallpaper
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
@@ -581,12 +632,16 @@ in
           Unit = {
             Description = "Hyprland desktop video wallpaper";
             PartOf = [ "hyprland-session.target" ];
-            After = [ "hyprland-session.target" ];
+            Wants = [ "awww.service" ];
+            After = [
+              "hyprland-session.target"
+              "awww.service"
+            ];
             ConditionPathExists = scopeConfig.videoWallpaper;
           };
 
           Service = {
-            ExecStart = "${lib.getExe pkgs.mpvpaper} -l bottom -o ${lib.escapeShellArg "no-audio loop-file=inf hwdec=auto panscan=1"} ${lib.escapeShellArg "*"} ${lib.escapeShellArg scopeConfig.videoWallpaper}";
+            ExecStart = "${lib.getExe videoWallpaper} ${lib.escapeShellArg scopeConfig.videoWallpaper}";
             Restart = "on-failure";
             RestartSec = 2;
           };
