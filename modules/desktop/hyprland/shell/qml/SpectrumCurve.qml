@@ -1,12 +1,13 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Shapes
 
 Item {
     id: root
 
-    required property QtObject spectrum
-    required property QtObject theme
-    required property var frequencyScale
+    required property SpectrumState spectrum
+    required property Theme theme
+    required property SpectrumScale frequencyScale
 
     readonly property var geometry: {
         const values = spectrum.bands || [];
