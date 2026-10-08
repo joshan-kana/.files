@@ -307,8 +307,19 @@ in
           pkgs.util-linux
         ];
         text = ''
+          mpvOptions='no-audio loop-file=inf hwdec=auto'
+          case "''${1:-}" in
+            --fit)
+              shift
+              ;;
+            --fill)
+              mpvOptions="$mpvOptions panscan=1"
+              shift
+              ;;
+          esac
+
           if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
-            printf 'Usage: linux-desktop-wallpaper-video <video-file>\n' >&2
+            printf 'Usage: linux-desktop-wallpaper-video [--fit|--fill] <video-file>\n' >&2
             exit 2
           fi
 
@@ -339,7 +350,7 @@ in
           trap 'exit 130' INT
           trap 'exit 143' TERM
 
-          mpvpaper -l bottom -o 'no-audio loop-file=inf hwdec=auto' '*' "$1"
+          mpvpaper -l bottom -o "$mpvOptions" '*' "$1"
         '';
       };
 
