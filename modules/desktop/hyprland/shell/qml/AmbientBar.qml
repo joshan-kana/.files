@@ -20,6 +20,7 @@ Variants {
 
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
+    signal calendarRequested(var screen, var origin)
     signal notificationsRequested
 
     function screenKey(screen: var): string {
@@ -79,6 +80,7 @@ Variants {
 
             bars.setOrigin(modelData, "media", barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
             bars.setOrigin(modelData, "system", barContent.x + systemIsland.x + systemIsland.width / 2, systemIsland.width, systemIsland.height);
+            bars.setOrigin(modelData, "calendar", barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
         }
 
         Component.onCompleted: Qt.callLater(publishOrigins)
@@ -260,6 +262,12 @@ Variants {
                         font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.DemiBold
                     }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: bars.calendarRequested(bar.modelData, bars.originFor(bar.modelData, "calendar"))
                 }
             }
 
