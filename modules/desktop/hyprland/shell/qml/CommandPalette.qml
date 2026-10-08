@@ -52,10 +52,12 @@ PanelWindow {
             return 1;
         if (name.includes(query))
             return 2;
-        if (generic.startsWith(query))
+        if ((item.keywords || []).some(keyword => keyword.toLowerCase() === query))
             return 3;
-        if (generic.includes(query))
+        if (generic.startsWith(query))
             return 4;
+        if (generic.includes(query))
+            return 5;
 
         return 10;
     }
@@ -467,7 +469,8 @@ PanelWindow {
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: results.currentIndex = result.index
+                        // Do not select a new row when search results move beneath a stationary pointer.
+                        onPositionChanged: results.currentIndex = result.index
                         onClicked: {
                             results.currentIndex = result.index;
                             palette.launchCurrent(false);
