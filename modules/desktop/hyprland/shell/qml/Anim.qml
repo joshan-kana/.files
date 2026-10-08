@@ -12,7 +12,7 @@ NumberAnimation {
         SlowEffects
     }
 
-    required property QtObject motion
+    required property Motion motion
     property int type: Anim.DefaultSpatial
 
     duration: {

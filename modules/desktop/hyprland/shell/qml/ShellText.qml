@@ -1,8 +1,8 @@
 import QtQuick
 
 Text {
-    required property QtObject runtime
-    required property QtObject theme
+    required property RuntimeConfig runtime
+    required property Theme theme
 
     color: theme.text
     font.family: runtime.fontMono

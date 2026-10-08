@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -5,9 +6,9 @@ import Quickshell.Wayland
 PanelWindow {
     id: window
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
     property bool closing: false
@@ -31,7 +32,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: window.motion.fast
         onTriggered: window.closing = false
     }
 
@@ -135,13 +136,13 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrimHeavy
+        color: window.theme.scrimHeavy
         opacity: window.open ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: window.open ? motion.enterType : motion.exitType
+                duration: window.motion.fast
+                easing.type: window.open ? window.motion.enterType : window.motion.exitType
             }
         }
 
@@ -167,14 +168,14 @@ PanelWindow {
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.normal
-                easing.type: motion.enterType
+                duration: window.motion.normal
+                easing.type: window.motion.enterType
             }
         }
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing5
+            anchors.margins: window.theme.spacing5
 
             Item {
                 id: header
@@ -186,9 +187,9 @@ PanelWindow {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Shortcuts"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(28)
+                    color: window.theme.textStrong
+                    font.family: window.runtime.fontMono
+                    font.pixelSize: window.theme.fontSize(28)
                     font.weight: Font.DemiBold
                 }
 
@@ -196,10 +197,10 @@ PanelWindow {
                     id: headerHint
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: runtime.shortcut("shortcuts.toggle") + "   ·   ESC CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    text: window.runtime.shortcut("shortcuts.toggle") + "   ·   ESC CLOSE"
+                    color: window.theme.textMuted
+                    font.family: window.runtime.fontMono
+                    font.pixelSize: window.theme.fontSize(10)
                     font.letterSpacing: 0.6
                 }
             }
@@ -227,13 +228,13 @@ PanelWindow {
                     anchors {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
-                        leftMargin: theme.spacing3
+                        leftMargin: window.theme.spacing3
                     }
                     visible: search.text.length === 0
                     text: "Search shortcuts…"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(13)
+                    color: window.theme.textMuted
+                    font.family: window.runtime.fontMono
+                    font.pixelSize: window.theme.fontSize(13)
                 }
 
                 TextInput {
@@ -241,16 +242,16 @@ PanelWindow {
 
                     anchors {
                         fill: parent
-                        leftMargin: theme.spacing3
-                        rightMargin: theme.spacing3
+                        leftMargin: window.theme.spacing3
+                        rightMargin: window.theme.spacing3
                     }
                     verticalAlignment: TextInput.AlignVCenter
                     clip: true
-                    color: theme.text
-                    selectionColor: theme.accent
-                    selectedTextColor: theme.background
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(13)
+                    color: window.theme.text
+                    selectionColor: window.theme.accent
+                    selectedTextColor: window.theme.background
+                    font.family: window.runtime.fontMono
+                    font.pixelSize: window.theme.fontSize(13)
                     onTextChanged: {
                         window.query = text;
                         flick.contentY = 0;
@@ -266,8 +267,8 @@ PanelWindow {
                     right: parent.right
                     bottom: footer.top
                     left: parent.left
-                    topMargin: theme.spacing4
-                    bottomMargin: theme.spacing4
+                    topMargin: window.theme.spacing4
+                    bottomMargin: window.theme.spacing4
                 }
 
                 clip: true
@@ -280,35 +281,37 @@ PanelWindow {
 
                     width: parent.width
                     columns: width >= 1180 ? 3 : (width >= 760 ? 2 : 1)
-                    columnSpacing: theme.spacing5
-                    rowSpacing: theme.spacing5
+                    columnSpacing: window.theme.spacing5
+                    rowSpacing: window.theme.spacing5
 
                     Repeater {
                         model: window.sections
 
                         delegate: Column {
+                            id: shortcutSection
                             required property var modelData
 
                             width: (sectionGrid.width - sectionGrid.columnSpacing * (sectionGrid.columns - 1)) / sectionGrid.columns
-                            spacing: theme.spacing2
+                            spacing: window.theme.spacing2
 
                             Text {
-                                text: modelData.title
-                                color: theme.accent
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(12)
+                                text: shortcutSection.modelData.title
+                                color: window.theme.accent
+                                font.family: window.runtime.fontMono
+                                font.pixelSize: window.theme.fontSize(12)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.6
                             }
 
                             Repeater {
-                                model: modelData.items
+                                model: shortcutSection.modelData.items
 
                                 delegate: Row {
+                                    id: shortcutBinding
                                     required property var modelData
 
                                     width: parent.width
-                                    spacing: theme.spacing3
+                                    spacing: window.theme.spacing3
 
                                     ShellSurface {
                                         width: 142
@@ -320,10 +323,10 @@ PanelWindow {
 
                                         Text {
                                             anchors.centerIn: parent
-                                            text: modelData.key
-                                            color: theme.textStrong
-                                            font.family: runtime.fontMono
-                                            font.pixelSize: theme.fontSize(11)
+                                            text: shortcutBinding.modelData.key
+                                            color: window.theme.textStrong
+                                            font.family: window.runtime.fontMono
+                                            font.pixelSize: window.theme.fontSize(11)
                                             font.weight: Font.Medium
                                         }
                                     }
@@ -331,10 +334,10 @@ PanelWindow {
                                     Text {
                                         width: parent.width - 142 - parent.spacing
                                         anchors.verticalCenter: parent.children[0].verticalCenter
-                                        text: modelData.description
-                                        color: theme.text
-                                        font.family: runtime.fontMono
-                                        font.pixelSize: theme.fontSize(13)
+                                        text: shortcutBinding.modelData.description
+                                        color: window.theme.text
+                                        font.family: window.runtime.fontMono
+                                        font.pixelSize: window.theme.fontSize(13)
                                         elide: Text.ElideRight
                                     }
                                 }
@@ -348,9 +351,9 @@ PanelWindow {
                 anchors.centerIn: flick
                 visible: window.query.trim().length > 0 && window.filteredBindingCount === 0
                 text: "No matching shortcuts"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(14)
+                color: window.theme.textMuted
+                font.family: window.runtime.fontMono
+                font.pixelSize: window.theme.fontSize(14)
             }
 
             Rectangle {
@@ -362,7 +365,7 @@ PanelWindow {
                 }
                 width: 3
                 radius: 2
-                color: theme.outline
+                color: window.theme.outline
                 opacity: 0.28
                 visible: flick.contentHeight > flick.height + 1
 
@@ -377,7 +380,7 @@ PanelWindow {
                         return (parent.height - height) * Math.max(0, Math.min(1, flick.contentY / maxScroll));
                     }
                     radius: parent.radius
-                    color: theme.accent
+                    color: window.theme.accent
                     opacity: 0.82
                 }
             }
@@ -398,9 +401,9 @@ PanelWindow {
                         verticalCenter: parent.verticalCenter
                     }
                     text: search.activeFocus ? "TYPE  SEARCH   TAB  NAV   PGUP/PGDN  PAGE" : "J/K  SCROLL   U/D  HALF PAGE   /  SEARCH   ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
+                    color: window.theme.textMuted
+                    font.family: window.runtime.fontMono
+                    font.pixelSize: window.theme.fontSize(10)
                     font.letterSpacing: 0.4
                 }
 
@@ -410,20 +413,20 @@ PanelWindow {
                         right: parent.right
                         verticalCenter: parent.verticalCenter
                     }
-                    spacing: theme.spacing3
+                    spacing: window.theme.spacing3
 
                     Text {
-                        text: window.filteredBindingCount + " / " + runtime.keybindings.length + " bindings"
-                        color: theme.textMuted
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(12)
+                        text: window.filteredBindingCount + " / " + window.runtime.keybindings.length + " bindings"
+                        color: window.theme.textMuted
+                        font.family: window.runtime.fontMono
+                        font.pixelSize: window.theme.fontSize(12)
                     }
 
                     Text {
-                        text: "TOGGLE " + runtime.shortcut("shortcuts.toggle")
-                        color: theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(12)
+                        text: "TOGGLE " + window.runtime.shortcut("shortcuts.toggle")
+                        color: window.theme.accent
+                        font.family: window.runtime.fontMono
+                        font.pixelSize: window.theme.fontSize(12)
                         font.weight: Font.DemiBold
                     }
                 }
