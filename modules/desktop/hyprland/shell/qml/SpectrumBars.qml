@@ -8,80 +8,43 @@ Item {
     required property var frequencyScale
 
     property int barCount: 48
+    readonly property var values: spectrum.bands || []
+    readonly property int count: Math.min(barCount, Math.ceil(values.length / 2))
 
-    Canvas {
-        id: canvas
-        anchors.fill: parent
-        antialiasing: true
+    function levelFor(index: int): real {
+        if (count === 0)
+            return 0;
 
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
+        const source = Math.round(index / Math.max(1, count - 1) * (values.length - 1));
+        const previous = index > 0 ? Math.round((index - 1) / Math.max(1, count - 1) * (values.length - 1)) : source;
+        const next = index < count - 1 ? Math.round((index + 1) / Math.max(1, count - 1) * (values.length - 1)) : source;
+        let peak = 0;
+        for (let sample = Math.floor((previous + source) / 2); sample <= Math.ceil((source + next) / 2); sample++)
+            peak = Math.max(peak, values[sample] || 0);
 
-            const values = root.spectrum.bands || [];
-            if (values.length === 0)
-                return;
-
-            const count = Math.min(root.barCount, Math.ceil(values.length / 2));
-            if (count < 1)
-                return;
-
-            const centers = [];
-            const sources = [];
-            for (let index = 0; index < count; index++) {
-                const t = count <= 1 ? 0 : index / (count - 1);
-                const source = Math.round(t * Math.max(0, values.length - 1));
-                sources.push(source);
-                centers.push(root.frequencyScale.fromNormalized(t) * width);
-            }
-
-            for (let index = 0; index < count; index++) {
-                const source = sources[index];
-                const previousSource = index > 0 ? Math.floor((sources[index - 1] + source) / 2) : source;
-                const nextSource = index < count - 1 ? Math.ceil((source + sources[index + 1]) / 2) : source;
-                let raw = 0;
-                for (let sample = previousSource; sample <= nextSource; sample++)
-                    raw = Math.max(raw, values[sample] || 0);
-                const level = Math.pow(Math.max(0, Math.min(1, raw)), 0.88);
-                const barHeight = Math.max(2, level * height);
-                const center = centers[index];
-                const leftEdge = index === 0 ? 0 : (centers[index - 1] + center) / 2;
-                const rightEdge = index === count - 1 ? width : (center + centers[index + 1]) / 2;
-                const cellWidth = Math.max(1, rightEdge - leftEdge);
-                const barWidth = Math.max(1, cellWidth * 0.70);
-                const x = Math.max(0, Math.min(width - barWidth, center - barWidth / 2));
-                const y = height - barHeight;
-
-                const mix = count <= 1 ? 0 : index / (count - 1);
-                const r = theme.accent.r * (1 - mix) + theme.positive.r * mix;
-                const g = theme.accent.g * (1 - mix) + theme.positive.g * mix;
-                const b = theme.accent.b * (1 - mix) + theme.positive.b * mix;
-                ctx.fillStyle = Qt.rgba(r, g, b, 0.95);
-
-                const radius = Math.min(barWidth / 2, 3);
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + barWidth - radius, y);
-                ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
-                ctx.lineTo(x + barWidth, height);
-                ctx.lineTo(x, height);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
+        return Math.pow(Math.max(0, Math.min(1, peak)), 0.88);
     }
 
-    Connections {
-        target: root.spectrum
+    Repeater {
+        model: root.count
 
-        function onBandsChanged() {
-            canvas.requestPaint();
+        delegate: Rectangle {
+            required property int index
+
+            readonly property real fraction: root.count <= 1 ? 0 : index / (root.count - 1)
+            readonly property real center: root.frequencyScale.fromNormalized(fraction) * root.width
+            readonly property real previousCenter: index > 0 ? root.frequencyScale.fromNormalized((index - 1) / (root.count - 1)) * root.width : 0
+            readonly property real nextCenter: index < root.count - 1 ? root.frequencyScale.fromNormalized((index + 1) / (root.count - 1)) * root.width : root.width
+            readonly property real leftEdge: index === 0 ? 0 : (previousCenter + center) / 2
+            readonly property real rightEdge: index === root.count - 1 ? root.width : (center + nextCenter) / 2
+            readonly property real level: root.levelFor(index)
+
+            width: Math.max(1, (rightEdge - leftEdge) * 0.70)
+            height: Math.max(2, level * root.height)
+            x: Math.max(0, Math.min(root.width - width, center - width / 2))
+            y: root.height - height
+            radius: Math.min(width / 2, 3)
+            color: Qt.rgba(root.theme.accent.r * (1 - fraction) + root.theme.positive.r * fraction, root.theme.accent.g * (1 - fraction) + root.theme.positive.g * fraction, root.theme.accent.b * (1 - fraction) + root.theme.positive.b * fraction, 0.95)
         }
     }
 }
