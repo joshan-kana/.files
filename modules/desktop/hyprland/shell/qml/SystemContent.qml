@@ -179,7 +179,7 @@ FocusScope {
     signal mediaRequested
 
     implicitWidth: 512
-    implicitHeight: mixerOpen ? mixerView.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
+    implicitHeight: mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
     focus: engaged
 
     function applyRequestedView(): void {
@@ -915,13 +915,19 @@ FocusScope {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         sessionPanel.closeView();
                         event.accepted = true;
-                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        sessionPanel.moveSelection(-1);
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                        sessionPanel.moveGrid(0, -1);
                         event.accepted = true;
-                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        sessionPanel.moveSelection(1);
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                        sessionPanel.moveGrid(0, 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+                        sessionPanel.moveGrid(-1, 0);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+                        sessionPanel.moveGrid(1, 0);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
                         sessionPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
