@@ -26,14 +26,12 @@ PanelWindow {
 
     WlrLayershell.namespace: "linux-desktop-resize-hints"
 
-    SquircleSurface {
+    ShellSurface {
         anchors.fill: parent
-
-        exponent: theme.squircleExponent
+        theme: overlay.theme
+        motion: overlay.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: theme.panelFill
-        borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.34)
-        borderWidth: theme.borderThin
 
         Row {
             anchors {
