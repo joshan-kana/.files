@@ -279,7 +279,10 @@ PanelWindow {
                         }
 
                         Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Escape) {
+                            if (event.key === Qt.Key_Tab) {
+                                list.forceActiveFocus();
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Escape) {
                                 panel.hide();
                                 event.accepted = true;
                             } else if (event.key === Qt.Key_Down) {
@@ -314,6 +317,28 @@ PanelWindow {
                 clip: true
                 currentIndex: panel.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
+
+                Keys.priority: Keys.BeforeItem
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_I || event.key === Qt.Key_Slash) {
+                        search.forceActiveFocus();
+                    } else if (event.key === Qt.Key_Escape) {
+                        panel.hide();
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                        panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                        panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                        const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
+                        const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        panel.activateSelected();
+                    } else {
+                        return;
+                    }
+                    event.accepted = true;
+                }
 
                 delegate: SquircleSurface {
                     id: item
@@ -400,7 +425,7 @@ PanelWindow {
                 spacing: theme.spacing4
 
                 Text {
-                    text: "↑↓  NAVIGATE"
+                    text: search.activeFocus ? "TAB  NAVIGATE" : "J/K  MOVE   U/D  HALF PAGE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(9)

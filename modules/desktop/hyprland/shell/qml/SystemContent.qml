@@ -24,7 +24,7 @@ FocusScope {
     readonly property string helpTitle: bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls"))))
     readonly property var helpBindings: bluetoothPanel.open ? [
         {
-            key: "↑ / ↓",
+            key: "J/K · U/D",
             action: "Select device"
         },
         {
@@ -32,7 +32,7 @@ FocusScope {
             action: "Connect / disconnect"
         },
         {
-            key: "B / D",
+            key: "B / SHIFT+D",
             action: "Bluetooth radio / discovery"
         },
         {
@@ -45,7 +45,7 @@ FocusScope {
         }
     ] : (networkPanel.open ? [
             {
-                key: "↑ / ↓",
+                key: "J/K · U/D",
                 action: "Select network"
             },
             {
@@ -66,7 +66,7 @@ FocusScope {
             }
         ] : (themePanel.open ? [
                 {
-                    key: "↑ / ↓",
+                    key: "J/K · U/D",
                     action: "Select theme"
                 },
                 {
@@ -79,7 +79,7 @@ FocusScope {
                 }
             ] : (sessionPanel.open ? [
                     {
-                        key: "↑ / ↓",
+                        key: "J/K · U/D",
                         action: "Select action"
                     },
                     {
@@ -92,7 +92,7 @@ FocusScope {
                     }
                 ] : (trayMenu.open ? [
                         {
-                            key: "↑ / ↓",
+                            key: "J/K · U/D",
                             action: "Select item"
                         },
                         {
@@ -105,11 +105,11 @@ FocusScope {
                         }
                     ] : [
                         {
-                            key: "← / →",
+                            key: "H/L · ←/→",
                             action: "Volume down / up"
                         },
                         {
-                            key: "↑ / ↓",
+                            key: "K/J · ↑/↓",
                             action: "Brightness up / down"
                         },
                         {
@@ -729,11 +729,14 @@ FocusScope {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         bluetoothPanel.closeView();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         bluetoothPanel.moveSelection(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         bluetoothPanel.moveSelection(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        bluetoothPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         bluetoothPanel.activateSelected();
@@ -741,7 +744,7 @@ FocusScope {
                     } else if (event.key === Qt.Key_B) {
                         bluetoothPanel.toggleBluetooth();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_D) {
+                    } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
                         bluetoothPanel.toggleDiscovery();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_P) {
@@ -762,11 +765,14 @@ FocusScope {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         sessionPanel.closeView();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         sessionPanel.moveSelection(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         sessionPanel.moveSelection(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        sessionPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         sessionPanel.activateSelected();
@@ -780,11 +786,14 @@ FocusScope {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         themePanel.closeView();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         themePanel.moveSelection(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         themePanel.moveSelection(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        themePanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         themePanel.activateSelected();
@@ -801,11 +810,14 @@ FocusScope {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         networkPanel.closeView();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         networkPanel.moveSelection(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         networkPanel.moveSelection(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        networkPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         networkPanel.activateSelected();
@@ -822,16 +834,19 @@ FocusScope {
                 }
 
                 if (trayMenu.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || event.key === Qt.Key_Left) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                         trayMenu.goBack();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         trayMenu.moveSelection(-1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         trayMenu.moveSelection(1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Right) {
+                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        trayMenu.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || (event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
                         trayMenu.activateSelected();
                         event.accepted = true;
                     }
@@ -842,10 +857,10 @@ FocusScope {
                 if (event.key === Qt.Key_Escape) {
                     root.closeRequested();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Left) {
+                } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                     system.adjustVolume(-0.05);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Right) {
+                } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
                     system.adjustVolume(0.05);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M) {
@@ -863,10 +878,10 @@ FocusScope {
                 } else if (event.key === Qt.Key_P) {
                     root.openSession();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Up && brightness.supported) {
+                } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && brightness.supported) {
                     brightness.adjust(5);
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Down && brightness.supported) {
+                } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J) && brightness.supported) {
                     brightness.adjust(-5);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_BracketLeft && system.trayCount > 0) {

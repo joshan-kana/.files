@@ -287,7 +287,10 @@ PanelWindow {
                     onTextChanged: results.currentIndex = resultModel.values.length > 0 ? 0 : -1
 
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) {
+                        if (event.key === Qt.Key_Tab) {
+                            results.forceActiveFocus();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Escape) {
                             palette.hide();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Down) {
@@ -339,6 +342,27 @@ PanelWindow {
                 currentIndex: resultModel.values.length > 0 ? 0 : -1
                 highlightMoveDuration: motion.fast
                 highlightResizeDuration: motion.fast
+
+                Keys.priority: Keys.BeforeItem
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Tab || event.key === Qt.Key_I || event.key === Qt.Key_Slash) {
+                        search.forceActiveFocus();
+                    } else if (event.key === Qt.Key_Escape) {
+                        palette.hide();
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                        results.currentIndex = Math.min(resultModel.values.length - 1, results.currentIndex + 1);
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                        results.currentIndex = Math.max(0, results.currentIndex - 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                        const rows = Math.max(1, Math.floor(results.height / (48 + results.spacing) / 2));
+                        results.currentIndex = Math.max(0, Math.min(resultModel.values.length - 1, results.currentIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        palette.launchCurrent((event.modifiers & Qt.ShiftModifier) !== 0);
+                    } else {
+                        return;
+                    }
+                    event.accepted = true;
+                }
 
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
@@ -485,7 +509,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: runtime.shortcutHint("launcherSlots") + " OPEN   ↑↓ NAVIGATE   ↵ OPEN   SHIFT+↵ KEEP   ESC CLOSE"
+                    text: search.activeFocus ? "TYPE TO SEARCH  ·  TAB NAV  ·  ↑↓ SELECT  ·  ↵ OPEN" : "J/K SELECT  ·  U/D HALF PAGE  ·  / SEARCH  ·  ↵ OPEN  ·  ESC"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)

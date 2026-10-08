@@ -326,11 +326,16 @@ PanelWindow {
                     if (event.key === Qt.Key_Escape) {
                         center.hide();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
+                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         center.selectedIndex = Math.max(0, center.selectedIndex - 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
+                    } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         center.selectedIndex = Math.min(center.items.length - 1, center.selectedIndex + 1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                        const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
+                        const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+                        center.selectedIndex = Math.max(0, Math.min(center.items.length - 1, center.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         notificationState.invokeDefault(center.selectedNotification());
