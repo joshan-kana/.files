@@ -9,6 +9,15 @@ Column {
     required property Motion motion
     required property AgendaState agenda
     required property string startDate
+    property int firstEventIndex: 0
+    readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - 4))
+    readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + 4)
+
+    function scrollEvents(amount: int): void {
+        firstEventIndex = Math.max(0, Math.min(firstEventIndex + amount, Math.max(0, agenda.events.length - 4)));
+    }
+
+    onStartDateChanged: firstEventIndex = 0
 
     spacing: theme.spacing2
     width: parent.width
@@ -30,7 +39,7 @@ Column {
         Text {
             id: status
             text: panel.agenda.loading ? "UPDATING" : (panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "NOT CONFIGURED")
-            color: panel.theme.textMuted
+            color: panel.theme.textStrong
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(10)
         }
@@ -51,9 +60,20 @@ Column {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : (panel.agenda.configured ? "No upcoming events" : "Configure a local khal calendar to show events"))
-            color: panel.theme.textMuted
+            color: panel.theme.textStrong
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.NoButton
+            onWheel: event => {
+                if (event.angleDelta.y !== 0) {
+                    panel.scrollEvents(event.angleDelta.y > 0 ? -1 : 1);
+                    event.accepted = true;
+                }
+            }
         }
 
         Column {
@@ -65,7 +85,7 @@ Column {
             spacing: 0
 
             Repeater {
-                model: panel.agenda.events.slice(0, 4)
+                model: panel.agenda.events.slice(panel.visibleStart, panel.visibleEnd)
                 delegate: Item {
                     id: eventRow
                     required property var modelData
@@ -105,7 +125,8 @@ Column {
                                 visible: eventRow.modelData.location.length > 0
                                 width: parent.width
                                 text: eventRow.modelData.location
-                                color: panel.theme.textMuted
+                                color: panel.theme.textStrong
+                                opacity: 0.85
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(10)
                                 elide: Text.ElideRight
@@ -119,8 +140,8 @@ Column {
 
     Text {
         visible: panel.agenda.events.length > 4
-        text: "+ " + (panel.agenda.events.length - 4) + " more events"
-        color: panel.theme.textMuted
+        text: "Events " + (panel.visibleStart + 1) + "–" + panel.visibleEnd + " of " + panel.agenda.events.length + " · U/D scroll"
+        color: panel.theme.textStrong
         font.family: panel.runtime.fontMono
         font.pixelSize: panel.theme.fontSize(10)
     }
