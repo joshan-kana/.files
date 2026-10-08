@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 
 QtObject {
     required property RuntimeConfig runtime
@@ -26,5 +27,6 @@ QtObject {
 
     function toggle(): void {
         enabled = !enabled;
+        Quickshell.execDetached(["hyprctl", "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
     }
 }
