@@ -16,7 +16,7 @@ in
     environment = {
       HTTP_HOST = "0.0.0.0";
       HTTP_PORT = toString agentMailPort;
-      HTTP_ALLOWED_HOSTS = server.lan.serverIp;
+      HTTP_ALLOWED_HOSTS = "${server.lan.serverIp},${config.networking.hostName}.home";
       HTTP_ALLOW_LOCALHOST_UNAUTHENTICATED = "true";
     };
     volumes = [ "${agentMailRoot}:/data" ];
