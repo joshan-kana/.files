@@ -118,7 +118,13 @@
 
       forAllSystems = f: lib.genAttrs systems f;
 
-      pkgsFor = system: import nixpkgs { inherit system; };
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          # Lint the same Quickshell version that hosts actually deploy.
+          overlays = (import ./overlays/quickshell.nix { }).nixpkgs.overlays;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -214,14 +220,19 @@
               qml-lint = {
                 command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
                 includes = [ "*.qml" ];
-                options = [
-                  "-I"
-                  "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
-                ]
-                ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-                  "-I"
-                  "${pkgs.quickshell}/lib/qt-6/qml"
-                ];
+                options =
+                  lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "--max-warnings"
+                    "0"
+                  ]
+                  ++ [
+                    "-I"
+                    "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "-I"
+                    "${pkgs.quickshell}/lib/qt-6/qml"
+                  ];
                 priority = 2;
               };
 
@@ -349,7 +360,7 @@
             ./overlays/comin.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
-            quickshellOverlayModule
+            ./overlays/quickshell.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             ./overlays/arc.nix
