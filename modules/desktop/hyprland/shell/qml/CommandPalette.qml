@@ -420,6 +420,7 @@ PanelWindow {
                                 source: modelData.icon ? Quickshell.iconPath(modelData.icon, "application-x-executable") : Quickshell.iconPath("application-x-executable")
                                 sourceSize.width: width
                                 sourceSize.height: height
+                                asynchronous: true
                                 fillMode: Image.PreserveAspectFit
                             }
                         }
