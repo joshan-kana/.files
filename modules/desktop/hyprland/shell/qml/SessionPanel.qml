@@ -21,30 +21,35 @@ Item {
         {
             id: "lock",
             label: "Lock",
+            icon: "󰌾",
             description: "Secure the current Wayland session",
             destructive: false
         },
         {
             id: "suspend",
             label: "Suspend",
+            icon: "󰤄",
             description: "Suspend the machine until resumed",
             destructive: true
         },
         {
             id: "logout",
             label: "Log out",
+            icon: "󰍃",
             description: "Exit the current Hyprland session",
             destructive: true
         },
         {
             id: "reboot",
             label: "Reboot",
+            icon: "󰜉",
             description: "Restart the machine",
             destructive: true
         },
         {
             id: "poweroff",
             label: "Power off",
+            icon: "󰐥",
             description: "Shut the machine down",
             destructive: true
         }
@@ -91,9 +96,19 @@ Item {
     }
 
     function moveHalfPage(direction: int): void {
-        const rowHeight = actionList.currentItem ? actionList.currentItem.height + actionList.spacing : 64;
-        const rows = Math.max(1, Math.floor(actionList.height / Math.max(1, rowHeight) / 2));
-        moveSelection(direction * rows);
+        moveSelection(direction * 3);
+    }
+
+    function moveGrid(horizontal: int, vertical: int): void {
+        if (horizontal !== 0) {
+            const rowStart = Math.floor(selectedIndex / 3) * 3;
+            const rowEnd = Math.min(entries.length - 1, rowStart + 2);
+            moveSelection(Math.max(rowStart, Math.min(rowEnd, selectedIndex + horizontal)) - selectedIndex);
+        } else if (vertical !== 0) {
+            const target = selectedIndex + vertical * 3;
+            if (target >= 0 && target < entries.length)
+                moveSelection(target - selectedIndex);
+        }
     }
 
     function moveSelection(delta: int): void {
@@ -153,18 +168,19 @@ Item {
         armTimer.restart();
     }
 
+    implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 * 3
+
     Column {
         id: header
-
         width: parent.width
         spacing: panel.theme.spacing1
 
         Text {
-            text: "Session"
+            text: "SESSION"
             color: panel.theme.accent
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
-            font.weight: Font.Medium
+            font.weight: Font.DemiBold
         }
 
         Text {
@@ -176,113 +192,92 @@ Item {
         }
 
         Text {
-            text: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : "Choose an action"
+            text: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
             color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.textMuted
             font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(9)
-            font.letterSpacing: 0.8
+            font.pixelSize: panel.theme.fontSize(10)
         }
     }
 
-    ListView {
-        id: actionList
-
+    Column {
+        id: buttonGrid
         anchors {
             top: header.bottom
-            right: parent.right
-            bottom: footer.top
-            left: parent.left
-            topMargin: panel.theme.spacing4
-            bottomMargin: panel.theme.spacing3
+            topMargin: panel.theme.spacing5
+            horizontalCenter: parent.horizontalCenter
         }
+        spacing: panel.theme.spacing3
 
-        model: panel.entries
-        spacing: panel.theme.spacing2
-        clip: true
-        currentIndex: panel.selectedIndex
-        boundsBehavior: Flickable.StopAtBounds
+        Row {
+            id: firstRow
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: panel.theme.spacing3
 
-        delegate: ShellSurface {
-            id: actionRow
-
-            required property var modelData
-            required property int index
-
-            width: ListView.view.width
-            height: 66
-            theme: panel.theme
-            motion: panel.motion
-            surfaceLayer: ShellSurface.Control
-            selected: index === panel.selectedIndex
-            cornerRadius: theme.radiusMedium
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-
-                onClicked: {
-                    panel.selectedIndex = actionRow.index;
-                    panel.activateSelected();
-                    panel.keyboardRequested();
-                }
-            }
-
-            Row {
-                anchors {
-                    fill: parent
-                    margins: panel.theme.spacing3
-                }
-                spacing: panel.theme.spacing3
-
-                Column {
-                    width: parent.width - actionState.width - parent.spacing
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 3
-
-                    Text {
-                        width: parent.width
-                        text: actionRow.modelData.label
-                        color: actionRow.modelData.id === panel.armedAction ? panel.theme.warning : panel.theme.textStrong
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(14)
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
+            Repeater {
+                model: panel.entries.slice(0, 3)
+                delegate: SessionActionButton {
+                    required property int index
+                    required property var modelData
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: modelData.icon
+                    label: modelData.label
+                    selected: panel.selectedIndex === index
+                    armed: panel.armedAction === modelData.id
+                    onHovered: {
+                        if (panel.selectedIndex !== index)
+                            panel.moveSelection(index - panel.selectedIndex);
                     }
-
-                    Text {
-                        width: parent.width
-                        text: actionRow.modelData.description
-                        color: panel.theme.textMuted
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(8)
-                        elide: Text.ElideRight
+                    onActivated: {
+                        if (panel.selectedIndex !== index)
+                            panel.moveSelection(index - panel.selectedIndex);
+                        panel.activateSelected();
+                        panel.keyboardRequested();
                     }
-                }
-
-                Text {
-                    id: actionState
-                    width: 112
-                    anchors.verticalCenter: parent.verticalCenter
-                    horizontalAlignment: Text.AlignRight
-                    text: actionRow.modelData.id === panel.armedAction ? "CONFIRM" : (actionRow.modelData.destructive ? "ARM" : "RUN")
-                    color: actionRow.modelData.id === panel.armedAction ? panel.theme.warning : panel.theme.accent
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                    font.weight: Font.DemiBold
                 }
             }
         }
 
-        onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+        Row {
+            id: lastRow
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: panel.theme.spacing3
+
+            Repeater {
+                model: panel.entries.slice(3)
+                delegate: SessionActionButton {
+                    required property int index
+                    required property var modelData
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    icon: modelData.icon
+                    label: modelData.label
+                    selected: panel.selectedIndex === index + 3
+                    armed: panel.armedAction === modelData.id
+                    onHovered: {
+                        if (panel.selectedIndex !== index + 3)
+                            panel.moveSelection(index + 3 - panel.selectedIndex);
+                    }
+                    onActivated: {
+                        if (panel.selectedIndex !== index + 3)
+                            panel.moveSelection(index + 3 - panel.selectedIndex);
+                        panel.activateSelected();
+                        panel.keyboardRequested();
+                    }
+                }
+            }
+        }
     }
 
     Column {
         id: footer
-
         anchors {
-            right: parent.right
-            bottom: parent.bottom
             left: parent.left
+            right: parent.right
+            top: buttonGrid.bottom
+            topMargin: panel.theme.spacing4
         }
         spacing: panel.theme.spacing2
 
@@ -291,41 +286,18 @@ Item {
             visible: panel.statusText.length > 0
             text: panel.statusText
             color: panel.statusError ? panel.theme.critical : panel.theme.warning
-            horizontalAlignment: Text.AlignRight
-            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
             font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(8)
+            font.pixelSize: panel.theme.fontSize(11)
             font.weight: Font.DemiBold
-            font.letterSpacing: 0.6
         }
 
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing4
-
-            Text {
-                text: "↑/↓  SELECT"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                text: panel.armedAction.length > 0 ? "ENTER  CONFIRM" : "ENTER  ARM/RUN"
-                color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                text: "ESC  BACK"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
-                font.letterSpacing: 0.8
-            }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "H/J/K/L · NAVIGATE   U/D · ROWS   ENTER · ARM/RUN   ESC · BACK"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(9)
         }
     }
 }
