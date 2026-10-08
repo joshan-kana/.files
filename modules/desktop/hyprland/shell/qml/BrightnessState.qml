@@ -4,7 +4,7 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    required property QtObject runtime
+    required property RuntimeConfig runtime
 
     property bool supported: false
     property bool initialized: false

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Services.Pam
@@ -6,9 +7,9 @@ import Quickshell.Wayland
 WlSessionLock {
     id: lock
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property string password: ""
     property string statusText: ""
@@ -35,7 +36,7 @@ WlSessionLock {
 
             const response = lock.password;
             lock.password = "";
-            pamContext.respond(response);
+            lock.pamContext.respond(response);
         }
 
         onCompleted: result => {
@@ -128,7 +129,7 @@ WlSessionLock {
 
             Rectangle {
                 anchors.fill: parent
-                color: theme.scrimStrong
+                color: lock.theme.scrimStrong
             }
 
             Rectangle {
@@ -168,7 +169,7 @@ WlSessionLock {
                     text: Qt.formatDateTime(lock.clock.date, "h:mm AP")
                     color: lock.theme.textStrong
                     font.family: lock.runtime.fontMono
-                    font.pixelSize: theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))
+                    font.pixelSize: lock.theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))
                     font.weight: Font.Light
                     font.letterSpacing: -2
                 }
@@ -178,7 +179,7 @@ WlSessionLock {
                     text: Qt.formatDateTime(lock.clock.date, "dddd, d MMMM").toUpperCase()
                     color: lock.theme.textMuted
                     font.family: lock.runtime.fontMono
-                    font.pixelSize: theme.fontSize(11)
+                    font.pixelSize: lock.theme.fontSize(11)
                     font.weight: Font.DemiBold
                     font.letterSpacing: 2
                 }
@@ -282,7 +283,7 @@ WlSessionLock {
                                 text: Quickshell.env("USER") || "user"
                                 color: lock.theme.textStrong
                                 font.family: lock.runtime.fontMono
-                                font.pixelSize: theme.fontSize(18)
+                                font.pixelSize: lock.theme.fontSize(18)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -316,7 +317,7 @@ WlSessionLock {
                                 selectionColor: lock.theme.accent
                                 selectedTextColor: lock.theme.background
                                 font.family: lock.runtime.fontMono
-                                font.pixelSize: theme.fontSize(17)
+                                font.pixelSize: lock.theme.fontSize(17)
                                 clip: true
 
                                 onTextEdited: {
@@ -362,7 +363,7 @@ WlSessionLock {
                             verticalAlignment: Text.AlignVCenter
                             color: lock.statusError ? lock.theme.critical : lock.theme.textMuted
                             font.family: lock.runtime.fontMono
-                            font.pixelSize: theme.fontSize(9)
+                            font.pixelSize: lock.theme.fontSize(9)
                             font.weight: Font.DemiBold
                             font.letterSpacing: 1.2
                             elide: Text.ElideRight
