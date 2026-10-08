@@ -198,7 +198,15 @@ FocusScope {
             openResources();
         else if (requestedView === "mixer")
             openMixer();
-        else if (requestedView.length === 0) {
+        else if (requestedView.startsWith("tray:")) {
+            const index = Number(requestedView.slice(5));
+            if (Number.isInteger(index) && index >= 0 && index < system.trayCount) {
+                trayIndex = index;
+                const item = system.trayItems[index];
+                if (item.hasMenu)
+                    trayMenu.openFor(item);
+            }
+        } else if (requestedView.length === 0) {
             trayMenu.closeMenu();
             networkPanel.closeView();
             bluetoothPanel.closeView();
