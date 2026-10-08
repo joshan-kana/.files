@@ -21,6 +21,7 @@ QtObject {
     readonly property string clipboardCopy: root.configData.tools.clipboardCopy
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
+    readonly property string powerprofilesctl: root.configData.tools.powerprofilesctl
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
 
@@ -123,6 +124,7 @@ QtObject {
                 property string clipboardCopy: ""
                 property string lockSession: ""
                 property string networkConnectionEditor: ""
+                property string powerprofilesctl: ""
                 property string sessionCommand: ""
                 property string themeSet: ""
             }
