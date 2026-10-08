@@ -302,7 +302,7 @@ Variants {
                         height: 20
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        text: "󰂚"
+                        text: bar.notificationState.silent ? "󰂛" : "󰂚"
                         color: bars.theme.textStrong
                         font.family: "Symbols Nerd Font"
                         font.pixelSize: bars.theme.fontSize(19)
