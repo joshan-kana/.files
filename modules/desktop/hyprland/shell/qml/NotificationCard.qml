@@ -13,11 +13,54 @@ SquircleSurface {
     property bool selected: false
     property bool expanded: false
     property int groupCount: 1
+    property bool dismissing: false
     readonly property var safeActions: notification && notification.actions ? notification.actions : []
 
     signal activated
     signal defaultRequested
     signal actionRequested(int index)
+    signal dismissRequested
+
+    function dismissAnimated(): void {
+        if (dismissing)
+            return;
+        dismissing = true;
+        if (motion.enabled)
+            dismissMotion.start();
+        else
+            dismissRequested();
+    }
+
+    Behavior on x {
+        enabled: !pointer.drag.active && !card.dismissing
+        Anim {
+            motion: card.motion
+            type: Anim.FastSpatial
+        }
+    }
+
+    SequentialAnimation {
+        id: dismissMotion
+        ParallelAnimation {
+            NumberAnimation {
+                target: card
+                property: "x"
+                to: card.x < 0 ? -card.width - 24 : card.width + 24
+                duration: card.motion.spatialFast
+                easing.type: card.motion.spatialType
+            }
+            NumberAnimation {
+                target: card
+                property: "opacity"
+                to: 0
+                duration: card.motion.effectsFast
+                easing.type: card.motion.effectsType
+            }
+        }
+        ScriptAction {
+            script: card.dismissRequested()
+        }
+    }
 
     implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
     cornerRadius: theme.radiusMedium
@@ -27,11 +70,34 @@ SquircleSurface {
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
     MouseArea {
+        id: pointer
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        property bool dragged: false
+        drag.target: card
+        drag.axis: Drag.XAxis
+        drag.threshold: 12
+        onPressed: dragged = false
+        onPositionChanged: {
+            if (drag.active)
+                dragged = true;
+        }
+        onReleased: {
+            if (dragged) {
+                if (Math.abs(card.x) >= 70)
+                    card.dismissAnimated();
+                else
+                    card.x = 0;
+            }
+        }
+        onCanceled: card.x = 0
         onClicked: mouse => {
-            if (mouse.button === Qt.RightButton)
+            if (dragged)
+                return;
+            if (mouse.button === Qt.MiddleButton)
+                card.dismissAnimated();
+            else if (mouse.button === Qt.RightButton)
                 card.defaultRequested();
             else
                 card.activated();
