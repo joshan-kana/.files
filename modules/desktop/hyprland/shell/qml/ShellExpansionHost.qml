@@ -66,8 +66,6 @@ PanelWindow {
         item: shellSurface
     }
 
-    Keys.onEscapePressed: expansionState.close()
-
     HyprlandFocusGrab {
         active: expansionState.hasCurrent
         windows: [host]
