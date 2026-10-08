@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 
 Item {
     id: root
@@ -7,77 +8,75 @@ Item {
     required property QtObject theme
     required property var frequencyScale
 
-    Canvas {
-        id: canvas
-        anchors.fill: parent
-        antialiasing: true
+    readonly property var geometry: {
+        const values = spectrum.bands || [];
+        if (values.length < 2)
+            return {
+                outline: "",
+                filled: ""
+            };
 
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            ctx.clearRect(0, 0, width, height);
-
-            const values = root.spectrum.bands || [];
-            if (values.length < 2)
-                return;
-
-            const points = [];
-            for (let source = 0; source < values.length; source += 2) {
-                const next = Math.min(values.length - 1, source + 1);
-                const raw = Math.max(values[source] || 0, values[next] || 0);
-                const level = Math.pow(Math.max(0, Math.min(1, raw)), 0.82);
-                const t = source / Math.max(1, values.length - 1);
-                points.push({
-                    x: root.frequencyScale.fromNormalized(t) * width,
-                    y: height - Math.max(2, level * height * 0.92)
-                });
-            }
-
-            if (points.length < 2)
-                return;
-
-            function traceCurve() {
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (let index = 1; index < points.length - 1; index++) {
-                    const current = points[index];
-                    const next = points[index + 1];
-                    const midX = (current.x + next.x) / 2;
-                    const midY = (current.y + next.y) / 2;
-                    ctx.quadraticCurveTo(current.x, current.y, midX, midY);
-                }
-                const last = points[points.length - 1];
-                ctx.lineTo(last.x, last.y);
-            }
-
-            traceCurve();
-            const last = points[points.length - 1];
-            ctx.lineTo(last.x, height);
-            ctx.lineTo(points[0].x, height);
-            ctx.closePath();
-            const fill = ctx.createLinearGradient(0, 0, 0, height);
-            fill.addColorStop(0, Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28));
-            fill.addColorStop(1, Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.02));
-            ctx.fillStyle = fill;
-            ctx.fill();
-
-            traceCurve();
-            ctx.strokeStyle = Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.92);
-            ctx.lineWidth = 2.2;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
-            ctx.stroke();
+        const points = [];
+        for (let source = 0; source < values.length; source += 2) {
+            const raw = Math.max(values[source] || 0, values[Math.min(source + 1, values.length - 1)] || 0);
+            points.push({
+                x: frequencyScale.fromNormalized(source / Math.max(1, values.length - 1)) * width,
+                y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw)), 0.82) * height * 0.92)
+            });
         }
+        if (points.length < 2)
+            return {
+                outline: "",
+                filled: ""
+            };
 
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
+        let outline = "M " + points[0].x + " " + points[0].y;
+        for (let i = 1; i < points.length - 1; i++) {
+            const next = points[i + 1];
+            outline += " Q " + points[i].x + " " + points[i].y + " " + (points[i].x + next.x) / 2 + " " + (points[i].y + next.y) / 2;
+        }
+        const last = points[points.length - 1];
+        outline += " L " + last.x + " " + last.y;
+        return {
+            outline,
+            filled: outline + " L " + last.x + " " + height + " L " + points[0].x + " " + height + " Z"
+        };
     }
 
-    Connections {
-        target: root.spectrum
+    Shape {
+        anchors.fill: parent
+        preferredRendererType: Shape.CurveRenderer
+        visible: root.geometry.outline.length > 0
 
-        function onBandsChanged() {
-            canvas.requestPaint();
+        ShapePath {
+            strokeColor: "transparent"
+            fillGradient: LinearGradient {
+                x1: 0
+                y1: 0
+                x2: 0
+                y2: root.height
+                GradientStop {
+                    position: 0
+                    color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.28)
+                }
+                GradientStop {
+                    position: 1
+                    color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.02)
+                }
+            }
+            PathSvg {
+                path: root.geometry.filled
+            }
+        }
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.92)
+            strokeWidth: 2.2
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
+            PathSvg {
+                path: root.geometry.outline
+            }
         }
     }
 }
