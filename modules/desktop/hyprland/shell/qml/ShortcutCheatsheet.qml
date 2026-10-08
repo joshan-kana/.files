@@ -13,6 +13,7 @@ PanelWindow {
     property bool open: false
     property bool closing: false
     property string query: ""
+    property bool helpOpen: false
     readonly property var sections: buildSections(query)
     readonly property int filteredBindingCount: countBindings(sections)
 
@@ -72,34 +73,41 @@ PanelWindow {
     }
 
     function handleNavigation(event: var): void {
-        if (event.key === Qt.Key_Tab) {
+        if (event.key === Qt.Key_Escape) {
+            if (helpOpen)
+                helpOpen = false;
+            else if (search.activeFocus)
+                keySink.forceActiveFocus();
+            else
+                window.hide();
+            event.accepted = true;
+        } else if (helpOpen) {
+            if (event.key === Qt.Key_Question) {
+                helpOpen = false;
+                event.accepted = true;
+            }
+        } else if (event.key === Qt.Key_Tab) {
             if (search.activeFocus)
                 keySink.forceActiveFocus();
             else
                 search.forceActiveFocus();
             event.accepted = true;
-        } else if (!search.activeFocus && (event.key === Qt.Key_I || event.key === Qt.Key_Slash)) {
+        } else if (!search.activeFocus && event.key === Qt.Key_Slash) {
             search.forceActiveFocus();
             event.accepted = true;
-        } else if (event.key === Qt.Key_Escape) {
-            if (search.text.length > 0) {
-                search.text = "";
-                flick.contentY = 0;
-                search.forceActiveFocus();
-            } else {
-                window.hide();
-            }
+        } else if (!search.activeFocus && event.key === Qt.Key_Question) {
+            helpOpen = true;
             event.accepted = true;
-        } else if ((event.key === Qt.Key_Up || (!search.activeFocus && event.key === Qt.Key_K))) {
+        } else if (event.key === Qt.Key_Up || (!search.activeFocus && event.key === Qt.Key_K)) {
             flick.contentY = Math.max(0, flick.contentY - 72);
             event.accepted = true;
-        } else if ((event.key === Qt.Key_Down || (!search.activeFocus && event.key === Qt.Key_J))) {
+        } else if (event.key === Qt.Key_Down || (!search.activeFocus && event.key === Qt.Key_J)) {
             flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + 72);
             event.accepted = true;
-        } else if ((event.key === Qt.Key_PageUp || (!search.activeFocus && event.key === Qt.Key_U))) {
+        } else if (event.key === Qt.Key_PageUp || (!search.activeFocus && event.key === Qt.Key_U)) {
             flick.contentY = Math.max(0, flick.contentY - flick.height * (event.key === Qt.Key_U ? 0.5 : 0.8));
             event.accepted = true;
-        } else if ((event.key === Qt.Key_PageDown || (!search.activeFocus && event.key === Qt.Key_D))) {
+        } else if (event.key === Qt.Key_PageDown || (!search.activeFocus && event.key === Qt.Key_D)) {
             flick.contentY = Math.min(Math.max(0, flick.contentHeight - flick.height), flick.contentY + flick.height * (event.key === Qt.Key_D ? 0.5 : 0.8));
             event.accepted = true;
         }
@@ -111,7 +119,10 @@ PanelWindow {
         search.text = "";
         flick.contentY = 0;
         open = true;
-        search.forceActiveFocus();
+        Qt.callLater(() => {
+            if (open)
+                keySink.forceActiveFocus();
+        });
     }
 
     function hide(): void {
@@ -119,6 +130,7 @@ PanelWindow {
             return;
 
         open = false;
+        helpOpen = false;
         if (motion.fast === 0) {
             closing = false;
         } else {
@@ -197,7 +209,7 @@ PanelWindow {
                     id: headerHint
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: window.runtime.shortcut("shortcuts.toggle") + "   ·   ESC CLOSE"
+                    text: window.runtime.shortcut("shortcuts.toggle") + "   ·   ? HELP"
                     color: window.theme.textMuted
                     font.family: window.runtime.fontMono
                     font.pixelSize: window.theme.fontSize(10)
@@ -256,6 +268,7 @@ PanelWindow {
                         window.query = text;
                         flick.contentY = 0;
                     }
+                    Keys.priority: Keys.BeforeItem
                     Keys.onPressed: event => window.handleNavigation(event)
                 }
             }
@@ -310,10 +323,11 @@ PanelWindow {
                                     id: shortcutBinding
                                     required property var modelData
 
-                                    width: parent.width
+                                    width: shortcutSection.width
                                     spacing: window.theme.spacing3
 
                                     ShellSurface {
+                                        id: bindingKey
                                         width: 142
                                         height: 28
                                         theme: window.theme
@@ -332,8 +346,8 @@ PanelWindow {
                                     }
 
                                     Text {
-                                        width: parent.width - 142 - parent.spacing
-                                        anchors.verticalCenter: parent.children[0].verticalCenter
+                                        width: shortcutBinding.width - bindingKey.width - shortcutBinding.spacing
+                                        anchors.verticalCenter: bindingKey.verticalCenter
                                         text: shortcutBinding.modelData.description
                                         color: window.theme.text
                                         font.family: window.runtime.fontMono
@@ -400,7 +414,7 @@ PanelWindow {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
                     }
-                    text: search.activeFocus ? "TYPE  SEARCH   TAB  NAV   PGUP/PGDN  PAGE" : "J/K  SCROLL   U/D  HALF PAGE   /  SEARCH   ESC  CLOSE"
+                    text: search.activeFocus ? "TYPE  FILTER   ESC/TAB  NAV   PGUP/PGDN  PAGE" : "J/K  SCROLL   U/D  HALF PAGE   /  SEARCH   ESC  CLOSE"
                     color: window.theme.textMuted
                     font.family: window.runtime.fontMono
                     font.pixelSize: window.theme.fontSize(10)
@@ -439,6 +453,46 @@ PanelWindow {
 
                 Keys.onPressed: event => window.handleNavigation(event)
             }
+        }
+
+        WidgetHelp {
+            anchors.fill: parent
+            runtime: window.runtime
+            theme: window.theme
+            motion: window.motion
+            open: window.helpOpen
+            title: "Shortcut sheet controls"
+            bindings: [
+                {
+                    key: "J / K",
+                    action: "Scroll down / up"
+                },
+                {
+                    key: "U / D",
+                    action: "Half page up / down"
+                },
+                {
+                    key: "PgUp / PgDn",
+                    action: "Scroll by page"
+                },
+                {
+                    key: "/",
+                    action: "Focus search"
+                },
+                {
+                    key: "Tab",
+                    action: "Switch search / navigation"
+                },
+                {
+                    key: "Esc",
+                    action: "Leave search, then close"
+                },
+                {
+                    key: "?",
+                    action: "Toggle these controls"
+                }
+            ]
+            onDismissed: window.helpOpen = false
         }
     }
 }
