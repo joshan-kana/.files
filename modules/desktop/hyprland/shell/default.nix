@@ -234,10 +234,20 @@ in
     description = "Scale text in the Hyprland desktop shell.";
   };
 
+  scopeOptions.videoWallpaper = lib.mkOption {
+    type = lib.types.nullOr lib.types.str;
+    default = null;
+    description = "Absolute path to a video wallpaper, played by mpvpaper over the Stylix background.";
+  };
+
   assertions = [
     {
       assertion = scopeConfig.textScale >= 0.75 && scopeConfig.textScale <= 1.5;
       message = "desktop.hyprland.shell.textScale must be between 0.75 and 1.5";
+    }
+    {
+      assertion = scopeConfig.videoWallpaper == null || lib.hasPrefix "/" scopeConfig.videoWallpaper;
+      message = "desktop.hyprland.shell.videoWallpaper must be an absolute path";
     }
   ];
 
@@ -450,7 +460,8 @@ in
         clipboardCopy
         pkgs.quickshell
         spectrumAnalyzer
-      ];
+      ]
+      ++ lib.optional (scopeConfig.videoWallpaper != null) pkgs.mpvpaper;
 
       xdg.configFile."linux-desktop/runtime.json".source = runtimeConfig;
 
@@ -502,6 +513,24 @@ in
             ExecStart = "${lib.getExe launcher} --no-duplicate";
             Restart = "on-failure";
             RestartSec = 1;
+          };
+
+          Install.WantedBy = [ "hyprland-session.target" ];
+        };
+      }
+      // lib.optionalAttrs (scopeConfig.videoWallpaper != null) {
+        linux-desktop-wallpaper = {
+          Unit = {
+            Description = "Hyprland desktop video wallpaper";
+            PartOf = [ "hyprland-session.target" ];
+            After = [ "hyprland-session.target" ];
+            ConditionPathExists = scopeConfig.videoWallpaper;
+          };
+
+          Service = {
+            ExecStart = "${lib.getExe pkgs.mpvpaper} -l bottom -o ${lib.escapeShellArg "no-audio loop-file=inf hwdec=auto"} ${lib.escapeShellArg "*"} ${lib.escapeShellArg scopeConfig.videoWallpaper}";
+            Restart = "on-failure";
+            RestartSec = 2;
           };
 
           Install.WantedBy = [ "hyprland-session.target" ];
