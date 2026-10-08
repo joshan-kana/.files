@@ -45,6 +45,13 @@ Item {
         selectedIndex = 0;
     }
 
+    function moveHalfPage(direction: int): void {
+        const rowHeight = menuList.currentItem ? menuList.currentItem.height + menuList.spacing : 48;
+        const steps = Math.max(1, Math.floor(menuList.height / Math.max(1, rowHeight) / 2));
+        for (let i = 0; i < steps; i++)
+            moveSelection(direction);
+    }
+
     function moveSelection(delta: int): void {
         if (items.length === 0)
             return;
