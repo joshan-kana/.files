@@ -15,6 +15,7 @@ PanelWindow {
     property Component mediaComponent: null
     property Component systemComponent: null
     property Component calendarComponent: null
+    property Component weatherComponent: null
     property bool contentExpanded: false
     property bool closing: false
 
@@ -28,6 +29,8 @@ PanelWindow {
             return systemComponent;
         case "calendar":
             return calendarComponent;
+        case "weather":
+            return weatherComponent;
         default:
             return null;
         }
