@@ -32,6 +32,8 @@ QtObject {
             expansionState.close();
         if (except !== "calendar" && expansionState.hasCurrent && expansionState.currentName === "calendar")
             expansionState.close();
+        if (except !== "weather" && expansionState.hasCurrent && expansionState.currentName === "weather")
+            expansionState.close();
         if (except !== "notifications" && notificationCenter.open)
             notificationCenter.hide();
     }
@@ -142,6 +144,19 @@ QtObject {
         expansionState.toggle("calendar", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
+    function toggleWeather(targetScreen: var, origin: var): void {
+        const screen = targetScreen || screenRouter.focusedScreen;
+        if (!screen)
+            return;
+
+        const geometry = origin || ambientBar.originFor(screen, "calendar");
+        const opening = !(expansionState.hasCurrent && expansionState.currentName === "weather" && expansionState.screen === screen);
+        if (opening)
+            hideTransient("weather");
+
+        expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, "");
+    }
+
     function showTheme(): void {
         showSystem(null, null, "theme");
     }
@@ -212,6 +227,8 @@ QtObject {
             toggleSystem();
         else if (commandId === "calendar.toggle")
             toggleCalendar();
+        else if (commandId === "weather.toggle")
+            toggleWeather();
         else if (commandId === "theme.toggle")
             showTheme();
         else if (commandId === "session.toggle")
