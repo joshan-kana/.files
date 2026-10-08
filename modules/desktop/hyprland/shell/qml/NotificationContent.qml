@@ -104,10 +104,7 @@ FocusScope {
             expandedGroupKey = expandedGroupKey === group.key ? "" : group.key;
     }
 
-    function dismissSelected(): void {
-        const notification = selectedNotification();
-        if (!notification)
-            return;
+    function dismissNotification(notification): void {
         notificationState.dismiss(notification);
         Qt.callLater(() => {
             selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, groups.length - 1)));
@@ -115,6 +112,18 @@ FocusScope {
             selectedMemberIndex = group ? Math.min(selectedMemberIndex, group.notifications.length - 1) : 0;
             focusKeyboard();
         });
+    }
+
+    function dismissSelected(): void {
+        const notification = selectedNotification();
+        if (!notification)
+            return;
+        const groupItem = list.itemAtIndex(selectedIndex);
+        const card = groupItem ? groupItem.memberAt(expandedGroupKey === groupItem.modelData.key ? selectedMemberIndex : 0) : null;
+        if (card && card.notification === notification)
+            card.dismissAnimated();
+        else
+            dismissNotification(notification);
     }
 
     Item {
@@ -165,6 +174,21 @@ FocusScope {
             currentIndex: center.selectedIndex
             boundsBehavior: Flickable.StopAtBounds
 
+            remove: Transition {
+                NumberAnimation {
+                    property: "opacity"
+                    to: 0
+                    duration: center.motion.effectsFast
+                }
+            }
+            displaced: Transition {
+                NumberAnimation {
+                    properties: "x,y"
+                    duration: center.motion.spatialFast
+                    easing.type: center.motion.spatialType
+                }
+            }
+
             delegate: Item {
                 id: groupItem
                 required property var modelData
@@ -194,6 +218,14 @@ FocusScope {
                     id: groupColumn
                     width: parent.width
                     spacing: center.theme.spacing2
+
+                    move: Transition {
+                        NumberAnimation {
+                            properties: "x,y"
+                            duration: center.motion.spatialFast
+                            easing.type: center.motion.spatialType
+                        }
+                    }
 
                     Item {
                         width: parent.width
@@ -256,6 +288,7 @@ FocusScope {
                             }
                             onDefaultRequested: center.notificationState.invokeDefault(modelData)
                             onActionRequested: action => center.notificationState.invokeAction(modelData, action)
+                            onDismissRequested: center.dismissNotification(modelData)
                         }
                     }
                 }
