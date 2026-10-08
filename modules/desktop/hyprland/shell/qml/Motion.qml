@@ -1,7 +1,7 @@
 import QtQuick
 
 QtObject {
-    required property QtObject runtime
+    required property RuntimeConfig runtime
 
     property bool enabled: runtime.animationsEnabled
 

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -5,10 +6,10 @@ import Quickshell.Wayland
 PanelWindow {
     id: panel
 
-    required property QtObject system
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
+    required property SystemState system
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
 
     property bool open: false
     property bool closing: false
@@ -33,7 +34,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        interval: panel.motion.fast
         onTriggered: panel.closing = false
     }
 
@@ -88,13 +89,13 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: theme.scrim
+        color: panel.theme.scrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
-                easing.type: panel.open ? motion.enterType : motion.exitType
+                duration: panel.motion.fast
+                easing.type: panel.open ? panel.motion.enterType : panel.motion.exitType
             }
         }
 
@@ -126,47 +127,47 @@ PanelWindow {
 
         Behavior on scale {
             NumberAnimation {
-                duration: motion.normal
-                easing.type: motion.enterType
+                duration: panel.motion.normal
+                easing.type: panel.motion.enterType
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: motion.fast
+                duration: panel.motion.fast
             }
         }
 
         Item {
             anchors.fill: parent
-            anchors.margins: theme.spacing5
+            anchors.margins: panel.theme.spacing5
 
             Column {
                 id: header
                 width: parent.width
-                spacing: theme.spacing1
+                spacing: panel.theme.spacing1
 
                 Text {
                     text: "Audio · " + panel.streams.length + (panel.streams.length === 1 ? " active source" : " active sources")
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(12)
+                    color: panel.theme.accent
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(12)
                     font.weight: Font.Medium
                 }
 
                 Text {
                     text: "Application mixer"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontPanelTitle
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontPanelTitle
                     font.weight: Font.DemiBold
                 }
 
                 Text {
                     text: "Per-application volume and mute"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                 }
             }
 
@@ -178,12 +179,12 @@ PanelWindow {
                     right: parent.right
                     bottom: footer.top
                     left: parent.left
-                    topMargin: theme.spacing4
-                    bottomMargin: theme.spacing4
+                    topMargin: panel.theme.spacing4
+                    bottomMargin: panel.theme.spacing4
                 }
 
                 model: panel.streams
-                spacing: theme.spacing3
+                spacing: panel.theme.spacing3
                 clip: true
                 currentIndex: panel.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
@@ -196,11 +197,11 @@ PanelWindow {
 
                     width: ListView.view.width
                     height: 92
-                    exponent: theme.squircleExponent
-                    cornerRadius: theme.radiusMedium
-                    fillColor: index === panel.selectedIndex ? theme.focusFill : theme.background
-                    borderColor: index === panel.selectedIndex ? theme.accent : theme.outline
-                    borderWidth: index === panel.selectedIndex ? theme.borderFocus : theme.borderThin
+                    exponent: panel.theme.squircleExponent
+                    cornerRadius: panel.theme.radiusMedium
+                    fillColor: index === panel.selectedIndex ? panel.theme.focusFill : panel.theme.background
+                    borderColor: index === panel.selectedIndex ? panel.theme.accent : panel.theme.outline
+                    borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus : panel.theme.borderThin
 
                     MouseArea {
                         anchors.fill: parent
@@ -209,7 +210,7 @@ PanelWindow {
 
                     Item {
                         anchors.fill: parent
-                        anchors.margins: theme.spacing4
+                        anchors.margins: panel.theme.spacing4
 
                         Row {
                             anchors {
@@ -219,26 +220,26 @@ PanelWindow {
                             }
 
                             Column {
-                                width: parent.width - volumeLabel.width - theme.spacing4
+                                width: parent.width - volumeLabel.width - panel.theme.spacing4
                                 spacing: 3
 
                                 Text {
                                     width: parent.width
-                                    text: system.streamDisplayName(modelData)
-                                    color: modelData.audio && modelData.audio.muted ? theme.warning : theme.textStrong
-                                    font.family: runtime.fontMono
-                                    font.pixelSize: theme.fontSize(14)
+                                    text: panel.system.streamDisplayName(streamRow.modelData)
+                                    color: streamRow.modelData.audio && streamRow.modelData.audio.muted ? panel.theme.warning : panel.theme.textStrong
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(14)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
 
                                 Text {
                                     width: parent.width
-                                    text: system.streamTechnicalName(modelData)
-                                    color: theme.textMuted
+                                    text: panel.system.streamTechnicalName(streamRow.modelData)
+                                    color: panel.theme.textMuted
                                     opacity: 0.70
-                                    font.family: runtime.fontMono
-                                    font.pixelSize: theme.fontSize(9)
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(9)
                                     elide: Text.ElideMiddle
                                 }
                             }
@@ -246,10 +247,10 @@ PanelWindow {
                             Text {
                                 id: volumeLabel
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.audio ? (modelData.audio.muted ? "MUTED" : Math.round(modelData.audio.volume * 100) + "%") : "—"
-                                color: modelData.audio && modelData.audio.muted ? theme.warning : theme.accent
-                                font.family: runtime.fontMono
-                                font.pixelSize: theme.fontSize(11)
+                                text: streamRow.modelData.audio ? (streamRow.modelData.audio.muted ? "MUTED" : Math.round(streamRow.modelData.audio.volume * 100) + "%") : "—"
+                                color: streamRow.modelData.audio && streamRow.modelData.audio.muted ? panel.theme.warning : panel.theme.accent
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(11)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -263,18 +264,18 @@ PanelWindow {
 
                             height: 6
                             radius: height / 2
-                            color: theme.surfaceRaised
+                            color: panel.theme.surfaceRaised
 
                             Rectangle {
                                 height: parent.height
                                 radius: parent.radius
-                                width: modelData.audio ? parent.width * Math.max(0, Math.min(1, modelData.audio.volume)) : 0
-                                color: modelData.audio && modelData.audio.muted ? theme.warning : theme.accent
+                                width: streamRow.modelData.audio ? parent.width * Math.max(0, Math.min(1, streamRow.modelData.audio.volume)) : 0
+                                color: streamRow.modelData.audio && streamRow.modelData.audio.muted ? panel.theme.warning : panel.theme.accent
 
                                 Behavior on width {
                                     NumberAnimation {
-                                        duration: motion.fast
-                                        easing.type: motion.enterType
+                                        duration: panel.motion.fast
+                                        easing.type: panel.motion.enterType
                                     }
                                 }
                             }
@@ -289,9 +290,9 @@ PanelWindow {
                 anchors.centerIn: list
                 visible: panel.streams.length === 0
                 text: "Nothing is playing"
-                color: theme.textMuted
-                font.family: runtime.fontMono
-                font.pixelSize: theme.fontSize(11)
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
             }
 
@@ -302,37 +303,37 @@ PanelWindow {
                     right: parent.right
                     bottom: parent.bottom
                 }
-                spacing: theme.spacing4
+                spacing: panel.theme.spacing4
 
                 Text {
                     text: "↑↓  STREAM"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "←/→  VOLUME"
-                    color: theme.accent
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.accent
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "M  MUTE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
 
                 Text {
                     text: "ESC  CLOSE"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(9)
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
             }
