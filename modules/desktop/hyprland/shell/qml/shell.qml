@@ -263,6 +263,21 @@ ShellRoot {
                 keywords: ["copy", "paste", "cliphist"]
             },
             {
+                id: "capture.region",
+                name: "Copy Screen Region",
+                description: "Select a region or window and copy the screenshot",
+                icon: "camera-photo",
+                key: runtime.shortcut("capture.region"),
+                keywords: ["screenshot", "capture", "snip", "clipboard", "region", "image"]
+            },
+            {
+                id: "capture.saveRegion",
+                name: "Save Screen Region",
+                description: "Select a region or window and save a screenshot",
+                icon: "camera-photo",
+                keywords: ["screenshot", "capture", "save", "file", "region", "image"]
+            },
+            {
                 id: "audio.mixer",
                 name: "Application Mixer",
                 description: "Control live PipeWire playback streams",
@@ -561,6 +576,13 @@ ShellRoot {
         name: "launcher-slot-9"
         description: "Open command palette result 9"
         onPressed: launcher.launchIndex(8)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "capture-region"
+        description: "Copy selected screen region to clipboard"
+        onPressed: actions.captureRegion(true)
     }
 
     GlobalShortcut {

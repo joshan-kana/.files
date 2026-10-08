@@ -218,6 +218,12 @@ QtObject {
         brightnessState.adjust(-5);
     }
 
+    function captureRegion(copy: bool): void {
+        hideTransient("");
+        // Reuse Hyprland's existing Wayland capture backend.
+        Quickshell.execDetached(copy ? ["grimblast", "copy", "area"] : ["grimblast", "--notify", "save", "area"]);
+    }
+
     function invokeCommand(commandId: string): void {
         if (commandId === "session.lock")
             lockSession();
@@ -225,6 +231,10 @@ QtObject {
             toggleAudioMixer();
         else if (commandId === "clipboard.toggle")
             toggleClipboard();
+        else if (commandId === "capture.region")
+            captureRegion(true);
+        else if (commandId === "capture.saveRegion")
+            captureRegion(false);
         else if (commandId === "media.toggle")
             toggleMedia();
         else if (commandId === "media.playPause")
