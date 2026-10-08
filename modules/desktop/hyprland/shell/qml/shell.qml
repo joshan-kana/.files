@@ -161,6 +161,7 @@ ShellRoot {
         notificationState: notifications
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
+        onTrayMenuRequested: (screen, origin, index) => actions.showSystem(screen, origin, "tray:" + index)
         onCalendarRequested: (screen, origin) => actions.toggleCalendar(screen, origin)
         onNotificationsRequested: actions.toggleNotifications()
     }
