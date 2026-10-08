@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
@@ -15,7 +16,6 @@ Item {
 
     ShellSurface {
         anchors.fill: parent
-
         theme: island.theme
         motion: island.motion
         surfaceLayer: ShellSurface.Pane
@@ -23,96 +23,112 @@ Item {
 
         Row {
             id: statusRow
-
             anchors.centerIn: parent
-            spacing: island.theme.spacing2
+            spacing: island.theme.spacing3
 
             Row {
                 id: volumeStatus
                 spacing: island.theme.spacing1
-                height: Math.max(volumeIcon.implicitHeight, volumeValue.implicitHeight)
+                anchors.verticalCenter: parent.verticalCenter
 
                 Text {
-                    id: volumeIcon
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
-                    text: island.system.muted ? "󰖁" : "󰕾"
+                    text: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
                     color: island.system.muted ? island.theme.warning : island.theme.accent
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(12)
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: island.theme.fontSize(15)
                 }
 
                 Text {
-                    id: volumeValue
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
-                    text: island.system.muted ? "Muted" : island.system.volumePercent + "%"
-                    color: island.system.muted ? island.theme.warning : island.theme.text
+                    text: island.system.muted ? "MUTE" : island.system.volumePercent + "%"
+                    color: island.system.muted ? island.theme.warning : island.theme.textStrong
                     font.family: island.runtime.fontMono
                     font.pixelSize: island.theme.fontSize(11)
                     font.weight: Font.DemiBold
+                    anchors.verticalCenter: parent.verticalCenter
                 }
+            }
+
+            // end-4's contextual muted-input indicator, sharing the same PipeWire state.
+            Text {
+                visible: island.system.microphoneMuted
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰍭"
+                color: island.theme.warning
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(16)
             }
 
             Text {
-                width: 108
-                text: island.system.networkConnected ? island.system.networkName : "Offline"
-                elide: Text.ElideRight
-                color: island.system.networkConnected ? island.theme.text : island.theme.critical
-                font.family: island.runtime.fontMono
-                font.pixelSize: island.theme.fontSize(11)
+                anchors.verticalCenter: parent.verticalCenter
+                text: island.system.networkConnected ? (island.system.wifiConnected ? "󰤨" : "󰈀") : "󰖪"
+                color: island.system.networkConnected ? island.theme.accent : island.theme.critical
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(17)
             }
 
             Row {
-                id: bluetoothStatus
-                visible: island.system.bluetoothEnabled
+                visible: island.system.bluetoothAvailable
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: island.theme.spacing1
-                height: Math.max(bluetoothIcon.implicitHeight, bluetoothValue.implicitHeight)
 
                 Text {
-                    id: bluetoothIcon
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
-                    text: "󰂯"
-                    color: island.system.bluetoothConnectedCount > 0 ? island.theme.accent : island.theme.text
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(11)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: island.system.bluetoothEnabled ? "󰂯" : "󰂲"
+                    color: island.system.bluetoothConnectedCount > 0 ? island.theme.accent : island.theme.textMuted
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: island.theme.fontSize(15)
                 }
 
                 Text {
-                    id: bluetoothValue
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
+                    anchors.verticalCenter: parent.verticalCenter
                     visible: island.system.bluetoothConnectedCount > 0
                     text: island.system.bluetoothConnectedCount
-                    color: island.theme.text
+                    color: island.theme.textStrong
                     font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(11)
+                    font.pixelSize: island.theme.fontSize(10)
+                }
+            }
+
+            // The existing Control Centre owns the tray items and menu interactions.
+            Row {
+                visible: island.system.trayCount > 0
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: island.theme.spacing1
+
+                Text {
+                    text: "󰀻"
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: island.theme.accent
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: island.theme.fontSize(15)
+                }
+
+                Text {
+                    text: island.system.trayCount
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: island.theme.textStrong
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(10)
                 }
             }
 
             Row {
-                id: batteryStatus
                 visible: island.system.batteryAvailable
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: island.theme.spacing1
-                height: Math.max(batteryIcon.implicitHeight, batteryValue.implicitHeight)
 
                 Text {
-                    id: batteryIcon
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
-                    text: "󰁹"
+                    text: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                    anchors.verticalCenter: parent.verticalCenter
                     color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(12)
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: island.theme.fontSize(16)
                 }
 
                 Text {
-                    id: batteryValue
-                    height: parent.height
-                    verticalAlignment: Text.AlignVCenter
                     text: island.system.batteryPercent + "%"
-                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.text
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.textStrong
                     font.family: island.runtime.fontMono
                     font.pixelSize: island.theme.fontSize(11)
                     font.weight: Font.DemiBold
@@ -123,7 +139,14 @@ Item {
         StateLayer {
             theme: island.theme
             motion: island.motion
+            cornerRadius: island.theme.radiusMedium
             onActivated: island.activated()
+            onWheel: event => {
+                if (event.angleDelta.y !== 0 && island.system.audioAvailable) {
+                    island.system.adjustVolume((event.angleDelta.y > 0 ? 1 : -1) * 0.05);
+                    event.accepted = true;
+                }
+            }
         }
     }
 }
