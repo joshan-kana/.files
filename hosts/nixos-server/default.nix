@@ -356,6 +356,7 @@
 
           services.tailscale = {
             enable = true;
+            package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.tailscale;
             openFirewall = true;
             useRoutingFeatures = "server";
             authKeyFile = "${server.secretsDir}/tailscale-oauth-client-secret";
@@ -363,10 +364,6 @@
               ephemeral = true;
               preauthorized = true;
             };
-            extraDaemonFlags = [
-              "--state=mem:"
-              "--statedir=/var/lib/tailscale"
-            ];
             extraUpFlags = [
               "--advertise-tags=tag:nixos-server"
               "--hostname=${config.networking.hostName}"
