@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -6,12 +7,12 @@ import Quickshell.Wayland
 Variants {
     id: bars
 
-    required property QtObject runtime
-    required property QtObject theme
-    required property QtObject motion
-    required property QtObject media
-    required property QtObject spectrum
-    required property QtObject system
+    required property RuntimeConfig runtime
+    required property Theme theme
+    required property Motion motion
+    required property MediaState media
+    required property SpectrumState spectrum
+    required property SystemState system
 
     property bool shown: true
     property var origins: ({})
@@ -120,8 +121,8 @@ Variants {
                 height: parent.height
                 anchors.left: parent.left
 
-                theme: bar.theme
-                motion: bar.motion
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusMedium
 
@@ -155,29 +156,29 @@ Variants {
                                 width: workspace.active ? 28 : 8
                                 height: workspace.active ? 28 : 8
 
-                                exponent: theme.squircleExponent
+                                exponent: bars.theme.squircleExponent
                                 cornerRadius: workspace.active ? 9 : 4
-                                fillColor: workspace.active ? theme.accent : Qt.rgba(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, 0.55)
+                                fillColor: workspace.active ? bars.theme.accent : Qt.rgba(bars.theme.textMuted.r, bars.theme.textMuted.g, bars.theme.textMuted.b, 0.55)
                                 borderColor: "transparent"
                                 borderWidth: 0
 
                                 Behavior on width {
                                     NumberAnimation {
-                                        duration: motion.fast
-                                        easing.type: motion.enterType
+                                        duration: bars.motion.fast
+                                        easing.type: bars.motion.enterType
                                     }
                                 }
 
                                 Behavior on height {
                                     NumberAnimation {
-                                        duration: motion.fast
-                                        easing.type: motion.enterType
+                                        duration: bars.motion.fast
+                                        easing.type: bars.motion.enterType
                                     }
                                 }
 
                                 Behavior on fillColor {
                                     ColorAnimation {
-                                        duration: motion.fast
+                                        duration: bars.motion.fast
                                     }
                                 }
 
@@ -185,9 +186,9 @@ Variants {
                                     anchors.centerIn: parent
                                     visible: workspace.active
                                     text: workspace.number
-                                    color: theme.background
-                                    font.family: runtime.fontMono
-                                    font.pixelSize: theme.fontSize(11)
+                                    color: bars.theme.background
+                                    font.family: bars.runtime.fontMono
+                                    font.pixelSize: bars.theme.fontSize(11)
                                     font.weight: Font.DemiBold
                                 }
                             }
@@ -205,11 +206,11 @@ Variants {
                     verticalCenter: parent.verticalCenter
                 }
 
-                runtime: bar.runtime
-                theme: bar.theme
-                motion: bar.motion
-                media: bar.media
-                spectrum: bar.spectrum
+                runtime: (bar.runtime as RuntimeConfig)
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
+                media: (bar.media as MediaState)
+                spectrum: (bar.spectrum as SpectrumState)
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.mediaRequested(bar.modelData, bars.originFor(bar.modelData, "media"))
@@ -222,21 +223,21 @@ Variants {
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                theme: bar.theme
-                motion: bar.motion
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusMedium
 
                 Row {
                     anchors.centerIn: parent
-                    spacing: theme.spacing2
+                    spacing: bars.theme.spacing2
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
-                        color: theme.accent
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(13)
+                        color: bars.theme.accent
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.Medium
                     }
 
@@ -245,15 +246,15 @@ Variants {
                         width: 4
                         height: 4
                         radius: 2
-                        color: theme.warning
+                        color: bars.theme.warning
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "h:mm AP")
-                        color: theme.textStrong
-                        font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(13)
+                        color: bars.theme.textStrong
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.DemiBold
                     }
                 }
@@ -267,10 +268,10 @@ Variants {
                     verticalCenter: parent.verticalCenter
                 }
 
-                runtime: bar.runtime
-                theme: bar.theme
-                motion: bar.motion
-                system: bar.system
+                runtime: (bar.runtime as RuntimeConfig)
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
+                system: (bar.system as SystemState)
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -5,8 +6,8 @@ import Quickshell.Wayland
 Variants {
     id: wallpaperLayer
 
-    required property QtObject runtime
-    required property QtObject theme
+    required property RuntimeConfig runtime
+    required property Theme theme
 
     model: Quickshell.screens
 

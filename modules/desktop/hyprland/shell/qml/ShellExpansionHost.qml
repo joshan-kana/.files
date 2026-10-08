@@ -7,7 +7,7 @@ import Quickshell.Wayland
 PanelWindow {
     id: host
 
-    required property QtObject runtime
+    required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
     required property ShellExpansionState expansionState
@@ -18,6 +18,7 @@ PanelWindow {
     property bool closing: false
 
     readonly property Item loadedContent: contentLoader.item as Item
+    readonly property SystemContent systemContent: expansionState.currentName === "system" ? contentLoader.item as SystemContent : null
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
