@@ -3,8 +3,8 @@ import QtQuick
 QtObject {
     id: root
 
-    required property QtObject system
-    required property QtObject brightness
+    required property SystemState system
+    required property BrightnessState brightness
 
     property bool ready: false
     property bool visible: false

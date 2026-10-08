@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -7,7 +8,8 @@ QtObject {
 
     property bool active: false
     property bool connectionGate: true
-    readonly property bool connected: socketLoader.item ? socketLoader.item.connected : false
+    readonly property Socket currentSocket: socketLoader.item as Socket
+    readonly property bool connected: currentSocket ? currentSocket.connected : false
 
     property var bands: []
     property var targetBands: []
@@ -78,7 +80,7 @@ QtObject {
             connected: false
 
             Component.onCompleted: Qt.callLater(() => {
-                if (spectrum.active && socketLoader.item === spectrumSocket)
+                if (spectrum.active && spectrum.socketLoader.item === spectrumSocket)
                     spectrumSocket.connected = true;
             })
 
@@ -108,11 +110,11 @@ QtObject {
                     return;
 
                 Qt.callLater(() => {
-                    if (!spectrum.active || socketLoader.item !== spectrumSocket)
+                    if (!spectrum.active || spectrum.socketLoader.item !== spectrumSocket)
                         return;
 
                     spectrum.connectionGate = false;
-                    reconnectTimer.restart();
+                    spectrum.reconnectTimer.restart();
                 });
             }
         }
@@ -120,7 +122,7 @@ QtObject {
 
     property Loader socketLoader: Loader {
         active: spectrum.active && spectrum.connectionGate
-        sourceComponent: socketComponent
+        sourceComponent: spectrum.socketComponent
     }
 
     property Timer reconnectTimer: Timer {

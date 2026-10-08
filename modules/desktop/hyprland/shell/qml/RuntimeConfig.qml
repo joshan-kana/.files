@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,42 +7,44 @@ QtObject {
     id: root
 
     signal themeChanged
+    property alias jsonAdapter: data
+    readonly property var configData: root.jsonAdapter
 
-    readonly property string terminal: data.defaults.terminal
-    readonly property string editor: data.defaults.editor
-    readonly property string wallpaper: data.wallpaper
-    readonly property string bluetoothctl: data.tools.bluetoothctl
-    readonly property string brightnessctl: data.tools.brightnessctl
-    readonly property string cliphist: data.tools.cliphist
-    readonly property string clipboardCopy: data.tools.clipboardCopy
-    readonly property string lockSession: data.tools.lockSession
-    readonly property string networkConnectionEditor: data.tools.networkConnectionEditor
-    readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || data.tools.sessionCommand
-    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || data.tools.themeSet
+    readonly property string terminal: root.configData.defaults.terminal
+    readonly property string editor: root.configData.defaults.editor
+    readonly property string wallpaper: root.configData.wallpaper
+    readonly property string bluetoothctl: root.configData.tools.bluetoothctl
+    readonly property string brightnessctl: root.configData.tools.brightnessctl
+    readonly property string cliphist: root.configData.tools.cliphist
+    readonly property string clipboardCopy: root.configData.tools.clipboardCopy
+    readonly property string lockSession: root.configData.tools.lockSession
+    readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
+    readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
+    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
 
-    readonly property string fontMono: data.fonts.mono
+    readonly property string fontMono: root.configData.fonts.mono
 
-    readonly property color background: data.theme.background
-    readonly property color surface: data.theme.surface
-    readonly property color surfaceRaised: data.theme.surfaceRaised
-    readonly property color outline: data.theme.outline
-    readonly property color textMuted: data.theme.textMuted
-    readonly property color text: data.theme.text
-    readonly property color textStrong: data.theme.textStrong
-    readonly property color critical: data.theme.critical
-    readonly property color warning: data.theme.warning
-    readonly property color positive: data.theme.positive
-    readonly property color accent: data.theme.accent
+    readonly property color background: root.configData.theme.background
+    readonly property color surface: root.configData.theme.surface
+    readonly property color surfaceRaised: root.configData.theme.surfaceRaised
+    readonly property color outline: root.configData.theme.outline
+    readonly property color textMuted: root.configData.theme.textMuted
+    readonly property color text: root.configData.theme.text
+    readonly property color textStrong: root.configData.theme.textStrong
+    readonly property color critical: root.configData.theme.critical
+    readonly property color warning: root.configData.theme.warning
+    readonly property color positive: root.configData.theme.positive
+    readonly property color accent: root.configData.theme.accent
 
-    readonly property real textScale: data.accessibility.textScale
-    readonly property bool animationsEnabled: data.motion.animationsEnabled
-    readonly property real panelOpacity: data.visual.panelOpacity
-    readonly property real focusOpacity: data.visual.focusOpacity
-    readonly property real scrimOpacity: data.visual.scrimOpacity
-    readonly property real squircleExponent: data.visual.squircleExponent
-    readonly property var keybindings: data.keybindings
-    readonly property var shortcuts: data.shortcuts
-    readonly property var shortcutHints: data.shortcutHints
+    readonly property real textScale: root.configData.accessibility.textScale
+    readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
+    readonly property real panelOpacity: root.configData.visual.panelOpacity
+    readonly property real focusOpacity: root.configData.visual.focusOpacity
+    readonly property real scrimOpacity: root.configData.visual.scrimOpacity
+    readonly property real squircleExponent: root.configData.visual.squircleExponent
+    readonly property var keybindings: root.configData.keybindings
+    readonly property var shortcuts: root.configData.shortcuts
+    readonly property var shortcutHints: root.configData.shortcutHints
 
     function shortcut(id) {
         const value = shortcuts ? shortcuts[id] : undefined;
@@ -57,7 +60,7 @@ QtObject {
         path: Quickshell.env("LINUX_DESKTOP_THEME_STATE") || ""
         watchChanges: true
         onFileChanged: {
-            configFile.reload();
+            root.configFile.reload();
             root.themeChanged();
         }
     }
