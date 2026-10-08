@@ -284,12 +284,16 @@ Variants {
                     anchors.centerIn: parent
                     spacing: bars.theme.spacing2
 
-                    Image {
+                    Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 20
                         height: 20
-                        source: Quickshell.iconPath("preferences-system-notifications")
-                        fillMode: Image.PreserveAspectFit
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: "󰂚"
+                        color: bars.theme.textStrong
+                        font.family: "Symbols Nerd Font"
+                        font.pixelSize: bars.theme.fontSize(19)
                     }
 
                     Text {
