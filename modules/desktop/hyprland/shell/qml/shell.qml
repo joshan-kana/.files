@@ -15,6 +15,7 @@ ShellRoot {
     readonly property MediaState mediaRef: media
     readonly property SpectrumState spectrumRef: spectrum
     readonly property SystemState systemRef: system
+    readonly property ResourceState resourcesRef: resources
     readonly property BrightnessState brightnessRef: brightness
     readonly property WeatherState weatherRef: weather
 
@@ -96,6 +97,7 @@ ShellRoot {
             motion: root.motionRef
             system: root.systemRef
             brightness: root.brightnessRef
+            resourceState: root.resourcesRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
             requestedView: expansionState.currentView
             onCloseRequested: expansionState.close()
@@ -120,6 +122,11 @@ ShellRoot {
 
     SystemState {
         id: system
+    }
+
+    ResourceState {
+        id: resources
+        active: expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent !== null && expansionHost.systemContent.resourcesOpen
     }
 
     BrightnessState {
@@ -319,6 +326,13 @@ ShellRoot {
                 icon: "media-playlist-repeat",
                 key: runtime.shortcut("media.cyclePlayer"),
                 keywords: ["music", "media", "player", "switch"]
+            },
+            {
+                id: "resources.toggle",
+                name: "Resource Monitor",
+                description: "Live CPU and memory dashboard",
+                icon: "utilities-system-monitor",
+                keywords: ["cpu", "ram", "memory", "resources", "performance", "usage"]
             },
             {
                 id: "system.toggle",
@@ -842,6 +856,10 @@ ShellRoot {
 
         function calendarOpen(): bool {
             return expansionState.hasCurrent && expansionState.currentName === "calendar";
+        }
+
+        function showResources(): void {
+            actions.showResources();
         }
 
         function showTheme(): void {
