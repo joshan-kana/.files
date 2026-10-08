@@ -183,7 +183,7 @@ PanelWindow {
         }
     }
 
-    SquircleSurface {
+    ShellSurface {
         id: card
 
         width: Math.min(palette.width - 80, 780)
@@ -194,11 +194,10 @@ PanelWindow {
             topMargin: Math.max(86, palette.height * 0.13)
         }
 
-        exponent: theme.squircleExponent
+        theme: palette.theme
+        motion: palette.motion
+        surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
-        fillColor: theme.panelFill
-        borderColor: theme.panelBorder
-        borderWidth: theme.borderThin
 
         scale: palette.open ? 1 : theme.panelClosedScale
         opacity: palette.open ? 1 : 0
