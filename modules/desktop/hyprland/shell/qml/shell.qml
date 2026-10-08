@@ -468,6 +468,7 @@ ShellRoot {
         systemState: system
         brightnessState: brightness
         notificationState: notifications
+        notificationPopup: notificationPopup
         motion: motion
     }
 
