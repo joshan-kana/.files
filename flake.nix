@@ -116,7 +116,6 @@
       semantic = import ./lib/semantic-scopes.nix { inherit lib; };
       semanticScopeOptions = import ./modules/options/semantic-scopes.nix { inherit lib; };
       moduleRegistry = import ./modules;
-      quickshellOverlayModule = import ./overlays/quickshell.nix { };
 
       systems = [
         "x86_64-linux"
@@ -131,7 +130,7 @@
         import nixpkgs {
           inherit system;
           # Lint the same Quickshell version that hosts actually deploy.
-          overlays = quickshellOverlayModule.nixpkgs.overlays;
+          overlays = (import ./overlays/quickshell.nix { }).nixpkgs.overlays;
         };
 
       repoToolExcludedDirs = [
@@ -334,7 +333,7 @@
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/nvtop.nix
-            quickshellOverlayModule
+            ./overlays/quickshell.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             (semantic.rootModule hostScopeWithFile)
