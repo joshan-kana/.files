@@ -136,8 +136,12 @@ FocusScope {
                             action: "Theme / session"
                         },
                         {
-                            key: "G",
-                            action: "Resource monitor"
+                            key: "G / V",
+                            action: "Resources / media controls"
+                        },
+                        {
+                            key: "CTRL+TAB",
+                            action: "Switch Home / Controls"
                         },
                         {
                             key: "[ / ]",
@@ -154,6 +158,7 @@ FocusScope {
                     ]))))
 
     signal closeRequested
+    signal mediaRequested
 
     implicitWidth: 512
     implicitHeight: resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
@@ -420,6 +425,17 @@ FocusScope {
                         }
                     }
                 }
+            }
+
+            ShellAction {
+                width: parent.width
+                height: 54
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
+                title: "󰝚  Media & visualiser"
+                subtitle: "Artwork · playback · seek · visualiser"
+                onActivated: root.mediaRequested()
             }
 
             ShellAction {
@@ -945,6 +961,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_G) {
                     root.openResources();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_V) {
+                    root.mediaRequested();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && root.brightness.supported) {
                     root.brightness.adjust(5);
