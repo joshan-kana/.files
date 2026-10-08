@@ -368,7 +368,29 @@
             ./modules/options
             stylix.${nativeModules}.stylix
             home-manager.${nativeModules}.home-manager
-            ./overlays
+            ./overlays/bottles.nix
+            ./overlays/comin.nix
+            ./overlays/gh-dash.nix
+            ./overlays/nixos-options-doc.nix
+            ./overlays/quickshell.nix
+            ./overlays/tuicr.nix
+            ./overlays/webhook.nix
+            ./overlays/arc.nix
+            ./overlays/arduino-ide.nix
+            ./overlays/chatgpt.nix
+            ./overlays/bambu-studio.nix
+            ./overlays/cryptomator.nix
+            ./overlays/hammerspoon.nix
+            ./overlays/heroic.nix
+            ./overlays/iterm2.nix
+            ./overlays/linear.nix
+            ./overlays/notion.nix
+            ./overlays/open-webui.nix
+            ./overlays/prusaslicer.nix
+            ./overlays/qmk-toolbox.nix
+            ./overlays/raspberry-pi-imager.nix
+            ./overlays/reaper.nix
+            ./overlays/vial.nix
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
