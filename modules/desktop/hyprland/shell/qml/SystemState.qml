@@ -13,12 +13,14 @@ QtObject {
     readonly property real volume: audioAvailable ? audioSink.audio.volume : 0
     readonly property int volumePercent: Math.round(volume * 100)
     readonly property bool muted: audioAvailable ? audioSink.audio.muted : false
+    readonly property var audioSource: Pipewire.defaultAudioSource
+    readonly property bool microphoneMuted: audioSource !== null && audioSource.audio !== null && audioSource.audio.muted
 
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
     readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null)
 
     property PwObjectTracker audioTracker: PwObjectTracker {
-        objects: [system.audioSink].filter(node => node !== null).concat(system.audioStreams)
+        objects: [system.audioSink, system.audioSource].filter(node => node !== null).concat(system.audioStreams)
     }
 
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
@@ -65,6 +67,7 @@ QtObject {
     }
 
     readonly property bool networkConnected: connectedNetworkDevice !== null
+    readonly property bool wifiConnected: connectedNetworkDevice !== null && connectedNetworkDevice.type === DeviceType.Wifi
     readonly property string networkName: {
         if (!connectedNetworkDevice)
             return "Offline";
