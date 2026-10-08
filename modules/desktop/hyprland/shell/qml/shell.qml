@@ -119,8 +119,10 @@ ShellRoot {
         media: media
         spectrum: spectrum
         system: system
+        notificationState: notifications
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
+        onNotificationsRequested: actions.toggleNotifications()
     }
 
     ShortcutCheatsheet {
@@ -305,6 +307,7 @@ ShellRoot {
                 name: "Notifications",
                 description: "Open notification history",
                 icon: "preferences-system-notifications",
+                key: runtime.shortcut("notifications.toggle"),
                 keywords: ["alerts", "history", "messages"]
             },
             {

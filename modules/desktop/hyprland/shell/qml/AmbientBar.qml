@@ -13,12 +13,14 @@ Variants {
     required property MediaState media
     required property SpectrumState spectrum
     required property SystemState system
+    required property NotificationState notificationState
 
     property bool shown: true
     property var origins: ({})
 
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
+    signal notificationsRequested
 
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
@@ -68,6 +70,7 @@ Variants {
         readonly property QtObject media: bars.media
         readonly property QtObject spectrum: bars.spectrum
         readonly property QtObject system: bars.system
+        readonly property NotificationState notificationState: bars.notificationState
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
 
         function publishOrigins(): void {
@@ -257,6 +260,53 @@ Variants {
                         font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.DemiBold
                     }
+                }
+            }
+
+            ShellSurface {
+                id: notificationIsland
+
+                width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
+                height: parent.height
+                anchors {
+                    right: systemIsland.left
+                    rightMargin: bars.theme.spacing3
+                    verticalCenter: parent.verticalCenter
+                }
+
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
+                surfaceLayer: ShellSurface.Pane
+                cornerRadius: bars.theme.radiusMedium
+
+                Row {
+                    id: notificationRow
+                    anchors.centerIn: parent
+                    spacing: bars.theme.spacing2
+
+                    Image {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 20
+                        height: 20
+                        source: Quickshell.iconPath("preferences-system-notifications")
+                        fillMode: Image.PreserveAspectFit
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: bar.notificationState.count > 0
+                        text: bar.notificationState.count > 99 ? "99+" : String(bar.notificationState.count)
+                        color: bars.theme.accent
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(11)
+                        font.weight: Font.DemiBold
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: bars.notificationsRequested()
                 }
             }
 
