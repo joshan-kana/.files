@@ -13,6 +13,8 @@ FocusScope {
     property bool engaged: false
     property int monthShift: 0
     property int selectedDay: 0
+    readonly property var selectedDate: selectedDay > 0 ? new Date(viewingDate.getFullYear(), viewingDate.getMonth(), selectedDay) : viewingDate
+    readonly property string selectedDateKey: Qt.formatDate(selectedDate, "yyyy-MM-dd")
     readonly property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift, clock.date)
     readonly property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0)
     property var outgoingLayout: []
@@ -44,6 +46,13 @@ FocusScope {
         precision: SystemClock.Minutes
     }
 
+    AgendaState {
+        id: agenda
+        runtime: calendar.runtime
+        active: calendar.engaged
+        startDate: calendar.selectedDateKey
+    }
+
     NumberAnimation {
         id: monthAnimation
         target: calendar
@@ -71,6 +80,21 @@ FocusScope {
             monthAnimation.start();
         else
             slideProgress = 1;
+    }
+
+    function browseDays(amount: int): void {
+        const currentDay = selectedDay > 0 ? selectedDay : (monthShift === 0 ? clock.date.getDate() : 1);
+        const monthDays = new Date(viewingDate.getFullYear(), viewingDate.getMonth() + 1, 0).getDate();
+        const targetDay = currentDay + amount;
+        if (targetDay < 1) {
+            browseMonths(-1);
+            selectedDay = new Date(viewingDate.getFullYear(), viewingDate.getMonth() + 1, 0).getDate();
+        } else if (targetDay > monthDays) {
+            browseMonths(1);
+            selectedDay = 1;
+        } else {
+            selectedDay = targetDay;
+        }
     }
 
     function today(): void {
@@ -108,6 +132,15 @@ FocusScope {
                 event.accepted = true;
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down || event.key === Qt.Key_PageDown) {
                 calendar.browseMonths(1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                calendar.browseDays(-1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                calendar.browseDays(1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_R) {
+                agenda.refresh();
                 event.accepted = true;
             } else if (event.key === Qt.Key_T) {
                 calendar.today();
@@ -233,12 +266,21 @@ FocusScope {
             onForecastRequested: calendar.forecastRequested()
         }
 
+        AgendaList {
+            width: parent.width
+            runtime: calendar.runtime
+            theme: calendar.theme
+            motion: calendar.motion
+            agenda: agenda
+            startDate: calendar.selectedDateKey
+        }
+
         Row {
             width: parent.width
 
             Text {
                 id: dateCaption
-                text: calendar.selectedDay > 0 ? Qt.formatDate(new Date(calendar.viewingDate.getFullYear(), calendar.viewingDate.getMonth(), calendar.selectedDay), "ddd d MMMM") : "J / K · months · T today"
+                text: calendar.selectedDay > 0 ? Qt.formatDate(new Date(calendar.viewingDate.getFullYear(), calendar.viewingDate.getMonth(), calendar.selectedDay), "ddd d MMMM") : "J/K months · H/L days · T today · R events"
                 color: calendar.theme.textMuted
                 font.family: calendar.runtime.fontMono
                 font.pixelSize: calendar.theme.fontSize(11)
