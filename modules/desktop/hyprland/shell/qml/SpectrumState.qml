@@ -10,6 +10,8 @@ QtObject {
     readonly property bool connected: socketLoader.item ? socketLoader.item.connected : false
 
     property var bands: []
+    property var targetBands: []
+    property bool interpolating: false
     property real rms: 0
     property real peak: 0
     property real sub: 0
@@ -20,6 +22,53 @@ QtObject {
     property real lowHz: 20
     property real highHz: 20000
     property int sequence: 0
+
+    // Audio buffers arrive independently of display refresh. Let the scene graph
+    // interpolate between samples rather than redrawing only on PipeWire callbacks.
+    property FrameAnimation interpolationFrame: FrameAnimation {
+        running: spectrum.active && spectrum.interpolating
+        onTriggered: spectrum.advanceBands(frameTime)
+    }
+
+    function updateBands(values: var): void {
+        const next = values || [];
+        if (bands.length !== next.length) {
+            bands = next;
+            targetBands = next;
+            interpolating = false;
+            return;
+        }
+
+        targetBands = next;
+        for (let i = 0; i < next.length; i++) {
+            if (Math.abs(next[i] - bands[i]) > 0.002) {
+                interpolating = true;
+                return;
+            }
+        }
+
+        // Avoid repainting a static spectrum for every silent audio buffer.
+        interpolating = false;
+    }
+
+    function advanceBands(frameTime: real): void {
+        const delta = Math.min(Math.max(frameTime, 0), 0.05);
+        if (delta === 0)
+            return;
+
+        const blend = 1 - Math.exp(-delta * 120);
+        const values = [];
+        let maxDifference = 0;
+        for (let i = 0; i < targetBands.length; i++) {
+            const value = bands[i] + (targetBands[i] - bands[i]) * blend;
+            values.push(value);
+            maxDifference = Math.max(maxDifference, Math.abs(targetBands[i] - value));
+        }
+
+        bands = maxDifference < 0.002 ? targetBands : values;
+        if (maxDifference < 0.002)
+            interpolating = false;
+    }
 
     property Component socketComponent: Component {
         Socket {
@@ -47,7 +96,7 @@ QtObject {
                         spectrum.bass = frame.bass || 0;
                         spectrum.mid = frame.mid || 0;
                         spectrum.high = frame.high || 0;
-                        spectrum.bands = frame.bands || [];
+                        spectrum.updateBands(frame.bands);
                     } catch (error) {
                         console.warn("spectrum: invalid frame:", error);
                     }
@@ -89,6 +138,8 @@ QtObject {
         } else {
             reconnectTimer.stop();
             bands = [];
+            targetBands = [];
+            interpolating = false;
             rms = 0;
             peak = 0;
             sub = 0;
