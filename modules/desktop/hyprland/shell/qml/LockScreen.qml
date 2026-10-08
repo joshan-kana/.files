@@ -13,6 +13,7 @@ WlSessionLock {
     property string password: ""
     property string statusText: ""
     property bool statusError: false
+    property bool authRevealed: false
 
     property PamContext pamContext: PamContext {
         config: "linux-desktop"
@@ -80,6 +81,7 @@ WlSessionLock {
         password = "";
         statusText = "";
         statusError = false;
+        authRevealed = false;
         locked = true;
     }
 
@@ -107,6 +109,7 @@ WlSessionLock {
         password = "";
         statusText = "";
         statusError = false;
+        authRevealed = false;
     }
 
     WlSessionLockSurface {
@@ -162,7 +165,7 @@ WlSessionLock {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: Qt.formatDateTime(lock.clock.date, "HH:mm")
+                    text: Qt.formatDateTime(lock.clock.date, "h:mm AP")
                     color: lock.theme.textStrong
                     font.family: lock.runtime.fontMono
                     font.pixelSize: theme.fontSize(Math.max(62, Math.min(104, parent.parent.width * 0.055)))
@@ -181,26 +184,80 @@ WlSessionLock {
                 }
             }
 
-            SquircleSurface {
+            ShellSurface {
                 id: authCard
 
-                width: Math.min(parent.width - 80, 430)
-                height: contentColumn.implicitHeight + lock.theme.spacing5 * 2
+                width: lock.authRevealed ? Math.min(parent.width - 80, 430) : 190
+                height: lock.authRevealed ? contentColumn.implicitHeight + lock.theme.spacing5 * 2 : 68
                 anchors {
                     horizontalCenter: parent.horizontalCenter
                     bottom: parent.bottom
                     bottomMargin: Math.max(70, parent.height * 0.11)
                 }
 
-                exponent: lock.theme.squircleExponent
-                cornerRadius: lock.theme.radiusPanel
-                fillColor: Qt.rgba(lock.theme.surface.r, lock.theme.surface.g, lock.theme.surface.b, 0.94)
-                borderColor: lock.theme.panelBorder
-                borderWidth: lock.theme.borderThin
+                theme: lock.theme
+                motion: lock.motion
+                surfaceLayer: ShellSurface.Pane
+                cornerRadius: lock.authRevealed ? lock.theme.radiusPanel : lock.theme.radiusLarge
+
+                Behavior on width {
+                    Anim {
+                        motion: lock.motion
+                        type: Anim.DefaultSpatial
+                    }
+                }
+                Behavior on height {
+                    Anim {
+                        motion: lock.motion
+                        type: Anim.DefaultSpatial
+                    }
+                }
+                Behavior on cornerRadius {
+                    Anim {
+                        motion: lock.motion
+                        type: Anim.DefaultSpatial
+                    }
+                }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: lock.theme.spacing2
+                    opacity: lock.authRevealed ? 0 : 1
+
+                    Image {
+                        width: 20
+                        height: 20
+                        source: Quickshell.iconPath("system-lock-screen")
+                        fillMode: Image.PreserveAspectFit
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "TYPE TO UNLOCK"
+                        color: lock.theme.textStrong
+                        font.family: lock.runtime.fontMono
+                        font.pixelSize: lock.theme.fontSize(11)
+                        font.weight: Font.DemiBold
+                    }
+
+                    Behavior on opacity {
+                        Anim {
+                            motion: lock.motion
+                            type: Anim.FastEffects
+                        }
+                    }
+                }
 
                 Item {
                     anchors.fill: parent
                     anchors.margins: lock.theme.spacing5
+                    opacity: lock.authRevealed ? 1 : 0
+
+                    Behavior on opacity {
+                        Anim {
+                            motion: lock.motion
+                            type: Anim.DefaultEffects
+                        }
+                    }
 
                     Column {
                         id: contentColumn
@@ -230,15 +287,15 @@ WlSessionLock {
                             }
                         }
 
-                        SquircleSurface {
+                        ShellSurface {
                             width: parent.width
                             height: 54
-
-                            exponent: lock.theme.squircleExponent
+                            theme: lock.theme
+                            motion: lock.motion
+                            surfaceLayer: ShellSurface.Group
                             cornerRadius: lock.theme.radiusMedium
-                            fillColor: lock.theme.background
-                            borderColor: passwordInput.activeFocus ? lock.theme.accent : lock.theme.outline
-                            borderWidth: passwordInput.activeFocus ? lock.theme.borderFocus : lock.theme.borderThin
+                            outlined: passwordInput.activeFocus
+                            borderColor: passwordInput.activeFocus ? lock.theme.accent : lock.theme.subtleBorder
 
                             TextInput {
                                 id: passwordInput
@@ -262,11 +319,17 @@ WlSessionLock {
                                 font.pixelSize: theme.fontSize(17)
                                 clip: true
 
-                                onTextEdited: lock.password = text
+                                onTextEdited: {
+                                    lock.password = text;
+                                    lock.authRevealed = true;
+                                }
 
                                 Keys.onPressed: event => {
                                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                        lock.submitPassword();
+                                        if (!lock.authRevealed)
+                                            lock.authRevealed = true;
+                                        else
+                                            lock.submitPassword();
                                         event.accepted = true;
                                     } else if (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U) {
                                         lock.password = "";
@@ -304,6 +367,16 @@ WlSessionLock {
                             font.letterSpacing: 1.2
                             elide: Text.ElideRight
                         }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    visible: !lock.authRevealed
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        lock.authRevealed = true;
+                        passwordInput.forceActiveFocus();
                     }
                 }
             }
