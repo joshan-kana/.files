@@ -64,6 +64,7 @@ Item {
         motion: root.motion
         disabled: !root.enabled
         selected: root.active
+        cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
         onActivated: root.activated()
     }
 }
