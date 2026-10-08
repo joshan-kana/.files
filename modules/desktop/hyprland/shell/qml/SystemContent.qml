@@ -12,6 +12,7 @@ FocusScope {
     required property NotificationState notificationState
     required property BrightnessState brightness
     required property ResourceState resourceState
+    required property PowerProfileState powerProfile
 
     property bool engaged: false
     property bool mixerOpen: false
@@ -159,8 +160,16 @@ FocusScope {
                             action: "Resources / media / app mixer"
                         },
                         {
+                            key: "Q / I",
+                            action: "Do Not Disturb / Stay awake"
+                        },
+                        {
+                            key: "O",
+                            action: "Cycle available power profiles"
+                        },
+                        {
                             key: "CTRL+TAB",
-                            action: "Switch Home / Controls"
+                            action: "Cycle Home / Controls / Activity"
                         },
                         {
                             key: "[ / ]",
@@ -508,6 +517,44 @@ FocusScope {
                 }
             }
 
+            Column {
+                width: parent.width
+                spacing: root.theme.spacing2
+                visible: root.powerProfile.available
+
+                Text {
+                    text: "Power profile  ·  O to cycle"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                }
+
+                Row {
+                    id: profileRow
+                    width: parent.width
+                    spacing: root.theme.spacing3
+
+                    Repeater {
+                        model: root.powerProfile.profiles
+
+                        delegate: ShellAction {
+                            required property string modelData
+                            width: (profileRow.width - (root.powerProfile.profiles.length - 1) * profileRow.spacing) / root.powerProfile.profiles.length
+                            height: 52
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            title: root.powerProfile.label(modelData)
+                            subtitle: root.powerProfile.current === modelData ? "Selected" : "Select"
+                            active: root.powerProfile.current === modelData
+                            enabled: !root.powerProfile.applying
+                            onActivated: root.powerProfile.setProfile(modelData)
+                        }
+                    }
+                }
+            }
+
             ShellAction {
                 width: parent.width
                 height: 54
@@ -821,6 +868,15 @@ FocusScope {
                 spacing: root.theme.spacing4
 
                 Text {
+                    text: "O  POWER"
+                    visible: root.powerProfile.available
+                    color: root.theme.accent
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
+                    font.letterSpacing: 1
+                }
+
+                Text {
                     text: "I  AWAKE"
                     color: root.theme.accent
                     font.family: root.runtime.fontMono
@@ -851,6 +907,11 @@ FocusScope {
                     font.pixelSize: root.theme.fontSize(9)
                     font.letterSpacing: 1
                 }
+            }
+
+            Row {
+                anchors.right: parent.right
+                spacing: root.theme.spacing4
 
                 Text {
                     text: "Y  THEME"
@@ -1081,6 +1142,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_I) {
                     root.system.toggleIdleInhibited();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_O && root.powerProfile.available) {
+                    root.powerProfile.cycle();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N) {
                     root.openNetwork();
