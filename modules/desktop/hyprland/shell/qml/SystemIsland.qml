@@ -28,26 +28,17 @@ Item {
             anchors.centerIn: parent
             spacing: island.theme.spacing3
 
-            Row {
+            ResourceGauge {
                 id: volumeStatus
-                spacing: island.theme.spacing1
+                width: 30
+                height: 30
                 anchors.verticalCenter: parent.verticalCenter
-
-                Text {
-                    text: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
-                    color: island.system.muted ? island.theme.warning : island.theme.accent
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: island.theme.fontSize(15)
-                }
-
-                Text {
-                    text: island.system.muted ? "MUTE" : island.system.volumePercent + "%"
-                    color: island.system.muted ? island.theme.warning : island.theme.textStrong
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(11)
-                    font.weight: Font.DemiBold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+                theme: island.theme
+                motion: island.motion
+                compact: true
+                value: island.system.volume
+                accentColor: island.system.muted ? island.theme.warning : island.theme.accent
+                compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
             }
 
             Text {
@@ -100,27 +91,17 @@ Item {
                 }
             }
 
-            Row {
+            ResourceGauge {
                 visible: island.system.batteryAvailable
+                width: 30
+                height: 30
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: island.theme.spacing1
-
-                Text {
-                    text: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: island.theme.fontSize(16)
-                }
-
-                Text {
-                    text: island.system.batteryPercent + "%"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.textStrong
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(11)
-                    font.weight: Font.DemiBold
-                }
+                theme: island.theme
+                motion: island.motion
+                compact: true
+                value: island.system.batteryPercent / 100
+                accentColor: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
+                compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
             }
         }
 
