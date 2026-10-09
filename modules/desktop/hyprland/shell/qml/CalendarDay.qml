@@ -14,17 +14,17 @@ ShellSurface {
     implicitWidth: 42
     implicitHeight: 42
     surfaceLayer: ShellSurface.Control
-    selected: picked
+    selected: false
     cornerRadius: theme.radiusMedium
-    borderColor: dayState === 1 && !picked ? theme.accent : "transparent"
-    borderWidth: dayState === 1 && !picked ? theme.borderFocus : 0
+    borderColor: picked ? (dayState === 1 ? theme.textStrong : theme.accent) : "transparent"
+    borderWidth: picked ? theme.borderFocus : 0
 
-    fillColor: picked ? theme.accent : (hover.hovered && !header ? theme.layer3 : "transparent")
+    fillColor: dayState === 1 ? theme.accent : (hover.hovered && !header ? theme.layer3 : "transparent")
 
     Text {
         anchors.centerIn: parent
         text: cell.header ? cell.heading : String(cell.day)
-        color: cell.picked ? cell.theme.background : (cell.dayState === 1 ? cell.theme.accent : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
+        color: cell.dayState === 1 ? cell.theme.background : (cell.picked ? cell.theme.accent : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
         opacity: cell.dayState === -1 ? 0.48 : 1
         font.family: cell.theme.runtime.fontMono
         font.pixelSize: cell.theme.fontSize(cell.header ? 11 : 14)
