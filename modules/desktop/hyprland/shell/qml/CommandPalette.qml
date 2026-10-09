@@ -42,24 +42,52 @@ PanelWindow {
         values: palette.filteredItems()
     }
 
+    function subsequencePenalty(haystack: string, query: string): int {
+        let offset = 0;
+        let previous = -1;
+        let penalty = 0;
+        for (let i = 0; i < query.length; i++) {
+            const position = haystack.indexOf(query[i], offset);
+            if (position < 0)
+                return 10000;
+            if (previous < 0)
+                penalty += position * 3;
+            else
+                penalty += (position - previous - 1) * 2;
+            previous = position;
+            offset = position + 1;
+        }
+        return penalty + Math.min(40, haystack.length - query.length);
+    }
+
     function score(item, query): int {
         const name = item.name.toLowerCase();
         const generic = (item.genericName || "").toLowerCase();
-
+        const keywords = (item.keywords || []).map(keyword => keyword.toLowerCase());
+        const binding = (item.key || "").toLowerCase();
         if (name === query)
             return 0;
         if (name.startsWith(query))
-            return 1;
+            return 10;
+        if (name.split(/\s+/).some(word => word.startsWith(query)))
+            return 15;
         if (name.includes(query))
-            return 2;
-        if ((item.keywords || []).some(keyword => keyword.toLowerCase() === query))
-            return 3;
+            return 20;
+        if (keywords.some(keyword => keyword === query))
+            return 25;
+        if (keywords.some(keyword => keyword.startsWith(query)))
+            return 30;
         if (generic.startsWith(query))
-            return 4;
+            return 35;
         if (generic.includes(query))
-            return 5;
-
-        return 10;
+            return 40;
+        if (keywords.some(keyword => keyword.includes(query)))
+            return 45;
+        if (binding.includes(query))
+            return 50;
+        if (query.length < 2)
+            return 10000;
+        return Math.min(100 + subsequencePenalty(name, query), 180 + subsequencePenalty(generic, query));
     }
 
     function filteredItems(): var {
@@ -90,20 +118,17 @@ PanelWindow {
         if (query.length === 0)
             return items.slice(0, 9);
 
-        return items.filter(item => {
-            const haystack = [item.name, item.genericName || "", item.key || "", ...(item.keywords || [])].join(" ").toLowerCase();
-
-            return haystack.includes(query);
-        }).sort((a, b) => {
-            const rank = score(a, query) - score(b, query);
+        return items.map(item => ({
+                    entry: item,
+                    relevance: score(item, query)
+                })).filter(result => result.relevance < 10000).sort((a, b) => {
+            const rank = a.relevance - b.relevance;
             if (rank !== 0)
                 return rank;
-
-            if (a.kind !== b.kind)
-                return a.kind === "command" ? -1 : 1;
-
-            return a.name.localeCompare(b.name);
-        }).slice(0, 9);
+            if (a.entry.kind !== b.entry.kind)
+                return a.entry.kind === "command" ? -1 : 1;
+            return a.entry.name.localeCompare(b.entry.name);
+        }).slice(0, 9).map(result => result.entry);
     }
 
     function setLauncherSubmap(enabled: bool): void {
@@ -114,6 +139,7 @@ PanelWindow {
         closeTimer.stop();
         closing = false;
         setLauncherSubmap(true);
+        search.text = "";
         open = true;
         if (resultModel.values.length === 0)
             results.currentIndex = -1;
