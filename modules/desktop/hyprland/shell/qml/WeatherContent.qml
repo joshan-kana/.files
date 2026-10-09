@@ -99,11 +99,12 @@ FocusScope {
                     opacity: panel.weather.loading ? 0.4 : 1
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: !panel.weather.loading
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: panel.weather.refresh()
+                StateLayer {
+                    theme: panel.theme
+                    motion: panel.motion
+                    cornerRadius: panel.theme.radiusMedium
+                    disabled: panel.weather.loading
+                    onActivated: panel.weather.refresh()
                 }
             }
         }
