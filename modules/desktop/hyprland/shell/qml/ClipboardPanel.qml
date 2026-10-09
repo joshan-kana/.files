@@ -355,9 +355,12 @@ PanelWindow {
                     borderColor: index === panel.selectedIndex ? panel.theme.accent : panel.theme.outline
                     borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus : panel.theme.borderThin
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: panel.selectedIndex = item.index
+                    StateLayer {
+                        theme: panel.theme
+                        motion: panel.motion
+                        selected: item.index === panel.selectedIndex
+                        cornerRadius: panel.theme.radiusMedium
+                        onActivated: panel.selectedIndex = item.index
                         onDoubleClicked: {
                             panel.selectedIndex = item.index;
                             panel.activateSelected();
