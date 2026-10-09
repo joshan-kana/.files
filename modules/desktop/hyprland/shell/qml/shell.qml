@@ -140,6 +140,7 @@ ShellRoot {
         theme: theme
         motion: motion
         expansionState: expansionState
+        barWindows: ambientBar.instances
         mediaComponent: mediaExpansionComponent
         systemComponent: systemExpansionComponent
         calendarComponent: calendarExpansionComponent
