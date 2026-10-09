@@ -607,7 +607,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4
+                    width: (parent.width - parent.spacing * 3) / 4.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -619,7 +619,7 @@ FocusScope {
                     onActivated: root.openResources()
                 }
                 ShellSurface {
-                    width: (parent.width - parent.spacing * 3) / 4
+                    width: (parent.width - parent.spacing * 3) / 4.25 * 1.25
                     height: 82
                     visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
@@ -635,8 +635,8 @@ FocusScope {
                         spacing: root.theme.spacing3
 
                         ResourceGauge {
-                            width: 36
-                            height: 36
+                            width: 46
+                            height: 46
                             anchors.verticalCenter: parent.verticalCenter
                             visible: root.system.batteryAvailable
                             theme: root.theme
@@ -648,7 +648,7 @@ FocusScope {
                         }
 
                         Column {
-                            width: Math.max(1, parent.width - (root.system.batteryAvailable ? 36 + parent.spacing : 0))
+                            width: Math.max(1, parent.width - (root.system.batteryAvailable ? 46 + parent.spacing : 0))
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: root.theme.spacing1
 
@@ -656,7 +656,7 @@ FocusScope {
                                 text: root.system.batteryAvailable ? ("Battery " + root.system.batteryPercent + "%") : "Power profile"
                                 color: root.theme.textStrong
                                 font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
+                                font.pixelSize: root.theme.fontSize(12)
                                 font.weight: Font.DemiBold
                             }
 
@@ -664,7 +664,7 @@ FocusScope {
                                 text: root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Unavailable"
                                 color: root.theme.textMuted
                                 font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(9)
+                                font.pixelSize: root.theme.fontSize(11)
                             }
                         }
                     }
