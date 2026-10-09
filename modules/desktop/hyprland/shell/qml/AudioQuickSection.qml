@@ -9,6 +9,11 @@ Column {
     required property Theme theme
     required property Motion motion
     property bool microphone: false
+    property bool showMixer: false
+    property int baseIndex: 0
+    property int selectedAudioIndex: 0
+    signal selectionRequested(int index)
+    signal mixerRequested
 
     readonly property bool available: microphone ? system.microphoneAvailable : system.audioAvailable
     readonly property bool muted: microphone ? system.microphoneMuted : system.muted
@@ -21,7 +26,7 @@ Column {
 
     Row {
         width: parent.width
-        height: 20
+        height: 28
         spacing: quick.theme.spacing2
 
         Text {
@@ -33,14 +38,14 @@ Column {
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            text: (quick.microphone ? "Input" : "Output") + "  " + (quick.muted ? "MUTED" : quick.percent + "%")
-            color: quick.theme.textStrong
+            text: (quick.selectedAudioIndex === quick.baseIndex ? "▸ " : "") + (quick.microphone ? "Input" : "Output") + "  " + (quick.muted ? "MUTED" : quick.percent + "%")
+            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.accent : quick.theme.textStrong
             font.family: quick.runtime.fontMono
             font.pixelSize: quick.theme.fontSize(11)
             font.weight: Font.DemiBold
         }
         Text {
-            width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - parent.spacing * 2)
+            width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - (quick.showMixer ? mixerLink.width : 0) - parent.spacing * (quick.showMixer ? 3 : 2))
             anchors.verticalCenter: parent.verticalCenter
             text: quick.device ? (quick.device.description || quick.device.name) : "Unavailable"
             elide: Text.ElideRight
@@ -48,6 +53,19 @@ Column {
             color: quick.theme.textMuted
             font.family: quick.runtime.fontMono
             font.pixelSize: quick.theme.fontSize(9)
+        }
+        ShellAction {
+            id: mixerLink
+            visible: quick.showMixer
+            width: quick.showMixer ? 78 : 0
+            height: 28
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            compact: true
+            title: "A  Mixer ↗"
+            onActivated: quick.mixerRequested()
         }
     }
 
@@ -113,6 +131,7 @@ Column {
         delegate: Row {
             id: streamRow
             required property var modelData
+            required property int index
             width: quick.width
             height: 30
             spacing: quick.theme.spacing2
@@ -120,11 +139,15 @@ Column {
             Text {
                 width: 116
                 anchors.verticalCenter: parent.verticalCenter
-                text: quick.system.streamDisplayName(streamRow.modelData)
+                text: (quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "▸ " : "") + quick.system.streamDisplayName(streamRow.modelData)
                 elide: Text.ElideRight
-                color: quick.theme.textMuted
+                color: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? quick.theme.accent : quick.theme.textMuted
                 font.family: quick.runtime.fontMono
                 font.pixelSize: quick.theme.fontSize(9)
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: quick.selectionRequested(quick.baseIndex + streamRow.index + 1)
+                }
             }
             ShellSlider {
                 width: Math.max(1, parent.width - parent.children[0].width - streamMute.width - parent.spacing * 2)
