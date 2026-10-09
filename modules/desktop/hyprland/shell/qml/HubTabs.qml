@@ -93,9 +93,13 @@ Item {
         anchors.topMargin: root.theme.spacing1
         width: tabs.width / 3
         height: 3
-        x: tabs.width / 3 * root.selectedIndex
 
-        Behavior on x {
+        // Animate the tab index once, then map it into live layout geometry.
+        // Animating x itself restarts the motion at every panel width change.
+        property real animatedIndex: root.selectedIndex
+        x: tabs.width / 3 * animatedIndex
+
+        Behavior on animatedIndex {
             Anim {
                 motion: root.motion
                 type: Anim.FastSpatial
