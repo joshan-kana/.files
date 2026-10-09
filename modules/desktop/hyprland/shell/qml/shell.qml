@@ -271,6 +271,14 @@ ShellRoot {
                 keywords: ["screenshot", "capture", "snip", "clipboard", "region", "image"]
             },
             {
+                id: "capture.recordToggle",
+                name: "Start / Stop Screen Recording",
+                description: "Select a Wayland region; use again to finish and save the recording",
+                icon: "media-record",
+                key: runtime.shortcut("capture.recordToggle"),
+                keywords: ["screen", "record", "video", "capture", "screencast", "mp4"]
+            },
+            {
                 id: "capture.saveRegion",
                 name: "Save Screen Region",
                 description: "Select a region or window and save a screenshot",
@@ -576,6 +584,13 @@ ShellRoot {
         name: "launcher-slot-9"
         description: "Open command palette result 9"
         onPressed: launcher.launchIndex(8)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "record-toggle"
+        description: "Start or stop a selected screen recording"
+        onPressed: actions.toggleRecording()
     }
 
     GlobalShortcut {
