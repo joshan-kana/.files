@@ -153,7 +153,7 @@ FocusScope {
             }
 
             Text {
-                text: "J/K apps · H/L items · E expand · 1–9 act · S quiet · Del dismiss · Esc back"
+                text: "J/K apps · H/L items · E expand · 1–9 act · S quiet · C clear · Del dismiss · Esc back"
                 color: center.theme.textMuted
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(9)
@@ -320,8 +320,10 @@ FocusScope {
                 motion: center.motion
                 compact: true
                 active: center.notificationState.silent
-                width: 152
-                shortcut: "S"
+                width: 44
+                height: 40
+                iconOnly: true
+                icon: center.notificationState.silent ? "󰂛" : "󰂚"
                 title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
                 onActivated: center.notificationState.toggleSilent()
             }
@@ -331,8 +333,10 @@ FocusScope {
                 motion: center.motion
                 compact: true
                 enabled: center.notificationState.count > 0
-                width: 124
-                shortcut: "C"
+                width: 44
+                height: 40
+                iconOnly: true
+                icon: "󰆴"
                 title: "Clear all"
                 onActivated: center.notificationState.clearAll()
             }
