@@ -72,23 +72,19 @@ PanelWindow {
     }
     readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
     readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
-    readonly property real horizontalMargin: {
-        if (!screen)
-            return 0;
-
-        const width = contentExpanded ? contentWidth : expansionState.originWidth;
-        const desired = contentExpanded ? (screen.width - width) / 2 : expansionState.originCenter - width / 2;
-        const edge = theme.spacing4;
-        return Math.max(edge, Math.min(desired, screen.width - width - edge));
-    }
+    // The Wayland layer surface is a stable transparent viewport. Morph only
+    // the inner squircle: resizing/repositioning PanelWindow every tab switch
+    // causes separate compositor commits and visibly lagging/jumping edges.
+    readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, 960) : 1
+    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (56 + theme.spacing1) - theme.spacing4) : 1
 
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
     color: "transparent"
     focusable: expansionState.hasCurrent
     exclusionMode: ExclusionMode.Ignore
-    implicitWidth: Math.max(1, targetWidth)
-    implicitHeight: Math.max(1, targetHeight)
+    implicitWidth: Math.max(1, viewportWidth)
+    implicitHeight: Math.max(1, viewportHeight)
 
     anchors {
         top: true
@@ -97,7 +93,7 @@ PanelWindow {
 
     margins {
         top: 56 + theme.spacing1
-        left: host.horizontalMargin
+        left: host.screen ? (host.screen.width - host.viewportWidth) / 2 : 0
     }
 
     WlrLayershell.namespace: "linux-desktop-expansion"
@@ -177,9 +173,26 @@ PanelWindow {
     ShellSurface {
         id: shellSurface
 
-        anchors.fill: parent
+        x: (host.width - width) / 2
+        y: 0
+        width: Math.min(host.width, host.targetWidth)
+        height: Math.min(host.height, host.targetHeight)
+        clip: true
         scale: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0.97
         opacity: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0
+
+        Behavior on width {
+            NumberAnimation {
+                duration: host.motion.morph
+                easing.type: host.motion.morphType
+            }
+        }
+        Behavior on height {
+            NumberAnimation {
+                duration: host.motion.morph
+                easing.type: host.motion.morphType
+            }
+        }
 
         Behavior on scale {
             Anim {
@@ -241,7 +254,19 @@ PanelWindow {
 
         Loader {
             id: contentLoader
-            onLoaded: geometryUpdate.restart()
+            onLoaded: {
+                geometryUpdate.restart();
+                // Reveal the newly loaded tab after its geometry has settled.
+                opacity = 0;
+                Qt.callLater(() => opacity = 1);
+            }
+
+            Behavior on opacity {
+                Anim {
+                    motion: host.motion
+                    type: Anim.FastEffects
+                }
+            }
 
             anchors {
                 top: tabs.bottom
