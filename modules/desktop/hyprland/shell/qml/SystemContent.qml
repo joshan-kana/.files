@@ -839,7 +839,8 @@ FocusScope {
                                 theme: root.theme
                                 motion: root.motion
                                 compact: true
-                                title: "V  Detail ↗"
+                                title: "Details"
+                                shortcut: "V"
                                 onActivated: root.mediaRequested()
                             }
                         }
