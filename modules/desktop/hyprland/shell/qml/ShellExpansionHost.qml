@@ -247,11 +247,7 @@ PanelWindow {
 
         Loader {
             id: contentLoader
-            onLoaded: {
-                geometryUpdate.restart();
-                // Reveal the newly loaded tab after its geometry has settled.
-
-            }
+            onLoaded: geometryUpdate.restart()
 
             anchors {
                 top: tabs.bottom
