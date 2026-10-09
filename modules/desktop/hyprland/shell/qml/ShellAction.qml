@@ -13,12 +13,15 @@ Item {
     property string shortcut: ""
     property bool active: false
     property bool compact: false
+    property bool iconOnly: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
 
     signal activated
 
-    implicitWidth: Math.max(96, content.implicitWidth + horizontalPadding * 2)
-    implicitHeight: compact ? 40 : 58
+    implicitWidth: iconOnly ? 44 : Math.max(96, content.implicitWidth + horizontalPadding * 2)
+    implicitHeight: iconOnly ? 40 : compact ? 40 : 58
+    Accessible.role: Accessible.Button
+    Accessible.name: title
     opacity: enabled ? 1 : 0.42
 
     ShellSurface {
@@ -50,6 +53,7 @@ Item {
         }
 
         ShellText {
+            visible: !root.iconOnly
             width: Math.max(1, root.width - root.horizontalPadding * 2)
             horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
             elide: Text.ElideRight
@@ -62,7 +66,7 @@ Item {
         }
 
         ShellText {
-            visible: root.subtitle.length > 0
+            visible: !root.iconOnly && root.subtitle.length > 0
             width: Math.max(1, root.width - root.horizontalPadding * 2)
             horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
             runtime: root.runtime
@@ -75,7 +79,7 @@ Item {
     }
 
     Text {
-        visible: root.shortcut.length > 0
+        visible: !root.iconOnly && root.shortcut.length > 0
         anchors {
             top: parent.top
             right: parent.right
