@@ -208,6 +208,14 @@ in
     description = "Clipboard history";
   })
   (mk {
+    keys = "SUPER + TAB";
+    mainMod = false;
+    id = "overview.toggle";
+    action = global "linux-desktop:overview";
+    section = "WORKSPACES";
+    description = "Workspaces & window overview";
+  })
+  (mk {
     keys = "SUPER + SHIFT + R";
     mainMod = false;
     id = "capture.recordToggle";
