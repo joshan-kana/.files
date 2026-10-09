@@ -463,61 +463,6 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: audioStack.implicitHeight + root.theme.spacing4 * 2
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
-
-                Column {
-                    id: audioStack
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                        top: parent.top
-                        margins: root.theme.spacing4
-                    }
-                    spacing: root.theme.spacing3
-
-                    AudioQuickSection {
-                        id: outputQuick
-                        width: audioStack.width
-                        showMixer: true
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                inputQuick.chooserOpen = false;
-                        }
-                        baseIndex: 0
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
-                        onMixerRequested: root.openMixer()
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                    }
-                    AudioQuickSection {
-                        id: inputQuick
-                        width: audioStack.width
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                outputQuick.chooserOpen = false;
-                        }
-                        visible: root.system.microphoneAvailable
-                        microphone: true
-                        baseIndex: root.microphoneAudioIndex
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                    }
-                }
-            }
-
-            ShellSurface {
-                width: parent.width
                 height: 84
                 visible: root.brightness.supported
                 theme: root.theme
@@ -741,6 +686,61 @@ FocusScope {
                         cornerRadius: root.theme.radiusMedium
                         disabled: !root.powerProfile.available || root.powerProfile.applying
                         onActivated: root.powerProfile.cycle()
+                    }
+                }
+            }
+
+            ShellSurface {
+                width: parent.width
+                height: audioStack.implicitHeight + root.theme.spacing4 * 2
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: theme.radiusLarge
+
+                Column {
+                    id: audioStack
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: parent.top
+                        margins: root.theme.spacing4
+                    }
+                    spacing: root.theme.spacing3
+
+                    AudioQuickSection {
+                        id: outputQuick
+                        width: audioStack.width
+                        showMixer: true
+                        onChooserOpenChanged: {
+                            if (chooserOpen)
+                                inputQuick.chooserOpen = false;
+                        }
+                        baseIndex: 0
+                        selectedAudioIndex: root.selectedAudioIndex
+                        onSelectionRequested: index => root.selectedAudioIndex = index
+                        onMixerRequested: root.openMixer()
+                        system: root.system
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                    }
+                    AudioQuickSection {
+                        id: inputQuick
+                        width: audioStack.width
+                        onChooserOpenChanged: {
+                            if (chooserOpen)
+                                outputQuick.chooserOpen = false;
+                        }
+                        visible: root.system.microphoneAvailable
+                        microphone: true
+                        baseIndex: root.microphoneAudioIndex
+                        selectedAudioIndex: root.selectedAudioIndex
+                        onSelectionRequested: index => root.selectedAudioIndex = index
+                        system: root.system
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
                     }
                 }
             }
