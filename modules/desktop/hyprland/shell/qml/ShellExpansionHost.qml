@@ -205,7 +205,7 @@ PanelWindow {
 
             Anim {
                 motion: host.motion
-                type: Anim.DefaultSpatial
+                type: Anim.FastSpatial
             }
         }
 
