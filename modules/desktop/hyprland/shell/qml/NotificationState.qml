@@ -30,6 +30,12 @@ QtObject {
     property var readNotifications: []
     readonly property int unreadCount: history.filter(notification => !readNotifications.includes(notification)).length
 
+    // Dismissed notifications must not remain alive through stale read references.
+    onHistoryChanged: {
+        if (readNotifications.length)
+            readNotifications = readNotifications.filter(notification => history.includes(notification));
+    }
+
     function markRead(): void {
         readNotifications = [...history];
     }
