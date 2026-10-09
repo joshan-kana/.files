@@ -8,13 +8,16 @@ Item {
     property real value: 0
     property color accentColor: theme.accent
     property string label: ""
+    property bool compact: false
+    property string compactIcon: "󰁹"
     property real animatedValue: Math.max(0, Math.min(1, value))
 
-    implicitWidth: 126
-    implicitHeight: 126
+    implicitWidth: compact ? 34 : 126
+    implicitHeight: compact ? 34 : 126
 
     onAnimatedValueChanged: face.requestPaint()
     onAccentColorChanged: face.requestPaint()
+    onCompactChanged: face.requestPaint()
 
     Behavior on animatedValue {
         Anim {
@@ -29,10 +32,10 @@ Item {
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
-            const radius = Math.min(width, height) / 2 - 12;
+            const radius = Math.max(1, Math.min(width, height) / 2 - (gauge.compact ? 4 : 12));
             const start = Math.PI * 0.75;
             const sweep = Math.PI * 1.5;
-            ctx.lineWidth = 9;
+            ctx.lineWidth = gauge.compact ? 3 : 9;
             ctx.lineCap = "round";
             ctx.beginPath();
             ctx.strokeStyle = gauge.theme.layer3;
@@ -48,6 +51,7 @@ Item {
     Column {
         anchors.centerIn: parent
         spacing: 2
+        visible: !gauge.compact
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Math.round(gauge.animatedValue * 100) + "%"
@@ -63,5 +67,13 @@ Item {
             font.family: gauge.theme.runtime.fontMono
             font.pixelSize: gauge.theme.fontSize(10)
         }
+    }
+    Text {
+        anchors.centerIn: parent
+        visible: gauge.compact
+        text: gauge.compactIcon
+        color: gauge.accentColor
+        font.family: "Symbols Nerd Font"
+        font.pixelSize: gauge.theme.fontSize(14)
     }
 }
