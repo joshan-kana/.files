@@ -413,10 +413,12 @@ FocusScope {
             system.adjustStreamVolume(target.node, delta);
     }
 
-    function cycleSelectedAudioDevice(): void {
+    function toggleSelectedAudioDeviceChooser(): void {
         const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
-        if (target.kind === "output" || target.kind === "input")
-            system.cycleAudioDevice(target.kind === "input");
+        if (target.kind === "output")
+            outputQuick.toggleDeviceChooser();
+        else if (target.kind === "input")
+            inputQuick.toggleDeviceChooser();
     }
 
     function muteSelectedAudio(): void {
@@ -478,8 +480,13 @@ FocusScope {
                     spacing: root.theme.spacing3
 
                     AudioQuickSection {
+                        id: outputQuick
                         width: audioStack.width
                         showMixer: true
+                        onChooserOpenChanged: {
+                            if (chooserOpen)
+                                inputQuick.chooserOpen = false;
+                        }
                         baseIndex: 0
                         selectedAudioIndex: root.selectedAudioIndex
                         onSelectionRequested: index => root.selectedAudioIndex = index
@@ -490,7 +497,12 @@ FocusScope {
                         motion: root.motion
                     }
                     AudioQuickSection {
+                        id: inputQuick
                         width: audioStack.width
+                        onChooserOpenChanged: {
+                            if (chooserOpen)
+                                outputQuick.chooserOpen = false;
+                        }
                         visible: root.system.microphoneAvailable
                         microphone: true
                         baseIndex: root.microphoneAudioIndex
@@ -1125,6 +1137,22 @@ FocusScope {
                 if (root.mixerOpen)
                     return;
 
+                if (outputQuick.chooserOpen || inputQuick.chooserOpen) {
+                    const picker = outputQuick.chooserOpen ? outputQuick : inputQuick;
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || event.key === Qt.Key_D)
+                        picker.chooserOpen = false;
+                    else if (event.key === Qt.Key_J || event.key === Qt.Key_Down)
+                        picker.moveDeviceSelection(1);
+                    else if (event.key === Qt.Key_K || event.key === Qt.Key_Up)
+                        picker.moveDeviceSelection(-1);
+                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                        picker.selectDevice(picker.chooserIndex);
+                    else
+                        return;
+                    event.accepted = true;
+                    return;
+                }
+
                 if (wallpaperPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         wallpaperPanel.closeView();
@@ -1370,7 +1398,7 @@ FocusScope {
                     root.openMixer();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_D) {
-                    root.cycleSelectedAudioDevice();
+                    root.toggleSelectedAudioDeviceChooser();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                     root.moveAudioSelection(-1);
