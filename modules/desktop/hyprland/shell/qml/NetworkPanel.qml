@@ -260,9 +260,12 @@ Item {
                 selected: index === panel.selectedIndex
                 cornerRadius: theme.radiusMedium
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
+                StateLayer {
+                    theme: panel.theme
+                    motion: panel.motion
+                    selected: networkRow.index === panel.selectedIndex
+                    cornerRadius: panel.theme.radiusMedium
+                    onActivated: {
                         panel.selectedIndex = networkRow.index;
                         panel.activateSelected();
                     }
