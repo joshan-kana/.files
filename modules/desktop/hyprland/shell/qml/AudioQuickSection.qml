@@ -15,6 +15,29 @@ Column {
     signal selectionRequested(int index)
     signal mixerRequested
 
+    property bool chooserOpen: false
+    property int chooserIndex: 0
+    function toggleDeviceChooser(): void {
+        if (devices.length === 0)
+            return;
+        if (chooserOpen) {
+            chooserOpen = false;
+        } else {
+            chooserIndex = Math.max(0, devices.indexOf(device));
+            chooserOpen = true;
+        }
+    }
+    function moveDeviceSelection(delta: int): void {
+        if (devices.length > 0)
+            chooserIndex = (chooserIndex + delta + devices.length) % devices.length;
+    }
+    function selectDevice(index: int): void {
+        const node = devices[index];
+        if (node)
+            system.selectAudioDevice(microphone, node);
+        chooserOpen = false;
+    }
+
     readonly property bool available: microphone ? system.microphoneAvailable : system.audioAvailable
     readonly property bool muted: microphone ? system.microphoneMuted : system.muted
     readonly property real level: microphone ? system.microphoneVolume : system.volume
@@ -66,8 +89,9 @@ Column {
             compact: true
             title: "Device"
             shortcut: "D"
-            enabled: quick.devices.length > 1
-            onActivated: quick.system.cycleAudioDevice(quick.microphone)
+            enabled: quick.devices.length > 0
+            active: quick.chooserOpen
+            onActivated: quick.toggleDeviceChooser()
         }
         ShellAction {
             id: mixerLink
@@ -82,6 +106,35 @@ Column {
             title: "Mixer"
             shortcut: "A"
             onActivated: quick.mixerRequested()
+        }
+    }
+
+    ListView {
+        id: deviceList
+        width: parent.width
+        height: quick.chooserOpen ? Math.min(4, quick.devices.length) * 40 : 0
+        visible: quick.chooserOpen
+        clip: true
+        model: quick.devices
+        currentIndex: quick.chooserIndex
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, ListView.Contain);
+        }
+
+        delegate: ShellAction {
+            required property var modelData
+            required property int index
+            width: deviceList.width
+            height: 38
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            compact: true
+            active: index === quick.chooserIndex
+            title: (modelData === quick.device ? "✓  " : "") + (modelData.description || modelData.name)
+            shortcut: index === quick.chooserIndex ? "↵" : ""
+            onActivated: quick.selectDevice(index)
         }
     }
 
