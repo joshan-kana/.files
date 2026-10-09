@@ -37,9 +37,13 @@ QtObject {
 
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
     readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null)
+    readonly property var audioInputStreams: pipewireNodes.filter(node => node !== null && node.isStream && !node.isSink && node.audio !== null)
+    // Shell-internal capture is not an application to adjust in the mixers.
+    readonly property var audioApplicationStreams: audioStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
+    readonly property var audioCaptureStreams: audioInputStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
 
     property PwObjectTracker audioTracker: PwObjectTracker {
-        objects: [system.audioSink, system.audioSource].filter(node => node !== null).concat(system.audioStreams)
+        objects: [system.audioSink, system.audioSource].filter(node => node !== null).concat(system.audioStreams).concat(system.audioInputStreams)
     }
 
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
