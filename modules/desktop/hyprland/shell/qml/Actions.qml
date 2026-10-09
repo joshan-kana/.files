@@ -83,10 +83,11 @@ QtObject {
 
         const geometry = origin || ambientBar.originFor(screen, "media");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "media" && expansionState.screen === screen);
+        const fromControls = expansionState.hasCurrent && expansionState.currentName === "system";
         if (opening)
             hideTransient("media");
 
-        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height, "");
+        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height, fromControls ? "controls" : "");
     }
 
     function mediaPlayPause(): void {
