@@ -11,6 +11,7 @@ FocusScope {
     required property Motion motion
 
     property bool engaged: false
+    property bool returnToControls: false
     property bool helpOpen: false
     property string visualizerMode: "bars"
     property bool scrubbing: false
@@ -34,7 +35,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: "Close now playing"
+            action: content.returnToControls ? "Back to Controls" : "Close now playing"
         }
     ]
 
@@ -424,7 +425,7 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     compact: true
-                    title: "ESC  CLOSE"
+                    title: content.returnToControls ? "ESC  BACK" : "ESC  CLOSE"
                     onActivated: content.closeRequested()
                 }
             }
