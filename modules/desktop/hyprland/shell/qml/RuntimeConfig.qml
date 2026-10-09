@@ -25,6 +25,7 @@ QtObject {
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
+    readonly property string recordingToggle: root.configData.tools.recordingToggle
 
     readonly property string fontMono: root.configData.fonts.mono
 
@@ -129,6 +130,7 @@ QtObject {
                 property string sessionCommand: ""
                 property string themeSet: ""
                 property string wallpaperLibrary: ""
+                property string recordingToggle: ""
             }
 
             property var keybindings: []
