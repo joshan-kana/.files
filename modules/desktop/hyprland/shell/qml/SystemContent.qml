@@ -636,19 +636,56 @@ FocusScope {
             Column {
                 width: parent.width
                 spacing: root.theme.spacing2
-                visible: root.powerProfile.available
+                visible: root.powerProfile.available || root.system.batteryAvailable
 
-                Text {
-                    text: "Power profile  ·  O to cycle"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(10)
-                    font.weight: Font.DemiBold
+                Row {
+                    width: parent.width
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Power profile  ·  O to cycle"
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                    }
+
+                    Item {
+                        width: Math.max(0, parent.width - parent.children[0].width - batteryCompact.width)
+                        height: 1
+                    }
+
+                    Row {
+                        id: batteryCompact
+                        visible: root.system.batteryAvailable
+                        spacing: root.theme.spacing2
+
+                        ResourceGauge {
+                            width: 34
+                            height: 34
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                            value: root.system.batteryPercent / 100
+                            accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
+                            compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.system.batteryPercent + "%"
+                            color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontSize(12)
+                            font.weight: Font.DemiBold
+                        }
+                    }
                 }
 
                 Row {
                     id: profileRow
                     width: parent.width
+                    visible: root.powerProfile.available
                     spacing: root.theme.spacing3
 
                     Repeater {
@@ -671,151 +708,169 @@ FocusScope {
                 }
             }
 
-            ShellSurface {
+            Column {
                 width: parent.width
-                height: 170
-                visible: root.media.available
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
+                spacing: root.theme.spacing2
 
-                Column {
-                    anchors {
-                        fill: parent
-                        margins: root.theme.spacing4
-                    }
-                    spacing: root.theme.spacing3
+                Text {
+                    text: "MEDIA & UTILITIES"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                }
 
-                    Row {
-                        width: parent.width
-                        height: 64
+                ShellSurface {
+                    width: parent.width
+                    height: 170
+                    visible: root.media.available
+                    theme: root.theme
+                    motion: root.motion
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: theme.radiusLarge
+
+                    Column {
+                        anchors {
+                            fill: parent
+                            margins: root.theme.spacing4
+                        }
                         spacing: root.theme.spacing3
 
-                        ShellSurface {
-                            width: 64
+                        Row {
+                            width: parent.width
                             height: 64
-                            theme: root.theme
-                            motion: root.motion
-                            surfaceLayer: ShellSurface.Control
-                            cornerRadius: theme.radiusMedium
-                            clip: true
+                            spacing: root.theme.spacing3
 
-                            Image {
-                                anchors.fill: parent
-                                source: root.media.artUrl
-                                asynchronous: true
-                                cache: true
-                                fillMode: Image.PreserveAspectCrop
-                                visible: root.media.artUrl.length > 0
+                            ShellSurface {
+                                width: 64
+                                height: 64
+                                theme: root.theme
+                                motion: root.motion
+                                surfaceLayer: ShellSurface.Control
+                                cornerRadius: theme.radiusMedium
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: root.media.artUrl
+                                    asynchronous: true
+                                    cache: true
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: root.media.artUrl.length > 0
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: root.media.artUrl.length === 0
+                                    text: "♫"
+                                    color: root.theme.accent
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(28)
+                                }
                             }
 
-                            Text {
-                                anchors.centerIn: parent
-                                visible: root.media.artUrl.length === 0
-                                text: "♫"
-                                color: root.theme.accent
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(28)
+                            Column {
+                                width: Math.max(1, parent.width - 64 - detailsButton.width - parent.spacing * 2)
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: root.theme.spacing1
+
+                                Text {
+                                    text: root.media.identity || "Now playing"
+                                    width: parent.width
+                                    color: root.theme.accent
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(10)
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    text: root.media.title
+                                    width: parent.width
+                                    color: root.theme.textStrong
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(13)
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    text: root.media.artist
+                                    width: parent.width
+                                    color: root.theme.textMuted
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(10)
+                                    elide: Text.ElideRight
+                                }
+                            }
+
+                            ShellAction {
+                                id: detailsButton
+                                width: 94
+                                height: 40
+                                anchors.verticalCenter: parent.verticalCenter
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                compact: true
+                                title: "V  Detail ↗"
+                                onActivated: root.mediaRequested()
                             }
                         }
 
-                        Column {
-                            width: Math.max(1, parent.width - 64 - detailsButton.width - parent.spacing * 2)
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: root.theme.spacing1
-
-                            Text {
-                                text: root.media.identity || "Now playing"
-                                width: parent.width
-                                color: root.theme.accent
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                text: root.media.title
-                                width: parent.width
-                                color: root.theme.textStrong
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(13)
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                text: root.media.artist
-                                width: parent.width
-                                color: root.theme.textMuted
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        ShellAction {
-                            id: detailsButton
-                            width: 94
+                        Item {
+                            width: parent.width
                             height: 40
-                            anchors.verticalCenter: parent.verticalCenter
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            title: "V  Detail ↗"
-                            onActivated: root.mediaRequested()
-                        }
-                    }
 
-                    Item {
-                        width: parent.width
-                        height: 40
-
-                        MediaTransport {
-                            anchors.centerIn: parent
-                            media: root.media
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
+                            MediaTransport {
+                                anchors.centerIn: parent
+                                media: root.media
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                compact: true
+                            }
                         }
                     }
                 }
-            }
 
-            ShellAction {
-                width: parent.width
-                height: 54
-                visible: !root.media.available
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                title: "󰝚  Media & visualiser"
-                subtitle: "No player connected · V for detailed view"
-                onActivated: root.mediaRequested()
-            }
+                Row {
+                    width: parent.width
+                    spacing: root.theme.spacing2
 
-            ShellAction {
-                width: parent.width
-                height: 54
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                title: "󰕾  Application audio mixer"
-                subtitle: "Individual streams · volume · mute    A ↗"
-                onActivated: root.openMixer()
-            }
+                    ShellAction {
+                        width: (parent.width - 2 * parent.spacing) / 3
+                        height: 42
+                        compact: true
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        title: "󰝚  V  Media"
+                        onActivated: root.mediaRequested()
+                    }
 
-            ShellAction {
-                width: parent.width
-                height: 54
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                title: "󰍛  Resource monitor"
-                subtitle: "CPU · memory · activity history    G ↗"
-                onActivated: root.openResources()
+                    ShellAction {
+                        width: (parent.width - 2 * parent.spacing) / 3
+                        height: 42
+                        compact: true
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        title: "󰕾  A  Mixer"
+                        onActivated: root.openMixer()
+                    }
+
+                    ShellAction {
+                        width: (parent.width - 2 * parent.spacing) / 3
+                        height: 42
+                        compact: true
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        title: "󰍛  G  Resources"
+                        onActivated: root.openResources()
+                    }
+                }
             }
 
             Column {
@@ -912,48 +967,6 @@ FocusScope {
                                 }
                             }
                         }
-                    }
-                }
-            }
-
-            ShellSurface {
-                width: parent.width
-                height: 64
-                visible: root.system.batteryAvailable
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusMedium
-
-                Row {
-                    anchors {
-                        fill: parent
-                        leftMargin: root.theme.spacing4
-                        rightMargin: root.theme.spacing4
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Battery"
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(10)
-                        font.letterSpacing: 1.2
-                    }
-
-                    Item {
-                        width: parent.width - parent.children[0].width - batteryValue.width
-                        height: 1
-                    }
-
-                    Text {
-                        id: batteryValue
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.system.batteryPercent + "%"
-                        color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(13)
-                        font.weight: Font.DemiBold
                     }
                 }
             }
