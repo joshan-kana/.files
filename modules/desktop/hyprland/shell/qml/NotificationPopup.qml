@@ -97,13 +97,15 @@ PanelWindow {
             }
         }
 
-        MouseArea {
-            anchors.fill: parent
-            enabled: popup.notificationState.popupVisible
+        StateLayer {
+            theme: popup.theme
+            motion: popup.motion
+            cornerRadius: popup.theme.radiusLarge
+            disabled: !popup.notificationState.popupVisible
             acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-            onClicked: mouse => {
-                if (mouse.button === Qt.RightButton) {
+            onActivated: event => {
+                if (event.button === Qt.RightButton) {
                     popup.notificationState.dismiss(popup.notification);
                 } else {
                     popup.notificationState.hidePopup();
