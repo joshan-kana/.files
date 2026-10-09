@@ -599,6 +599,7 @@ in
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
+          recordingToggle = lib.getExe recordingToggle;
         };
 
         wallpaper = toString osConfig.stylix.image;
@@ -642,6 +643,35 @@ in
         '';
       };
 
+      recordRegion = pkgs.writeShellApplication {
+        name = "linux-desktop-record-region";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.slurp
+          pkgs.wf-recorder
+        ];
+        text = ''
+          geometry="$(slurp -d)" || exit 0
+          [ -n "$geometry" ] || exit 0
+          directory="''${LINUX_DESKTOP_RECORDING_DIR:-$HOME/Videos/Screencasts}"
+          mkdir -p "$directory"
+          output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.mp4"
+          exec wf-recorder --geometry "$geometry" --file "$output"
+        '';
+      };
+
+      recordingToggle = pkgs.writeShellApplication {
+        name = "linux-desktop-recording-toggle";
+        runtimeInputs = [ pkgs.systemd ];
+        text = ''
+          if systemctl --user --quiet is-active linux-desktop-recording.service; then
+            exec systemctl --user stop linux-desktop-recording.service
+          else
+            exec systemctl --user start --no-block linux-desktop-recording.service
+          fi
+        '';
+      };
+
       sessionCommand = pkgs.writeShellApplication {
         name = "linux-desktop-session";
         runtimeInputs = [
@@ -681,6 +711,7 @@ in
         clipboardCopy
         videoWallpaper
         wallpaperLibrary
+        recordingToggle
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
@@ -733,6 +764,20 @@ in
           };
 
           Install.WantedBy = [ "hyprland-session.target" ];
+        };
+
+        linux-desktop-recording = {
+          Unit = {
+            Description = "Record a selected Wayland screen region";
+            PartOf = [ "hyprland-session.target" ];
+            After = [ "hyprland-session.target" ];
+          };
+          Service = {
+            ExecStart = lib.getExe recordRegion;
+            KillSignal = "SIGINT";
+            TimeoutStopSec = 15;
+            Restart = "no";
+          };
         };
 
         linux-desktop-lock = {
