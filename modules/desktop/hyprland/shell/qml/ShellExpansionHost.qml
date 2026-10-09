@@ -11,6 +11,7 @@ PanelWindow {
     required property Theme theme
     required property Motion motion
     required property ShellExpansionState expansionState
+    property var barWindows: []
 
     property Component mediaComponent: null
     property Component systemComponent: null
@@ -135,7 +136,8 @@ PanelWindow {
 
     HyprlandFocusGrab {
         active: host.expansionState.hasCurrent
-        windows: [host]
+        // Bar-originated navigation stays inside the same focus group.
+        windows: [host].concat(host.barWindows)
         onCleared: host.expansionState.close()
     }
 
