@@ -25,10 +25,36 @@ FocusScope {
     readonly property bool networkOpen: networkPanel.open
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
+    readonly property bool wallpaperOpen: wallpaperPanel.open
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
-    readonly property string helpTitle: mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: mixerOpen ? [
+    readonly property string helpTitle: wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property var helpBindings: wallpaperPanel.open ? [
+        {
+            key: "H/J/K/L",
+            action: "Choose thumbnail"
+        },
+        {
+            key: "U/D",
+            action: "Page selection"
+        },
+        {
+            key: "/",
+            action: "Search wallpapers"
+        },
+        {
+            key: "ENTER",
+            action: "Apply to focused monitor"
+        },
+        {
+            key: "F / R",
+            action: "Fit/fill / reset"
+        },
+        {
+            key: "ESC",
+            action: "Back to Controls"
+        }
+    ] : mixerOpen ? [
         {
             key: "J/K · U/D",
             action: "Select stream / half page"
@@ -154,7 +180,7 @@ FocusScope {
                         },
                         {
                             key: "Y / P",
-                            action: "Theme / session"
+                            action: "Theme / session (W wallpapers)"
                         },
                         {
                             key: "G / V / A",
@@ -194,7 +220,7 @@ FocusScope {
     signal mediaRequested
 
     implicitWidth: 512
-    implicitHeight: mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
+    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
     focus: engaged
 
     function applyRequestedView(): void {
@@ -213,6 +239,8 @@ FocusScope {
             openResources();
         else if (requestedView === "mixer")
             openMixer();
+        else if (requestedView === "wallpaper")
+            openWallpaper();
         else if (requestedView.startsWith("tray:")) {
             const index = Number(requestedView.slice(5));
             if (Number.isInteger(index) && index >= 0 && index < system.trayCount) {
@@ -223,6 +251,7 @@ FocusScope {
             }
         } else if (requestedView.length === 0) {
             trayMenu.closeMenu();
+            wallpaperPanel.closeView();
             networkPanel.closeView();
             bluetoothPanel.closeView();
             themePanel.closeView();
@@ -250,6 +279,7 @@ FocusScope {
         } else {
             helpOpen = false;
             trayMenu.closeMenu();
+            wallpaperPanel.closeView();
             networkPanel.closeView();
             bluetoothPanel.closeView();
             themePanel.closeView();
@@ -266,6 +296,7 @@ FocusScope {
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.closeView();
@@ -277,10 +308,23 @@ FocusScope {
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         networkPanel.closeView();
         themePanel.closeView();
         sessionPanel.closeView();
         bluetoothPanel.openView();
+    }
+
+    function openWallpaper(): void {
+        helpOpen = false;
+        mixerOpen = false;
+        resourcesPanel.closeView();
+        trayMenu.closeMenu();
+        networkPanel.closeView();
+        bluetoothPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        wallpaperPanel.openView();
     }
 
     function openTheme(): void {
@@ -288,6 +332,7 @@ FocusScope {
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         networkPanel.closeView();
         bluetoothPanel.closeView();
         sessionPanel.closeView();
@@ -303,6 +348,7 @@ FocusScope {
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         networkPanel.closeView();
         bluetoothPanel.closeView();
         themePanel.closeView();
@@ -317,6 +363,7 @@ FocusScope {
         helpOpen = false;
         mixerOpen = false;
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         networkPanel.closeView();
         bluetoothPanel.closeView();
         themePanel.closeView();
@@ -327,6 +374,7 @@ FocusScope {
     function openMixer(): void {
         helpOpen = false;
         trayMenu.closeMenu();
+        wallpaperPanel.closeView();
         resourcesPanel.closeView();
         networkPanel.closeView();
         bluetoothPanel.closeView();
@@ -359,7 +407,7 @@ FocusScope {
         Column {
             id: content
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
             spacing: root.theme.spacing4
 
             Text {
@@ -515,6 +563,12 @@ FocusScope {
                             active: true
                         },
                         {
+                            id: "wallpaper",
+                            label: "Wallpaper",
+                            value: "Library",
+                            active: true
+                        },
+                        {
                             id: "session",
                             label: "Session",
                             value: "Power",
@@ -541,6 +595,8 @@ FocusScope {
                                 root.openBluetooth();
                             else if (modelData.id === "theme")
                                 root.openTheme();
+                            else if (modelData.id === "wallpaper")
+                                root.openWallpaper();
                             else if (modelData.id === "session")
                                 root.openSession();
                         }
@@ -951,6 +1007,15 @@ FocusScope {
             onKeyboardRequested: keyboardFocus.forceActiveFocus()
         }
 
+        WallpaperPanel {
+            id: wallpaperPanel
+            anchors.fill: parent
+            runtime: root.runtime
+            theme: root.theme
+            motion: root.motion
+            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+        }
+
         ThemePanel {
             id: themePanel
 
@@ -989,7 +1054,7 @@ FocusScope {
             id: footer
 
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
 
             anchors {
                 left: parent.left
@@ -1161,6 +1226,41 @@ FocusScope {
 
                 if (root.mixerOpen)
                     return;
+
+                if (wallpaperPanel.open) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        wallpaperPanel.closeView();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Slash) {
+                        wallpaperPanel.enterSearch();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+                        wallpaperPanel.moveSelection(-1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
+                        wallpaperPanel.moveSelection(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                        wallpaperPanel.moveSelection(-3);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                        wallpaperPanel.moveSelection(3);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                        wallpaperPanel.moveSelection(event.key === Qt.Key_U ? -6 : 6);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_F) {
+                        wallpaperPanel.toggleFit();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_R) {
+                        wallpaperPanel.resetWallpaper();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        wallpaperPanel.applySelected();
+                        event.accepted = true;
+                    }
+                    return;
+                }
 
                 if (resourcesPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
@@ -1337,6 +1437,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_B) {
                     root.openBluetooth();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_W) {
+                    root.openWallpaper();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Y) {
                     root.openTheme();
