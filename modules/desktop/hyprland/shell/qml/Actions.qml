@@ -233,10 +233,14 @@ QtObject {
             Quickshell.execDetached([runtime.recordingToggle]);
     }
 
-    function captureRegion(copy: bool): void {
+    function captureScreenshot(copy: bool, target: string): void {
         hideTransient("");
-        // Reuse Hyprland's existing Wayland capture backend.
-        Quickshell.execDetached(copy ? ["grimblast", "copy", "area"] : ["grimblast", "--notify", "save", "area"]);
+        // Share Hyprland's screenshot backend for region and active-output capture.
+        Quickshell.execDetached(copy ? ["grimblast", "copy", target] : ["grimblast", "--notify", "save", target]);
+    }
+
+    function captureRegion(copy: bool): void {
+        captureScreenshot(copy, "area");
     }
 
     function invokeCommand(commandId: string): void {
@@ -252,6 +256,10 @@ QtObject {
             captureRegion(true);
         else if (commandId === "capture.saveRegion")
             captureRegion(false);
+        else if (commandId === "capture.output")
+            captureScreenshot(true, "output");
+        else if (commandId === "capture.saveOutput")
+            captureScreenshot(false, "output");
         else if (commandId === "capture.recordToggle")
             toggleRecording();
         else if (commandId === "media.toggle")
