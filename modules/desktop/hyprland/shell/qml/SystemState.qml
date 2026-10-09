@@ -42,6 +42,22 @@ QtObject {
     readonly property var audioApplicationStreams: audioStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
     readonly property var audioCaptureStreams: audioInputStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
 
+    readonly property var outputDevices: pipewireNodes.filter(node => node && !node.isStream && node.isSink && node.audio)
+    readonly property var inputDevices: pipewireNodes.filter(node => node && !node.isStream && !node.isSink && node.audio)
+
+    function cycleAudioDevice(microphone: bool): void {
+        const devices = microphone ? inputDevices : outputDevices;
+        if (devices.length < 2)
+            return;
+        const current = microphone ? audioSource : audioSink;
+        const index = devices.indexOf(current);
+        const next = devices[(index + 1) % devices.length];
+        if (microphone)
+            Pipewire.preferredDefaultAudioSource = next;
+        else
+            Pipewire.preferredDefaultAudioSink = next;
+    }
+
     property PwObjectTracker audioTracker: PwObjectTracker {
         objects: [system.audioSink, system.audioSource].filter(node => node !== null).concat(system.audioStreams).concat(system.audioInputStreams)
     }
