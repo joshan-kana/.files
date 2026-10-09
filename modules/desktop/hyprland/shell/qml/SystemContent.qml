@@ -445,14 +445,6 @@ FocusScope {
             spacing: root.theme.spacing4
 
             Text {
-                text: "System"
-                color: root.theme.accent
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontSize(12)
-                font.weight: Font.Medium
-            }
-
-            Text {
                 text: "Control centre"
                 color: root.theme.textStrong
                 font.family: root.runtime.fontMono
