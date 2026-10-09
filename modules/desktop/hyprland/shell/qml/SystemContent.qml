@@ -428,78 +428,37 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: root.system.microphoneAvailable ? 168 : 98
+                height: audioStack.implicitHeight + root.theme.spacing4 * 2
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
 
-                ShellSection {
+                Column {
+                    id: audioStack
                     anchors {
-                        top: parent.top
                         left: parent.left
                         right: parent.right
-                        margins: theme.spacing4
+                        top: parent.top
+                        margins: root.theme.spacing4
                     }
-                    runtime: root.runtime
-                    theme: root.theme
-                    title: root.system.muted ? "Sound · muted" : "Sound  " + root.system.volumePercent + "%"
-                    detail: root.system.audioAvailable && root.system.audioSink ? (root.system.audioSink.description || root.system.audioSink.name) : "No output"
+                    spacing: root.theme.spacing3
 
-                    ShellSlider {
-                        width: parent.width
+                    AudioQuickSection {
+                        width: audioStack.width
+                        system: root.system
+                        runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
-                        value: root.system.volume
-                        enabled: root.system.audioAvailable
-                        accentColor: root.system.muted ? theme.warning : theme.accent
-                        trackHeight: 8
-                        handleSize: 18
-                        onValueRequested: value => root.system.setVolume(value)
                     }
-                }
-
-                ShellSection {
-                    visible: root.system.microphoneAvailable
-                    anchors {
-                        bottom: parent.bottom
-                        left: parent.left
-                        right: parent.right
-                        margins: theme.spacing4
-                    }
-                    runtime: root.runtime
-                    theme: root.theme
-                    title: root.system.microphoneMuted ? "Microphone · muted" : "Microphone  " + root.system.microphoneVolumePercent + "%"
-                    detail: root.system.audioSource ? (root.system.audioSource.description || root.system.audioSource.name) : "No input"
-
-                    Row {
-                        width: parent.width
-                        spacing: root.theme.spacing3
-
-                        ShellSlider {
-                            width: Math.max(1, parent.width - micMute.width - parent.spacing)
-                            theme: root.theme
-                            motion: root.motion
-                            value: root.system.microphoneVolume
-                            enabled: root.system.microphoneAvailable
-                            accentColor: root.system.microphoneMuted ? theme.warning : theme.accent
-                            trackHeight: 8
-                            handleSize: 16
-                            onValueRequested: value => root.system.setMicrophoneVolume(value)
-                        }
-
-                        ShellAction {
-                            id: micMute
-                            width: 96
-                            height: 34
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            active: root.system.microphoneMuted
-                            title: root.system.microphoneMuted ? "X  Unmute" : "X  Mute"
-                            onActivated: root.system.toggleMicrophoneMute()
-                        }
+                    AudioQuickSection {
+                        width: audioStack.width
+                        visible: root.system.microphoneAvailable
+                        microphone: true
+                        system: root.system
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
                     }
                 }
             }
@@ -547,30 +506,35 @@ FocusScope {
                         {
                             id: "network",
                             label: "Network",
+                            icon: root.system.wifiConnected ? "󰤨" : "󰈀",
                             value: root.system.networkConnected ? root.system.networkName : "Offline",
                             active: root.system.networkConnected
                         },
                         {
                             id: "bluetooth",
                             label: "Bluetooth",
+                            icon: root.system.bluetoothEnabled ? "󰂯" : "󰂲",
                             value: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected" : "Off",
                             active: root.system.bluetoothEnabled
                         },
                         {
                             id: "theme",
                             label: "Theme",
+                            icon: "󰏘",
                             value: "Palette",
                             active: true
                         },
                         {
                             id: "wallpaper",
                             label: "Wallpaper",
+                            icon: "󰸉",
                             value: "Library",
                             active: true
                         },
                         {
                             id: "session",
                             label: "Session",
+                            icon: "󰐥",
                             value: "Power",
                             active: true
                         }
@@ -580,7 +544,8 @@ FocusScope {
                         required property var modelData
 
                         width: (content.width - theme.spacing3 * (controlTiles.count - 1)) / controlTiles.count
-                        height: 78
+                        height: 84
+                        icon: modelData.icon
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
@@ -638,71 +603,69 @@ FocusScope {
                 spacing: root.theme.spacing2
                 visible: root.powerProfile.available || root.system.batteryAvailable
 
-                Row {
-                    width: parent.width
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Power profile  ·  O to cycle"
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(10)
-                        font.weight: Font.DemiBold
-                    }
-
-                    Item {
-                        width: Math.max(0, parent.width - parent.children[0].width - batteryCompact.width)
-                        height: 1
-                    }
-
-                    Row {
-                        id: batteryCompact
-                        visible: root.system.batteryAvailable
-                        spacing: root.theme.spacing2
-
-                        ResourceGauge {
-                            width: 34
-                            height: 34
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            value: root.system.batteryPercent / 100
-                            accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
-                            compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
-                        }
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.system.batteryPercent + "%"
-                            color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(12)
-                            font.weight: Font.DemiBold
-                        }
-                    }
+                Text {
+                    text: "POWER  ·  O TO CYCLE"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    font.weight: Font.DemiBold
                 }
 
                 Row {
                     id: profileRow
                     width: parent.width
-                    visible: root.powerProfile.available
                     spacing: root.theme.spacing3
 
                     Repeater {
-                        model: root.powerProfile.profiles
+                        model: root.powerProfile.available ? root.powerProfile.profiles : []
 
                         delegate: ShellAction {
                             required property string modelData
-                            width: (profileRow.width - (root.powerProfile.profiles.length - 1) * profileRow.spacing) / root.powerProfile.profiles.length
-                            height: 52
+                            width: Math.max(80, (profileRow.width - (root.system.batteryAvailable ? 114 : 0) - (root.powerProfile.profiles.length - 1 + (root.system.batteryAvailable ? 1 : 0)) * profileRow.spacing) / root.powerProfile.profiles.length)
+                            height: 64
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
+                            compact: true
                             title: root.powerProfile.label(modelData)
-                            subtitle: root.powerProfile.current === modelData ? "Selected" : "Select"
+                            subtitle: root.powerProfile.current === modelData ? "Active" : "Select"
                             active: root.powerProfile.current === modelData
                             enabled: !root.powerProfile.applying
                             onActivated: root.powerProfile.setProfile(modelData)
+                        }
+                    }
+
+                    ShellSurface {
+                        width: 114
+                        height: 64
+                        visible: root.system.batteryAvailable
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: theme.radiusMedium
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: root.theme.spacing2
+
+                            ResourceGauge {
+                                width: 36
+                                height: 36
+                                theme: root.theme
+                                motion: root.motion
+                                compact: true
+                                value: root.system.batteryPercent / 100
+                                accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
+                                compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.system.batteryPercent + "%"
+                                color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(12)
+                                font.weight: Font.DemiBold
+                            }
                         }
                     }
                 }
@@ -723,7 +686,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: 170
+                    height: 120
                     visible: root.media.available
                     theme: root.theme
                     motion: root.motion
@@ -733,18 +696,18 @@ FocusScope {
                     Column {
                         anchors {
                             fill: parent
-                            margins: root.theme.spacing4
+                            margins: root.theme.spacing3
                         }
-                        spacing: root.theme.spacing3
+                        spacing: root.theme.spacing2
 
                         Row {
                             width: parent.width
-                            height: 64
+                            height: 48
                             spacing: root.theme.spacing3
 
                             ShellSurface {
-                                width: 64
-                                height: 64
+                                width: 48
+                                height: 48
                                 theme: root.theme
                                 motion: root.motion
                                 surfaceLayer: ShellSurface.Control
@@ -771,7 +734,7 @@ FocusScope {
                             }
 
                             Column {
-                                width: Math.max(1, parent.width - 64 - detailsButton.width - parent.spacing * 2)
+                                width: Math.max(1, parent.width - 48 - detailsButton.width - parent.spacing * 2)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
@@ -840,12 +803,12 @@ FocusScope {
 
                     ShellAction {
                         width: (parent.width - 2 * parent.spacing) / 3
-                        height: 42
+                        height: 40
                         compact: true
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
-                        title: "󰝚  V  Media"
+                        title: "V  Media"
                         onActivated: root.mediaRequested()
                     }
 
@@ -856,7 +819,7 @@ FocusScope {
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
-                        title: "󰕾  A  Mixer"
+                        title: "A  Mixer"
                         onActivated: root.openMixer()
                     }
 
@@ -867,7 +830,7 @@ FocusScope {
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
-                        title: "󰍛  G  Resources"
+                        title: "G  Resources"
                         onActivated: root.openResources()
                     }
                 }
@@ -1063,154 +1026,31 @@ FocusScope {
             motion: root.motion
         }
 
-        Column {
+        Row {
             id: footer
-
-            width: parent.width
             visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
-
             anchors {
-                left: parent.left
                 right: parent.right
                 bottom: parent.bottom
             }
-            spacing: root.theme.spacing1
+            spacing: root.theme.spacing3
 
-            Row {
-                anchors.right: parent.right
-                spacing: root.theme.spacing4
-
-                Text {
-                    text: "←/→  VOLUME"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "X  MIC"
-                    visible: root.system.microphoneAvailable
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "M  MUTE"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    visible: root.brightness.supported
-                    text: "↑/↓  BRIGHTNESS"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    visible: root.system.trayCount > 0
-                    text: "[/]  TRAY   ENTER  OPEN"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+            Text {
+                text: "H/L  VOLUME     M  SPEAKER     X  MIC"
+                color: root.theme.textMuted
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontSize(9)
             }
-
-            Row {
-                anchors.right: parent.right
-                spacing: root.theme.spacing4
-
-                Text {
-                    text: "O  POWER"
-                    visible: root.powerProfile.available
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "I  AWAKE"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "Q  QUIET"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "N  NETWORK"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "B  BLUETOOTH"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-            }
-
-            Row {
-                anchors.right: parent.right
-                spacing: root.theme.spacing4
-
-                Text {
-                    text: "Y  THEME"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "P  SESSION"
-                    color: root.theme.accent
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "?  HELP"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.helpOpen = true
-                    }
-                }
-
-                Text {
-                    text: "ESC  CLOSE"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
-                    font.letterSpacing: 1
+            Text {
+                text: "?  HELP"
+                color: root.theme.textMuted
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontSize(9)
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.helpOpen = true
                 }
             }
         }
