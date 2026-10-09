@@ -768,6 +768,28 @@ FocusScope {
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: theme.radiusLarge
 
+                    StateLayer {
+                        theme: root.theme
+                        motion: root.motion
+                        cornerRadius: root.theme.radiusLarge
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Open full media player"
+                        onActivated: root.mediaRequested()
+                    }
+
+                    Text {
+                        anchors {
+                            top: parent.top
+                            right: parent.right
+                            margins: root.theme.spacing3
+                        }
+                        z: 1
+                        text: "V"
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(11)
+                    }
+
                     Column {
                         anchors {
                             fill: parent
@@ -809,7 +831,7 @@ FocusScope {
                             }
 
                             Column {
-                                width: Math.max(1, parent.width - 48 - detailsButton.width - parent.spacing * 2)
+                                width: Math.max(1, parent.width - 48 - parent.spacing - root.theme.spacing5)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
@@ -840,20 +862,6 @@ FocusScope {
                                     font.pixelSize: root.theme.fontSize(10)
                                     elide: Text.ElideRight
                                 }
-                            }
-
-                            ShellAction {
-                                id: detailsButton
-                                width: 94
-                                height: 40
-                                anchors.verticalCenter: parent.verticalCenter
-                                runtime: root.runtime
-                                theme: root.theme
-                                motion: root.motion
-                                compact: true
-                                title: "Details"
-                                shortcut: "V"
-                                onActivated: root.mediaRequested()
                             }
                         }
 
