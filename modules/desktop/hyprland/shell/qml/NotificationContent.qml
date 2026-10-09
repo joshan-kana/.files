@@ -252,10 +252,11 @@ FocusScope {
                                 font.pixelSize: center.theme.fontSize(9)
                             }
                         }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
+                        StateLayer {
+                            theme: center.theme
+                            motion: center.motion
+                            cornerRadius: center.theme.radiusSmall
+                            onActivated: {
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = 0;
                                 center.toggleExpanded();
