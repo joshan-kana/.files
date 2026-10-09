@@ -17,6 +17,8 @@ Item {
     property string resizeMode: "fit"
     property string statusText: ""
     property int selectedIndex: 0
+    property bool loading: false
+    property bool resetPending: false
 
     readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()))
     readonly property string outputName: {
@@ -51,6 +53,7 @@ Item {
         stdout: panel.listOutput
         stderr: panel.listError
         onExited: (code, status) => {
+            panel.loading = false;
             if (code !== 0) {
                 panel.statusText = panel.listError.text.trim() || "Could not open wallpaper library";
                 return;
@@ -87,6 +90,10 @@ Item {
                 panel.statusText = panel.applyError.text.trim() || "Wallpaper apply failed";
             }
             panel.keyboardRequested();
+            if (panel.resetPending) {
+                panel.resetPending = false;
+                Qt.callLater(() => panel.resetWallpaper());
+            }
         }
     }
 
@@ -109,8 +116,10 @@ Item {
     function refresh(): void {
         if (runtime.wallpaperLibrary.length === 0)
             return;
-        if (!listProcess.running)
+        if (!listProcess.running) {
+            loading = true;
             listProcess.exec([runtime.wallpaperLibrary, "list"]);
+        }
         refreshCurrent();
     }
 
@@ -150,8 +159,14 @@ Item {
     }
 
     function resetWallpaper(): void {
-        if (busy || runtime.wallpaperLibrary.length === 0)
+        if (runtime.wallpaperLibrary.length === 0 || resetProcess.running)
             return;
+        if (applyProcess.running) {
+            resetPending = true;
+            statusText = "Restoring wallpaper after current selection…";
+            return;
+        }
+        statusText = "Restoring Stylix wallpaper…";
         resetProcess.exec([runtime.wallpaperLibrary, "reset", outputName]);
     }
 
@@ -307,6 +322,21 @@ Item {
                     required property string modelData
                     required property int index
                     readonly property bool current: PathView.isCurrentItem
+                    readonly property bool animatedFile: /\.(mp4|webm|mkv|mov|gif)$/i.test(modelData)
+                    property string posterPath: ""
+                    property StdioCollector posterOutput: StdioCollector {}
+                    property Process posterProcess: Process {
+                        stdout: entry.posterOutput
+                        onExited: (code, status) => {
+                            if (code === 0)
+                                entry.posterPath = entry.posterOutput.text.trim();
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        if (animatedFile && panel.runtime.wallpaperLibrary.length > 0)
+                            posterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail", modelData]);
+                    }
                     width: 206
                     height: 180
                     z: current ? 2 : 1
@@ -343,11 +373,20 @@ Item {
                                 right: parent.right
                             }
                             height: 139
-                            source: "file://" + entry.modelData
+                            source: entry.animatedFile ? (entry.posterPath.length > 0 ? "file://" + entry.posterPath : "") : "file://" + entry.modelData
                             sourceSize: Qt.size(380, 250)
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible: entry.animatedFile && entry.posterPath.length === 0
+                            text: "󰐊"
+                            color: panel.theme.accent
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(32)
                         }
 
                         Text {
@@ -357,7 +396,7 @@ Item {
                                 bottom: parent.bottom
                                 margins: panel.theme.spacing2
                             }
-                            text: entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1)
+                            text: (entry.animatedFile ? "󰕧  " : "") + entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1)
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(10)
@@ -368,7 +407,7 @@ Item {
                             theme: panel.theme
                             motion: panel.motion
                             selected: entry.current
-                            cornerRadius: parent.cornerRadius
+                            cornerRadius: panel.theme.radiusMedium
                             onActivated: panel.activateThumbnail(entry.index)
                         }
                     }
@@ -394,7 +433,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: panel.filteredEntries.length === 0
-                text: panel.searchText.length > 0 ? "No matching wallpapers" : "Add images or GIFs to ~/Pictures/Wallpapers"
+                text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/Pictures/Wallpapers"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(11)

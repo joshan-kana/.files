@@ -25,8 +25,16 @@ QtObject {
     readonly property int spatialType: Easing.OutQuint
     readonly property int effectsType: Easing.OutCubic
 
+    Component.onCompleted: syncWallpaperMotion()
+
+    function syncWallpaperMotion(): void {
+        if (runtime.wallpaperLibrary.length > 0)
+            Quickshell.execDetached([runtime.wallpaperLibrary, "motion", enabled ? "on" : "off"]);
+    }
+
     function toggle(): void {
         enabled = !enabled;
         Quickshell.execDetached(["hyprctl", "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
+        syncWallpaperMotion();
     }
 }
