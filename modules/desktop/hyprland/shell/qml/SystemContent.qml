@@ -621,7 +621,7 @@ FocusScope {
                 spacing: root.theme.spacing3
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 2) / 3
+                    width: (parent.width - parent.spacing * 3) / 4
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -635,7 +635,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 2) / 3
+                    width: (parent.width - parent.spacing * 3) / 4
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -649,7 +649,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 2) / 3
+                    width: (parent.width - parent.spacing * 3) / 4
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -660,65 +660,76 @@ FocusScope {
                     subtitle: "CPU · Memory"
                     onActivated: root.openResources()
                 }
-            }
-
-            ShellSurface {
-                width: parent.width
-                height: 74
-                visible: root.system.batteryAvailable || root.powerProfile.available
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Control
-                cornerRadius: theme.radiusMedium
-
-                Row {
-                    anchors {
-                        fill: parent
-                        margins: root.theme.spacing3
-                    }
-                    spacing: root.theme.spacing3
-
-                    ResourceGauge {
-                        width: 42
-                        height: 42
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: root.system.batteryAvailable
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        value: root.system.batteryPercent / 100
-                        accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
-                        compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
-                    }
-
-                    Column {
-                        width: Math.max(1, parent.width - (root.system.batteryAvailable ? 42 + parent.spacing : 0))
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: root.theme.spacing1
-
-                        Text {
-                            text: root.system.batteryAvailable ? ("Battery " + root.system.batteryPercent + "%") : "Power profile"
-                            color: root.theme.textStrong
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(12)
-                            font.weight: Font.DemiBold
-                        }
-
-                        Text {
-                            text: root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) + " · O to cycle" : "Power profile unavailable"
-                            color: root.theme.textMuted
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(10)
-                        }
-                    }
-                }
-
-                StateLayer {
+                ShellSurface {
+                    width: (parent.width - parent.spacing * 3) / 4
+                    height: 82
+                    visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
                     motion: root.motion
-                    cornerRadius: root.theme.radiusMedium
-                    disabled: !root.powerProfile.available || root.powerProfile.applying
-                    onActivated: root.powerProfile.cycle()
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: theme.radiusMedium
+
+                    Row {
+                        anchors {
+                            fill: parent
+                            margins: root.theme.spacing3
+                        }
+                        spacing: root.theme.spacing3
+
+                        ResourceGauge {
+                            width: 36
+                            height: 36
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: root.system.batteryAvailable
+                            theme: root.theme
+                            motion: root.motion
+                            compact: true
+                            value: root.system.batteryPercent / 100
+                            accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
+                            compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                        }
+
+                        Column {
+                            width: Math.max(1, parent.width - (root.system.batteryAvailable ? 36 + parent.spacing : 0))
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: root.theme.spacing1
+
+                            Text {
+                                text: root.system.batteryAvailable ? ("Battery " + root.system.batteryPercent + "%") : "Power profile"
+                                color: root.theme.textStrong
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(10)
+                                font.weight: Font.DemiBold
+                            }
+
+                            Text {
+                                text: root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Unavailable"
+                                color: root.theme.textMuted
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(9)
+                            }
+                        }
+                    }
+
+                    Text {
+                        anchors {
+                            top: parent.top
+                            right: parent.right
+                            margins: root.theme.spacing2
+                        }
+                        text: "O"
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(9)
+                    }
+
+                    StateLayer {
+                        theme: root.theme
+                        motion: root.motion
+                        cornerRadius: root.theme.radiusMedium
+                        disabled: !root.powerProfile.available || root.powerProfile.applying
+                        onActivated: root.powerProfile.cycle()
+                    }
                 }
             }
 
