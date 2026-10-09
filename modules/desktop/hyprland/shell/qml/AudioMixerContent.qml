@@ -11,7 +11,7 @@ FocusScope {
 
     property bool active: false
     property int selectedIndex: 0
-    readonly property var streams: system.audioStreams || []
+    readonly property var streams: system.audioApplicationStreams || []
 
     signal closeRequested
 
