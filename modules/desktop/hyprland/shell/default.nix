@@ -270,6 +270,7 @@ in
           pkgs.awww
           pkgs.coreutils
           pkgs.jq
+          pkgs.systemd
           pkgs.util-linux
         ];
         text = ''
@@ -287,7 +288,10 @@ in
           # The service can start before the Wayland daemon has opened its socket.
           for _ in {1..25}; do
             if awww query >/dev/null 2>&1; then
-              awww img --transition-type fade --transition-duration 0.8 --transition-fps 165 "$wallpaper"
+              quiet="$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled"
+              transition=fade
+              [ ! -f "$quiet" ] || transition=none
+              awww img --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$wallpaper"
 
               # The Stylix wallpaper remains the default. Reapply user-selected
               # per-output overrides after a theme reload or session restart.
@@ -297,11 +301,27 @@ in
                 { IFS= read -r resize && IFS= read -r image; } < "$entry" || continue
                 [ -f "$image" ] || continue
                 output="$(basename "$entry" .wall)"
-                if [ "$output" = all ]; then
-                  awww img --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
-                else
-                  awww img --outputs "$output" --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
-                fi
+                args=()
+                [ "$output" = all ] || args=(--outputs "$output")
+                case "''${image,,}" in
+                  *.mp4|*.webm|*.mkv|*.mov)
+                    if [ -f "$quiet" ]; then
+                      systemctl --user stop --no-block "linux-desktop-wallpaper-video@$output.service" || true
+                      still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
+                      awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
+                    else
+                      awww clear "''${args[@]}" 000000
+                      systemctl --user start --no-block "linux-desktop-wallpaper-video@$output.service"
+                    fi
+                    ;;
+                  *)
+                    still="$image"
+                    if [ -f "$quiet" ] && [[ "''${image,,}" = *.gif ]]; then
+                      still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
+                    fi
+                    awww img "''${args[@]}" --resize "$resize" --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$still"
+                    ;;
+                esac
               done
               exit 0
             fi
@@ -319,6 +339,7 @@ in
           pkgs.awww
           pkgs.coreutils
           pkgs.findutils
+          pkgs.ffmpeg
           pkgs.jq
           pkgs.systemd
           pkgs.util-linux
@@ -329,15 +350,48 @@ in
           runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
           action="''${1:-}"
           output="''${2:-all}"
+          if [ "$action" = thumbnail ]; then
+            image="$output"
+            [ -f "$image" ] && [[ "$image" = /* ]] || exit 2
+            case "''${image,,}" in
+              *.gif|*.mp4|*.webm|*.mkv|*.mov)
+                cache="''${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
+                mkdir -p "$cache"
+                key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
+                thumb="$cache/$key.png"
+                if [ ! -s "$thumb" ]; then
+                  tmp="$(mktemp "$cache/.thumb.XXXXXXXX.png")"
+                  trap 'rm -f "$tmp"' EXIT
+                  ffmpeg -nostdin -v error -i "$image" -frames:v 1 -vf 'scale=380:250:force_original_aspect_ratio=decrease' -update 1 -y "$tmp"
+                  mv -f "$tmp" "$thumb"
+                fi
+                printf '%s\n' "$thumb"
+                ;;
+              *) printf '%s\n' "$image" ;;
+            esac
+            exit 0
+          fi
+
           case "$output" in
             *[!a-zA-Z0-9_.-]*|"") printf 'Invalid output name: %s\n' "$output" >&2; exit 2 ;;
           esac
           state_file="$state_dir/$output.wall"
 
+          if [ "$action" = motion ]; then
+            quiet="$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled"
+            case "$output" in
+              off) touch "$quiet" ;;
+              on) rm -f "$quiet" ;;
+              *) exit 2 ;;
+            esac
+            systemctl --user start --no-block linux-desktop-wallpaper-image.service
+            exit 0
+          fi
+
           case "$action" in
             list)
               if [ -d "$library" ]; then
-                find "$library" -type f \(                   -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o                   -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' \) -print                   | LC_ALL=C sort | jq -Rsc '[split("\n")[] | select(length > 0)]'
+                find "$library" -type f \(                   -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o                   -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) -print                   | LC_ALL=C sort | jq -Rsc '[split("\n")[] | select(length > 0)]'
               else
                 printf '[]\n'
               fi
@@ -355,7 +409,8 @@ in
               image="''${4:-}"
               case "$resize" in crop|fit) ;; *) printf 'Invalid resize mode\n' >&2; exit 2 ;; esac
               case "''${image,,}" in
-                *.png|*.jpg|*.jpeg|*.webp|*.bmp|*.gif) ;;
+                *.png|*.jpg|*.jpeg|*.webp|*.bmp|*.gif) kind=image ;;
+                *.mp4|*.webm|*.mkv|*.mov) kind=video ;;
                 *) printf 'Unsupported wallpaper image: %s\n' "$image" >&2; exit 2 ;;
               esac
               if [ ! -f "$image" ] || [ "''${image:0:1}" != / ]; then
@@ -364,26 +419,67 @@ in
               fi
               exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
               flock -x 9
-              if [ "$output" = all ]; then
-                awww img --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+              unit="linux-desktop-wallpaper-video@$output.service"
+              args=()
+              [ "$output" = all ] || args=(--outputs "$output")
+              if [ "$kind" = video ]; then
+                ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$image" | grep -qx video || exit 2
+                if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
+                  still="$("$0" thumbnail "$image")"
+                  awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
+                else
+                  awww clear "''${args[@]}" 000000
+                fi
               else
-                awww img --outputs "$output" --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+                systemctl --user stop "$unit" || true
+                still="$image"
+                if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] && [[ "''${image,,}" = *.gif ]]; then
+                  still="$("$0" thumbnail "$image")"
+                fi
+                transition=fade
+                [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || transition=none
+                awww img "''${args[@]}" --resize "$resize" --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$still"
               fi
               mkdir -p "$state_dir"
               temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
               trap 'rm -f "$temp"' EXIT
               printf '%s\n%s\n' "$resize" "$image" > "$temp"
               mv -f "$temp" "$state_file"
+              if [ "$kind" = video ]; then
+                systemctl --user restart "$unit"
+              fi
               ;;
             reset)
+              systemctl --user stop "linux-desktop-wallpaper-video@$output.service" || true
               rm -f "$state_file"
               systemctl --user start --no-block linux-desktop-wallpaper-image.service
               ;;
             *)
-              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/image|reset [output]}\n' >&2
+              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|motion on\|off}\n' >&2
               exit 2
               ;;
           esac
+        '';
+      };
+
+      wallpaperVideoFromState = pkgs.writeShellApplication {
+        name = "linux-desktop-wallpaper-video-from-state";
+        runtimeInputs = [
+          pkgs.mpvpaper
+          pkgs.coreutils
+        ];
+        text = ''
+          output="''${1:?Output required}"
+          file="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers/$output.wall"
+          [ -r "$file" ] || exit 0
+          { IFS= read -r resize && IFS= read -r video; } < "$file" || exit 1
+          [ -f "$video" ] || exit 1
+          case "''${video,,}" in *.mp4|*.webm|*.mkv|*.mov) ;; *) exit 0 ;; esac
+          [ "$output" != all ] || output='*'
+          [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || exit 0
+          options='no-audio loop-file=inf hwdec=auto'
+          [ "$resize" != crop ] || options="$options panscan=1"
+          exec mpvpaper -p -a full -l bottom -o "$options" "$output" "$video"
         '';
       };
 
@@ -745,6 +841,23 @@ in
           };
 
           Install.WantedBy = [ "hyprland-session.target" ];
+        };
+
+        "linux-desktop-wallpaper-video@" = {
+          Unit = {
+            Description = "Selected video wallpaper on %i";
+            PartOf = [ "hyprland-session.target" ];
+            Wants = [ "awww.service" ];
+            After = [
+              "awww.service"
+              "hyprland-session.target"
+            ];
+          };
+          Service = {
+            ExecStart = "${lib.getExe wallpaperVideoFromState} %i";
+            Restart = "on-failure";
+            RestartSec = 2;
+          };
         };
 
         linux-desktop-spectrum = {
