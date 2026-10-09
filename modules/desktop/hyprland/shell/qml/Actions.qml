@@ -29,15 +29,9 @@ QtObject {
             audioMixerPanel.hide();
         if (except !== "overview" && overviewPanel.open)
             overviewPanel.hide();
-        if (except !== "media" && expansionState.hasCurrent && expansionState.currentName === "media")
-            expansionState.close();
-        if (except !== "system" && expansionState.hasCurrent && expansionState.currentName === "system")
-            expansionState.close();
-        if (except !== "calendar" && expansionState.hasCurrent && expansionState.currentName === "calendar")
-            expansionState.close();
-        if (except !== "weather" && expansionState.hasCurrent && expansionState.currentName === "weather")
-            expansionState.close();
-        if (except !== "activity" && expansionState.hasCurrent && expansionState.currentName === "activity")
+        // All hub tabs use one expansion surface. Switching between them must
+        // not close/reopen the hub; other transient panels still dismiss it.
+        if (!["media", "system", "calendar", "weather", "activity"].includes(except) && expansionState.hasCurrent)
             expansionState.close();
     }
 
