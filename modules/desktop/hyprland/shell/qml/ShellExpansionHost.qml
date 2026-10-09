@@ -39,8 +39,37 @@ PanelWindow {
         }
     }
     readonly property string currentTab: expansionState.currentName === "activity" ? "activity" : expansionState.currentName === "calendar" || expansionState.currentName === "weather" ? "home" : "controls"
-    readonly property real contentWidth: loadedContent ? Math.max(loadedContent.implicitWidth, 560) + theme.spacing5 * 2 : expansionState.originWidth
-    readonly property real contentHeight: loadedContent ? loadedContent.implicitHeight + tabs.implicitHeight + theme.spacing3 + theme.spacing5 * 2 : expansionState.originHeight
+    // Keep the last valid dimensions while Loader replaces one tab with another.
+    // Falling back to the tiny bar origin for that intermediate frame made the
+    // compositor repeatedly collapse and regrow the entire window.
+    property real measuredContentWidth: 0
+    property real measuredContentHeight: 0
+    readonly property real contentWidth: measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth
+    readonly property real contentHeight: measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight
+
+    function updateContentGeometry(): void {
+        if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
+            return;
+        measuredContentWidth = Math.max(loadedContent.implicitWidth, 560) + theme.spacing5 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + theme.spacing3 + theme.spacing5 * 2;
+    }
+
+    Timer {
+        id: geometryUpdate
+        interval: 0
+        repeat: false
+        onTriggered: host.updateContentGeometry()
+    }
+
+    Connections {
+        target: host.loadedContent
+        function onImplicitWidthChanged(): void {
+            geometryUpdate.restart();
+        }
+        function onImplicitHeightChanged(): void {
+            geometryUpdate.restart();
+        }
+    }
     readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
     readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
     readonly property real horizontalMargin: {
@@ -141,6 +170,8 @@ PanelWindow {
         onTriggered: {
             host.closing = false;
             host.expansionState.finishClose();
+            host.measuredContentWidth = 0;
+            host.measuredContentHeight = 0;
         }
     }
 
@@ -149,6 +180,8 @@ PanelWindow {
 
         function onHasCurrentChanged(): void {
             if (host.expansionState.hasCurrent) {
+                if (!host.closing)
+                    geometryUpdate.restart();
                 closeTimer.stop();
                 host.closing = false;
                 host.contentExpanded = false;
@@ -223,6 +256,7 @@ PanelWindow {
 
         Loader {
             id: contentLoader
+            onLoaded: geometryUpdate.restart()
 
             anchors {
                 top: tabs.bottom
