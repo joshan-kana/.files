@@ -207,7 +207,7 @@ FocusScope {
                         },
                         {
                             key: "Q / I",
-                            action: "Do Not Disturb / Stay awake"
+                            action: "Toggle Notifications / Stay awake"
                         },
                         {
                             key: "O",
@@ -578,21 +578,22 @@ FocusScope {
                 spacing: root.theme.spacing3
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4
+                    width: (parent.width - parent.spacing * 3) / 4.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: root.notificationState.silent ? "󰂛" : "󰂚"
                     shortcut: "Q"
-                    title: "Do not disturb"
+                    title: "Notifications"
                     subtitle: root.notificationState.silent ? "Alerts paused" : "Alerts enabled"
                     active: root.notificationState.silent
+                    activeColor: root.theme.warning
                     onActivated: root.notificationState.toggleSilent()
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4
+                    width: (parent.width - parent.spacing * 3) / 4.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
