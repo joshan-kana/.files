@@ -51,7 +51,7 @@ PanelWindow {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
         measuredContentWidth = Math.max(loadedContent.implicitWidth, 560) + theme.spacing5 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + theme.spacing3 + theme.spacing5 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing5 * 2;
     }
 
     Timer {
@@ -81,16 +81,6 @@ PanelWindow {
         const edge = theme.spacing4;
         return Math.max(edge, Math.min(desired, screen.width - width - edge));
     }
-    property real animatedMargin: horizontalMargin
-
-    Behavior on animatedMargin {
-        enabled: host.contentExpanded || host.closing
-
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
-        }
-    }
 
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
@@ -100,23 +90,6 @@ PanelWindow {
     implicitWidth: Math.max(1, targetWidth)
     implicitHeight: Math.max(1, targetHeight)
 
-    Behavior on implicitWidth {
-        enabled: host.contentExpanded || host.closing
-
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
-        }
-    }
-    Behavior on implicitHeight {
-        enabled: host.contentExpanded || host.closing
-
-        Anim {
-            motion: host.motion
-            type: Anim.DefaultSpatial
-        }
-    }
-
     anchors {
         top: true
         left: true
@@ -124,7 +97,7 @@ PanelWindow {
 
     margins {
         top: 56 + theme.spacing1
-        left: host.animatedMargin
+        left: host.horizontalMargin
     }
 
     WlrLayershell.namespace: "linux-desktop-expansion"
@@ -151,10 +124,17 @@ PanelWindow {
     }
 
     Shortcut {
-        sequence: "Ctrl+Tab"
+        sequence: "Z"
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent
         onActivated: host.cycleTab(1)
+    }
+
+    Shortcut {
+        sequence: "Shift+Z"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent
+        onActivated: host.cycleTab(-1)
     }
 
     HyprlandFocusGrab {
@@ -165,7 +145,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: host.motion.spatialNormal
+        interval: host.motion.spatialFast
         repeat: false
         onTriggered: {
             host.closing = false;
@@ -197,28 +177,20 @@ PanelWindow {
     ShellSurface {
         id: shellSurface
 
-        Keys.priority: Keys.AfterItem
-        Keys.onPressed: event => {
-            if (host.expansionState.hasCurrent && event.key === Qt.Key_Tab && (event.modifiers & Qt.ControlModifier)) {
-                host.cycleTab((event.modifiers & Qt.ShiftModifier) ? -1 : 1);
-                event.accepted = true;
-            }
-        }
-
         anchors.fill: parent
-        scale: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0.94
+        scale: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0.97
         opacity: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0
 
         Behavior on scale {
             Anim {
                 motion: host.motion
-                type: Anim.DefaultSpatial
+                type: Anim.FastSpatial
             }
         }
         Behavior on opacity {
             Anim {
                 motion: host.motion
-                type: Anim.DefaultEffects
+                type: Anim.FastEffects
             }
         }
 
@@ -254,6 +226,19 @@ PanelWindow {
             onTabRequested: destination => host.navigate(destination)
         }
 
+        Text {
+            id: hubFooter
+            anchors {
+                bottom: parent.bottom
+                horizontalCenter: parent.horizontalCenter
+                bottomMargin: host.theme.spacing3
+            }
+            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  CLOSE"
+            color: host.theme.textMuted
+            font.family: host.runtime.fontMono
+            font.pixelSize: host.theme.fontSize(9)
+        }
+
         Loader {
             id: contentLoader
             onLoaded: geometryUpdate.restart()
@@ -262,11 +247,11 @@ PanelWindow {
                 top: tabs.bottom
                 left: parent.left
                 right: parent.right
-                bottom: parent.bottom
+                bottom: hubFooter.top
                 topMargin: host.theme.spacing3
                 leftMargin: host.theme.spacing5
                 rightMargin: host.theme.spacing5
-                bottomMargin: host.theme.spacing5
+                bottomMargin: host.theme.spacing3
             }
 
             active: host.visible && host.currentComponent !== null
