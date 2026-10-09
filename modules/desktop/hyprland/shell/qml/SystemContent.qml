@@ -10,6 +10,7 @@ FocusScope {
     required property Motion motion
     required property SystemState system
     required property MediaState media
+    required property SpectrumState spectrum
     required property NotificationState notificationState
     required property BrightnessState brightness
     required property ResourceState resourceState
@@ -727,7 +728,7 @@ FocusScope {
 
                 Text {
                     visible: root.media.available
-                    text: "MEDIA"
+                    text: "MEDIA  ·  SHIFT+H/L SEEK"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
@@ -737,7 +738,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: 120
+                    height: 168
                     visible: root.media.available
                     theme: root.theme
                     motion: root.motion
@@ -843,6 +844,25 @@ FocusScope {
                                 theme: root.theme
                                 motion: root.motion
                                 compact: true
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 22
+
+                            SpectrumScale {
+                                id: compactFrequency
+                                lowHz: root.spectrum.lowHz
+                                highHz: root.spectrum.highHz
+                            }
+
+                            SpectrumBars {
+                                anchors.fill: parent
+                                spectrum: root.spectrum
+                                theme: root.theme
+                                frequencyScale: compactFrequency
+                                barCount: 36
                             }
                         }
                     }
@@ -1276,6 +1296,12 @@ FocusScope {
 
                 if (event.key === Qt.Key_Escape) {
                     root.closeRequested();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)) {
+                    root.media.seek(-5);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_L && (event.modifiers & Qt.ShiftModifier)) {
+                    root.media.seek(5);
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                     root.adjustSelectedAudio(-0.05);
