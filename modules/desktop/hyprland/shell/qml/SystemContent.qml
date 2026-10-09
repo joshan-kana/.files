@@ -895,9 +895,8 @@ FocusScope {
                         id: trayHint
                         text: "[  PREV     ]  NEXT     ENTER  OPEN"
                         color: root.theme.textMuted
-                        opacity: 0.62
                         font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(8)
+                        font.pixelSize: root.theme.fontSize(9)
                     }
                 }
 
@@ -921,20 +920,21 @@ FocusScope {
                             selected: index === root.trayIndex
                             cornerRadius: theme.radiusMedium
 
-                            MouseArea {
-                                anchors.fill: parent
+                            StateLayer {
+                                theme: root.theme
+                                motion: root.motion
+                                selected: trayItem.index === root.trayIndex
+                                cornerRadius: root.theme.radiusMedium
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-                                onClicked: mouse => {
+                                onActivated: event => {
                                     root.trayIndex = trayItem.index;
-
-                                    if (mouse.button === Qt.RightButton) {
+                                    if (event.button === Qt.RightButton)
                                         trayItem.modelData.secondaryActivate();
-                                    } else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu) {
+                                    else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu)
                                         trayMenu.openFor(trayItem.modelData);
-                                    } else {
+                                    else
                                         trayItem.modelData.activate();
-                                    }
                                 }
                             }
 
