@@ -27,6 +27,12 @@ QtObject {
     }
     readonly property var history: server.trackedNotifications.values
     readonly property int count: history.length
+    property var readNotifications: []
+    readonly property int unreadCount: history.filter(notification => !readNotifications.includes(notification)).length
+
+    function markRead(): void {
+        readNotifications = [...history];
+    }
 
     property NotificationServer server: NotificationServer {
         keepOnReload: true
