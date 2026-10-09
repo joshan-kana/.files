@@ -8,6 +8,19 @@
 let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
+  windowEffectsToggle = pkgs.writeShellApplication {
+    name = "linux-desktop-window-effects-toggle";
+    runtimeInputs = [ pkgs.jq ];
+    text = ''
+      current="$(hyprctl getoption decoration:active_opacity -j | jq -er '.float')"
+      if jq -ne --argjson current "$current" '$current < 0.999' >/dev/null; then
+        opacity=1.0
+      else
+        opacity=0.82
+      fi
+      hyprctl eval "hl.config({ decoration = { active_opacity = $opacity, inactive_opacity = $opacity } })"
+    '';
+  };
   aliases = {
     h = "start-hyprland";
     HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
@@ -62,6 +75,7 @@ in
     stylix.targets.hyprland.hyprpaper.enable = false;
 
     home.shellAliases = aliases;
+    home.packages = [ windowEffectsToggle ];
 
     wayland.windowManager.hyprland =
       let
@@ -147,8 +161,8 @@ in
 
               blur = {
                 enabled = true;
-                size = 3;
-                passes = 1;
+                size = 8;
+                passes = 2;
               };
 
               shadow = {
