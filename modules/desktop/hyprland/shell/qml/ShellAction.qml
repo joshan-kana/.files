@@ -10,6 +10,7 @@ Item {
     property string title: ""
     property string subtitle: ""
     property string icon: ""
+    property string shortcut: ""
     property bool active: false
     property bool compact: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
@@ -71,6 +72,19 @@ Item {
             font.pixelSize: theme.fontSize(root.compact ? 9 : 11)
             elide: Text.ElideRight
         }
+    }
+
+    Text {
+        visible: root.shortcut.length > 0
+        anchors {
+            top: parent.top
+            right: parent.right
+            margins: root.theme.spacing2
+        }
+        text: root.shortcut
+        color: root.theme.textMuted
+        font.family: root.runtime.fontMono
+        font.pixelSize: root.theme.fontSize(9)
     }
 
     StateLayer {
