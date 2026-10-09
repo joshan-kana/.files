@@ -15,7 +15,7 @@ ShellSurface {
     implicitHeight: 134
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: active ? theme.selectionFill : (hover.hovered ? theme.layer3 : theme.layer2)
+    fillColor: active ? theme.selectionFill : theme.layer2
     outlined: active
 
     Column {
@@ -58,13 +58,11 @@ ShellSurface {
         }
     }
 
-    HoverHandler {
-        id: hover
-    }
-
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: dayCard.activated()
+    StateLayer {
+        theme: dayCard.theme
+        motion: dayCard.motion
+        selected: dayCard.active
+        cornerRadius: dayCard.theme.radiusMedium
+        onActivated: dayCard.activated()
     }
 }
