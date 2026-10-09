@@ -10,6 +10,9 @@ QtObject {
 
     readonly property bool available: player !== null
     readonly property bool playing: available && player.isPlaying
+    readonly property bool canTogglePlaying: available && (player.isPlaying ? player.canPause : player.canPlay)
+    readonly property bool canGoNext: available && player.canGoNext
+    readonly property bool canGoPrevious: available && player.canGoPrevious
 
     readonly property string title: available ? (player.trackTitle || "Unknown track") : ""
     readonly property string artist: available ? (player.trackArtist || player.identity || "Unknown artist") : ""
@@ -64,7 +67,7 @@ QtObject {
     }
 
     function togglePlaying(): void {
-        if (!available)
+        if (!canTogglePlaying)
             return;
 
         if (player.isPlaying) {
@@ -76,12 +79,12 @@ QtObject {
     }
 
     function next(): void {
-        if (available && player.canGoNext)
+        if (canGoNext)
             player.next();
     }
 
     function previous(): void {
-        if (available && player.canGoPrevious)
+        if (canGoPrevious)
             player.previous();
     }
 
