@@ -505,6 +505,7 @@ FocusScope {
                     model: [
                         {
                             id: "network",
+                            shortcut: "N",
                             label: "Network",
                             icon: root.system.wifiConnected ? "󰤨" : "󰈀",
                             value: root.system.networkConnected ? root.system.networkName : "Offline",
@@ -512,6 +513,7 @@ FocusScope {
                         },
                         {
                             id: "bluetooth",
+                            shortcut: "B",
                             label: "Bluetooth",
                             icon: root.system.bluetoothEnabled ? "󰂯" : "󰂲",
                             value: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected" : "Off",
@@ -519,6 +521,7 @@ FocusScope {
                         },
                         {
                             id: "theme",
+                            shortcut: "Y",
                             label: "Theme",
                             icon: "󰏘",
                             value: "Palette",
@@ -526,6 +529,7 @@ FocusScope {
                         },
                         {
                             id: "wallpaper",
+                            shortcut: "W",
                             label: "Wallpaper",
                             icon: "󰸉",
                             value: "Library",
@@ -533,6 +537,7 @@ FocusScope {
                         },
                         {
                             id: "session",
+                            shortcut: "P",
                             label: "Session",
                             icon: "󰐥",
                             value: "Power",
@@ -546,6 +551,7 @@ FocusScope {
                         width: (content.width - theme.spacing3 * (controlTiles.count - 1)) / controlTiles.count
                         height: 84
                         icon: modelData.icon
+                        shortcut: modelData.shortcut
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
@@ -574,100 +580,104 @@ FocusScope {
                 spacing: root.theme.spacing3
 
                 ShellAction {
-                    width: (parent.width - parent.spacing) / 2
-                    height: 54
+                    width: (parent.width - parent.spacing * 2) / 3
+                    height: 82
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    title: "󰂛  Do not disturb"
-                    subtitle: root.notificationState.silent ? "Alerts paused · Q" : "Alerts enabled · Q"
+                    icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                    shortcut: "Q"
+                    title: "Do not disturb"
+                    subtitle: root.notificationState.silent ? "Alerts paused" : "Alerts enabled"
                     active: root.notificationState.silent
                     onActivated: root.notificationState.toggleSilent()
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing) / 2
-                    height: 54
+                    width: (parent.width - parent.spacing * 2) / 3
+                    height: 82
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    title: "󰅶  Stay awake"
-                    subtitle: root.system.idleInhibited ? "Idle blocked · I" : "Normal idle · I"
+                    icon: "󰅶"
+                    shortcut: "I"
+                    title: "Stay awake"
+                    subtitle: root.system.idleInhibited ? "Idle blocked" : "Normal idle"
                     active: root.system.idleInhibited
                     onActivated: root.system.toggleIdleInhibited()
                 }
+
+                ShellAction {
+                    width: (parent.width - parent.spacing * 2) / 3
+                    height: 82
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰍛"
+                    shortcut: "G"
+                    title: "Resources"
+                    subtitle: "CPU · Memory"
+                    onActivated: root.openResources()
+                }
             }
 
-            Column {
+            ShellSurface {
                 width: parent.width
-                spacing: root.theme.spacing2
-                visible: root.powerProfile.available || root.system.batteryAvailable
-
-                Text {
-                    text: "POWER  ·  O TO CYCLE"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(10)
-                    font.weight: Font.DemiBold
-                }
+                height: 74
+                visible: root.system.batteryAvailable || root.powerProfile.available
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: theme.radiusMedium
 
                 Row {
-                    id: profileRow
-                    width: parent.width
+                    anchors {
+                        fill: parent
+                        margins: root.theme.spacing3
+                    }
                     spacing: root.theme.spacing3
 
-                    Repeater {
-                        model: root.powerProfile.available ? root.powerProfile.profiles : []
-
-                        delegate: ShellAction {
-                            required property string modelData
-                            width: Math.max(80, (profileRow.width - (root.system.batteryAvailable ? 114 : 0) - (root.powerProfile.profiles.length - 1 + (root.system.batteryAvailable ? 1 : 0)) * profileRow.spacing) / root.powerProfile.profiles.length)
-                            height: 64
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            title: root.powerProfile.label(modelData)
-                            subtitle: root.powerProfile.current === modelData ? "Active" : "Select"
-                            active: root.powerProfile.current === modelData
-                            enabled: !root.powerProfile.applying
-                            onActivated: root.powerProfile.setProfile(modelData)
-                        }
-                    }
-
-                    ShellSurface {
-                        width: 114
-                        height: 64
+                    ResourceGauge {
+                        width: 42
+                        height: 42
+                        anchors.verticalCenter: parent.verticalCenter
                         visible: root.system.batteryAvailable
                         theme: root.theme
                         motion: root.motion
-                        surfaceLayer: ShellSurface.Control
-                        cornerRadius: theme.radiusMedium
+                        compact: true
+                        value: root.system.batteryPercent / 100
+                        accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
+                        compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                    }
 
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: root.theme.spacing2
+                    Column {
+                        width: Math.max(1, parent.width - (root.system.batteryAvailable ? 42 + parent.spacing : 0))
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: root.theme.spacing1
 
-                            ResourceGauge {
-                                width: 36
-                                height: 36
-                                theme: root.theme
-                                motion: root.motion
-                                compact: true
-                                value: root.system.batteryPercent / 100
-                                accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
-                                compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: root.system.batteryPercent + "%"
-                                color: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.textStrong
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(12)
-                                font.weight: Font.DemiBold
-                            }
+                        Text {
+                            text: root.system.batteryAvailable ? ("Battery " + root.system.batteryPercent + "%") : "Power profile"
+                            color: root.theme.textStrong
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontSize(12)
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            text: root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) + " · O to cycle" : "Power profile unavailable"
+                            color: root.theme.textMuted
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontSize(10)
                         }
                     }
+                }
+
+                StateLayer {
+                    theme: root.theme
+                    motion: root.motion
+                    cornerRadius: root.theme.radiusMedium
+                    disabled: !root.powerProfile.available || root.powerProfile.applying
+                    onActivated: root.powerProfile.cycle()
                 }
             }
 
@@ -676,7 +686,8 @@ FocusScope {
                 spacing: root.theme.spacing2
 
                 Text {
-                    text: "MEDIA & UTILITIES"
+                    visible: root.media.available
+                    text: "MEDIA"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
@@ -794,44 +805,6 @@ FocusScope {
                                 compact: true
                             }
                         }
-                    }
-                }
-
-                Row {
-                    width: parent.width
-                    spacing: root.theme.spacing2
-
-                    ShellAction {
-                        width: (parent.width - 2 * parent.spacing) / 3
-                        height: 40
-                        compact: true
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: "V  Media"
-                        onActivated: root.mediaRequested()
-                    }
-
-                    ShellAction {
-                        width: (parent.width - 2 * parent.spacing) / 3
-                        height: 42
-                        compact: true
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: "A  Mixer"
-                        onActivated: root.openMixer()
-                    }
-
-                    ShellAction {
-                        width: (parent.width - 2 * parent.spacing) / 3
-                        height: 42
-                        compact: true
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: "G  Resources"
-                        onActivated: root.openResources()
                     }
                 }
             }
