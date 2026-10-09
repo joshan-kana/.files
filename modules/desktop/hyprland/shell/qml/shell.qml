@@ -62,7 +62,13 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "media"
-            onCloseRequested: expansionState.close()
+            returnToControls: expansionState.currentView === "controls"
+            onCloseRequested: {
+                if (returnToControls)
+                    actions.showSystem();
+                else
+                    expansionState.close();
+            }
         }
     }
 
