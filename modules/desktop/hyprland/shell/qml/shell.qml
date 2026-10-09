@@ -287,6 +287,20 @@ ShellRoot {
                 keywords: ["screenshot", "capture", "snip", "clipboard", "region", "image"]
             },
             {
+                id: "capture.output",
+                name: "Copy Display Screenshot",
+                description: "Copy the focused monitor to the clipboard",
+                icon: "camera-photo",
+                keywords: ["screenshot", "capture", "screen", "display", "monitor", "copy", "clipboard"]
+            },
+            {
+                id: "capture.saveOutput",
+                name: "Save Display Screenshot",
+                description: "Save a screenshot of the focused monitor",
+                icon: "camera-photo",
+                keywords: ["screenshot", "capture", "screen", "display", "monitor", "save", "file"]
+            },
+            {
                 id: "capture.recordToggle",
                 name: "Start / Stop Screen Recording",
                 description: "Select a Wayland region; use again to finish and save the recording",
