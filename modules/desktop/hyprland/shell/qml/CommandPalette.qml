@@ -492,12 +492,13 @@ PanelWindow {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
+                    StateLayer {
+                        theme: card.theme
+                        motion: card.motion
+                        cornerRadius: card.theme.radiusMedium
                         // Do not select a new row when search results move beneath a stationary pointer.
                         onPositionChanged: results.currentIndex = result.index
-                        onClicked: {
+                        onActivated: {
                             results.currentIndex = result.index;
                             palette.launchCurrent(false);
                         }
