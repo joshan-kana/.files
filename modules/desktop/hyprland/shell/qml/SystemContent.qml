@@ -213,12 +213,8 @@ FocusScope {
                             action: "Cycle available power profiles"
                         },
                         {
-                            key: "Z / SHIFT+Z",
-                            action: "Next / previous hub tab"
-                        },
-                        {
-                            key: "/ / [",
-                            action: "Next / previous tray app"
+                            key: "[ / ]",
+                            action: "Previous / next tray app"
                         },
                         {
                             key: "ENTER",
@@ -879,7 +875,7 @@ FocusScope {
 
                     Text {
                         id: trayHint
-                        text: "/  NEXT     [  PREVIOUS     ENTER  OPEN"
+                        text: "[  PREV     ]  NEXT     ENTER  OPEN"
                         color: root.theme.textMuted
                         opacity: 0.62
                         font.family: root.runtime.fontMono
