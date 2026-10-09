@@ -323,7 +323,15 @@ Item {
         spacing: panel.theme.spacing2
         clip: true
         currentIndex: panel.selectedIndex
+        // Keyboard auto-repeat must not queue smooth highlight/scroll motion.
+        highlightMoveDuration: 0
+        highlightResizeDuration: 0
         boundsBehavior: Flickable.StopAtBounds
+
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, ListView.Contain);
+        }
 
         delegate: ShellSurface {
             id: themeRow
@@ -337,7 +345,9 @@ Item {
             motion: panel.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: theme.radiusMedium
-            fillColor: index === panel.selectedIndex ? theme.selectionFill : (modelData.preview ? modelData.preview.background : theme.layer3)
+            fillColor: modelData.preview ? modelData.preview.background : theme.layer3
+            borderColor: index === panel.selectedIndex ? panel.theme.accent : "transparent"
+            borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
             MouseArea {
                 anchors.fill: parent
@@ -378,7 +388,7 @@ Item {
                         Text {
                             id: stateBadge
                             text: themeRow.modelData.name === panel.currentTheme ? "ACTIVE" : (themeRow.modelData.name === panel.defaultTheme ? "DEFAULT" : "")
-                            color: themeRow.modelData.name === panel.currentTheme ? panel.theme.positive : panel.theme.textMuted
+                            color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textMuted
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(8)
                             font.weight: Font.DemiBold
