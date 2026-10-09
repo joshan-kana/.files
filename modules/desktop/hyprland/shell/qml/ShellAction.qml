@@ -9,6 +9,7 @@ Item {
 
     property string title: ""
     property string subtitle: ""
+    property string icon: ""
     property bool active: false
     property bool compact: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
@@ -38,7 +39,19 @@ Item {
         }
         spacing: root.theme.spacing1
 
+        Text {
+            visible: root.icon.length > 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: root.icon
+            color: root.active ? root.theme.accent : root.theme.textStrong
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: root.theme.fontSize(root.compact ? 15 : 19)
+        }
+
         ShellText {
+            width: Math.max(1, root.width - root.horizontalPadding * 2)
+            horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
+            elide: Text.ElideRight
             runtime: root.runtime
             theme: root.theme
             text: root.title
@@ -50,6 +63,7 @@ Item {
         ShellText {
             visible: root.subtitle.length > 0
             width: Math.max(1, root.width - root.horizontalPadding * 2)
+            horizontalAlignment: root.icon.length > 0 ? Text.AlignHCenter : Text.AlignLeft
             runtime: root.runtime
             theme: root.theme
             text: root.subtitle
