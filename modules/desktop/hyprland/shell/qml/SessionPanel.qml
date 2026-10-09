@@ -105,9 +105,13 @@ Item {
             const rowEnd = Math.min(entries.length - 1, rowStart + 2);
             moveSelection(Math.max(rowStart, Math.min(rowEnd, selectedIndex + horizontal)) - selectedIndex);
         } else if (vertical !== 0) {
-            const target = selectedIndex + vertical * 3;
-            if (target >= 0 && target < entries.length)
+            const targetRow = Math.floor(selectedIndex / 3) + vertical;
+            const lastRow = Math.floor((entries.length - 1) / 3);
+            if (targetRow >= 0 && targetRow <= lastRow) {
+                const column = selectedIndex % 3;
+                const target = Math.min(entries.length - 1, targetRow * 3 + column);
                 moveSelection(target - selectedIndex);
+            }
         }
     }
 
