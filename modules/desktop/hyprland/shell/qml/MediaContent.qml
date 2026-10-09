@@ -402,7 +402,8 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     compact: true
-                    title: "V  " + content.visualizerMode.toUpperCase()
+                    title: content.visualizerMode.toUpperCase()
+                    shortcut: "V"
                     active: true
                     onActivated: content.toggleVisualizer()
                 }
@@ -414,7 +415,8 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     compact: true
-                    title: "?  HELP"
+                    title: "HELP"
+                    shortcut: "?"
                     onActivated: content.helpOpen = true
                 }
 
@@ -425,7 +427,8 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     compact: true
-                    title: content.returnToControls ? "ESC  BACK" : "ESC  CLOSE"
+                    title: content.returnToControls ? "BACK" : "CLOSE"
+                    shortcut: "Esc"
                     onActivated: content.closeRequested()
                 }
             }
