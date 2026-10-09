@@ -211,6 +211,14 @@ ShellRoot {
         motion: motion
     }
 
+    OverviewPanel {
+        id: overviewPanel
+        screen: screens.focusedScreen
+        runtime: runtime
+        theme: theme
+        motion: motion
+    }
+
     AudioMixerPanel {
         id: audioMixerPanel
         screen: screens.focusedScreen
@@ -254,6 +262,14 @@ ShellRoot {
         theme: theme
         motion: motion
         commands: [
+            {
+                id: "overview.toggle",
+                name: "Workspaces & Window Overview",
+                description: "Browse live window previews and switch workspaces",
+                icon: "view-grid",
+                key: runtime.shortcut("overview.toggle"),
+                keywords: ["overview", "mission control", "windows", "workspaces", "switch", "preview"]
+            },
             {
                 id: "clipboard.toggle",
                 name: "Clipboard History",
@@ -501,6 +517,7 @@ ShellRoot {
         launcher: launcher
         clipboardPanel: clipboardPanel
         audioMixerPanel: audioMixerPanel
+        overviewPanel: overviewPanel
         mediaState: media
         systemState: system
         brightnessState: brightness
@@ -584,6 +601,13 @@ ShellRoot {
         name: "launcher-slot-9"
         description: "Open command palette result 9"
         onPressed: launcher.launchIndex(8)
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "overview"
+        description: "Window and workspace overview"
+        onPressed: actions.toggleOverview()
     }
 
     GlobalShortcut {
@@ -793,6 +817,13 @@ ShellRoot {
 
         function toggleAudioMixer(): void {
             actions.toggleAudioMixer();
+        }
+        function toggleOverview(): void {
+            actions.toggleOverview();
+        }
+
+        function overviewOpen(): bool {
+            return overviewPanel.open;
         }
 
         function audioMixerOpen(): bool {

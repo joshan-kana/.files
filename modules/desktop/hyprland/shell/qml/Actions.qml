@@ -10,6 +10,7 @@ QtObject {
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
     required property AudioMixerPanel audioMixerPanel
+    required property OverviewPanel overviewPanel
     required property MediaState mediaState
     required property SystemState systemState
     required property BrightnessState brightnessState
@@ -26,6 +27,8 @@ QtObject {
             clipboardPanel.hide();
         if (except !== "audio" && audioMixerPanel.open)
             audioMixerPanel.hide();
+        if (except !== "overview" && overviewPanel.open)
+            overviewPanel.hide();
         if (except !== "media" && expansionState.hasCurrent && expansionState.currentName === "media")
             expansionState.close();
         if (except !== "system" && expansionState.hasCurrent && expansionState.currentName === "system")
@@ -54,6 +57,12 @@ QtObject {
         if (!clipboardPanel.open)
             hideTransient("clipboard");
         clipboardPanel.toggle();
+    }
+
+    function toggleOverview(): void {
+        if (!overviewPanel.open)
+            hideTransient("overview");
+        overviewPanel.toggle();
     }
 
     function toggleAudioMixer(): void {
@@ -235,6 +244,8 @@ QtObject {
             lockSession();
         else if (commandId === "audio.mixer")
             toggleAudioMixer();
+        else if (commandId === "overview.toggle")
+            toggleOverview();
         else if (commandId === "clipboard.toggle")
             toggleClipboard();
         else if (commandId === "capture.region")
