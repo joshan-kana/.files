@@ -558,6 +558,13 @@ in
     description = "Toggle animations";
   })
   (mk {
+    keys = "SHIFT + O";
+    id = "window.effects.toggle";
+    action = exec "linux-desktop-window-effects-toggle";
+    section = "WINDOWS";
+    description = "Toggle window transparency";
+  })
+  (mk {
     keys = "SHIFT + B";
     id = "bar.toggle";
     action = global "linux-desktop:bar";
