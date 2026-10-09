@@ -218,6 +218,12 @@ QtObject {
         brightnessState.adjust(-5);
     }
 
+    function toggleRecording(): void {
+        hideTransient("");
+        if (runtime.recordingToggle.length > 0)
+            Quickshell.execDetached([runtime.recordingToggle]);
+    }
+
     function captureRegion(copy: bool): void {
         hideTransient("");
         // Reuse Hyprland's existing Wayland capture backend.
@@ -235,6 +241,8 @@ QtObject {
             captureRegion(true);
         else if (commandId === "capture.saveRegion")
             captureRegion(false);
+        else if (commandId === "capture.recordToggle")
+            toggleRecording();
         else if (commandId === "media.toggle")
             toggleMedia();
         else if (commandId === "media.playPause")
