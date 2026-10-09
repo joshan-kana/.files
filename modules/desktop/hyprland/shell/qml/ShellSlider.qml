@@ -47,14 +47,6 @@ Item {
             width: parent.width * root.normalizedValue
             radius: parent.radius
             color: root.accentColor
-
-            Behavior on width {
-                enabled: !interaction.pressed
-                Anim {
-                    motion: root.motion
-                    type: Anim.FastSpatial
-                }
-            }
         }
     }
 
@@ -67,14 +59,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: root.accentColor
         scale: interaction.pressed ? 1.18 : 1
-
-        Behavior on x {
-            enabled: !interaction.pressed
-            Anim {
-                motion: root.motion
-                type: Anim.FastSpatial
-            }
-        }
 
         Behavior on scale {
             Anim {
