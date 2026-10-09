@@ -33,9 +33,9 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.warning : button.selected || pointer.containsMouse ? button.theme.accent : button.theme.layer2
-        borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.accent : button.theme.subtleBorder
-        borderWidth: button.selected ? button.theme.borderFocus : button.theme.borderThin
+        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.selectionFill : button.theme.layer3
+        borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.accent : "transparent"
+        borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
 
         Behavior on cornerRadius {
             NumberAnimation {
@@ -50,68 +50,23 @@ Item {
             }
         }
 
-        SquircleSurface {
-            id: ripple
-            anchors.centerIn: parent
-            width: parent.width
-            height: parent.height
-            cornerRadius: surface.cornerRadius
-            exponent: surface.exponent
-            fillColor: button.armed ? button.theme.background : button.theme.textStrong
-            opacity: 0
-            scale: 0.2
-
-            SequentialAnimation {
-                id: rippleMotion
-                PropertyAction {
-                    target: ripple
-                    property: "opacity"
-                    value: 0.16
-                }
-                PropertyAction {
-                    target: ripple
-                    property: "scale"
-                    value: 0.25
-                }
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: ripple
-                        property: "scale"
-                        to: 1
-                        duration: button.motion.spatialNormal
-                        easing.type: button.motion.spatialType
-                    }
-                    NumberAnimation {
-                        target: ripple
-                        property: "opacity"
-                        to: 0
-                        duration: button.motion.effectsNormal
-                        easing.type: button.motion.effectsType
-                    }
-                }
-            }
-        }
-
         Text {
             anchors.centerIn: parent
             text: button.icon
-            color: button.armed ? button.theme.background : button.selected || pointer.containsMouse ? button.theme.background : button.theme.textStrong
+            color: button.armed ? button.theme.warning : button.selected ? button.theme.accent : button.theme.textStrong
             font.family: "Symbols Nerd Font"
             font.pixelSize: button.theme.fontSize(43)
             font.weight: Font.Normal
         }
 
-        MouseArea {
+        StateLayer {
             id: pointer
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
+            theme: button.theme
+            motion: button.motion
+            selected: button.selected
+            cornerRadius: surface.cornerRadius
             onEntered: button.hovered()
-            onPressed: {
-                if (button.motion.enabled)
-                    rippleMotion.restart();
-            }
-            onClicked: button.activated()
+            onActivated: button.activated()
         }
     }
 
