@@ -12,6 +12,7 @@ Item {
     property string icon: ""
     property string shortcut: ""
     property bool active: false
+    property color activeColor: theme.accent
     property bool compact: false
     property bool iconOnly: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
@@ -30,24 +31,21 @@ Item {
         motion: root.motion
         surfaceLayer: ShellSurface.Control
         selected: root.active
+        fillColor: root.active ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.18) : root.theme.layer3
         cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
     }
 
     Column {
         id: content
-        anchors {
-            left: parent.left
-            verticalCenter: parent.verticalCenter
-            leftMargin: root.horizontalPadding
-            rightMargin: root.horizontalPadding
-        }
+        width: Math.max(1, root.width - (root.iconOnly ? 0 : root.horizontalPadding * 2))
+        anchors.centerIn: parent
         spacing: root.theme.spacing1
 
         Text {
-            visible: root.icon.length > 0
+            visible: !root.iconOnly && root.icon.length > 0
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.icon
-            color: root.active ? root.theme.accent : root.theme.textStrong
+            color: root.active ? root.activeColor : root.theme.textStrong
             font.family: "Symbols Nerd Font"
             font.pixelSize: root.theme.fontSize(root.compact ? 15 : 19)
         }
@@ -60,7 +58,7 @@ Item {
             runtime: root.runtime
             theme: root.theme
             text: root.title
-            color: root.active ? theme.accent : theme.textStrong
+            color: root.active ? root.activeColor : theme.textStrong
             font.pixelSize: theme.fontSize(root.compact ? 10 : 11)
             font.weight: Font.DemiBold
         }
@@ -78,6 +76,20 @@ Item {
         }
     }
 
+    // Icon-only actions share one fixed glyph box, independent of font bearings.
+    Text {
+        visible: root.iconOnly
+        anchors.centerIn: parent
+        width: root.width
+        height: root.height
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: root.icon
+        color: root.active ? root.activeColor : root.theme.textStrong
+        font.family: "Symbols Nerd Font"
+        font.pixelSize: root.theme.fontSize(17)
+    }
+
     Text {
         visible: !root.iconOnly && root.shortcut.length > 0
         anchors {
@@ -88,7 +100,7 @@ Item {
         text: root.shortcut
         color: root.theme.textMuted
         font.family: root.runtime.fontMono
-        font.pixelSize: root.theme.fontSize(9)
+        font.pixelSize: root.theme.fontSize(11)
     }
 
     StateLayer {
@@ -96,6 +108,7 @@ Item {
         motion: root.motion
         disabled: !root.enabled
         selected: root.active
+        stateColor: root.active ? root.activeColor : root.theme.textStrong
         cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
         onActivated: root.activated()
     }
