@@ -59,8 +59,9 @@ Item {
                 theme: root.theme
                 motion: root.motion
                 compact: true
-                title: modelData.hint + "  " + modelData.label
-                active: modelData.action === "play"
+                title: modelData.label
+                shortcut: modelData.hint
+                active: modelData.action === "play" && root.media.playing
                 enabled: modelData.enabled
 
                 onActivated: {
