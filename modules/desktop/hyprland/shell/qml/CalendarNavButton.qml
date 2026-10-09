@@ -11,7 +11,7 @@ ShellSurface {
     implicitHeight: 34
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: hover.hovered ? theme.selectionFill : theme.layer3
+    fillColor: theme.layer3
 
     Text {
         anchors.centerIn: parent
@@ -21,13 +21,10 @@ ShellSurface {
         font.pixelSize: nav.theme.fontSize(18)
     }
 
-    HoverHandler {
-        id: hover
-    }
-
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: nav.activated()
+    StateLayer {
+        theme: nav.theme
+        motion: nav.motion
+        cornerRadius: nav.theme.radiusMedium
+        onActivated: nav.activated()
     }
 }
