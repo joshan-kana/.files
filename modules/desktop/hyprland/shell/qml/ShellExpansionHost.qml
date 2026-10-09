@@ -40,8 +40,8 @@ PanelWindow {
     }
     readonly property string currentTab: expansionState.currentName === "activity" ? "activity" : expansionState.currentName === "calendar" || expansionState.currentName === "weather" ? "home" : "controls"
     // Keep the last valid dimensions while Loader replaces one tab with another.
-    // Falling back to the tiny bar origin for that intermediate frame made the
-    // compositor repeatedly collapse and regrow the entire window.
+    // Otherwise the inner squircle briefly shrinks to the bar origin before the
+    // new tab's dimensions are ready.
     property real measuredContentWidth: 0
     property real measuredContentHeight: 0
     readonly property real contentWidth: measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth
@@ -141,7 +141,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: host.motion.spatialFast
+        interval: host.motion.morph
         repeat: false
         onTriggered: {
             host.closing = false;
@@ -178,7 +178,6 @@ PanelWindow {
         width: Math.min(host.width, host.targetWidth)
         height: Math.min(host.height, host.targetHeight)
         clip: true
-        scale: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0.97
         opacity: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0
 
         Behavior on width {
@@ -194,12 +193,6 @@ PanelWindow {
             }
         }
 
-        Behavior on scale {
-            Anim {
-                motion: host.motion
-                type: Anim.FastSpatial
-            }
-        }
         Behavior on opacity {
             Anim {
                 motion: host.motion
@@ -216,9 +209,9 @@ PanelWindow {
         Behavior on cornerRadius {
             enabled: host.contentExpanded || host.closing
 
-            Anim {
-                motion: host.motion
-                type: Anim.FastSpatial
+            NumberAnimation {
+                duration: host.motion.morph
+                easing.type: host.motion.morphType
             }
         }
 
