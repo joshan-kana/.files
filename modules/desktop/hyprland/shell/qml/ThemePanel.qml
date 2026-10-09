@@ -349,11 +349,13 @@ Item {
             borderColor: index === panel.selectedIndex ? panel.theme.accent : "transparent"
             borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
+            StateLayer {
+                theme: panel.theme
+                motion: panel.motion
+                selected: themeRow.index === panel.selectedIndex
+                cornerRadius: panel.theme.radiusMedium
 
-                onClicked: {
+                onActivated: {
                     panel.selectedIndex = themeRow.index;
                     panel.activateSelected();
                 }

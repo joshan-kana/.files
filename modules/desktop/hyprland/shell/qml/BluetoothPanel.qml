@@ -306,11 +306,13 @@ Item {
                 selected: index === panel.selectedIndex
                 cornerRadius: theme.radiusMedium
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
+                StateLayer {
+                    theme: panel.theme
+                    motion: panel.motion
+                    selected: deviceRow.index === panel.selectedIndex
+                    cornerRadius: panel.theme.radiusMedium
 
-                    onClicked: {
+                    onActivated: {
                         panel.selectedIndex = deviceRow.index;
                         panel.keyboardRequested();
                     }
