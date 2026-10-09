@@ -144,8 +144,23 @@ Variants {
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusMedium
 
+                HoverHandler {
+                    id: workspaceHover
+                }
+                StateLayer {
+                    theme: bars.theme
+                    motion: bars.motion
+                    cornerRadius: bars.theme.radiusMedium
+                    manualHover: workspaceHover.hovered
+                    onActivated: {
+                        if (bar.hyprMonitor && bar.hyprMonitor.activeWorkspace)
+                            bar.hyprMonitor.activeWorkspace.activate();
+                    }
+                }
+
                 Row {
                     id: workspaceRow
+                    z: 1
                     anchors.centerIn: parent
                     spacing: 6
 
@@ -277,10 +292,11 @@ Variants {
                     }
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: bars.calendarRequested(bar.modelData, bars.originFor(bar.modelData, "calendar"))
+                StateLayer {
+                    theme: bars.theme
+                    motion: bars.motion
+                    cornerRadius: bars.theme.radiusMedium
+                    onActivated: bars.calendarRequested(bar.modelData, bars.originFor(bar.modelData, "calendar"))
                 }
             }
 
@@ -330,10 +346,11 @@ Variants {
                     }
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
+                StateLayer {
+                    theme: bars.theme
+                    motion: bars.motion
+                    cornerRadius: bars.theme.radiusMedium
+                    onActivated: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
                 }
             }
 
