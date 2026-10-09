@@ -13,6 +13,7 @@ Item {
 
     property bool open: false
     property int selectedIndex: 0
+    property int preferredColumn: 0
     property string armedAction: ""
     property string statusText: ""
     property bool statusError: false
@@ -80,6 +81,7 @@ Item {
         armTimer.stop();
         open = true;
         selectedIndex = 0;
+        preferredColumn = 0;
         armedAction = "";
         statusText = "";
         statusError = false;
@@ -108,15 +110,19 @@ Item {
             const targetRow = Math.floor(selectedIndex / 3) + vertical;
             const lastRow = Math.floor((entries.length - 1) / 3);
             if (targetRow >= 0 && targetRow <= lastRow) {
-                const column = selectedIndex % 3;
-                const target = Math.min(entries.length - 1, targetRow * 3 + column);
+                const target = Math.min(entries.length - 1, targetRow * 3 + preferredColumn);
+                const column = preferredColumn;
                 moveSelection(target - selectedIndex);
+                // Keep the intended column for the return trip across a
+                // shorter row (Log out -> Power off -> Log out).
+                preferredColumn = column;
             }
         }
     }
 
     function moveSelection(delta: int): void {
         selectedIndex = Math.max(0, Math.min(entries.length - 1, selectedIndex + delta));
+        preferredColumn = selectedIndex % 3;
         armTimer.stop();
         armedAction = "";
         statusText = "";
