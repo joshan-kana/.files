@@ -109,6 +109,7 @@ ShellRoot {
             motion: root.motionRef
             system: root.systemRef
             media: root.mediaRef
+            spectrum: root.spectrumRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
             resourceState: root.resourcesRef
