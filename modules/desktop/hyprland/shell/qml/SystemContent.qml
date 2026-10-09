@@ -199,12 +199,12 @@ FocusScope {
                             action: "Cycle available power profiles"
                         },
                         {
-                            key: "CTRL+TAB",
-                            action: "Cycle Home / Controls / Activity"
+                            key: "Z / SHIFT+Z",
+                            action: "Next / previous hub tab"
                         },
                         {
-                            key: "[ / ]",
-                            action: "Select tray item"
+                            key: "/ / [",
+                            action: "Next / previous tray app"
                         },
                         {
                             key: "ENTER",
@@ -860,7 +860,7 @@ FocusScope {
 
                     Text {
                         id: trayHint
-                        text: "[ / ] SELECT   ENTER OPEN"
+                        text: "/  NEXT     [  PREVIOUS     ENTER  OPEN"
                         color: root.theme.textMuted
                         opacity: 0.62
                         font.family: root.runtime.fontMono
@@ -1327,7 +1327,7 @@ FocusScope {
                 } else if (event.key === Qt.Key_BracketLeft && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                     event.accepted = true;
-                } else if (event.key === Qt.Key_BracketRight && root.system.trayCount > 0) {
+                } else if ((event.key === Qt.Key_Slash || event.key === Qt.Key_BracketRight) && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex + 1) % root.system.trayCount;
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.system.trayCount > 0) {
