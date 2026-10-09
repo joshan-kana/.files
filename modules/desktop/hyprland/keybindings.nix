@@ -208,6 +208,14 @@ in
     description = "Clipboard history";
   })
   (mk {
+    keys = "SUPER + SHIFT + R";
+    mainMod = false;
+    id = "capture.recordToggle";
+    action = global "linux-desktop:record-toggle";
+    section = "UTILITIES";
+    description = "Start or stop recording a selected screen region";
+  })
+  (mk {
     keys = "SUPER + SHIFT + S";
     mainMod = false;
     id = "capture.region";
