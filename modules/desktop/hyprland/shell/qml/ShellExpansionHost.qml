@@ -250,15 +250,7 @@ PanelWindow {
             onLoaded: {
                 geometryUpdate.restart();
                 // Reveal the newly loaded tab after its geometry has settled.
-                opacity = 0;
-                Qt.callLater(() => opacity = 1);
-            }
 
-            Behavior on opacity {
-                Anim {
-                    motion: host.motion
-                    type: Anim.FastEffects
-                }
             }
 
             anchors {
