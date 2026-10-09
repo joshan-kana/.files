@@ -167,8 +167,10 @@ in
 
               shadow = {
                 enabled = true;
-                range = 30;
-                render_power = 3;
+                range = 18;
+                render_power = 2;
+                color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
+                color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
               };
             };
 
