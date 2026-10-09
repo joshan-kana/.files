@@ -232,12 +232,21 @@ FocusScope {
         }
     }
 
+    // Keep the deferred view update tied to this lazy-loaded item's lifetime.
+    // Qt.callLater can outlive SystemContent when the hub rapidly changes tabs.
+    Timer {
+        id: requestedViewTimer
+        interval: 0
+        repeat: false
+        onTriggered: root.applyRequestedView()
+    }
+
     onEngagedChanged: {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
             helpOpen = false;
             keyboardFocus.forceActiveFocus();
-            Qt.callLater(applyRequestedView);
+            requestedViewTimer.restart();
         } else {
             helpOpen = false;
             trayMenu.closeMenu();
@@ -250,7 +259,7 @@ FocusScope {
         }
     }
 
-    onRequestedViewChanged: Qt.callLater(applyRequestedView)
+    onRequestedViewChanged: requestedViewTimer.restart()
 
     function openNetwork(): void {
         helpOpen = false;
