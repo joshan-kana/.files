@@ -20,6 +20,7 @@ Column {
     readonly property real level: microphone ? system.microphoneVolume : system.volume
     readonly property int percent: microphone ? system.microphoneVolumePercent : system.volumePercent
     readonly property var device: microphone ? system.audioSource : system.audioSink
+    readonly property var devices: microphone ? system.inputDevices : system.outputDevices
     readonly property var streams: (microphone ? system.audioCaptureStreams : system.audioApplicationStreams).slice(0, 2)
 
     spacing: theme.spacing2
@@ -45,7 +46,7 @@ Column {
             font.weight: Font.DemiBold
         }
         Text {
-            width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - (quick.showMixer ? mixerLink.width : 0) - parent.spacing * (quick.showMixer ? 3 : 2))
+            width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - (quick.showMixer ? mixerLink.width : 0) - deviceLink.width - parent.spacing * (quick.showMixer ? 4 : 3))
             anchors.verticalCenter: parent.verticalCenter
             text: quick.device ? (quick.device.description || quick.device.name) : "Unavailable"
             elide: Text.ElideRight
@@ -55,16 +56,31 @@ Column {
             font.pixelSize: quick.theme.fontSize(9)
         }
         ShellAction {
-            id: mixerLink
-            visible: quick.showMixer
-            width: quick.showMixer ? 78 : 0
+            id: deviceLink
+            width: 86
             height: 28
             anchors.verticalCenter: parent.verticalCenter
             runtime: quick.runtime
             theme: quick.theme
             motion: quick.motion
             compact: true
-            title: "A  Mixer ↗"
+            title: "Device"
+            shortcut: "D"
+            enabled: quick.devices.length > 1
+            onActivated: quick.system.cycleAudioDevice(quick.microphone)
+        }
+        ShellAction {
+            id: mixerLink
+            visible: quick.showMixer
+            width: quick.showMixer ? 84 : 0
+            height: 28
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            compact: true
+            title: "Mixer"
+            shortcut: "A"
             onActivated: quick.mixerRequested()
         }
     }
