@@ -22,26 +22,26 @@ Item {
                 {
                     label: "◀",
                     hint: ",",
-                    enabled: root.media.available,
+                    enabled: root.media.canGoPrevious,
                     action: "previous"
                 },
                 {
                     label: root.media.playing ? "Pause" : "Play",
                     hint: "Space",
-                    enabled: root.media.available,
+                    enabled: root.media.canTogglePlaying,
                     action: "play"
                 },
                 {
                     label: "▶",
                     hint: ".",
-                    enabled: root.media.available,
+                    enabled: root.media.canGoNext,
                     action: "next"
                 }
             ] : [
                 {
                     label: "◀",
                     hint: ",",
-                    enabled: root.media.available,
+                    enabled: root.media.canGoPrevious,
                     action: "previous"
                 },
                 {
@@ -53,7 +53,7 @@ Item {
                 {
                     label: root.media.playing ? "Pause" : "Play",
                     hint: "Space",
-                    enabled: root.media.available,
+                    enabled: root.media.canTogglePlaying,
                     action: "play"
                 },
                 {
@@ -65,7 +65,7 @@ Item {
                 {
                     label: "▶",
                     hint: ".",
-                    enabled: root.media.available,
+                    enabled: root.media.canGoNext,
                     action: "next"
                 }
             ]
