@@ -176,8 +176,8 @@ in
 
               blur = {
                 enabled = true;
-                size = 3;
-                passes = 1;
+                size = 8;
+                passes = 2;
               };
 
               shadow = {
