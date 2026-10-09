@@ -230,7 +230,7 @@ FocusScope {
     signal closeRequested
     signal mediaRequested
 
-    implicitWidth: 512
+    implicitWidth: 720
     implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
     focus: engaged
 
