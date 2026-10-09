@@ -51,7 +51,7 @@ PanelWindow {
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
-        measuredContentWidth = Math.max(loadedContent.implicitWidth, 560) + theme.spacing5 * 2;
+        measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing5 * 2;
         measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing5 * 2;
     }
 
