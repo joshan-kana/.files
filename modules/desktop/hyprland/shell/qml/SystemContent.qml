@@ -20,6 +20,24 @@ FocusScope {
     property string requestedView: ""
     property bool helpOpen: false
     property int trayIndex: 0
+    property int selectedAudioIndex: 0
+    readonly property var quickAudioTargets: [
+        {
+            kind: "output"
+        }
+    ].concat(system.audioApplicationStreams.slice(0, 2).map(node => ({
+                kind: "stream",
+                node: node
+            }))).concat(system.microphoneAvailable ? [
+        {
+            kind: "input"
+        }
+    ] : []).concat(system.audioCaptureStreams.slice(0, 2).map(node => ({
+                kind: "stream",
+                node: node
+            })))
+    readonly property int microphoneAudioIndex: 1 + Math.min(2, system.audioApplicationStreams.length)
+
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
     readonly property bool networkOpen: networkPanel.open
@@ -163,28 +181,24 @@ FocusScope {
                         }
                     ] : [
                         {
-                            key: "H/L · ←/→",
-                            action: "Volume down / up"
+                            key: "J/K · ↑/↓",
+                            action: "Select output, microphone or application"
                         },
                         {
-                            key: "K/J · ↑/↓",
-                            action: "Brightness up / down"
+                            key: "H/L · ←/→",
+                            action: "Adjust selected audio level"
                         },
                         {
                             key: "M / X",
-                            action: "Output mute / microphone mute"
+                            action: "Selected audio mute / microphone mute"
                         },
                         {
-                            key: "N / B",
-                            action: "Network / Bluetooth"
+                            key: "N/B/Y/W/P/Q/I/G",
+                            action: "Open the labelled tile"
                         },
                         {
-                            key: "Y / P",
-                            action: "Theme / session (W wallpapers)"
-                        },
-                        {
-                            key: "G / V / A",
-                            action: "Resources / media details / app mixer"
+                            key: "V / A",
+                            action: "Media details / application mixer"
                         },
                         {
                             key: "SPACE / , / .",
@@ -388,6 +402,30 @@ FocusScope {
         keyboardFocus.forceActiveFocus();
     }
 
+    function moveAudioSelection(direction: int): void {
+        selectedAudioIndex = (selectedAudioIndex + direction + quickAudioTargets.length) % quickAudioTargets.length;
+    }
+
+    function adjustSelectedAudio(delta: real): void {
+        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
+        if (target.kind === "output")
+            system.adjustVolume(delta);
+        else if (target.kind === "input")
+            system.setMicrophoneVolume(system.microphoneVolume + delta);
+        else
+            system.adjustStreamVolume(target.node, delta);
+    }
+
+    function muteSelectedAudio(): void {
+        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
+        if (target.kind === "output")
+            system.toggleMute();
+        else if (target.kind === "input")
+            system.toggleMicrophoneMute();
+        else
+            system.toggleStreamMute(target.node);
+    }
+
     function activateTrayItem(): void {
         if (system.trayCount === 0)
             return;
@@ -446,6 +484,11 @@ FocusScope {
 
                     AudioQuickSection {
                         width: audioStack.width
+                        showMixer: true
+                        baseIndex: 0
+                        selectedAudioIndex: root.selectedAudioIndex
+                        onSelectionRequested: index => root.selectedAudioIndex = index
+                        onMixerRequested: root.openMixer()
                         system: root.system
                         runtime: root.runtime
                         theme: root.theme
@@ -455,6 +498,9 @@ FocusScope {
                         width: audioStack.width
                         visible: root.system.microphoneAvailable
                         microphone: true
+                        baseIndex: root.microphoneAudioIndex
+                        selectedAudioIndex: root.selectedAudioIndex
+                        onSelectionRequested: index => root.selectedAudioIndex = index
                         system: root.system
                         runtime: root.runtime
                         theme: root.theme
@@ -1009,7 +1055,7 @@ FocusScope {
             spacing: root.theme.spacing3
 
             Text {
-                text: "H/L  VOLUME     M  SPEAKER     X  MIC"
+                text: "J/K  SELECT AUDIO     H/L  LEVEL     M  MUTE     X  MIC"
                 color: root.theme.textMuted
                 font.family: root.runtime.fontMono
                 font.pixelSize: root.theme.fontSize(9)
@@ -1238,13 +1284,13 @@ FocusScope {
                     root.closeRequested();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                    root.system.adjustVolume(-0.05);
+                    root.adjustSelectedAudio(-0.05);
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                    root.system.adjustVolume(0.05);
+                    root.adjustSelectedAudio(0.05);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M) {
-                    root.system.toggleMute();
+                    root.muteSelectedAudio();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_X) {
                     root.system.toggleMicrophoneMute();
@@ -1291,16 +1337,16 @@ FocusScope {
                 } else if (event.key === Qt.Key_A) {
                     root.openMixer();
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K) && root.brightness.supported) {
-                    root.brightness.adjust(5);
+                } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                    root.moveAudioSelection(-1);
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J) && root.brightness.supported) {
-                    root.brightness.adjust(-5);
+                } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                    root.moveAudioSelection(1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_BracketLeft && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
                     event.accepted = true;
-                } else if ((event.key === Qt.Key_Slash || event.key === Qt.Key_BracketRight) && root.system.trayCount > 0) {
+                } else if (event.key === Qt.Key_BracketRight && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex + 1) % root.system.trayCount;
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.system.trayCount > 0) {
