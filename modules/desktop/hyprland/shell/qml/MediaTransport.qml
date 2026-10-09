@@ -18,26 +18,7 @@ Item {
         spacing: root.theme.spacing2
 
         Repeater {
-            model: root.compact ? [
-                {
-                    label: "◀",
-                    hint: ",",
-                    enabled: root.media.canGoPrevious,
-                    action: "previous"
-                },
-                {
-                    label: root.media.playing ? "Pause" : "Play",
-                    hint: "Space",
-                    enabled: root.media.canTogglePlaying,
-                    action: "play"
-                },
-                {
-                    label: "▶",
-                    hint: ".",
-                    enabled: root.media.canGoNext,
-                    action: "next"
-                }
-            ] : [
+            model: [
                 {
                     label: "◀",
                     hint: ",",
@@ -72,7 +53,7 @@ Item {
 
             delegate: ShellAction {
                 required property var modelData
-                width: root.compact ? (modelData.action === "play" ? 108 : 70) : (modelData.action === "play" ? 108 : 76)
+                width: modelData.action === "play" ? 108 : (root.compact ? 72 : 76)
                 height: 40
                 runtime: root.runtime
                 theme: root.theme
