@@ -45,6 +45,15 @@ QtObject {
     readonly property var outputDevices: pipewireNodes.filter(node => node && !node.isStream && node.isSink && node.audio)
     readonly property var inputDevices: pipewireNodes.filter(node => node && !node.isStream && !node.isSink && node.audio)
 
+    function selectAudioDevice(microphone: bool, device: var): void {
+        if (!device)
+            return;
+        if (microphone)
+            Pipewire.preferredDefaultAudioSource = device;
+        else
+            Pipewire.preferredDefaultAudioSink = device;
+    }
+
     function cycleAudioDevice(microphone: bool): void {
         const devices = microphone ? inputDevices : outputDevices;
         if (devices.length < 2)
@@ -52,10 +61,7 @@ QtObject {
         const current = microphone ? audioSource : audioSink;
         const index = devices.indexOf(current);
         const next = devices[(index + 1) % devices.length];
-        if (microphone)
-            Pipewire.preferredDefaultAudioSource = next;
-        else
-            Pipewire.preferredDefaultAudioSink = next;
+        selectAudioDevice(microphone, next);
     }
 
     property PwObjectTracker audioTracker: PwObjectTracker {
