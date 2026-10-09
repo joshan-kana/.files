@@ -46,6 +46,8 @@ FocusScope {
     onEngagedChanged: {
         if (engaged)
             Qt.callLater(focusKeyboard);
+        else
+            notificationState.markRead();
     }
 
     onGroupsChanged: {
@@ -135,19 +137,19 @@ FocusScope {
             spacing: center.theme.spacing1
 
             Text {
-                text: center.notificationState.count + " stored · " + center.groups.length + " apps"
-                color: center.theme.accent
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontSize(12)
-                font.weight: Font.Medium
-            }
-
-            Text {
                 text: "Notifications"
                 color: center.theme.textStrong
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontPanelTitle
                 font.weight: Font.DemiBold
+            }
+
+            Text {
+                text: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
+                color: center.theme.accent
+                font.family: center.runtime.fontMono
+                font.pixelSize: center.theme.fontSize(12)
+                font.weight: Font.Medium
             }
 
             Text {
@@ -312,20 +314,15 @@ FocusScope {
                 bottom: parent.bottom
             }
             spacing: center.theme.spacing4
-            Text {
-                text: center.notificationState.count + " STORED"
-                color: center.theme.textMuted
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontSize(9)
-                font.letterSpacing: 1
-            }
             ShellAction {
                 runtime: center.runtime
                 theme: center.theme
                 motion: center.motion
                 compact: true
                 active: center.notificationState.silent
-                title: center.notificationState.silent ? "󰂛  Resume alerts" : "󰂚  Pause alerts"
+                width: 152
+                shortcut: "S"
+                title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
                 onActivated: center.notificationState.toggleSilent()
             }
             ShellAction {
@@ -334,7 +331,9 @@ FocusScope {
                 motion: center.motion
                 compact: true
                 enabled: center.notificationState.count > 0
-                title: "C  Clear all"
+                width: 124
+                shortcut: "C"
+                title: "Clear all"
                 onActivated: center.notificationState.clearAll()
             }
         }
