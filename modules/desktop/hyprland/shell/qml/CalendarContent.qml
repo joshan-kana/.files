@@ -179,14 +179,6 @@ FocusScope {
                 spacing: calendar.theme.spacing1
 
                 Text {
-                    text: "CALENDAR"
-                    color: calendar.theme.accent
-                    font.family: calendar.runtime.fontMono
-                    font.pixelSize: calendar.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
                     text: Qt.formatDate(calendar.viewingDate, "MMMM yyyy")
                     color: calendar.theme.textStrong
                     font.family: calendar.runtime.fontMono
