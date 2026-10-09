@@ -13,6 +13,8 @@ QtObject {
     readonly property int pulse: enabled ? 520 : 0
 
     readonly property int spatialFast: enabled ? 100 : 0
+    // Smoother than OutQuint for large surface-size changes: no first-frame jump.
+    readonly property int morph: enabled ? 180 : 0
     readonly property int spatialNormal: enabled ? 220 : 0
     readonly property int spatialSlow: enabled ? 320 : 0
     readonly property int effectsFast: enabled ? 90 : 0
@@ -23,6 +25,7 @@ QtObject {
     readonly property int exitType: Easing.InCubic
     readonly property int pulseType: Easing.InOutSine
     readonly property int spatialType: Easing.OutQuint
+    readonly property int morphType: Easing.InOutCubic
     readonly property int effectsType: Easing.OutCubic
 
     Component.onCompleted: syncWallpaperMotion()
