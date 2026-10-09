@@ -296,10 +296,11 @@ FocusScope {
                 font.pixelSize: calendar.theme.fontSize(11)
                 font.weight: Font.DemiBold
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: calendar.today()
+                StateLayer {
+                    theme: calendar.theme
+                    motion: calendar.motion
+                    cornerRadius: calendar.theme.radiusSmall
+                    onActivated: calendar.today()
                 }
             }
         }
