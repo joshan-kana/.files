@@ -185,6 +185,13 @@ FocusScope {
                     font.pixelSize: calendar.theme.fontSize(22)
                     font.weight: Font.DemiBold
                 }
+
+                Text {
+                    text: calendar.selectedDay > 0 ? "Selected · " + Qt.formatDate(calendar.selectedDate, "ddd d MMM") : " "
+                    color: calendar.theme.accent
+                    font.family: calendar.runtime.fontMono
+                    font.pixelSize: calendar.theme.fontSize(10)
+                }
             }
 
             CalendarNavButton {
@@ -276,7 +283,7 @@ FocusScope {
 
             Text {
                 id: dateCaption
-                text: calendar.selectedDay > 0 ? Qt.formatDate(new Date(calendar.viewingDate.getFullYear(), calendar.viewingDate.getMonth(), calendar.selectedDay), "ddd d MMMM") : "J/K months · H/L days · U/D events"
+                text: "J/K months · H/L days · U/D events"
                 color: calendar.theme.textStrong
                 opacity: 0.85
                 font.family: calendar.runtime.fontMono
