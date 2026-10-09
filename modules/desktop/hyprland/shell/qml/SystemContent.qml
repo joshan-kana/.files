@@ -412,6 +412,12 @@ FocusScope {
             system.adjustStreamVolume(target.node, delta);
     }
 
+    function cycleSelectedAudioDevice(): void {
+        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
+        if (target.kind === "output" || target.kind === "input")
+            system.cycleAudioDevice(target.kind === "input");
+    }
+
     function muteSelectedAudio(): void {
         const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
         if (target.kind === "output")
@@ -1324,6 +1330,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_A) {
                     root.openMixer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_D) {
+                    root.cycleSelectedAudioDevice();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                     root.moveAudioSelection(-1);
