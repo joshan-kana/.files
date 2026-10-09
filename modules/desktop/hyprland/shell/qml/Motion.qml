@@ -12,7 +12,7 @@ QtObject {
     readonly property int slow: enabled ? 220 : 0
     readonly property int pulse: enabled ? 520 : 0
 
-    readonly property int spatialFast: enabled ? 150 : 0
+    readonly property int spatialFast: enabled ? 100 : 0
     readonly property int spatialNormal: enabled ? 220 : 0
     readonly property int spatialSlow: enabled ? 320 : 0
     readonly property int effectsFast: enabled ? 90 : 0
