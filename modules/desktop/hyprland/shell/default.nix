@@ -287,13 +287,103 @@ in
           # The service can start before the Wayland daemon has opened its socket.
           for _ in {1..25}; do
             if awww query >/dev/null 2>&1; then
-              exec awww img --transition-type fade --transition-duration 0.8 --transition-fps 165 "$wallpaper"
+              awww img --transition-type fade --transition-duration 0.8 --transition-fps 165 "$wallpaper"
+
+              # The Stylix wallpaper remains the default. Reapply user-selected
+              # per-output overrides after a theme reload or session restart.
+              state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
+              for entry in "$state_dir"/*.wall; do
+                [ -f "$entry" ] || continue
+                { IFS= read -r resize && IFS= read -r image; } < "$entry" || continue
+                [ -f "$image" ] || continue
+                output="$(basename "$entry" .wall)"
+                if [ "$output" = all ]; then
+                  awww img --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+                else
+                  awww img --outputs "$output" --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+                fi
+              done
+              exit 0
             fi
             sleep 0.2
           done
 
           printf 'awww daemon is not ready\n' >&2
           exit 1
+        '';
+      };
+
+      wallpaperLibrary = pkgs.writeShellApplication {
+        name = "linux-desktop-wallpaper-library";
+        runtimeInputs = [
+          pkgs.awww
+          pkgs.coreutils
+          pkgs.findutils
+          pkgs.jq
+          pkgs.systemd
+          pkgs.util-linux
+        ];
+        text = ''
+          library="$HOME/Pictures/Wallpapers"
+          state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
+          runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          action="''${1:-}"
+          output="''${2:-all}"
+          case "$output" in
+            *[!a-zA-Z0-9_.-]*|"") printf 'Invalid output name: %s\n' "$output" >&2; exit 2 ;;
+          esac
+          state_file="$state_dir/$output.wall"
+
+          case "$action" in
+            list)
+              if [ -d "$library" ]; then
+                find "$library" -type f \(                   -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o                   -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' \) -print                   | LC_ALL=C sort | jq -Rsc '[split("\n")[] | select(length > 0)]'
+              else
+                printf '[]\n'
+              fi
+              ;;
+            current)
+              if [ -f "$state_file" ]; then
+                { IFS= read -r resize && IFS= read -r image; } < "$state_file" || exit 1
+                printf '%s\n' "$image"
+              else
+                jq -er '.wallpaper' "$runtime"
+              fi
+              ;;
+            set)
+              resize="''${3:-crop}"
+              image="''${4:-}"
+              case "$resize" in crop|fit) ;; *) printf 'Invalid resize mode\n' >&2; exit 2 ;; esac
+              case "''${image,,}" in
+                *.png|*.jpg|*.jpeg|*.webp|*.bmp|*.gif) ;;
+                *) printf 'Unsupported wallpaper image: %s\n' "$image" >&2; exit 2 ;;
+              esac
+              if [ ! -f "$image" ] || [ "''${image:0:1}" != / ]; then
+                printf 'Wallpaper must be an existing absolute file path\n' >&2
+                exit 2
+              fi
+              exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
+              flock -x 9
+              if [ "$output" = all ]; then
+                awww img --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+              else
+                awww img --outputs "$output" --resize "$resize" --transition-type fade --transition-duration 0.8 --transition-fps 165 "$image"
+              fi
+              mkdir -p "$state_dir"
+              temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
+              trap 'rm -f "$temp"' EXIT
+              printf '%s\n%s\n' "$resize" "$image" > "$temp"
+              mv -f "$temp" "$state_file"
+              ;;
+            reset)
+              rm -f "$state_file"
+              systemctl --user start --no-block linux-desktop-wallpaper-image.service
+              ;;
+            *)
+              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/image|reset [output]}\n' >&2
+              exit 2
+              ;;
+          esac
         '';
       };
 
@@ -508,6 +598,7 @@ in
           powerprofilesctl = lib.getExe' pkgs.power-profiles-daemon "powerprofilesctl";
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
+          wallpaperLibrary = lib.getExe wallpaperLibrary;
         };
 
         wallpaper = toString osConfig.stylix.image;
@@ -589,6 +680,7 @@ in
         sessionCommand
         clipboardCopy
         videoWallpaper
+        wallpaperLibrary
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
