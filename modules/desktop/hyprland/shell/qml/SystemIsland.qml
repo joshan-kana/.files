@@ -8,6 +8,7 @@ Item {
     required property Theme theme
     required property Motion motion
     required property SystemState system
+    property bool compact: false
 
     signal activated
     signal trayMenuRequested(int index)
@@ -26,10 +27,11 @@ Item {
             id: statusRow
             z: 1
             anchors.centerIn: parent
-            spacing: island.theme.spacing3
+            spacing: island.compact ? island.theme.spacing1 : island.theme.spacing3
 
             ResourceGauge {
                 id: volumeStatus
+                visible: !island.compact
                 width: 30
                 height: 30
                 anchors.verticalCenter: parent.verticalCenter
@@ -42,7 +44,7 @@ Item {
             }
 
             Text {
-                visible: island.system.idleInhibited
+                visible: !island.compact && island.system.idleInhibited
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰅶"
                 color: island.theme.positive
@@ -52,7 +54,7 @@ Item {
 
             // end-4's contextual muted-input indicator, sharing the same PipeWire state.
             Text {
-                visible: island.system.microphoneMuted
+                visible: !island.compact && island.system.microphoneMuted
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰍭"
                 color: island.theme.warning
@@ -69,7 +71,7 @@ Item {
             }
 
             Row {
-                visible: island.system.bluetoothAvailable
+                visible: !island.compact && island.system.bluetoothAvailable
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: island.theme.spacing1
 
@@ -92,7 +94,7 @@ Item {
             }
 
             ResourceGauge {
-                visible: island.system.batteryAvailable
+                visible: !island.compact && island.system.batteryAvailable
                 width: 30
                 height: 30
                 anchors.verticalCenter: parent.verticalCenter
