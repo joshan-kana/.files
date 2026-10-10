@@ -63,6 +63,13 @@ PanelWindow {
     }
 
     Connections {
+        target: host.systemContent
+        function onRevealContent(top: real, bottom: real): void {
+            host.revealContent(top, bottom);
+        }
+    }
+
+    Connections {
         target: host.loadedContent
         function onImplicitWidthChanged(): void {
             geometryUpdate.restart();
@@ -123,6 +130,13 @@ PanelWindow {
     function pageContent(direction: int): void {
         const limit = Math.max(0, contentViewport.contentHeight - contentViewport.height);
         contentViewport.contentY = Math.max(0, Math.min(limit, contentViewport.contentY + direction * Math.max(1, contentViewport.height * 0.8)));
+    }
+
+    function revealContent(top: real, bottom: real): void {
+        const limit = Math.max(0, contentViewport.contentHeight - contentViewport.height);
+        const margin = theme.spacing3;
+        const nextY = bottom + margin > contentViewport.contentY + contentViewport.height ? bottom + margin - contentViewport.height : top - margin < contentViewport.contentY ? top - margin : contentViewport.contentY;
+        contentViewport.contentY = Math.max(0, Math.min(limit, nextY));
     }
 
     Shortcut {
