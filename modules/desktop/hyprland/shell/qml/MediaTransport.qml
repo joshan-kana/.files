@@ -27,7 +27,7 @@ Item {
                 },
                 {
                     label: "−5s",
-                    hint: "←",
+                    hint: root.compact ? "⇧H" : "←",
                     enabled: root.media.seekable,
                     action: "back"
                 },
@@ -39,7 +39,7 @@ Item {
                 },
                 {
                     label: "+5s",
-                    hint: "→",
+                    hint: root.compact ? "⇧L" : "→",
                     enabled: root.media.seekable,
                     action: "forward"
                 },
