@@ -233,6 +233,8 @@ Variants {
             NowPlayingIsland {
                 id: mediaIsland
 
+                maximumWidth: Math.max(0, clockIsland.x - bars.theme.spacing3 - x)
+
                 anchors {
                     left: workspaceIsland.right
                     leftMargin: theme.spacing3
