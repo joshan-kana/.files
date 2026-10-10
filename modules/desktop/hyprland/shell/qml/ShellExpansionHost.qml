@@ -140,6 +140,13 @@ PanelWindow {
     }
 
     Shortcut {
+        sequence: "Shift+Esc"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent
+        onActivated: host.expansionState.close()
+    }
+
+    Shortcut {
         sequence: "PgDown"
         context: Qt.ApplicationShortcut
         enabled: host.expansionState.hasCurrent && contentViewport.contentHeight > contentViewport.height
@@ -277,7 +284,7 @@ PanelWindow {
             }
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE" + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
+            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE" + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
             font.pixelSize: host.theme.fontKeyHint
