@@ -184,7 +184,8 @@ ShellRoot {
 
     SpectrumState {
         id: spectrum
-        active: media.playing || (expansionState.hasCurrent && expansionState.currentName === "media")
+        // The analyser has no consumer when the bar and media views are closed.
+        active: (media.playing && (ambientBar.shown || (expansionState.hasCurrent && expansionState.currentName === "system"))) || (expansionState.hasCurrent && expansionState.currentName === "media")
     }
 
     AmbientBar {
