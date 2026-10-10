@@ -222,7 +222,7 @@ FocusScope {
         text: "J/K SELECT   U/D PAGE   H/L VOLUME   M MUTE   ESC BACK"
         color: mixer.theme.textMuted
         font.family: mixer.runtime.fontMono
-        font.pixelSize: mixer.theme.fontSize(9)
+        font.pixelSize: mixer.theme.fontKeyHint
     }
 
     FocusScope {
