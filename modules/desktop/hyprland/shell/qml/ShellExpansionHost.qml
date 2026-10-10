@@ -120,6 +120,25 @@ PanelWindow {
         navigate(destinations[(index + direction + destinations.length) % destinations.length]);
     }
 
+    function pageContent(direction: int): void {
+        const limit = Math.max(0, contentViewport.contentHeight - contentViewport.height);
+        contentViewport.contentY = Math.max(0, Math.min(limit, contentViewport.contentY + direction * Math.max(1, contentViewport.height * 0.8)));
+    }
+
+    Shortcut {
+        sequence: "PgDown"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent && contentViewport.contentHeight > contentViewport.height
+        onActivated: host.pageContent(1)
+    }
+
+    Shortcut {
+        sequence: "PgUp"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent && contentViewport.contentHeight > contentViewport.height
+        onActivated: host.pageContent(-1)
+    }
+
     Shortcut {
         sequence: "Z"
         context: Qt.ApplicationShortcut
