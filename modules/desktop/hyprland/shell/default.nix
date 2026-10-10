@@ -3,7 +3,6 @@
   configurationFlakeSubdirectory ? null,
   configurationName,
   configurationOutputName,
-  inputs,
   lib,
   pkgs,
   scopeConfig,
@@ -18,7 +17,6 @@ let
       lib.removePrefix "${configurationName}-" configurationOutputName
     else
       themeRegistry.default;
-  themeFlake = "path:${inputs.self.outPath}?dir=themes";
   themeNames = builtins.attrNames themeRegistry.variants;
 
   themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
@@ -53,107 +51,22 @@ let
     }
   );
 
+  # The chooser is a frontend to the canonical full-system themed output.
   themeSet = pkgs.writeShellApplication {
     name = "theme-set";
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.nix
-    ];
+    runtimeInputs = [ pkgs.coreutils ];
     text = ''
-      defaultTheme=${lib.escapeShellArg themeRegistry.default}
       configuredTheme=${lib.escapeShellArg configuredTheme}
-      expectedUser=${lib.escapeShellArg primaryUser}
-      themeFlake=${lib.escapeShellArg themeFlake}
+      repoPath=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      terminal=${lib.escapeShellArg config.dotfiles.defaults.terminal}
       manifest=${lib.escapeShellArg (toString themeManifest)}
-      stateDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
-      stateFile="$stateDir/theme"
+      expectedUser=${lib.escapeShellArg primaryUser}
 
-      resolve_theme() {
+      validate_theme() {
         case "$1" in
-          ${lib.concatStringsSep "|" themeNames})
-            return 0
-            ;;
-          *)
-            return 1
-            ;;
+          ${lib.concatStringsSep "|" themeNames}) ;;
+          *) printf 'Unknown theme: %s\n' "$1" >&2; exit 2 ;;
         esac
-      }
-
-      write_state() {
-        selected="$1"
-        umask 077
-        install -d -m 0700 "$stateDir"
-        tmp="$(mktemp "$stateDir/theme.XXXXXX")"
-        printf '%s\n' "$selected" > "$tmp"
-        mv "$tmp" "$stateFile"
-      }
-
-      current_theme() {
-        if [ -s "$stateFile" ]; then
-          selected="$(cat "$stateFile")"
-          if resolve_theme "$selected"; then
-            printf '%s\n' "$selected"
-            return
-          fi
-        fi
-
-        printf '%s\n' "$configuredTheme"
-      }
-
-      validate_theme_request() {
-        selected="$1"
-
-        if [ "''${USER:-}" != "$expectedUser" ]; then
-          printf 'theme-set is configured for user %s, not %s\n' "$expectedUser" "''${USER:-unknown}" >&2
-          exit 1
-        fi
-
-        if ! resolve_theme "$selected"; then
-          printf 'Unknown theme: %s\n' "$selected" >&2
-          exit 2
-        fi
-      }
-
-      build_theme() {
-        selected="$1"
-        validate_theme_request "$selected"
-
-        nix build \
-          --no-link \
-          --print-out-paths \
-          "$themeFlake#nixosConfigurations.${configurationName}-$selected.config.home-manager.users.${primaryUser}.home.activationPackage"
-      }
-
-      activate_built_theme() {
-        selected="$1"
-        activation="$2"
-        validate_theme_request "$selected"
-
-        case "$activation" in
-          /nix/store/*)
-            ;;
-          *)
-            printf 'Invalid theme activation path: %s\n' "$activation" >&2
-            exit 3
-            ;;
-        esac
-
-        if [ ! -x "$activation/activate" ]; then
-          printf 'Theme activation is not executable: %s/activate\n' "$activation" >&2
-          exit 3
-        fi
-
-        XDG_DATA_DIRS="$activation/home-path/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}" \
-          "$activation/activate" --driver-version 1
-
-        write_state "$selected"
-        printf '%s\n' "$selected"
-      }
-
-      apply_theme() {
-        selected="$1"
-        activation="$(build_theme "$selected")"
-        activate_built_theme "$selected" "$activation"
       }
 
       case "''${1:-}" in
@@ -161,49 +74,24 @@ let
           if [ "''${2:-}" = "--json" ]; then
             cat "$manifest"
           else
-            while IFS= read -r name; do
-              printf '%s\n' "$name"
-            done <<'EOF'
-      ${lib.concatStringsSep "\n" themeNames}
-      EOF
+            ${lib.concatMapStringsSep "\n" (name: "printf '%s\\n' ${lib.escapeShellArg name}") themeNames}
           fi
           ;;
         current)
-          current_theme
+          printf '%s\n' "$configuredTheme"
           ;;
-        build)
-          if [ -z "''${2:-}" ]; then
-            printf 'Usage: theme-set build <theme>\n' >&2
-            exit 2
+        switch)
+          selected="''${2:-}"
+          validate_theme "$selected"
+          if [ "''${USER:-}" != "$expectedUser" ]; then
+            printf 'Theme chooser is configured for user %s\n' "$expectedUser" >&2
+            exit 1
           fi
-          build_theme "$2"
-          ;;
-        activate-built)
-          if [ -z "''${2:-}" ] || [ -z "''${3:-}" ]; then
-            printf 'Usage: theme-set activate-built <theme> <activation-path>\n' >&2
-            exit 2
-          fi
-          activate_built_theme "$2" "$3"
-          ;;
-        restore)
-          # A full themed NixOS generation is authoritative. Record it rather
-          # than overriding it with an older runtime-only selection.
-          if [ "$configuredTheme" != "$defaultTheme" ]; then
-            write_state "$configuredTheme"
-            exit 0
-          fi
-
-          selected="$(current_theme)"
-          if [ "$selected" != "$configuredTheme" ]; then
-            apply_theme "$selected" >/dev/null
-          fi
-          ;;
-        "")
-          printf 'Usage: theme-set [list [--json]|current|restore|build <theme>|activate-built <theme> <activation-path>|<theme>]\n' >&2
-          exit 2
+          exec "$terminal" -e ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected"
           ;;
         *)
-          apply_theme "$1"
+          printf 'Usage: theme-set {list [--json]|current|switch <theme>}\n' >&2
+          exit 2
           ;;
       esac
     '';
@@ -218,9 +106,6 @@ let
 in
 {
   environment.systemPackages = [ themeSet ];
-
-  systemd.services."home-manager-${primaryUser}".serviceConfig.ExecStartPost =
-    "${lib.getExe themeSet} restore";
 
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
@@ -706,7 +591,6 @@ in
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --path "${productionShellPath}" "$@"
         '';
       };
@@ -716,7 +600,6 @@ in
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };
@@ -726,7 +609,6 @@ in
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          export LINUX_DESKTOP_THEME_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme"
           exec qs --no-duplicate --path "${productionShellPath}/lock.qml"
         '';
       };
