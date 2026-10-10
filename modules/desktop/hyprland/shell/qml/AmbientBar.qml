@@ -120,6 +120,8 @@ Variants {
 
         readonly property int focusedWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 1
         readonly property var normalWorkspaces: Hyprland.workspaces.values.filter(workspace => workspace.id > 0).sort((a, b) => a.id - b.id)
+        // Workspace pills lose detail before competing with the centred clock.
+        readonly property real fullWorkspaceWidth: normalWorkspaces.length > 0 ? 28 + Math.max(0, normalWorkspaces.length - 1) * 22 + bars.theme.spacing3 * 2 : 0
 
         Item {
             id: barContent
@@ -165,7 +167,7 @@ Variants {
                     spacing: 6
 
                     Repeater {
-                        model: bar.normalWorkspaces
+                        model: bar.fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? bar.normalWorkspaces : bar.normalWorkspaces.filter(workspace => workspace.id === bar.focusedWorkspaceId)
 
                         delegate: Item {
                             id: workspace
@@ -254,7 +256,7 @@ Variants {
             ShellSurface {
                 id: clockIsland
 
-                width: 184
+                width: Math.min(parent.width, Math.max(184, clockRow.implicitWidth + bars.theme.spacing3 * 2))
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -264,6 +266,7 @@ Variants {
                 cornerRadius: theme.radiusMedium
 
                 Row {
+                    id: clockRow
                     anchors.centerIn: parent
                     spacing: bars.theme.spacing2
 
@@ -305,6 +308,8 @@ Variants {
             ShellSurface {
                 id: notificationIsland
 
+                // Notification history remains reachable through Activity when space is tight.
+                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + width + bars.theme.spacing3 * 2
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
                 height: parent.height
                 anchors {
@@ -368,6 +373,7 @@ Variants {
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 system: (bar.system as SystemState)
+                compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.systemRequested(bar.modelData, bars.originFor(bar.modelData, "system"))
