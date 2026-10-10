@@ -194,7 +194,7 @@ FocusScope {
                             action: "Selected audio mute / microphone mute"
                         },
                         {
-                            key: "N/B/Y/W/P/Q/I/G",
+                            key: "N/B/Y/W/P/G",
                             action: "Open the labelled tile"
                         },
                         {
@@ -206,8 +206,8 @@ FocusScope {
                             action: "Play-pause / previous / next media"
                         },
                         {
-                            key: "Q / I",
-                            action: "Toggle Notifications / Stay awake"
+                            key: "Q / I / R",
+                            action: "Toggle Notifications / Stay awake / Motion"
                         },
                         {
                             key: "O",
@@ -578,7 +578,7 @@ FocusScope {
                 spacing: root.theme.spacing3
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4.25
+                    width: (parent.width - parent.spacing * 4) / 5.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -593,7 +593,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4.25
+                    width: (parent.width - parent.spacing * 4) / 5.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -607,7 +607,21 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 3) / 4.25
+                    width: (parent.width - parent.spacing * 4) / 5.25
+                    height: 82
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: root.motion.enabled ? "󰔎" : "󰾅"
+                    shortcut: "R"
+                    title: "Reduced motion"
+                    subtitle: root.motion.enabled ? "Off" : "On"
+                    active: !root.motion.enabled
+                    onActivated: root.motion.toggle()
+                }
+
+                ShellAction {
+                    width: (parent.width - parent.spacing * 4) / 5.25
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -619,7 +633,7 @@ FocusScope {
                     onActivated: root.openResources()
                 }
                 ShellSurface {
-                    width: (parent.width - parent.spacing * 3) / 4.25 * 1.25
+                    width: (parent.width - parent.spacing * 4) / 5.25 * 1.25
                     height: 82
                     visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
@@ -1369,6 +1383,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_I) {
                     root.system.toggleIdleInhibited();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_R) {
+                    root.motion.toggle();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_O && root.powerProfile.available) {
                     root.powerProfile.cycle();
