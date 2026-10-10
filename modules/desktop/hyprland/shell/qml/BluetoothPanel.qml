@@ -484,28 +484,28 @@ Item {
                 text: "↑/↓  SELECT"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: "ENTER  LINK"
                 color: panel.theme.accent
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: "B  RADIO"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: "D  SCAN"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
         }
 
@@ -517,28 +517,28 @@ Item {
                 text: "P  PAIR"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: "T  TRUST"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: panel.forgetAddress.length > 0 ? "F  CONFIRM" : "F  FORGET"
                 color: panel.forgetAddress.length > 0 ? panel.theme.warning : panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
 
             Text {
                 text: "ESC  BACK"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
             }
         }
     }
