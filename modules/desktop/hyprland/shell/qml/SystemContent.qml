@@ -746,6 +746,15 @@ FocusScope {
                 }
             }
 
+            Text {
+                width: parent.width
+                text: "J/K  SELECT AUDIO     H/L  LEVEL     M  MUTE     X  MIC"
+                horizontalAlignment: Text.AlignRight
+                color: root.theme.textMuted
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontSize(11)
+            }
+
             Column {
                 width: parent.width
                 spacing: root.theme.spacing2
@@ -1101,12 +1110,6 @@ FocusScope {
             }
             spacing: root.theme.spacing3
 
-            Text {
-                text: "J/K  SELECT AUDIO     H/L  LEVEL     M  MUTE     X  MIC"
-                color: root.theme.textMuted
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontSize(9)
-            }
             Text {
                 text: "?  HELP"
                 color: root.theme.textMuted
