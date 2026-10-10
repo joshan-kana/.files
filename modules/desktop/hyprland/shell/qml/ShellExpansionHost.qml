@@ -241,7 +241,7 @@ PanelWindow {
                 horizontalCenter: parent.horizontalCenter
                 bottomMargin: host.theme.spacing3
             }
-            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  CLOSE"
+            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE"
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
             font.pixelSize: host.theme.fontSize(9)
