@@ -247,10 +247,8 @@ PanelWindow {
             font.pixelSize: host.theme.fontSize(9)
         }
 
-        Loader {
-            id: contentLoader
-            onLoaded: geometryUpdate.restart()
-
+        Flickable {
+            id: contentViewport
             anchors {
                 top: tabs.bottom
                 left: parent.left
@@ -261,9 +259,24 @@ PanelWindow {
                 rightMargin: host.theme.spacing5
                 bottomMargin: host.theme.spacing3
             }
+            clip: true
+            contentWidth: width
+            contentHeight: contentLoader.height
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
 
-            active: host.visible && host.currentComponent !== null
-            sourceComponent: host.currentComponent
+            Loader {
+                id: contentLoader
+                width: contentViewport.width
+                height: Math.max(contentViewport.height, host.loadedContent ? host.loadedContent.implicitHeight : 0)
+                onLoaded: {
+                    contentViewport.contentY = 0;
+                    geometryUpdate.restart();
+                }
+
+                active: host.visible && host.currentComponent !== null
+                sourceComponent: host.currentComponent
+            }
         }
     }
 }
