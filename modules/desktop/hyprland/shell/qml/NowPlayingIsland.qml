@@ -11,12 +11,16 @@ Item {
 
     signal activated
 
-    width: media.available ? 458 : 0
+    // Leave the centered clock island unobstructed on narrow logical screens.
+    property real maximumWidth: 458
+    width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
     height: 40
     visible: width > 1
     opacity: media.available ? 1 : 0
 
     Behavior on width {
+        // Layout reductions must follow monitor geometry immediately.
+        enabled: island.maximumWidth >= 458
         NumberAnimation {
             duration: island.motion.normal
             easing.type: island.motion.enterType
@@ -118,14 +122,14 @@ Item {
         Item {
             id: miniSpectrum
 
-            width: 148
+            width: island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
             height: 32
             anchors {
                 right: state.left
                 rightMargin: island.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
-            visible: island.media.playing
+            visible: island.media.playing && width > 0
             opacity: island.media.playing && island.spectrum.connected ? 0.95 : 0
 
             SpectrumBars {
