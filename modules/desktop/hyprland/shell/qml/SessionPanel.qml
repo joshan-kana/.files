@@ -97,10 +97,6 @@ Item {
         keyboardRequested();
     }
 
-    function moveHalfPage(direction: int): void {
-        moveSelection(direction * 3);
-    }
-
     function moveGrid(horizontal: int, vertical: int): void {
         if (horizontal !== 0) {
             const rowStart = Math.floor(selectedIndex / 3) * 3;
@@ -304,7 +300,7 @@ Item {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "H/J/K/L · NAVIGATE   U/D · ROWS   ENTER · ARM/RUN   ESC · BACK"
+            text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(9)
