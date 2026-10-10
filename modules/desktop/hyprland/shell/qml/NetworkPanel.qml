@@ -503,7 +503,7 @@ Item {
                 text: "↑↓  SELECT   ENTER  JOIN/DROP"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
 
@@ -512,7 +512,7 @@ Item {
                 text: "W  WI-FI"
                 color: panel.theme.accent
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
 
@@ -520,7 +520,7 @@ Item {
                 text: "A  ADVANCED"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
 
@@ -528,7 +528,7 @@ Item {
                 text: "ESC  BACK"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
         }
