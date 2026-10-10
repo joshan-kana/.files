@@ -31,6 +31,13 @@ PanelWindow {
     WlrLayershell.namespace: "linux-desktop-launcher"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    Shortcut {
+        sequence: "Shift+Esc"
+        context: Qt.ApplicationShortcut
+        enabled: palette.open
+        onActivated: palette.hide()
+    }
+
     Timer {
         id: closeTimer
         interval: motion.fast
@@ -540,7 +547,7 @@ PanelWindow {
 
                 Text {
                     id: hints
-                    text: search.activeFocus ? "TYPE TO SEARCH  ·  TAB NAV  ·  ↑↓ SELECT  ·  ↵ OPEN" : "J/K SELECT  ·  U/D HALF PAGE  ·  / SEARCH  ·  ↵ OPEN  ·  ESC"
+                    text: search.activeFocus ? "TYPE TO SEARCH  ·  TAB NAV  ·  ↑↓ SELECT  ·  ↵ OPEN  ·  ⇧ESC CLOSE" : "J/K SELECT  ·  U/D PAGE  ·  / SEARCH  ·  ↵ OPEN  ·  ESC  ·  ⇧ESC CLOSE"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
