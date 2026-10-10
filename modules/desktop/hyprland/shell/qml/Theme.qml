@@ -44,6 +44,7 @@ QtObject {
     readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
     readonly property real panelClosedScale: 0.965
 
+    readonly property int fontKeyHint: fontSize(11)
     readonly property int fontPanelEyebrow: fontSize(11)
     readonly property int fontPanelTitle: fontSize(27)
     readonly property int fontSubpanelEyebrow: fontSize(10)
