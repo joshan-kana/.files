@@ -282,6 +282,13 @@ FocusScope {
         onTriggered: root.applyRequestedView()
     }
 
+    // A pointer-dismissed Help overlay can leave its backdrop with keyboard
+    // focus. Return it to the owning panel so ? works on the next press.
+    onHelpOpenChanged: {
+        if (!helpOpen && engaged)
+            keyboardFocus.forceActiveFocus();
+    }
+
     onEngagedChanged: {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
