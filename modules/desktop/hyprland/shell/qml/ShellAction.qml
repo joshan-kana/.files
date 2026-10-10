@@ -100,7 +100,7 @@ Item {
         text: root.shortcut
         color: root.theme.textMuted
         font.family: root.runtime.fontMono
-        font.pixelSize: root.theme.fontSize(11)
+        font.pixelSize: root.theme.fontKeyHint
     }
 
     StateLayer {
