@@ -268,7 +268,9 @@ Item {
             StateLayer {
                 theme: panel.theme
                 motion: panel.motion
-                selected: themeRow.index === panel.selectedIndex
+                // Preserve each palette's own foreground/background contrast.
+                // The outer accent border communicates keyboard selection.
+                stateColor: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textStrong
                 cornerRadius: panel.theme.radiusMedium
 
                 onActivated: {
