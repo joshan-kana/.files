@@ -45,6 +45,13 @@ FocusScope {
     implicitHeight: 422
     focus: engaged
 
+    // A pointer-dismissed Help overlay can leave its backdrop with keyboard
+    // focus. Return it to the owning panel so ? works on the next press.
+    onHelpOpenChanged: {
+        if (!helpOpen && engaged)
+            keyboardFocus.forceActiveFocus();
+    }
+
     onEngagedChanged: {
         if (engaged) {
             keyboardFocus.forceActiveFocus();
