@@ -493,9 +493,12 @@ FocusScope {
                 }
             }
 
-            Row {
+            Grid {
+                id: primaryTiles
                 width: parent.width
-                spacing: root.theme.spacing3
+                columns: width < 470 || root.theme.textScale >= 1.65 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
+                columnSpacing: root.theme.spacing3
+                rowSpacing: root.theme.spacing3
 
                 Repeater {
                     id: controlTiles
@@ -546,7 +549,7 @@ FocusScope {
                     delegate: ShellAction {
                         required property var modelData
 
-                        width: (content.width - theme.spacing3 * (controlTiles.count - 1)) / controlTiles.count
+                        width: (primaryTiles.width - primaryTiles.columnSpacing * (primaryTiles.columns - 1)) / primaryTiles.columns
                         height: 84
                         icon: modelData.icon
                         shortcut: modelData.shortcut
@@ -573,12 +576,16 @@ FocusScope {
                 }
             }
 
-            Row {
+            Grid {
+                id: secondaryTiles
                 width: parent.width
-                spacing: root.theme.spacing3
+                columns: primaryTiles.columns
+                columnSpacing: root.theme.spacing3
+                rowSpacing: root.theme.spacing3
+                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 4) / 5.25
+                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -593,7 +600,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 4) / 5.25
+                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -607,7 +614,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 4) / 5.25
+                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -621,7 +628,7 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: (parent.width - parent.spacing * 4) / 5.25
+                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
                     height: 82
                     runtime: root.runtime
                     theme: root.theme
@@ -633,7 +640,7 @@ FocusScope {
                     onActivated: root.openResources()
                 }
                 ShellSurface {
-                    width: (parent.width - parent.spacing * 4) / 5.25 * 1.25
+                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 * 1.25 : secondaryTiles.cellWidth
                     height: 82
                     visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
