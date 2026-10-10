@@ -15,14 +15,11 @@ Item {
     property var themes: []
     property string defaultTheme: ""
     property string currentTheme: ""
-    property string pendingTheme: ""
-    property string desiredTheme: ""
-    property string builtActivation: ""
     property int selectedIndex: 0
     property string statusText: ""
     property bool statusError: false
 
-    readonly property bool applying: buildProcess.running || activateProcess.running
+    readonly property bool applying: switchProcess.running
 
     Connections {
         target: panel.runtime
@@ -38,17 +35,7 @@ Item {
     property StdioCollector registryError: StdioCollector {}
     property StdioCollector currentOutput: StdioCollector {}
     property StdioCollector currentError: StdioCollector {}
-    property StdioCollector buildOutput: StdioCollector {}
-    property StdioCollector buildError: StdioCollector {}
-    property StdioCollector activateOutput: StdioCollector {}
-    property StdioCollector activateError: StdioCollector {}
-
-    Timer {
-        id: nextThemeTimer
-        interval: 0
-        repeat: false
-        onTriggered: panel.startDesiredTheme()
-    }
+    property StdioCollector switchError: StdioCollector {}
 
     property Process registryProcess: Process {
         stdout: panel.registryOutput
@@ -86,64 +73,17 @@ Item {
         }
     }
 
-    property Process buildProcess: Process {
-        stdout: panel.buildOutput
-        stderr: panel.buildError
+    property Process switchProcess: Process {
+        stderr: panel.switchError
 
         onExited: (exitCode, exitStatus) => {
-            const completedTheme = panel.pendingTheme;
-
-            if (exitCode !== 0) {
-                if (completedTheme === panel.desiredTheme)
-                    panel.setError(panel.buildError.text, "THEME BUILD FAILED");
-                panel.pendingTheme = "";
-                nextThemeTimer.restart();
-                panel.keyboardRequested();
-                return;
-            }
-
-            const activation = panel.buildOutput.text.trim().split("\n").filter(line => line.length > 0).pop() || "";
-            panel.pendingTheme = "";
-
-            if (completedTheme !== panel.desiredTheme) {
-                nextThemeTimer.restart();
-                panel.keyboardRequested();
-                return;
-            }
-
-            if (activation.length === 0) {
-                panel.setError("", "THEME BUILD RETURNED NO ACTIVATION");
-                panel.keyboardRequested();
-                return;
-            }
-
-            panel.builtActivation = activation;
-            panel.pendingTheme = completedTheme;
-            panel.statusText = "ACTIVATING // " + panel.themeLabel(completedTheme).toUpperCase();
-            panel.statusError = false;
-            panel.activateProcess.exec([panel.runtime.themeSet, "activate-built", completedTheme, activation]);
-        }
-    }
-
-    property Process activateProcess: Process {
-        stdout: panel.activateOutput
-        stderr: panel.activateError
-
-        onExited: (exitCode, exitStatus) => {
-            const completedTheme = panel.pendingTheme;
-            panel.pendingTheme = "";
-            panel.builtActivation = "";
-
-            if (exitCode === 0) {
-                panel.currentTheme = completedTheme;
-                panel.statusText = "ACTIVE // " + panel.themeLabel(panel.currentTheme).toUpperCase();
+            if (exitCode !== 0)
+                panel.setError(panel.switchError.text, "FAILED TO OPEN THEME TERMINAL");
+            else {
+                // The full-system theme switch happens in stock nh, not here.
+                panel.statusText = "CHECK TERMINAL // SYSTEM THEME SWITCH";
                 panel.statusError = false;
-                panel.selectCurrentTheme();
-            } else if (completedTheme === panel.desiredTheme) {
-                panel.setError(panel.activateError.text, "THEME SWITCH FAILED");
             }
-
-            nextThemeTimer.restart();
             panel.keyboardRequested();
         }
     }
@@ -233,39 +173,13 @@ Item {
         selectedIndex = Math.max(0, Math.min(themes.length - 1, selectedIndex + delta));
     }
 
-    function startDesiredTheme(): void {
-        if (runtime.themeSet.length === 0 || applying || desiredTheme.length === 0)
-            return;
-
-        if (desiredTheme === currentTheme) {
-            statusText = "ACTIVE // " + themeLabel(currentTheme).toUpperCase();
-            statusError = false;
-            return;
-        }
-
-        pendingTheme = desiredTheme;
-        statusText = "BUILDING // " + themeLabel(pendingTheme).toUpperCase();
-        statusError = false;
-        buildProcess.exec([runtime.themeSet, "build", pendingTheme]);
-    }
-
     function activateSelected(): void {
-        if (runtime.themeSet.length === 0)
+        if (runtime.themeSet.length === 0 || applying)
             return;
 
         const selected = selectedTheme();
         if (!selected)
             return;
-
-        desiredTheme = selected.name;
-
-        if (applying) {
-            if (desiredTheme !== pendingTheme) {
-                statusText = "QUEUED // " + (selected.label || selected.name).toUpperCase();
-                statusError = false;
-            }
-            return;
-        }
 
         if (selected.name === currentTheme) {
             statusText = "ALREADY ACTIVE // " + (selected.label || selected.name).toUpperCase();
@@ -273,7 +187,9 @@ Item {
             return;
         }
 
-        startDesiredTheme();
+        statusText = "OPENING TERMINAL // " + (selected.label || selected.name).toUpperCase();
+        statusError = false;
+        switchProcess.exec([runtime.themeSet, "switch", selected.name]);
     }
 
     Column {
@@ -469,7 +385,7 @@ Item {
             }
 
             Text {
-                text: panel.applying ? "ENTER  QUEUE" : "ENTER  APPLY"
+                text: panel.applying ? "ENTER  OPENING" : "ENTER  SWITCH"
                 color: panel.applying ? panel.theme.warning : panel.theme.accent
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(8)
