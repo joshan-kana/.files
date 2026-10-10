@@ -237,9 +237,8 @@ Item {
                     model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
 
                     delegate: SessionActionButton {
-                        required property int index
                         required property var modelData
-                        readonly property int actionIndex: actionRow.index * panel.gridColumns + index
+                        readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
 
                         runtime: panel.runtime
                         theme: panel.theme
