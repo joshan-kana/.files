@@ -156,8 +156,8 @@ FocusScope {
                 }
             ] : (sessionPanel.open ? [
                     {
-                        key: "J/K · U/D",
-                        action: "Select action"
+                        key: "H/J/K/L · ARROWS",
+                        action: "Navigate actions"
                     },
                     {
                         key: "ENTER",
