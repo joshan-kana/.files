@@ -10,10 +10,13 @@ Item {
     required property Motion motion
 
     signal keyboardRequested
+    signal revealSelection(real top, real bottom)
 
     property bool open: false
     property int selectedIndex: 0
     property int preferredColumn: 0
+    readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
+    onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
     property string armedAction: ""
     property string statusText: ""
     property bool statusError: false
@@ -99,18 +102,18 @@ Item {
 
     function moveGrid(horizontal: int, vertical: int): void {
         if (horizontal !== 0) {
-            const rowStart = Math.floor(selectedIndex / 3) * 3;
-            const rowEnd = Math.min(entries.length - 1, rowStart + 2);
+            const rowStart = Math.floor(selectedIndex / gridColumns) * gridColumns;
+            const rowEnd = Math.min(entries.length - 1, rowStart + gridColumns - 1);
             moveSelection(Math.max(rowStart, Math.min(rowEnd, selectedIndex + horizontal)) - selectedIndex);
         } else if (vertical !== 0) {
-            const targetRow = Math.floor(selectedIndex / 3) + vertical;
-            const lastRow = Math.floor((entries.length - 1) / 3);
+            const targetRow = Math.floor(selectedIndex / gridColumns) + vertical;
+            const lastRow = Math.floor((entries.length - 1) / gridColumns);
             if (targetRow >= 0 && targetRow <= lastRow) {
-                const target = Math.min(entries.length - 1, targetRow * 3 + preferredColumn);
+                const target = Math.min(entries.length - 1, targetRow * gridColumns + preferredColumn);
                 const column = preferredColumn;
                 moveSelection(target - selectedIndex);
                 // Keep the intended column for the return trip across a
-                // shorter row (Log out -> Power off -> Log out).
+                // shorter row when navigating back upwards.
                 preferredColumn = column;
             }
         }
@@ -118,11 +121,16 @@ Item {
 
     function moveSelection(delta: int): void {
         selectedIndex = Math.max(0, Math.min(entries.length - 1, selectedIndex + delta));
-        preferredColumn = selectedIndex % 3;
+        preferredColumn = selectedIndex % gridColumns;
         armTimer.stop();
         armedAction = "";
         statusText = "";
         statusError = false;
+        if (open) {
+            const row = Math.floor(selectedIndex / gridColumns);
+            const top = buttonGrid.y + row * (155 + buttonGrid.spacing);
+            revealSelection(top, top + 155);
+        }
     }
 
     function execute(entry): void {
@@ -198,6 +206,8 @@ Item {
         }
 
         Text {
+            width: parent.width
+            wrapMode: Text.Wrap
             text: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
             color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.textMuted
             font.family: panel.runtime.fontMono
@@ -214,63 +224,41 @@ Item {
         }
         spacing: panel.theme.spacing3
 
-        Row {
-            id: firstRow
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: panel.theme.spacing3
+        Repeater {
+            model: Math.ceil(panel.entries.length / panel.gridColumns)
 
-            Repeater {
-                model: panel.entries.slice(0, 3)
-                delegate: SessionActionButton {
-                    required property int index
-                    required property var modelData
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    icon: modelData.icon
-                    label: modelData.label
-                    selected: panel.selectedIndex === index
-                    armed: panel.armedAction === modelData.id
-                    onHovered: {
-                        if (panel.selectedIndex !== index)
-                            panel.moveSelection(index - panel.selectedIndex);
-                    }
-                    onActivated: {
-                        if (panel.selectedIndex !== index)
-                            panel.moveSelection(index - panel.selectedIndex);
-                        panel.activateSelected();
-                        panel.keyboardRequested();
-                    }
-                }
-            }
-        }
+            delegate: Row {
+                id: actionRow
+                required property int index
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: panel.theme.spacing3
 
-        Row {
-            id: lastRow
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: panel.theme.spacing3
+                Repeater {
+                    model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
 
-            Repeater {
-                model: panel.entries.slice(3)
-                delegate: SessionActionButton {
-                    required property int index
-                    required property var modelData
-                    runtime: panel.runtime
-                    theme: panel.theme
-                    motion: panel.motion
-                    icon: modelData.icon
-                    label: modelData.label
-                    selected: panel.selectedIndex === index + 3
-                    armed: panel.armedAction === modelData.id
-                    onHovered: {
-                        if (panel.selectedIndex !== index + 3)
-                            panel.moveSelection(index + 3 - panel.selectedIndex);
-                    }
-                    onActivated: {
-                        if (panel.selectedIndex !== index + 3)
-                            panel.moveSelection(index + 3 - panel.selectedIndex);
-                        panel.activateSelected();
-                        panel.keyboardRequested();
+                    delegate: SessionActionButton {
+                        required property int index
+                        required property var modelData
+                        readonly property int actionIndex: actionRow.index * panel.gridColumns + index
+
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        icon: modelData.icon
+                        label: modelData.label
+                        selected: panel.selectedIndex === actionIndex
+                        armed: panel.armedAction === modelData.id
+
+                        onHovered: {
+                            if (panel.selectedIndex !== actionIndex)
+                                panel.moveSelection(actionIndex - panel.selectedIndex);
+                        }
+                        onActivated: {
+                            if (panel.selectedIndex !== actionIndex)
+                                panel.moveSelection(actionIndex - panel.selectedIndex);
+                            panel.activateSelected();
+                            panel.keyboardRequested();
+                        }
                     }
                 }
             }
@@ -299,7 +287,9 @@ Item {
         }
 
         Text {
-            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
             text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
