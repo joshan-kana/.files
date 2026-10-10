@@ -14,6 +14,8 @@ QtObject {
     property var bands: []
     property var targetBands: []
     property bool interpolating: false
+    property bool decaying: false
+    readonly property bool hasEnergy: bands.some(value => value > 0.002)
     property real rms: 0
     property real peak: 0
     property real sub: 0
@@ -28,7 +30,7 @@ QtObject {
     // Audio buffers arrive independently of display refresh. Let the scene graph
     // interpolate between samples rather than redrawing only on PipeWire callbacks.
     property FrameAnimation interpolationFrame: FrameAnimation {
-        running: spectrum.active && spectrum.interpolating
+        running: spectrum.interpolating && (spectrum.active || spectrum.decaying)
         onTriggered: spectrum.advanceBands(frameTime)
     }
 
@@ -58,7 +60,9 @@ QtObject {
         if (delta === 0)
             return;
 
-        const blend = 1 - Math.exp(-delta * 120);
+        // Preserve the last audio frame as it settles after the socket closes.
+        // The shorter live interpolation remains unchanged while playing.
+        const blend = 1 - Math.exp(-delta * (spectrum.decaying ? 10 : 120));
         const values = [];
         let maxDifference = 0;
         for (let i = 0; i < targetBands.length; i++) {
@@ -68,8 +72,14 @@ QtObject {
         }
 
         bands = maxDifference < 0.002 ? targetBands : values;
-        if (maxDifference < 0.002)
+        if (maxDifference < 0.002) {
             interpolating = false;
+            if (decaying) {
+                decaying = false;
+                bands = [];
+                targetBands = [];
+            }
+        }
     }
 
     property Component socketComponent: Component {
@@ -136,12 +146,19 @@ QtObject {
 
     onActiveChanged: {
         if (active) {
+            decaying = false;
             connectionGate = true;
         } else {
             reconnectTimer.stop();
-            bands = [];
-            targetBands = [];
-            interpolating = false;
+            // No more PipeWire work, but keep rendering the final frame until
+            // it reaches silence. FrameAnimation stops itself after the tail.
+            targetBands = bands.map(() => 0);
+            decaying = hasEnergy;
+            interpolating = decaying;
+            if (!decaying) {
+                bands = [];
+                targetBands = [];
+            }
             rms = 0;
             peak = 0;
             sub = 0;

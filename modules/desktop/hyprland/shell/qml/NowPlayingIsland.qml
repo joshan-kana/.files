@@ -129,8 +129,8 @@ Item {
                 rightMargin: island.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
-            visible: island.media.playing && width > 0
-            opacity: island.media.playing && island.spectrum.connected ? 0.95 : 0
+            visible: width > 0 && (island.media.playing || island.spectrum.hasEnergy)
+            opacity: island.media.playing || island.spectrum.hasEnergy ? 0.95 : 0
 
             SpectrumBars {
                 anchors.fill: parent
