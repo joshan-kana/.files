@@ -61,20 +61,14 @@ QtObject {
         return value === undefined || value === null ? "" : String(value);
     }
 
-    property FileView themeStateFile: FileView {
-        path: Quickshell.env("LINUX_DESKTOP_THEME_STATE") || ""
-        watchChanges: true
-        onFileChanged: {
-            root.configFile.reload();
-            root.themeChanged();
-        }
-    }
-
     property FileView configFile: FileView {
         path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
         blockLoading: true
         watchChanges: true
-        onFileChanged: reload()
+        onFileChanged: {
+            reload();
+            root.themeChanged();
+        }
 
         JsonAdapter {
             id: data
