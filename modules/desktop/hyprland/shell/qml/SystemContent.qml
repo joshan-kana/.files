@@ -692,7 +692,7 @@ FocusScope {
                         text: "O"
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(9)
+                        font.pixelSize: root.theme.fontKeyHint
                     }
 
                     StateLayer {
@@ -952,7 +952,7 @@ FocusScope {
                         text: "[  PREV     ]  NEXT     ENTER  OPEN"
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(9)
+                        font.pixelSize: root.theme.fontKeyHint
                     }
                 }
 
@@ -1128,7 +1128,7 @@ FocusScope {
                 text: "?  HELP"
                 color: root.theme.textMuted
                 font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontSize(9)
+                font.pixelSize: root.theme.fontKeyHint
                 MouseArea {
                     anchors.fill: parent
                     anchors.margins: -4
