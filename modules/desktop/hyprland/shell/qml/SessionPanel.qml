@@ -303,7 +303,7 @@ Item {
             text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(9)
+            font.pixelSize: panel.theme.fontKeyHint
         }
     }
 }

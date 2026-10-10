@@ -382,7 +382,7 @@ Item {
                 text: "↑/↓  SELECT"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
 
@@ -390,7 +390,7 @@ Item {
                 text: panel.applying ? "ENTER  OPENING" : "ENTER  SWITCH"
                 color: panel.applying ? panel.theme.warning : panel.theme.accent
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
 
@@ -398,7 +398,7 @@ Item {
                 text: "ESC  BACK"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
+                font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
             }
         }
