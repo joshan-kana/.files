@@ -1260,9 +1260,6 @@ FocusScope {
                     } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
                         sessionPanel.moveGrid(1, 0);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                        sessionPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
-                        event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         sessionPanel.activateSelected();
                         event.accepted = true;
