@@ -263,7 +263,7 @@ PanelWindow {
             text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE"
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
-            font.pixelSize: host.theme.fontSize(9)
+            font.pixelSize: host.theme.fontKeyHint
         }
 
         Flickable {
