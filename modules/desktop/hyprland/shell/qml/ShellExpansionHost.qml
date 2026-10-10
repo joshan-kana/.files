@@ -255,11 +255,14 @@ PanelWindow {
 
         Text {
             id: hubFooter
+            width: Math.max(1, parent.width - host.theme.spacing3 * 2)
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
                 bottomMargin: host.theme.spacing3
             }
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
             text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE" + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
