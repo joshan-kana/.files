@@ -597,7 +597,7 @@ FocusScope {
                     title: "Notifications"
                     subtitle: root.notificationState.silent ? "Alerts paused" : "Alerts enabled"
                     active: root.notificationState.silent
-                    activeColor: root.theme.warning
+                    activeColor: root.theme.notificationPaused
                     onActivated: root.notificationState.toggleSilent()
                 }
 
@@ -624,6 +624,7 @@ FocusScope {
                     icon: root.motion.enabled ? "󰔎" : "󰾅"
                     shortcut: "R"
                     title: "Reduced motion"
+                    activeColor: root.theme.reducedMotion
                     subtitle: root.motion.enabled ? "Off" : "On"
                     active: !root.motion.enabled
                     onActivated: root.motion.toggle()
