@@ -219,54 +219,87 @@ Item {
         selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, devices.length - 1)));
     }
 
-    Column {
+    ShellSurface {
         id: header
 
         width: parent.width
-        spacing: panel.theme.spacing1
+        height: 146
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: panel.theme.radiusLarge
 
-        Text {
-            text: panel.adapterAvailable ? "Bluetooth · " + (panel.adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
-            color: panel.adapterAvailable && panel.adapter.enabled ? panel.theme.positive : panel.theme.warning
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(11)
-            font.weight: Font.Medium
-        }
-
-        Text {
-            text: panel.adapterAvailable ? (panel.adapter.name || panel.adapter.adapterId || "Bluetooth") : "Bluetooth"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSubpanelTitle
-            font.weight: Font.DemiBold
-        }
-
-        Row {
-            width: parent.width
-            spacing: panel.theme.spacing3
+        ShellSurface {
+            width: 78
+            height: 78
+            anchors.left: parent.left
+            anchors.leftMargin: panel.theme.spacing4
+            anchors.verticalCenter: parent.verticalCenter
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: panel.theme.radiusMedium
 
             Text {
-                visible: panel.adapterAvailable
-                text: panel.system.bluetoothEnabled ? "Radio on" : "Radio off"
-                color: panel.system.bluetoothEnabled ? panel.theme.accent : panel.theme.critical
+                anchors.centerIn: parent
+                text: "ᛒ"
+                color: panel.theme.accent
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+                font.pixelSize: panel.theme.fontSize(39)
+            }
+        }
+
+        Column {
+            anchors {
+                fill: parent
+                margins: panel.theme.spacing4
+                leftMargin: panel.theme.spacing4 + 96
+            }
+            spacing: panel.theme.spacing2
+
+            Text {
+                text: panel.adapterAvailable ? "Bluetooth · " + (panel.adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
+                color: panel.adapterAvailable && panel.adapter.enabled ? panel.theme.positive : panel.theme.warning
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
+                font.weight: Font.Medium
             }
 
             Text {
-                visible: panel.adapterAvailable && panel.system.bluetoothEnabled
-                text: panel.system.bluetoothDiscovering ? "SCANNING" : "SCAN IDLE"
-                color: panel.system.bluetoothDiscovering ? panel.theme.positive : panel.theme.textMuted
+                text: panel.adapterAvailable ? (panel.adapter.name || panel.adapter.adapterId || "Bluetooth") : "Bluetooth"
+                color: panel.theme.textStrong
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+                font.pixelSize: panel.theme.fontSubpanelTitle
+                font.weight: Font.DemiBold
             }
 
-            Text {
-                visible: panel.adapterAvailable
-                text: panel.system.bluetoothConnectedCount + " CONNECTED"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+            Row {
+                width: parent.width
+                spacing: panel.theme.spacing3
+
+                Text {
+                    visible: panel.adapterAvailable
+                    text: panel.system.bluetoothEnabled ? "Radio on" : "Radio off"
+                    color: panel.system.bluetoothEnabled ? panel.theme.accent : panel.theme.critical
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
+
+                Text {
+                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled
+                    text: panel.system.bluetoothDiscovering ? "SCANNING" : "SCAN IDLE"
+                    color: panel.system.bluetoothDiscovering ? panel.theme.positive : panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
+
+                Text {
+                    visible: panel.adapterAvailable
+                    text: panel.system.bluetoothConnectedCount + " CONNECTED"
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
             }
         }
     }
@@ -416,16 +449,46 @@ Item {
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
         }
 
-        Text {
+        ShellSurface {
             anchors.centerIn: parent
-            visible: !panel.adapterAvailable
             width: parent.width
-            text: "No Bluetooth adapter"
-            horizontalAlignment: Text.AlignHCenter
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-            font.letterSpacing: 0.8
+            height: 158
+            visible: !panel.adapterAvailable
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusLarge
+
+            Column {
+                width: parent.width - panel.theme.spacing5 * 2
+                anchors.centerIn: parent
+                spacing: panel.theme.spacing3
+
+                Text {
+                    text: "BLUETOOTH UNAVAILABLE"
+                    color: panel.theme.warning
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(11)
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    text: "No Bluetooth adapter"
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(20)
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    text: "Connect or enable an adapter to discover and pair devices."
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(10)
+                }
+            }
         }
 
         Text {

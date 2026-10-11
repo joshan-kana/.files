@@ -31,7 +31,7 @@ Item {
         motion: root.motion
         surfaceLayer: ShellSurface.Control
         selected: root.active
-        fillColor: root.active ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.18) : root.theme.layer3
+        fillColor: root.active ? Qt.rgba(root.activeColor.r, root.activeColor.g, root.activeColor.b, 0.28) : root.theme.layer3
         cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
     }
 
