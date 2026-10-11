@@ -169,7 +169,7 @@ PanelWindow {
     ShellSurface {
         id: card
 
-        width: Math.min(window.width - 120, 1380)
+        width: Math.min(window.width - 120, 1180)
         height: Math.min(window.height - 120, 820)
         anchors.centerIn: parent
 
@@ -296,9 +296,11 @@ PanelWindow {
                     id: sectionGrid
 
                     width: parent.width
-                    columns: width >= 1180 ? 3 : (width >= 760 ? 2 : 1)
-                    columnSpacing: window.theme.spacing5
-                    rowSpacing: window.theme.spacing5
+                    // Give descriptions room to breathe instead of squeezing
+                    // three columns around oversized, fixed-width keycaps.
+                    columns: width >= 900 ? 2 : 1
+                    columnSpacing: window.theme.spacing6
+                    rowSpacing: window.theme.spacing4
 
                     Repeater {
                         model: window.sections
@@ -327,34 +329,41 @@ PanelWindow {
                                     required property var modelData
 
                                     width: shortcutSection.width
-                                    spacing: window.theme.spacing3
+                                    height: Math.max(bindingKey.height, bindingDescription.implicitHeight)
+                                    spacing: window.theme.spacing2
 
                                     ShellSurface {
                                         id: bindingKey
-                                        width: 174
-                                        height: 40
+                                        width: 136
+                                        height: 34
+                                        anchors.verticalCenter: parent.verticalCenter
                                         theme: window.theme
                                         motion: window.motion
-                                        surfaceLayer: ShellSurface.Group
+                                        surfaceLayer: ShellSurface.Control
                                         cornerRadius: theme.radiusSmall
 
                                         Text {
                                             anchors.centerIn: parent
                                             text: KeyGlyphs.display(shortcutBinding.modelData.key)
                                             color: window.theme.textStrong
-                                            font.family: "Symbols Nerd Font"
-                                            font.pixelSize: window.theme.fontSize(19)
+                                            // Monospace keeps letters and modifiers proportionate;
+                                            // Qt falls back for symbols the font lacks.
+                                            font.family: window.runtime.fontMono
+                                            font.pixelSize: window.theme.fontSize(16)
                                             font.weight: Font.DemiBold
                                         }
                                     }
 
                                     Text {
+                                        id: bindingDescription
                                         width: shortcutBinding.width - bindingKey.width - shortcutBinding.spacing
-                                        anchors.verticalCenter: bindingKey.verticalCenter
+                                        anchors.verticalCenter: parent.verticalCenter
                                         text: shortcutBinding.modelData.description
-                                        color: window.theme.text
+                                        color: window.theme.textStrong
                                         font.family: window.runtime.fontMono
-                                        font.pixelSize: window.theme.fontSize(13)
+                                        font.pixelSize: window.theme.fontSize(15)
+                                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                        maximumLineCount: 2
                                         elide: Text.ElideRight
                                     }
                                 }
