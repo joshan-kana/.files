@@ -60,6 +60,7 @@ PanelWindow {
             NumberAnimation {
                 duration: popup.motion.fast
                 easing.type: popup.osd.visible ? popup.motion.enterType : popup.motion.exitType
+                easing.bezierCurve: popup.osd.visible ? popup.motion.enterCurve : popup.motion.exitCurve
             }
         }
 
@@ -67,6 +68,7 @@ PanelWindow {
             NumberAnimation {
                 duration: popup.motion.fast
                 easing.type: popup.motion.enterType
+                easing.bezierCurve: popup.motion.enterCurve
             }
         }
 
@@ -126,6 +128,7 @@ PanelWindow {
                         NumberAnimation {
                             duration: popup.motion.fast
                             easing.type: popup.motion.enterType
+                            easing.bezierCurve: popup.motion.enterCurve
                         }
                     }
                 }

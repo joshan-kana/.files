@@ -24,4 +24,5 @@ AnchorAnimation {
     }
 
     easing.type: motion.spatialType
+    easing.bezierCurve: motion.spatialCurve
 }
