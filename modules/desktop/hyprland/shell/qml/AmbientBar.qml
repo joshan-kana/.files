@@ -202,6 +202,7 @@ Variants {
                                     NumberAnimation {
                                         duration: bars.motion.fast
                                         easing.type: bars.motion.enterType
+                                        easing.bezierCurve: bars.motion.enterCurve
                                     }
                                 }
 
@@ -209,12 +210,15 @@ Variants {
                                     NumberAnimation {
                                         duration: bars.motion.fast
                                         easing.type: bars.motion.enterType
+                                        easing.bezierCurve: bars.motion.enterCurve
                                     }
                                 }
 
                                 Behavior on fillColor {
                                     ColorAnimation {
                                         duration: bars.motion.fast
+                                        easing.type: bars.motion.effectsType
+                                        easing.bezierCurve: bars.motion.effectsCurve
                                     }
                                 }
 
