@@ -169,7 +169,7 @@ PanelWindow {
     ShellSurface {
         id: card
 
-        width: Math.min(window.width - 120, 1180)
+        width: Math.min(window.width - 120, 1380)
         height: Math.min(window.height - 120, 820)
         anchors.centerIn: parent
 
@@ -296,10 +296,9 @@ PanelWindow {
                     id: sectionGrid
 
                     width: parent.width
-                    // Give descriptions room to breathe instead of squeezing
-                    // three columns around oversized, fixed-width keycaps.
-                    columns: width >= 900 ? 2 : 1
-                    columnSpacing: window.theme.spacing6
+                    // Three columns on wide displays, without truncating labels.
+                    columns: width >= 1110 ? 3 : (width >= 760 ? 2 : 1)
+                    columnSpacing: window.theme.spacing4
                     rowSpacing: window.theme.spacing4
 
                     Repeater {
@@ -334,7 +333,7 @@ PanelWindow {
 
                                     ShellSurface {
                                         id: bindingKey
-                                        width: 136
+                                        width: 112
                                         height: 34
                                         anchors.verticalCenter: parent.verticalCenter
                                         theme: window.theme
