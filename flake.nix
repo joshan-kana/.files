@@ -275,6 +275,38 @@
           };
         };
 
+      hostScope =
+        hostModule:
+        let
+          hostFile =
+            if builtins.pathExists (hostModule + "/default.nix") then
+              hostModule + "/default.nix"
+            else
+              hostModule;
+          host = import hostFile;
+        in
+        lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host);
+
+      hostSpecialArgs =
+        {
+          configurationName,
+          system,
+          configurationOutputName,
+          configurationFlakeSubdirectory,
+          moduleRegistryInput,
+        }:
+        {
+          inherit
+            configurationFlakeSubdirectory
+            configurationName
+            configurationOutputName
+            inputs
+            system
+            ;
+          inherit (semantic) editScope extendScope;
+          moduleRegistry = moduleRegistryInput;
+        };
+
       nixosHost =
         configurationName:
         {
@@ -288,32 +320,16 @@
           configurationFlakeSubdirectory ? null,
           extraModules ? [ ],
         }:
-        let
-          hostFile =
-            if builtins.pathExists (hostModule + "/default.nix") then
-              hostModule + "/default.nix"
-            else
-              hostModule;
-          hostScope = import hostFile;
-          hostScopeWithFile = lib.setFunctionArgs (args: (hostScope args) // { _file = toString hostFile; }) (
-            lib.functionArgs hostScope
-          );
-        in
         nixpkgsInput.lib.nixosSystem {
           inherit system;
-          specialArgs = {
+          specialArgs = hostSpecialArgs {
             inherit
-              configurationFlakeSubdirectory
               configurationName
-              configurationOutputName
-              inputs
               system
+              configurationOutputName
+              configurationFlakeSubdirectory
+              moduleRegistryInput
               ;
-            inherit (semantic)
-              editScope
-              extendScope
-              ;
-            moduleRegistry = moduleRegistryInput;
           };
           modules = [
             ./modules/options
@@ -327,7 +343,7 @@
             ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
-            (semantic.rootModule hostScopeWithFile)
+            (semantic.rootModule (hostScope hostModule))
           ]
           ++ extraModules;
         };
@@ -357,12 +373,54 @@
         };
       };
 
-      themeNames =
-        builtins.attrNames
-          (import ./modules/theme/registry.nix {
-            inherit lib;
-            pkgs = null;
-          }).variants;
+      darwinHost =
+        configurationName:
+        {
+          system,
+          hostModule,
+          configurationOutputName ? configurationName,
+          configurationFlakeSubdirectory ? null,
+          moduleRegistryInput ? moduleRegistry,
+          extraModules ? [ ],
+        }:
+        nix-darwin.lib.darwinSystem {
+          inherit system;
+          specialArgs = hostSpecialArgs {
+            inherit
+              configurationName
+              system
+              configurationOutputName
+              configurationFlakeSubdirectory
+              moduleRegistryInput
+              ;
+          };
+          modules = [
+            ./modules/options
+            home-manager.darwinModules.home-manager
+            stylix.darwinModules.stylix
+            inputs.determinate.darwinModules.default
+            ./overlays/comin.nix
+            ./overlays/hammerspoon.nix
+            ./overlays/mac-slicers.nix
+            ./overlays/mac-apps.nix
+            (semantic.rootModule (hostScope hostModule))
+          ]
+          ++ extraModules;
+        };
+
+      darwinHostSpecs = {
+        mac = {
+          system = "aarch64-darwin";
+          hostModule = ./hosts/mac;
+        };
+      };
+
+      themeScope = moduleRegistry.theme {
+        inherit lib;
+        pkgs = null;
+        scopeConfig = { };
+      };
+      themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
 
       themedNixosConfigurations = builtins.listToAttrs (
         lib.concatLists (
@@ -685,31 +743,7 @@
           };
         }
       );
-      darwinConfigurations.mac =
-        let
-          system = "aarch64-darwin";
-        in
-        nix-darwin.lib.darwinSystem {
-          inherit system;
-          specialArgs = {
-            inherit inputs moduleRegistry system;
-            configurationName = "mac";
-            configurationOutputName = "mac";
-            configurationFlakeSubdirectory = null;
-            inherit (semantic) editScope extendScope;
-          };
-          modules = [
-            ./modules/options
-            home-manager.darwinModules.home-manager
-            stylix.darwinModules.stylix
-            inputs.determinate.darwinModules.default
-            ./overlays/comin.nix
-            ./overlays/hammerspoon.nix
-            ./overlays/mac-slicers.nix
-            ./overlays/mac-apps.nix
-            (semantic.rootModule (import ./hosts/mac))
-          ];
-        };
+      darwinConfigurations = lib.mapAttrs darwinHost darwinHostSpecs;
       nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
     };
 }
