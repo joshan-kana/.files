@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       auto_merge_system_update:
-        description: Merge an up-to-date system-update PR after every NixOS build succeeds
+        description: Merge an up-to-date system-update PR after every fleet build succeeds
         required: false
         default: false
         type: boolean
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   discover:
-    name: Discover NixOS configurations
+    name: Discover fleet configurations
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -38,7 +38,7 @@ jobs:
             "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
             -f state=pending \
             -f context="Nix build cache" \
-            -f description="Building and publishing all NixOS configurations" \
+            -f description="Building and publishing all fleet configurations" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             >/dev/null
 
@@ -56,30 +56,45 @@ jobs:
         id: configurations
         shell: bash
         run: |
-          systems="$(
+          nixos="$(
             nix eval --json .#nixosConfigurations --apply '
+              configs: builtins.mapAttrs (_: cfg: cfg.pkgs.stdenv.hostPlatform.system) configs
+            '
+          )"
+          darwin="$(
+            nix eval --json .#darwinConfigurations --apply '
               configs: builtins.mapAttrs (_: cfg: cfg.pkgs.stdenv.hostPlatform.system) configs
             '
           )"
 
           matrix="$(
-            jq -c '
+            jq -cn --argjson nixos "$nixos" --argjson darwin "$darwin" '
               {
-                include: [
-                  to_entries[]
-                  | {
-                      profile: .key,
-                      system: .value,
-                      runner: (
-                        if .value == "x86_64-linux" then "ubuntu-24.04"
-                        elif .value == "aarch64-linux" then "ubuntu-24.04-arm"
-                        else error("unsupported GitHub runner system: " + .value)
-                        end
-                      )
-                    }
-                ]
+                include: (
+                  [ $nixos | to_entries[] | {
+                    profile: .key,
+                    system: .value,
+                    kind: "nixos",
+                    runner: (
+                      if .value == "x86_64-linux" then "ubuntu-24.04"
+                      elif .value == "aarch64-linux" then "ubuntu-24.04-arm"
+                      else error("unsupported NixOS system: " + .value)
+                      end
+                    )
+                  } ]
+                  + [ $darwin | to_entries[] | {
+                    profile: .key,
+                    system: .value,
+                    kind: "darwin",
+                    runner: (
+                      if .value == "aarch64-darwin" then "macos-26"
+                      else error("unsupported Darwin system: " + .value)
+                      end
+                    )
+                  } ]
+                )
               }
-            ' <<<"$systems"
+            '
           )"
 
           jq -r '.include[] | "Discovered \(.profile) (\(.system))"' <<<"$matrix"
@@ -113,6 +128,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Expand Nix store
+        if: runner.os == 'Linux'
         uses: wimpysworld/nothing-but-nix@v10
         with:
           hatchet-protocol: rampage
@@ -142,12 +158,17 @@ jobs:
 
       - name: Build host closure
         shell: bash
+        env:
+          HOST_KIND: ${{ matrix.kind }}
+          HOST_PROFILE: ${{ matrix.profile }}
         run: |
-          nix build \
-            --no-link \
-            --print-out-paths \
-            ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel" \
-            | tee "$RUNNER_TEMP/built-paths.txt"
+          if [[ "$HOST_KIND" == darwin ]]; then
+            sudo install -d -m 1777 /nix/build
+            installable=".#darwinConfigurations.$HOST_PROFILE.system"
+          else
+            installable=".#nixosConfigurations.$HOST_PROFILE.config.system.build.toplevel"
+          fi
+          nix build --no-link --print-out-paths "$installable" | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
         timeout-minutes: 90
@@ -184,10 +205,10 @@ jobs:
           set -euo pipefail
 
           state=failure
-          description="One or more NixOS builds or Attic publications failed"
+          description="One or more fleet builds or Attic publications failed"
           if [[ "${{ needs.discover.result }}" == success && "${{ needs.build.result }}" == success ]]; then
             state=success
-            description="All NixOS builds and Attic publications passed"
+            description="All fleet builds and Attic publications passed"
           fi
 
           gh api --method POST \
