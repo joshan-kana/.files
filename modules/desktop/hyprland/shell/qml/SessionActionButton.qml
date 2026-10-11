@@ -41,12 +41,14 @@ Item {
             NumberAnimation {
                 duration: button.motion.spatialFast
                 easing.type: button.motion.spatialType
+                easing.bezierCurve: button.motion.spatialCurve
             }
         }
         Behavior on exponent {
             NumberAnimation {
                 duration: button.motion.spatialFast
                 easing.type: button.motion.spatialType
+                easing.bezierCurve: button.motion.spatialCurve
             }
         }
 
