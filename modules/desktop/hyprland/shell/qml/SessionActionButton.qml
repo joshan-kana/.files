@@ -33,7 +33,7 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.selectionFill : button.theme.layer3
+        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.selectionFill : button.theme.expressiveSurfaceStrong
         borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.accent : "transparent"
         borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
 

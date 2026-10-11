@@ -26,9 +26,9 @@ SquircleSurface {
         case ShellSurface.Background:
             return theme.layer0;
         case ShellSurface.Group:
-            return theme.layer2;
+            return theme.expressiveSurface;
         case ShellSurface.Control:
-            return theme.layer3;
+            return theme.expressiveSurfaceStrong;
         default:
             return theme.layer1;
         }
