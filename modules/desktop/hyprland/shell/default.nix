@@ -90,6 +90,12 @@ let
             printf 'Theme chooser is configured for user %s\n' "$expectedUser" >&2
             exit 1
           fi
+          # The terminal and switch must survive Quickshell's own restart
+          # during system activation. A user scope owns their lifetime and
+          # the special-workspace cleanup, not the UI process cgroup.
+          if [ "''${3:-}" != "--scoped" ]; then
+            exec ${lib.getExe' pkgs.systemd "systemd-run"} --user --scope --quiet --collect -- "$0" switch "$selected" --scoped
+          fi
           # Interactive theme switching uses its own system-owned special workspace.
           # It must not hijack normal windows or the user special:magic workspace.
           theme_workspace_visible() {
