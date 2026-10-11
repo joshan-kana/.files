@@ -12,49 +12,26 @@ let
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
-  brave =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.brave ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "brave-browser" ];
-    };
+  brave = _: {
+    environment.systemPackages = [ pkgs.brave ];
+  };
 
-  bitwarden =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.bitwarden-desktop ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "bitwarden" ];
-    };
+  bitwarden = _: {
+    environment.systemPackages = [ pkgs.bitwarden-desktop ];
+  };
 
-  warp =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.warp-terminal ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "warp" ];
-    };
+  warp = _: {
+    environment.systemPackages = [ pkgs.warp-terminal ];
+  };
 
   mullvad =
     _:
     {
-      config = lib.optionalAttrs isLinux {
-        services.mullvad-vpn.enable = true;
-        environment.systemPackages = [ pkgs.mullvad-vpn ];
-      };
+      environment.systemPackages =
+        lib.optionals isLinux [ pkgs.mullvad-vpn ] ++ lib.optionals isDarwin [ pkgs.mullvad ];
     }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "mullvad-vpn" ];
+    // lib.optionalAttrs isLinux {
+      services.mullvad-vpn.enable = true;
     };
 
   chromium =
@@ -68,65 +45,39 @@ in
       homebrew.casks = [ "chromium" ];
     };
 
-  zen =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [
-          inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
-        ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "zen" ];
-    };
+  zen = _: {
+    environment.systemPackages = [ inputs.zen-browser.packages.${system}.beta ];
+  };
 
-  firefox =
-    _:
-    {
-      home = _: {
-        stylix.targets.firefox.profileNames = [ "themed" ];
-        stylix.targets.firefox.colorTheme.enable = true;
-        programs.firefox.profiles.themed.extensions.force = true;
-        programs.firefox.package = lib.mkIf isDarwin null;
-        programs.firefox.configPath =
-          lib.optionalString isDarwin "Library/Application Support/Firefox"
-          + lib.optionalString isLinux ".mozilla/firefox";
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "firefox" ];
+  firefox = _: {
+    home = _: {
+      stylix.targets.firefox.profileNames = [ "themed" ];
+      stylix.targets.firefox.colorTheme.enable = true;
+      programs.firefox.profiles.themed.extensions.force = true;
+      programs.firefox.configPath =
+        lib.optionalString isDarwin "Library/Application Support/Firefox"
+        + lib.optionalString isLinux ".mozilla/firefox";
     };
+  };
 
-  floorp =
-    _:
-    {
-      home = _: {
-        stylix.targets.floorp.profileNames = [ "themed" ];
-        stylix.targets.floorp.colorTheme.enable = true;
-        programs.floorp.profiles.themed.extensions.force = true;
-        programs.floorp.package = lib.mkIf isDarwin null;
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "floorp" ];
+  floorp = _: {
+    home = _: {
+      stylix.targets.floorp.profileNames = [ "themed" ];
+      stylix.targets.floorp.colorTheme.enable = true;
+      programs.floorp.profiles.themed.extensions.force = true;
     };
+  };
 
-  kitty =
-    _:
-    {
-      home = _: {
-        programs.kitty.extraConfig = ''
-          confirm_os_window_close 0
-          enable_audio_bell no
-          input_delay 0
-          touch_scroll_multiplier 3.0
-        '';
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "kitty" ];
+  kitty = _: {
+    home = _: {
+      programs.kitty.extraConfig = ''
+        confirm_os_window_close 0
+        enable_audio_bell no
+        input_delay 0
+        touch_scroll_multiplier 3.0
+      '';
     };
+  };
 
   alacritty = _: {
     home = _: {
@@ -134,27 +85,13 @@ in
     };
   };
 
-  thunderbird =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.thunderbird ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "thunderbird" ];
-    };
+  thunderbird = _: {
+    environment.systemPackages = [ pkgs.thunderbird ];
+  };
 
-  obsidian =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.obsidian ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "obsidian" ];
-    };
+  obsidian = _: {
+    environment.systemPackages = [ pkgs.obsidian ];
+  };
 
   filelight = linuxOnly (_: {
     environment.systemPackages = [ pkgs.kdePackages.filelight ];
@@ -196,27 +133,14 @@ in
     };
   };
 
-  pycharm =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.jetbrains.pycharm ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "pycharm" ];
-    };
+  pycharm = _: {
+    environment.systemPackages = [ pkgs.jetbrains.pycharm ];
+  };
 
-  libreoffice =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.libreoffice ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "libreoffice" ];
-    };
+  libreoffice = _: {
+    environment.systemPackages =
+      lib.optionals isLinux [ pkgs.libreoffice ] ++ lib.optionals isDarwin [ pkgs.libreoffice-bin ];
+  };
 
   sunshine = _: {
     environment.systemPackages = [ pkgs.sunshine ];
@@ -225,31 +149,18 @@ in
     };
   };
 
-  moonlight =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.moonlight-qt ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "moonlight" ];
-    };
+  moonlight = _: {
+    environment.systemPackages = [ pkgs.moonlight-qt ];
+  };
 
   waypipe = linuxOnly (_: {
     environment.systemPackages = [ pkgs.waypipe ];
   });
 
-  vlc =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.vlc ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "vlc" ];
-    };
+  vlc = _: {
+    environment.systemPackages =
+      lib.optionals isLinux [ pkgs.vlc ] ++ lib.optionals isDarwin [ pkgs.vlc-bin ];
+  };
 
   mopidy = _: {
     home = _: {
@@ -284,19 +195,13 @@ in
       }
     ))
     // lib.optionalAttrs isDarwin {
+      # The pinned Darwin Nixpkgs source depends on a stalled Wayback download.
       homebrew.casks = [ "spotify" ];
     };
 
-  discord =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.discord ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "discord" ];
-    };
+  discord = _: {
+    environment.systemPackages = [ pkgs.discord ];
+  };
 
   dropbox =
     _:

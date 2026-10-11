@@ -1,4 +1,9 @@
-{ lib, system, ... }:
+{
+  lib,
+  pkgs ? null,
+  system,
+  ...
+}:
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
@@ -48,7 +53,7 @@ in
         };
       }
       // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "tailscale-app" ];
+        environment.systemPackages = [ pkgs.tailscale-gui ];
       }
     );
 
