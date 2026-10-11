@@ -32,7 +32,7 @@ Item {
 
     visible: open
     implicitWidth: 512
-    implicitHeight: 610
+    implicitHeight: 760
 
     onOpenChanged: {
         if (open)
@@ -243,7 +243,7 @@ Item {
 
         Item {
             width: parent.width
-            height: 360
+            height: 465
 
             // Caelestia-style centre-selected wallpaper carousel, keeping our
             // own Theme/Motion/StateLayer and awww-backed selection action.
@@ -322,10 +322,10 @@ Item {
                         if (animatedFile && panel.runtime.wallpaperLibrary.length > 0)
                             posterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail", modelData]);
                     }
-                    width: 206
-                    height: 180
+                    width: 360
+                    height: 305
                     z: current ? 2 : 1
-                    scale: current ? 1 : PathView.onPath ? 0.77 : 0.5
+                    scale: current ? 1 : PathView.onPath ? 0.71 : 0.5
                     opacity: PathView.onPath ? 1 : 0
 
                     Behavior on scale {
@@ -357,9 +357,9 @@ Item {
                                 left: parent.left
                                 right: parent.right
                             }
-                            height: 139
+                            height: 260
                             source: entry.animatedFile ? (entry.posterPath.length > 0 ? "file://" + entry.posterPath : "") : "file://" + entry.modelData
-                            sourceSize: Qt.size(380, 250)
+                            sourceSize: Qt.size(620, 400)
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
@@ -399,6 +399,71 @@ Item {
                 }
             }
 
+            ShellSurface {
+                id: currentWallpaperPreview
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                }
+                height: gallery.height
+                visible: panel.filteredEntries.length === 0 && !panel.loading && panel.searchText.length === 0 && panel.runtime.wallpaper.length > 0
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusLarge
+                clip: true
+
+                Image {
+                    anchors.fill: parent
+                    source: panel.runtime.wallpaper.length > 0 ? "file://" + panel.runtime.wallpaper : ""
+                    sourceSize: Qt.size(900, 600)
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectCrop
+                }
+
+                Rectangle {
+                    anchors {
+                        bottom: parent.bottom
+                        left: parent.left
+                        right: parent.right
+                    }
+                    height: 84
+                    color: Qt.rgba(panel.theme.background.r, panel.theme.background.g, panel.theme.background.b, 0.82)
+
+                    Column {
+                        anchors {
+                            fill: parent
+                            margins: panel.theme.spacing4
+                        }
+                        spacing: panel.theme.spacing2
+                        Text {
+                            text: "CURRENT · STYLIX"
+                            color: panel.theme.accent
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontPanelEyebrow
+                            font.weight: Font.DemiBold
+                        }
+                        Text {
+                            width: parent.width
+                            text: "Theme wallpaper"
+                            color: panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(16)
+                            font.weight: Font.DemiBold
+                        }
+                        Text {
+                            width: parent.width
+                            text: "Add files to ~/Pictures/Wallpapers to build a gallery"
+                            color: panel.theme.text
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(10)
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+
             Text {
                 anchors {
                     top: gallery.bottom
@@ -417,7 +482,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: panel.filteredEntries.length === 0
+                visible: panel.filteredEntries.length === 0 && (panel.loading || panel.searchText.length > 0 || panel.runtime.wallpaper.length === 0)
                 text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/Pictures/Wallpapers"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
