@@ -155,10 +155,11 @@ QtObject {
 
         const geometry = origin || ambientBar.originFor(screen, "calendar");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "weather" && expansionState.screen === screen);
+        const fromCalendar = expansionState.hasCurrent && expansionState.currentName === "calendar" && expansionState.screen === screen;
         if (opening)
             hideTransient("weather");
 
-        expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, "");
+        expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, fromCalendar ? "calendar" : "");
     }
 
     function showResources(): void {
