@@ -3,8 +3,8 @@ name: Nix build cache
 on:
   workflow_dispatch:
     inputs:
-      auto_merge_system_upgrade:
-        description: Merge an up-to-date system-upgrade PR after every NixOS build succeeds
+      auto_merge_system_update:
+        description: Merge an up-to-date system-update PR after every NixOS build succeeds
         required: false
         default: false
         type: boolean
@@ -28,8 +28,8 @@ jobs:
       matrix: ${{ steps.configurations.outputs.matrix }}
 
     steps:
-      - name: Mark system upgrade build check pending
-        if: inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
+      - name: Mark system update build check pending
+        if: inputs.auto_merge_system_update && github.ref_name == 'system-update'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -164,12 +164,12 @@ jobs:
           path: ${{ runner.temp }}/built-paths.txt
           if-no-files-found: ignore
 
-  report-system-upgrade:
-    name: Report system upgrade build check
+  report-system-update:
+    name: Report system update build check
     needs:
       - discover
       - build
-    if: always() && inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
+    if: always() && inputs.auto_merge_system_update && github.ref_name == 'system-update'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -200,10 +200,10 @@ jobs:
 
           [[ "$state" == success ]]
 
-  merge-system-upgrade:
-    name: Enable system upgrade auto-merge
-    needs: report-system-upgrade
-    if: inputs.auto_merge_system_upgrade && github.ref_name == 'system-upgrade'
+  merge-system-update:
+    name: Enable system update auto-merge
+    needs: report-system-update
+    if: inputs.auto_merge_system_update && github.ref_name == 'system-update'
     runs-on: ubuntu-24.04
     permissions:
       actions: write
@@ -211,7 +211,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Merge validated upgrade
+      - name: Merge validated update
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -223,20 +223,20 @@ jobs:
             gh pr list \
               --repo "$REPOSITORY" \
               --base main \
-              --head system-upgrade \
+              --head system-update \
               --state open \
               --json url \
               --jq '.[0].url // empty'
           )"
           [[ -n "$pr_url" ]] || {
-            echo "error: no open system-upgrade -> main PR found" >&2
+            echo "error: no open system-update -> main PR found" >&2
             exit 1
           }
 
           dispatch_validation() {
-            gh workflow run system-upgrade.yml \
+            gh workflow run system-update.yml \
               --repo "$REPOSITORY" \
-              --ref system-upgrade \
+              --ref system-update \
               -f validate_only=true
           }
 
@@ -252,12 +252,12 @@ jobs:
               sleep 2
             done
             [[ "$new_head" != "$old_head" ]] || {
-              echo "error: GitHub did not update system-upgrade to current main" >&2
+              echo "error: GitHub did not update system-update to current main" >&2
               exit 1
             }
 
             dispatch_validation
-            echo "Updated system-upgrade from main and dispatched fresh evaluation before rebuilding."
+            echo "Updated system-update from main and dispatched fresh evaluation before rebuilding."
           }
 
           head_sha="$(gh pr view "$pr_url" --repo "$REPOSITORY" --json headRefOid --jq .headRefOid)"
@@ -265,7 +265,7 @@ jobs:
           relation="$(gh api "repos/$REPOSITORY/compare/$base_sha...$head_sha" --jq .status)"
 
           if [[ "$relation" != "ahead" && "$relation" != "identical" ]]; then
-            echo "system-upgrade is not based on current main ($relation); updating it first."
+            echo "system-update is not based on current main ($relation); updating it first."
             refresh_and_revalidate
             exit 0
           fi
@@ -274,7 +274,7 @@ jobs:
           # update the PR and validate the new combined head instead of merging stale CI.
           latest_base="$(gh api "repos/$REPOSITORY/branches/main" --jq .commit.sha)"
           if [[ "$latest_base" != "$base_sha" ]]; then
-            echo "main moved during the merge check; refreshing system-upgrade first."
+            echo "main moved during the merge check; refreshing system-update first."
             refresh_and_revalidate
             exit 0
           fi
