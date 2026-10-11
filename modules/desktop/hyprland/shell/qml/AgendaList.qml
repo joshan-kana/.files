@@ -59,10 +59,20 @@ Column {
             width: parent.width - panel.theme.spacing4 * 2
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : (panel.agenda.configured ? "No upcoming events" : "Configure a local khal calendar to show events"))
+            text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : (panel.agenda.configured ? "No upcoming events" : "󰃰  Create local calendar  ↗"))
             color: panel.theme.textStrong
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
+        }
+
+        StateLayer {
+            visible: !panel.agenda.configured && !panel.agenda.loading
+            theme: panel.theme
+            motion: panel.motion
+            cornerRadius: panel.theme.radiusMedium
+            Accessible.role: Accessible.Button
+            Accessible.name: "Create local calendar"
+            onActivated: panel.agenda.setup()
         }
 
         MouseArea {
