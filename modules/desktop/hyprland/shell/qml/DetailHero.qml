@@ -13,10 +13,10 @@ ShellSurface {
     property string detail: ""
     property string glyph: "◇"
     property color glyphColor: theme.accent
-    property bool emphasized: false
 
     implicitHeight: 126
     surfaceLayer: ShellSurface.Group
+    fillColor: theme.expressiveSurfaceStrong
     cornerRadius: theme.radiusLarge
 
     ShellSurface {
