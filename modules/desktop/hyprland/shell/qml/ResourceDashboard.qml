@@ -10,7 +10,7 @@ Item {
 
     property bool open: false
     visible: open
-    implicitHeight: 440
+    implicitHeight: 555
 
     signal keyboardRequested
 
@@ -27,19 +27,15 @@ Item {
         width: parent.width
         spacing: panel.theme.spacing3
 
-        Text {
-            text: "PERFORMANCE / LIVE"
-            color: panel.theme.accent
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontPanelEyebrow
-            font.weight: Font.DemiBold
-        }
-        Text {
-            text: "Resources"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontPanelTitle
-            font.weight: Font.DemiBold
+        DetailHero {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: "◴"
+            eyebrow: "Performance / live"
+            title: "Resources"
+            detail: "CPU · Memory · Last " + panel.resourceState.historyLength * 2 + "s"
         }
 
         Row {
@@ -105,7 +101,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 102
+            height: 132
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -136,7 +132,8 @@ Item {
                     }
                 }
                 Row {
-                    height: 44
+                    width: parent.width
+                    height: 72
                     spacing: 3
                     Repeater {
                         model: panel.resourceState.historyLength
@@ -144,8 +141,8 @@ Item {
                             id: bar
                             required property int index
                             readonly property real fraction: panel.resourceState.cpuHistory[index] || 0
-                            width: 11
-                            height: 44
+                            width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
+                            height: 72
                             Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: parent.width
