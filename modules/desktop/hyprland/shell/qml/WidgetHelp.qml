@@ -23,6 +23,7 @@ Item {
         NumberAnimation {
             duration: help.motion.fast
             easing.type: help.open ? help.motion.enterType : help.motion.exitType
+            easing.bezierCurve: help.open ? help.motion.enterCurve : help.motion.exitCurve
         }
     }
 
