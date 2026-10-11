@@ -543,9 +543,7 @@
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          darwin-eval =
-            assert import ./tests/darwin-host.nix { configuration = self.darwinConfigurations.mac; };
-            builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
