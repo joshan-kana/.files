@@ -231,20 +231,15 @@ PanelWindow {
                 width: parent.width
                 spacing: panel.theme.spacing2
 
-                Text {
-                    text: panel.entries.length + (panel.entries.length === 1 ? " item" : " items")
-                    color: panel.theme.accent
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(12)
-                    font.weight: Font.Medium
-                }
-
-                Text {
-                    text: "Clipboard"
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontPanelTitle
-                    font.weight: Font.DemiBold
+                DetailHero {
+                    width: parent.width
+                    runtime: panel.runtime
+                    theme: panel.theme
+                    motion: panel.motion
+                    glyph: "▣"
+                    eyebrow: "History / Clipboard"
+                    title: "Clipboard"
+                    detail: panel.entries.length + (panel.entries.length === 1 ? " item" : " items") + " · Search and paste"
                 }
 
                 SquircleSurface {
