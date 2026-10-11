@@ -228,6 +228,7 @@ FocusScope {
                     ]))))
 
     signal closeRequested
+    signal themeTerminalActiveChanged(bool active)
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
@@ -1103,7 +1104,8 @@ FocusScope {
             motion: root.motion
 
             onKeyboardRequested: keyboardFocus.forceActiveFocus()
-            onSwitchLaunched: root.closeRequested()
+            onSwitchLaunched: root.themeTerminalActiveChanged(true)
+            onSwitchFinished: root.themeTerminalActiveChanged(false)
         }
 
         SessionPanel {
