@@ -308,6 +308,17 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3
             }
             clip: true
+            // Incoming tiles have their final layout width from the first frame.
+            // Do not reveal them while the animated squircle is narrower, since
+            // that would slice off the trailing columns as it expands.
+            opacity: width + 1 >= contentLoader.width ? 1 : 0
+            enabled: opacity > 0.99
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: host.motion.effectsFast
+                    easing.type: host.motion.effectsType
+                }
+            }
             contentWidth: width
             contentHeight: contentLoader.height
             boundsBehavior: Flickable.StopAtBounds
