@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell
 import Quickshell.Io
 
 Item {
@@ -10,6 +11,7 @@ Item {
     required property Motion motion
 
     signal keyboardRequested
+    signal switchLaunched
 
     property bool open: false
     property var themes: []
@@ -18,8 +20,6 @@ Item {
     property int selectedIndex: 0
     property string statusText: ""
     property bool statusError: false
-
-    readonly property bool applying: switchProcess.running
 
     Connections {
         target: panel.runtime
@@ -35,7 +35,6 @@ Item {
     property StdioCollector registryError: StdioCollector {}
     property StdioCollector currentOutput: StdioCollector {}
     property StdioCollector currentError: StdioCollector {}
-    property StdioCollector switchError: StdioCollector {}
 
     property Process registryProcess: Process {
         stdout: panel.registryOutput
@@ -70,22 +69,6 @@ Item {
 
             panel.currentTheme = panel.currentOutput.text.trim();
             panel.selectCurrentTheme();
-        }
-    }
-
-    property Process switchProcess: Process {
-        stderr: panel.switchError
-
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
-                panel.setError(panel.switchError.text, "FAILED TO OPEN THEME TERMINAL");
-            else {
-                // The full-system theme switch happens in stock nh, not here.
-                panel.statusText = "THEME TERMINAL CLOSED // CHECK SYSTEM STATUS";
-                panel.statusError = false;
-                panel.refreshCurrentTheme();
-            }
-            panel.keyboardRequested();
         }
     }
 
@@ -175,7 +158,7 @@ Item {
     }
 
     function activateSelected(): void {
-        if (runtime.themeSet.length === 0 || applying)
+        if (runtime.themeSet.length === 0)
             return;
 
         const selected = selectedTheme();
@@ -190,7 +173,10 @@ Item {
 
         statusText = "OPENING TERMINAL // " + (selected.label || selected.name).toUpperCase();
         statusError = false;
-        switchProcess.exec([runtime.themeSet, "switch", selected.name]);
+        // This process owns an interactive terminal and must survive the
+        // closing panel. The hub releases its Wayland keyboard focus first.
+        Quickshell.execDetached([runtime.themeSet, "switch", selected.name]);
+        switchLaunched();
     }
 
     Column {
@@ -366,7 +352,7 @@ Item {
             width: parent.width
             visible: panel.statusText.length > 0
             text: panel.statusText
-            color: panel.statusError ? panel.theme.critical : (panel.applying ? panel.theme.warning : panel.theme.positive)
+            color: panel.statusError ? panel.theme.critical : panel.theme.positive
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: panel.runtime.fontMono
@@ -388,8 +374,8 @@ Item {
             }
 
             Text {
-                text: panel.applying ? "ENTER  OPENING" : "ENTER  SWITCH"
-                color: panel.applying ? panel.theme.warning : panel.theme.accent
+                text: "ENTER  SWITCH"
+                color: panel.theme.accent
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontKeyHint
                 font.letterSpacing: 0.8
