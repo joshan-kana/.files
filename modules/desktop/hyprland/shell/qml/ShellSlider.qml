@@ -10,10 +10,20 @@ Item {
     property real to: 1
     property real value: 0
     property bool interactive: true
+    // Animate external/keyboard changes, never fight pointer dragging.
+    property bool animateValueChanges: false
     property color accentColor: theme.accent
     property real trackHeight: 10
     property real handleSize: 20
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
+    property real displayedValue: normalizedValue
+    Behavior on displayedValue {
+        enabled: root.animateValueChanges && !interaction.pressed
+        Anim {
+            motion: root.motion
+            type: Anim.FastSpatial
+        }
+    }
 
     signal valueRequested(real value)
     signal interactionStarted(real value)
@@ -44,7 +54,7 @@ Item {
 
         Rectangle {
             height: parent.height
-            width: parent.width * root.normalizedValue
+            width: parent.width * root.displayedValue
             radius: parent.radius
             color: root.accentColor
         }
@@ -55,7 +65,7 @@ Item {
         width: root.handleSize
         height: root.handleSize
         radius: width / 2
-        x: root.normalizedValue * Math.max(1, root.width - width)
+        x: root.displayedValue * Math.max(1, root.width - width)
         anchors.verticalCenter: parent.verticalCenter
         color: root.accentColor
         scale: interaction.pressed ? 1.18 : 1
