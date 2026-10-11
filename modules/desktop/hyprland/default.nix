@@ -280,15 +280,31 @@ in
             sensitivity = -0.5;
           };
 
-          window_rule = {
-            match.class = "polkit-kde-authentication-agent-1";
-            float = true;
-            center = true;
-            size = [
-              500
-              250
-            ];
-          };
+          window_rule = [
+            {
+              match.class = "polkit-kde-authentication-agent-1";
+              float = true;
+              center = true;
+              size = [
+                500
+                250
+              ];
+            }
+            {
+              # The theme prompt must coexist with the centre picker and the
+              # desktop, even on the system-owned special workspace.
+              match.class = "LinuxDesktopThemeSwitch";
+              float = true;
+              size = [
+                640
+                390
+              ];
+              move = [
+                64
+                90
+              ];
+            }
+          ];
 
           on = {
             _args = [
