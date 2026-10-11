@@ -79,6 +79,7 @@ PanelWindow {
             NumberAnimation {
                 duration: panel.motion.fast
                 easing.type: panel.open ? panel.motion.enterType : panel.motion.exitType
+                easing.bezierCurve: panel.open ? panel.motion.enterCurve : panel.motion.exitCurve
             }
         }
 
@@ -104,11 +105,14 @@ PanelWindow {
             NumberAnimation {
                 duration: panel.motion.normal
                 easing.type: panel.motion.enterType
+                easing.bezierCurve: panel.motion.enterCurve
             }
         }
         Behavior on opacity {
             NumberAnimation {
                 duration: panel.motion.fast
+                easing.type: panel.motion.effectsType
+                easing.bezierCurve: panel.motion.effectsCurve
             }
         }
 
