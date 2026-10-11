@@ -95,8 +95,13 @@ ShellRoot {
             motion: root.motionRef
             weather: root.weatherRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "weather"
-            onCalendarRequested: actions.toggleCalendar()
-            onCloseRequested: expansionState.close()
+            onCalendarRequested: actions.toggleCalendar(expansionState.screen)
+            onCloseRequested: {
+                if (expansionState.currentView === "calendar")
+                    actions.toggleCalendar(expansionState.screen);
+                else
+                    expansionState.close();
+            }
         }
     }
 
