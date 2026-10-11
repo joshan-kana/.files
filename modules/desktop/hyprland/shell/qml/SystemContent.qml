@@ -794,7 +794,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 168 : 76
+                    height: root.media.available ? 202 : 76
                     visible: true
                     theme: root.theme
                     motion: root.motion
@@ -917,7 +917,7 @@ FocusScope {
 
                         Item {
                             width: parent.width
-                            height: root.media.available ? 22 : 0
+                            height: root.media.available ? 56 : 0
                             visible: root.media.available
 
                             SpectrumScale {
