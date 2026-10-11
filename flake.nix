@@ -550,8 +550,8 @@
             text = builtins.readFile ./scripts/update-container-lock;
           };
 
-          systemUpgrade = pkgs.writeShellApplication {
-            name = "system-upgrade";
+          systemUpdate = pkgs.writeShellApplication {
+            name = "system-update";
             runtimeInputs = [
               pkgs.fzf
               pkgs.git
@@ -573,11 +573,11 @@
                         | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
                       update-container-lock --list | jq -Rr '["container", .] | @tsv'
                     } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
-                      --header='Tab: select multiple • Enter: upgrade'
+                      --header='Tab: select multiple • Enter: update'
                   ) || exit 0
                   ;;
                 1:--all) selections=$'all\t*' ;;
-                *) echo "usage: system-upgrade [--all]" >&2; exit 1 ;;
+                *) echo "usage: system-update [--all]" >&2; exit 1 ;;
               esac
 
               inputs=()
@@ -638,9 +638,9 @@
             program = lib.getExe docsCommands.serve;
             meta.description = "Build and live-preview the generated repository manual";
           };
-          system-upgrade = {
+          system-update = {
             type = "app";
-            program = lib.getExe systemUpgrade;
+            program = lib.getExe systemUpdate;
             meta.description = "Update Nix inputs and container locks, then check the flake";
           };
           update-container-lock = {
