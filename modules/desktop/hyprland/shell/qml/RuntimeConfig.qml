@@ -15,6 +15,7 @@ QtObject {
     readonly property string wallpaper: root.configData.wallpaper
     readonly property string bluetoothctl: root.configData.tools.bluetoothctl
     readonly property string weatherCurl: Quickshell.env("LINUX_DESKTOP_WEATHER_CURL") || root.configData.tools.weatherCurl
+    readonly property string agendaSetup: root.configData.tools.agendaSetup
     readonly property string agendaQuery: Quickshell.env("LINUX_DESKTOP_AGENDA_QUERY") || root.configData.tools.agendaQuery
     readonly property string brightnessctl: root.configData.tools.brightnessctl
     readonly property string cliphist: root.configData.tools.cliphist
@@ -115,6 +116,7 @@ QtObject {
                 property string bluetoothctl: ""
                 property string weatherCurl: ""
                 property string agendaQuery: ""
+                property string agendaSetup: ""
                 property string brightnessctl: ""
                 property string cliphist: ""
                 property string clipboardCopy: ""
