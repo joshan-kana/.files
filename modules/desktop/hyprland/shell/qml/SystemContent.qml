@@ -527,7 +527,7 @@ FocusScope {
                             label: "Theme",
                             icon: "󰏘",
                             value: "Palette",
-                            active: true
+                            active: false
                         },
                         {
                             id: "wallpaper",
@@ -535,7 +535,7 @@ FocusScope {
                             label: "Wallpaper",
                             icon: "󰸉",
                             value: "Library",
-                            active: true
+                            active: false
                         },
                         {
                             id: "session",
@@ -543,7 +543,7 @@ FocusScope {
                             label: "Session",
                             icon: "󰐥",
                             value: "Power",
-                            active: true
+                            active: false
                         }
                     ]
 
@@ -665,7 +665,7 @@ FocusScope {
                             motion: root.motion
                             compact: true
                             value: root.system.batteryPercent / 100
-                            accentColor: root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
+                            accentColor: root.powerProfile.current === "power-saver" || root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
                             compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
                         }
 
@@ -782,8 +782,8 @@ FocusScope {
                 spacing: root.theme.spacing2
 
                 Text {
-                    visible: root.media.available
-                    text: "MEDIA  ·  SHIFT+H/L SEEK"
+                    visible: true
+                    text: root.media.available ? "MEDIA  ·  ⇧H/L SEEK" : "MEDIA  ·  N OPEN NOW PLAYING"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
@@ -793,8 +793,8 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: 168
-                    visible: root.media.available
+                    height: root.media.available ? 168 : 76
+                    visible: true
                     theme: root.theme
                     motion: root.motion
                     surfaceLayer: ShellSurface.Group
@@ -817,6 +817,7 @@ FocusScope {
                         }
                         z: 1
                         text: "V"
+                        visible: root.media.available
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono
                         font.pixelSize: root.theme.fontSize(11)
@@ -868,7 +869,7 @@ FocusScope {
                                 spacing: root.theme.spacing1
 
                                 Text {
-                                    text: root.media.identity || "Now playing"
+                                    text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
                                     width: parent.width
                                     color: root.theme.accent
                                     font.family: root.runtime.fontMono
@@ -877,7 +878,7 @@ FocusScope {
                                 }
 
                                 Text {
-                                    text: root.media.title
+                                    text: root.media.available ? root.media.title : "No active media player"
                                     width: parent.width
                                     color: root.theme.textStrong
                                     font.family: root.runtime.fontMono
@@ -888,6 +889,7 @@ FocusScope {
 
                                 Text {
                                     text: root.media.artist
+                                    visible: root.media.available
                                     width: parent.width
                                     color: root.theme.textMuted
                                     font.family: root.runtime.fontMono
@@ -899,7 +901,8 @@ FocusScope {
 
                         Item {
                             width: parent.width
-                            height: 40
+                            height: root.media.available ? 40 : 0
+                            visible: root.media.available
 
                             MediaTransport {
                                 anchors.centerIn: parent
@@ -913,7 +916,8 @@ FocusScope {
 
                         Item {
                             width: parent.width
-                            height: 22
+                            height: root.media.available ? 22 : 0
+                            visible: root.media.available
 
                             SpectrumScale {
                                 id: compactFrequency
@@ -1133,17 +1137,16 @@ FocusScope {
             }
             spacing: root.theme.spacing3
 
-            Text {
-                text: "?  HELP"
-                color: root.theme.textMuted
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontKeyHint
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.helpOpen = true
-                }
+            ShellAction {
+                width: 36
+                height: 30
+                iconOnly: true
+                icon: "󰋗"
+                title: "Help (?)"
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
+                onActivated: root.helpOpen = true
             }
         }
 
