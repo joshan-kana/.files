@@ -50,6 +50,22 @@ QtObject {
         onTriggered: agenda.refresh()
     }
 
+    function setup(): void {
+        if (runtime.agendaSetup.length > 0 && !setupProcess.running)
+            setupProcess.exec([runtime.agendaSetup]);
+    }
+
+    property StdioCollector setupError: StdioCollector {}
+    property Process setupProcess: Process {
+        stderr: agenda.setupError
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0)
+                agenda.refresh();
+            else
+                agenda.errorMessage = agenda.setupError.text.trim() || "Could not create local calendar";
+        }
+    }
+
     property StdioCollector queryOutput: StdioCollector {}
     property StdioCollector queryError: StdioCollector {}
     property Process fetchProcess: Process {
