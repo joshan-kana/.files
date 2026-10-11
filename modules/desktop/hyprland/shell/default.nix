@@ -87,7 +87,21 @@ let
             printf 'Theme chooser is configured for user %s\n' "$expectedUser" >&2
             exit 1
           fi
-          exec "$terminal" -e ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected"
+          # Interactive theme switching uses its own system-owned special workspace.
+          # It must not hijack normal windows or the user special:magic workspace.
+          hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null
+          restore_workspace() {
+            hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null || true
+          }
+          trap restore_workspace EXIT
+          case "$terminal" in
+            alacritty|*/alacritty)
+              "$terminal" --class LinuxDesktopThemeSwitch -e ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected"
+              ;;
+            *)
+              "$terminal" -e ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected"
+              ;;
+          esac
           ;;
         *)
           printf 'Usage: theme-set {list [--json]|current|switch <theme>}\n' >&2
