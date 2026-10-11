@@ -23,8 +23,64 @@ PanelWindow {
     property bool closing: false
     property bool themeTerminalActive: false
 
-    readonly property Item loadedContent: contentLoader.item as Item
-    readonly property SystemContent systemContent: expansionState.currentName === "system" ? contentLoader.item as SystemContent : null
+    // Keep the outgoing component alive while the new view enters. Replacing
+    // one Loader destroys the old view instantly, causing a hard content cut
+    // even though the surrounding surface continues to morph.
+    property int activeSlot: -1
+    readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : null
+    readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
+    readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
+
+    function presentComponent(next: Component): void {
+        if (!next) {
+            contentTransition.stop();
+            contentLoaderA.sourceComponent = null;
+            contentLoaderB.sourceComponent = null;
+            activeSlot = -1;
+            return;
+        }
+
+        if (activeLoader && activeLoader.sourceComponent === next)
+            return;
+
+        const incoming = activeSlot === 0 ? contentLoaderB : contentLoaderA;
+        const outgoing = activeLoader;
+        contentTransition.stop();
+        incoming.opacity = 0;
+        // Enable the destination before constructing its FocusScope. Its
+        // onEngagedChanged requests keyboard focus during instantiation.
+        activeSlot = incoming === contentLoaderA ? 0 : 1;
+        incoming.sourceComponent = next;
+        contentViewport.contentY = 0;
+        if (outgoing) {
+            outgoing.opacity = 0;
+            incoming.opacity = 1;
+            contentTransition.restart();
+        } else {
+            incoming.opacity = 1;
+        }
+        geometryUpdate.restart();
+        // FocusScope descendants request focus as they are constructed, but
+        // Loader can replace that focus while finishing the load. Restore it
+        // once the destination is fully attached to the active loader.
+        Qt.callLater(() => {
+            if (host.expansionState.hasCurrent && host.currentComponent === next && host.loadedContent)
+                host.loadedContent.forceActiveFocus();
+        });
+    }
+
+    onCurrentComponentChanged: presentComponent(currentComponent)
+    Component.onCompleted: presentComponent(currentComponent)
+
+    Timer {
+        id: contentTransition
+        interval: Math.max(1, host.motion.morph)
+        repeat: false
+        onTriggered: {
+            const outgoing = host.activeSlot === 0 ? contentLoaderB : contentLoaderA;
+            outgoing.sourceComponent = null;
+        }
+    }
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
@@ -316,36 +372,50 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3
             }
             clip: true
-            // Incoming tiles have their final layout width from the first frame.
-            // Do not reveal them while the animated squircle is narrower, since
-            // that would slice off the trailing columns as it expands.
-            opacity: width + 1 >= contentLoader.width ? 1 : 0
-            enabled: opacity > 0.99
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: host.motion.effectsFast
-                    easing.type: host.motion.effectsType
-                }
-            }
+            // Each view retains its destination layout; overlapping loaders
+            // crossfade while the squircle morphs. Scaling compensates only
+            // for the brief period when the animated viewport is narrower.
             contentWidth: width
-            contentHeight: contentLoader.height
+            contentHeight: host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : height
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
 
             Loader {
-                id: contentLoader
-                // Lay out the incoming tab at its destination width while
-                // the outer squircle morphs. Otherwise every tile reflows
-                // through intermediate widths on each animation frame.
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, host.targetWidth - host.theme.spacing5 * 2))
-                height: Math.max(contentViewport.height, host.loadedContent ? host.loadedContent.implicitHeight : 0)
-                onLoaded: {
-                    contentViewport.contentY = 0;
-                    geometryUpdate.restart();
+                id: contentLoaderA
+                readonly property Item contentItem: item as Item
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
+                transformOrigin: Item.TopLeft
+                scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                x: (contentViewport.width - width * scale) / 2
+                opacity: 0
+                enabled: host.activeSlot === 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: host.motion.morph
+                        easing.type: host.motion.morphType
+                    }
                 }
+                onLoaded: geometryUpdate.restart()
+            }
 
-                active: host.visible && host.currentComponent !== null
-                sourceComponent: host.currentComponent
+            Loader {
+                id: contentLoaderB
+                readonly property Item contentItem: item as Item
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
+                transformOrigin: Item.TopLeft
+                scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                x: (contentViewport.width - width * scale) / 2
+                opacity: 0
+                enabled: host.activeSlot === 1
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: host.motion.morph
+                        easing.type: host.motion.morphType
+                    }
+                }
+                onLoaded: geometryUpdate.restart()
             }
         }
     }
