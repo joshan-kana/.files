@@ -155,7 +155,7 @@ let
         base01 = "1a1a1a";
         base02 = "3a3a3a";
         base03 = "505050";
-        base04 = "666666";
+        base04 = "999999";
         base05 = "ffffff";
         base06 = "ffffff";
         base07 = "ffffff";
