@@ -209,7 +209,9 @@ in
       inherit ((nhConfig args)) programs;
     };
     config = lib.optionalAttrs isLinux {
-      inherit ((nhConfig args)) programs;
+      programs = lib.recursiveUpdate (nhConfig args).programs {
+        nh.enable = true;
+      };
     };
   };
 
@@ -262,7 +264,8 @@ in
     {
       environment.shellAliases = aliases;
       config = lib.optionalAttrs isLinux {
-        programs = (direnvConfig args).programs // {
+        programs = lib.recursiveUpdate (direnvConfig args).programs {
+          direnv.enable = true;
           zsh = {
             shellAliases = zshAliases;
             interactiveShellInit = hook;
@@ -489,6 +492,7 @@ in
       };
 
       config = lib.optionalAttrs isLinux {
+        programs.git.enable = true;
         programs.git.config = gitSettings // {
           gpg.format = gitSigningFormat;
         };
@@ -547,6 +551,7 @@ in
       environment.shellAliases = aliases;
       config = lib.optionalAttrs isLinux {
         programs.zsh = (zshConfig args).programs.zsh // {
+          enable = true;
           enableBashCompletion = true;
         };
         users.defaultUserShell = pkgs.zsh;
@@ -659,7 +664,9 @@ in
 
   starship = args: {
     config = lib.optionalAttrs isLinux {
-      inherit (starshipConfig args) programs;
+      programs = lib.recursiveUpdate (starshipConfig args).programs {
+        starship.enable = true;
+      };
     };
 
     home = args: {
@@ -751,7 +758,9 @@ in
     in
     {
       config = lib.optionalAttrs isLinux {
-        inherit (neovimConfig args) programs;
+        programs = lib.recursiveUpdate (neovimConfig args).programs {
+          neovim.enable = true;
+        };
       };
       environment.shellAliases = aliases;
 
