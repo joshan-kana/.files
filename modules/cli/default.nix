@@ -647,6 +647,7 @@ in
   zellij = _: {
     home = _: {
       programs.zellij.enable = true;
+      xdg.configFile."zellij/config.kdl".source = ./zellij.kdl;
     };
   };
 
@@ -773,16 +774,25 @@ in
       environment.systemPackages = [ pkgs.fastfetch ];
 
       home = _: {
+        home.packages = [ pkgs.fastfetch ];
         home.shellAliases = aliases;
       };
     };
 
   tree = _: {
     environment.systemPackages = [ pkgs.tree ];
+
+    home = _: {
+      home.packages = [ pkgs.tree ];
+    };
   };
 
   glow = _: {
     environment.systemPackages = [ pkgs.glow ];
+
+    home = _: {
+      home.packages = [ pkgs.glow ];
+    };
   };
 
   stow = _: {
@@ -861,6 +871,41 @@ in
 
   dust = _: {
     environment.systemPackages = [ pkgs.dust ];
+
+    home = _: {
+      home.packages = [ pkgs.dust ];
+    };
+  };
+
+  nixShell = _: {
+    home = _: {
+      home.packages = [
+        (pkgs.writeShellApplication {
+          name = "ns";
+          text = ''
+            if (( $# == 0 )); then
+              echo "usage: ns package1 package2 ... [-- command args...]" >&2
+              exit 2
+            fi
+
+            packages=()
+            while (( $# )); do
+              if [[ "$1" == "--" ]]; then
+                shift
+                break
+              fi
+              packages+=("nixpkgs#$1")
+              shift
+            done
+
+            if (( $# )); then
+              exec nix shell "''${packages[@]}" --command "$@"
+            fi
+            exec nix shell "''${packages[@]}"
+          '';
+        })
+      ];
+    };
   };
 
 }
