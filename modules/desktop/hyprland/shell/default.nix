@@ -636,6 +636,7 @@ in
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
           powerprofilesctl = lib.getExe' pkgs.power-profiles-daemon "powerprofilesctl";
+          powerprofilesMonitor = lib.getExe' pkgs.dbus "dbus-monitor";
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
