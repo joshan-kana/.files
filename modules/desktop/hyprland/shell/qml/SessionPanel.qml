@@ -184,35 +184,17 @@ Item {
 
     implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 * 3
 
-    Column {
+    DetailHero {
         id: header
         width: parent.width
-        spacing: panel.theme.spacing1
-
-        Text {
-            text: "SESSION"
-            color: panel.theme.accent
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(11)
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            text: "Power & session"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSubpanelTitle
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            text: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
-            color: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-        }
+        runtime: panel.runtime
+        theme: panel.theme
+        motion: panel.motion
+        glyph: panel.armedAction.length > 0 ? "!" : "⏻"
+        glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.accent
+        eyebrow: "Session"
+        title: "Power & session"
+        detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
     }
 
     Column {

@@ -42,7 +42,7 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 812
-    implicitHeight: 422
+    implicitHeight: 470
     focus: engaged
 
     onEngagedChanged: {
@@ -99,8 +99,8 @@ FocusScope {
             spacing: content.theme.spacing4
 
             ShellSurface {
-                width: 112
-                height: 112
+                width: 132
+                height: 132
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
@@ -184,7 +184,7 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: 118
+                height: 142
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
