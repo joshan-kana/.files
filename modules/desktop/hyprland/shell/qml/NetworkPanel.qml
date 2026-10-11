@@ -172,53 +172,86 @@ Item {
         }
     }
 
-    Column {
+    ShellSurface {
         id: header
 
         width: parent.width
-        spacing: panel.theme.spacing1
+        height: 146
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: panel.theme.radiusLarge
 
-        Text {
-            text: "Network · " + panel.system.connectivityText.toLowerCase()
-            color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(11)
-            font.weight: Font.Medium
-        }
-
-        Text {
-            text: panel.system.wifiAvailable ? "Wi-Fi" : "Network"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSubpanelTitle
-            font.weight: Font.DemiBold
-        }
-
-        Row {
-            width: parent.width
-            spacing: panel.theme.spacing3
+        ShellSurface {
+            width: 78
+            height: 78
+            anchors.left: parent.left
+            anchors.leftMargin: panel.theme.spacing4
+            anchors.verticalCenter: parent.verticalCenter
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: panel.theme.radiusMedium
 
             Text {
-                text: panel.system.networkConnected ? panel.system.networkName : "Offline"
-                color: panel.theme.text
+                anchors.centerIn: parent
+                text: "◎"
+                color: panel.theme.accent
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+                font.pixelSize: panel.theme.fontSize(39)
+            }
+        }
+
+        Column {
+            anchors {
+                fill: parent
+                margins: panel.theme.spacing4
+                leftMargin: panel.theme.spacing4 + 96
+            }
+            spacing: panel.theme.spacing2
+
+            Text {
+                text: "Network · " + panel.system.connectivityText.toLowerCase()
+                color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
+                font.weight: Font.Medium
             }
 
             Text {
-                visible: panel.system.wifiAvailable
-                text: panel.system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
-                color: panel.system.wifiEnabled ? panel.theme.accent : panel.theme.critical
+                text: panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+                color: panel.theme.textStrong
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+                font.pixelSize: panel.theme.fontSubpanelTitle
+                font.weight: Font.DemiBold
             }
 
-            Text {
-                visible: panel.system.wifiAvailable && !panel.system.wifiHardwareEnabled
-                text: "Wi-Fi hardware unavailable"
-                color: panel.theme.critical
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(9)
+            Row {
+                width: parent.width
+                spacing: panel.theme.spacing3
+
+                Text {
+                    text: panel.system.networkConnected ? panel.system.networkName : "Offline"
+                    color: panel.theme.text
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
+
+                Text {
+                    visible: panel.system.wifiAvailable
+                    text: panel.system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
+                    color: panel.system.wifiEnabled ? panel.theme.accent : panel.theme.critical
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
+
+                Text {
+                    visible: panel.system.wifiAvailable && !panel.system.wifiHardwareEnabled
+                    text: "Wi-Fi hardware unavailable"
+                    color: panel.theme.critical
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(9)
+                }
             }
         }
     }
@@ -446,16 +479,48 @@ Item {
             }
         }
 
-        Text {
+        ShellSurface {
             anchors.centerIn: parent
-            visible: !panel.system.wifiAvailable && !panel.passwordPrompt
             width: parent.width
-            text: panel.system.networkConnected ? "WIRED LINK // " + panel.system.networkName : "NO WI-FI DEVICE // NETWORK OFFLINE"
-            horizontalAlignment: Text.AlignHCenter
-            color: panel.system.networkConnected ? panel.theme.text : panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-            font.letterSpacing: 0.8
+            height: 160
+            visible: !panel.system.wifiAvailable && !panel.passwordPrompt
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusLarge
+
+            Column {
+                width: parent.width - panel.theme.spacing5 * 2
+                anchors.centerIn: parent
+                spacing: panel.theme.spacing3
+
+                Text {
+                    text: panel.system.networkConnected ? "WIRED CONNECTION" : "NO ACTIVE CONNECTION"
+                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(11)
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    width: parent.width
+                    text: panel.system.networkName
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(20)
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    text: "No Wi-Fi adapter is available on this host."
+                    color: panel.theme.textMuted
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(10)
+                    wrapMode: Text.WordWrap
+                }
+            }
         }
 
         Text {
