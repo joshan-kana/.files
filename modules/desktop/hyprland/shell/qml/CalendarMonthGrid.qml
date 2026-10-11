@@ -8,6 +8,7 @@ Grid {
     required property Motion motion
     required property var monthLayout
     property int selectedDay: 0
+    property real daySize: 42
     property bool interactive: true
 
     signal dayActivated(int cellIndex)
@@ -28,6 +29,8 @@ Grid {
 
             theme: monthGrid.theme
             motion: monthGrid.motion
+            width: monthGrid.daySize
+            height: monthGrid.daySize
             day: dateInfo.day
             dayState: dateInfo.today
             picked: monthGrid.selectedDay > 0 && monthGrid.selectedDay === day && dayState !== -1
