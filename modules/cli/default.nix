@@ -122,14 +122,14 @@ in
     let
       commands = {
         cd = "cd $DOTFILES";
-        flakeUpdate = "nix run ${repoPath}#system-upgrade --";
+        systemUpdate = "nix run ${repoPath}#system-update --";
         rebuild = action: "nh os ${action} --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
       };
       aliases = {
         syscd = commands.cd;
         scd = commands.cd;
-        sysfu = commands.flakeUpdate;
-        sfu = commands.flakeUpdate;
+        sysfu = commands.systemUpdate;
+        sfu = commands.systemUpdate;
         sysbld = commands.rebuild "build";
         sbld = commands.rebuild "build";
         sysboot = commands.rebuild "boot";
