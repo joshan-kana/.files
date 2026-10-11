@@ -57,6 +57,8 @@ in
 
   users.users.${primary}.home = "/Users/${primary}";
   dotfiles.users.primary.homeRoot = "/Users";
+  # The Darwin host exposes the same resolved semantic-scope tree as NixOS.
+  dotfiles.resolvedScopes = config.home-manager.users.${primary}.dotfiles.resolvedScopes;
 
   # Install only foundational, non-creative Mac applications here.
   homebrew = {
@@ -99,6 +101,8 @@ in
   home-manager = {
     # Preserve the hand-maintained originals when Home Manager first takes ownership.
     backupFileExtension = "before-nix";
+    extraSpecialArgs.configurationName = "mac";
+    sharedModules = [ ../../modules/options ];
     useGlobalPkgs = true;
     useUserPackages = true;
     users.${primary} =
