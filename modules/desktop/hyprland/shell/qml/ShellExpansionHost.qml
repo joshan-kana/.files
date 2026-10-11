@@ -285,7 +285,11 @@ PanelWindow {
             }
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
+            // Use intrinsic tab content and the stable viewport budget. Testing
+            // against contentViewport.height would make this Text's own wrap
+            // height a dependency of its content, creating a binding loop.
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing5 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
+            text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (host.loadedContent && host.loadedContent.implicitHeight > scrollBudget ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
             font.pixelSize: host.theme.fontKeyHint
