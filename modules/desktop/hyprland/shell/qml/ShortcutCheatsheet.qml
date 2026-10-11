@@ -348,15 +348,12 @@ PanelWindow {
                                         surfaceLayer: ShellSurface.Control
                                         cornerRadius: theme.radiusSmall
 
-                                        Text {
+                                        KeyChord {
                                             anchors.centerIn: parent
-                                            text: KeyGlyphs.display(shortcutBinding.modelData.key)
-                                            color: window.theme.textStrong
-                                            // Monospace keeps letters and modifiers proportionate;
-                                            // Qt falls back for symbols the font lacks.
-                                            font.family: window.runtime.fontMono
-                                            font.pixelSize: window.theme.fontSize(16)
-                                            font.weight: Font.DemiBold
+                                            shortcut: shortcutBinding.modelData.key
+                                            fontFamily: window.runtime.fontMono
+                                            textColor: window.theme.textStrong
+                                            fontSize: window.theme.fontSize(16)
                                         }
                                     }
 
