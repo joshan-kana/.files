@@ -13,8 +13,8 @@ MouseArea {
     property bool manualPress: false
     property bool showHover: true
     property color stateColor: selected ? theme.accent : theme.textStrong
-    property real hoverOpacity: 0.08
-    property real pressOpacity: 0.12
+    property real hoverOpacity: 0.10
+    property real pressOpacity: 0.16
     property real cornerRadius: theme.radiusMedium
 
     property real rippleX: width / 2
