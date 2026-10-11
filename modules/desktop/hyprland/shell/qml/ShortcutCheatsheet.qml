@@ -34,7 +34,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: window.motion.normal
+        interval: window.motion.normal + (window.motion.enabled ? 24 : 0)
         onTriggered: window.closing = false
     }
 
@@ -116,10 +116,10 @@ PanelWindow {
 
     function show(): void {
         closeTimer.stop();
+        open = true;
         closing = false;
         search.text = "";
         flick.contentY = 0;
-        open = true;
         Qt.callLater(() => {
             if (open)
                 keySink.forceActiveFocus();
@@ -130,14 +130,13 @@ PanelWindow {
         if (!open)
             return;
 
+        // Keep the Wayland surface alive throughout the exit animation.
+        // Dropping open before raising closing transiently made visible false.
+        closing = motion.enabled;
         open = false;
         helpOpen = false;
-        if (motion.fast === 0) {
-            closing = false;
-        } else {
-            closing = true;
+        if (closing)
             closeTimer.restart();
-        }
     }
 
     function toggle(): void {
@@ -179,8 +178,16 @@ PanelWindow {
         cornerRadius: theme.radiusPanel
 
         scale: window.open ? 1 : theme.panelClosedScale
+        opacity: window.open ? 1 : 0
 
         Behavior on scale {
+            NumberAnimation {
+                duration: window.motion.normal
+                easing.type: window.open ? window.motion.enterType : window.motion.exitType
+                easing.bezierCurve: window.open ? window.motion.enterCurve : window.motion.exitCurve
+            }
+        }
+        Behavior on opacity {
             NumberAnimation {
                 duration: window.motion.normal
                 easing.type: window.open ? window.motion.enterType : window.motion.exitType
