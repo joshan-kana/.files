@@ -784,7 +784,7 @@ FocusScope {
 
                 Text {
                     visible: true
-                    text: root.media.available ? "MEDIA  ·  ⇧H/L SEEK" : "MEDIA  ·  V OPEN NOW PLAYING"
+                    text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "MEDIA  ·  V OPEN NOW PLAYING"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
