@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "KeyGlyphs.js" as KeyGlyphs
 import Quickshell
 import Quickshell.Wayland
 
@@ -33,7 +34,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: window.motion.fast
+        interval: window.motion.normal
         onTriggered: window.closing = false
     }
 
@@ -181,7 +182,7 @@ PanelWindow {
         Behavior on scale {
             NumberAnimation {
                 duration: window.motion.normal
-                easing.type: window.motion.enterType
+                easing.type: window.open ? window.motion.enterType : window.motion.exitType
             }
         }
 
@@ -209,7 +210,7 @@ PanelWindow {
                     id: headerHint
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: window.runtime.shortcut("shortcuts.toggle") + "   ·   ? HELP"
+                    text: KeyGlyphs.display(window.runtime.shortcut("shortcuts.toggle")) + "   ·   ? HELP"
                     color: window.theme.textMuted
                     font.family: window.runtime.fontMono
                     font.pixelSize: window.theme.fontSize(10)
@@ -337,7 +338,7 @@ PanelWindow {
 
                                         Text {
                                             anchors.centerIn: parent
-                                            text: shortcutBinding.modelData.key
+                                            text: KeyGlyphs.display(shortcutBinding.modelData.key)
                                             color: window.theme.textStrong
                                             font.family: window.runtime.fontMono
                                             font.pixelSize: window.theme.fontSize(11)
@@ -437,7 +438,7 @@ PanelWindow {
                     }
 
                     Text {
-                        text: "TOGGLE " + window.runtime.shortcut("shortcuts.toggle")
+                        text: "TOGGLE " + KeyGlyphs.display(window.runtime.shortcut("shortcuts.toggle"))
                         color: window.theme.accent
                         font.family: window.runtime.fontMono
                         font.pixelSize: window.theme.fontSize(12)
