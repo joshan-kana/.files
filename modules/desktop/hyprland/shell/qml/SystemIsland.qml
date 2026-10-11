@@ -8,6 +8,7 @@ Item {
     required property Theme theme
     required property Motion motion
     required property SystemState system
+    required property PowerProfileState powerProfile
     property bool compact: false
 
     signal activated
@@ -41,25 +42,6 @@ Item {
                 value: island.system.volume
                 accentColor: island.system.muted ? island.theme.warning : island.theme.accent
                 compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
-            }
-
-            Text {
-                visible: !island.compact && island.system.idleInhibited
-                anchors.verticalCenter: parent.verticalCenter
-                text: "󰅶"
-                color: island.theme.positive
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: island.theme.fontSize(15)
-            }
-
-            // end-4's contextual muted-input indicator, sharing the same PipeWire state.
-            Text {
-                visible: !island.compact && island.system.microphoneMuted
-                anchors.verticalCenter: parent.verticalCenter
-                text: "󰍭"
-                color: island.theme.warning
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: island.theme.fontSize(16)
             }
 
             Text {
@@ -102,7 +84,7 @@ Item {
                 motion: island.motion
                 compact: true
                 value: island.system.batteryPercent / 100
-                accentColor: island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
+                accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
                 compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
             }
         }
