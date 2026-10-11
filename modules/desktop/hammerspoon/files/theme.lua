@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Central theme for all Hammerspoon UI (window switcher, cheatsheet, etc.)
 -- Colors are supplied by the shared Stylix palette.
 --

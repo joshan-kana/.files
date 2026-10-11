@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Spotify "Expand Now Playing view" button.
 --
 -- Targets the circular diagonal-arrows button. Does NOT click the

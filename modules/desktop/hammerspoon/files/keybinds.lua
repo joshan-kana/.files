@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- All keybindings in one place. Add, remove, or change shortcuts here.
 -- Legend:
 --   mods    - string alias (e.g. "hyper") or raw mod table

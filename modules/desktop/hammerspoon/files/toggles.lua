@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Small stateless toggle functions used by keybinds.lua.
 
 local y = require("yabai_utils")

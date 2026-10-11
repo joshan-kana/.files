@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Shared yabai command wrappers used by init.lua and feature modules.
 
 local YABAI = "/opt/homebrew/bin/yabai -m "
@@ -96,8 +98,7 @@ function M.focusNextDisplay()
 	end
 
 	hs.execute(
-		"/opt/homebrew/bin/yabai -m display --focus next || " ..
-			"/opt/homebrew/bin/yabai -m display --focus first"
+		"/opt/homebrew/bin/yabai -m display --focus next || " .. "/opt/homebrew/bin/yabai -m display --focus first"
 	)
 
 	hs.timer.doAfter(0.08, function()
@@ -113,9 +114,7 @@ function M.focusNextDisplay()
 		end
 
 		for _, win in ipairs(windows) do
-			if win.subrole == "AXStandardWindow"
-				and win["is-visible"]
-				and not win["is-minimized"] then
+			if win.subrole == "AXStandardWindow" and win["is-visible"] and not win["is-minimized"] then
 				M.exec("window " .. tostring(win.id) .. " --focus")
 				return
 			end

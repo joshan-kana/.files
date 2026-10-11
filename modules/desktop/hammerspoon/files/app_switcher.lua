@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Launch-or-focus an app. All app names live in keybinds.lua.
 
 local M = {}

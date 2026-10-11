@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Free AltTab-style canvas switcher.
 -- App icon on the left, window title on the right.
 -- Current Space only for yabai-friendly switching.

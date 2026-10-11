@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Seek-only media controls.
 -- No target picker, no polling, no Arc tab scanning.
 --

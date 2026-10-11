@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Canvas-based hotkey cheatsheet — dark overlay matching window_switcher's aesthetic.
 -- Reads bindings dynamically from keybinds.lua via setBindings().
 -- Dismisses on any keypress.

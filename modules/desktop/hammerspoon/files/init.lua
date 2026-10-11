@@ -1,10 +1,12 @@
+local hs = _G.hs
+
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
 require("theme").apply("stylix")
 
 -- Auto-reload on config changes
-configWatcher = hs.pathwatcher
+_G.configWatcher = hs.pathwatcher
 	.new(os.getenv("HOME") .. "/.hammerspoon/", function(files)
 		if hs.fnutils.some(files, function(f)
 			return f:sub(-4) == ".lua"
@@ -58,7 +60,7 @@ end
 require("hs.ipc")
 
 -- Set the built-in display brightness using Hammerspoon's per-screen API.
-function setDisplayBrightness(percent)
+function _G.setDisplayBrightness(percent)
 	local screen = hs.screen.mainScreen()
 	if screen then
 		screen:setBrightness(math.max(0, math.min(100, percent)) / 100)

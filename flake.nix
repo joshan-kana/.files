@@ -169,6 +169,7 @@
           programs = {
             deadnix.enable = true;
             nixfmt.enable = true;
+            stylua.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -231,6 +232,11 @@
                 priority = 2;
               };
               typos.priority = 1;
+              lua-lint = {
+                command = lib.getExe pkgs.lua54Packages.luacheck;
+                includes = [ "*.lua" ];
+                priority = 2;
+              };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
@@ -254,7 +260,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|lua|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -351,14 +357,12 @@
         };
       };
 
-      themeScope = moduleRegistry.theme {
-        inherit lib;
-        # Theme registry introspection needs no host packages.
-        system = "x86_64-linux";
-        pkgs = null;
-        scopeConfig = { };
-      };
-      themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
+      themeNames =
+        builtins.attrNames
+          (import ./modules/theme/registry.nix {
+            inherit lib;
+            pkgs = null;
+          }).variants;
 
       themedNixosConfigurations = builtins.listToAttrs (
         lib.concatLists (

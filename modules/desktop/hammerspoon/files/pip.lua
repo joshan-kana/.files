@@ -1,3 +1,5 @@
+local hs = _G.hs
+
 -- Picture-in-picture style floating sticky top-layer window.
 -- sticky makes it visible across Spaces.
 -- sub-layer above replaces the old topmost toggle.
