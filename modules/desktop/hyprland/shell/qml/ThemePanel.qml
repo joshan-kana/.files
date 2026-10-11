@@ -12,6 +12,7 @@ Item {
 
     signal keyboardRequested
     signal switchLaunched
+    signal switchFinished
 
     property bool open: false
     property var themes: []
@@ -54,6 +55,18 @@ Item {
             } catch (error) {
                 panel.setError(error.toString(), "INVALID THEME REGISTRY");
             }
+        }
+    }
+
+    // Keep the prompt's launch process alive so the hub can relinquish its
+    // keyboard grab without disappearing. The terminal runs on the dedicated
+    // system workspace, independent of the user's Super+X workspace.
+    property Process switchProcess: Process {
+        onExited: (exitCode, exitStatus) => {
+            panel.switchFinished();
+            panel.statusText = exitCode === 0 ? "THEME SWITCH FINISHED" : "THEME SWITCH DID NOT COMPLETE";
+            panel.statusError = exitCode !== 0;
+            panel.refreshCurrentTheme();
         }
     }
 
@@ -158,7 +171,7 @@ Item {
     }
 
     function activateSelected(): void {
-        if (runtime.themeSet.length === 0)
+        if (runtime.themeSet.length === 0 || switchProcess.running)
             return;
 
         const selected = selectedTheme();
@@ -173,10 +186,13 @@ Item {
 
         statusText = "OPENING TERMINAL // " + (selected.label || selected.name).toUpperCase();
         statusError = false;
-        // This process owns an interactive terminal and must survive the
-        // closing panel. The hub releases its Wayland keyboard focus first.
-        Quickshell.execDetached([runtime.themeSet, "switch", selected.name]);
+        // Release the hub grab before the terminal is created, but keep the
+        // palette visible. The process owns the handoff until the prompt exits.
         switchLaunched();
+        Qt.callLater(() => {
+            if (switchProcess && !switchProcess.running)
+                switchProcess.exec([runtime.themeSet, "switch", selected.name]);
+        });
     }
 
     Column {
