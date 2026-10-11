@@ -329,8 +329,8 @@ PanelWindow {
 
                                     ShellSurface {
                                         id: bindingKey
-                                        width: 142
-                                        height: 28
+                                        width: 174
+                                        height: 40
                                         theme: window.theme
                                         motion: window.motion
                                         surfaceLayer: ShellSurface.Group
@@ -340,9 +340,9 @@ PanelWindow {
                                             anchors.centerIn: parent
                                             text: KeyGlyphs.display(shortcutBinding.modelData.key)
                                             color: window.theme.textStrong
-                                            font.family: window.runtime.fontMono
-                                            font.pixelSize: window.theme.fontSize(11)
-                                            font.weight: Font.Medium
+                                            font.family: "Symbols Nerd Font"
+                                            font.pixelSize: window.theme.fontSize(19)
+                                            font.weight: Font.DemiBold
                                         }
                                     }
 
