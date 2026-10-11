@@ -1,4 +1,12 @@
 {
+  qmkToolbox = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.qmk-toolbox-mac ];
+  };
+
+  arc = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.arc-mac ];
+  };
+
   bambuStudio = { pkgs, ... }: {
     environment.systemPackages = [ pkgs.bambu-studio ];
   };

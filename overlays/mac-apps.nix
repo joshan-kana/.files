@@ -3,7 +3,7 @@ _: {
     (
       _final: prev:
       let
-        macDmg =
+        macArchive =
           {
             pname,
             version,
@@ -36,7 +36,7 @@ _: {
           };
       in
       {
-        arduino-ide-mac = macDmg {
+        arduino-ide-mac = macArchive {
           pname = "arduino-ide-mac";
           version = "2.3.10";
           url = "https://github.com/arduino/arduino-ide/releases/download/2.3.10/arduino-ide_2.3.10_macOS_ARM64.dmg";
@@ -47,7 +47,7 @@ _: {
           unpacker = prev._7zz;
         };
 
-        cryptomator-mac = macDmg {
+        cryptomator-mac = macArchive {
           pname = "cryptomator-mac";
           version = "1.19.3";
           url = "https://github.com/cryptomator/cryptomator/releases/download/1.19.3/Cryptomator-1.19.3-arm64.dmg";
@@ -57,7 +57,7 @@ _: {
           license = prev.lib.licenses.gpl3Only;
         };
 
-        raspberry-pi-imager-mac = macDmg {
+        raspberry-pi-imager-mac = macArchive {
           pname = "raspberry-pi-imager-mac";
           version = "2.0.12";
           url = "https://github.com/raspberrypi/rpi-imager/releases/download/v2.0.12/rpi-imager-v2.0.12.dmg";
@@ -67,7 +67,7 @@ _: {
           license = prev.lib.licenses.asl20;
         };
 
-        heroic-mac = macDmg {
+        heroic-mac = macArchive {
           pname = "heroic-mac";
           version = "2.22.3";
           url = "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.22.3/Heroic-2.22.3-macOS-arm64.dmg";
@@ -77,7 +77,7 @@ _: {
           license = prev.lib.licenses.gpl3Only;
         };
 
-        notion-mac = macDmg {
+        notion-mac = macArchive {
           pname = "notion-mac";
           version = "7.37.1";
           url = "https://desktop-release.notion-static.com/Notion-7.37.1-arm64.dmg";
@@ -87,7 +87,7 @@ _: {
           license = prev.lib.licenses.unfree;
         };
 
-        linear-mac = macDmg {
+        linear-mac = macArchive {
           pname = "linear-mac";
           version = "1.32.4";
           url = "https://releases.linear.app/Linear-1.32.4-universal.dmg";
@@ -97,7 +97,7 @@ _: {
           license = prev.lib.licenses.unfree;
         };
 
-        reaper-mac = macDmg {
+        reaper-mac = macArchive {
           pname = "reaper-mac";
           version = "7.82";
           url = "https://dlcf.reaper.fm/7.x/reaper782_universal.dmg";
@@ -107,7 +107,29 @@ _: {
           license = prev.lib.licenses.unfree;
         };
 
-        vial-mac = macDmg {
+        qmk-toolbox-mac = macArchive {
+          pname = "qmk-toolbox-mac";
+          version = "0.3.4";
+          url = "https://github.com/qmk/qmk_toolbox/releases/download/0.3.4/QMK.Toolbox.app.zip";
+          hash = "sha256-CgUUltkU1YinVu5L4u6KoD3J1dMoczAS5vBv6k9CXQg=";
+          appName = "QMK Toolbox.app";
+          homepage = "https://github.com/qmk/qmk_toolbox";
+          license = prev.lib.licenses.mit;
+          unpacker = prev.unzip;
+        };
+
+        arc-mac = macArchive {
+          pname = "arc-mac";
+          version = "1.168.0.88413";
+          url = "https://releases.arc.net/release/Arc-1.168.0-88413.zip";
+          hash = "sha256-GvMkMeu90sUGXIvtXwbFxa+b1i0B4AkneCgQzF/cscU=";
+          appName = "Arc.app";
+          homepage = "https://arc.net";
+          license = prev.lib.licenses.unfree;
+          unpacker = prev.unzip;
+        };
+
+        vial-mac = macArchive {
           pname = "vial-mac";
           version = "0.7.5";
           url = "https://github.com/vial-kb/vial-gui/releases/download/v0.7.5/Vial-v0.7.5.dmg";
