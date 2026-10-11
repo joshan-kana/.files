@@ -24,12 +24,15 @@ Item {
         NumberAnimation {
             duration: island.motion.normal
             easing.type: island.motion.enterType
+            easing.bezierCurve: island.motion.enterCurve
         }
     }
 
     Behavior on opacity {
         NumberAnimation {
             duration: island.motion.fast
+            easing.type: island.motion.effectsType
+            easing.bezierCurve: island.motion.effectsCurve
         }
     }
 
@@ -143,6 +146,8 @@ Item {
             Behavior on opacity {
                 NumberAnimation {
                     duration: island.motion.fast
+                    easing.type: island.motion.effectsType
+                    easing.bezierCurve: island.motion.effectsCurve
                 }
             }
         }
