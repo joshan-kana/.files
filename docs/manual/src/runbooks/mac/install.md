@@ -1,6 +1,6 @@
 # MacBook declarative setup
 
-The `mac` Darwin host composes the same semantic scopes as the NixOS fleet. Portable CLI tools, system commands, the theme registry, Nix/Attic policy, backups, and Comin deployment reuse the shared modules; Linux-only implementation details contribute no Darwin configuration. Hammerspoon, yabai, and selected macOS preferences use native host integration. Determinate Nix continues to own the installed Nix daemon (`nix.enable = false`). Homebrew installs selected native applications; no creative applications, plug-ins, user accounts, credentials, or document libraries are imported into the Nix store.
+The MacBook configuration is `darwinConfigurations.mac` in `flake.nix`. It includes Hammerspoon, yabai, shell tools, the shared theme, backups, Comin and Attic. Determinate Nix continues to manage the Nix daemon (`nix.enable = false`). Homebrew manages macOS applications; creative software, plug-ins, credentials and user documents remain outside the Nix store.
 
 ## Before first activation
 

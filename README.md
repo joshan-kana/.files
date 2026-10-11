@@ -42,7 +42,7 @@ docs/manual/              Manual runbooks and generated-reference source
 docs/infrastructure-docs/ Cross-project operating handbook submodule
 ```
 
-Use `nix flake show` for the current hosts, packages, apps, checks, and development shells. The Mac setup and its first-activation precautions are documented in `docs/manual/src/runbooks/mac/install.md`.
+Use `nix flake show` for the current hosts, packages, apps, checks, and development shells.
 
 ## Clone
 

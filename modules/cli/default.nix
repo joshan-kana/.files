@@ -685,7 +685,6 @@ in
   zellij = _: {
     home = _: {
       programs.zellij.enable = true;
-      xdg.configFile."zellij/config.kdl".source = ./zellij.kdl;
     };
   };
 
@@ -845,9 +844,9 @@ in
     environment.systemPackages = [ pkgs.systemd-manager-tui ];
   });
 
-  youtubeTui = linuxOnly (_: {
+  youtubeTui = _: {
     environment.systemPackages = [ pkgs.youtube-tui ];
-  });
+  };
 
   killall = linuxOnly (_: {
     environment.systemPackages = [ pkgs.killall ];
@@ -857,9 +856,9 @@ in
     environment.systemPackages = [ pkgs.xdg-utils ];
   });
 
-  trashCli = linuxOnly (_: {
+  trashCli = _: {
     environment.systemPackages = [ pkgs.trash-cli ];
-  });
+  };
 
   gnumake = _: {
     environment.systemPackages = [ pkgs.gnumake ];
