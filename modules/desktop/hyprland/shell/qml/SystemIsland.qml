@@ -30,6 +30,25 @@ Item {
             anchors.centerIn: parent
             spacing: island.compact ? island.theme.spacing1 : island.theme.spacing3
 
+            // Contextual statuses belong to this single background surface.
+            Text {
+                visible: !island.compact && island.system.idleInhibited
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰅶"
+                color: island.theme.positive
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(15)
+            }
+
+            Text {
+                visible: !island.compact && island.system.microphoneMuted
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰍭"
+                color: island.theme.warning
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(16)
+            }
+
             ResourceGauge {
                 id: volumeStatus
                 visible: !island.compact
