@@ -181,30 +181,15 @@ Item {
         anchors.fill: parent
         spacing: panel.theme.spacing3
 
-        Text {
-            text: "APPEARANCE / WALLPAPERS"
-            color: panel.theme.accent
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.2
-        }
-
-        Text {
-            text: "Wallpaper library"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontPanelTitle
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            text: panel.outputName + "  ·  H/J/K/L navigate  ·  / search  ·  Enter apply  ·  F fit/fill  ·  R reset"
+        DetailHero {
             width: parent.width
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(9)
-            wrapMode: Text.WordWrap
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            glyph: "▧"
+            eyebrow: "Appearance / wallpapers"
+            title: "Wallpaper library"
+            detail: panel.outputName + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
         }
 
         ShellSurface {
@@ -258,7 +243,7 @@ Item {
 
         Item {
             width: parent.width
-            height: 410
+            height: 360
 
             // Caelestia-style centre-selected wallpaper carousel, keeping our
             // own Theme/Motion/StateLayer and awww-backed selection action.
