@@ -30,6 +30,11 @@ let
   paletteLua = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: hex: "  ${name} = { hex = \"${hex}\" },") palette
   );
+  configHash = builtins.hashString "sha256" (
+    lib.concatStringsSep "\n" (
+      [ paletteLua ] ++ map (name: builtins.readFile (./files + "/${name}")) luaFiles
+    )
+  );
 in
 {
   home = _: {
@@ -46,6 +51,14 @@ in
           ${paletteLua}
           }
         '';
+        ".hammerspoon/.nix-config-hash" = {
+          text = configHash;
+          onChange = lib.optionalString isDarwin ''
+            if /usr/bin/pgrep -x Hammerspoon > /dev/null; then
+              ${pkgs.hammerspoon}/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs -q -c 'hs.reload()'
+            fi
+          '';
+        };
       };
   };
 }

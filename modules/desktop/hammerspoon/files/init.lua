@@ -5,17 +5,6 @@ local bindings = require("keybinds")
 local modifiers = require("modifiers")
 require("theme").apply("framer") -- Set default theme (change to "tokyo-night" etc.)
 
--- Auto-reload on config changes
-_G.configWatcher = hs.pathwatcher
-	.new(os.getenv("HOME") .. "/.hammerspoon/", function(files)
-		if hs.fnutils.some(files, function(f)
-			return f:sub(-4) == ".lua"
-		end) then
-			hs.reload()
-		end
-	end)
-	:start()
-
 -- Sticky Hyper mode
 -- hyper+tab toggles a modal in which bare keys act as hyper bindings.
 local stickyHyper = hs.hotkey.modal.new()
