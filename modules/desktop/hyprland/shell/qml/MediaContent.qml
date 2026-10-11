@@ -41,7 +41,7 @@ FocusScope {
 
     signal closeRequested
 
-    implicitWidth: 812
+    implicitWidth: 920
     implicitHeight: 470
     focus: engaged
 
