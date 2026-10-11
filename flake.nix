@@ -32,6 +32,11 @@
     };
 
     # Home Manager: a tool for managing dotfiles using Nix
+    nix-darwin = {
+      url = "github:nix-darwin/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -104,6 +109,7 @@
       nixpkgs-stable,
       home-manager,
       home-manager-stable,
+      nix-darwin,
       stylix,
       stylix-stable,
       treefmt-nix,
@@ -524,6 +530,9 @@
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+        }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
@@ -664,6 +673,22 @@
           };
         }
       );
+      darwinConfigurations.mac = nix-darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = {
+          inherit inputs moduleRegistry;
+          configurationName = "mac";
+          configurationOutputName = "mac";
+          configurationFlakeSubdirectory = null;
+          inherit (semantic) homeModule;
+        };
+        modules = [
+          ./modules/options
+          home-manager.darwinModules.home-manager
+          stylix.darwinModules.stylix
+          ./hosts/mac
+        ];
+      };
       nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
     };
 }
