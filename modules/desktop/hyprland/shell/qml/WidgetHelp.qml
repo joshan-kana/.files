@@ -32,10 +32,9 @@ Item {
         MouseArea {
             anchors.fill: parent
             enabled: help.open
-            onClicked: {
-                help.open = false;
-                help.dismissed();
-            }
+            // The owner binds `open` to its helpOpen state. Do not assign to
+            // `open` here: imperative assignment destroys that QML binding.
+            onClicked: help.dismissed()
         }
     }
 
