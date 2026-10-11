@@ -42,4 +42,15 @@ NumberAnimation {
             return motion.spatialType;
         }
     }
+
+    easing.bezierCurve: {
+        switch (type) {
+        case Anim.FastEffects:
+        case Anim.DefaultEffects:
+        case Anim.SlowEffects:
+            return motion.effectsCurve;
+        default:
+            return motion.spatialCurve;
+        }
+    }
 }
