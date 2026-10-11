@@ -24,6 +24,7 @@ Item {
     readonly property var devices: system.bluetoothAdapterDevices || []
     readonly property bool adapterAvailable: system.bluetoothAvailable
 
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + (adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : 190) + footer.implicitHeight
     visible: open
 
     Timer {
@@ -332,18 +333,19 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: 72
+                height: 92
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Control
                 selected: index === panel.selectedIndex
-                cornerRadius: theme.radiusMedium
+                cornerRadius: theme.radiusLarge
+                fillColor: deviceRow.modelData.connected ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.positive.r, panel.theme.positive.g, panel.theme.positive.b, 0.12)) : panel.theme.layer3
 
                 StateLayer {
                     theme: panel.theme
                     motion: panel.motion
                     selected: deviceRow.index === panel.selectedIndex
-                    cornerRadius: panel.theme.radiusMedium
+                    cornerRadius: panel.theme.radiusLarge
 
                     onActivated: {
                         panel.selectedIndex = deviceRow.index;

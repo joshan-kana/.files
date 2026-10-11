@@ -7,57 +7,56 @@ ShellSurface {
     required property WeatherState weather
     signal forecastRequested
 
-    implicitHeight: 102
-    surfaceLayer: ShellSurface.Control
+    implicitHeight: 160
+    surfaceLayer: ShellSurface.Group
+    fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15))
     cornerRadius: theme.radiusMedium
 
-    Row {
+    Column {
         anchors {
             fill: parent
-            leftMargin: summary.theme.spacing3
-            rightMargin: summary.theme.spacing3
+            margins: summary.theme.spacing4
         }
-        spacing: summary.theme.spacing3
+        spacing: summary.theme.spacing1
 
         Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: summary.weather.icon
+            text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
             color: summary.theme.accent
-            font.family: "Symbols Nerd Font"
-            font.pixelSize: summary.theme.fontSize(42)
+            font.family: summary.theme.runtime.fontMono
+            font.pixelSize: summary.theme.fontPanelEyebrow
+            font.weight: Font.DemiBold
         }
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, parent.width - 104)
-            spacing: summary.theme.spacing1
+        Row {
+            width: parent.width
+            height: 82
+            spacing: summary.theme.spacing4
 
             Text {
-                text: summary.weather.available ? summary.weather.temperatureText(summary.weather.temperature) + "  " + summary.weather.description : summary.weather.status
+                anchors.verticalCenter: parent.verticalCenter
+                text: summary.weather.available ? summary.weather.temperatureText(summary.weather.temperature) : "--°"
                 color: summary.theme.textStrong
                 font.family: summary.theme.runtime.fontMono
-                font.pixelSize: summary.theme.fontSize(15)
+                font.pixelSize: summary.theme.fontSize(42)
                 font.weight: Font.DemiBold
-                elide: Text.ElideRight
-                width: parent.width
             }
 
             Text {
-                text: summary.weather.city || "Your location"
-                color: summary.theme.textMuted
-                font.family: summary.theme.runtime.fontMono
-                font.pixelSize: summary.theme.fontSize(11)
-                elide: Text.ElideRight
-                width: parent.width
-            }
-
-            Text {
-                text: "F · FORECAST  ↗"
+                anchors.verticalCenter: parent.verticalCenter
+                text: summary.weather.icon
                 color: summary.theme.accent
-                font.family: summary.theme.runtime.fontMono
-                font.pixelSize: summary.theme.fontSize(11)
-                font.weight: Font.DemiBold
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: summary.theme.fontSize(48)
             }
+        }
+
+        Text {
+            width: parent.width
+            text: (summary.weather.available ? summary.weather.description : summary.weather.status) + "  ·  F Forecast ↗"
+            color: summary.theme.text
+            font.family: summary.theme.runtime.fontMono
+            font.pixelSize: summary.theme.fontSize(11)
+            elide: Text.ElideRight
         }
     }
 
