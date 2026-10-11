@@ -21,6 +21,7 @@ PanelWindow {
     property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
+    property bool themeTerminalActive: false
 
     readonly property Item loadedContent: contentLoader.item as Item
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? contentLoader.item as SystemContent : null
@@ -68,6 +69,9 @@ PanelWindow {
         function onRevealContent(top: real, bottom: real): void {
             host.revealContent(top, bottom);
         }
+        function onThemeTerminalActiveChanged(active: bool): void {
+            host.themeTerminalActive = active;
+        }
     }
 
     Connections {
@@ -90,7 +94,7 @@ PanelWindow {
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
     color: "transparent"
-    focusable: expansionState.hasCurrent
+    focusable: expansionState.hasCurrent && !themeTerminalActive
     exclusionMode: ExclusionMode.Ignore
     implicitWidth: Math.max(1, viewportWidth)
     implicitHeight: Math.max(1, viewportHeight)
@@ -107,7 +111,7 @@ PanelWindow {
 
     WlrLayershell.namespace: "linux-desktop-expansion"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: expansionState.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: expansionState.hasCurrent && !themeTerminalActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: Region {
         item: shellSurface
@@ -176,10 +180,13 @@ PanelWindow {
     }
 
     HyprlandFocusGrab {
-        active: host.expansionState.hasCurrent
+        active: host.expansionState.hasCurrent && !host.themeTerminalActive
         // Bar-originated navigation stays inside the same focus group.
         windows: [host].concat(host.barWindows)
-        onCleared: host.expansionState.close()
+        onCleared: {
+            if (!host.themeTerminalActive)
+                host.expansionState.close();
+        }
     }
 
     Timer {
@@ -203,6 +210,7 @@ PanelWindow {
                     geometryUpdate.restart();
                 closeTimer.stop();
                 host.closing = false;
+                host.themeTerminalActive = false;
                 host.contentExpanded = false;
                 Qt.callLater(() => host.contentExpanded = true);
             } else if (host.visible) {
