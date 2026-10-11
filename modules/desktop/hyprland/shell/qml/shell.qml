@@ -196,6 +196,7 @@ ShellRoot {
         media: media
         spectrum: spectrum
         system: system
+        powerProfile: powerProfile
         notificationState: notifications
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
