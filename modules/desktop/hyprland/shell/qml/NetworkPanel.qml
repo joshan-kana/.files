@@ -22,6 +22,7 @@ Item {
     readonly property var networks: system.wifiNetworks || []
     readonly property bool passwordPrompt: pendingNetwork !== null
 
+    implicitHeight: header.height + connectionSummary.height + panel.theme.spacing3 * 3 + (system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
     visible: open
 
     function selectedNetwork(): var {
@@ -256,11 +257,76 @@ Item {
         }
     }
 
+    ShellSurface {
+        id: connectionSummary
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing3
+        }
+        height: 90
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: panel.theme.radiusLarge
+        fillColor: panel.system.networkConnected ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.positive.r, panel.theme.positive.g, panel.theme.positive.b, 0.14)) : panel.theme.expressiveSurface
+
+        Row {
+            anchors {
+                fill: parent
+                margins: panel.theme.spacing4
+            }
+            spacing: panel.theme.spacing4
+
+            ShellSurface {
+                width: 54
+                height: 54
+                anchors.verticalCenter: parent.verticalCenter
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusMedium
+                Text {
+                    anchors.centerIn: parent
+                    text: panel.system.networkConnected ? "●" : "○"
+                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(25)
+                }
+            }
+
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(1, parent.width - 54 - parent.spacing)
+                spacing: panel.theme.spacing2
+
+                Text {
+                    width: parent.width
+                    text: panel.system.networkConnected ? (panel.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "CONNECTION UNAVAILABLE"
+                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                }
+                Text {
+                    width: parent.width
+                    text: panel.system.networkConnected ? panel.system.networkName : panel.system.connectivityText
+                    color: panel.theme.textStrong
+                    font.family: panel.runtime.fontMono
+                    font.pixelSize: panel.theme.fontSize(17)
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+            }
+        }
+    }
+
     Item {
         id: body
 
         anchors {
-            top: header.bottom
+            top: connectionSummary.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
@@ -286,18 +352,19 @@ Item {
                 required property int index
 
                 width: ListView.view.width
-                height: 66
+                height: 88
                 theme: panel.theme
                 motion: panel.motion
                 surfaceLayer: ShellSurface.Control
                 selected: index === panel.selectedIndex
-                cornerRadius: theme.radiusMedium
+                cornerRadius: theme.radiusLarge
+                fillColor: networkRow.modelData.connected ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.positive.r, panel.theme.positive.g, panel.theme.positive.b, 0.13)) : panel.theme.layer3
 
                 StateLayer {
                     theme: panel.theme
                     motion: panel.motion
                     selected: networkRow.index === panel.selectedIndex
-                    cornerRadius: panel.theme.radiusMedium
+                    cornerRadius: panel.theme.radiusLarge
                     onActivated: {
                         panel.selectedIndex = networkRow.index;
                         panel.activateSelected();
@@ -480,8 +547,11 @@ Item {
         }
 
         ShellSurface {
-            anchors.centerIn: parent
-            width: parent.width
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+            }
             height: 160
             visible: !panel.system.wifiAvailable && !panel.passwordPrompt
             theme: panel.theme
