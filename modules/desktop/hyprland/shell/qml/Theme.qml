@@ -42,6 +42,8 @@ QtObject {
     readonly property color layer2: surfaceRaised
     readonly property color layer3: Qt.rgba(accent.r, accent.g, accent.b, 0.095)
     readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.24)
+    readonly property color expressiveSurface: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.075))
+    readonly property color expressiveSurfaceStrong: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.14))
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)
