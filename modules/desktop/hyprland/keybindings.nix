@@ -544,6 +544,22 @@ in
     description = "Edit desktop configuration";
   })
   (mk {
+    keys = "SUPER + ALT + H";
+    mainMod = false;
+    id = "home.toggle";
+    action = global "linux-desktop:home";
+    section = "SYSTEM";
+    description = "Open Home tab";
+  })
+  (mk {
+    keys = "SUPER + ALT + C";
+    mainMod = false;
+    id = "controls.toggle";
+    action = global "linux-desktop:controls";
+    section = "SYSTEM";
+    description = "Open Controls tab";
+  })
+  (mk {
     keys = "Y";
     id = "theme.toggle";
     action = global "linux-desktop:theme";
