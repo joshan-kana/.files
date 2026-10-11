@@ -1,0 +1,58 @@
+# -----------------------------
+# Layout
+# -----------------------------
+yabai -m config layout bsp
+yabai -m config window_placement second_child
+
+# -----------------------------
+# Gaps / padding
+# -----------------------------
+yabai -m config window_gap 8
+yabai -m config top_padding 8
+yabai -m config bottom_padding 8
+yabai -m config left_padding 8
+yabai -m config right_padding 8
+
+# -----------------------------
+# Mouse settings
+# -----------------------------
+# yabai -m config mouse_modifier cmd
+
+# Hover-to-focus.
+# Keep this off unless you want windows to focus just by hovering.
+yabai -m config focus_follows_mouse off
+
+# Cursor follows focused window globally.
+# This is the behaviour you like.
+yabai -m config mouse_follows_focus on
+
+# cmd + left click = move window
+# yabai -m config mouse_action1 move
+
+# cmd + right click = resize window
+# yabai -m config mouse_action2 resize
+
+# Swap windows on drop
+yabai -m config mouse_drop_action swap
+
+# -----------------------------
+# App rules
+# -----------------------------
+
+# Arc YouTube PiP / Mini Player fix
+# Your PiP showed as:
+# app="Arc", title="", subrole="AXSystemDialog", floating=true
+#
+# This keeps global mouse_follows_focus ON,
+# but disables cursor warping only for Arc PiP/system-dialog windows.
+yabai -m rule --add label="arc-pip-no-cursor-warp" \
+  app="^Arc$" \
+  title="^$" \
+  subrole="^AXSystemDialog$" \
+  manage=off \
+  mouse_follows_focus=off
+
+# Disable tiling for specific apps
+yabai -m rule --add app="^System Settings$" manage=off
+yabai -m rule --add title="^Settings$" manage=off
+yabai -m rule --add app="^Calculator$" manage=off
