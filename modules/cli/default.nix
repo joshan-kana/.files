@@ -3,10 +3,13 @@
   configurationFlakeSubdirectory,
   configurationOutputName,
   pkgs,
+  lib,
+  system,
   ...
 }:
 
 let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   inherit (config) dotfiles;
   inherit (dotfiles.defaults) editor;
   inherit (dotfiles.users) primary;
@@ -22,6 +25,8 @@ let
   };
   gitSigningFormat = "openpgp";
   toml = pkgs.formats.toml { };
+  linuxOnly =
+    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
   tuicrConfig = toml.generate "tuicr-config.toml" {
     theme = "stylix";
     diff_view = "side-by-side";
@@ -109,12 +114,17 @@ let
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
+
 in
 {
-  environment.sessionVariables = sessionVariables;
-
   home = _: {
     home.sessionVariables = sessionVariables;
+  };
+
+  # The Darwin system module has no environment.sessionVariables option.
+  # Home Manager still receives the same shared values on both systems.
+  config = lib.optionalAttrs isLinux {
+    environment.sessionVariables = sessionVariables;
   };
 
   systemCommands =
@@ -123,7 +133,10 @@ in
       commands = {
         cd = "cd $DOTFILES";
         systemUpdate = "nix run ${repoPath}#system-update --";
-        rebuild = action: "nh os ${action} --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+        rebuild =
+          action:
+          lib.optionalString isDarwin ''nh darwin ${action} "$NH_OS_FLAKE#$FLK_PROFILE"''
+          + lib.optionalString isLinux ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS'';
       };
       aliases = {
         syscd = commands.cd;
@@ -132,15 +145,17 @@ in
         sfu = commands.systemUpdate;
         sysbld = commands.rebuild "build";
         sbld = commands.rebuild "build";
-        sysboot = commands.rebuild "boot";
-        sboot = commands.rebuild "boot";
         sysup = commands.rebuild "switch";
         sup = commands.rebuild "switch";
-        systest = commands.rebuild "test";
-        stest = commands.rebuild "test";
         edit = "edit-config";
         sedit = "edit-config";
         sysedit = "edit-config";
+      }
+      // lib.optionalAttrs isLinux {
+        sysboot = commands.rebuild "boot";
+        sboot = commands.rebuild "boot";
+        systest = commands.rebuild "test";
+        stest = commands.rebuild "test";
       };
       editConfig = pkgs.writeShellApplication {
         name = "edit-config";
@@ -162,7 +177,7 @@ in
         home.shellAliases = aliases;
       };
 
-      vm =
+      vm = linuxOnly (
         { pkgs, ... }:
         let
           aliases = {
@@ -185,13 +200,15 @@ in
             home.shellAliases = aliases;
             home.packages = [ buildVm ];
           };
-        };
+        }
+      );
     };
 
   nh = args: {
-    inherit ((nhConfig args)) programs;
-
     home = args: {
+      inherit ((nhConfig args)) programs;
+    };
+    config = lib.optionalAttrs isLinux {
       inherit ((nhConfig args)) programs;
     };
   };
@@ -244,10 +261,12 @@ in
     in
     {
       environment.shellAliases = aliases;
-      programs = (direnvConfig args).programs // {
-        zsh = {
-          shellAliases = zshAliases;
-          interactiveShellInit = hook;
+      config = lib.optionalAttrs isLinux {
+        programs = (direnvConfig args).programs // {
+          zsh = {
+            shellAliases = zshAliases;
+            interactiveShellInit = hook;
+          };
         };
       };
 
@@ -295,7 +314,7 @@ in
       };
     };
 
-  ollama =
+  ollama = linuxOnly (
     _:
     let
       aliases = {
@@ -308,7 +327,8 @@ in
       home = _: {
         home.shellAliases = aliases;
       };
-    };
+    }
+  );
 
   jujutsu =
     _:
@@ -459,16 +479,18 @@ in
     {
       environment.systemPackages = [ stash ];
       environment.shellAliases = aliases;
-      programs.git.config = gitSettings // {
-        gpg.format = gitSigningFormat;
-      };
-
       home = _: {
         home.packages = [ stash ];
         home.shellAliases = aliases;
         programs.git = {
           settings = gitSettings;
           signing.format = gitSigningFormat;
+        };
+      };
+
+      config = lib.optionalAttrs isLinux {
+        programs.git.config = gitSettings // {
+          gpg.format = gitSigningFormat;
         };
       };
 
@@ -501,13 +523,16 @@ in
           };
         };
 
-      lazygit = args: {
-        inherit (lazygitConfig args) programs;
-
-        home = args: {
+      lazygit =
+        args:
+        {
+          home = args: {
+            inherit (lazygitConfig args) programs;
+          };
+        }
+        // lib.optionalAttrs isLinux {
           inherit (lazygitConfig args) programs;
         };
-      };
     };
 
   zsh =
@@ -520,10 +545,12 @@ in
     in
     {
       environment.shellAliases = aliases;
-      programs.zsh = (zshConfig args).programs.zsh // {
-        enableBashCompletion = true;
+      config = lib.optionalAttrs isLinux {
+        programs.zsh = (zshConfig args).programs.zsh // {
+          enableBashCompletion = true;
+        };
+        users.defaultUserShell = pkgs.zsh;
       };
-      users.defaultUserShell = pkgs.zsh;
 
       home = args: {
         home.shellAliases = aliases;
@@ -555,7 +582,9 @@ in
     };
 
   yazi = _: {
-    programs.yazi.enable = true;
+    config = lib.optionalAttrs isLinux {
+      programs.yazi.enable = true;
+    };
 
     home = _: {
       programs.yazi.shellWrapperName = "y";
@@ -629,7 +658,9 @@ in
     };
 
   starship = args: {
-    inherit (starshipConfig args) programs;
+    config = lib.optionalAttrs isLinux {
+      inherit (starshipConfig args) programs;
+    };
 
     home = args: {
       programs.starship = (starshipConfig args).programs.starship // {
@@ -719,7 +750,9 @@ in
       };
     in
     {
-      inherit (neovimConfig args) programs;
+      config = lib.optionalAttrs isLinux {
+        inherit (neovimConfig args) programs;
+      };
       environment.shellAliases = aliases;
 
       home = args: {
@@ -746,7 +779,7 @@ in
 
       home = _: {
         home.shellAliases = aliases;
-        programs.mpv.scripts = with pkgs; [ mpvScripts.mpris ];
+        programs.mpv.scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
       };
     };
 
@@ -758,9 +791,9 @@ in
     environment.systemPackages = [ pkgs.wget ];
   };
 
-  lshw = _: {
+  lshw = linuxOnly (_: {
     environment.systemPackages = [ pkgs.lshw ];
-  };
+  });
 
   fastfetch =
     _:
@@ -799,25 +832,25 @@ in
     environment.systemPackages = [ pkgs.stow ];
   };
 
-  systemdManagerTui = _: {
+  systemdManagerTui = linuxOnly (_: {
     environment.systemPackages = [ pkgs.systemd-manager-tui ];
-  };
+  });
 
-  youtubeTui = _: {
+  youtubeTui = linuxOnly (_: {
     environment.systemPackages = [ pkgs.youtube-tui ];
-  };
+  });
 
-  killall = _: {
+  killall = linuxOnly (_: {
     environment.systemPackages = [ pkgs.killall ];
-  };
+  });
 
-  xdgUtils = _: {
+  xdgUtils = linuxOnly (_: {
     environment.systemPackages = [ pkgs.xdg-utils ];
-  };
+  });
 
-  trashCli = _: {
+  trashCli = linuxOnly (_: {
     environment.systemPackages = [ pkgs.trash-cli ];
-  };
+  });
 
   gnumake = _: {
     environment.systemPackages = [ pkgs.gnumake ];

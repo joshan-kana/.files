@@ -4,9 +4,13 @@
   configurationOutputName,
   lib,
   pkgs,
+  system,
   ...
 }:
 
+let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+in
 {
   programs.ssh.knownHosts."github.com".publicKey =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
@@ -45,20 +49,35 @@
       topic = "${config.dotfiles.services.ntfy.url}/comin";
     in
     {
-      systemd.services.comin-event-listener = {
-        description = "Trigger Comin from ntfy events";
-        wantedBy = [ "multi-user.target" ];
+      config = lib.optionalAttrs isLinux {
+        systemd.services.comin-event-listener = {
+          description = "Trigger Comin from ntfy events";
+          wantedBy = [ "multi-user.target" ];
 
-        script = ''
-          exec ${lib.getExe pkgs.ntfy-sh} subscribe \
-            ${lib.escapeShellArg topic} \
-            ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
-        '';
+          script = ''
+            exec ${lib.getExe pkgs.ntfy-sh} subscribe \
+              ${lib.escapeShellArg topic} \
+              ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
+          '';
 
-        serviceConfig = {
-          Restart = "on-failure";
-          RestartSec = "5s";
+          serviceConfig = {
+            Restart = "on-failure";
+            RestartSec = "5s";
+          };
         };
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      launchd.daemons.comin-event-listener.serviceConfig = {
+        ProgramArguments = [
+          "${lib.getExe pkgs.ntfy-sh}"
+          "subscribe"
+          topic
+          "${lib.getExe config.services.comin.package} fetch"
+        ];
+        RunAtLoad = true;
+        KeepAlive = true;
+        ThrottleInterval = 5;
       };
     };
 }

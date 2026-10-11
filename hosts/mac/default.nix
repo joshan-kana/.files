@@ -1,64 +1,55 @@
 {
   config,
-  homeModule,
-  lib,
+  editScope,
+  extendScope,
   moduleRegistry,
-  pkgs,
   ...
 }:
 
-let
-  primary = config.dotfiles.users.primary.name;
-  themeRegistry = import ../../modules/theme/registry.nix { inherit lib pkgs; };
-  theme = themeRegistry.resolve themeRegistry.default;
-  sharedCli =
-    { osConfig, pkgs, ... }:
-    let
-      scope = moduleRegistry.cli {
-        config = osConfig;
-        inherit pkgs;
-        configurationOutputName = "mac";
-        configurationFlakeSubdirectory = null;
-      };
-    in
-    lib.getAttrs [
-      "bat"
-      "btop"
-      "clipboard"
-      "direnv"
-      "dust"
-      "eza"
-      "fastfetch"
-      "fzf"
-      "gh"
-      "git"
-      "glow"
-      "htop"
-      "jujutsu"
-      "neovim"
-      "nixShell"
-      "ripgrep"
-      "starship"
-      "tmux"
-      "tree"
-      "yazi"
-      "zellij"
-      "zsh"
-    ] scope
-    // {
-      inherit (scope) home;
-    };
-in
 {
-  # Determinate owns the existing Nix daemon and its settings.
-  nix.enable = false;
-  system.stateVersion = 6;
-  system.primaryUser = primary;
+  inherit (moduleRegistry)
+    cli
+    nix
+    networking
+    theme
+    backups
+    audio
+    virtualisation
+    desktopApps
+    appimage
+    ;
 
-  users.users.${primary}.home = "/Users/${primary}";
+  system = editScope moduleRegistry.system {
+    compatibility = _: {
+      system.stateVersion = 6;
+    };
+    identity = _: {
+      system.primaryUser = config.dotfiles.users.primary.name;
+      users.users.${config.dotfiles.users.primary.name}.home =
+        "/Users/${config.dotfiles.users.primary.name}";
+    };
+  };
+
+  desktop = extendScope moduleRegistry.desktop {
+    hammerspoon = import ../../modules/desktop/hammerspoon;
+    yabai = import ../../modules/desktop/yabai;
+    macPreferences = _: {
+      system.defaults = {
+        dock = {
+          autohide = true;
+          show-recents = false;
+          tilesize = 47;
+          mru-spaces = false;
+        };
+        NSGlobalDomain = {
+          KeyRepeat = 2;
+          InitialKeyRepeat = 15;
+        };
+      };
+    };
+  };
+
   dotfiles.users.primary.homeRoot = "/Users";
-  # The Darwin host exposes the same resolved semantic-scope tree as NixOS.
-  dotfiles.resolvedScopes = config.home-manager.users.${primary}.dotfiles.resolvedScopes;
 
   # Install only foundational, non-creative Mac applications here.
   homebrew = {
@@ -73,31 +64,6 @@ in
     ];
   };
 
-  stylix = {
-    enable = true;
-    inherit (theme) polarity;
-    base16Scheme = {
-      system = "base16";
-      name = theme.label;
-      variant = theme.polarity;
-      palette = theme.colors;
-    };
-    inherit (theme) fonts;
-  };
-
-  system.defaults = {
-    dock = {
-      autohide = true;
-      show-recents = false;
-      tilesize = 47;
-      mru-spaces = false;
-    };
-    NSGlobalDomain = {
-      KeyRepeat = 2;
-      InitialKeyRepeat = 15;
-    };
-  };
-
   home-manager = {
     # Preserve the hand-maintained originals when Home Manager first takes ownership.
     backupFileExtension = "before-nix";
@@ -105,21 +71,13 @@ in
     sharedModules = [ ../../modules/options ];
     useGlobalPkgs = true;
     useUserPackages = true;
-    users.${primary} =
+    users.${config.dotfiles.users.primary.name} =
       { lib, ... }:
       {
-        imports = [
-          (homeModule "cli" sharedCli)
-          (homeModule "desktop" (_: {
-            hammerspoon = import ../../modules/desktop/hammerspoon;
-            yabai = import ../../modules/desktop/yabai;
-          }))
-        ];
-
         home = {
-          username = primary;
-          homeDirectory = "/Users/${primary}";
-          stateVersion = "26.05";
+          username = config.dotfiles.users.primary.name;
+          homeDirectory = "/Users/${config.dotfiles.users.primary.name}";
+          stateVersion = lib.mkForce "26.05";
           sessionPath = [ "$HOME/.local/bin" ];
           shellAliases = {
             p = "mpv --audio-pitch-correction=no --loop=yes";
@@ -152,7 +110,6 @@ in
         stylix = {
           autoEnable = false;
           targets = {
-            bat.enable = true;
             btop.enable = true;
             fzf.enable = true;
             lazygit.enable = true;

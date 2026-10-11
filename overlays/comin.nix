@@ -1,14 +1,19 @@
 {
   config,
   lib,
+  pkgs,
+  system,
   ...
 }:
 
 let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   upstream = builtins.getFlake "github:nlewo/comin/ed92afc48978fb15a2535ebd5c5f63b3010e3b78";
 in
 {
-  imports = [ upstream.nixosModules.comin ];
+  imports =
+    lib.optionals isLinux [ upstream.nixosModules.comin ]
+    ++ lib.optionals isDarwin [ (import ../modules/system/comin-darwin.nix { self = upstream; }) ];
 
   options.services.comin.allowForcePush = lib.mkOption {
     type = lib.types.bool;
@@ -34,8 +39,25 @@ in
       ];
     }
 
-    (lib.mkIf config.services.comin.allowForcePush {
-      systemd.services.comin.environment.COMIN_ALLOW_FORCE_PUSH = "true";
+    (lib.optionalAttrs isLinux (
+      lib.mkIf config.services.comin.allowForcePush {
+        systemd.services.comin.environment.COMIN_ALLOW_FORCE_PUSH = "true";
+      }
+    ))
+    (lib.optionalAttrs isDarwin {
+      # Determinate owns the daemon, so `nix.package` cannot be read here.
+      launchd.daemons.comin.serviceConfig.EnvironmentVariables.PATH = lib.mkForce (
+        lib.makeBinPath [
+          pkgs.nix
+          pkgs.git
+          pkgs.openssh
+        ]
+      );
     })
+    (lib.optionalAttrs isDarwin (
+      lib.mkIf config.services.comin.allowForcePush {
+        launchd.daemons.comin.serviceConfig.EnvironmentVariables.COMIN_ALLOW_FORCE_PUSH = "true";
+      }
+    ))
   ];
 }

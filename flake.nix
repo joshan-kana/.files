@@ -79,6 +79,11 @@
 
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
+    determinate = {
+      url = "github:DeterminateSystems/determinate";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
     computer = {
@@ -296,6 +301,7 @@
               configurationName
               configurationOutputName
               inputs
+              system
               ;
             inherit (semantic)
               editScope
@@ -347,6 +353,8 @@
 
       themeScope = moduleRegistry.theme {
         inherit lib;
+        # Theme registry introspection needs no host packages.
+        system = "x86_64-linux";
         pkgs = null;
         scopeConfig = { };
       };
@@ -675,22 +683,28 @@
           };
         }
       );
-      darwinConfigurations.mac = nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = {
-          inherit inputs moduleRegistry;
-          configurationName = "mac";
-          configurationOutputName = "mac";
-          configurationFlakeSubdirectory = null;
-          inherit (semantic) homeModule;
+      darwinConfigurations.mac =
+        let
+          system = "aarch64-darwin";
+        in
+        nix-darwin.lib.darwinSystem {
+          inherit system;
+          specialArgs = {
+            inherit inputs moduleRegistry system;
+            configurationName = "mac";
+            configurationOutputName = "mac";
+            configurationFlakeSubdirectory = null;
+            inherit (semantic) editScope extendScope;
+          };
+          modules = [
+            ./modules/options
+            home-manager.darwinModules.home-manager
+            stylix.darwinModules.stylix
+            inputs.determinate.darwinModules.default
+            ./overlays/comin.nix
+            (semantic.rootModule (import ./hosts/mac))
+          ];
         };
-        modules = [
-          ./modules/options
-          home-manager.darwinModules.home-manager
-          stylix.darwinModules.stylix
-          ./hosts/mac
-        ];
-      };
       nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
     };
 }

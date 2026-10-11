@@ -1,32 +1,43 @@
-{ inputs, pkgs, ... }:
-
 {
-  brave = _: {
+  inputs,
+  lib,
+  pkgs,
+  system,
+  ...
+}:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+  linuxOnly =
+    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
+in
+{
+  brave = linuxOnly (_: {
     environment.systemPackages = [ pkgs.brave ];
-  };
+  });
 
-  bitwarden = _: {
+  bitwarden = linuxOnly (_: {
     environment.systemPackages = [ pkgs.bitwarden-desktop ];
-  };
+  });
 
-  warp = _: {
+  warp = linuxOnly (_: {
     environment.systemPackages = [ pkgs.warp-terminal ];
-  };
+  });
 
-  mullvad = _: {
+  mullvad = linuxOnly (_: {
     services.mullvad-vpn.enable = true;
     environment.systemPackages = [ pkgs.mullvad-vpn ];
-  };
+  });
 
-  chromium = _: {
+  chromium = linuxOnly (_: {
     environment.systemPackages = [ pkgs.chromium ];
-  };
+  });
 
-  zen = _: {
+  zen = linuxOnly (_: {
     environment.systemPackages = [
       inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
     ];
-  };
+  });
 
   firefox = _: {
     home = _: {
@@ -62,33 +73,33 @@
     };
   };
 
-  thunderbird = _: {
+  thunderbird = linuxOnly (_: {
     environment.systemPackages = [ pkgs.thunderbird ];
-  };
+  });
 
-  obsidian = _: {
+  obsidian = linuxOnly (_: {
     environment.systemPackages = [ pkgs.obsidian ];
-  };
+  });
 
-  filelight = _: {
+  filelight = linuxOnly (_: {
     environment.systemPackages = [ pkgs.kdePackages.filelight ];
-  };
+  });
 
-  gimp = _: {
+  gimp = linuxOnly (_: {
     environment.systemPackages = [ pkgs.gimp ];
-  };
+  });
 
-  gparted = _: {
+  gparted = linuxOnly (_: {
     environment.systemPackages = [ pkgs.gparted ];
-  };
+  });
 
-  githubDesktop = _: {
+  githubDesktop = linuxOnly (_: {
     environment.systemPackages = [ pkgs.github-desktop ];
-  };
+  });
 
-  nautilus = _: {
+  nautilus = linuxOnly (_: {
     environment.systemPackages = [ pkgs.nautilus ];
-  };
+  });
 
   vscode = _: {
     home = _: {
@@ -96,30 +107,30 @@
     };
   };
 
-  pycharm = _: {
+  pycharm = linuxOnly (_: {
     environment.systemPackages = [ pkgs.jetbrains.pycharm ];
-  };
+  });
 
-  libreoffice = _: {
+  libreoffice = linuxOnly (_: {
     environment.systemPackages = [ pkgs.libreoffice ];
-  };
+  });
 
-  sunshine = _: {
+  sunshine = linuxOnly (_: {
     environment.systemPackages = [ pkgs.sunshine ];
     networking.firewall.allowedTCPPorts = [ 47990 ];
-  };
+  });
 
-  moonlight = _: {
+  moonlight = linuxOnly (_: {
     environment.systemPackages = [ pkgs.moonlight-qt ];
-  };
+  });
 
-  waypipe = _: {
+  waypipe = linuxOnly (_: {
     environment.systemPackages = [ pkgs.waypipe ];
-  };
+  });
 
-  vlc = _: {
+  vlc = linuxOnly (_: {
     environment.systemPackages = [ pkgs.vlc ];
-  };
+  });
 
   mopidy = _: {
     home = _: {
@@ -140,32 +151,33 @@
 
   # The local Ollama service is managed outside this shared module, but these
   # desktop hosts intentionally expose its established ports.
-  ollama = _: {
+  ollama = linuxOnly (_: {
     networking.firewall.allowedTCPPorts = [
       11434
       11435
     ];
-  };
-  spotify =
+  });
+  spotify = linuxOnly (
     { lib, options, ... }:
     lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
       programs.spicetify.enable = true;
-    };
+    }
+  );
 
-  discord = _: {
+  discord = linuxOnly (_: {
     environment.systemPackages = [ pkgs.discord ];
-  };
+  });
 
-  dropbox = _: {
+  dropbox = linuxOnly (_: {
     environment.systemPackages = [ pkgs.dropbox ];
-  };
+  });
 
-  onlyoffice = _: {
+  onlyoffice = linuxOnly (_: {
     environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
-  };
+  });
 
-  twingate = _: {
+  twingate = linuxOnly (_: {
     services.twingate.enable = true;
-  };
+  });
 
 }

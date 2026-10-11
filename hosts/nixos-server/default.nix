@@ -2,6 +2,7 @@
   editScope,
   inputs,
   moduleRegistry,
+  system,
   ...
 }:
 
@@ -100,10 +101,19 @@
     {
       config,
       inputs,
+      lib,
       pkgs,
       ...
     }:
-    (moduleRegistry.nix { inherit config inputs pkgs; })
+    (moduleRegistry.nix {
+      inherit
+        config
+        inputs
+        lib
+        pkgs
+        system
+        ;
+    })
     // {
       boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
@@ -121,7 +131,9 @@
     }:
 
     let
-      shared = moduleRegistry.networking { };
+      shared = moduleRegistry.networking {
+        inherit lib system;
+      };
       inherit (config.dotfiles.server) lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;
     in

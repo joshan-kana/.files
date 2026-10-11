@@ -1,5 +1,12 @@
-_: {
+{ lib, system, ... }:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+in
+{
   time.timeZone = "Australia/Perth";
+}
+// lib.optionalAttrs isLinux {
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_AU.UTF-8";
