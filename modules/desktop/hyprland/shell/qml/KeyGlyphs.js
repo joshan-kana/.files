@@ -4,5 +4,5 @@ function display(value) {
         .replace(/\bSUPER\s*\+\s*/gi, "⊞")
         .replace(/\bCTRL\s*\+\s*/gi, "⌃")
         .replace(/\bALT\s*\+\s*/gi, "⌥")
-        .replace(/\bSHIFT\s*\+\s*/gi, "⇧");
+        .replace(/\bSHIFT\s*\+\s*/gi, "⬆");
 }
