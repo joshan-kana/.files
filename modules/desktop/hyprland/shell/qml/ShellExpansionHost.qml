@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "KeyGlyphs.js" as KeyGlyphs
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -284,7 +285,7 @@ PanelWindow {
             }
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE" + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
+            text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (contentViewport.contentHeight > contentViewport.height + 1 ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
             font.pixelSize: host.theme.fontKeyHint
@@ -310,7 +311,10 @@ PanelWindow {
 
             Loader {
                 id: contentLoader
-                width: contentViewport.width
+                // Lay out the incoming tab at its destination width while
+                // the outer squircle morphs. Otherwise every tile reflows
+                // through intermediate widths on each animation frame.
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, host.targetWidth - host.theme.spacing5 * 2))
                 height: Math.max(contentViewport.height, host.loadedContent ? host.loadedContent.implicitHeight : 0)
                 onLoaded: {
                     contentViewport.contentY = 0;
