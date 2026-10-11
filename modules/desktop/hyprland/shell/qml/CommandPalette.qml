@@ -381,8 +381,10 @@ PanelWindow {
                 spacing: theme.spacing1
                 clip: true
                 currentIndex: resultModel.values.length > 0 ? 0 : -1
-                highlightMoveDuration: motion.fast
-                highlightResizeDuration: motion.fast
+                // Autorepeated navigation must be immediate; the focused
+                // surface itself still animates its tonal state.
+                highlightMoveDuration: 0
+                highlightResizeDuration: 0
 
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: event => {
@@ -395,7 +397,7 @@ PanelWindow {
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                         results.currentIndex = Math.max(0, results.currentIndex - 1);
                     } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                        const rows = Math.max(1, Math.floor(results.height / (48 + results.spacing) / 2));
+                        const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));
                         results.currentIndex = Math.max(0, Math.min(resultModel.values.length - 1, results.currentIndex + (event.key === Qt.Key_D ? rows : -rows)));
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         palette.launchCurrent((event.modifiers & Qt.ShiftModifier) !== 0);
@@ -420,7 +422,7 @@ PanelWindow {
                     required property int index
 
                     width: ListView.view.width
-                    height: 48
+                    height: 57
 
                     Row {
                         anchors {
@@ -431,8 +433,8 @@ PanelWindow {
                         spacing: theme.spacing3
 
                         SquircleSurface {
-                            width: 28
-                            height: 28
+                            width: 36
+                            height: 36
                             anchors.verticalCenter: parent.verticalCenter
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusSmall
@@ -451,13 +453,13 @@ PanelWindow {
                         }
 
                         Item {
-                            width: 30
+                            width: 36
                             height: parent.height
 
                             Image {
                                 anchors.centerIn: parent
-                                width: 24
-                                height: 24
+                                width: 29
+                                height: 29
                                 source: modelData.icon ? Quickshell.iconPath(modelData.icon, "application-x-executable") : Quickshell.iconPath("application-x-executable")
                                 sourceSize.width: width
                                 sourceSize.height: height
@@ -468,7 +470,7 @@ PanelWindow {
 
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 190
+                            width: Math.max(90, parent.width - 204)
                             spacing: 1
 
                             Text {

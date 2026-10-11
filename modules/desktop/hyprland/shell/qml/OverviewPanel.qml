@@ -103,7 +103,7 @@ PanelWindow {
         id: card
         anchors.centerIn: parent
         width: Math.min(overview.width - 100, 980)
-        height: Math.min(overview.height - 120, Math.max(310, 213 + Math.min(4, Math.ceil(overview.windows.length / 3)) * 204))
+        height: Math.min(overview.height - 120, Math.max(310, 213 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
         theme: overview.theme
         motion: overview.motion
         surfaceLayer: ShellSurface.Pane
@@ -177,7 +177,7 @@ PanelWindow {
             }
 
             Text {
-                text: overview.windows.length + " WINDOWS   ·   Workspace " + overview.focusedWorkspace
+                text: overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS") + "   ·   Workspace " + overview.focusedWorkspace
                 color: overview.theme.accent
                 font.family: overview.runtime.fontMono
                 font.pixelSize: overview.theme.fontSubpanelEyebrow
@@ -190,7 +190,7 @@ PanelWindow {
                 height: Math.max(90, parent.height - 162)
                 clip: true
                 model: overview.windows
-                cellWidth: Math.floor(width / 3)
+                cellWidth: Math.floor(width / (width < 720 ? 2 : 3))
                 cellHeight: 204
                 currentIndex: overview.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
