@@ -61,6 +61,7 @@ FocusScope {
         to: 1
         duration: calendar.motion.spatialNormal
         easing.type: calendar.motion.spatialType
+        easing.bezierCurve: calendar.motion.spatialCurve
         onFinished: calendar.sliding = false
     }
 

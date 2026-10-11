@@ -291,12 +291,14 @@ PanelWindow {
             NumberAnimation {
                 duration: host.motion.morph
                 easing.type: host.motion.morphType
+                easing.bezierCurve: host.motion.morphCurve
             }
         }
         Behavior on height {
             NumberAnimation {
                 duration: host.motion.morph
                 easing.type: host.motion.morphType
+                easing.bezierCurve: host.motion.morphCurve
             }
         }
 
@@ -319,6 +321,7 @@ PanelWindow {
             NumberAnimation {
                 duration: host.motion.morph
                 easing.type: host.motion.morphType
+                easing.bezierCurve: host.motion.morphCurve
             }
         }
 
@@ -392,8 +395,9 @@ PanelWindow {
                 enabled: host.activeSlot === 0
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: host.motion.morph
-                        easing.type: host.motion.morphType
+                        duration: host.motion.contentFade
+                        easing.type: host.motion.enterType
+                        easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
                 onLoaded: geometryUpdate.restart()
@@ -411,8 +415,9 @@ PanelWindow {
                 enabled: host.activeSlot === 1
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: host.motion.morph
-                        easing.type: host.motion.morphType
+                        duration: host.motion.contentFade
+                        easing.type: host.motion.enterType
+                        easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
                 onLoaded: geometryUpdate.restart()
