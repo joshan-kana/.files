@@ -20,6 +20,7 @@ local media = require("media")
 local toggles = require("toggles")
 local cheatsheet = require("cheatsheet")
 local app_switcher = require("app_switcher")
+local space_stash = require("space_stash")
 
 local bindings = {
 	-- Free AltTab-style canvas switcher
@@ -175,6 +176,45 @@ local bindings = {
 		end,
 		section = "APPS",
 		desc = "XO",
+	},
+
+	-- Quick-access workspace (dedicated yabai Space).
+	{
+		mods = "hyper",
+		key = "s",
+		fn = function()
+			local space = yabai_utils.json("query --spaces --space")
+			if space then
+				yabai_utils.exec(
+					"space --focus " .. (space.label == "hs-quick-access" and "recent" or "hs-quick-access")
+				)
+			end
+		end,
+		section = "DISPLAYS & SPACES",
+		desc = "Open/return from quick workspace",
+	},
+	{
+		mods = "hyper + shift",
+		key = "s",
+		cmd = "window --space hs-quick-access",
+		section = "DISPLAYS & SPACES",
+		desc = "Send window to quick workspace",
+	},
+
+	-- Managed, inset scratchpad Space associated with each regular Space.
+	{
+		mods = "hyper",
+		key = "i",
+		fn = space_stash.stashFocused,
+		section = "WINDOWS",
+		desc = "Send/return window to/from scratchpad",
+	},
+	{
+		mods = "hyper + shift",
+		key = "i",
+		fn = space_stash.toggle,
+		section = "WINDOWS",
+		desc = "Open/leave this Space's scratchpad",
 	},
 
 	-- Window focus (vim-style hjkl)

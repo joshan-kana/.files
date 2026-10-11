@@ -3,7 +3,7 @@ local hs = _G.hs
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
-require("theme").apply("stylix")
+require("theme").apply("framer") -- Set default theme (change to "tokyo-night" etc.)
 
 -- Auto-reload on config changes
 _G.configWatcher = hs.pathwatcher
@@ -56,6 +56,8 @@ for _, b in ipairs(bindings) do
 		end
 	end
 end
+
+require("space_stash").start()
 
 require("hs.ipc")
 

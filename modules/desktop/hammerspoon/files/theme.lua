@@ -1,21 +1,60 @@
 local hs = _G.hs
 
 -- Central theme for all Hammerspoon UI (window switcher, cheatsheet, etc.)
--- Colors are supplied by the shared Stylix palette.
+-- Inspired by base16-framer — dark background, bright crisp text, no dimming.
 --
 -- Usage:
 --   local theme = require("theme")
 --   local colors = theme.colors
---   theme.apply("stylix")
+--   -- Or pick a named scheme:
+--   theme.apply("framer")  -- default
+--   theme.apply("tokyo-night")
 
 local M = {}
 
--- The palette is generated from the shared Stylix theme at activation.
-local schemes = { stylix = require("stylix_palette") }
+-- Built‑in colour schemes
+-- Each scheme must provide every key listed below.
+
+local schemes = {}
+
+-- Framer: deep dark background, bright foreground, rich accents.
+-- Base palette adapted from base16‑framer by TSUYUSATO Kitsune.
+schemes["framer"] = {
+	bg = { hex = "111111" }, -- base00 — corrected by canvas gamma in hexToColor
+	bgAlt = { hex = "1a1a1a" }, -- base01 – row background, slightly lighter
+	bgSelected = { hex = "3a3a3a" }, -- brighter than base02 for selected rows
+	stroke = { hex = "505050" }, -- subtle border
+	fg = { hex = "d0d0d0" }, -- base05 – main text (bright, not dimmed)
+	fgDim = { hex = "888888" }, -- base03 – secondary / dim text
+	fgMuted = { hex = "666666" }, -- very muted (counter, footer)
+	accent = { hex = "fc6a5c" }, -- red/coral  – primary accent
+	green = { hex = "66cc66" },
+	yellow = { hex = "ffcc00" },
+	blue = { hex = "5588cc" },
+	magenta = { hex = "cc55cc" },
+	cyan = { hex = "55cccc" },
+}
+
+-- Tokyo Night: popular dark theme with blue-ish undertones.
+schemes["tokyo-night"] = {
+	bg = { hex = "1a1b26" },
+	bgAlt = { hex = "24283b" },
+	bgSelected = { hex = "3b4261" },
+	stroke = { hex = "565f89" },
+	fg = { hex = "c0caf5" },
+	fgDim = { hex = "9aa5ce" },
+	fgMuted = { hex = "565f89" },
+	accent = { hex = "f7768e" },
+	green = { hex = "9ece6a" },
+	yellow = { hex = "e0af68" },
+	blue = { hex = "7aa2f7" },
+	magenta = { hex = "bb9af7" },
+	cyan = { hex = "7dcfff" },
+}
 
 -- Active scheme (set by apply())
 
-M._active = "stylix"
+M._active = "framer"
 
 -- Canvas color space correction
 -- hs.canvas uses calibrated RGB (gamma ~1.8), not sRGB (gamma ~2.2).
@@ -54,7 +93,7 @@ end
 -- Public API
 
 --- Switch to a named colour scheme.
---- @param name string  Currently "stylix"
+--- @param name string  e.g. "framer", "tokyo-night"
 function M.apply(name)
 	if not schemes[name] then
 		hs.alert.show("Unknown theme: " .. name)
