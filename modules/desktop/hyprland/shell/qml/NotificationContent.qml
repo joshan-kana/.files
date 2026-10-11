@@ -181,6 +181,8 @@ FocusScope {
                     property: "opacity"
                     to: 0
                     duration: center.motion.effectsFast
+                    easing.type: center.motion.exitType
+                    easing.bezierCurve: center.motion.exitCurve
                 }
             }
             displaced: Transition {
@@ -188,6 +190,7 @@ FocusScope {
                     properties: "x,y"
                     duration: center.motion.spatialFast
                     easing.type: center.motion.spatialType
+                    easing.bezierCurve: center.motion.spatialCurve
                 }
             }
 
@@ -226,6 +229,7 @@ FocusScope {
                             properties: "x,y"
                             duration: center.motion.spatialFast
                             easing.type: center.motion.spatialType
+                            easing.bezierCurve: center.motion.spatialCurve
                         }
                     }
 
