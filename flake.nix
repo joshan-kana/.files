@@ -704,6 +704,7 @@
             stylix.darwinModules.stylix
             inputs.determinate.darwinModules.default
             ./overlays/comin.nix
+            ./overlays/hammerspoon.nix
             (semantic.rootModule (import ./hosts/mac))
           ];
         };

@@ -341,7 +341,7 @@ local bindings = {
 		mods = "hyper + shift",
 		key = "r",
 		fn = function()
-			hs.execute("/opt/homebrew/bin/yabai --restart-service")
+			hs.execute("/bin/launchctl kickstart -k gui/$(/usr/bin/id -u)/org.nixos.yabai")
 		end,
 		section = "SYSTEM",
 		desc = "Restart Yabai",

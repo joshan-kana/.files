@@ -1,6 +1,13 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  system,
+  ...
+}:
 
 let
+  inherit (lib.systems.elaborate system) isDarwin;
   luaFiles = builtins.filter (name: lib.hasSuffix ".lua" name) (
     builtins.attrNames (builtins.readDir ./files)
   );
@@ -41,4 +48,7 @@ in
         '';
       };
   };
+}
+// lib.optionalAttrs isDarwin {
+  environment.systemPackages = [ pkgs.hammerspoon ];
 }

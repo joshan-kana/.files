@@ -2,7 +2,7 @@ local hs = _G.hs
 
 -- Shared yabai command wrappers used by init.lua and feature modules.
 
-local YABAI = "/opt/homebrew/bin/yabai -m "
+local YABAI = "/run/current-system/sw/bin/yabai -m "
 local M = {}
 
 --- Run a yabai command, discarding output.
@@ -97,9 +97,7 @@ function M.focusNextDisplay()
 		return
 	end
 
-	hs.execute(
-		"/opt/homebrew/bin/yabai -m display --focus next || " .. "/opt/homebrew/bin/yabai -m display --focus first"
-	)
+	hs.execute(YABAI .. "display --focus next || " .. YABAI .. "display --focus first")
 
 	hs.timer.doAfter(0.08, function()
 		local windows = M.json("query --windows --display " .. target.index)

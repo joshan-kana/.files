@@ -3,6 +3,7 @@
   editScope,
   extendScope,
   moduleRegistry,
+  pkgs,
   ...
 }:
 
@@ -33,6 +34,12 @@
   desktop = extendScope moduleRegistry.desktop {
     hammerspoon = import ../../modules/desktop/hammerspoon;
     yabai = import ../../modules/desktop/yabai;
+    raycast = _: {
+      environment.systemPackages = [ pkgs.raycast ];
+    };
+    karabinerElements = _: {
+      services.karabiner-elements.enable = true;
+    };
     macPreferences = _: {
       system.defaults = {
         dock = {
@@ -51,17 +58,10 @@
 
   dotfiles.users.primary.homeRoot = "/Users";
 
-  # Install only foundational, non-creative Mac applications here.
+  # Temporary backend for the remaining casks without working Nix packages.
   homebrew = {
     enable = true;
     onActivation.cleanup = "none";
-    taps = [ "asmvik/formulae" ];
-    brews = [ "asmvik/formulae/yabai" ];
-    casks = [
-      "hammerspoon"
-      "karabiner-elements"
-      "raycast"
-    ];
   };
 
   home-manager = {
@@ -81,8 +81,6 @@
           sessionPath = [ "$HOME/.local/bin" ];
           shellAliases = {
             p = "mpv --audio-pitch-correction=no --loop=yes";
-            upcheck = "brew update && brew upgrade -gny";
-            update = "sudo -v && brew upgrade -g --no-ask";
             o = "orb";
             caf = "caffeinate -dims";
             sn = "ssh nixos-server";
