@@ -295,20 +295,17 @@ FocusScope {
                 height: 1
             }
 
-            Text {
+            ShellAction {
                 id: resetButton
-                text: "TODAY ↗"
-                color: calendar.theme.accent
-                font.family: calendar.runtime.fontMono
-                font.pixelSize: calendar.theme.fontSize(11)
-                font.weight: Font.DemiBold
-
-                StateLayer {
-                    theme: calendar.theme
-                    motion: calendar.motion
-                    cornerRadius: calendar.theme.radiusSmall
-                    onActivated: calendar.today()
-                }
+                width: 36
+                height: 30
+                iconOnly: true
+                icon: "󰃰"
+                title: "Today (T)"
+                runtime: calendar.runtime
+                theme: calendar.theme
+                motion: calendar.motion
+                onActivated: calendar.today()
             }
         }
     }
