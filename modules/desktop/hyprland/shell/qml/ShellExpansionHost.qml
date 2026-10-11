@@ -103,8 +103,11 @@ PanelWindow {
     // new tab's dimensions are ready.
     property real measuredContentWidth: 0
     property real measuredContentHeight: 0
-    readonly property real contentWidth: measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth
-    readonly property real contentHeight: measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight
+    // Derive the destination geometry from the live view, not only the cache:
+    // a temporary initial implicitHeight can otherwise strand the host at
+    // the height of a previously loaded detail panel.
+    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing5 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing5 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
