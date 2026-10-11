@@ -37,6 +37,8 @@ assert scopes.cli.systemCommands.enable;
 assert scopes.cli.systemCommands.vm.enable;
 assert scopes.desktopApps.vscode.enable;
 assert scopes.networking.ssh.enable;
+assert config.services.openssh.enable;
+assert builtins.match ".*PasswordAuthentication no.*" config.services.openssh.extraConfig != null;
 assert scopes.desktop.hammerspoon.enable;
 assert scopes.desktop.yabai.enable;
 assert home.programs.zsh.enable;

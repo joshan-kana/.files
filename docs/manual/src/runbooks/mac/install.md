@@ -11,6 +11,7 @@ The `mac` Darwin host composes the same semantic scopes as the NixOS fleet. Port
 5. Confirm the runtime Restic password and rclone configuration files exist under `~/Library/Application Support/SecretsBackup`, and `~/.secrets` is private. The existing encrypted backup repository remains authoritative; never initialise a second one.
 6. Provision `~/.secrets/comin-github` (read-only repository deploy key) and `~/.secrets/attic-token` (narrowly scoped cache-upload credential) through the existing secret recovery process. Do **not** embed them in the flake or deploy before they are available. The declarative Comin and Attic launchd jobs expect these runtime credentials.
 7. Ensure the server-only ntfy and Attic endpoints are reachable from the Mac on the LAN, and check away-from-home Tailscale fallback. Comin event subscription is the fast path; its existing five-minute reconciliation fetch handles missed events.
+8. The shared networking scope now owns the native macOS SSH service with key-only authentication. Arrange physical-console access before the first switch; verify the server can still SSH to the Mac afterward before removing the original SSH configuration.
 
 ## Evaluate and build
 
@@ -30,7 +31,7 @@ sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake "$HOM
 
 Subsequent manual builds and activations can use `sbld` and `sup`, which invoke `nh darwin` on macOS. Review any conflicting symlinks and existing Homebrew-managed packages before switching.
 
-**First-activation handover:** Before the switch, record both existing secrets-backup LaunchAgent labels and retain a restorable copy of their plist files and `backup.sh`. In the same maintenance session, unload those two existing jobs before activating the new Home Manager agents with the same labels. Verify only one instance of each schedule is loaded, then run an actual backup, `restic check`, snapshot listing, and a temporary-directory restore comparison. If the activation fails, restore the original plists and reload the original jobs immediately. Do not leave the Mac without a working backup schedule.
+**First-activation handover:** Before the switch, record both existing secrets-backup LaunchAgent labels and retain a restorable copy of their plist files and `backup.sh`. In the same maintenance session, unload those two existing jobs and move their original plist files out of `~/Library/LaunchAgents` into the recovery copy before activating the new Home Manager agents with the same labels. Leaving the old plists in the LaunchAgents directory risks two schedulers reloading on the next login. Verify only one instance of each schedule is loaded, then run an actual backup, `restic check`, snapshot listing, and a temporary-directory restore comparison. If the activation fails, restore the original plists and reload the original jobs immediately. Do not leave the Mac without a working backup schedule.
 
 Comin will start managing the Mac only after this deliberate first activation. Test a manual `comin fetch` and a safe rollback before relying on future GitHub pushes. Do not merge the Mac PR or activate the new deployment jobs before native Darwin CI has passed.
 

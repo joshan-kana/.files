@@ -1,7 +1,11 @@
 { lib, system, ... }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  sshSettings = {
+    PasswordAuthentication = false;
+    KbdInteractiveAuthentication = false;
+  };
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
@@ -44,14 +48,18 @@ in
   /**
     Key-only OpenSSH server access with the firewall opening owned by the service.
   */
-  ssh = linuxOnly (_: {
+  ssh = _: {
     services.openssh = {
       enable = true;
+    }
+    // lib.optionalAttrs isLinux {
       openFirewall = true;
-      settings = {
-        PasswordAuthentication = false;
-        KbdInteractiveAuthentication = false;
-      };
+      settings = sshSettings;
+    }
+    // lib.optionalAttrs isDarwin {
+      extraConfig = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (name: enabled: "${name} ${if enabled then "yes" else "no"}") sshSettings
+      );
     };
-  });
+  };
 }
