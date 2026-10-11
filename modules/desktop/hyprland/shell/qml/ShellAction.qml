@@ -1,4 +1,5 @@
 import QtQuick
+import "KeyGlyphs.js" as KeyGlyphs
 
 Item {
     id: root
@@ -97,7 +98,7 @@ Item {
             right: parent.right
             margins: root.theme.spacing2
         }
-        text: root.shortcut
+        text: KeyGlyphs.display(root.shortcut)
         color: root.theme.textMuted
         font.family: root.runtime.fontMono
         font.pixelSize: root.theme.fontKeyHint
