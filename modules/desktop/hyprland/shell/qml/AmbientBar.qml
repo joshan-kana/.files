@@ -13,6 +13,7 @@ Variants {
     required property MediaState media
     required property SpectrumState spectrum
     required property SystemState system
+    required property PowerProfileState powerProfile
     required property NotificationState notificationState
 
     property bool shown: true
@@ -305,15 +306,42 @@ Variants {
                 }
             }
 
+            Row {
+                id: statusHints
+                spacing: bars.theme.spacing2
+                anchors {
+                    right: systemIsland.left
+                    rightMargin: implicitWidth > 0 ? bars.theme.spacing3 : 0
+                    verticalCenter: parent.verticalCenter
+                }
+                visible: !systemIsland.compact
+
+                Text {
+                    visible: bars.system.idleInhibited
+                    text: "󰅶"
+                    color: bars.theme.positive
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: bars.theme.fontSize(15)
+                }
+
+                Text {
+                    visible: bars.system.microphoneMuted
+                    text: "󰍭"
+                    color: bars.theme.warning
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: bars.theme.fontSize(16)
+                }
+            }
+
             ShellSurface {
                 id: notificationIsland
 
                 // Notification history remains reachable through Activity when space is tight.
-                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + width + bars.theme.spacing3 * 2
+                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + statusHints.implicitWidth + width + bars.theme.spacing3 * 3
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
                 height: parent.height
                 anchors {
-                    right: systemIsland.left
+                    right: statusHints.left
                     rightMargin: bars.theme.spacing3
                     verticalCenter: parent.verticalCenter
                 }
@@ -373,6 +401,7 @@ Variants {
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 system: (bar.system as SystemState)
+                powerProfile: (bars.powerProfile as PowerProfileState)
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
