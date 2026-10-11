@@ -213,6 +213,7 @@ FocusScope {
                         NumberAnimation {
                             duration: content.scrubbing ? 0 : content.motion.fast
                             easing.type: content.motion.enterType
+                            easing.bezierCurve: content.motion.enterCurve
                         }
                     }
                 }
@@ -239,6 +240,7 @@ FocusScope {
                         NumberAnimation {
                             duration: content.motion.fast
                             easing.type: content.motion.enterType
+                            easing.bezierCurve: content.motion.enterCurve
                         }
                     }
                 }
