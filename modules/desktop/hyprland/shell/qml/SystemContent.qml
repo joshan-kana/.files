@@ -1103,6 +1103,7 @@ FocusScope {
             motion: root.motion
 
             onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            onSwitchLaunched: root.closeRequested()
         }
 
         SessionPanel {
