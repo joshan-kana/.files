@@ -548,8 +548,19 @@
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
+          theme-tokens = builtins.seq (import ./tests/theme-tokens.nix { inherit inputs; }) pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
+        }
+        // lib.optionalAttrs (system == "aarch64-linux") {
+          theme-integration = builtins.seq (import ./tests/theme-integration.nix {
+            inherit inputs;
+            configurations = self.lib.themedNixosConfigurations;
+          }) pkgs.emptyFile;
+          theme-runtime = import ./tests/theme-runtime.nix {
+            inherit inputs pkgs;
+            configurations = self.lib.themedNixosConfigurations;
+          };
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
