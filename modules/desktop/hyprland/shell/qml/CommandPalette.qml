@@ -209,6 +209,7 @@ PanelWindow {
             NumberAnimation {
                 duration: motion.fast
                 easing.type: palette.open ? motion.enterType : motion.exitType
+                easing.bezierCurve: palette.open ? motion.enterCurve : motion.exitCurve
             }
         }
 
@@ -241,12 +242,15 @@ PanelWindow {
             NumberAnimation {
                 duration: motion.normal
                 easing.type: motion.enterType
+                easing.bezierCurve: motion.enterCurve
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
                 duration: motion.fast
+                easing.type: motion.effectsType
+                easing.bezierCurve: motion.effectsCurve
             }
         }
 
@@ -273,6 +277,8 @@ PanelWindow {
                 Behavior on borderColor {
                     ColorAnimation {
                         duration: motion.fast
+                        easing.type: motion.effectsType
+                        easing.bezierCurve: motion.effectsCurve
                     }
                 }
 

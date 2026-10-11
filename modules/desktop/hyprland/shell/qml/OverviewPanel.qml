@@ -89,6 +89,8 @@ PanelWindow {
         Behavior on opacity {
             NumberAnimation {
                 duration: overview.motion.fast
+                easing.type: overview.open ? overview.motion.enterType : overview.motion.exitType
+                easing.bezierCurve: overview.open ? overview.motion.enterCurve : overview.motion.exitCurve
             }
         }
         MouseArea {
@@ -118,6 +120,8 @@ PanelWindow {
         Behavior on opacity {
             NumberAnimation {
                 duration: overview.motion.fast
+                easing.type: overview.open ? overview.motion.enterType : overview.motion.exitType
+                easing.bezierCurve: overview.open ? overview.motion.enterCurve : overview.motion.exitCurve
             }
         }
 
@@ -194,6 +198,8 @@ PanelWindow {
                     NumberAnimation {
                         properties: "x,y"
                         duration: overview.motion.spatialFast
+                        easing.type: overview.motion.spatialType
+                        easing.bezierCurve: overview.motion.spatialCurve
                     }
                 }
                 delegate: OverviewWindow {
