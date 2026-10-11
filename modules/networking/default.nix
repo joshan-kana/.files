@@ -38,12 +38,19 @@ in
   /**
     Tailscale client daemon for ordinary hosts.
   */
-  tailscaleClient = linuxOnly (_: {
-    services.tailscale = {
-      enable = true;
-      openFirewall = true;
-    };
-  });
+  tailscaleClient =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        services.tailscale = {
+          enable = true;
+          openFirewall = true;
+        };
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "tailscale-app" ];
+      }
+    );
 
   /**
     Key-only OpenSSH server access with the firewall opening owned by the service.

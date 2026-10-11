@@ -7,65 +7,126 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
-  brave = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.brave ];
-  });
-
-  bitwarden = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.bitwarden-desktop ];
-  });
-
-  warp = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.warp-terminal ];
-  });
-
-  mullvad = linuxOnly (_: {
-    services.mullvad-vpn.enable = true;
-    environment.systemPackages = [ pkgs.mullvad-vpn ];
-  });
-
-  chromium = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.chromium ];
-  });
-
-  zen = linuxOnly (_: {
-    environment.systemPackages = [
-      inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
-    ];
-  });
-
-  firefox = _: {
-    home = _: {
-      stylix.targets.firefox.profileNames = [ "themed" ];
-      stylix.targets.firefox.colorTheme.enable = true;
-      programs.firefox.profiles.themed.extensions.force = true;
-      programs.firefox.configPath = ".mozilla/firefox";
+  brave =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.brave ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "brave-browser" ];
     };
-  };
 
-  floorp = _: {
-    home = _: {
-      stylix.targets.floorp.profileNames = [ "themed" ];
-      stylix.targets.floorp.colorTheme.enable = true;
-      programs.floorp.profiles.themed.extensions.force = true;
+  bitwarden =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.bitwarden-desktop ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "bitwarden" ];
     };
-  };
 
-  kitty = _: {
-    home = _: {
-      programs.kitty.extraConfig = ''
-        confirm_os_window_close 0
-        enable_audio_bell no
-        input_delay 0
-        touch_scroll_multiplier 3.0
-      '';
+  warp =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.warp-terminal ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "warp" ];
     };
-  };
+
+  mullvad =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        services.mullvad-vpn.enable = true;
+        environment.systemPackages = [ pkgs.mullvad-vpn ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "mullvad-vpn" ];
+    };
+
+  chromium =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.chromium ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "chromium" ];
+    };
+
+  zen =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [
+          inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
+        ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "zen" ];
+    };
+
+  firefox =
+    _:
+    {
+      home = _: {
+        stylix.targets.firefox.profileNames = [ "themed" ];
+        stylix.targets.firefox.colorTheme.enable = true;
+        programs.firefox.profiles.themed.extensions.force = true;
+        programs.firefox.package = lib.mkIf isDarwin null;
+        programs.firefox.configPath =
+          lib.optionalString isDarwin "Library/Application Support/Firefox"
+          + lib.optionalString isLinux ".mozilla/firefox";
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "firefox" ];
+    };
+
+  floorp =
+    _:
+    {
+      home = _: {
+        stylix.targets.floorp.profileNames = [ "themed" ];
+        stylix.targets.floorp.colorTheme.enable = true;
+        programs.floorp.profiles.themed.extensions.force = true;
+        programs.floorp.package = lib.mkIf isDarwin null;
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "floorp" ];
+    };
+
+  kitty =
+    _:
+    {
+      home = _: {
+        programs.kitty.extraConfig = ''
+          confirm_os_window_close 0
+          enable_audio_bell no
+          input_delay 0
+          touch_scroll_multiplier 3.0
+        '';
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "kitty" ];
+    };
 
   alacritty = _: {
     home = _: {
@@ -73,29 +134,57 @@ in
     };
   };
 
-  thunderbird = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.thunderbird ];
-  });
+  thunderbird =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.thunderbird ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "thunderbird" ];
+    };
 
-  obsidian = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.obsidian ];
-  });
+  obsidian =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.obsidian ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "obsidian" ];
+    };
 
   filelight = linuxOnly (_: {
     environment.systemPackages = [ pkgs.kdePackages.filelight ];
   });
 
-  gimp = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.gimp ];
-  });
+  gimp =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.gimp ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "gimp" ];
+    };
 
   gparted = linuxOnly (_: {
     environment.systemPackages = [ pkgs.gparted ];
   });
 
-  githubDesktop = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.github-desktop ];
-  });
+  githubDesktop =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.github-desktop ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "github" ];
+    };
 
   nautilus = linuxOnly (_: {
     environment.systemPackages = [ pkgs.nautilus ];
@@ -107,30 +196,60 @@ in
     };
   };
 
-  pycharm = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.jetbrains.pycharm ];
-  });
+  pycharm =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.jetbrains.pycharm ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "pycharm" ];
+    };
 
-  libreoffice = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.libreoffice ];
-  });
+  libreoffice =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.libreoffice ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "libreoffice" ];
+    };
 
-  sunshine = linuxOnly (_: {
+  sunshine = _: {
     environment.systemPackages = [ pkgs.sunshine ];
-    networking.firewall.allowedTCPPorts = [ 47990 ];
-  });
+    config = lib.optionalAttrs isLinux {
+      networking.firewall.allowedTCPPorts = [ 47990 ];
+    };
+  };
 
-  moonlight = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.moonlight-qt ];
-  });
+  moonlight =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.moonlight-qt ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "moonlight" ];
+    };
 
   waypipe = linuxOnly (_: {
     environment.systemPackages = [ pkgs.waypipe ];
   });
 
-  vlc = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.vlc ];
-  });
+  vlc =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.vlc ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "vlc" ];
+    };
 
   mopidy = _: {
     home = _: {
@@ -157,27 +276,59 @@ in
       11435
     ];
   });
-  spotify = linuxOnly (
+  spotify =
     { lib, options, ... }:
-    lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
-      programs.spicetify.enable = true;
+    (lib.optionalAttrs isLinux (
+      lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
+        programs.spicetify.enable = true;
+      }
+    ))
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "spotify" ];
+    };
+
+  discord =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.discord ];
+      };
     }
-  );
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "discord" ];
+    };
 
-  discord = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.discord ];
-  });
+  dropbox =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.dropbox ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "dropbox" ];
+    };
 
-  dropbox = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.dropbox ];
-  });
+  onlyoffice =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "onlyoffice" ];
+    };
 
-  onlyoffice = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
-  });
-
-  twingate = linuxOnly (_: {
-    services.twingate.enable = true;
-  });
+  twingate =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        services.twingate.enable = true;
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "twingate" ];
+    };
 
 }
