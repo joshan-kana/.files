@@ -1,6 +1,6 @@
 # .files
 
-Nix flake for my NixOS systems, Home Manager configuration, and home infrastructure.
+Nix flake for my NixOS systems, macOS workstation, Home Manager configuration, and home infrastructure.
 
 Configuration is organised by **semantic ownership**: code lives with the application, capability, or idea it belongs to rather than being grouped by native Nix option namespace.
 
@@ -42,7 +42,7 @@ docs/manual/              Manual runbooks and generated-reference source
 docs/infrastructure-docs/ Cross-project operating handbook submodule
 ```
 
-Use `nix flake show` for the current hosts, packages, apps, checks, and development shells.
+Use `nix flake show` for the current hosts, packages, apps, checks, and development shells. The Mac setup and its first-activation precautions are documented in `docs/manual/src/runbooks/mac/install.md`.
 
 ## Clone
 
