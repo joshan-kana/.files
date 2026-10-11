@@ -81,8 +81,9 @@ Item {
                 panel.setError(panel.switchError.text, "FAILED TO OPEN THEME TERMINAL");
             else {
                 // The full-system theme switch happens in stock nh, not here.
-                panel.statusText = "CHECK TERMINAL // SYSTEM THEME SWITCH";
+                panel.statusText = "THEME TERMINAL CLOSED // CHECK SYSTEM STATUS";
                 panel.statusError = false;
+                panel.refreshCurrentTheme();
             }
             panel.keyboardRequested();
         }
