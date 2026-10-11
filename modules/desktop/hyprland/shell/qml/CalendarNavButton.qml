@@ -11,7 +11,7 @@ ShellSurface {
     implicitHeight: 34
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: theme.layer3
+    fillColor: theme.expressiveSurfaceStrong
 
     Text {
         anchors.centerIn: parent
