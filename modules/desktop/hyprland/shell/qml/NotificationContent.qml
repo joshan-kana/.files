@@ -40,7 +40,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: Math.max(252, 142 + Math.min(groups.length, 5) * 116)
+    implicitHeight: Math.max(360, 235 + Math.min(groups.length, 5) * 116)
     focus: engaged
 
     onEngagedChanged: {
@@ -136,20 +136,15 @@ FocusScope {
             width: parent.width
             spacing: center.theme.spacing1
 
-            Text {
-                text: "Notifications"
-                color: center.theme.textStrong
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontPanelTitle
-                font.weight: Font.DemiBold
-            }
-
-            Text {
-                text: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
-                color: center.theme.accent
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontSize(12)
-                font.weight: Font.Medium
+            DetailHero {
+                width: parent.width
+                runtime: center.runtime
+                theme: center.theme
+                motion: center.motion
+                glyph: center.notificationState.unreadCount > 0 ? "󰂚" : "󰂛"
+                eyebrow: "Activity / notifications"
+                title: "Notifications"
+                detail: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
             }
 
             Text {
