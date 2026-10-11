@@ -18,10 +18,14 @@ Item {
     readonly property real normalizedValue: to === from ? 0 : Math.max(0, Math.min(1, (value - from) / (to - from)))
     property real displayedValue: normalizedValue
     Behavior on displayedValue {
-        enabled: root.animateValueChanges && !interaction.pressed
-        Anim {
-            motion: root.motion
-            type: Anim.FastSpatial
+        enabled: root.animateValueChanges && root.motion.enabled && !interaction.pressed
+        // A Bézier restarts its ease on every key-repeat event. Keep velocity
+        // continuous while the target moves, including when direction reverses.
+        SmoothedAnimation {
+            velocity: 1.35
+            duration: root.motion.spatialFast
+            maximumEasingTime: 60
+            reversingMode: SmoothedAnimation.Eased
         }
     }
 
