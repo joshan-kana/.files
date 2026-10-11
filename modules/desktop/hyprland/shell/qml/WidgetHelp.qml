@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import "KeyGlyphs.js" as KeyGlyphs
 
 Item {
     id: help
@@ -103,14 +102,13 @@ Item {
                         selected: true
                         cornerRadius: theme.radiusSmall
 
-                        Text {
+                        KeyChord {
                             id: keyLabel
                             anchors.centerIn: parent
-                            text: KeyGlyphs.display(helpBinding.modelData.key)
-                            color: help.theme.accent
-                            font.family: help.runtime.fontMono
-                            font.pixelSize: help.theme.fontSize(10)
-                            font.weight: Font.DemiBold
+                            shortcut: helpBinding.modelData.key
+                            fontFamily: help.runtime.fontMono
+                            textColor: help.theme.accent
+                            fontSize: help.theme.fontSize(11)
                         }
                     }
 
