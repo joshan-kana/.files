@@ -34,16 +34,11 @@ in
       services.mullvad-vpn.enable = true;
     };
 
-  chromium =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.chromium ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "chromium" ];
+  chromium = _: {
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.chromium ];
     };
+  };
 
   zen = _: {
     environment.systemPackages = [ inputs.zen-browser.packages.${system}.beta ];
@@ -112,16 +107,11 @@ in
     environment.systemPackages = [ pkgs.gparted ];
   });
 
-  githubDesktop =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.github-desktop ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "github" ];
+  githubDesktop = _: {
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.github-desktop ];
     };
+  };
 
   nautilus = linuxOnly (_: {
     environment.systemPackages = [ pkgs.nautilus ];
@@ -214,26 +204,16 @@ in
       homebrew.casks = [ "dropbox" ];
     };
 
-  onlyoffice =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "onlyoffice" ];
+  onlyoffice = _: {
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
     };
+  };
 
-  twingate =
-    _:
-    {
-      config = lib.optionalAttrs isLinux {
-        services.twingate.enable = true;
-      };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "twingate" ];
+  twingate = _: {
+    config = lib.optionalAttrs isLinux {
+      services.twingate.enable = true;
     };
+  };
 
 }

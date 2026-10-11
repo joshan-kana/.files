@@ -705,6 +705,8 @@
             inputs.determinate.darwinModules.default
             ./overlays/comin.nix
             ./overlays/hammerspoon.nix
+            ./overlays/mac-slicers.nix
+            ./overlays/mac-apps.nix
             (semantic.rootModule (import ./hosts/mac))
           ];
         };

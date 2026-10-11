@@ -9,14 +9,12 @@
 
 {
   inherit (moduleRegistry)
-    cli
     nix
     networking
     theme
     backups
     audio
     virtualisation
-    desktopApps
     appimage
     ;
 
@@ -30,6 +28,10 @@
         "/Users/${config.dotfiles.users.primary.name}";
     };
   };
+
+  cli = extendScope moduleRegistry.cli (import ./cli.nix);
+
+  desktopApps = extendScope moduleRegistry.desktopApps (import ./desktop-apps.nix);
 
   desktop = extendScope moduleRegistry.desktop {
     hammerspoon = import ../../modules/desktop/hammerspoon;
