@@ -67,17 +67,17 @@ let
         base01 = "181825";
         base02 = "313244";
         base03 = "45475a";
-        base04 = "585b70";
+        base04 = "a6adc8";
         base05 = "cdd6f4";
-        base06 = "f5e0dc";
-        base07 = "b4befe";
+        base06 = "cdd6f4";
+        base07 = "a6adc8";
         base08 = "f38ba8";
         base09 = "fab387";
         base0A = "f9e2af";
         base0B = "a6e3a1";
         base0C = "94e2d5";
         base0D = "89b4fa";
-        base0E = "cba6f7";
+        base0E = "f5c2e7";
         base0F = "f2cdcd";
       };
     };
@@ -86,7 +86,7 @@ let
       label = "Dracula";
       colors = {
         base00 = "282a36";
-        base01 = "353747";
+        base01 = "343746";
         base02 = "44475a";
         base03 = "6272a4";
         base04 = "6272a4";
@@ -107,11 +107,11 @@ let
     gruvbox-material = {
       label = "Gruvbox Material";
       colors = {
-        base00 = "292828";
+        base00 = "282828";
         base01 = "32302f";
         base02 = "504945";
         base03 = "665c54";
-        base04 = "bdae93";
+        base04 = "d4be98";
         base05 = "ddc7a1";
         base06 = "ebdbb2";
         base07 = "fbf1c7";
@@ -122,7 +122,7 @@ let
         base0C = "89b482";
         base0D = "7daea3";
         base0E = "d3869b";
-        base0F = "bd6f3e";
+        base0F = "e78a4e";
       };
     };
 
@@ -135,8 +135,8 @@ let
         base03 = "54546d";
         base04 = "727169";
         base05 = "dcd7ba";
-        base06 = "c8c093";
-        base07 = "717c7c";
+        base06 = "dcd7ba";
+        base07 = "dcd7ba";
         base08 = "c34043";
         base09 = "ffa066";
         base0A = "c0a36e";
@@ -157,8 +157,8 @@ let
         base03 = "505050";
         base04 = "666666";
         base05 = "ffffff";
-        base06 = "cccccc";
-        base07 = "444444";
+        base06 = "ffffff";
+        base07 = "ffffff";
         base08 = "fc6a5c";
         base09 = "ffaa00";
         base0A = "ffcc00";
@@ -180,7 +180,7 @@ let
         base04 = "d8dee9";
         base05 = "e5e9f0";
         base06 = "eceff4";
-        base07 = "8fbcbb";
+        base07 = "eceff4";
         base08 = "bf616a";
         base09 = "d08770";
         base0A = "ebcb8b";
@@ -246,16 +246,16 @@ let
         base03 = "565f89";
         base04 = "a9b1d6";
         base05 = "c0caf5";
-        base06 = "89ddff";
-        base07 = "b4f9f8";
+        base06 = "c0caf5";
+        base07 = "c0caf5";
         base08 = "f7768e";
         base09 = "ff9e64";
         base0A = "e0af68";
         base0B = "9ece6a";
         base0C = "7dcfff";
         base0D = "7aa2f7";
-        base0E = "9d7cd8";
-        base0F = "bb9af7";
+        base0E = "bb9af7";
+        base0F = "9d7cd8";
       };
     };
 
