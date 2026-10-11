@@ -195,34 +195,66 @@ Item {
         });
     }
 
-    Column {
+    ShellSurface {
         id: header
-
         width: parent.width
-        spacing: panel.theme.spacing1
+        height: 140
+        theme: panel.theme
+        motion: panel.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: panel.theme.radiusLarge
 
-        Text {
-            text: "Appearance"
-            color: panel.theme.accent
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(11)
-            font.weight: Font.Medium
+        ShellSurface {
+            width: 76
+            height: 76
+            anchors.left: parent.left
+            anchors.leftMargin: panel.theme.spacing4
+            anchors.verticalCenter: parent.verticalCenter
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: panel.theme.radiusMedium
+
+            Text {
+                anchors.centerIn: parent
+                text: "◈"
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(38)
+            }
         }
 
-        Text {
-            text: "Palette switcher"
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSubpanelTitle
-            font.weight: Font.DemiBold
-        }
+        Column {
+            anchors {
+                fill: parent
+                margins: panel.theme.spacing4
+                leftMargin: panel.theme.spacing4 + 94
+            }
+            spacing: panel.theme.spacing2
 
-        Text {
-            text: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(9)
-            font.letterSpacing: 0.8
+            Text {
+                text: "Appearance"
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
+                font.weight: Font.Medium
+            }
+
+            Text {
+                text: "Theme registry"
+                color: panel.theme.textStrong
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSubpanelTitle
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                text: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
+                font.letterSpacing: 0.8
+            }
         }
     }
 
