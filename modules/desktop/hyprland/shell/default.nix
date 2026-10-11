@@ -54,7 +54,10 @@ let
   # The chooser is a frontend to the canonical full-system themed output.
   themeSet = pkgs.writeShellApplication {
     name = "theme-set";
-    runtimeInputs = [ pkgs.coreutils ];
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+    ];
     text = ''
       configuredTheme=${lib.escapeShellArg configuredTheme}
       repoPath=${lib.escapeShellArg config.dotfiles.paths.repoPath}
@@ -89,9 +92,19 @@ let
           fi
           # Interactive theme switching uses its own system-owned special workspace.
           # It must not hijack normal windows or the user special:magic workspace.
+          theme_workspace_visible() {
+            hyprctl workspaces -j | jq -e 'any(.[]; .name == "special:linux-desktop-theme")' >/dev/null
+          }
+          # Repair stale visibility from interrupted launches. A blind toggle
+          # would hide the special workspace and spawn the terminal on desktop 2.
+          if theme_workspace_visible; then
+            hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null
+          fi
           hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null
           restore_workspace() {
-            hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null || true
+            if theme_workspace_visible; then
+              hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("linux-desktop-theme"))' >/dev/null || true
+            fi
           }
           trap restore_workspace EXIT
           case "$terminal" in
