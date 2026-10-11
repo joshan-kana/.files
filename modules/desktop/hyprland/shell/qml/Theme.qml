@@ -21,14 +21,14 @@ QtObject {
         return Math.max(1, Math.round(size * textScale));
     }
 
-    readonly property int radiusSmall: 10
-    readonly property int radiusMedium: 18
-    readonly property int radiusLarge: 30
-    readonly property int radiusPanel: 38
+    readonly property int radiusSmall: 12
+    readonly property int radiusMedium: 22
+    readonly property int radiusLarge: 36
+    readonly property int radiusPanel: 44
     readonly property real squircleExponent: runtime.squircleExponent
 
     readonly property real borderThin: 1
-    readonly property real borderFocus: 1.5
+    readonly property real borderFocus: 2
     readonly property color panelFill: Qt.rgba(surface.r, surface.g, surface.b, runtime.panelOpacity)
     readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, 0.42)
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, runtime.focusOpacity)
@@ -40,8 +40,8 @@ QtObject {
     readonly property color layer0: background
     readonly property color layer1: surface
     readonly property color layer2: surfaceRaised
-    readonly property color layer3: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, 0.08)
-    readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
+    readonly property color layer3: Qt.rgba(accent.r, accent.g, accent.b, 0.095)
+    readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.24)
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)
