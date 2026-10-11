@@ -30,6 +30,7 @@ Item {
         }
     }
 
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + Math.min(680, Math.max(390, Math.ceil(themes.length / 2) * themeList.cellHeight)) + footer.implicitHeight
     visible: open
 
     property StdioCollector registryOutput: StdioCollector {}
@@ -158,16 +159,18 @@ Item {
     }
 
     function moveHalfPage(direction: int): void {
-        const rowHeight = themeList.currentItem ? themeList.currentItem.height + themeList.spacing : 64;
-        const rows = Math.max(1, Math.floor(themeList.height / Math.max(1, rowHeight) / 2));
-        moveSelection(direction * rows);
+        const rows = Math.max(1, Math.floor(themeList.height / themeList.cellHeight / 2));
+        moveSelection(direction * rows * themeList.columnCount);
     }
 
     function moveSelection(delta: int): void {
         if (themes.length === 0)
             return;
-
         selectedIndex = Math.max(0, Math.min(themes.length - 1, selectedIndex + delta));
+    }
+
+    function moveGrid(x: int, y: int): void {
+        moveSelection(x + y * themeList.columnCount);
     }
 
     function activateSelected(): void {
@@ -258,9 +261,8 @@ Item {
         }
     }
 
-    ListView {
+    GridView {
         id: themeList
-
         anchors {
             top: header.bottom
             right: parent.right
@@ -269,117 +271,185 @@ Item {
             topMargin: panel.theme.spacing4
             bottomMargin: panel.theme.spacing3
         }
-
+        readonly property int columnCount: width < 580 || panel.theme.textScale >= 1.5 ? 1 : 2
+        cellWidth: width / columnCount
+        cellHeight: 206
         model: panel.themes
-        spacing: panel.theme.spacing2
         clip: true
         currentIndex: panel.selectedIndex
-        // Keyboard auto-repeat must not queue smooth highlight/scroll motion.
         highlightMoveDuration: 0
-        highlightResizeDuration: 0
         boundsBehavior: Flickable.StopAtBounds
-
         onCurrentIndexChanged: {
             if (currentIndex >= 0)
-                positionViewAtIndex(currentIndex, ListView.Contain);
+                positionViewAtIndex(currentIndex, GridView.Contain);
         }
 
-        delegate: ShellSurface {
-            id: themeRow
-
+        delegate: Item {
+            id: themeCard
             required property var modelData
             required property int index
+            readonly property var preview: modelData.preview
 
-            width: ListView.view.width
-            height: 82
-            theme: panel.theme
-            motion: panel.motion
-            surfaceLayer: ShellSurface.Control
-            cornerRadius: theme.radiusMedium
-            fillColor: modelData.preview ? modelData.preview.background : theme.layer3
-            borderColor: index === panel.selectedIndex ? panel.theme.accent : "transparent"
-            borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
+            width: themeList.cellWidth
+            height: themeList.cellHeight
+            scale: previewPress.pressed ? 0.985 : previewPress.containsMouse ? 1.012 : 1
 
-            StateLayer {
-                theme: panel.theme
-                motion: panel.motion
-                // Preserve each palette's own foreground/background contrast.
-                // The outer accent border communicates keyboard selection.
-                stateColor: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textStrong
-                cornerRadius: panel.theme.radiusMedium
-
-                onActivated: {
-                    panel.selectedIndex = themeRow.index;
-                    panel.activateSelected();
+            Behavior on scale {
+                Anim {
+                    motion: panel.motion
+                    type: Anim.FastSpatial
                 }
             }
 
-            Row {
+            ShellSurface {
+                id: card
                 anchors {
                     fill: parent
-                    margins: panel.theme.spacing3
+                    rightMargin: panel.theme.spacing3
+                    bottomMargin: panel.theme.spacing3
                 }
-                spacing: panel.theme.spacing3
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: panel.theme.radiusLarge
+                borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
+                borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
                 Column {
-                    width: parent.width - swatchPreview.width - parent.spacing
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 5
+                    anchors {
+                        fill: parent
+                        margins: panel.theme.spacing3
+                    }
+                    spacing: panel.theme.spacing2
+
+                    ShellSurface {
+                        width: parent.width
+                        height: 122
+                        theme: panel.theme
+                        motion: panel.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: panel.theme.radiusMedium
+                        fillColor: themeCard.preview ? themeCard.preview.background : panel.theme.surface
+                        clip: true
+
+                        Row {
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: parent.right
+                                margins: panel.theme.spacing2
+                            }
+                            spacing: 5
+                            Repeater {
+                                model: 3
+                                delegate: Rectangle {
+                                    required property int index
+                                    width: index === 0 ? 28 : 8
+                                    height: 8
+                                    radius: 4
+                                    color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[index % themeCard.preview.swatches.length] : panel.theme.accent
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            x: 12
+                            y: 28
+                            width: parent.width * 0.57
+                            height: 73
+                            radius: 10
+                            color: themeCard.preview ? Qt.tint(themeCard.preview.background, Qt.rgba(themeCard.preview.text.r, themeCard.preview.text.g, themeCard.preview.text.b, 0.12)) : panel.theme.layer3
+
+                            Rectangle {
+                                x: 9
+                                y: 9
+                                width: parent.width - 18
+                                height: 8
+                                radius: 4
+                                color: themeCard.preview && themeCard.preview.swatches.length ? themeCard.preview.swatches[0] : panel.theme.accent
+                            }
+                            Rectangle {
+                                x: 9
+                                y: 24
+                                width: parent.width * 0.72
+                                height: 5
+                                radius: 3
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                opacity: 0.65
+                            }
+                            Rectangle {
+                                x: 9
+                                y: 36
+                                width: parent.width * 0.47
+                                height: 5
+                                radius: 3
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                opacity: 0.42
+                            }
+                            Rectangle {
+                                x: 9
+                                y: 54
+                                width: parent.width - 18
+                                height: 8
+                                radius: 4
+                                color: themeCard.preview && themeCard.preview.swatches.length > 1 ? themeCard.preview.swatches[1] : panel.theme.accent
+                                opacity: 0.80
+                            }
+                        }
+
+                        Column {
+                            anchors {
+                                right: parent.right
+                                rightMargin: 12
+                                verticalCenter: parent.verticalCenter
+                            }
+                            spacing: 5
+                            Repeater {
+                                model: themeCard.preview ? themeCard.preview.swatches : []
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    width: 28
+                                    height: 11
+                                    radius: 5
+                                    color: modelData
+                                }
+                            }
+                        }
+                    }
 
                     Row {
                         width: parent.width
                         spacing: panel.theme.spacing2
-
                         Text {
-                            width: parent.width - stateBadge.width - parent.spacing
-                            text: themeRow.modelData.label || themeRow.modelData.name
-                            color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textStrong
+                            width: parent.width - status.width - parent.spacing
+                            text: themeCard.modelData.label || themeCard.modelData.name
+                            color: panel.theme.textStrong
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(14)
-                            font.weight: themeRow.modelData.name === panel.currentTheme ? Font.DemiBold : Font.Normal
+                            font.pixelSize: panel.theme.fontSize(12)
+                            font.weight: Font.DemiBold
                             elide: Text.ElideRight
                         }
-
                         Text {
-                            id: stateBadge
-                            text: themeRow.modelData.name === panel.currentTheme ? "ACTIVE" : (themeRow.modelData.name === panel.defaultTheme ? "DEFAULT" : "")
-                            color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textMuted
+                            id: status
+                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : themeCard.index === panel.selectedIndex ? "SELECTED" : ""
+                            color: themeCard.modelData.name === panel.currentTheme ? panel.theme.positive : panel.theme.accent
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(8)
-                            font.weight: Font.DemiBold
+                            font.pixelSize: panel.theme.fontSize(9)
                         }
-                    }
-
-                    Text {
-                        text: themeRow.modelData.name.toUpperCase() + (themeRow.index === panel.selectedIndex ? " // SELECTED" : "")
-                        color: themeRow.modelData.preview ? themeRow.modelData.preview.text : panel.theme.textMuted
-                        opacity: 0.72
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(8)
-                        font.letterSpacing: 0.7
                     }
                 }
 
-                Row {
-                    id: swatchPreview
-
-                    width: 112
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 5
-
-                    Repeater {
-                        model: themeRow.modelData.preview ? themeRow.modelData.preview.swatches : []
-
-                        delegate: Rectangle {
-                            required property var modelData
-
-                            width: 18
-                            height: 30
-                            radius: 7
-                            color: modelData
-                            border.width: panel.theme.borderThin
-                            border.color: panel.theme.subtleBorder
-                        }
+                StateLayer {
+                    id: previewPress
+                    theme: panel.theme
+                    motion: panel.motion
+                    selected: themeCard.index === panel.selectedIndex
+                    cornerRadius: panel.theme.radiusLarge
+                    onActivated: {
+                        if (panel.selectedIndex === themeCard.index)
+                            panel.activateSelected();
+                        else
+                            panel.selectedIndex = themeCard.index;
                     }
                 }
             }

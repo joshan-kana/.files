@@ -233,7 +233,7 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: 900
-    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : (resourcesPanel.open ? resourcesPanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight)
+    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
     focus: engaged
 
     function applyRequestedView(): void {
@@ -495,100 +495,131 @@ FocusScope {
                 }
             }
 
+            Text {
+                text: "CONNECTIONS"
+                color: root.theme.accent
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.4
+            }
+
             Grid {
-                id: primaryTiles
+                id: connectionTiles
                 width: parent.width
-                columns: width < 470 || root.theme.textScale >= 1.65 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
+                columns: width < 660 || root.theme.textScale >= 1.5 ? 1 : 2
                 columnSpacing: root.theme.spacing3
                 rowSpacing: root.theme.spacing3
+                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
 
-                Repeater {
-                    id: controlTiles
-
-                    model: [
-                        {
-                            id: "network",
-                            shortcut: "N",
-                            label: "Network",
-                            icon: root.system.wifiConnected ? "󰤨" : "󰈀",
-                            value: root.system.networkConnected ? root.system.networkName : "Offline",
-                            active: root.system.networkConnected
-                        },
-                        {
-                            id: "bluetooth",
-                            shortcut: "B",
-                            label: "Bluetooth",
-                            icon: root.system.bluetoothEnabled ? "󰂯" : "󰂲",
-                            value: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected" : "Off",
-                            active: root.system.bluetoothEnabled
-                        },
-                        {
-                            id: "theme",
-                            shortcut: "Y",
-                            label: "Theme",
-                            icon: "󰏘",
-                            value: "Palette",
-                            active: false
-                        },
-                        {
-                            id: "wallpaper",
-                            shortcut: "W",
-                            label: "Wallpaper",
-                            icon: "󰸉",
-                            value: "Library",
-                            active: false
-                        },
-                        {
-                            id: "session",
-                            shortcut: "P",
-                            label: "Session",
-                            icon: "󰐥",
-                            value: "Power",
-                            active: false
-                        }
-                    ]
-
-                    delegate: ShellAction {
-                        required property var modelData
-
-                        width: (primaryTiles.width - primaryTiles.columnSpacing * (primaryTiles.columns - 1)) / primaryTiles.columns
-                        height: 84
-                        icon: modelData.icon
-                        shortcut: modelData.shortcut
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: modelData.label
-                        subtitle: modelData.value
-                        active: modelData.active
-
-                        onActivated: {
-                            if (modelData.id === "network")
-                                root.openNetwork();
-                            else if (modelData.id === "bluetooth")
-                                root.openBluetooth();
-                            else if (modelData.id === "theme")
-                                root.openTheme();
-                            else if (modelData.id === "wallpaper")
-                                root.openWallpaper();
-                            else if (modelData.id === "session")
-                                root.openSession();
-                        }
-                    }
+                ConnectivityTile {
+                    width: connectionTiles.cellWidth
+                    height: 132
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "Network"
+                    detail: root.system.networkConnected ? root.system.networkName : "No connection"
+                    status: root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "OFFLINE"
+                    glyph: root.system.wifiConnected ? "󰤨" : "󰈀"
+                    shortcut: "N"
+                    connected: root.system.networkConnected
+                    onActivated: root.openNetwork()
                 }
+
+                ConnectivityTile {
+                    width: connectionTiles.cellWidth
+                    height: 132
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "Bluetooth"
+                    detail: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
+                    status: root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
+                    glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
+                    shortcut: "B"
+                    connected: root.system.bluetoothEnabled
+                    onActivated: root.openBluetooth()
+                }
+            }
+
+            Text {
+                text: "PERSONALISE · SYSTEM"
+                color: root.theme.textMuted
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.2
+            }
+
+            Grid {
+                id: appearanceTiles
+                width: parent.width
+                columns: width < 660 || root.theme.textScale >= 1.5 ? 1 : 3
+                columnSpacing: root.theme.spacing3
+                rowSpacing: root.theme.spacing3
+                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+
+                ShellAction {
+                    width: appearanceTiles.cellWidth
+                    height: 67
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "Themes"
+                    subtitle: "Live palette registry"
+                    icon: "󰏘"
+                    shortcut: "Y"
+                    onActivated: root.openTheme()
+                }
+
+                ShellAction {
+                    width: appearanceTiles.cellWidth
+                    height: 67
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "Wallpaper"
+                    subtitle: "Images · video"
+                    icon: "󰸉"
+                    shortcut: "W"
+                    onActivated: root.openWallpaper()
+                }
+
+                ShellAction {
+                    width: appearanceTiles.cellWidth
+                    height: 67
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    title: "Session"
+                    subtitle: "Lock · power"
+                    icon: "󰐥"
+                    shortcut: "P"
+                    onActivated: root.openSession()
+                }
+            }
+
+            Text {
+                text: "QUICK ACTIONS"
+                color: root.theme.textMuted
+                font.family: root.runtime.fontMono
+                font.pixelSize: root.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.2
             }
 
             Grid {
                 id: secondaryTiles
                 width: parent.width
-                columns: primaryTiles.columns
+                columns: width < 640 || root.theme.textScale >= 1.5 ? 2 : 5
                 columnSpacing: root.theme.spacing3
                 rowSpacing: root.theme.spacing3
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 82
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -603,7 +634,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 82
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -617,7 +648,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 82
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -631,7 +662,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 82
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -643,7 +674,7 @@ FocusScope {
                 }
                 ShellSurface {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 * 1.25 : secondaryTiles.cellWidth
-                    height: 82
+                    height: 64
                     visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
                     motion: root.motion
@@ -1305,10 +1336,16 @@ FocusScope {
                         themePanel.closeView();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        themePanel.moveSelection(-1);
+                        themePanel.moveGrid(0, -1);
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        themePanel.moveSelection(1);
+                        themePanel.moveGrid(0, 1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                        themePanel.moveGrid(-1, 0);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                        themePanel.moveGrid(1, 0);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
                         themePanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
