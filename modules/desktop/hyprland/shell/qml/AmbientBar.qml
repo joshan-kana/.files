@@ -306,42 +306,15 @@ Variants {
                 }
             }
 
-            Row {
-                id: statusHints
-                spacing: bars.theme.spacing2
-                anchors {
-                    right: systemIsland.left
-                    rightMargin: implicitWidth > 0 ? bars.theme.spacing3 : 0
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: !systemIsland.compact
-
-                Text {
-                    visible: bars.system.idleInhibited
-                    text: "󰅶"
-                    color: bars.theme.positive
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: bars.theme.fontSize(15)
-                }
-
-                Text {
-                    visible: bars.system.microphoneMuted
-                    text: "󰍭"
-                    color: bars.theme.warning
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: bars.theme.fontSize(16)
-                }
-            }
-
             ShellSurface {
                 id: notificationIsland
 
                 // Notification history remains reachable through Activity when space is tight.
-                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + statusHints.implicitWidth + width + bars.theme.spacing3 * 3
+                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + width + bars.theme.spacing3 * 2
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
                 height: parent.height
                 anchors {
-                    right: statusHints.left
+                    right: systemIsland.left
                     rightMargin: bars.theme.spacing3
                     verticalCenter: parent.verticalCenter
                 }
