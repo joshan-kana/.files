@@ -158,8 +158,8 @@ ShellRoot {
 
     PowerProfileState {
         id: powerProfile
-        runtime: runtime
-        active: expansionState.hasCurrent && expansionState.currentName === "system"
+        runtime: root.runtimeRef
+        active: true
     }
 
     ResourceState {
