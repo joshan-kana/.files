@@ -18,6 +18,7 @@ let
     else
       themeRegistry.default;
   themeNames = builtins.attrNames themeRegistry.variants;
+  activeTheme = themeRegistry.resolve configuredTheme;
 
   themeManifest = pkgs.writeText "dotfiles-theme-registry.json" (
     builtins.toJSON {
@@ -602,25 +603,34 @@ in
         }) (lib.filter (binding: binding.id != null) keybindings)
       );
 
+      # Native semantic roles drive the shell; wallpaper retains a Stylix fallback.
+      ui =
+        if activeTheme ? colors then
+          activeTheme.ui
+        else
+          {
+            background = colors.base00;
+            surface = colors.base01;
+            surfaceRaised = colors.base02;
+            outline = colors.base03;
+            textMuted = colors.base04;
+            text = colors.base05;
+            textStrong = colors.base06;
+            critical = colors.base08;
+            warning = colors.base0A;
+            positive = colors.base0B;
+            accent = colors.base0D;
+            notificationPaused = colors.base09;
+            reducedMotion = colors.base0E;
+          };
+
       runtimeConfig = json.generate "linux-desktop-runtime.json" {
         defaults = {
           terminal = osConfig.dotfiles.defaults.terminal;
           editor = osConfig.dotfiles.defaults.editor;
         };
 
-        theme = {
-          background = colors.base00;
-          surface = colors.base01;
-          surfaceRaised = colors.base02;
-          outline = colors.base03;
-          textMuted = colors.base04;
-          text = colors.base05;
-          textStrong = colors.base06;
-          critical = colors.base08;
-          warning = colors.base0A;
-          positive = colors.base0B;
-          accent = colors.base0D;
-        };
+        theme = lib.mapAttrs (_: value: "#${value}") ui;
 
         fonts.mono = config.stylix.fonts.monospace.name;
 

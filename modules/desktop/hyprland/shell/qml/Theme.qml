@@ -14,6 +14,8 @@ QtObject {
     readonly property color warning: runtime.warning
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
+    readonly property color notificationPaused: runtime.notificationPaused
+    readonly property color reducedMotion: runtime.reducedMotion
 
     readonly property real textScale: runtime.textScale
 

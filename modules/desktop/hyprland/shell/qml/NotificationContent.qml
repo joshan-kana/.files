@@ -325,7 +325,7 @@ FocusScope {
                 motion: center.motion
                 compact: true
                 active: center.notificationState.silent
-                activeColor: center.theme.warning
+                activeColor: center.theme.notificationPaused
                 width: 44
                 height: 40
                 iconOnly: true
