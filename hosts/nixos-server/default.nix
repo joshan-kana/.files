@@ -132,7 +132,7 @@
 
     let
       shared = moduleRegistry.networking {
-        inherit lib system;
+        inherit lib pkgs system;
       };
       inherit (config.dotfiles.server) lan;
       lanPrefixLength = builtins.elemAt (lib.splitString "/" lan.subnet) 1;

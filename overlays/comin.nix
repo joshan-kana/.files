@@ -13,7 +13,7 @@ in
 {
   imports =
     lib.optionals isLinux [ upstream.nixosModules.comin ]
-    ++ lib.optionals isDarwin [ (import ../modules/system/comin-darwin.nix { self = upstream; }) ];
+    ++ lib.optionals isDarwin [ upstream.darwinModules.comin ];
 
   options.services.comin.allowForcePush = lib.mkOption {
     type = lib.types.bool;
@@ -45,14 +45,9 @@ in
       }
     ))
     (lib.optionalAttrs isDarwin {
-      # Determinate owns the daemon, so `nix.package` cannot be read here.
-      launchd.daemons.comin.serviceConfig.EnvironmentVariables.PATH = lib.mkForce (
-        lib.makeBinPath [
-          pkgs.nix
-          pkgs.git
-          pkgs.openssh
-        ]
-      );
+      # The upstream Comin module reads this option for its executable PATH.
+      # With `nix.enable = false`, Determinate still owns the daemon.
+      nix.package = lib.mkDefault pkgs.nix;
     })
     (lib.optionalAttrs isDarwin (
       lib.mkIf config.services.comin.allowForcePush {
