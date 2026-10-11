@@ -150,6 +150,7 @@ Column {
             motion: quick.motion
             enabled: quick.available
             value: quick.level
+            animateValueChanges: true
             accentColor: quick.muted ? quick.theme.warning : quick.theme.accent
             trackHeight: 7
             handleSize: 15
@@ -224,6 +225,7 @@ Column {
                 theme: quick.theme
                 motion: quick.motion
                 value: streamRow.modelData.audio?.volume ?? 0
+                animateValueChanges: true
                 enabled: !!streamRow.modelData.audio
                 accentColor: streamRow.modelData.audio?.muted ? quick.theme.warning : quick.theme.accent
                 trackHeight: 5
