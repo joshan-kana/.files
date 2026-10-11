@@ -761,6 +761,20 @@ ShellRoot {
 
     GlobalShortcut {
         appid: "linux-desktop"
+        name: "home"
+        description: "Open Home"
+        onPressed: actions.toggleCalendar()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "controls"
+        description: "Open Controls"
+        onPressed: actions.toggleSystem()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
         name: "system"
         description: "Open system controls"
         onPressed: actions.toggleSystem()
