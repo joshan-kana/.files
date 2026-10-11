@@ -63,6 +63,7 @@ MouseArea {
         to: root.rippleExtent
         duration: root.motion.spatialSlow
         easing.type: root.motion.spatialType
+        easing.bezierCurve: root.motion.spatialCurve
     }
 
     NumberAnimation {
@@ -72,6 +73,7 @@ MouseArea {
         to: 0
         duration: root.motion.effectsSlow
         easing.type: root.motion.effectsType
+        easing.bezierCurve: root.motion.effectsCurve
     }
 
     SquircleSurface {

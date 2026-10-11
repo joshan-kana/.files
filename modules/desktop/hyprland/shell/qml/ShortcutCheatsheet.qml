@@ -156,6 +156,7 @@ PanelWindow {
             NumberAnimation {
                 duration: window.motion.fast
                 easing.type: window.open ? window.motion.enterType : window.motion.exitType
+                easing.bezierCurve: window.open ? window.motion.enterCurve : window.motion.exitCurve
             }
         }
 
@@ -183,6 +184,7 @@ PanelWindow {
             NumberAnimation {
                 duration: window.motion.normal
                 easing.type: window.open ? window.motion.enterType : window.motion.exitType
+                easing.bezierCurve: window.open ? window.motion.enterCurve : window.motion.exitCurve
             }
         }
 

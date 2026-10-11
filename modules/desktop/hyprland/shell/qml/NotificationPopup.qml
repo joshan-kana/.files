@@ -87,6 +87,7 @@ PanelWindow {
             NumberAnimation {
                 duration: popup.motion.fast
                 easing.type: popup.notificationState.popupVisible ? popup.motion.enterType : popup.motion.exitType
+                easing.bezierCurve: popup.notificationState.popupVisible ? popup.motion.enterCurve : popup.motion.exitCurve
             }
         }
 
@@ -94,6 +95,7 @@ PanelWindow {
             NumberAnimation {
                 duration: popup.motion.normal
                 easing.type: popup.motion.enterType
+                easing.bezierCurve: popup.motion.enterCurve
             }
         }
 

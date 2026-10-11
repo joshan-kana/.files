@@ -48,6 +48,7 @@ SquircleSurface {
                 to: card.x < 0 ? -card.width - 24 : card.width + 24
                 duration: card.motion.spatialFast
                 easing.type: card.motion.spatialType
+                easing.bezierCurve: card.motion.spatialCurve
             }
             NumberAnimation {
                 target: card
@@ -55,6 +56,7 @@ SquircleSurface {
                 to: 0
                 duration: card.motion.effectsFast
                 easing.type: card.motion.effectsType
+                easing.bezierCurve: card.motion.effectsCurve
             }
         }
         ScriptAction {

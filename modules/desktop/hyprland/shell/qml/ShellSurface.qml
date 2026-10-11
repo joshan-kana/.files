@@ -40,6 +40,7 @@ SquircleSurface {
         ColorAnimation {
             duration: root.motion.effectsFast
             easing.type: root.motion.effectsType
+            easing.bezierCurve: root.motion.effectsCurve
         }
     }
 }
