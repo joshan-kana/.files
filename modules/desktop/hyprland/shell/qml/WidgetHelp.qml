@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "KeyGlyphs.js" as KeyGlyphs
 
 Item {
     id: help
@@ -25,9 +26,13 @@ Item {
         }
     }
 
-    Rectangle {
+    SquircleSurface {
         anchors.fill: parent
-        color: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.68)
+        exponent: help.theme.squircleExponent
+        cornerRadius: help.theme.radiusLarge
+        fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.68)
+        borderColor: "transparent"
+        borderWidth: 0
 
         MouseArea {
             anchors.fill: parent
@@ -100,7 +105,7 @@ Item {
                         Text {
                             id: keyLabel
                             anchors.centerIn: parent
-                            text: helpBinding.modelData.key
+                            text: KeyGlyphs.display(helpBinding.modelData.key)
                             color: help.theme.accent
                             font.family: help.runtime.fontMono
                             font.pixelSize: help.theme.fontSize(10)
