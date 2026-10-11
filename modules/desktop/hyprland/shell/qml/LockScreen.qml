@@ -200,6 +200,7 @@ WlSessionLock {
                 motion: lock.motion
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: lock.authRevealed ? lock.theme.radiusPanel : lock.theme.radiusLarge
+                fillColor: lock.authRevealed ? lock.theme.expressiveSurface : lock.theme.surface
 
                 Behavior on width {
                     Anim {
