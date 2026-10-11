@@ -44,33 +44,16 @@ FocusScope {
             system.toggleStreamMute(stream);
     }
 
-    Column {
+    DetailHero {
         id: header
         width: parent.width
-        spacing: mixer.theme.spacing1
-
-        Text {
-            text: "Audio · " + mixer.streams.length + (mixer.streams.length === 1 ? " active source" : " active sources")
-            color: mixer.theme.accent
-            font.family: mixer.runtime.fontMono
-            font.pixelSize: mixer.theme.fontSize(12)
-            font.weight: Font.Medium
-        }
-
-        Text {
-            text: "Application mixer"
-            color: mixer.theme.textStrong
-            font.family: mixer.runtime.fontMono
-            font.pixelSize: mixer.theme.fontPanelTitle
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            text: "Per-application volume and mute"
-            color: mixer.theme.textMuted
-            font.family: mixer.runtime.fontMono
-            font.pixelSize: mixer.theme.fontSize(10)
-        }
+        runtime: mixer.runtime
+        theme: mixer.theme
+        motion: mixer.motion
+        glyph: "♫"
+        eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active source" : " active sources")
+        title: "Application mixer"
+        detail: "Per-application volume and mute"
     }
 
     ListView {
