@@ -1,4 +1,19 @@
 {
+  macHomebrew = _: {
+    # Keep the remaining native casks without deleting existing installations.
+    homebrew = {
+      enable = true;
+      onActivation.cleanup = "none";
+    };
+    home = { lib, ... }: {
+      programs.zsh.profileExtra = lib.mkBefore ''
+        if [[ -x /opt/homebrew/bin/brew ]]; then
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+        fi
+      '';
+    };
+  };
+
   qmkToolbox = { pkgs, ... }: {
     environment.systemPackages = [ pkgs.qmk-toolbox-mac ];
   };
