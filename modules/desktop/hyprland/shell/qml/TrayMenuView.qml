@@ -124,39 +124,16 @@ Item {
         closeMenu();
     }
 
-    Column {
+    DetailHero {
         id: header
-
         width: parent.width
-        spacing: view.theme.spacing1
-
-        Text {
-            text: "TRAY MENU // " + view.stack.map(level => level.label.toUpperCase()).join(" / ")
-            color: view.theme.accent
-            font.family: view.runtime.fontMono
-            font.pixelSize: view.theme.fontSubpanelEyebrow
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.4
-            elide: Text.ElideMiddle
-            width: parent.width
-        }
-
-        Text {
-            text: view.currentTitle
-            color: view.theme.textStrong
-            font.family: view.runtime.fontMono
-            font.pixelSize: view.theme.fontSubpanelTitle
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            width: parent.width
-        }
-
-        Text {
-            text: "↑↓ select  ·  Enter open  ·  Backspace back  ·  Esc back"
-            color: view.theme.textMuted
-            font.family: view.runtime.fontMono
-            font.pixelSize: view.theme.fontSize(9)
-        }
+        runtime: view.runtime
+        theme: view.theme
+        motion: view.motion
+        glyph: "◇"
+        eyebrow: "Tray / " + view.stack.map(level => level.label.toUpperCase()).join(" / ")
+        title: view.currentTitle
+        detail: "↑↓ Select · Enter Open · Backspace Back · Esc Close"
     }
 
     ListView {
