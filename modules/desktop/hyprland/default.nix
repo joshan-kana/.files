@@ -81,6 +81,7 @@ in
       let
         lua = lib.generators.mkLuaInline;
         mod = keys: lua ''mainMod .. " + ${keys}"'';
+        meh = keys: lua ''mehMod .. " + ${keys}"'';
         bind = keys: dispatcher: {
           _args = [
             keys
@@ -113,7 +114,13 @@ in
         renderBinding =
           binding:
           let
-            keys = if binding.mainMod then mod binding.keys else binding.keys;
+            keys =
+              if binding.mehMod then
+                meh binding.keys
+              else if binding.mainMod then
+                mod binding.keys
+              else
+                binding.keys;
             dispatcher = actionDispatcher binding.action;
           in
           if binding.flags == { } then bind keys dispatcher else bindWith keys dispatcher binding.flags;
@@ -124,6 +131,7 @@ in
 
         settings = {
           mainMod._var = "SUPER";
+          mehMod._var = "CTRL + ALT + SHIFT";
 
           config = {
             xwayland.force_zero_scaling = true;
