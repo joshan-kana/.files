@@ -25,6 +25,7 @@ QtObject {
     readonly property string clipboardPreview: root.configData.tools.clipboardPreview
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
+    readonly property string nmcli: root.configData.tools.nmcli
     readonly property string powerprofilesctl: root.configData.tools.powerprofilesctl
     readonly property string powerprofilesMonitor: root.configData.tools.powerprofilesMonitor
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
@@ -131,6 +132,7 @@ QtObject {
                 property string clipboardPreview: ""
                 property string lockSession: ""
                 property string networkConnectionEditor: ""
+                property string nmcli: ""
                 property string powerprofilesctl: ""
                 property string powerprofilesMonitor: ""
                 property string sessionCommand: ""
