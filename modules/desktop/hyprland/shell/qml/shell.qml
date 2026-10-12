@@ -296,6 +296,13 @@ ShellRoot {
                 keywords: ["copy", "paste", "cliphist"]
             },
             {
+                id: "colour.pick",
+                name: "Pick Colour to Clipboard",
+                description: "Select a screen pixel and copy its HEX colour",
+                icon: "color-picker",
+                keywords: ["colour", "color", "eyedropper", "hex", "sample", "picker", "clipboard"]
+            },
+            {
                 id: "capture.region",
                 name: "Copy Screen Region",
                 description: "Select a region or window and copy the screenshot",
