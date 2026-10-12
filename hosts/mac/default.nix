@@ -11,6 +11,9 @@
     nix
     networking
     backups
+    theme
+    desktopApps
+    virtualisation
     ;
 
   system =
@@ -39,33 +42,12 @@
         };
       };
 
-  theme = extendScope moduleRegistry.theme {
-    macTargets = _: {
-      home = _: {
-        stylix = {
-          autoEnable = false;
-          targets = {
-            btop.enable = true;
-            fzf.enable = true;
-            lazygit.enable = true;
-            neovim.enable = true;
-            starship.enable = true;
-            tmux.enable = true;
-            yazi.enable = true;
-            zellij.enable = true;
-          };
-        };
-      };
-    };
-  };
-
   cli = extendScope moduleRegistry.cli {
     macShell = _: {
       home = { lib, ... }: {
         home = {
           sessionPath = [ "$HOME/.local/bin" ];
           shellAliases = {
-            p = "mpv --audio-pitch-correction=no --loop=yes";
             caf = "caffeinate -dims";
             sn = "ssh nixos-server";
             pvm = "ssh nixos-arm-parallels";
@@ -79,8 +61,6 @@
       };
     };
   };
-
-  inherit (moduleRegistry) desktopApps virtualisation;
 
   desktop = extendScope moduleRegistry.desktop {
     macPreferences = _: {
