@@ -821,11 +821,21 @@ in
           pkgs.hyprpicker
           pkgs.wl-clipboard
           pkgs.libnotify
+          pkgs.systemd
         ];
         text = ''
-          # Let the picker own cancellation, clipboard copying and confirmation.
-          # Its normal stdout is colour-styled, not a plain HEX token.
-          exec hyprpicker --format=hex --no-fancy --autocopy --notify
+          # Native autocopy loses ownership when the transient action exits.
+          # A separate clipboard scope keeps the selected text pasteable until
+          # another app replaces it, without any permanently running service.
+          selected="$(hyprpicker --format=hex --no-fancy)" || exit 0
+          if ! [[ "$selected" =~ ^#[[:xdigit:]]{6}$ ]]; then
+            printf 'Unexpected colour picker result\n' >&2
+            exit 1
+          fi
+          # shellcheck disable=SC2016
+          systemd-run --user --scope --quiet -- \
+            ${lib.getExe pkgs.bash} -c 'printf "%s" "$1" | wl-copy --type text/plain' colour-picker-copy "$selected"
+          notify-send --app-name=linux-desktop "Colour copied" "$selected"
         '';
       };
 
