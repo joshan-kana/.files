@@ -192,7 +192,7 @@ Item {
         motion: panel.motion
         glyph: panel.armedAction.length > 0 ? "!" : "⏻"
         glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.accent
-        eyebrow: "Session"
+        eyebrow: "Device / secure session"
         title: "Power & session"
         detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
     }
