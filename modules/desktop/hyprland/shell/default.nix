@@ -694,6 +694,7 @@ in
           themeSet = lib.getExe themeSet;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
+          colourPicker = lib.getExe colourPicker;
         };
 
         wallpaper = toString osConfig.stylix.image;
@@ -731,6 +732,24 @@ in
         runtimeInputs = [ pkgs.systemd ];
         text = ''
           exec systemctl --user start linux-desktop-lock.service
+        '';
+      };
+
+      colourPicker = pkgs.writeShellApplication {
+        name = "linux-desktop-pick-colour";
+        runtimeInputs = [
+          pkgs.hyprpicker
+          pkgs.wl-clipboard
+          pkgs.libnotify
+        ];
+        text = ''
+          selected="$(hyprpicker --format=hex --quiet)" || exit 0
+          if ! [[ "$selected" =~ ^#[[:xdigit:]]{6}$ ]]; then
+            printf 'Colour picker returned an invalid colour\n' >&2
+            exit 1
+          fi
+          printf '%s' "$selected" | wl-copy --type text/plain
+          notify-send --app-name=linux-desktop "Colour copied" "$selected"
         '';
       };
 
@@ -803,6 +822,7 @@ in
         videoWallpaper
         wallpaperLibrary
         recordingToggle
+        colourPicker
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
