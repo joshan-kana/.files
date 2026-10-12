@@ -232,7 +232,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: 900
+    implicitWidth: 780
     implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
     focus: engaged
 
@@ -453,7 +453,7 @@ FocusScope {
             id: content
             width: parent.width
             visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
-            spacing: root.theme.spacing4
+            spacing: root.theme.spacing3
 
             Text {
                 text: "Control centre"
@@ -496,7 +496,7 @@ FocusScope {
             }
 
             Text {
-                text: "CONNECTIONS"
+                text: "SYSTEM · QUICK SETTINGS"
                 color: root.theme.accent
                 font.family: root.runtime.fontMono
                 font.pixelSize: root.theme.fontPanelEyebrow
@@ -514,7 +514,7 @@ FocusScope {
 
                 ConnectivityTile {
                     width: connectionTiles.cellWidth
-                    height: 132
+                    height: 92
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -529,7 +529,7 @@ FocusScope {
 
                 ConnectivityTile {
                     width: connectionTiles.cellWidth
-                    height: 132
+                    height: 92
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -562,7 +562,7 @@ FocusScope {
 
                 ShellAction {
                     width: appearanceTiles.cellWidth
-                    height: 67
+                    height: 52
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -575,7 +575,7 @@ FocusScope {
 
                 ShellAction {
                     width: appearanceTiles.cellWidth
-                    height: 67
+                    height: 52
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -588,7 +588,7 @@ FocusScope {
 
                 ShellAction {
                     width: appearanceTiles.cellWidth
-                    height: 67
+                    height: 52
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -619,7 +619,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 64
+                    height: 54
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -634,7 +634,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 64
+                    height: 54
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -648,7 +648,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 64
+                    height: 54
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -662,7 +662,7 @@ FocusScope {
 
                 ShellAction {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 64
+                    height: 54
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -674,7 +674,7 @@ FocusScope {
                 }
                 ShellSurface {
                     width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 * 1.25 : secondaryTiles.cellWidth
-                    height: 64
+                    height: 54
                     visible: root.system.batteryAvailable || root.powerProfile.available
                     theme: root.theme
                     motion: root.motion
@@ -815,7 +815,7 @@ FocusScope {
 
                 Text {
                     visible: true
-                    text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "MEDIA  ·  V OPEN NOW PLAYING"
+                    text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
@@ -825,7 +825,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 202 : 76
+                    height: root.media.available ? 202 : 153
                     visible: true
                     theme: root.theme
                     motion: root.motion
@@ -948,8 +948,8 @@ FocusScope {
 
                         Item {
                             width: parent.width
-                            height: root.media.available ? 56 : 0
-                            visible: root.media.available
+                            height: 56
+                            visible: true
 
                             SpectrumScale {
                                 id: compactFrequency
