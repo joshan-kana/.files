@@ -18,8 +18,26 @@ ShellSurface {
     surfaceLayer: ShellSurface.Group
     luminous: true
     luminousColor: hero.glyphColor
-    fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.21))
+    fillColor: theme.blend(theme.groupBase, hero.glyphColor, theme.dark ? 0.12 : 0.07)
     cornerRadius: theme.radiusLarge
+    clip: true
+
+    // Large state-derived glyph provides a clear identity without introducing
+    // an extra illustration or independent backend for each detail panel.
+    Text {
+        anchors {
+            right: parent.right
+            bottom: parent.bottom
+            rightMargin: hero.theme.spacing4
+            bottomMargin: -hero.theme.spacing4
+        }
+        text: hero.glyph
+        color: hero.glyphColor
+        opacity: 0.11
+        font.family: hero.runtime.fontMono
+        font.pixelSize: hero.theme.fontSize(98)
+        visible: hero.glyph.length > 0
+    }
 
     ShellSurface {
         id: iconTile

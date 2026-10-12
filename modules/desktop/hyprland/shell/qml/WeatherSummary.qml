@@ -12,21 +12,22 @@ ShellSurface {
     luminous: true
     luminousColor: theme.textStrong
     lightIntensity: 1.35
-    fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.66))
+    fillColor: theme.blend(theme.groupBase, theme.accent, theme.dark ? 0.15 : 0.08)
     cornerRadius: theme.radiusLarge
+    clip: true
 
     Text {
         anchors {
             right: parent.right
             bottom: parent.bottom
-            rightMargin: -summary.theme.spacing3
-            bottomMargin: -summary.theme.spacing5
+            rightMargin: summary.theme.spacing1
+            bottomMargin: -summary.theme.spacing4
         }
         text: summary.weather.icon
         font.family: "Symbols Nerd Font"
-        font.pixelSize: summary.theme.fontSize(139)
-        color: summary.theme.background
-        opacity: 0.22
+        font.pixelSize: summary.theme.fontSize(124)
+        color: summary.theme.accent
+        opacity: 0.19
     }
 
     Column {
@@ -39,8 +40,8 @@ ShellSurface {
         Text {
             width: parent.width
             text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
-            color: summary.theme.background
-            opacity: 0.82
+            color: summary.theme.accent
+            opacity: 0.89
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontPanelEyebrow
             font.weight: Font.DemiBold
@@ -49,7 +50,7 @@ ShellSurface {
 
         Text {
             text: summary.weather.available ? summary.weather.temperatureText(summary.weather.temperature) : "--°"
-            color: summary.theme.background
+            color: summary.theme.textStrong
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontSize(68)
             font.weight: Font.DemiBold
@@ -58,7 +59,7 @@ ShellSurface {
         Text {
             width: parent.width
             text: summary.weather.available ? summary.weather.description + "  ·  F Forecast ↗" : summary.weather.status + "  ·  F Forecast ↗"
-            color: summary.theme.background
+            color: summary.theme.textStrong
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontSize(11)
             elide: Text.ElideRight

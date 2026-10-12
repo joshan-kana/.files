@@ -79,7 +79,7 @@ PanelWindow {
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: Qt.tint(popup.theme.surface, Qt.rgba(popup.urgencyColor.r, popup.urgencyColor.g, popup.urgencyColor.b, 0.09))
+        fillColor: popup.theme.blend(popup.theme.groupBase, popup.urgencyColor, popup.theme.dark ? 0.07 : 0.04)
 
         opacity: popup.notificationState.popupVisible ? 1 : 0
         scale: popup.notificationState.popupVisible ? 1 : 0.965
