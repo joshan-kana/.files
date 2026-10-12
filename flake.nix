@@ -112,10 +112,7 @@
       self,
       nixpkgs,
       nixpkgs-stable,
-      home-manager,
       home-manager-stable,
-      nix-darwin,
-      stylix,
       stylix-stable,
       treefmt-nix,
       pre-commit-hooks,
@@ -275,80 +272,16 @@
           };
         };
 
-      hostScope =
-        hostModule:
-        let
-          hostFile =
-            if builtins.pathExists (hostModule + "/default.nix") then
-              hostModule + "/default.nix"
-            else
-              hostModule;
-          host = import hostFile;
-        in
-        lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host);
+      mkHost = import ./lib/host-configurations.nix {
+        inherit
+          inputs
+          lib
+          moduleRegistry
+          semantic
+          ;
+      };
 
-      hostSpecialArgs =
-        {
-          configurationName,
-          system,
-          configurationOutputName,
-          configurationFlakeSubdirectory,
-          moduleRegistryInput,
-        }:
-        {
-          inherit
-            configurationFlakeSubdirectory
-            configurationName
-            configurationOutputName
-            inputs
-            system
-            ;
-          inherit (semantic) editScope extendScope;
-          moduleRegistry = moduleRegistryInput;
-        };
-
-      nixosHost =
-        configurationName:
-        {
-          system,
-          hostModule,
-          nixpkgsInput ? nixpkgs,
-          homeManagerInput ? home-manager,
-          stylixInput ? stylix,
-          moduleRegistryInput ? moduleRegistry,
-          configurationOutputName ? configurationName,
-          configurationFlakeSubdirectory ? null,
-          extraModules ? [ ],
-        }:
-        nixpkgsInput.lib.nixosSystem {
-          inherit system;
-          specialArgs = hostSpecialArgs {
-            inherit
-              configurationName
-              system
-              configurationOutputName
-              configurationFlakeSubdirectory
-              moduleRegistryInput
-              ;
-          };
-          modules = [
-            ./modules/options
-            stylixInput.nixosModules.stylix
-            homeManagerInput.nixosModules.home-manager
-            ./overlays/bottles.nix
-            ./overlays/comin.nix
-            ./overlays/gh-dash.nix
-            ./overlays/libreoffice.nix
-            ./overlays/nixos-options-doc.nix
-            ./overlays/nvtop.nix
-            ./overlays/tuicr.nix
-            ./overlays/webhook.nix
-            (semantic.rootModule (hostScope hostModule))
-          ]
-          ++ extraModules;
-        };
-
-      nixosHostSpecs = {
+      hostSpecs = {
         nixos = {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
@@ -371,49 +304,15 @@
           system = "x86_64-linux";
           hostModule = ./hosts/nixos-server;
         };
-      };
 
-      darwinHost =
-        configurationName:
-        {
-          system,
-          hostModule,
-          configurationOutputName ? configurationName,
-          configurationFlakeSubdirectory ? null,
-          moduleRegistryInput ? moduleRegistry,
-          extraModules ? [ ],
-        }:
-        nix-darwin.lib.darwinSystem {
-          inherit system;
-          specialArgs = hostSpecialArgs {
-            inherit
-              configurationName
-              system
-              configurationOutputName
-              configurationFlakeSubdirectory
-              moduleRegistryInput
-              ;
-          };
-          modules = [
-            ./modules/options
-            home-manager.darwinModules.home-manager
-            stylix.darwinModules.stylix
-            inputs.determinate.darwinModules.default
-            ./overlays/comin.nix
-            ./overlays/hammerspoon.nix
-            ./overlays/mac-slicers.nix
-            ./overlays/mac-apps.nix
-            (semantic.rootModule (hostScope hostModule))
-          ]
-          ++ extraModules;
-        };
-
-      darwinHostSpecs = {
         mac = {
           system = "aarch64-darwin";
           hostModule = ./hosts/mac;
         };
       };
+
+      nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
+      darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
 
       themeScope = moduleRegistry.theme {
         inherit lib;
@@ -433,7 +332,7 @@
               in
               {
                 name = outputName;
-                value = nixosHost configurationName (
+                value = mkHost configurationName (
                   hostSpec
                   // {
                     moduleRegistryInput = moduleRegistry // {
@@ -743,7 +642,7 @@
           };
         }
       );
-      darwinConfigurations = lib.mapAttrs darwinHost darwinHostSpecs;
-      nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
+      darwinConfigurations = lib.mapAttrs mkHost darwinHostSpecs;
+      nixosConfigurations = lib.mapAttrs mkHost nixosHostSpecs;
     };
 }
