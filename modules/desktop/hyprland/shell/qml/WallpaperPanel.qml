@@ -277,7 +277,9 @@ Item {
                 }
 
                 path: Path {
-                    startX: -30
+                    // Keep neighbouring cards visible as previews without
+                    // letting their edges crowd the full-size selection.
+                    startX: -gallery.width * 0.13
                     startY: gallery.height / 2
 
                     PathAttribute {
@@ -293,7 +295,7 @@ Item {
                         value: 1
                     }
                     PathLine {
-                        x: gallery.width + 30
+                        x: gallery.width * 1.13
                         y: gallery.height / 2
                     }
                     PathAttribute {
@@ -325,8 +327,8 @@ Item {
                     width: 360
                     height: 305
                     z: current ? 2 : 1
-                    scale: current ? 1 : PathView.onPath ? 0.71 : 0.5
-                    opacity: PathView.onPath ? 1 : 0
+                    scale: current ? 1 : PathView.onPath ? 0.58 : 0.5
+                    opacity: PathView.onPath ? (current ? 1 : 0.84) : 0
 
                     Behavior on scale {
                         Anim {
@@ -357,7 +359,7 @@ Item {
                                 left: parent.left
                                 right: parent.right
                             }
-                            height: 260
+                            height: parent.height
                             source: entry.animatedFile ? (entry.posterPath.length > 0 ? "file://" + entry.posterPath : "") : "file://" + entry.modelData
                             sourceSize: Qt.size(620, 400)
                             asynchronous: true
@@ -374,19 +376,9 @@ Item {
                             font.pixelSize: panel.theme.fontSize(32)
                         }
 
-                        Text {
-                            anchors {
-                                left: parent.left
-                                right: parent.right
-                                bottom: parent.bottom
-                                margins: panel.theme.spacing2
-                            }
-                            text: (entry.animatedFile ? "󰕧  " : "") + entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1)
-                            color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(10)
-                            elide: Text.ElideMiddle
-                        }
+                        // Selected filename is already in the dedicated caption
+                        // beneath the carousel; repeating it on every shrunken
+                        // side card made the gallery unnecessarily crowded.
 
                         StateLayer {
                             theme: panel.theme
