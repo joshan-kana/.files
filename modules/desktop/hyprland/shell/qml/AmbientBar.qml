@@ -15,6 +15,7 @@ Variants {
     required property SystemState system
     required property PowerProfileState powerProfile
     required property NotificationState notificationState
+    required property RecordingState recordingState
 
     property bool shown: true
 
@@ -29,6 +30,7 @@ Variants {
     signal trayMenuRequested(var screen, var origin, int index)
     signal calendarRequested(var screen, var origin)
     signal notificationsRequested(var screen, var origin)
+    signal recordingStopRequested
 
     function screenKey(screen: var): string {
         return screen && screen.name ? String(screen.name) : "";
@@ -79,6 +81,7 @@ Variants {
         readonly property QtObject spectrum: bars.spectrum
         readonly property QtObject system: bars.system
         readonly property NotificationState notificationState: bars.notificationState
+        readonly property RecordingState recordingState: bars.recordingState
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
 
         function publishOrigins(): void {
@@ -368,11 +371,11 @@ Variants {
                 id: notificationIsland
 
                 // Notification history remains reachable through Activity when space is tight.
-                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + width + bars.theme.spacing3 * 2
+                visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + (recordingIsland.visible ? recordingIsland.width + bars.theme.spacing3 : 0) + width + bars.theme.spacing3 * 2
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
                 height: parent.height
                 anchors {
-                    right: systemIsland.left
+                    right: recordingIsland.visible ? recordingIsland.left : systemIsland.left
                     rightMargin: bars.theme.spacing3
                     verticalCenter: parent.verticalCenter
                 }
@@ -421,6 +424,53 @@ Variants {
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
                     onActivated: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
+                }
+            }
+
+            ShellSurface {
+                id: recordingIsland
+                visible: bar.recordingState.visibleInBar
+                width: recordingContent.implicitWidth + bars.theme.spacing4 * 2
+                height: parent.height
+                anchors {
+                    right: systemIsland.left
+                    rightMargin: bars.theme.spacing3
+                    verticalCenter: parent.verticalCenter
+                }
+                theme: (bar.theme as Theme)
+                motion: (bar.motion as Motion)
+                surfaceLayer: ShellSurface.Pane
+                cornerRadius: bars.theme.radiusIsland
+                elevated: true
+                outlined: true
+                fillColor: theme.blend(theme.paneBase, bar.recordingState.phase === "failed" ? theme.critical : theme.warning, 0.08)
+
+                Row {
+                    id: recordingContent
+                    anchors.centerIn: parent
+                    spacing: bars.theme.spacing2
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "●"
+                        color: bar.recordingState.phase === "completed" ? bars.theme.positive : bar.recordingState.phase === "failed" ? bars.theme.critical : bars.theme.warning
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(15)
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: bar.recordingState.capturing ? "REC " + bar.recordingState.elapsedLabel : bar.recordingState.finalising ? "SAVING" : bar.recordingState.phase === "completed" ? "SAVED" : "FAILED"
+                        color: bars.theme.textStrong
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(11)
+                        font.weight: Font.DemiBold
+                    }
+                }
+                StateLayer {
+                    theme: bars.theme
+                    motion: bars.motion
+                    cornerRadius: bars.theme.radiusIsland
+                    disabled: !bar.recordingState.capturing
+                    onActivated: bars.recordingStopRequested()
                 }
             }
 
