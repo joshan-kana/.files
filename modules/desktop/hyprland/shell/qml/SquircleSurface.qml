@@ -15,12 +15,16 @@ Item {
     // glow overlay. The native squircle path stays authoritative.
     property color lightColor: "transparent"
     property real lightStrength: 0
+    property real shadowStrength: 0
+    property real shadowOffset: 3
     // Match arc detail to its size instead of tessellating tiny controls
     // into the same number of segments as large panels.
     readonly property int cornerSamples: Math.max(8, Math.min(20, Math.ceil(cornerRadius * 0.7)))
 
-    readonly property string fillPathData: buildPath(0)
-    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? buildPath(borderWidth / 2) : ""
+    // A zero-sized surface has no contour yet. Keep SVG parsing valid while
+    // its first frame or animated size is being measured.
+    readonly property string fillPathData: buildPath(0) || "M 0 0"
+    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? (buildPath(borderWidth / 2) || "M 0 0") : "M 0 0"
 
     function point(value: real): string {
         return Number(value).toFixed(4);
@@ -70,7 +74,7 @@ Item {
         return path;
     }
 
-    readonly property string topEdgePathData: buildTopEdge(0.95)
+    readonly property string topEdgePathData: buildTopEdge(0.95) || "M 0 0"
 
     function buildPath(inset: real): string {
         const innerWidth = width - inset * 2;
@@ -96,6 +100,46 @@ Item {
         path += buildCorner(left + r, top + r, r, Math.PI, Math.PI * 1.5);
         path += " Z";
         return path;
+    }
+
+    // Low-contrast, layered shadows share the exact superellipse path.
+    // Unlike a rectangular drop-shadow, their contour never ends early.
+    Shape {
+        visible: root.shadowStrength > 0
+        x: 0
+        y: root.shadowOffset + 2
+        width: root.width
+        height: root.height
+        preferredRendererType: Shape.CurveRenderer
+        antialiasing: true
+
+        ShapePath {
+            fillColor: Qt.rgba(0, 0, 0, root.shadowStrength * 0.30)
+            strokeColor: "transparent"
+            strokeWidth: 0
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
+    }
+
+    Shape {
+        visible: root.shadowStrength > 0
+        x: 0
+        y: root.shadowOffset
+        width: root.width
+        height: root.height
+        preferredRendererType: Shape.CurveRenderer
+        antialiasing: true
+
+        ShapePath {
+            fillColor: Qt.rgba(0, 0, 0, root.shadowStrength * 0.58)
+            strokeColor: "transparent"
+            strokeWidth: 0
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
     }
 
     Shape {
