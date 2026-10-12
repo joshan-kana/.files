@@ -1,5 +1,4 @@
 {
-  editScope,
   extendScope,
   moduleRegistry,
   ...
@@ -15,8 +14,10 @@
 
   dotfiles.users.primary.homeRoot = "/Users";
 
-  system = editScope moduleRegistry.system {
-    compatibility = _: {
+  system =
+    args@{ config, ... }:
+    (moduleRegistry.system args)
+    // {
       system.defaults = {
         dock = {
           autohide = true;
@@ -29,20 +30,12 @@
           InitialKeyRepeat = 15;
         };
       };
-      system.stateVersion = 6;
-      home = _: {
-        home.stateVersion = "26.05";
-      };
-    };
-
-    identity = { config, ... }: {
       home-manager = {
         backupFileExtension = "before-nix";
         extraSpecialArgs.configurationName = config.dotfiles.profile.name;
         sharedModules = [ ../../modules/options ];
       };
     };
-  };
 
   cli = extendScope moduleRegistry.cli {
     automake = { pkgs, ... }: {
@@ -113,7 +106,6 @@
     uv = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.uv ];
     };
-
   };
 
   desktop = extendScope moduleRegistry.desktop {
@@ -125,8 +117,8 @@
       environment.systemPackages = [ pkgs.raycast ];
     };
     yabai = import ../../modules/desktop/yabai;
-
   };
+
   desktopApps = extendScope moduleRegistry.desktopApps {
     arc = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.arc-mac ];
