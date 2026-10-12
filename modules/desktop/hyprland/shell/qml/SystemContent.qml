@@ -729,6 +729,7 @@ FocusScope {
                         width: audioStack.width
                         showMixer: true
                         inline: true
+                        meterEnabled: root.visible && !root.mixerOpen
                         onChooserOpenChanged: {
                             if (chooserOpen)
                                 inputQuick.chooserOpen = false;
@@ -752,6 +753,7 @@ FocusScope {
                         visible: root.system.microphoneAvailable
                         microphone: true
                         inline: true
+                        meterEnabled: root.visible && !root.mixerOpen
                         baseIndex: root.microphoneAudioIndex
                         selectedAudioIndex: root.selectedAudioIndex
                         onSelectionRequested: index => root.selectedAudioIndex = index
@@ -1449,16 +1451,5 @@ FocusScope {
                 }
             }
         }
-    }
-
-    WidgetHelp {
-        anchors.fill: parent
-        runtime: root.runtime
-        theme: root.theme
-        motion: root.motion
-        open: root.helpOpen
-        title: root.helpTitle
-        bindings: root.helpBindings
-        onDismissed: root.helpOpen = false
     }
 }

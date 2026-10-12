@@ -11,6 +11,7 @@ Column {
     property bool microphone: false
     property bool showMixer: false
     property bool inline: false
+    property bool meterEnabled: false
     property int baseIndex: 0
     property int selectedAudioIndex: 0
     signal selectionRequested(int index)
@@ -74,8 +75,19 @@ Column {
             font.weight: Font.DemiBold
         }
 
+        AudioPeakMeter {
+            id: inlineMeter
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(106, Math.max(66, inlineControl.width * 0.15))
+            height: 29
+            theme: quick.theme
+            node: quick.device
+            muted: quick.muted
+            monitoring: quick.meterEnabled
+        }
+
         ShellSlider {
-            width: Math.max(1, inlineControl.width - 82 - inlineControl.children[0].implicitWidth - 39 - inlineMute.width - inlineDevices.width - inlineMixer.width - inlineControl.spacing * (quick.showMixer ? 6 : 5))
+            width: Math.max(1, inlineControl.width - 82 - inlineControl.children[0].implicitWidth - inlineMeter.width - 39 - inlineMute.width - inlineDevices.width - inlineMixer.width - inlineControl.spacing * (quick.showMixer ? 7 : 6))
             anchors.verticalCenter: parent.verticalCenter
             theme: quick.theme
             motion: quick.motion
@@ -232,19 +244,37 @@ Column {
                 positionViewAtIndex(currentIndex, ListView.Contain);
         }
 
-        delegate: ShellAction {
+        delegate: Row {
+            id: deviceRow
             required property var modelData
             required property int index
             width: deviceList.width
             height: 38
-            runtime: quick.runtime
-            theme: quick.theme
-            motion: quick.motion
-            compact: true
-            active: index === quick.chooserIndex
-            title: (modelData === quick.device ? "✓  " : "") + (modelData.description || modelData.name)
-            shortcut: index === quick.chooserIndex ? "↵" : ""
-            onActivated: quick.selectDevice(index)
+            spacing: quick.theme.spacing2
+
+            ShellAction {
+                width: parent.width - chooserMeter.width - parent.spacing
+                height: 38
+                runtime: quick.runtime
+                theme: quick.theme
+                motion: quick.motion
+                compact: true
+                active: deviceRow.index === quick.chooserIndex
+                title: (deviceRow.modelData === quick.device ? "✓  " : "") + (deviceRow.modelData.description || deviceRow.modelData.name)
+                shortcut: deviceRow.index === quick.chooserIndex ? "↵" : ""
+                onActivated: quick.selectDevice(deviceRow.index)
+            }
+
+            AudioPeakMeter {
+                id: chooserMeter
+                anchors.verticalCenter: parent.verticalCenter
+                width: 142
+                height: 27
+                theme: quick.theme
+                node: deviceRow.modelData
+                monitoring: quick.meterEnabled && quick.chooserOpen
+                muted: !!deviceRow.modelData.audio?.muted
+            }
         }
     }
 
@@ -254,8 +284,19 @@ Column {
         height: 34
         spacing: quick.theme.spacing2
 
+        AudioPeakMeter {
+            id: rowMeter
+            width: 104
+            height: 28
+            anchors.verticalCenter: parent.verticalCenter
+            theme: quick.theme
+            node: quick.device
+            muted: quick.muted
+            monitoring: quick.meterEnabled && !quick.inline
+        }
+
         ShellSlider {
-            width: Math.max(1, parent.width - muteButton.width - parent.spacing)
+            width: Math.max(1, parent.width - rowMeter.width - muteButton.width - parent.spacing * 2)
             anchors.verticalCenter: parent.verticalCenter
             theme: quick.theme
             motion: quick.motion
@@ -314,7 +355,7 @@ Column {
             required property var modelData
             required property int index
             width: quick.width
-            height: 30
+            height: 36
             spacing: quick.theme.spacing2
 
             Text {
@@ -330,8 +371,18 @@ Column {
                     onClicked: quick.selectionRequested(quick.baseIndex + streamRow.index + 1)
                 }
             }
+            AudioPeakMeter {
+                id: streamMeter
+                anchors.verticalCenter: parent.verticalCenter
+                width: 105
+                height: 28
+                theme: quick.theme
+                node: streamRow.modelData
+                muted: !!streamRow.modelData.audio?.muted
+                monitoring: quick.meterEnabled
+            }
             ShellSlider {
-                width: Math.max(1, parent.width - parent.children[0].width - streamMute.width - parent.spacing * 2)
+                width: Math.max(1, parent.width - parent.children[0].width - streamMeter.width - streamMute.width - parent.spacing * 3)
                 anchors.verticalCenter: parent.verticalCenter
                 theme: quick.theme
                 motion: quick.motion
