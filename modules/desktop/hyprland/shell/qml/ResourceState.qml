@@ -5,6 +5,8 @@ import Quickshell.Io
 QtObject {
     id: root
 
+    required property RuntimeConfig runtime
+
     // Read only while a resource dashboard is visible.
     property bool active: false
     property real memoryTotal: 0
@@ -28,6 +30,10 @@ QtObject {
     property real diskUsed: 0
     readonly property real diskPercent: diskTotal > 0 ? diskUsed / diskTotal : 0
     property int diskTicks: 0
+    property int sensorTicks: 0
+    property real gpuPercent: -1
+    property real cpuTemperature: -1
+    property real gpuTemperature: -1
     readonly property int historyLength: 30
 
     function kibString(value: real): string {
@@ -111,6 +117,11 @@ QtObject {
             networkUpload = 0;
         }
         networkHistory = updateHistory(networkHistory, networkDownload + networkUpload);
+        if (++sensorTicks >= 5) {
+            sensorTicks = 0;
+            if (runtime.resourceProbe.length > 0 && !sensorProcess.running)
+                sensorProcess.exec([runtime.resourceProbe]);
+        }
         if (++diskTicks >= 5) {
             diskTicks = 0;
             if (!diskProcess.running)
@@ -123,6 +134,7 @@ QtObject {
             previousCpuStats = null;
             previousNetworkStats = null;
             diskTicks = 4;
+            sensorTicks = 4;
             refresh();
         }
     }
@@ -149,6 +161,24 @@ QtObject {
             if (fields.length >= 4) {
                 root.diskTotal = Number(fields[1]) || 0;
                 root.diskUsed = Number(fields[2]) || 0;
+            }
+        }
+    }
+    property StdioCollector sensorOutput: StdioCollector {}
+    property Process sensorProcess: Process {
+        stdout: root.sensorOutput
+        onExited: (exitCode, exitStatus) => {
+            if (!root.active || exitCode !== 0)
+                return;
+            try {
+                const result = JSON.parse(root.sensorOutput.text);
+                root.gpuPercent = typeof result.gpuPercent === "number" ? Math.max(0, Math.min(100, result.gpuPercent)) : -1;
+                root.cpuTemperature = typeof result.cpuMilliC === "number" ? result.cpuMilliC / 1000 : -1;
+                root.gpuTemperature = typeof result.gpuMilliC === "number" ? result.gpuMilliC / 1000 : -1;
+            } catch (error) {
+                root.gpuPercent = -1;
+                root.cpuTemperature = -1;
+                root.gpuTemperature = -1;
             }
         }
     }
