@@ -12,41 +12,6 @@ QtObject {
     readonly property bool connected: currentSocket ? currentSocket.connected : false
 
     property var bands: []
-    // Make one display spectrum for all visualisers at their native 48-band
-    // resolution. Peak separation compares frequencies in the SAME audio frame:
-    // it does not average, hold, or delay an 808/kick transient.
-    readonly property var displayBands: {
-        const raw = bands;
-        if (raw.length < 2)
-            return [];
-
-        const levels = [];
-        let framePeak = 0;
-        for (let i = 0; i < 48; ++i) {
-            const position = i * (raw.length - 1) / 47;
-            const lower = Math.floor(position);
-            const blend = position - lower;
-            const level = (raw[lower] || 0) * (1 - blend) + (raw[Math.min(lower + 1, raw.length - 1)] || 0) * blend;
-            levels.push(level);
-            framePeak = Math.max(framePeak, level);
-        }
-        if (framePeak <= 0.002)
-            return levels;
-
-        // The legacy global threshold let adjacent frequency leakage remain
-        // almost as bright as the true peak. Compare only adjacent display
-        // bands instead so simultaneous distant notes retain separate peaks.
-        const separated = [];
-        for (let i = 0; i < levels.length; ++i) {
-            const level = levels[i];
-            const localPeak = Math.max(levels[Math.max(0, i - 1)], level, levels[Math.min(levels.length - 1, i + 1)]);
-            const threshold = Math.max(0, framePeak - 0.22, localPeak - 0.04);
-            const contrast = Math.max(0, Math.min(1, (level - threshold) / Math.max(0.002, localPeak - threshold)));
-            separated.push(level * Math.pow(contrast, 1.4));
-        }
-        return separated;
-    }
-
     property var targetBands: []
     property bool interpolating: false
     property bool decaying: false
