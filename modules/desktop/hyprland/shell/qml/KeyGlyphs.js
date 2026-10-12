@@ -1,11 +1,12 @@
 // Present modifiers compactly without changing shortcut registration or search data.
 function display(value) {
     return String(value || "")
+        .replace(/\bCTRL\s*\+\s*ALT\s*\+\s*SHIFT\s*\+\s*/gi, "✣")
         .replace(/\bSUPER\s*\+\s*/gi, "✦")
         .replace(/\bCTRL\s*\+\s*/gi, "∧")
         .replace(/\bALT\s*\+\s*/gi, "⌥")
         .replace(/\bSHIFT\s*\+\s*/gi, "⬆")
-        .replace(/([✦∧⌥⬆]+)(?=\S)/g, "$1 ");
+        .replace(/([✦✣∧⌥⬆]+)(?=\S)/g, "$1 ");
 }
 
 // Preserve the exact registered shortcut for search/dispatch, but allow the
