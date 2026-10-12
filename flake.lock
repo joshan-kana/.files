@@ -783,6 +783,22 @@
         "type": "github"
       }
     },
+    "homebrew-cask": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791803004,
+        "narHash": "sha256-HyMD2jOzlmcvxaaUOY/4OOBPOv+TXDidU30MLUthlu0=",
+        "owner": "Homebrew",
+        "repo": "homebrew-cask",
+        "rev": "52d3a9946e3935aba291ce71c4ce67ac6fffdeb5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Homebrew",
+        "repo": "homebrew-cask",
+        "type": "github"
+      }
+    },
     "llm-agents": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -1321,6 +1337,7 @@
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",
         "home-manager-stable": "home-manager-stable",
+        "homebrew-cask": "homebrew-cask",
         "llm-agents": "llm-agents",
         "mautrix-packages": "mautrix-packages",
         "nix-darwin": "nix-darwin",

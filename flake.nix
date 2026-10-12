@@ -37,6 +37,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Package metadata for upstream macOS application bundles.
+    homebrew-cask = {
+      url = "github:Homebrew/homebrew-cask";
+      flake = false;
+    };
+
     # Home Manager: declarative user configuration.
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -293,15 +299,27 @@
           extraModules ? [ ],
         }:
         let
-          inherit (lib.systems.elaborate system) isDarwin;
-          nativeModules = if isDarwin then "darwinModules" else "nixosModules";
+          inherit (lib.systems.elaborate system) isDarwin isLinux;
+          nativeModules =
+            if isDarwin then
+              "darwinModules"
+            else if isLinux then
+              "nixosModules"
+            else
+              throw "Unsupported host system: ${system}";
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
             else
               hostModule;
           host = import hostFile;
-          systemConstructor = if isDarwin then nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem;
+          systemConstructor =
+            if isDarwin then
+              nix-darwin.lib.darwinSystem
+            else if isLinux then
+              nixpkgsInput.lib.nixosSystem
+            else
+              throw "Unsupported host system: ${system}";
         in
         systemConstructor {
           inherit system;
@@ -328,9 +346,19 @@
             ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
+            ./overlays/arc.nix
+            ./overlays/arduino-ide.nix
+            ./overlays/bambu-studio.nix
+            ./overlays/cryptomator.nix
             ./overlays/hammerspoon.nix
-            ./overlays/mac-slicers.nix
-            ./overlays/mac-apps.nix
+            ./overlays/heroic.nix
+            ./overlays/linear.nix
+            ./overlays/notion.nix
+            ./overlays/prusaslicer.nix
+            ./overlays/qmk-toolbox.nix
+            ./overlays/raspberry-pi-imager.nix
+            ./overlays/reaper.nix
+            ./overlays/vial.nix
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
