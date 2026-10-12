@@ -20,6 +20,7 @@ QtObject {
     readonly property string brightnessctl: root.configData.tools.brightnessctl
     readonly property string cliphist: root.configData.tools.cliphist
     readonly property string emojiTest: root.configData.tools.emojiTest
+    readonly property string resourceProbe: root.configData.tools.resourceProbe
     readonly property string clipboardCopy: root.configData.tools.clipboardCopy
     readonly property string lockSession: root.configData.tools.lockSession
     readonly property string networkConnectionEditor: root.configData.tools.networkConnectionEditor
@@ -122,6 +123,7 @@ QtObject {
                 property string brightnessctl: ""
                 property string cliphist: ""
                 property string emojiTest: ""
+                property string resourceProbe: ""
                 property string clipboardCopy: ""
                 property string lockSession: ""
                 property string networkConnectionEditor: ""
