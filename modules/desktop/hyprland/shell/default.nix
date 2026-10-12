@@ -571,6 +571,7 @@ in
         terminal = osConfig.dotfiles.defaults.terminal;
       };
       mainModifierLabel = config.wayland.windowManager.hyprland.settings.mainMod._var;
+      mehModifierLabel = config.wayland.windowManager.hyprland.settings.mehMod._var;
       launcherSlotBindings = lib.filter (
         binding:
         binding.submap == "launcher"
@@ -588,7 +589,7 @@ in
         let
           key = if binding.label != null then binding.label else binding.keys;
         in
-        "${lib.optionalString binding.mainMod "${mainModifierLabel} + "}${key}";
+        "${lib.optionalString binding.mehMod "${mehModifierLabel} + "}${lib.optionalString binding.mainMod "${mainModifierLabel} + "}${key}";
 
       cheatsheetBindings = map (binding: {
         key = renderShortcut binding;
