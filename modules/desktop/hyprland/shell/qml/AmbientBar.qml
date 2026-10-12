@@ -95,10 +95,10 @@ Variants {
         onWidthChanged: Qt.callLater(publishOrigins)
 
         visible: bars.shown
-        implicitHeight: 62
+        implicitHeight: bars.theme.barHeight
         color: "transparent"
         exclusionMode: ExclusionMode.Normal
-        exclusiveZone: bars.shown ? 62 : 0
+        exclusiveZone: bars.shown ? bars.theme.barHeight : 0
 
         anchors {
             top: true
@@ -125,7 +125,8 @@ Variants {
         // Display only real workspaces. Hyprland creates workspace objects
         // for occupied or currently active workspaces; do not manufacture slots.
         readonly property var workspaceIds: normalWorkspaces.map(workspace => workspace.id)
-        readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? 37 + Math.max(0, workspaceIds.length - 1) * 31 + bars.theme.spacing3 * 2 : 0
+        readonly property var visibleWorkspaceIds: fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? workspaceIds : [focusedWorkspaceId]
+        readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? workspaceIds.length * 42 + Math.max(0, workspaceIds.length - 1) * 6 + bars.theme.spacing3 * 2 : 0
 
         Item {
             id: barContent
@@ -134,14 +135,14 @@ Variants {
             anchors {
                 leftMargin: 17
                 rightMargin: 17
-                topMargin: 14
-                bottomMargin: 8
+                topMargin: bars.theme.barInsetTop
+                bottomMargin: bars.theme.barInsetBottom
             }
 
             ShellSurface {
                 id: workspaceIsland
 
-                width: workspaceRow.implicitWidth + theme.spacing3 * 2
+                width: workspaceTrack.implicitWidth + theme.spacing3 * 2
                 height: parent.height
                 anchors.left: parent.left
 
@@ -150,9 +151,9 @@ Variants {
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusIsland
                 exponent: Math.min(4, theme.squircleExponent)
-                luminous: true
-                luminousColor: theme.accent
-                hovered: workspaceHover.hovered
+                elevated: true
+                outlined: true
+                fillColor: theme.paneBase
 
                 HoverHandler {
                     id: workspaceHover
@@ -168,75 +169,116 @@ Variants {
                     }
                 }
 
-                Row {
-                    id: workspaceRow
+                Item {
+                    id: workspaceTrack
                     z: 1
                     anchors.centerIn: parent
-                    spacing: 6
+                    implicitWidth: workspaceRow.implicitWidth
+                    implicitHeight: 34
+                    // Keep the selection inside the island when an unused
+                    // workspace vanishes and the track contracts.
+                    clip: true
 
-                    Repeater {
-                        model: bar.fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? bar.workspaceIds : [bar.focusedWorkspaceId]
+                    readonly property int activeIndex: Math.max(0, bar.visibleWorkspaceIds.indexOf(bar.focusedWorkspaceId))
+                    property var previousIds: []
+                    property int previousFocus: -1
+                    property bool settled: false
 
-                        delegate: Item {
-                            id: workspace
-                            required property var modelData
+                    function syncPosition(): void {
+                        const ids = bar.visibleWorkspaceIds.slice();
+                        const focused = bar.focusedWorkspaceId;
+                        // A newly focused, empty workspace can arrive before
+                        // Hyprland publishes its slot. Wait for the actual
+                        // workspace, rather than teleporting the pill to zero.
+                        if (!ids.includes(focused))
+                            return;
+                        const index = ids.indexOf(focused);
+                        const destination = index * (42 + workspaceRow.spacing);
+                        const slide = settled && ids.length >= previousIds.length && ids.includes(previousFocus) && focused !== previousFocus && bars.motion.enabled;
 
-                            readonly property int number: modelData
-                            readonly property bool active: bar.focusedWorkspaceId === number
+                        workspaceAnimation.stop();
+                        if (slide && workspaceSelection.x !== destination) {
+                            workspaceAnimation.from = workspaceSelection.x;
+                            workspaceAnimation.to = destination;
+                            workspaceAnimation.start();
+                        } else {
+                            workspaceSelection.x = destination;
+                        }
+                        previousIds = ids;
+                        previousFocus = focused;
+                        settled = true;
+                    }
 
-                            width: active ? 37 : 25
-                            height: 28
+                    Component.onCompleted: Qt.callLater(syncPosition)
+                    onActiveIndexChanged: Qt.callLater(syncPosition)
+                    onImplicitWidthChanged: Qt.callLater(syncPosition)
+                    Connections {
+                        target: bar
+                        function onVisibleWorkspaceIdsChanged(): void {
+                            Qt.callLater(workspaceTrack.syncPosition);
+                        }
+                    }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                z: 1
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
-                            }
+                    NumberAnimation {
+                        id: workspaceAnimation
+                        target: workspaceSelection
+                        property: "x"
+                        duration: bars.motion.enabled ? 135 : 0
+                        easing.type: bars.motion.spatialType
+                        easing.bezierCurve: bars.motion.spatialCurve
+                    }
 
-                            SquircleSurface {
-                                anchors.centerIn: parent
-                                width: workspace.active ? 37 : 23
-                                height: 28
+                    SquircleSurface {
+                        id: workspaceSelection
+                        x: 0
+                        y: 0
+                        width: 42
+                        height: 34
+                        exponent: bars.theme.squircleExponent
+                        cornerRadius: 16
+                        fillColor: bars.theme.accent
+                        lightColor: bars.theme.textStrong
+                        lightStrength: 0.035
+                        visible: bar.visibleWorkspaceIds.length > 0
+                    }
 
-                                exponent: bars.theme.squircleExponent
-                                cornerRadius: workspace.active ? 12 : 10
-                                fillColor: workspace.active ? bars.theme.accent : "transparent"
-                                borderColor: "transparent"
-                                borderWidth: 0
+                    Row {
+                        id: workspaceRow
+                        spacing: 6
 
-                                Behavior on width {
-                                    NumberAnimation {
-                                        duration: bars.motion.fast
-                                        easing.type: bars.motion.enterType
-                                        easing.bezierCurve: bars.motion.enterCurve
-                                    }
-                                }
+                        Repeater {
+                            model: bar.visibleWorkspaceIds
 
-                                Behavior on height {
-                                    NumberAnimation {
-                                        duration: bars.motion.fast
-                                        easing.type: bars.motion.enterType
-                                        easing.bezierCurve: bars.motion.enterCurve
-                                    }
-                                }
+                            delegate: Item {
+                                id: workspace
+                                required property var modelData
+                                required property int index
+                                readonly property int number: modelData
+                                readonly property bool active: bar.focusedWorkspaceId === number
 
-                                Behavior on fillColor {
-                                    ColorAnimation {
-                                        duration: bars.motion.fast
-                                        easing.type: bars.motion.effectsType
-                                        easing.bezierCurve: bars.motion.effectsCurve
-                                    }
-                                }
+                                width: 42
+                                height: 34
 
                                 Text {
                                     anchors.centerIn: parent
-                                    visible: true
                                     text: workspace.number
-                                    color: workspace.active ? bars.theme.background : bars.theme.textMuted
+                                    // Make the ink follow the sliding pill,
+                                    // not the destination before it arrives.
+                                    color: Math.abs(workspaceSelection.x - workspace.index * (42 + workspaceRow.spacing)) < 21 ? bars.theme.background : bars.theme.textMuted
                                     font.family: bars.runtime.fontMono
-                                    font.pixelSize: bars.theme.fontSize(11)
+                                    font.pixelSize: bars.theme.fontSize(12)
                                     font.weight: Font.DemiBold
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: bars.motion.effectsFast
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
                                 }
                             }
                         }
@@ -268,7 +310,7 @@ Variants {
             ShellSurface {
                 id: clockIsland
 
-                width: Math.min(parent.width, Math.max(184, clockRow.implicitWidth + bars.theme.spacing3 * 2))
+                width: Math.min(parent.width, Math.max(206, clockRow.implicitWidth + bars.theme.spacing4 * 2))
                 height: parent.height
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -277,9 +319,9 @@ Variants {
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusIsland
                 exponent: Math.min(4, theme.squircleExponent)
-                luminous: true
-                luminousColor: theme.accent
-                hovered: clockPress.containsMouse
+                elevated: true
+                outlined: true
+                fillColor: theme.paneBase
 
                 Row {
                     id: clockRow
@@ -289,7 +331,7 @@ Variants {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Qt.formatDateTime(clock.date, "ddd d MMM")
-                        color: bars.theme.accent
+                        color: bars.theme.textMuted
                         font.family: bars.runtime.fontMono
                         font.pixelSize: bars.theme.fontSize(13)
                         font.weight: Font.Medium
@@ -298,7 +340,7 @@ Variants {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "✳"
-                        color: bars.theme.accent
+                        color: bars.theme.warning
                         font.family: bars.runtime.fontMono
                         font.pixelSize: bars.theme.fontSize(14)
                     }
@@ -308,7 +350,7 @@ Variants {
                         text: Qt.formatDateTime(clock.date, "h:mm AP")
                         color: bars.theme.textStrong
                         font.family: bars.runtime.fontMono
-                        font.pixelSize: bars.theme.fontSize(13)
+                        font.pixelSize: bars.theme.fontSize(16)
                         font.weight: Font.DemiBold
                     }
                 }
@@ -339,6 +381,9 @@ Variants {
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: bars.theme.radiusIsland
+                elevated: true
+                outlined: true
+                fillColor: theme.paneBase
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
 
