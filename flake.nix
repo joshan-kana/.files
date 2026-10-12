@@ -20,7 +20,7 @@
     # First-party OpenClaw NixOS service module.
     nix-openclaw.url = "github:openclaw/nix-openclaw";
 
-    # Stylix: systemwide theming and typography for NixOS
+    # Stylix: systemwide theming and typography across NixOS and macOS.
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -31,12 +31,13 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    # Home Manager: a tool for managing dotfiles using Nix
+    # nix-darwin: declarative macOS system configuration.
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Home Manager: declarative user configuration on Linux and macOS.
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -77,8 +78,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Determinate Nix CLI and manpages for the NixOS hosts.
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
+    # Determinate Nix: native macOS integration and daemon ownership.
     determinate = {
       url = "github:DeterminateSystems/determinate";
       inputs.nixpkgs.follows = "nixpkgs";
