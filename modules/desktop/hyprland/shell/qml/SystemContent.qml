@@ -232,8 +232,8 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: 780
-    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight + theme.spacing3 + footer.implicitHeight
+    implicitWidth: 710
+    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function applyRequestedView(): void {
@@ -453,14 +453,84 @@ FocusScope {
             id: content
             width: parent.width
             visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
-            spacing: root.theme.spacing3
+            spacing: root.theme.spacing2
 
-            Text {
-                text: "Control centre"
-                color: root.theme.textStrong
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontPanelTitle
-                font.weight: Font.DemiBold
+            Row {
+                id: controlsHeading
+                width: parent.width
+                height: 40
+                spacing: root.theme.spacing2
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Control centre"
+                    color: root.theme.textStrong
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(23)
+                    font.weight: Font.DemiBold
+                }
+
+                Item {
+                    width: Math.max(1, controlsHeading.width - controlsHeading.children[0].implicitWidth - appearanceButton.width - wallpaperButton.width - sessionButton.width - helpButton.width - controlsHeading.spacing * 5)
+                    height: 1
+                }
+
+                ShellAction {
+                    id: appearanceButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 88
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    icon: "󰏘"
+                    title: "Themes"
+                    shortcut: "Y"
+                    onActivated: root.openTheme()
+                }
+                ShellAction {
+                    id: wallpaperButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 92
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    icon: "󰸉"
+                    title: "Wallpaper"
+                    shortcut: "W"
+                    onActivated: root.openWallpaper()
+                }
+                ShellAction {
+                    id: sessionButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 82
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    icon: "󰐥"
+                    title: "Session"
+                    shortcut: "P"
+                    onActivated: root.openSession()
+                }
+
+                ShellAction {
+                    id: helpButton
+                    width: 33
+                    height: 36
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    iconOnly: true
+                    icon: "󰋗"
+                    title: "Help (?)"
+                    onActivated: root.helpOpen = true
+                }
             }
 
             ShellSurface {
@@ -507,14 +577,14 @@ FocusScope {
             Grid {
                 id: connectionTiles
                 width: parent.width
-                columns: width < 660 || root.theme.textScale >= 1.5 ? 1 : 2
+                columns: width < 560 || root.theme.textScale >= 1.5 ? 1 : 2
                 columnSpacing: root.theme.spacing3
                 rowSpacing: root.theme.spacing3
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
 
                 ConnectivityTile {
                     width: connectionTiles.cellWidth
-                    height: 92
+                    height: 84
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -529,7 +599,7 @@ FocusScope {
 
                 ConnectivityTile {
                     width: connectionTiles.cellWidth
-                    height: 92
+                    height: 84
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -543,215 +613,106 @@ FocusScope {
                 }
             }
 
-            Text {
-                text: "PERSONALISE · SYSTEM"
-                color: root.theme.textMuted
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontPanelEyebrow
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1.2
+            Row {
+                width: parent.width
+                spacing: root.theme.spacing2
+
+                Text {
+                    text: "QUICK ACTIONS"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.1
+                }
             }
 
             Grid {
-                id: appearanceTiles
+                id: actionStrip
                 width: parent.width
-                columns: width < 660 || root.theme.textScale >= 1.5 ? 1 : 3
-                columnSpacing: root.theme.spacing3
-                rowSpacing: root.theme.spacing3
+                columns: width < 600 || root.theme.textScale >= 1.5 ? 3 : 5
+                columnSpacing: root.theme.spacing2
+                rowSpacing: root.theme.spacing2
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
 
-                ShellAction {
-                    width: appearanceTiles.cellWidth
-                    height: 52
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Themes"
-                    subtitle: "Live palette registry"
-                    icon: "󰏘"
-                    shortcut: "Y"
-                    onActivated: root.openTheme()
-                }
-
-                ShellAction {
-                    width: appearanceTiles.cellWidth
-                    height: 52
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Wallpaper"
-                    subtitle: "Images · video"
-                    icon: "󰸉"
-                    shortcut: "W"
-                    onActivated: root.openWallpaper()
-                }
-
-                ShellAction {
-                    width: appearanceTiles.cellWidth
-                    height: 52
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Session"
-                    subtitle: "Lock · power"
-                    icon: "󰐥"
-                    shortcut: "P"
-                    onActivated: root.openSession()
-                }
-            }
-
-            Text {
-                text: "QUICK ACTIONS"
-                color: root.theme.textMuted
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontPanelEyebrow
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1.2
-            }
-
-            Grid {
-                id: secondaryTiles
-                width: parent.width
-                columns: width < 640 || root.theme.textScale >= 1.5 ? 2 : 5
-                columnSpacing: root.theme.spacing3
-                rowSpacing: root.theme.spacing3
-                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
-
-                ShellAction {
-                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 54
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                    title: root.notificationState.silent ? "Alerts paused" : "Alerts"
                     shortcut: "Q"
-                    title: "Notifications"
-                    subtitle: root.notificationState.silent ? "Alerts paused" : "Alerts enabled"
                     active: root.notificationState.silent
                     activeColor: root.theme.warning
                     onActivated: root.notificationState.toggleSilent()
                 }
 
-                ShellAction {
-                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 54
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: "󰅶"
+                    title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
                     shortcut: "I"
-                    title: "Stay awake"
-                    subtitle: root.system.idleInhibited ? "Idle blocked" : "Normal idle"
                     active: root.system.idleInhibited
                     onActivated: root.system.toggleIdleInhibited()
                 }
 
-                ShellAction {
-                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 54
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: root.motion.enabled ? "󰔎" : "󰾅"
+                    title: root.motion.enabled ? "Animations" : "Motion off"
                     shortcut: "R"
-                    title: "Reduced motion"
-                    subtitle: root.motion.enabled ? "Off" : "On"
                     active: !root.motion.enabled
                     onActivated: root.motion.toggle()
                 }
 
-                ShellAction {
-                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 : secondaryTiles.cellWidth
-                    height: 54
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: "󰍛"
-                    shortcut: "G"
                     title: "Resources"
-                    subtitle: "CPU · Memory"
+                    shortcut: "G"
                     onActivated: root.openResources()
                 }
-                ShellSurface {
-                    width: secondaryTiles.columns === 5 ? (secondaryTiles.width - secondaryTiles.columnSpacing * 4) / 5.25 * 1.25 : secondaryTiles.cellWidth
-                    height: 54
-                    visible: root.system.batteryAvailable || root.powerProfile.available
+
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    surfaceLayer: ShellSurface.Control
-                    cornerRadius: theme.radiusMedium
-
-                    Row {
-                        anchors {
-                            fill: parent
-                            margins: root.theme.spacing3
-                        }
-                        spacing: root.theme.spacing3
-
-                        ResourceGauge {
-                            width: 46
-                            height: 46
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: root.system.batteryAvailable
-                            theme: root.theme
-                            motion: root.motion
-                            compact: true
-                            value: root.system.batteryPercent / 100
-                            accentColor: root.powerProfile.current === "power-saver" || root.system.batteryPercent <= 20 ? root.theme.warning : root.theme.accent
-                            compactIcon: root.system.batteryPercent <= 20 ? "󰁺" : root.system.batteryPercent < 65 ? "󰁾" : "󰁹"
-                        }
-
-                        Column {
-                            width: Math.max(1, parent.width - (root.system.batteryAvailable ? 46 + parent.spacing : 0))
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: root.theme.spacing1
-
-                            Text {
-                                text: root.system.batteryAvailable ? ("Battery " + root.system.batteryPercent + "%") : "Power profile"
-                                color: root.theme.textStrong
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(12)
-                                font.weight: Font.DemiBold
-                            }
-
-                            Text {
-                                text: root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Unavailable"
-                                color: root.theme.textMuted
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(11)
-                            }
-                        }
-                    }
-
-                    Text {
-                        anchors {
-                            top: parent.top
-                            right: parent.right
-                            margins: root.theme.spacing2
-                        }
-                        text: "O"
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontKeyHint
-                    }
-
-                    StateLayer {
-                        theme: root.theme
-                        motion: root.motion
-                        cornerRadius: root.theme.radiusMedium
-                        disabled: !root.powerProfile.available || root.powerProfile.applying
-                        onActivated: root.powerProfile.cycle()
-                    }
+                    icon: root.system.batteryAvailable ? (root.system.batteryPercent <= 20 ? "󰁺" : "󰁹") : "󰐥"
+                    title: root.system.batteryAvailable ? "Battery " + root.system.batteryPercent + "%" : root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power"
+                    shortcut: "O"
+                    enabled: root.powerProfile.available && !root.powerProfile.applying
+                    active: root.powerProfile.current === "power-saver"
+                    activeColor: root.theme.warning
+                    onActivated: root.powerProfile.cycle()
                 }
             }
 
             ShellSurface {
                 width: parent.width
-                height: audioStack.implicitHeight + root.theme.spacing4 * 2
+                height: audioStack.implicitHeight + root.theme.spacing3 * 2
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
+                luminous: true
+                luminousColor: root.theme.accent
+                fillColor: Qt.tint(root.theme.surfaceRaised, Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.09))
 
                 Column {
                     id: audioStack
@@ -759,14 +720,15 @@ FocusScope {
                         left: parent.left
                         right: parent.right
                         top: parent.top
-                        margins: root.theme.spacing4
+                        margins: root.theme.spacing3
                     }
-                    spacing: root.theme.spacing3
+                    spacing: root.theme.spacing1
 
                     AudioQuickSection {
                         id: outputQuick
                         width: audioStack.width
                         showMixer: true
+                        inline: true
                         onChooserOpenChanged: {
                             if (chooserOpen)
                                 inputQuick.chooserOpen = false;
@@ -789,6 +751,7 @@ FocusScope {
                         }
                         visible: root.system.microphoneAvailable
                         microphone: true
+                        inline: true
                         baseIndex: root.microphoneAudioIndex
                         selectedAudioIndex: root.selectedAudioIndex
                         onSelectionRequested: index => root.selectedAudioIndex = index
@@ -801,6 +764,7 @@ FocusScope {
             }
 
             Text {
+                visible: false
                 width: parent.width
                 text: "J/K  SELECT AUDIO     H/L  LEVEL     M  MUTE     X  MIC"
                 horizontalAlignment: Text.AlignRight
@@ -825,12 +789,16 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 202 : 153
+                    height: root.media.available ? 182 : 155
                     visible: true
                     theme: root.theme
                     motion: root.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: theme.radiusLarge
+                    luminous: true
+                    lightIntensity: 1.25
+                    luminousColor: root.theme.accent
+                    fillColor: Qt.tint(root.theme.surfaceRaised, Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.13))
 
                     StateLayer {
                         theme: root.theme
@@ -957,6 +925,29 @@ FocusScope {
                                 highHz: root.spectrum.highHz
                             }
 
+                            Row {
+                                visible: !root.media.available && !root.spectrum.hasEnergy
+                                anchors {
+                                    left: parent.left
+                                    right: parent.right
+                                    bottom: parent.bottom
+                                }
+                                height: 3
+                                spacing: 4
+
+                                Repeater {
+                                    model: 36
+                                    delegate: Rectangle {
+                                        required property int index
+                                        width: Math.max(2, (parent.width - 35 * 4) / 36)
+                                        height: 3
+                                        radius: 2
+                                        color: root.theme.accent
+                                        opacity: 0.34
+                                    }
+                                }
+                            }
+
                             SpectrumBars {
                                 anchors.fill: parent
                                 spectrum: root.spectrum
@@ -969,101 +960,87 @@ FocusScope {
                 }
             }
 
-            Column {
+            Row {
                 width: parent.width
+                height: 37
                 visible: root.system.trayCount > 0
                 spacing: root.theme.spacing2
 
-                Row {
-                    width: parent.width
-
-                    Text {
-                        text: "Tray  " + root.system.trayCount
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(10)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1.2
-                    }
-
-                    Item {
-                        width: parent.width - parent.children[0].width - trayHint.width
-                        height: 1
-                    }
-
-                    Text {
-                        id: trayHint
-                        text: "[  PREV     ]  NEXT     ENTER  OPEN"
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontKeyHint
-                    }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "TRAY  " + root.system.trayCount
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
                 }
 
-                Row {
-                    spacing: root.theme.spacing2
+                Repeater {
+                    model: root.system.trayItems
 
-                    Repeater {
-                        model: root.system.trayItems
+                    delegate: ShellSurface {
+                        id: trayItem
+                        required property var modelData
+                        required property int index
 
-                        delegate: ShellSurface {
-                            id: trayItem
+                        width: 98
+                        height: 36
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Control
+                        selected: index === root.trayIndex
+                        cornerRadius: theme.radiusSmall
 
-                            required property var modelData
-                            required property int index
+                        Row {
+                            anchors {
+                                fill: parent
+                                margins: root.theme.spacing2
+                            }
+                            spacing: root.theme.spacing1
 
-                            width: 72
-                            height: 66
+                            Image {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 19
+                                height: 19
+                                source: trayItem.modelData.icon.length > 0 ? trayItem.modelData.icon : Quickshell.iconPath("application-x-executable")
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.max(1, parent.width - 19 - parent.spacing)
+                                text: trayItem.modelData.title || trayItem.modelData.id
+                                elide: Text.ElideRight
+                                color: root.theme.text
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(10)
+                            }
+                        }
+                        StateLayer {
                             theme: root.theme
                             motion: root.motion
-                            surfaceLayer: ShellSurface.Control
-                            selected: index === root.trayIndex
-                            cornerRadius: theme.radiusMedium
-
-                            StateLayer {
-                                theme: root.theme
-                                motion: root.motion
-                                selected: trayItem.index === root.trayIndex
-                                cornerRadius: root.theme.radiusMedium
-                                acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                                onActivated: event => {
-                                    root.trayIndex = trayItem.index;
-                                    if (event.button === Qt.RightButton)
-                                        trayItem.modelData.secondaryActivate();
-                                    else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu)
-                                        trayMenu.openFor(trayItem.modelData);
-                                    else
-                                        trayItem.modelData.activate();
-                                }
-                            }
-
-                            Column {
-                                anchors.centerIn: parent
-                                width: parent.width - 10
-                                spacing: root.theme.spacing1
-
-                                Image {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: 24
-                                    height: 24
-                                    source: trayItem.modelData.icon.length > 0 ? trayItem.modelData.icon : Quickshell.iconPath("application-x-executable")
-                                    fillMode: Image.PreserveAspectFit
-                                    asynchronous: true
-                                }
-
-                                Text {
-                                    width: parent.width
-                                    text: trayItem.modelData.title || trayItem.modelData.id
-                                    horizontalAlignment: Text.AlignHCenter
-                                    elide: Text.ElideRight
-                                    color: root.theme.text
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(8)
-                                }
+                            selected: trayItem.index === root.trayIndex
+                            cornerRadius: root.theme.radiusSmall
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onActivated: event => {
+                                root.trayIndex = trayItem.index;
+                                if (event.button === Qt.RightButton)
+                                    trayItem.modelData.secondaryActivate();
+                                else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu)
+                                    trayMenu.openFor(trayItem.modelData);
+                                else
+                                    trayItem.modelData.activate();
                             }
                         }
                     }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "[]  PREV / NEXT · ENTER OPEN"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(9)
                 }
             }
         }
@@ -1160,28 +1137,6 @@ FocusScope {
             runtime: root.runtime
             theme: root.theme
             motion: root.motion
-        }
-
-        Row {
-            id: footer
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-            }
-            spacing: root.theme.spacing3
-
-            ShellAction {
-                width: 36
-                height: 30
-                iconOnly: true
-                icon: "󰋗"
-                title: "Help (?)"
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                onActivated: root.helpOpen = true
-            }
         }
 
         FocusScope {
