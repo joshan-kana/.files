@@ -22,7 +22,7 @@ Item {
     readonly property var networks: system.wifiNetworks || []
     readonly property bool passwordPrompt: pendingNetwork !== null
 
-    implicitHeight: header.height + connectionSummary.height + panel.theme.spacing3 * 3 + (system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
+    implicitHeight: header.height + panel.theme.spacing3 * 2 + (system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
     visible: open
 
     function selectedNetwork(): var {
@@ -173,160 +173,25 @@ Item {
         }
     }
 
-    ShellSurface {
+    DetailHero {
         id: header
-
         width: parent.width
-        height: 146
+        height: 128
+        runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        surfaceLayer: ShellSurface.Group
-        cornerRadius: panel.theme.radiusLarge
-
-        ShellSurface {
-            width: 78
-            height: 78
-            anchors.left: parent.left
-            anchors.leftMargin: panel.theme.spacing4
-            anchors.verticalCenter: parent.verticalCenter
-            theme: panel.theme
-            motion: panel.motion
-            surfaceLayer: ShellSurface.Control
-            cornerRadius: panel.theme.radiusMedium
-
-            Text {
-                anchors.centerIn: parent
-                text: "◎"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(39)
-            }
-        }
-
-        Column {
-            anchors {
-                fill: parent
-                margins: panel.theme.spacing4
-                leftMargin: panel.theme.spacing4 + 96
-            }
-            spacing: panel.theme.spacing2
-
-            Text {
-                text: "Network · " + panel.system.connectivityText.toLowerCase()
-                color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(11)
-                font.weight: Font.Medium
-            }
-
-            Text {
-                text: panel.system.wifiAvailable ? "Wi-Fi" : "Network"
-                color: panel.theme.textStrong
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSubpanelTitle
-                font.weight: Font.DemiBold
-            }
-
-            Row {
-                width: parent.width
-                spacing: panel.theme.spacing3
-
-                Text {
-                    text: panel.system.networkConnected ? panel.system.networkName : "Offline"
-                    color: panel.theme.text
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-
-                Text {
-                    visible: panel.system.wifiAvailable
-                    text: panel.system.wifiEnabled ? "RADIO ON" : "RADIO OFF"
-                    color: panel.system.wifiEnabled ? panel.theme.accent : panel.theme.critical
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-
-                Text {
-                    visible: panel.system.wifiAvailable && !panel.system.wifiHardwareEnabled
-                    text: "Wi-Fi hardware unavailable"
-                    color: panel.theme.critical
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-            }
-        }
-    }
-
-    ShellSurface {
-        id: connectionSummary
-        anchors {
-            top: header.bottom
-            left: parent.left
-            right: parent.right
-            topMargin: panel.theme.spacing3
-        }
-        height: 90
-        theme: panel.theme
-        motion: panel.motion
-        surfaceLayer: ShellSurface.Control
-        cornerRadius: panel.theme.radiusLarge
-        fillColor: panel.system.networkConnected ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.positive.r, panel.theme.positive.g, panel.theme.positive.b, 0.14)) : panel.theme.expressiveSurface
-
-        Row {
-            anchors {
-                fill: parent
-                margins: panel.theme.spacing4
-            }
-            spacing: panel.theme.spacing4
-
-            ShellSurface {
-                width: 54
-                height: 54
-                anchors.verticalCenter: parent.verticalCenter
-                theme: panel.theme
-                motion: panel.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: panel.theme.radiusMedium
-                Text {
-                    anchors.centerIn: parent
-                    text: panel.system.networkConnected ? "●" : "○"
-                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(25)
-                }
-            }
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - 54 - parent.spacing)
-                spacing: panel.theme.spacing2
-
-                Text {
-                    width: parent.width
-                    text: panel.system.networkConnected ? (panel.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "CONNECTION UNAVAILABLE"
-                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(10)
-                    font.weight: Font.DemiBold
-                }
-                Text {
-                    width: parent.width
-                    text: panel.system.networkConnected ? panel.system.networkName : panel.system.connectivityText
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(17)
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                }
-            }
-        }
+        glyph: panel.system.wifiConnected ? "󰤨" : panel.system.networkConnected ? "󰈀" : "󰤭"
+        glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
+        eyebrow: "Connectivity / " + panel.system.connectivityText
+        title: panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+        detail: panel.system.networkConnected ? panel.system.networkName : "No active network"
     }
 
     Item {
         id: body
 
         anchors {
-            top: connectionSummary.bottom
+            top: header.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
