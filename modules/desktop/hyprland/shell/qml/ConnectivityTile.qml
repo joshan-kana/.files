@@ -16,11 +16,12 @@ Item {
     property string glyph: ""
     property string shortcut: ""
     property bool connected: false
-    property color signalColor: connected ? theme.positive : theme.textMuted
+    property color signalColor: connected ? theme.accent : theme.textMuted
+    readonly property color foreground: connected ? theme.background : theme.textStrong
 
     signal activated
 
-    implicitHeight: 132
+    implicitHeight: 92
     scale: interaction.pressed ? 0.982 : interaction.containsMouse ? 1.012 : 1
 
     Behavior on scale {
@@ -39,12 +40,12 @@ Item {
         motion: tile.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: tile.theme.radiusLarge
-        fillColor: tile.connected ? Qt.tint(tile.theme.surfaceRaised, Qt.rgba(tile.theme.accent.r, tile.theme.accent.g, tile.theme.accent.b, 0.20)) : tile.theme.expressiveSurface
+        fillColor: tile.connected ? tile.theme.accent : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
             id: glyphSurface
-            width: 69
-            height: 69
+            width: 47
+            height: 47
             anchors {
                 left: parent.left
                 leftMargin: tile.theme.spacing4
@@ -54,14 +55,14 @@ Item {
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: tile.theme.radiusMedium
-            fillColor: Qt.rgba(tile.signalColor.r, tile.signalColor.g, tile.signalColor.b, 0.13)
+            fillColor: tile.connected ? Qt.rgba(tile.theme.background.r, tile.theme.background.g, tile.theme.background.b, 0.17) : tile.theme.expressiveSurface
 
             Text {
                 anchors.centerIn: parent
                 text: tile.glyph
-                color: tile.signalColor
+                color: tile.foreground
                 font.family: "Symbols Nerd Font"
-                font.pixelSize: tile.theme.fontSize(34)
+                font.pixelSize: tile.theme.fontSize(24)
             }
         }
 
@@ -78,9 +79,9 @@ Item {
             Text {
                 width: parent.width
                 text: tile.title
-                color: tile.theme.textStrong
+                color: tile.foreground
                 font.family: tile.runtime.fontMono
-                font.pixelSize: tile.theme.fontSize(18)
+                font.pixelSize: tile.theme.fontSize(15)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -88,7 +89,8 @@ Item {
             Text {
                 width: parent.width
                 text: tile.detail
-                color: tile.theme.text
+                color: tile.foreground
+                opacity: tile.connected ? 0.76 : 0.75
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(11)
                 elide: Text.ElideRight
@@ -97,7 +99,8 @@ Item {
             Text {
                 width: parent.width
                 text: tile.status
-                color: tile.signalColor
+                color: tile.foreground
+                opacity: 0.76
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(9)
                 font.weight: Font.DemiBold
@@ -113,7 +116,7 @@ Item {
             }
             shortcut: tile.shortcut
             fontFamily: tile.runtime.fontMono
-            textColor: tile.theme.textMuted
+            textColor: tile.foreground
             fontSize: tile.theme.fontKeyHint
         }
     }
@@ -123,7 +126,7 @@ Item {
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected
-        stateColor: tile.signalColor
+        stateColor: tile.foreground
         cornerRadius: tile.theme.radiusLarge
         onActivated: tile.activated()
     }
