@@ -10,7 +10,7 @@ Item {
 
     property bool open: false
     visible: open
-    implicitHeight: 555
+    implicitHeight: 608
 
     signal keyboardRequested
 
@@ -52,12 +52,13 @@ Item {
                     readonly property color gaugeColor: cpu ? panel.theme.accent : panel.theme.positive
                     readonly property real percentage: cpu ? panel.resourceState.cpuPercent : panel.resourceState.memoryPercent
                     readonly property string detailText: cpu ? "Processor activity" : panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
-                    width: (panel.width - panel.theme.spacing3) / 2
-                    height: 214
+                    width: (panel.width - panel.theme.spacing3) * (cpu ? 0.57 : 0.43)
+                    height: 245
                     theme: panel.theme
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: panel.theme.radiusLarge
+                    fillColor: Qt.tint(panel.theme.surfaceRaised, Qt.rgba(tile.gaugeColor.r, tile.gaugeColor.g, tile.gaugeColor.b, cpu ? 0.17 : 0.10))
 
                     Column {
                         anchors.centerIn: parent
@@ -101,7 +102,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 132
+            height: 161
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -133,7 +134,7 @@ Item {
                 }
                 Row {
                     width: parent.width
-                    height: 72
+                    height: 103
                     spacing: 3
                     Repeater {
                         model: panel.resourceState.historyLength
@@ -142,7 +143,7 @@ Item {
                             required property int index
                             readonly property real fraction: panel.resourceState.cpuHistory[index] || 0
                             width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
-                            height: 72
+                            height: 103
                             Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: parent.width
