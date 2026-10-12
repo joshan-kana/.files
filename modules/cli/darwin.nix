@@ -51,25 +51,4 @@
     environment.systemPackages = [ pkgs.uv ];
   };
 
-  macShell = _: {
-    home = { lib, ... }: {
-      home = {
-        sessionPath = [ "$HOME/.local/bin" ];
-        shellAliases = {
-          p = "mpv --audio-pitch-correction=no --loop=yes";
-          caf = "caffeinate -dims";
-          sn = "ssh nixos-server";
-          pvm = "ssh nixos-arm-parallels";
-        };
-      };
-      programs.zsh = {
-        initContent = lib.mkAfter ''
-          zd() {
-            zip -qry /tmp/upload.zip . && osascript -e 'set the clipboard to POSIX file "/tmp/upload.zip"'
-          }
-        '';
-      };
-    };
-  };
-
 }

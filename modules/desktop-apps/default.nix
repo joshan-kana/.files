@@ -217,3 +217,4 @@ in
   };
 
 }
+// lib.optionalAttrs isDarwin (import ./darwin.nix)

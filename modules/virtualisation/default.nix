@@ -7,7 +7,7 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isLinux isDarwin;
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
@@ -57,3 +57,4 @@ in
   */
   vm = linuxOnly (import ./vm.nix);
 }
+// lib.optionalAttrs isDarwin (import ./darwin.nix)

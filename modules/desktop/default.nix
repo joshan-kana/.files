@@ -36,3 +36,4 @@ lib.optionalAttrs isLinux {
   */
   gnome = linuxOnly (import ./gnome);
 }
+// lib.optionalAttrs (lib.systems.elaborate system).isDarwin (import ./darwin.nix)

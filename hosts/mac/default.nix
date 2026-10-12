@@ -3,7 +3,6 @@
   editScope,
   extendScope,
   moduleRegistry,
-  pkgs,
   ...
 }:
 
@@ -60,32 +59,30 @@
     };
   };
 
-  cli = extendScope moduleRegistry.cli (import ./cli.nix);
-
-  desktopApps = extendScope moduleRegistry.desktopApps (import ./desktop-apps.nix);
-
-  virtualisation = extendScope moduleRegistry.virtualisation {
-    orbStack = _: {
-      home = _: {
-        home.shellAliases.o = "orb";
-        programs.zsh.profileExtra = ''
-          if [[ -f "$HOME/.orbstack/shell/init.zsh" ]]; then
-            source "$HOME/.orbstack/shell/init.zsh"
-          fi
+  cli = extendScope moduleRegistry.cli {
+    macShell = _: {
+      home = { lib, ... }: {
+        home = {
+          sessionPath = [ "$HOME/.local/bin" ];
+          shellAliases = {
+            p = "mpv --audio-pitch-correction=no --loop=yes";
+            caf = "caffeinate -dims";
+            sn = "ssh nixos-server";
+            pvm = "ssh nixos-arm-parallels";
+          };
+        };
+        programs.zsh.initContent = lib.mkAfter ''
+          zd() {
+            zip -qry /tmp/upload.zip . && osascript -e 'set the clipboard to POSIX file "/tmp/upload.zip"'
+          }
         '';
       };
     };
   };
 
+  inherit (moduleRegistry) desktopApps virtualisation;
+
   desktop = extendScope moduleRegistry.desktop {
-    hammerspoon = import ../../modules/desktop/hammerspoon;
-    yabai = import ../../modules/desktop/yabai;
-    raycast = _: {
-      environment.systemPackages = [ pkgs.raycast ];
-    };
-    karabinerElements = _: {
-      services.karabiner-elements.enable = true;
-    };
     macPreferences = _: {
       system.defaults = {
         dock = {
