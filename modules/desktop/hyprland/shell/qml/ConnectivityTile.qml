@@ -43,7 +43,7 @@ Item {
         luminous: true
         luminousColor: tile.theme.accent
         hovered: interaction.containsMouse
-        fillColor: tile.connected ? Qt.tint(tile.theme.surfaceRaised, Qt.rgba(tile.theme.accent.r, tile.theme.accent.g, tile.theme.accent.b, 0.58)) : tile.theme.expressiveSurfaceStrong
+        fillColor: tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.theme.accent, tile.theme.dark ? 0.34 : 0.23) : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
             id: glyphSurface

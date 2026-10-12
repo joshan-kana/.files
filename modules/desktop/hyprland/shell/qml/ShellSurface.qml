@@ -22,7 +22,7 @@ SquircleSurface {
 
     exponent: theme.squircleExponent
     lightColor: luminousColor
-    lightStrength: luminous ? (hovered ? 0.19 : 0.105) * lightIntensity : 0
+    lightStrength: luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0
 
     Behavior on lightStrength {
         NumberAnimation {
