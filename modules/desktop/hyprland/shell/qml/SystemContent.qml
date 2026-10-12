@@ -48,8 +48,30 @@ FocusScope {
     readonly property bool wallpaperOpen: wallpaperPanel.open
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
-    readonly property string helpTitle: wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: wallpaperPanel.open ? [
+    readonly property bool recordingsOpen: recordingsPanel.open
+    readonly property string helpTitle: recordingsPanel.open ? "Recording library" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property var helpBindings: recordingsPanel.open ? [
+        {
+            key: "J/K · U/D",
+            action: "Select clip / half-page"
+        },
+        {
+            key: "ENTER / O",
+            action: "Open selected recording"
+        },
+        {
+            key: "D · ENTER",
+            action: "Confirm move to Trash"
+        },
+        {
+            key: "R",
+            action: "Refresh saved clips"
+        },
+        {
+            key: "ESC",
+            action: "Cancel deletion / back to Controls"
+        }
+    ] : wallpaperPanel.open ? [
         {
             key: "H/J/K/L",
             action: "Choose thumbnail"
@@ -242,7 +264,7 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: 710
-    implicitHeight: wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function applyRequestedView(): void {
@@ -263,6 +285,8 @@ FocusScope {
             openMixer();
         else if (requestedView === "wallpaper")
             openWallpaper();
+        else if (requestedView === "recordings")
+            openRecordings();
         else if (requestedView.startsWith("tray:")) {
             const index = Number(requestedView.slice(5));
             if (Number.isInteger(index) && index >= 0 && index < system.trayCount) {
@@ -279,6 +303,7 @@ FocusScope {
             themePanel.closeView();
             sessionPanel.closeView();
             resourcesPanel.closeView();
+            recordingsPanel.closeView();
             mixerOpen = false;
         }
     }
@@ -308,6 +333,7 @@ FocusScope {
             themePanel.closeView();
             sessionPanel.closeView();
             resourcesPanel.closeView();
+            recordingsPanel.closeView();
             mixerOpen = false;
         }
     }
@@ -316,6 +342,7 @@ FocusScope {
 
     function openNetwork(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
@@ -328,6 +355,7 @@ FocusScope {
 
     function openBluetooth(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
@@ -340,6 +368,7 @@ FocusScope {
 
     function openWallpaper(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
@@ -352,6 +381,7 @@ FocusScope {
 
     function openTheme(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
@@ -368,6 +398,7 @@ FocusScope {
 
     function openSession(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         resourcesPanel.closeView();
         trayMenu.closeMenu();
@@ -384,6 +415,7 @@ FocusScope {
 
     function openResources(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         mixerOpen = false;
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
@@ -396,6 +428,7 @@ FocusScope {
 
     function openMixer(): void {
         helpOpen = false;
+        recordingsPanel.closeView();
         trayMenu.closeMenu();
         wallpaperPanel.closeView();
         resourcesPanel.closeView();
@@ -404,6 +437,19 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         mixerOpen = true;
+    }
+
+    function openRecordings(): void {
+        helpOpen = false;
+        mixerOpen = false;
+        trayMenu.closeMenu();
+        wallpaperPanel.closeView();
+        resourcesPanel.closeView();
+        networkPanel.closeView();
+        bluetoothPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        recordingsPanel.openView();
     }
 
     function closeMixer(): void {
@@ -462,7 +508,7 @@ FocusScope {
         Column {
             id: content
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen
+            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen && !recordingsPanel.open
             spacing: root.theme.spacing2
 
             Row {
@@ -887,14 +933,36 @@ FocusScope {
                 width: parent.width
                 spacing: root.theme.spacing2
 
-                Text {
-                    visible: true
-                    text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(10)
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1
+                Row {
+                    width: parent.width
+                    height: 30
+                    spacing: root.theme.spacing3
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - recordingsButton.width - parent.spacing)
+                        text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1
+                        elide: Text.ElideRight
+                    }
+                    ShellAction {
+                        id: recordingsButton
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 152
+                        height: 30
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: "󰕧"
+                        title: "RECORDINGS"
+                        shortcut: "C"
+                        onActivated: root.openRecordings()
+                    }
                 }
 
                 ShellSurface {
@@ -1219,6 +1287,15 @@ FocusScope {
             onCloseRequested: root.closeMixer()
         }
 
+        RecordingLibrary {
+            id: recordingsPanel
+            anchors.fill: parent
+            runtime: root.runtime
+            theme: root.theme
+            motion: root.motion
+            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+        }
+
         ResourceDashboard {
             id: resourcesPanel
             anchors.fill: parent
@@ -1374,6 +1451,33 @@ FocusScope {
                         wallpaperPanel.applySelected();
                         event.accepted = true;
                     }
+                    return;
+                }
+
+                if (recordingsPanel.open) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        if (recordingsPanel.deletePending.length > 0)
+                            recordingsPanel.cancelDelete();
+                        else
+                            recordingsPanel.closeView();
+                    } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                        recordingsPanel.moveSelection(1);
+                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                        recordingsPanel.moveSelection(-1);
+                    } else if (event.key === Qt.Key_U) {
+                        recordingsPanel.moveSelection(-4);
+                    } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
+                        recordingsPanel.moveSelection(4);
+                    } else if (event.key === Qt.Key_D) {
+                        recordingsPanel.requestDelete();
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_O) {
+                        recordingsPanel.openSelected();
+                    } else if (event.key === Qt.Key_R) {
+                        recordingsPanel.refresh();
+                    } else {
+                        return;
+                    }
+                    event.accepted = true;
                     return;
                 }
 
@@ -1600,6 +1704,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_P) {
                     root.openSession();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_C) {
+                    root.openRecordings();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_G) {
                     root.openResources();
