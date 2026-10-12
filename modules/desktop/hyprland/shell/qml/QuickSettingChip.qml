@@ -37,7 +37,7 @@ Item {
         luminous: chip.active
         luminousColor: chip.activeColor
         hovered: press.containsMouse
-        fillColor: chip.active ? Qt.tint(chip.theme.expressiveSurfaceStrong, Qt.rgba(chip.activeColor.r, chip.activeColor.g, chip.activeColor.b, 0.46)) : chip.theme.expressiveSurfaceStrong
+        fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.19 : 0.13) : chip.theme.expressiveSurfaceStrong
 
         Behavior on cornerRadius {
             Anim {
