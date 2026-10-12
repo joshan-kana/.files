@@ -207,6 +207,10 @@ FocusScope {
                             action: "Play-pause / previous / next media"
                         },
                         {
+                            key: "S / SHIFT+R / SHIFT+P",
+                            action: "MPRIS shuffle / repeat / choose player"
+                        },
+                        {
                             key: "Q / I / R",
                             action: "Toggle Notifications / Stay awake / Motion"
                         },
@@ -970,7 +974,7 @@ FocusScope {
                             }
 
                             Column {
-                                width: Math.max(1, parent.width - 60 - (root.media.available ? mediaInlineTransport.width : 0) - parent.spacing * (root.media.available ? 2 : 1) - root.theme.spacing2)
+                                width: Math.max(1, parent.width - 60 - (root.media.available ? mediaInlineTransport.width + mediaQuickExtras.width : 0) - parent.spacing * (root.media.available ? 3 : 1) - root.theme.spacing2)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
@@ -1015,6 +1019,60 @@ FocusScope {
                                 motion: root.motion
                                 compact: true
                                 minimal: true
+                            }
+
+                            Row {
+                                id: mediaQuickExtras
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: root.theme.spacing1
+                                visible: root.media.available
+                                width: root.media.available ? implicitWidth : 0
+
+                                ShellAction {
+                                    width: 70
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: "󰒝"
+                                    title: root.media.shuffled ? "ON" : "OFF"
+                                    shortcut: "S"
+                                    active: root.media.shuffled
+                                    enabled: root.media.shuffleAvailable
+                                    onActivated: root.media.toggleShuffle()
+                                }
+                                ShellAction {
+                                    width: 84
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
+                                    title: root.media.repeatLabel
+                                    shortcut: "⇧R"
+                                    active: root.media.repeatState !== 0
+                                    enabled: root.media.repeatAvailable
+                                    onActivated: root.media.toggleRepeat()
+                                }
+                                ShellAction {
+                                    width: 70
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: "󰎄"
+                                    title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
+                                    shortcut: "⇧P"
+                                    active: root.media.playerCount > 1
+                                    enabled: root.media.playerCount > 1
+                                    onActivated: root.media.cyclePlayer()
+                                }
                             }
                         }
 
@@ -1501,6 +1559,9 @@ FocusScope {
                 } else if (event.key === Qt.Key_I) {
                     root.system.toggleIdleInhibited();
                     event.accepted = true;
+                } else if (event.key === Qt.Key_R && (event.modifiers & Qt.ShiftModifier)) {
+                    root.media.toggleRepeat();
+                    event.accepted = true;
                 } else if (event.key === Qt.Key_R) {
                     root.motion.toggle();
                     event.accepted = true;
@@ -1525,11 +1586,17 @@ FocusScope {
                 } else if (event.key === Qt.Key_Y) {
                     root.openTheme();
                     event.accepted = true;
+                } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ShiftModifier)) {
+                    root.media.cyclePlayer();
+                    event.accepted = true;
                 } else if (event.key === Qt.Key_P) {
                     root.openSession();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_G) {
                     root.openResources();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_S) {
+                    root.media.toggleShuffle();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Space) {
                     root.media.togglePlaying();
