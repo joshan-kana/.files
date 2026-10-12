@@ -332,8 +332,7 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        readonly property color panelTone: Qt.tint(host.theme.background, Qt.rgba(host.theme.surfaceRaised.r, host.theme.surfaceRaised.g, host.theme.surfaceRaised.b, 0.71))
-        fillColor: Qt.rgba(panelTone.r, panelTone.g, panelTone.b, host.theme.runtime.panelOpacity)
+        fillColor: host.theme.panelBase
         luminous: true
         luminousColor: host.theme.accent
         lightIntensity: 1.45
