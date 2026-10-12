@@ -148,7 +148,7 @@ PanelWindow {
     // the inner squircle: resizing/repositioning PanelWindow every tab switch
     // causes separate compositor commits and visibly lagging/jumping edges.
     readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, 960) : 1
-    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (56 + theme.spacing1) - theme.spacing4) : 1
+    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (62 + theme.spacing1) - theme.spacing4) : 1
 
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
@@ -164,7 +164,7 @@ PanelWindow {
     }
 
     margins {
-        top: 56 + theme.spacing1
+        top: 62 + theme.spacing1
         left: host.screen ? (host.screen.width - host.viewportWidth) / 2 : 0
     }
 
@@ -316,8 +316,10 @@ PanelWindow {
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
         fillColor: Qt.tint(host.theme.background, Qt.rgba(host.theme.surfaceRaised.r, host.theme.surfaceRaised.g, host.theme.surfaceRaised.b, 0.71))
+        luminous: true
+        luminousColor: host.theme.accent
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
-        borderColor: host.theme.subtleBorder
+        borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
         borderWidth: host.theme.borderThin
 
         Behavior on cornerRadius {

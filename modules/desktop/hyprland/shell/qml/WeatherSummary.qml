@@ -9,6 +9,8 @@ ShellSurface {
 
     implicitHeight: 160
     surfaceLayer: ShellSurface.Group
+    luminous: true
+    luminousColor: theme.accent
     fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15))
     cornerRadius: theme.radiusMedium
 

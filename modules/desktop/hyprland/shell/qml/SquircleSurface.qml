@@ -11,6 +11,10 @@ Item {
     property real borderWidth: 0
     property real cornerRadius: 28
     property real exponent: 4.5
+    // A soft, shape-clipped directional reflection, not a rectangular
+    // glow overlay. The native squircle path stays authoritative.
+    property color lightColor: "transparent"
+    property real lightStrength: 0
     // Match arc detail to its size instead of tessellating tiny controls
     // into the same number of segments as large panels.
     readonly property int cornerSamples: Math.max(8, Math.min(20, Math.ceil(cornerRadius * 0.7)))
@@ -86,6 +90,36 @@ Item {
             fillColor: root.fillColor
             strokeColor: "transparent"
             strokeWidth: 0
+
+            PathSvg {
+                path: root.fillPathData
+            }
+        }
+
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: "transparent"
+            strokeWidth: 0
+            fillGradient: RadialGradient {
+                centerX: root.width * 0.15
+                centerY: root.height * -0.16
+                centerRadius: Math.max(root.width * 0.9, root.height * 2)
+                focalX: centerX
+                focalY: centerY
+
+                GradientStop {
+                    position: 0
+                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength)
+                }
+                GradientStop {
+                    position: 0.44
+                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength * 0.28)
+                }
+                GradientStop {
+                    position: 1
+                    color: "transparent"
+                }
+            }
 
             PathSvg {
                 path: root.fillPathData
