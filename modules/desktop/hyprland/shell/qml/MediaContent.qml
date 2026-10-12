@@ -34,6 +34,18 @@ FocusScope {
             action: "Switch visualizer"
         },
         {
+            key: "S",
+            action: media.shuffleAvailable ? "Toggle shuffle" : "Shuffle unsupported by player"
+        },
+        {
+            key: "R",
+            action: media.repeatAvailable ? "Cycle repeat Off / All / One" : "Repeat unsupported by player"
+        },
+        {
+            key: "P",
+            action: "Cycle connected media players"
+        },
+        {
             key: "ESC",
             action: content.returnToControls ? "Back to Controls" : "Close now playing"
         }
@@ -403,17 +415,63 @@ FocusScope {
                 right: parent.right
                 bottom: parent.bottom
             }
+            spacing: content.theme.spacing3
 
-            Text {
-                text: content.media.available ? content.media.identity : "MPRIS"
-                color: content.theme.textMuted
-                font.family: content.runtime.fontMono
-                font.pixelSize: content.theme.fontSize(9)
-                font.letterSpacing: 1
+            // Keep optional MPRIS capabilities visible rather than relying on
+            // hidden keyboard actions or an additional player daemon.
+            Row {
+                spacing: content.theme.spacing2
+
+                ShellAction {
+                    width: 120
+                    height: 38
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰒝"
+                    title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
+                    shortcut: "S"
+                    active: content.media.shuffled
+                    enabled: content.media.shuffleAvailable
+                    onActivated: content.media.toggleShuffle()
+                }
+
+                ShellAction {
+                    width: 124
+                    height: 38
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
+                    title: "REPEAT " + content.media.repeatLabel
+                    shortcut: "R"
+                    active: content.media.repeatState !== 0
+                    enabled: content.media.repeatAvailable
+                    onActivated: content.media.toggleRepeat()
+                }
+
+                ShellAction {
+                    width: 250
+                    height: 38
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰎄"
+                    title: content.media.available ? content.media.identity + "  " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
+                    shortcut: "P"
+                    active: content.media.playerCount > 1
+                    enabled: content.media.playerCount > 1
+                    onActivated: content.media.cyclePlayer()
+                }
             }
-
             Item {
-                width: parent.width - parent.children[0].width - parent.children[2].width
+                width: Math.max(1, parent.width - parent.children[0].width - parent.children[2].width - parent.spacing * 2)
                 height: 1
             }
 
@@ -486,6 +544,15 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_V) {
                     content.toggleVisualizer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_S) {
+                    content.media.toggleShuffle();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_R) {
+                    content.media.toggleRepeat();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_P) {
+                    content.media.cyclePlayer();
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
                     content.media.seek(-5);
