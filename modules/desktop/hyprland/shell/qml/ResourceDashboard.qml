@@ -10,7 +10,7 @@ Item {
 
     property bool open: false
     visible: open
-    implicitHeight: 608
+    implicitHeight: 690
 
     signal keyboardRequested
 
@@ -35,7 +35,7 @@ Item {
             glyph: "◴"
             eyebrow: "Performance / live"
             title: "Resources"
-            detail: "CPU · Memory · Last " + panel.resourceState.historyLength * 2 + "s"
+            detail: "CPU · Memory · Network · Disk · Last " + panel.resourceState.historyLength * 2 + "s"
         }
 
         Row {
@@ -102,7 +102,71 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 161
+            height: 93
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusMedium
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: panel.theme.spacing3
+                spacing: panel.theme.spacing4
+
+                Repeater {
+                    model: [
+                        {
+                            title: "DISK /",
+                            value: panel.resourceState.diskTotal > 0 ? Math.round(panel.resourceState.diskPercent * 100) + "%" : "N/A",
+                            subtitle: panel.resourceState.diskTotal > 0 ? panel.resourceState.kibString(panel.resourceState.diskUsed) + " used" : "Capacity unavailable"
+                        },
+                        {
+                            title: "NETWORK ↓",
+                            value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkDownload) : "N/A",
+                            subtitle: panel.resourceState.networkInterface || "No active interface"
+                        },
+                        {
+                            title: "NETWORK ↑",
+                            value: panel.resourceState.networkInterface ? panel.resourceState.speedString(panel.resourceState.networkUpload) : "N/A",
+                            subtitle: "Outgoing traffic"
+                        }
+                    ]
+                    delegate: Column {
+                        id: metricColumn
+                        required property var modelData
+                        width: (parent.width - 2 * panel.theme.spacing4) / 3
+                        spacing: 2
+                        Text {
+                            text: metricColumn.modelData.title
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(10)
+                        }
+                        Text {
+                            width: parent.width
+                            text: metricColumn.modelData.value
+                            color: panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(14)
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width
+                            text: metricColumn.modelData.subtitle
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(9)
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+        }
+
+        ShellSurface {
+            width: parent.width
+            height: 205
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -112,45 +176,42 @@ Item {
                 anchors.fill: parent
                 anchors.margins: panel.theme.spacing3
                 spacing: panel.theme.spacing2
-                Row {
-                    width: parent.width
-                    Text {
-                        text: "CPU HISTORY"
-                        color: panel.theme.textMuted
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(10)
-                    }
-                    Item {
-                        width: Math.max(0, parent.width - parent.children[0].width - swapLabel.width)
-                        height: 1
-                    }
-                    Text {
-                        id: swapLabel
-                        text: panel.resourceState.swapTotal > 0 ? "Swap " + Math.round(panel.resourceState.swapPercent * 100) + "%" : "No swap"
-                        color: panel.theme.textMuted
-                        font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(10)
-                    }
-                }
-                Row {
-                    width: parent.width
-                    height: 103
-                    spacing: 3
-                    Repeater {
-                        model: panel.resourceState.historyLength
-                        delegate: Item {
-                            id: bar
-                            required property int index
-                            readonly property real fraction: panel.resourceState.cpuHistory[index] || 0
-                            width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
-                            height: 103
-                            Rectangle {
-                                anchors.bottom: parent.bottom
-                                width: parent.width
-                                height: Math.max(3, parent.height * bar.fraction)
-                                radius: 3
-                                color: panel.theme.accent
-                                opacity: 0.6 + bar.fraction * 0.4
+                Repeater {
+                    model: 3
+                    delegate: Column {
+                        id: historyRow
+                        required property int index
+                        readonly property var values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
+                        readonly property real maxValue: index === 2 ? Math.max(131072, ...values) : 1
+                        width: parent.width
+                        spacing: 2
+                        Text {
+                            text: historyRow.index === 0 ? "CPU HISTORY" : historyRow.index === 1 ? "MEMORY HISTORY" : "NETWORK HISTORY"
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(9)
+                        }
+                        Row {
+                            width: parent.width
+                            height: 29
+                            spacing: 3
+                            Repeater {
+                                model: panel.resourceState.historyLength
+                                delegate: Item {
+                                    id: bar
+                                    required property int index
+                                    readonly property real fraction: historyRow.maxValue > 0 ? (historyRow.values[index] || 0) / historyRow.maxValue : 0
+                                    width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
+                                    height: parent.height
+                                    Rectangle {
+                                        anchors.bottom: parent.bottom
+                                        width: parent.width
+                                        height: Math.max(2, parent.height * bar.fraction)
+                                        radius: 2
+                                        color: historyRow.index === 0 ? panel.theme.accent : historyRow.index === 1 ? panel.theme.positive : panel.theme.warning
+                                        opacity: 0.55 + bar.fraction * 0.45
+                                    }
+                                }
                             }
                         }
                     }
@@ -159,7 +220,7 @@ Item {
         }
 
         Text {
-            text: "R refresh  ·  ESC back  ·  Sampled every 2s while open"
+            text: "R refresh  ·  ESC back  ·  Sampled every 2s while open · disk every 10s"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(10)
