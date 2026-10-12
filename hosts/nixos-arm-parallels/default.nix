@@ -22,6 +22,8 @@
     ;
 
   imports = [
+    (moduleRegistry.profiles { inherit lib; }).linux.core
+    (moduleRegistry.profiles { inherit lib; }).linux.desktop
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 

@@ -2,6 +2,7 @@
   editScope,
   inputs,
   moduleRegistry,
+  lib,
   system,
   ...
 }:
@@ -14,6 +15,7 @@
     ;
 
   imports = [
+    (moduleRegistry.profiles { inherit lib; }).linux.core
     inputs.hermes-agent.nixosModules.default
     inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix

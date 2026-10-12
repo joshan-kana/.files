@@ -10,8 +10,6 @@ let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
-  darwinOnly =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isDarwin (scope args)) (lib.functionArgs scope);
 in
 {
   brave = _: {
@@ -30,7 +28,12 @@ in
     _:
     {
       environment.systemPackages =
-        lib.optionals isLinux [ pkgs.mullvad-vpn ] ++ lib.optionals isDarwin [ pkgs.mullvad ];
+        if isDarwin then
+          [ pkgs.mullvad ]
+        else if isLinux then
+          [ pkgs.mullvad-vpn ]
+        else
+          throw "Unsupported host platform: ${system}";
     }
     // lib.optionalAttrs isLinux {
       services.mullvad-vpn.enable = true;
@@ -52,8 +55,12 @@ in
       stylix.targets.firefox.colorTheme.enable = true;
       programs.firefox.profiles.themed.extensions.force = true;
       programs.firefox.configPath =
-        lib.optionalString isDarwin "Library/Application Support/Firefox"
-        + lib.optionalString isLinux ".mozilla/firefox";
+        if isDarwin then
+          "Library/Application Support/Firefox"
+        else if isLinux then
+          ".mozilla/firefox"
+        else
+          throw "Unsupported host platform: ${system}";
     };
   };
 
@@ -131,7 +138,12 @@ in
 
   libreoffice = _: {
     environment.systemPackages =
-      lib.optionals isLinux [ pkgs.libreoffice ] ++ lib.optionals isDarwin [ pkgs.libreoffice-bin ];
+      if isDarwin then
+        [ pkgs.libreoffice-bin ]
+      else if isLinux then
+        [ pkgs.libreoffice ]
+      else
+        throw "Unsupported host platform: ${system}";
   };
 
   sunshine = _: {
@@ -151,7 +163,12 @@ in
 
   vlc = _: {
     environment.systemPackages =
-      lib.optionals isLinux [ pkgs.vlc ] ++ lib.optionals isDarwin [ pkgs.vlc-bin ];
+      if isDarwin then
+        [ pkgs.vlc-bin ]
+      else if isLinux then
+        [ pkgs.vlc ]
+      else
+        throw "Unsupported host platform: ${system}";
   };
 
   mopidy = _: {
@@ -219,4 +236,4 @@ in
   };
 
 }
-// lib.mapAttrs (_: darwinOnly) (import ./darwin.nix)
+// import ./darwin.nix

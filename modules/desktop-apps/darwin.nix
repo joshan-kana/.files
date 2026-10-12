@@ -1,9 +1,11 @@
 {
-  macHomebrew = _: {
+  macHomebrew = { lib, system, ... }: {
     # Keep the remaining native casks without deleting existing installations.
-    homebrew = {
-      enable = true;
-      onActivation.cleanup = "none";
+    config = lib.optionalAttrs (lib.systems.elaborate system).isDarwin {
+      homebrew = {
+        enable = true;
+        onActivation.cleanup = "none";
+      };
     };
     home = { lib, ... }: {
       programs.zsh.profileExtra = lib.mkBefore ''

@@ -27,8 +27,6 @@ let
   toml = pkgs.formats.toml { };
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
-  darwinOnly =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isDarwin (scope args)) (lib.functionArgs scope);
   tuicrConfig = toml.generate "tuicr-config.toml" {
     theme = "stylix";
     diff_view = "side-by-side";
@@ -137,8 +135,12 @@ in
         systemUpdate = "nix run ${repoPath}#system-update --";
         rebuild =
           action:
-          lib.optionalString isDarwin ''nh darwin ${action} "$NH_OS_FLAKE#$FLK_PROFILE"''
-          + lib.optionalString isLinux ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS'';
+          if isDarwin then
+            ''nh darwin ${action} "$NH_OS_FLAKE#$FLK_PROFILE"''
+          else if isLinux then
+            ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS''
+          else
+            throw "Unsupported host platform: ${system}";
       };
       aliases = {
         syscd = commands.cd;
@@ -952,4 +954,4 @@ in
   };
 
 }
-// lib.mapAttrs (_: darwinOnly) (import ./darwin.nix)
+// import ./darwin.nix

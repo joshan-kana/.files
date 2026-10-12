@@ -4,7 +4,9 @@
   raycast = { pkgs, ... }: {
     environment.systemPackages = [ pkgs.raycast ];
   };
-  karabinerElements = _: {
-    services.karabiner-elements.enable = true;
+  karabinerElements = { lib, system, ... }: {
+    config = lib.optionalAttrs (lib.systems.elaborate system).isDarwin {
+      services.karabiner-elements.enable = true;
+    };
   };
 }
