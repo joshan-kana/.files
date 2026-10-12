@@ -14,7 +14,7 @@ Item {
     // Leave the centered clock island unobstructed on narrow logical screens.
     property real maximumWidth: 458
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
-    height: 40
+    height: 50
     visible: width > 1
     opacity: media.available ? 1 : 0
 
@@ -50,15 +50,15 @@ Item {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusIsland
         exponent: Math.min(4, theme.squircleExponent)
-        luminous: true
-        luminousColor: theme.accent
-        hovered: islandPress.containsMouse
+        elevated: true
+        outlined: true
+        fillColor: theme.paneBase
 
         Item {
             id: artwork
 
-            width: 32
-            height: 32
+            width: 40
+            height: 40
             anchors {
                 left: parent.left
                 leftMargin: 4
@@ -92,7 +92,7 @@ Item {
                 text: "♫"
                 color: island.theme.accent
                 font.family: island.runtime.fontMono
-                font.pixelSize: island.theme.fontSize(14)
+                font.pixelSize: island.theme.fontSize(19)
             }
         }
 
@@ -130,7 +130,7 @@ Item {
             id: miniSpectrum
 
             width: island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
-            height: 32
+            height: 37
             anchors {
                 right: state.left
                 rightMargin: island.theme.spacing2

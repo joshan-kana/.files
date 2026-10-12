@@ -19,6 +19,10 @@ SquircleSurface {
     property bool hovered: false
     property color luminousColor: theme.accent
     property real lightIntensity: 1
+    property bool elevated: false
+
+    shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
+    shadowOffset: elevated ? 3 : 0
 
     exponent: theme.squircleExponent
     lightColor: luminousColor

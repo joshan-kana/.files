@@ -26,6 +26,9 @@ QtObject {
     readonly property int radiusIsland: 22
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
+    readonly property int barHeight: 70
+    readonly property int barInsetTop: 12
+    readonly property int barInsetBottom: 8
     readonly property real squircleExponent: runtime.squircleExponent
 
     // Use the palette's own luminance rather than a separate dark/light flag:
@@ -65,6 +68,7 @@ QtObject {
     readonly property color layer2: groupBase
     readonly property color layer3: blend(paneBase, accent, dark ? 0.08 : 0.07)
     readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.20 : 0.15)
+    readonly property color selectedTabFill: blend(controlBase, accent, dark ? 0.52 : 0.34)
     readonly property color expressiveSurface: blend(groupBase, accent, dark ? 0.035 : 0.022)
     readonly property color expressiveSurfaceStrong: blend(controlBase, accent, dark ? 0.055 : 0.035)
     readonly property real panelClosedScale: 0.965
