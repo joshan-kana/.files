@@ -34,6 +34,7 @@ PanelWindow {
     function presentComponent(next: Component): void {
         if (!next) {
             contentTransition.stop();
+            contentEnter.stop();
             contentLoaderA.sourceComponent = null;
             contentLoaderB.sourceComponent = null;
             activeSlot = -1;
@@ -46,6 +47,7 @@ PanelWindow {
         const incoming = activeSlot === 0 ? contentLoaderB : contentLoaderA;
         const outgoing = activeLoader;
         contentTransition.stop();
+        contentEnter.stop();
         incoming.opacity = 0;
         // Enable the destination before constructing its FocusScope. Its
         // onEngagedChanged requests keyboard focus during instantiation.
@@ -53,8 +55,13 @@ PanelWindow {
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
         if (outgoing) {
+            // Stagger the content handoff. Full crossfades leave both pages
+            // readable at once, producing ghosted text over the morph.
             outgoing.opacity = 0;
-            incoming.opacity = 1;
+            if (motion.enabled)
+                contentEnter.restart();
+            else
+                incoming.opacity = 1;
             contentTransition.restart();
         } else {
             incoming.opacity = 1;
@@ -71,6 +78,16 @@ PanelWindow {
 
     onCurrentComponentChanged: presentComponent(currentComponent)
     Component.onCompleted: presentComponent(currentComponent)
+
+    Timer {
+        id: contentEnter
+        interval: Math.max(1, host.motion.effectsFast)
+        repeat: false
+        onTriggered: {
+            if (host.activeLoader)
+                host.activeLoader.opacity = 1;
+        }
+    }
 
     Timer {
         id: contentTransition
@@ -384,9 +401,9 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3
             }
             clip: true
-            // Each view retains its destination layout; overlapping loaders
-            // crossfade while the squircle morphs. Scaling compensates only
-            // for the brief period when the animated viewport is narrower.
+            // Keep the outgoing view alive for its short fade-out, then
+            // fade the incoming view in over the same morphing squircle.
+            // Scaling only compensates while the animated viewport narrows.
             contentWidth: width
             contentHeight: host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : height
             boundsBehavior: Flickable.StopAtBounds
@@ -404,7 +421,7 @@ PanelWindow {
                 enabled: host.activeSlot === 0
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: host.motion.contentFade
+                        duration: host.activeSlot === 0 ? host.motion.contentFade : host.motion.effectsFast
                         easing.type: host.motion.enterType
                         easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
                     }
@@ -424,7 +441,7 @@ PanelWindow {
                 enabled: host.activeSlot === 1
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: host.motion.contentFade
+                        duration: host.activeSlot === 1 ? host.motion.contentFade : host.motion.effectsFast
                         easing.type: host.motion.enterType
                         easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
                     }
