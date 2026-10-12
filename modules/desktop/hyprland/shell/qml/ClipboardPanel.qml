@@ -76,7 +76,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: panel.motion.fast
+        interval: panel.motion.normal + (panel.motion.enabled ? 24 : 0)
         onTriggered: panel.closing = false
     }
 
@@ -146,24 +146,25 @@ PanelWindow {
 
     function show(): void {
         closeTimer.stop();
+        open = true;
         closing = false;
         search.text = "";
         copyFeedback = "";
         selectedIndex = 0;
-        open = true;
         refresh();
         search.forceActiveFocus();
     }
 
     function hide(): void {
+        if (!open)
+            return;
+
+        // Preserve the Wayland surface until the longer spatial exit finishes.
+        closing = motion.enabled;
         open = false;
 
-        if (motion.fast === 0)
-            closing = false;
-        else {
-            closing = true;
+        if (closing)
             closeTimer.restart();
-        }
     }
 
     function toggle(): void {
@@ -226,8 +227,8 @@ PanelWindow {
         Behavior on scale {
             NumberAnimation {
                 duration: panel.motion.normal
-                easing.type: panel.motion.enterType
-                easing.bezierCurve: panel.motion.enterCurve
+                easing.type: panel.open ? panel.motion.enterType : panel.motion.exitType
+                easing.bezierCurve: panel.open ? panel.motion.enterCurve : panel.motion.exitCurve
             }
         }
 
