@@ -127,6 +127,7 @@ in
   });
 
   vscode = _: {
+    environment.systemPackages = lib.optionals isDarwin [ pkgs.vscode ];
     home = _: {
       programs.vscode = { };
     };
