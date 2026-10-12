@@ -738,6 +738,7 @@ in
           themeSet = lib.getExe themeSet;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
+          recordingLibrary = lib.getExe recordingLibrary;
           frozenCapture = lib.getExe frozenCapture;
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
@@ -1022,6 +1023,61 @@ in
                 rm -f -- "$config"
                 exit 1
               fi
+              ;;
+            *) exit 2 ;;
+          esac
+        '';
+      };
+
+      recordingLibrary = pkgs.writeShellApplication {
+        name = "linux-desktop-recordings";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.findutils
+          pkgs.glib
+          pkgs.ffmpeg
+          pkgs.gnused
+          pkgs.xdg-utils
+        ];
+        text = ''
+          action="''${1:-}"
+          recordings="$HOME/Videos/Screencasts"
+          preview_dir="''${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-preview"
+          case "$action" in
+            list)
+              [ -d "$recordings" ] || exit 0
+              find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
+                -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4' \
+                -printf '%T@\t%f\t%s\n' | sort -rn | sed -n '1,100p'
+              ;;
+            clear-preview)
+              [ ! -L "$preview_dir" ] || exit 2
+              rm -rf -- "$preview_dir"
+              ;;
+            preview|open|trash)
+              [ "$#" -eq 2 ] || exit 2
+              name="$2"
+              [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
+              path="$recordings/$name"
+              [ -f "$path" ] && [ ! -L "$path" ] || exit 2
+              if [ "$action" = open ]; then
+                exec xdg-open "$path"
+              elif [ "$action" = trash ]; then
+                exec gio trash "$path"
+              fi
+              [ ! -L "$preview_dir" ] || exit 2
+              umask 077
+              mkdir -p -- "$preview_dir"
+              chmod 700 -- "$preview_dir"
+              find "$preview_dir" -maxdepth 1 -type f -name 'recording-*.png' -delete
+              output="$(mktemp "$preview_dir/recording-XXXXXXXX.png")"
+              trap 'rm -f -- "$output"' EXIT
+              ffmpeg -hide_banner -loglevel error -ss 0.2 -i "$path" \
+                -vf 'scale=510:300:force_original_aspect_ratio=decrease' \
+                -frames:v 1 -y "$output" >/dev/null
+              duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path")"
+              printf '%s\n%s\n' "$output" "$duration"
+              trap - EXIT
               ;;
             *) exit 2 ;;
           esac
