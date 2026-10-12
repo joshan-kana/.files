@@ -14,6 +14,7 @@ FocusScope {
     property bool returnToControls: false
     property bool helpOpen: false
     property string visualizerMode: "bars"
+    property bool lyricsVisible: false
     property bool scrubbing: false
     property real scrubFraction: 0
     readonly property var helpBindings: [
@@ -32,6 +33,10 @@ FocusScope {
         {
             key: "V",
             action: "Switch visualizer"
+        },
+        {
+            key: "Y",
+            action: "Show local synchronised lyrics (.lrc) / spectrum"
         },
         {
             key: "S",
@@ -63,6 +68,7 @@ FocusScope {
         } else {
             helpOpen = false;
             scrubbing = false;
+            lyricsVisible = false;
         }
     }
 
@@ -237,7 +243,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: content.visualizerMode === "curve" || opacity > 0.01
+                    visible: !content.lyricsVisible && (content.visualizerMode === "curve" || opacity > 0.01)
                     opacity: content.visualizerMode === "curve" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -264,7 +270,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: content.visualizerMode === "bars" || opacity > 0.01
+                    visible: !content.lyricsVisible && (content.visualizerMode === "bars" || opacity > 0.01)
                     opacity: content.visualizerMode === "bars" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -280,10 +286,21 @@ FocusScope {
                     }
                 }
 
+                MediaLyrics {
+                    anchors.fill: parent
+                    media: content.media
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    active: content.engaged && content.lyricsVisible
+                    visible: content.lyricsVisible
+                }
+
                 Item {
                     id: frequencyLabels
 
                     height: 18
+                    visible: !content.lyricsVisible
                     anchors {
                         right: parent.right
                         bottom: parent.bottom
@@ -492,6 +509,19 @@ FocusScope {
                 }
 
                 ShellAction {
+                    width: 95
+                    height: 30
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    title: content.lyricsVisible ? "LYRICS" : "SPECTRUM"
+                    shortcut: "Y"
+                    active: content.lyricsVisible
+                    onActivated: content.lyricsVisible = !content.lyricsVisible
+                }
+
+                ShellAction {
                     width: 36
                     height: 30
                     runtime: content.runtime
@@ -544,6 +574,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_V) {
                     content.toggleVisualizer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Y) {
+                    content.lyricsVisible = !content.lyricsVisible;
                     event.accepted = true;
                 } else if (event.key === Qt.Key_S) {
                     content.media.toggleShuffle();
