@@ -272,6 +272,7 @@ ShellRoot {
 
     CommandPalette {
         id: launcher
+        clipboardPanel: clipboardPanel
         screen: screens.focusedScreen
         runtime: runtime
         theme: theme
