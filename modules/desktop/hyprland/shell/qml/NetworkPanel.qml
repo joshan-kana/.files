@@ -223,7 +223,7 @@ Item {
                 surfaceLayer: ShellSurface.Control
                 selected: index === panel.selectedIndex
                 cornerRadius: theme.radiusLarge
-                fillColor: networkRow.modelData.connected ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.positive.r, panel.theme.positive.g, panel.theme.positive.b, 0.13)) : panel.theme.layer3
+                fillColor: networkRow.modelData.connected ? panel.theme.blend(panel.theme.groupBase, panel.theme.positive, panel.theme.dark ? 0.11 : 0.07) : panel.theme.layer3
 
                 StateLayer {
                     theme: panel.theme
