@@ -22,6 +22,13 @@ QtObject {
     readonly property real position: available && player.positionSupported ? player.position : 0
     readonly property real length: available && player.lengthSupported ? player.length : 0
     readonly property bool seekable: available && player.canSeek && player.positionSupported && player.lengthSupported
+    readonly property int playerCount: players.length
+    readonly property int selectedPlayerIndex: available ? players.indexOf(player) : -1
+    readonly property bool shuffleAvailable: available && player.shuffleSupported
+    readonly property bool shuffled: shuffleAvailable && player.shuffle
+    readonly property bool repeatAvailable: available && player.loopSupported
+    readonly property int repeatState: repeatAvailable ? player.loopState : MprisLoopState.None
+    readonly property string repeatLabel: repeatState === MprisLoopState.Track ? "ONE" : repeatState === MprisLoopState.Playlist ? "ALL" : "OFF"
 
     function playerId(candidate): string {
         if (!candidate)
@@ -103,6 +110,12 @@ QtObject {
     function toggleShuffle(): void {
         if (available && player.shuffleSupported)
             player.shuffle = !player.shuffle;
+    }
+
+    function toggleRepeat(): void {
+        if (!repeatAvailable)
+            return;
+        player.loopState = repeatState === MprisLoopState.None ? MprisLoopState.Playlist : repeatState === MprisLoopState.Playlist ? MprisLoopState.Track : MprisLoopState.None;
     }
 
     function refreshPosition(): void {
