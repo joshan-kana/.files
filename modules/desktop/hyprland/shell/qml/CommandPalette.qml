@@ -23,6 +23,17 @@ PanelWindow {
     property string copyFeedback: ""
     property bool clipboardQueried: false
     property bool awaitingClipboardCopy: false
+    property var unicodeEntries: []
+
+    FileView {
+        id: unicodeData
+        path: palette.runtime.emojiTest
+        blockLoading: false
+        onLoadedChanged: {
+            if (loaded)
+                palette.unicodeEntries = SymbolLibrary.parseUnicode(text());
+        }
+    }
 
     Connections {
         target: palette.clipboardPanel
@@ -131,7 +142,7 @@ PanelWindow {
 
         const symbolMode = query.match(/^(?:emoji|symbol|sym)(?:\s+(.*))?$/);
         if (symbolMode)
-            return SymbolLibrary.search(symbolMode[1] || "");
+            return SymbolLibrary.search(symbolMode[1] || "", unicodeEntries);
 
         const clipboardMode = query.match(/^clip(?:\s+(.*))?$/);
         if (clipboardMode) {
