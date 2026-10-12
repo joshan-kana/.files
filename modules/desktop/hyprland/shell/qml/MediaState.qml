@@ -19,6 +19,16 @@ QtObject {
     readonly property string album: available ? (player.trackAlbum || "") : ""
     readonly property string artUrl: available ? (player.trackArtUrl || "") : ""
     readonly property string identity: available ? (player.identity || "") : ""
+    // Optional local .lrc sidecar. A remote MPRIS URI is never fetched, and
+    // neither the title nor audio is sent to a lyrics service.
+    readonly property string lyricsPath: {
+        const source = available && player.metadata ? String(player.metadata["xesam:url"] || "") : "";
+        if (!source.startsWith("file:///"))
+            return "";
+        const filePath = decodeURIComponent(source.slice(7).split(/[?#]/)[0]);
+        return /\.[^/.]+$/.test(filePath) ? filePath.replace(/\.[^/.]+$/, ".lrc") : "";
+    }
+
     readonly property real position: available && player.positionSupported ? player.position : 0
     readonly property real length: available && player.lengthSupported ? player.length : 0
     readonly property bool seekable: available && player.canSeek && player.positionSupported && player.lengthSupported
