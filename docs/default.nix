@@ -750,15 +750,13 @@ let
     let
       inherit (host) config;
       primary = config.dotfiles.users.primary;
-      homeManager = config.home-manager;
-      launchAgents = homeManager.users.${primary.name}.launchd.agents;
-      agentLabel = name: launchAgents.${name}.config.Label;
+      secretBackup = config.dotfiles.backups.secrets;
+      launchAgents = config.home-manager.users.${primary.name}.launchd.agents;
+      enabledAgentLabels = map (agent: agent.config.Label) (
+        builtins.attrValues (lib.filterAttrs (_: agent: agent.enable && agent.config ? Label) launchAgents)
+      );
     in
     ''
-      export BACKUP_JOB_LABEL=${lib.escapeShellArg (agentLabel "secrets-backup")}
-      export BACKUP_MAINTENANCE_JOB_LABEL=${lib.escapeShellArg (agentLabel "secrets-backup-maintenance")}
-      export ATTIC_WATCH_JOB_LABEL=${lib.escapeShellArg (agentLabel "attic-watch-store")}
-      export HOME_MANAGER_BACKUP_EXTENSION=${lib.escapeShellArg homeManager.backupFileExtension}
       export HOST_NAME=${lib.escapeShellArg name}
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
@@ -766,6 +764,13 @@ let
       export PRIMARY_USER=${lib.escapeShellArg primary.name}
       export PRIMARY_HOME=${lib.escapeShellArg "${primary.homeRoot}/${primary.name}"}
       export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
+      export SECRETS_BACKUP_ENABLED=${lib.escapeShellArg (lib.boolToString config.dotfiles.resolvedScopes.backups.secrets.enable)}
+      export SECRETS_REPOSITORY=${lib.escapeShellArg secretBackup.repository}
+      export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg secretBackup.rcloneConfigFile}
+      export SECRETS_PASSWORD_FILE=${lib.escapeShellArg secretBackup.passwordFile}
+      MANAGED_LAUNCHD_LABELS=(
+      ${lib.concatMapStringsSep "\n" (label: "  ${lib.escapeShellArg label}") enabledAgentLabels}
+      )
     '';
 
   serverRunbookEnvironment = ''

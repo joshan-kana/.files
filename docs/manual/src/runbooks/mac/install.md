@@ -1,12 +1,9 @@
 # Installation guide for `mac`
 
-This guide installs the evaluated nix-darwin host configuration. Use a local
-terminal with administrator access and a working Nix daemon.
-
 ## Current evaluated target
 
-Load the generated host environment in the shell before running the commands
-below:
+Load the generated host environment in the installer shell before running
+commands that reference the target configuration:
 
 ```sh
 {{#include ../../generated/hosts/mac.sh}}
@@ -14,74 +11,84 @@ below:
 
 ## Prepare the target
 
-Check out the configuration and its submodules at the evaluated repository path,
-then verify the host target:
+Install Nix, then make the repository and its submodules available at the
+evaluated path:
 
 ```sh
 cd "$DOTFILES_REPO"
 nix eval --raw ".#darwinConfigurations.${HOST_NAME}.config.system.build.toplevel.drvPath"
 ```
 
-Before installation, verify that a recent backup can be restored and that the
-host's private secrets, backup credentials, Comin credentials, and cache token
-are available. The backup and deployment modules define which runtime files
-these services require; keep the credentials outside the Nix store.
-
-Check for already loaded backup jobs before enabling their declarative
-replacements:
+Review the launchd jobs already loaded before installing their declarative
+replacements. Preserve any existing job definitions that must be unloaded for
+installation:
 
 ```sh
-launchctl list | grep -F "$BACKUP_JOB_LABEL" || true
-launchctl list | grep -F "$BACKUP_MAINTENANCE_JOB_LABEL" || true
+for label in "${MANAGED_LAUNCHD_LABELS[@]}"; do
+  launchctl list "$label" || true
+done
 ```
 
-If existing backup jobs are loaded, preserve their plists for recovery and
-unload them before switching. Do not initialize or overwrite an existing Restic
-repository.
+## Recover host secrets
 
-## Build
+{{#include ../_shared/secrets-recovery-prerequisites.inc}}
+
+Skip this section when `SECRETS_BACKUP_ENABLED=false`. Otherwise stage the
+external bootstrap files in `/tmp` under the filenames expected by the
+generated environment, then install them with private permissions:
 
 ```sh
-cd "$DOTFILES_REPO"
-nix flake check --no-build
-nix build --no-link ".#darwinConfigurations.${HOST_NAME}.system"
+install -d -m 0700 "$(dirname "$SECRETS_RCLONE_CONFIG")"
+install -m 0600 "/tmp/$(basename "$SECRETS_RCLONE_CONFIG")" "$SECRETS_RCLONE_CONFIG"
+install -m 0600 "/tmp/$(basename "$SECRETS_PASSWORD_FILE")" "$SECRETS_PASSWORD_FILE"
 ```
+
+For an existing repository, inspect its snapshots and restore the latest
+secrets snapshot only when the target secrets directory can safely be replaced:
+
+```sh
+RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+  snapshots
+
+RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+  restore latest --target / --include "$USER_SECRETS_DIR"
+```
+
+For a new repository, initialize it once instead of restoring:
+
+```sh
+RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+  init
+```
+
+Only initialize a repository that does not already exist.
 
 ## Install
 
-For the first activation, when `darwin-rebuild` is not on `PATH`:
-
 ```sh
+cd "$DOTFILES_REPO"
 sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- \
   switch --flake ".#$HOST_NAME"
 ```
 
-Use the configured `sup` or `sbld` commands for later updates and builds.
-
 ## Verify
 
-Check the active generation and the launchd services configured for this host:
+Verify the active generation and the launchd jobs enabled by the evaluated
+configuration:
 
 ```sh
 sudo darwin-rebuild --list-generations
-launchctl list | grep -F "$BACKUP_JOB_LABEL" || true
-launchctl list | grep -F "$BACKUP_MAINTENANCE_JOB_LABEL" || true
-launchctl list | grep -F "$ATTIC_WATCH_JOB_LABEL" || true
+for label in "${MANAGED_LAUNCHD_LABELS[@]}"; do
+  launchctl list "$label"
+done
 ```
 
-Run `secrets-backup backup`, confirm that a repository snapshot was created, and
-restore files into a temporary directory to verify recovery. Check SSH, Tailscale,
-Comin, cache access, Hammerspoon, yabai, Karabiner and required applications.
-
-## Rollback
-
-To activate the previous nix-darwin generation:
-
-```sh
-sudo darwin-rebuild --rollback
-```
-
-If a previous backup job needs to be restored, reload its preserved plist and
-verify the resulting schedule. Home Manager preserves conflicting files using
-the evaluated suffix `$HOME_MANAGER_BACKUP_EXTENSION`; inspect those copies
-before replacing any user files.
+Verify that the restored secrets are accessible and that their encrypted
+repository contains a recent snapshot. Check application and remote-access
+functionality before relying on the installed configuration.
