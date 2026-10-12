@@ -62,10 +62,15 @@ QtObject {
 
         // Preserve the last audio frame as it settles after the socket closes.
         // The shorter live interpolation remains unchanged while playing.
-        const blend = 1 - Math.exp(-delta * (spectrum.decaying ? 10 : 120));
         const values = [];
         let maxDifference = 0;
+        const bassEnd = targetBands.length * Math.log(250 / Math.max(1, lowHz)) / Math.log(Math.max(2, highHz / Math.max(1, lowHz)));
         for (let i = 0; i < targetBands.length; i++) {
+            const lowBand = i <= bassEnd;
+            // Kick transients should arrive immediately and fall cleanly.
+            // Higher bands retain a softer but still responsive decay.
+            const rate = decaying ? 10 : lowBand ? (targetBands[i] > bands[i] ? 320 : 110) : (targetBands[i] > bands[i] ? 120 : 45);
+            const blend = 1 - Math.exp(-delta * rate);
             const value = bands[i] + (targetBands[i] - bands[i]) * blend;
             values.push(value);
             maxDifference = Math.max(maxDifference, Math.abs(targetBands[i] - value));

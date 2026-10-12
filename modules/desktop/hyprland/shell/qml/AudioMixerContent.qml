@@ -11,12 +11,12 @@ FocusScope {
 
     property bool active: false
     property int selectedIndex: 0
-    readonly property var streams: system.audioApplicationStreams || []
+    readonly property var streams: (system.audioApplicationStreams || []).concat(system.audioCaptureStreams || [])
 
     signal closeRequested
 
     implicitWidth: 730
-    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + Math.min(5, Math.max(1, streams.length)) * 110 + Math.max(0, Math.min(5, streams.length) - 1) * theme.spacing3 + footer.implicitHeight
+    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + Math.min(5, Math.max(1, streams.length)) * 112 + Math.max(0, Math.min(5, streams.length) - 1) * theme.spacing3 + footer.implicitHeight
     visible: active
     focus: active
 
@@ -53,7 +53,7 @@ FocusScope {
         glyph: "♫"
         eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active source" : " active sources")
         title: "Application mixer"
-        detail: "Per-application volume and mute"
+        detail: "Live per-channel signal, volume and mute"
     }
 
     ListView {
@@ -80,7 +80,7 @@ FocusScope {
             readonly property bool chosen: index === mixer.selectedIndex
 
             width: ListView.view.width
-            height: 110
+            height: 112
             theme: mixer.theme
             motion: mixer.motion
             cornerRadius: theme.radiusMedium
@@ -121,7 +121,7 @@ FocusScope {
                         }
                         Text {
                             width: parent.width
-                            text: mixer.system.streamTechnicalName(streamRow.modelData)
+                            text: (mixer.system.audioCaptureStreams.indexOf(streamRow.modelData) >= 0 ? "INPUT · " : "OUTPUT · ") + mixer.system.streamTechnicalName(streamRow.modelData)
                             color: mixer.theme.textMuted
                             font.family: mixer.runtime.fontMono
                             font.pixelSize: mixer.theme.fontSize(9)
@@ -169,18 +169,36 @@ FocusScope {
                     }
                 }
 
-                ShellSlider {
+                Row {
                     width: parent.width
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    enabled: !!streamRow.modelData.audio
-                    value: streamRow.modelData.audio ? streamRow.modelData.audio.volume : 0
-                    accentColor: streamRow.modelData.audio?.muted ? mixer.theme.warning : mixer.theme.accent
-                    trackHeight: 11
-                    handleSize: 19
-                    onValueRequested: value => {
-                        mixer.selectedIndex = streamRow.index;
-                        mixer.system.setStreamVolume(streamRow.modelData, value);
+                    height: 32
+                    spacing: mixer.theme.spacing3
+
+                    AudioPeakMeter {
+                        id: streamMeter
+                        width: Math.min(154, Math.max(105, parent.width * 0.23))
+                        height: 29
+                        anchors.verticalCenter: parent.verticalCenter
+                        theme: mixer.theme
+                        node: streamRow.modelData
+                        muted: !!streamRow.modelData.audio?.muted
+                        monitoring: mixer.active
+                    }
+
+                    ShellSlider {
+                        width: Math.max(1, parent.width - streamMeter.width - parent.spacing)
+                        anchors.verticalCenter: parent.verticalCenter
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        enabled: !!streamRow.modelData.audio
+                        value: streamRow.modelData.audio ? streamRow.modelData.audio.volume : 0
+                        accentColor: streamRow.modelData.audio?.muted ? mixer.theme.warning : mixer.theme.accent
+                        trackHeight: 11
+                        handleSize: 19
+                        onValueRequested: value => {
+                            mixer.selectedIndex = streamRow.index;
+                            mixer.system.setStreamVolume(streamRow.modelData, value);
+                        }
                     }
                 }
             }
