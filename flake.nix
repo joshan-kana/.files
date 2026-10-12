@@ -443,6 +443,7 @@
           pkgs = pkgsFor system;
           source = self;
           configurations = self.nixosConfigurations;
+          inherit (self) darwinConfigurations;
         };
 
       docsCommandsFor =
