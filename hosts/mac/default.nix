@@ -1,5 +1,4 @@
 {
-  config,
   editScope,
   extendScope,
   moduleRegistry,
@@ -16,31 +15,23 @@
     virtualisation
     ;
 
-  system =
-    extendScope
-      (editScope moduleRegistry.system {
-        compatibility = _: {
-          system.stateVersion = 6;
-        };
-        identity = _: {
-          system.primaryUser = config.dotfiles.users.primary.name;
-          users.users.${config.dotfiles.users.primary.name}.home =
-            "/Users/${config.dotfiles.users.primary.name}";
-        };
-      })
-      {
-        macUser = _: {
-          dotfiles.users.primary.homeRoot = "/Users";
-          home-manager = {
-            backupFileExtension = "before-nix";
-            extraSpecialArgs.configurationName = "mac";
-            sharedModules = [ ../../modules/options ];
-          };
-          home = { lib, ... }: {
-            home.stateVersion = lib.mkForce "26.05";
-          };
-        };
+  system = editScope moduleRegistry.system {
+    compatibility = _: {
+      system.stateVersion = 6;
+      home = _: {
+        home.stateVersion = "26.05";
       };
+    };
+
+    identity = { config, ... }: {
+      dotfiles.users.primary.homeRoot = "/Users";
+      home-manager = {
+        backupFileExtension = "before-nix";
+        extraSpecialArgs.configurationName = config.dotfiles.profile.name;
+        sharedModules = [ ../../modules/options ];
+      };
+    };
+  };
 
   cli = extendScope moduleRegistry.cli {
     macShell = _: {

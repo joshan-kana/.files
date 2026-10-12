@@ -31,6 +31,8 @@ in
 }
 // lib.optionalAttrs isDarwin {
   networking.hostName = lib.mkDefault config.dotfiles.profile.name;
+  system.primaryUser = primary.name;
+  users.users.${primary.name}.home = "${primary.homeRoot}/${primary.name}";
 }
 // {
   home =
