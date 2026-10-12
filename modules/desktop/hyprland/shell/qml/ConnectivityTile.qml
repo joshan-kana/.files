@@ -115,7 +115,7 @@ Item {
             anchors {
                 top: parent.top
                 right: parent.right
-                margins: tile.theme.spacing3
+                margins: tile.theme.spacing4
             }
             shortcut: tile.shortcut
             fontFamily: tile.runtime.fontMono
