@@ -10,6 +10,8 @@ ShellSurface {
     required property RuntimeConfig runtime
     property bool active: false
     signal activated
+    signal dragMoved(real pointerX, real pointerY)
+    signal dropped(real pointerX, real pointerY)
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
@@ -70,8 +72,34 @@ ShellSurface {
     }
 
     MouseArea {
+        id: interaction
         anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: tile.activated()
+        cursorShape: dragActive ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+        property real pressedX: 0
+        property real pressedY: 0
+        property bool dragActive: false
+        onPressed: mouse => {
+            pressedX = mouse.x;
+            pressedY = mouse.y;
+            dragActive = false;
+        }
+        onPositionChanged: mouse => {
+            if (!pressed)
+                return;
+            if (!dragActive && Math.hypot(mouse.x - pressedX, mouse.y - pressedY) >= 10)
+                dragActive = true;
+            if (dragActive)
+                tile.dragMoved(mouse.x, mouse.y);
+        }
+        onReleased: mouse => {
+            if (dragActive)
+                tile.dropped(mouse.x, mouse.y);
+        }
+        onClicked: {
+            if (!dragActive)
+                tile.activated();
+            dragActive = false;
+        }
+        onCanceled: dragActive = false
     }
 }
