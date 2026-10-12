@@ -29,43 +29,47 @@ for label in "${MANAGED_LAUNCHD_LABELS[@]}"; do
 done
 ```
 
-## Recover host secrets
+## Restore host secrets
 
-Skip this section when `SECRETS_BACKUP_ENABLED=false`. Otherwise stage the
-external bootstrap files in `/tmp` under the filenames expected by the
-generated environment, then install them with private permissions:
+Use the existing backup credentials at `$SECRETS_RCLONE_CONFIG` and
+`$SECRETS_PASSWORD_FILE`. If either is missing, recover it **directly to its
+evaluated path** from secure recovery material (directory mode `0700`, file mode
+`0600`). No temporary staging is required.
 
-```sh
-install -d -m 0700 "$(dirname "$SECRETS_RCLONE_CONFIG")"
-install -m 0600 "/tmp/$(basename "$SECRETS_RCLONE_CONFIG")" "$SECRETS_RCLONE_CONFIG"
-install -m 0600 "/tmp/$(basename "$SECRETS_PASSWORD_FILE")" "$SECRETS_PASSWORD_FILE"
-```
-
-For an existing repository, inspect its snapshots and restore the latest
-secrets snapshot only when the target secrets directory can safely be replaced:
+When restoring an existing repository, first inspect its snapshots:
 
 ```sh
-RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
-  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
-  snapshots
-
-RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
-  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
-  restore latest --target / --include "$USER_SECRETS_DIR"
+if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
+  RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+    nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+    -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+    snapshots
+fi
 ```
 
-For a new repository, initialize it once instead of restoring:
+After confirming that the destination can safely be restored, recover its latest
+secrets snapshot:
 
 ```sh
-RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
-  nix shell nixpkgs#restic nixpkgs#rclone -c restic \
-  -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
-  init
+if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
+  RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+    nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+    -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+    restore latest --target / --include "$USER_SECRETS_DIR"
+fi
 ```
 
-Only initialize a repository that does not already exist.
+For a repository that does not yet exist, initialize it once instead of
+restoring:
+
+```sh
+if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
+  RCLONE_CONFIG="$SECRETS_RCLONE_CONFIG" \
+    nix shell nixpkgs#restic nixpkgs#rclone -c restic \
+    -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
+    init
+fi
+```
 
 ## Install
 
