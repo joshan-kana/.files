@@ -48,7 +48,11 @@ Item {
         theme: island.theme
         motion: island.motion
         surfaceLayer: ShellSurface.Pane
-        cornerRadius: theme.radiusMedium
+        cornerRadius: theme.radiusIsland
+        exponent: Math.min(4, theme.squircleExponent)
+        luminous: true
+        luminousColor: theme.accent
+        hovered: islandPress.containsMouse
 
         Item {
             id: artwork
@@ -180,8 +184,10 @@ Item {
         }
 
         StateLayer {
+            id: islandPress
             theme: island.theme
             motion: island.motion
+            cornerRadius: theme.radiusIsland
             onActivated: island.activated()
         }
     }

@@ -22,7 +22,11 @@ Item {
         theme: island.theme
         motion: island.motion
         surfaceLayer: ShellSurface.Pane
-        cornerRadius: theme.radiusMedium
+        cornerRadius: theme.radiusIsland
+        exponent: Math.min(4, theme.squircleExponent)
+        luminous: true
+        luminousColor: island.system.networkConnected ? island.theme.accent : island.theme.warning
+        hovered: statusPress.containsMouse
 
         Row {
             id: statusRow
@@ -106,12 +110,21 @@ Item {
                 accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
                 compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
             }
+            Text {
+                visible: !island.compact
+                anchors.verticalCenter: parent.verticalCenter
+                text: "⌄"
+                color: island.theme.textMuted
+                font.family: island.runtime.fontMono
+                font.pixelSize: island.theme.fontSize(12)
+            }
         }
 
         StateLayer {
+            id: statusPress
             theme: island.theme
             motion: island.motion
-            cornerRadius: island.theme.radiusMedium
+            cornerRadius: island.theme.radiusIsland
             onActivated: island.activated()
             onWheel: event => {
                 if (event.angleDelta.y !== 0 && island.system.audioAvailable) {
