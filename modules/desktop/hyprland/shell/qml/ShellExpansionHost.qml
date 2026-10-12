@@ -315,8 +315,10 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        cornerRadius: host.contentExpanded ? host.theme.radiusLarge : Math.min(host.theme.radiusLarge, host.expansionState.originHeight / 2)
-        outlined: false
+        fillColor: Qt.tint(host.theme.background, Qt.rgba(host.theme.surfaceRaised.r, host.theme.surfaceRaised.g, host.theme.surfaceRaised.b, 0.71))
+        cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
+        borderColor: host.theme.subtleBorder
+        borderWidth: host.theme.borderThin
 
         Behavior on cornerRadius {
             enabled: host.contentExpanded || host.closing
