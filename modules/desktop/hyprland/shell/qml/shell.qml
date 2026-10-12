@@ -18,6 +18,7 @@ ShellRoot {
     readonly property ResourceState resourcesRef: resources
     readonly property PowerProfileState powerProfileRef: powerProfile
     readonly property BrightnessState brightnessRef: brightness
+    readonly property NightLightState nightLightRef: nightLight
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
 
@@ -117,6 +118,7 @@ ShellRoot {
             spectrum: root.spectrumRef
             notificationState: root.notificationsRef
             brightness: root.brightnessRef
+            nightLight: root.nightLightRef
             resourceState: root.resourcesRef
             powerProfile: root.powerProfileRef
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
@@ -175,6 +177,11 @@ ShellRoot {
 
     BrightnessState {
         id: brightness
+        runtime: runtime
+    }
+
+    NightLightState {
+        id: nightLight
         runtime: runtime
     }
 
@@ -294,6 +301,34 @@ ShellRoot {
                 icon: "edit-paste",
                 key: runtime.shortcut("clipboard.toggle"),
                 keywords: ["copy", "paste", "cliphist"]
+            },
+            {
+                id: "nightLight.toggle",
+                name: "Toggle Night Light",
+                description: "Warm the display using Hyprland colour temperature",
+                icon: "weather-clear-night",
+                keywords: ["night", "light", "warm", "display", "temperature", "blue"]
+            },
+            {
+                id: "nightLight.auto",
+                name: "Night Light Automatic Schedule",
+                description: "Toggle automatic Night Light, 19:00–07:00 local time",
+                icon: "preferences-system-time",
+                keywords: ["night", "light", "auto", "schedule", "timer", "evening"]
+            },
+            {
+                id: "nightLight.warmer",
+                name: "Night Light Warmer",
+                description: "Reduce Night Light colour temperature by 500K",
+                icon: "weather-clear-night",
+                keywords: ["night", "light", "warm", "kelvin", "temperature"]
+            },
+            {
+                id: "nightLight.cooler",
+                name: "Night Light Cooler",
+                description: "Increase Night Light colour temperature by 500K",
+                icon: "weather-clear",
+                keywords: ["night", "light", "cool", "kelvin", "temperature"]
             },
             {
                 id: "colour.pick",
@@ -559,6 +594,7 @@ ShellRoot {
         mediaState: media
         systemState: system
         brightnessState: brightness
+        nightLightState: nightLight
         notificationState: notifications
         notificationPopup: notificationPopup
         motion: motion

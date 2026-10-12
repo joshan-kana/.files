@@ -695,6 +695,7 @@ in
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           colourPicker = lib.getExe colourPicker;
+          nightLightControl = lib.getExe nightLightControl;
         };
 
         wallpaper = toString osConfig.stylix.image;
@@ -732,6 +733,85 @@ in
         runtimeInputs = [ pkgs.systemd ];
         text = ''
           exec systemctl --user start linux-desktop-lock.service
+        '';
+      };
+
+      nightLightControl = pkgs.writeShellApplication {
+        name = "linux-desktop-night-light";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.systemd
+          pkgs.hyprsunset
+        ];
+        text = ''
+          set -euo pipefail
+          state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop"
+          state_file="$state_dir/night-light"
+          mode=off
+          temperature=4500
+          if [ -r "$state_file" ]; then
+            read -r mode temperature < "$state_file" || true
+          fi
+          case "$mode" in off|manual|auto) ;; *) mode=off ;; esac
+          if ! [[ "$temperature" =~ ^[0-9]+$ ]]; then temperature=4500; fi
+          if (( temperature < 2500 || temperature > 6500 )); then
+            temperature=4500
+          fi
+          persist() {
+            mkdir -p "$state_dir"
+            temp_state="$(mktemp --tmpdir="$state_dir" night-light-XXXXXXXX)"
+            printf '%s %s\n' "$mode" "$temperature" > "$temp_state"
+            chmod 600 "$temp_state"
+            mv -f "$temp_state" "$state_file"
+          }
+          scheduled_now() {
+            local hour
+            hour="$(date +%H)"
+            (( 10#$hour >= 19 || 10#$hour < 7 ))
+          }
+          should_run() {
+            [ "$mode" = manual ] || { [ "$mode" = auto ] && scheduled_now; }
+          }
+          apply() {
+            if should_run; then
+              systemctl --user restart linux-desktop-night-light.service
+            else
+              systemctl --user stop linux-desktop-night-light.service
+            fi
+          }
+          case "''${1:-state}" in
+            state)
+              active=false
+              if systemctl --user --quiet is-active linux-desktop-night-light.service; then active=true; fi
+              printf '{"mode":"%s","temperature":%s,"active":%s,"supported":true}\n' "$mode" "$temperature" "$active"
+              ;;
+            run)
+              exec hyprsunset --temperature "$temperature"
+              ;;
+            apply)
+              apply
+              ;;
+            toggle)
+              if [ "$mode" = manual ] || { [ "$mode" = auto ] && scheduled_now; }; then mode=off; else mode=manual; fi
+              persist
+              apply
+              ;;
+            auto)
+              if [ "$mode" = auto ]; then mode=manual; else mode=auto; fi
+              persist
+              apply
+              ;;
+            warmer|cooler)
+              if [ "$1" = warmer ]; then temperature=$((temperature - 500)); else temperature=$((temperature + 500)); fi
+              temperature=$((temperature < 2500 ? 2500 : temperature > 6500 ? 6500 : temperature))
+              persist
+              if should_run; then apply; fi
+              ;;
+            *)
+              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|auto|warmer|cooler}\n' >&2
+              exit 2
+              ;;
+          esac
         '';
       };
 
@@ -819,6 +899,7 @@ in
         wallpaperLibrary
         recordingToggle
         colourPicker
+        nightLightControl
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
@@ -830,6 +911,27 @@ in
         Unit.Description = "Reload wallpaper when the selected theme changes";
         Path.PathChanged = "%h/.config/linux-desktop";
         Install.WantedBy = [ "hyprland-session.target" ];
+      };
+
+      systemd.user.timers = {
+        linux-desktop-night-light-evening = {
+          Unit.Description = "Apply Night Light evening schedule";
+          Timer = {
+            OnCalendar = "*-*-* 19:00:00";
+            Persistent = true;
+            Unit = "linux-desktop-night-light-apply.service";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
+        linux-desktop-night-light-morning = {
+          Unit.Description = "Apply Night Light morning schedule";
+          Timer = {
+            OnCalendar = "*-*-* 07:00:00";
+            Persistent = true;
+            Unit = "linux-desktop-night-light-apply.service";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
       };
 
       systemd.user.services = {
@@ -869,6 +971,30 @@ in
             Restart = "on-failure";
             RestartSec = 2;
           };
+        };
+
+        linux-desktop-night-light = {
+          Unit = {
+            Description = "Hyprland colour temperature (manual or scheduled)";
+            After = [ "hyprland-session.target" ];
+            PartOf = [ "hyprland-session.target" ];
+          };
+          Service = {
+            ExecStart = "${lib.getExe nightLightControl} run";
+            Restart = "no";
+          };
+        };
+
+        linux-desktop-night-light-apply = {
+          Unit = {
+            Description = "Apply current Night Light schedule at session start and schedule boundaries";
+            After = [ "hyprland-session.target" ];
+          };
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${lib.getExe nightLightControl} apply";
+          };
+          Install.WantedBy = [ "hyprland-session.target" ];
         };
 
         linux-desktop-spectrum = {
