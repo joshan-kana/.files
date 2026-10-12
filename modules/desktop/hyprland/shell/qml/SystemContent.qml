@@ -86,7 +86,11 @@ FocusScope {
         },
         {
             key: "ENTER",
-            action: "Apply to focused monitor"
+            action: "Apply to selected output"
+        },
+        {
+            key: "M",
+            action: "Choose monitor / all outputs"
         },
         {
             key: "F / R",
@@ -1440,6 +1444,9 @@ FocusScope {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
                         wallpaperPanel.moveSelection(event.key === Qt.Key_U ? -6 : 6);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_M) {
+                        wallpaperPanel.cycleOutput();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_F) {
                         wallpaperPanel.toggleFit();
