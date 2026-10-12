@@ -86,10 +86,36 @@ done
 
 ## Install
 
+Derive the bootstrap binary-cache settings from the target configuration,
+using the Determinate Nix options that own them on macOS:
+
 ```sh
 cd "$DOTFILES_REPO"
-sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- \
-  switch --flake ".#$HOST_NAME"
+
+substituters="$(
+  sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
+    ".#darwinConfigurations.$HOST_NAME" \
+    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.determinateNix.customSettings.extra-substituters)'
+)"
+trusted_public_keys="$(
+  sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
+    ".#darwinConfigurations.$HOST_NAME" \
+    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.determinateNix.customSettings.extra-trusted-public-keys)'
+)"
+```
+
+Pass the bootstrap settings both to `nix run` (which fetches the
+`darwin-rebuild` command) and to `darwin-rebuild` (which builds the
+system before the target Nix settings have been activated):
+
+```sh
+sudo nix --extra-experimental-features "nix-command flakes" \
+  --option extra-substituters "$substituters" \
+  --option extra-trusted-public-keys "$trusted_public_keys" \
+  run github:nix-darwin/nix-darwin#darwin-rebuild -- \
+  switch --flake ".#$HOST_NAME" \
+  --option extra-substituters "$substituters" \
+  --option extra-trusted-public-keys "$trusted_public_keys"
 ```
 
 ## Verify
