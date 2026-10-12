@@ -33,7 +33,7 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.selectionFill : button.theme.expressiveSurfaceStrong
+        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.accent : button.theme.expressiveSurfaceStrong
         borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.accent : "transparent"
         borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
 
@@ -55,7 +55,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: button.icon
-            color: button.armed ? button.theme.warning : button.selected ? button.theme.accent : button.theme.textStrong
+            color: button.armed ? button.theme.warning : button.selected ? button.theme.background : button.theme.textStrong
             font.family: "Symbols Nerd Font"
             font.pixelSize: button.theme.fontSize(43)
             font.weight: Font.Normal
