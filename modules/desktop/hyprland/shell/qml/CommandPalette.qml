@@ -80,7 +80,8 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: motion.fast
+        // Keep the layer surface alive until the longer card scale finishes.
+        interval: motion.normal + (motion.enabled ? 24 : 0)
         onTriggered: palette.closing = false
     }
 
@@ -222,6 +223,8 @@ PanelWindow {
 
     function show(): void {
         closeTimer.stop();
+        // Preserve visibility when reopening during the exit animation.
+        open = true;
         closing = false;
         setLauncherSubmap(true);
         copyFeedback = "";
@@ -233,7 +236,6 @@ PanelWindow {
             clipboardQueried = true;
             clipboardPanel.refresh();
         }
-        open = true;
         if (resultModel.values.length === 0)
             results.currentIndex = -1;
         else if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
@@ -242,15 +244,16 @@ PanelWindow {
     }
 
     function hide(): void {
+        if (!open)
+            return;
+
+        // Do not momentarily unmap the Wayland surface on close. Its exit
+        // animation must finish before visible changes to false.
+        closing = motion.enabled;
         open = false;
         setLauncherSubmap(false);
-
-        if (motion.fast === 0) {
-            closing = false;
-        } else {
-            closing = true;
+        if (closing)
             closeTimer.restart();
-        }
     }
 
     function toggle(): void {
@@ -341,8 +344,8 @@ PanelWindow {
         Behavior on scale {
             NumberAnimation {
                 duration: motion.normal
-                easing.type: motion.enterType
-                easing.bezierCurve: motion.enterCurve
+                easing.type: palette.open ? motion.enterType : motion.exitType
+                easing.bezierCurve: palette.open ? motion.enterCurve : motion.exitCurve
             }
         }
 
