@@ -14,6 +14,7 @@ Item {
     property bool active: false
     property color activeColor: theme.accent
     property bool compact: false
+    property bool horizontalCompact: false
     property bool iconOnly: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
 
@@ -37,6 +38,7 @@ Item {
 
     Column {
         id: content
+        visible: !root.horizontalCompact
         width: Math.max(1, root.width - (root.iconOnly ? 0 : root.horizontalPadding * 2))
         anchors.centerIn: parent
         spacing: root.theme.spacing1
@@ -76,6 +78,52 @@ Item {
         }
     }
 
+    // The 40-pixel header tiles use one line, leaving actual room for their
+    // labels, symbols and keyboard hints instead of stacking three rows.
+    Row {
+        id: inlineContent
+        visible: root.horizontalCompact && !root.iconOnly
+        anchors {
+            verticalCenter: parent.verticalCenter
+            left: parent.left
+            right: parent.right
+            leftMargin: root.horizontalPadding
+            rightMargin: root.horizontalPadding
+        }
+        spacing: root.theme.spacing2
+
+        Text {
+            id: inlineIcon
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.icon
+            color: root.active ? root.activeColor : root.theme.textStrong
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: root.theme.fontSize(15)
+        }
+
+        ShellText {
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(1, inlineContent.width - inlineIcon.implicitWidth - inlineHint.implicitWidth - inlineContent.spacing * 2)
+            text: root.title
+            elide: Text.ElideRight
+            runtime: root.runtime
+            theme: root.theme
+            color: root.active ? root.activeColor : root.theme.textStrong
+            font.pixelSize: root.theme.fontSize(10)
+            font.weight: Font.DemiBold
+        }
+
+        KeyChord {
+            id: inlineHint
+            visible: root.shortcut.length > 0
+            anchors.verticalCenter: parent.verticalCenter
+            shortcut: root.shortcut
+            fontFamily: root.runtime.fontMono
+            textColor: root.theme.textMuted
+            fontSize: root.theme.fontSize(9)
+        }
+    }
+
     // Icon-only actions share one fixed glyph box, independent of font bearings.
     Text {
         visible: root.iconOnly
@@ -91,11 +139,11 @@ Item {
     }
 
     KeyChord {
-        visible: !root.iconOnly && root.shortcut.length > 0
+        visible: !root.iconOnly && !root.horizontalCompact && root.shortcut.length > 0
         anchors {
             top: parent.top
             right: parent.right
-            margins: root.theme.spacing2
+            margins: root.theme.spacing3
         }
         shortcut: root.shortcut
         fontFamily: root.runtime.fontMono

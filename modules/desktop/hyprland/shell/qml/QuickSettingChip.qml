@@ -76,7 +76,7 @@ Item {
             anchors {
                 top: parent.top
                 right: parent.right
-                margins: chip.theme.spacing1
+                margins: chip.theme.spacing3
             }
             shortcut: chip.shortcut
             fontFamily: chip.runtime.fontMono
