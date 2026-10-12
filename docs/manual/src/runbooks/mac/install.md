@@ -11,23 +11,8 @@ commands that reference the target configuration:
 
 ## Prepare the target
 
-Install Nix, then make the repository and its submodules available at the
-evaluated path:
-
-```sh
-cd "$DOTFILES_REPO"
-nix eval --raw ".#darwinConfigurations.${HOST_NAME}.config.system.build.toplevel.drvPath"
-```
-
-Review the launchd jobs already loaded before installing their declarative
-replacements. Preserve any existing job definitions that must be unloaded for
-installation:
-
-```sh
-for label in "${MANAGED_LAUNCHD_LABELS[@]}"; do
-  launchctl list "$label" || true
-done
-```
+Install Nix and confirm network access before restoring the host's encrypted
+secrets repository.
 
 ## Restore host secrets
 
@@ -69,6 +54,34 @@ if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
     -r "$SECRETS_REPOSITORY" --password-file "$SECRETS_PASSWORD_FILE" \
     init
 fi
+```
+
+## Clone the configuration
+
+Use the recovered Git SSH key, or the current SSH agent, to access the private
+repository. Keep an existing checkout instead of cloning over it:
+
+```sh
+if [[ ! -d "$DOTFILES_REPO/.git" ]]; then
+  mkdir -p "$(dirname "$DOTFILES_REPO")"
+  if [[ -r "$USER_SECRETS_DIR/id_ed25519" ]]; then
+    GIT_SSH_COMMAND="ssh -i $USER_SECRETS_DIR/id_ed25519 -o IdentitiesOnly=yes" \
+      git clone --recurse-submodules git@github.com:joshan-kana/.files.git "$DOTFILES_REPO"
+  else
+    git clone --recurse-submodules git@github.com:joshan-kana/.files.git "$DOTFILES_REPO"
+  fi
+fi
+cd "$DOTFILES_REPO"
+nix eval --raw ".#darwinConfigurations.${HOST_NAME}.config.system.build.toplevel.drvPath"
+```
+
+Review any loaded launchd jobs before switching to their declarative
+replacements. Preserve existing definitions that need to be unloaded:
+
+```sh
+for label in "${MANAGED_LAUNCHD_LABELS[@]}"; do
+  launchctl list "$label" || true
+done
 ```
 
 ## Install
