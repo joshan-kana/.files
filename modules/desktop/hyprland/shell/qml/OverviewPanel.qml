@@ -41,19 +41,23 @@ PanelWindow {
 
     function show(): void {
         closeTimer.stop();
+        open = true;
         closing = false;
         selectedIndex = Math.max(0, windows.findIndex(toplevel => toplevel.activated));
-        open = true;
-        Qt.callLater(() => keyboard.forceActiveFocus());
+        Qt.callLater(() => {
+            if (open)
+                keyboard.forceActiveFocus();
+        });
     }
     function hide(): void {
+        if (!open)
+            return;
+
+        // Preserve the Wayland surface until the longer spatial exit finishes.
+        closing = motion.enabled;
         open = false;
-        if (motion.fast === 0)
-            closing = false;
-        else {
-            closing = true;
+        if (closing)
             closeTimer.restart();
-        }
     }
     function toggle(): void {
         if (open)
@@ -78,7 +82,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: overview.motion.fast
+        interval: overview.motion.spatialNormal + (overview.motion.enabled ? 24 : 0)
         onTriggered: overview.closing = false
     }
 
