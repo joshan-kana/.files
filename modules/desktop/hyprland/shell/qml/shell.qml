@@ -189,6 +189,7 @@ ShellRoot {
         id: osd
         system: system
         brightness: brightness
+        runtime: runtime
     }
 
     NotificationState {
@@ -705,6 +706,20 @@ ShellRoot {
         name: "overview"
         description: "Window and workspace overview"
         onPressed: actions.toggleOverview()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "keyboard-caps-lock"
+        description: "Show Caps Lock state"
+        onPressed: osd.refreshKeyboardLocks("caps")
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "keyboard-num-lock"
+        description: "Show Num Lock state"
+        onPressed: osd.refreshKeyboardLocks("num")
     }
 
     GlobalShortcut {
