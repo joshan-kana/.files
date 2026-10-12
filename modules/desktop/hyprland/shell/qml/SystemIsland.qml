@@ -15,7 +15,7 @@ Item {
     signal trayMenuRequested(int index)
 
     implicitWidth: statusRow.implicitWidth + theme.spacing4 * 2
-    implicitHeight: 40
+    implicitHeight: 50
 
     ShellSurface {
         anchors.fill: parent
@@ -24,9 +24,9 @@ Item {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusIsland
         exponent: Math.min(4, theme.squircleExponent)
-        luminous: true
-        luminousColor: island.system.networkConnected ? island.theme.accent : island.theme.warning
-        hovered: statusPress.containsMouse
+        elevated: true
+        outlined: true
+        fillColor: theme.paneBase
 
         Row {
             id: statusRow
