@@ -14,6 +14,9 @@ PanelWindow {
     property bool pending: false
     property bool exporting: false
     property bool copying: true
+    property string selectionMode: "image"
+    property string audioMode: "none"
+    readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
     property real startX: 0
@@ -47,11 +50,14 @@ PanelWindow {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
-    function begin(copy: bool, target: var): void {
+    function begin(copy: bool, target: var, mode: string): void {
         if (open || pending || exporting || !target || runtime.frozenCapture.length === 0)
             return;
         captureScreen = target;
         copying = copy;
+        selectionMode = mode;
+        if (mode !== "record")
+            audioMode = "none";
         pending = true;
         initialiseSelection = true;
         statusText = "";
@@ -109,6 +115,16 @@ PanelWindow {
         const fullHeight = Math.max(1, frozen.implicitHeight);
         const w = Math.max(1, Math.min(fullWidth - x, Math.ceil(selectionWidth * scaleX)));
         const h = Math.max(1, Math.min(fullHeight - y, Math.ceil(selectionHeight * scaleY)));
+        if (selectionMode === "record") {
+            // The image is a selection backdrop only. The recorder captures
+            // the live output, never the frozen image.
+            const recordGeometry = String(Math.round(leftEdge + (captureScreen.x || 0))) + "," + String(Math.round(topEdge + (captureScreen.y || 0))) + " " + String(Math.ceil(selectionWidth)) + "x" + String(Math.ceil(selectionHeight));
+            const outputName = captureScreen.name;
+            const selectedAudio = audioMode;
+            dismiss(true);
+            Quickshell.execDetached([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
+            return;
+        }
         exporting = true;
         statusText = copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…";
         exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(x), String(y), String(w), String(h)]);
@@ -137,8 +153,9 @@ PanelWindow {
         const index = Quickshell.screens.indexOf(captureScreen);
         const next = Quickshell.screens[(index + 1) % Quickshell.screens.length];
         const wasCopying = copying;
+        const mode = selectionMode;
         dismiss(true);
-        begin(wasCopying, next);
+        begin(wasCopying, next, mode);
     }
 
     StdioCollector {
@@ -289,7 +306,7 @@ PanelWindow {
             spacing: picker.theme.spacing2
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "FROZEN REGION · " + (picker.copying ? "COPY" : "SAVE") + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
+                text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : "FROZEN REGION · " + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
                 color: picker.theme.accent
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
@@ -297,7 +314,7 @@ PanelWindow {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · ENTER CONFIRM · ESC CANCEL"
+                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "") + "ENTER CONFIRM · ESC CANCEL"
                 color: picker.theme.textMuted
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(9)
@@ -332,6 +349,8 @@ PanelWindow {
                 picker.capture();
             } else if (event.key === Qt.Key_Tab) {
                 picker.nextMonitor();
+            } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
+                picker.audioMode = picker.audioMode === "none" ? "system" : picker.audioMode === "system" ? "microphone" : "none";
             } else if (event.key === Qt.Key_F) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
