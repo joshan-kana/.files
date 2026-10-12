@@ -2,6 +2,7 @@
   editScope,
   inputs,
   moduleRegistry,
+  pkgs,
   ...
 }:
 
@@ -49,6 +50,9 @@
       python3.enable = false;
     };
   };
+
+  # Keep the existing PostgreSQL data format when using the shared compatibility default.
+  services.postgresql.package = pkgs.postgresql_16;
 
   serverApps = editScope moduleRegistry.serverApps {
     jellyfin =
@@ -699,9 +703,5 @@
         }\\n"
       ];
     };
-
-  compatibility = _: {
-    system.stateVersion = "25.05";
-  };
 
 }
