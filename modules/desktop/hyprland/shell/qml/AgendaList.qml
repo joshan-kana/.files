@@ -48,11 +48,28 @@ Column {
 
     ShellSurface {
         width: parent.width
-        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(4, panel.agenda.events.length) * 54 + panel.theme.spacing2 : (panel.featured ? 134 : 72)
+        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(4, panel.agenda.events.length) * 54 + panel.theme.spacing2 : (panel.featured ? 169 : 72)
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
-        cornerRadius: panel.theme.radiusMedium
+        cornerRadius: panel.featured ? panel.theme.radiusLarge : panel.theme.radiusMedium
+        fillColor: panel.featured ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.accent.r, panel.theme.accent.g, panel.theme.accent.b, 0.09)) : panel.theme.expressiveSurface
+        luminous: panel.featured
+        luminousColor: panel.theme.accent
+
+        Text {
+            visible: panel.featured && panel.agenda.events.length === 0
+            anchors {
+                right: parent.right
+                bottom: parent.bottom
+                margins: panel.theme.spacing3
+            }
+            text: "󰃰"
+            color: panel.theme.accent
+            opacity: 0.19
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: panel.theme.fontSize(75)
+        }
 
         Column {
             anchors {
@@ -68,7 +85,7 @@ Column {
                 text: "Today"
                 color: panel.theme.textStrong
                 font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(20)
+                font.pixelSize: panel.theme.fontSize(27)
                 font.weight: Font.DemiBold
             }
             Text {
