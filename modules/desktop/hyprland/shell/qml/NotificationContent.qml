@@ -155,6 +155,44 @@ FocusScope {
             }
         }
 
+        ShellSurface {
+            anchors.centerIn: list
+            width: list.width
+            height: 146
+            visible: center.groups.length === 0
+            theme: center.theme
+            motion: center.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: center.theme.radiusLarge
+
+            Column {
+                anchors.centerIn: parent
+                spacing: center.theme.spacing3
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: center.notificationState.silent ? "󰂛" : "󰂜"
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: center.theme.fontSize(36)
+                    color: center.theme.accent
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: center.notificationState.silent ? "Notifications are paused" : "All caught up"
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(17)
+                    font.weight: Font.DemiBold
+                    color: center.theme.textStrong
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "New notifications will appear here"
+                    font.family: center.runtime.fontMono
+                    font.pixelSize: center.theme.fontSize(10)
+                    color: center.theme.textMuted
+                }
+            }
+        }
+
         ListView {
             id: list
             anchors {
@@ -296,15 +334,6 @@ FocusScope {
                 }
             }
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
-        }
-
-        Text {
-            anchors.centerIn: list
-            visible: center.notificationState.count === 0
-            text: "You’re all caught up"
-            color: center.theme.textMuted
-            font.family: center.runtime.fontMono
-            font.pixelSize: center.theme.fontSize(12)
         }
 
         Row {
