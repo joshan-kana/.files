@@ -223,7 +223,7 @@ PanelWindow {
         id: card
 
         width: Math.min(palette.width - 80, 780)
-        height: Math.min(palette.height - 120, 610)
+        height: Math.min(palette.height - 120, 675)
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
@@ -258,19 +258,46 @@ PanelWindow {
             anchors.fill: parent
             anchors.margins: theme.spacing5
 
+            Column {
+                id: paletteIntro
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                }
+                spacing: theme.spacing1
+
+                Text {
+                    text: "COMMAND PALETTE · SYSTEM + APPLICATIONS"
+                    color: theme.accent
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.7
+                }
+                Text {
+                    text: "What do you want to do?"
+                    color: theme.textStrong
+                    font.family: runtime.fontMono
+                    font.pixelSize: theme.fontSize(24)
+                    font.weight: Font.DemiBold
+                }
+            }
+
             SquircleSurface {
                 id: searchBox
 
-                height: 58
+                height: 60
                 anchors {
-                    top: parent.top
+                    top: paletteIntro.bottom
+                    topMargin: theme.spacing3
                     left: parent.left
                     right: parent.right
                 }
 
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
-                fillColor: theme.surfaceRaised
+                fillColor: theme.expressiveSurfaceStrong
                 borderColor: search.activeFocus ? theme.accent : theme.outline
                 borderWidth: search.activeFocus ? theme.borderFocus : theme.borderThin
 
@@ -410,7 +437,7 @@ PanelWindow {
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.13)
+                    fillColor: theme.selectionFill
                     borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
                     borderWidth: theme.borderThin
                 }
