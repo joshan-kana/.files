@@ -30,6 +30,10 @@ PanelWindow {
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
+    readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
+    readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
+    readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
+    readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
 
     function presentComponent(next: Component): void {
         if (!next) {
@@ -165,7 +169,7 @@ PanelWindow {
     // the inner squircle: resizing/repositioning PanelWindow every tab switch
     // causes separate compositor commits and visibly lagging/jumping edges.
     readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, 960) : 1
-    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (62 + theme.spacing1) - theme.spacing4) : 1
+    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (theme.barHeight + theme.spacing1) - theme.spacing4) : 1
 
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
@@ -181,7 +185,7 @@ PanelWindow {
     }
 
     margins {
-        top: 62 + theme.spacing1
+        top: theme.barHeight + theme.spacing1
         left: host.screen ? (host.screen.width - host.viewportWidth) / 2 : 0
     }
 
@@ -334,8 +338,9 @@ PanelWindow {
         surfaceLayer: ShellSurface.Pane
         fillColor: host.theme.panelBase
         luminous: true
-        luminousColor: host.theme.accent
-        lightIntensity: 1.45
+        luminousColor: host.theme.textStrong
+        lightIntensity: 0.22
+        elevated: true
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
         borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
         borderWidth: host.theme.borderThin
@@ -446,6 +451,23 @@ PanelWindow {
                     }
                 }
                 onLoaded: geometryUpdate.restart()
+            }
+        }
+
+        WidgetHelp {
+            anchors.fill: parent
+            runtime: host.runtime
+            theme: host.theme
+            motion: host.motion
+            open: host.helpVisible
+            title: host.helpCaption
+            bindings: host.helpKeys
+            backdropRadius: host.theme.radiusPanel
+            onDismissed: {
+                if (host.systemContent)
+                    host.systemContent.helpOpen = false;
+                else if (host.mediaContent)
+                    host.mediaContent.helpOpen = false;
             }
         }
     }

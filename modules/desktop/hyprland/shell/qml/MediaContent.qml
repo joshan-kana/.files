@@ -42,7 +42,7 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 920
-    implicitHeight: 512
+    implicitHeight: 620
     focus: engaged
 
     onEngagedChanged: {
@@ -120,8 +120,8 @@ FocusScope {
             spacing: content.theme.spacing4
 
             ShellSurface {
-                width: 132
-                height: 132
+                width: 168
+                height: 168
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
@@ -144,12 +144,12 @@ FocusScope {
                     text: "♫"
                     color: content.theme.accent
                     font.family: content.runtime.fontMono
-                    font.pixelSize: content.theme.fontSize(36)
+                    font.pixelSize: content.theme.fontSize(48)
                 }
             }
 
             Column {
-                width: header.width - 132 - header.spacing
+                width: header.width - 168 - header.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: content.theme.spacing2
 
@@ -166,7 +166,7 @@ FocusScope {
                     text: content.media.title
                     color: content.theme.textStrong
                     font.family: content.runtime.fontMono
-                    font.pixelSize: content.theme.fontSize(22)
+                    font.pixelSize: content.theme.fontSize(28)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -205,7 +205,7 @@ FocusScope {
 
             ShellSurface {
                 width: parent.width
-                height: 172
+                height: 220
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
@@ -502,16 +502,5 @@ FocusScope {
                 }
             }
         }
-    }
-
-    WidgetHelp {
-        anchors.fill: parent
-        runtime: content.runtime
-        theme: content.theme
-        motion: content.motion
-        open: content.helpOpen
-        title: "Now Playing controls"
-        bindings: content.helpBindings
-        onDismissed: content.helpOpen = false
     }
 }
