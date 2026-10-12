@@ -103,7 +103,7 @@ PanelWindow {
         id: card
         anchors.centerIn: parent
         width: Math.min(overview.width - 100, 980)
-        height: Math.min(overview.height - 120, Math.max(310, 213 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
+        height: Math.min(overview.height - 120, Math.max(345, 245 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
         theme: overview.theme
         motion: overview.motion
         surfaceLayer: ShellSurface.Pane
@@ -132,13 +132,33 @@ PanelWindow {
             }
             spacing: overview.theme.spacing4
 
-            Row {
+            Column {
                 width: parent.width
+                spacing: overview.theme.spacing2
+
                 Text {
-                    text: "Workspaces & Windows"
+                    text: "SPATIAL OVERVIEW · " + overview.windows.length + " WINDOWS"
+                    color: overview.theme.accent
+                    font.family: overview.runtime.fontMono
+                    font.pixelSize: overview.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                }
+                Text {
+                    text: "Your workspaces"
                     color: overview.theme.textStrong
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontPanelTitle
+                    font.weight: Font.DemiBold
+                }
+            }
+
+            Row {
+                width: parent.width
+                Text {
+                    text: "Windows · Workspace " + overview.focusedWorkspace
+                    color: overview.theme.textStrong
+                    font.family: overview.runtime.fontMono
+                    font.pixelSize: overview.theme.fontSize(12)
                     font.weight: Font.DemiBold
                 }
                 Item {

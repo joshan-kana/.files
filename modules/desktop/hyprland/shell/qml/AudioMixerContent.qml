@@ -15,8 +15,8 @@ FocusScope {
 
     signal closeRequested
 
-    implicitWidth: 656
-    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + Math.min(5, Math.max(1, streams.length)) * 92 + Math.max(0, Math.min(5, streams.length) - 1) * theme.spacing3 + footer.implicitHeight
+    implicitWidth: 730
+    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + Math.min(5, Math.max(1, streams.length)) * 110 + Math.max(0, Math.min(5, streams.length) - 1) * theme.spacing3 + footer.implicitHeight
     visible: active
     focus: active
 
@@ -80,12 +80,12 @@ FocusScope {
             readonly property bool chosen: index === mixer.selectedIndex
 
             width: ListView.view.width
-            height: 92
+            height: 110
             theme: mixer.theme
             motion: mixer.motion
             cornerRadius: theme.radiusMedium
             surfaceLayer: ShellSurface.Group
-            fillColor: chosen ? theme.focusFill : theme.layer2
+            fillColor: chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
             borderColor: chosen ? theme.accent : "transparent"
             borderWidth: chosen ? theme.borderFocus : 0
 
@@ -176,8 +176,8 @@ FocusScope {
                     enabled: !!streamRow.modelData.audio
                     value: streamRow.modelData.audio ? streamRow.modelData.audio.volume : 0
                     accentColor: streamRow.modelData.audio?.muted ? mixer.theme.warning : mixer.theme.accent
-                    trackHeight: 7
-                    handleSize: 15
+                    trackHeight: 11
+                    handleSize: 19
                     onValueRequested: value => {
                         mixer.selectedIndex = streamRow.index;
                         mixer.system.setStreamVolume(streamRow.modelData, value);
@@ -187,9 +187,48 @@ FocusScope {
         }
     }
 
+    ShellSurface {
+        anchors.centerIn: list
+        width: list.width
+        height: 120
+        visible: mixer.streams.length === 0
+        theme: mixer.theme
+        motion: mixer.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: mixer.theme.radiusLarge
+        fillColor: mixer.theme.expressiveSurface
+
+        Column {
+            anchors.centerIn: parent
+            spacing: mixer.theme.spacing2
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "󰎆"
+                color: mixer.theme.accent
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: mixer.theme.fontSize(32)
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "No application audio streams"
+                color: mixer.theme.textStrong
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(13)
+                font.weight: Font.DemiBold
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Active applications appear here automatically"
+                color: mixer.theme.textMuted
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(10)
+            }
+        }
+    }
+
     Text {
         anchors.centerIn: list
-        visible: mixer.streams.length === 0
+        visible: false
         text: "No applications playing audio"
         color: mixer.theme.textStrong
         font.family: mixer.runtime.fontMono
