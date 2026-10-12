@@ -12,6 +12,31 @@ QtObject {
     readonly property bool connected: currentSocket ? currentSocket.connected : false
 
     property var bands: []
+    // Per-frame spatial contrast: compare linear amplitudes, not their
+    // compressed dB display values. No attack/release or sample history here.
+    readonly property var displayBands: {
+        const source = bands;
+        if (source.length < 2)
+            return [];
+        const levels = [];
+        const amplitude = [];
+        for (let i = 0; i < 48; i++) {
+            const index = i * (source.length - 1) / 47;
+            const left = Math.floor(index);
+            const blend = index - left;
+            const value = (source[left] || 0) * (1 - blend) + (source[Math.min(left + 1, source.length - 1)] || 0) * blend;
+            levels.push(value);
+            amplitude.push(Math.pow(10, 3.6 * (value - 1)));
+        }
+        const result = [];
+        for (let i = 0; i < levels.length; i++) {
+            const maximum = Math.max(amplitude[Math.max(0, i - 2)], amplitude[Math.max(0, i - 1)], amplitude[i], amplitude[Math.min(47, i + 1)], amplitude[Math.min(47, i + 2)]);
+            const prominence = amplitude[i] / Math.max(0.000001, maximum);
+            const contrast = 0.07 + 0.93 * Math.pow(prominence, 3);
+            result.push(Math.pow(levels[i], 1.3) * contrast);
+        }
+        return result;
+    }
     property var targetBands: []
     property bool interpolating: false
     property bool decaying: false
