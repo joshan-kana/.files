@@ -14,6 +14,20 @@ PanelWindow {
     property bool open: false
     property bool closing: false
     property int selectedIndex: 0
+    property string selectedAddress: ""
+    property bool moveMode: false
+    property bool movePending: false
+    property int destinationWorkspace: 1
+    property int pendingWorkspace: 0
+    property var moveTarget: null
+    property string statusText: ""
+    property var actionTarget: null
+    property bool actionPending: false
+    property string actionKind: ""
+    property bool actionExpected: false
+    readonly property var chosenWindow: windows.find(toplevel => windowAddress(toplevel) === selectedAddress) || (selectedIndex >= 0 && selectedIndex < windows.length ? windows[selectedIndex] : null)
+    readonly property bool chosenFloating: !!(chosenWindow && (chosenWindow.lastIpcObject || {}).floating)
+    readonly property bool chosenPinned: !!(chosenWindow && (chosenWindow.lastIpcObject || {}).pinned)
 
     readonly property var windows: Hyprland.toplevels.values.filter(toplevel => {
         if (!toplevel || !toplevel.workspace || toplevel.workspace.id <= 0)
@@ -37,13 +51,213 @@ PanelWindow {
     WlrLayershell.namespace: "linux-desktop-overview"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    onWindowsChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, windows.length - 1))
+    function windowAddress(toplevel: var): string {
+        return toplevel ? String((toplevel.lastIpcObject || {}).address || "") : "";
+    }
+
+    function chooseIndex(index: int): void {
+        if (windows.length === 0) {
+            selectedIndex = 0;
+            selectedAddress = "";
+            return;
+        }
+        const next = Math.max(0, Math.min(windows.length - 1, index));
+        selectedAddress = windowAddress(windows[next]);
+        selectedIndex = next;
+    }
+
+    onWindowsChanged: {
+        const existingIndex = windows.findIndex(toplevel => windowAddress(toplevel) === selectedAddress);
+        if (existingIndex >= 0)
+            selectedIndex = existingIndex;
+        else
+            chooseIndex(selectedIndex);
+        verifyMove();
+    }
+
+    Connections {
+        target: overview.actionTarget
+        ignoreUnknownSignals: true
+        function onLastIpcObjectChanged() {
+            overview.verifyWindowAction();
+        }
+    }
+
+    Timer {
+        // Only refresh the relevant compositor-owned state during a requested
+        // action. Quickshell does not automatically update lastIpcObject for
+        // floating/pinned changes; no idle/background polling is introduced.
+        interval: 180
+        repeat: true
+        running: overview.actionPending
+        onTriggered: Hyprland.refreshToplevels()
+    }
+    Timer {
+        id: actionTimeout
+        interval: 2100
+        onTriggered: {
+            if (!overview.actionPending)
+                return;
+            overview.verifyWindowAction();
+            if (overview.actionPending) {
+                overview.actionPending = false;
+                overview.actionTarget = null;
+                overview.statusText = "WINDOW ACTION NOT CONFIRMED";
+                overviewFeedback.restart();
+            }
+        }
+    }
+
+    function verifyWindowAction(): void {
+        if (!actionPending || !actionTarget)
+            return;
+        const info = actionTarget.lastIpcObject || {};
+        if (Boolean(actionKind === "float" ? info.floating : info.pinned) !== actionExpected)
+            return;
+        actionPending = false;
+        actionTarget = null;
+        actionTimeout.stop();
+        statusText = actionKind === "float" ? (actionExpected ? "FLOATING · CONFIRMED" : "TILED · CONFIRMED") : (actionExpected ? "PINNED · CONFIRMED" : "UNPINNED · CONFIRMED");
+        overviewFeedback.restart();
+    }
+
+    Connections {
+        target: overview.moveTarget
+        ignoreUnknownSignals: true
+        function onWorkspaceChanged() {
+            overview.verifyMove();
+        }
+    }
+
+    Timer {
+        id: moveTimeout
+        interval: 2500
+        onTriggered: {
+            if (!overview.movePending)
+                return;
+            overview.verifyMove();
+            if (overview.movePending) {
+                overview.movePending = false;
+                overview.statusText = "MOVE NOT CONFIRMED · RETRY OR ESC CANCEL";
+                overviewFeedback.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: overviewFeedback
+        interval: 2300
+        onTriggered: {
+            if (!overview.movePending)
+                overview.statusText = "";
+        }
+    }
+
+    function verifyMove(): void {
+        if (!movePending || !moveTarget || !moveTarget.workspace)
+            return;
+        if (moveTarget.workspace.id !== pendingWorkspace)
+            return;
+        movePending = false;
+        moveMode = false;
+        moveTarget = null;
+        statusText = "MOVED · WORKSPACE " + pendingWorkspace;
+        moveTimeout.stop();
+        overviewFeedback.restart();
+    }
+
+    function startMove(index: int): void {
+        const target = windows[index];
+        if (!target || movePending)
+            return;
+        const addr = String((target.lastIpcObject || {}).address || "");
+        if (!/^0x[0-9a-f]+$/i.test(addr)) {
+            statusText = "WINDOW MOVE UNAVAILABLE · NO COMPOSITOR ADDRESS";
+            overviewFeedback.restart();
+            return;
+        }
+        chooseIndex(index);
+        moveTarget = target;
+        moveMode = true;
+        destinationWorkspace = target.workspace ? Math.max(1, Math.min(10, target.workspace.id)) : focusedWorkspace;
+        statusText = "MOVE WINDOW · CHOOSE DESTINATION";
+    }
+
+    function cancelMove(): void {
+        if (movePending)
+            return;
+        moveMode = false;
+        moveTarget = null;
+        statusText = "";
+    }
+
+    function hoverDestination(item: var, x: real, y: real): int {
+        const point = workspaceRow.mapFromItem(item, x, y);
+        if (point.x < 0 || point.x > workspaceRow.width || point.y < 0 || point.y > workspaceRow.height)
+            return 0;
+        const section = workspaceRow.width / 10;
+        const index = Math.max(0, Math.min(9, Math.floor(point.x / Math.max(1, section))));
+        return index + 1;
+    }
+
+    function toggleWindowState(kind: string): void {
+        if (moveMode || movePending || actionPending || !chosenWindow || (kind !== "float" && kind !== "pin"))
+            return;
+        const addr = String((chosenWindow.lastIpcObject || {}).address || "");
+        if (!/^0x[0-9a-f]+$/i.test(addr)) {
+            statusText = "WINDOW ACTION UNAVAILABLE · NO COMPOSITOR ADDRESS";
+            overviewFeedback.restart();
+            return;
+        }
+        if (kind === "pin" && !chosenFloating) {
+            statusText = "PINNING REQUIRES A FLOATING WINDOW";
+            overviewFeedback.restart();
+            return;
+        }
+        actionTarget = chosenWindow;
+        actionKind = kind;
+        actionExpected = kind === "float" ? !chosenFloating : !chosenPinned;
+        actionPending = true;
+        statusText = kind === "float" ? "CHANGING WINDOW LAYOUT…" : "CHANGING PIN STATE…";
+        Hyprland.dispatch('hl.dsp.window.' + kind + '({ action = "toggle", window = "address:' + addr + '" })');
+        Qt.callLater(() => Hyprland.refreshToplevels());
+        actionTimeout.restart();
+    }
+
+    function executeMove(workspace: int): void {
+        if (!moveMode || !moveTarget || movePending || workspace < 1 || workspace > 10)
+            return;
+        const addr = String((moveTarget.lastIpcObject || {}).address || "");
+        if (!/^0x[0-9a-f]+$/i.test(addr)) {
+            cancelMove();
+            statusText = "MOVE FAILED · WINDOW NO LONGER AVAILABLE";
+            overviewFeedback.restart();
+            return;
+        }
+        if (moveTarget.workspace && moveTarget.workspace.id === workspace) {
+            moveMode = false;
+            moveTarget = null;
+            statusText = "ALREADY ON WORKSPACE " + workspace;
+            overviewFeedback.restart();
+            return;
+        }
+        pendingWorkspace = workspace;
+        destinationWorkspace = workspace;
+        statusText = "MOVING WINDOW · WORKSPACE " + workspace;
+        movePending = true;
+        Hyprland.dispatch('hl.dsp.window.move({ workspace = "' + workspace + '", follow = false, window = "address:' + addr + '" })');
+        verifyMove();
+        if (movePending)
+            moveTimeout.restart();
+    }
 
     function show(): void {
         closeTimer.stop();
         open = true;
         closing = false;
-        selectedIndex = Math.max(0, windows.findIndex(toplevel => toplevel.activated));
+        chooseIndex(Math.max(0, windows.findIndex(toplevel => toplevel.activated)));
+        cancelMove();
+        Hyprland.refreshToplevels();
         Qt.callLater(() => {
             if (open)
                 keyboard.forceActiveFocus();
@@ -107,7 +321,7 @@ PanelWindow {
         id: card
         anchors.centerIn: parent
         width: Math.min(overview.width - 100, 980)
-        height: Math.min(overview.height - 120, Math.max(345, 245 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
+        height: Math.min(overview.height - 120, Math.max(398, 294 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
         theme: overview.theme
         motion: overview.motion
         surfaceLayer: ShellSurface.Pane
@@ -148,7 +362,7 @@ PanelWindow {
                     font.weight: Font.DemiBold
                 }
                 Text {
-                    text: "Your workspaces"
+                    text: overview.moveMode ? "Move window" : "Your workspaces"
                     color: overview.theme.textStrong
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontPanelTitle
@@ -159,7 +373,7 @@ PanelWindow {
             Row {
                 width: parent.width
                 Text {
-                    text: "Windows · Workspace " + overview.focusedWorkspace
+                    text: overview.statusText.length > 0 ? overview.statusText : "Windows · Workspace " + overview.focusedWorkspace
                     color: overview.theme.textStrong
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontSize(12)
@@ -171,7 +385,7 @@ PanelWindow {
                 }
                 Text {
                     id: shortcutHint
-                    text: "H/J/K/L navigate   ENTER focus   1–0 workspace   ESC close"
+                    text: overview.moveMode ? "H/L DESTINATION   1–0 CHOOSE   ENTER MOVE   ESC CANCEL" : "H/J/K/L NAVIGATE   M MOVE   F FLOAT   P PIN   ENTER FOCUS"
                     color: overview.theme.textMuted
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontSize(10)
@@ -194,14 +408,20 @@ PanelWindow {
                         motion: overview.motion
                         compact: true
                         title: index === 9 ? "0" : String(index + 1)
-                        active: overview.focusedWorkspace === index + 1
-                        onActivated: overview.focusWorkspace(index + 1)
+                        active: overview.moveMode ? overview.destinationWorkspace === index + 1 : overview.focusedWorkspace === index + 1
+                        enabled: !overview.movePending
+                        onActivated: {
+                            if (overview.moveMode)
+                                overview.executeMove(index + 1);
+                            else
+                                overview.focusWorkspace(index + 1);
+                        }
                     }
                 }
             }
 
             Text {
-                text: overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS") + "   ·   Workspace " + overview.focusedWorkspace
+                text: overview.movePending ? "PENDING · WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS") + "   ·   Workspace " + overview.focusedWorkspace
                 color: overview.theme.accent
                 font.family: overview.runtime.fontMono
                 font.pixelSize: overview.theme.fontSubpanelEyebrow
@@ -211,7 +431,7 @@ PanelWindow {
             GridView {
                 id: windowsGrid
                 width: parent.width
-                height: Math.max(90, parent.height - 162)
+                height: Math.max(90, parent.height - 215)
                 clip: true
                 model: overview.windows
                 cellWidth: Math.floor(width / (width < 720 ? 2 : 3))
@@ -227,6 +447,7 @@ PanelWindow {
                     }
                 }
                 delegate: OverviewWindow {
+                    id: windowTile
                     required property var modelData
                     required property int index
                     width: windowsGrid.cellWidth - overview.theme.spacing2
@@ -236,8 +457,26 @@ PanelWindow {
                     motion: overview.motion
                     toplevel: modelData
                     active: overview.open
-                    selected: overview.selectedIndex === index
-                    onActivated: overview.activateWindow(index)
+                    selected: overview.moveMode ? overview.moveTarget === modelData : overview.selectedIndex === index
+                    onActivated: {
+                        if (overview.moveMode) {
+                            overview.chooseIndex(index);
+                            overview.startMove(index);
+                        } else
+                            overview.activateWindow(index);
+                    }
+                    onDragMoved: (x, y) => {
+                        if (!overview.moveMode)
+                            overview.startMove(index);
+                        const destination = overview.hoverDestination(windowTile, x, y);
+                        if (destination !== 0)
+                            overview.destinationWorkspace = destination;
+                    }
+                    onDropped: (x, y) => {
+                        const destination = overview.hoverDestination(windowTile, x, y);
+                        if (destination !== 0)
+                            overview.executeMove(destination);
+                    }
                 }
                 onCurrentIndexChanged: positionViewAtIndex(currentIndex, GridView.Contain)
 
@@ -250,6 +489,53 @@ PanelWindow {
                     font.pixelSize: overview.theme.fontSize(13)
                 }
             }
+            Row {
+                width: parent.width
+                spacing: overview.theme.spacing3
+                height: 39
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(1, parent.width - 304)
+                    text: overview.chosenWindow ? (overview.chosenWindow.lastIpcObject.class || "WINDOW") + " · " + (overview.chosenFloating ? "FLOATING" : "TILED") + (overview.chosenPinned ? " · PINNED" : "") : "NO WINDOW SELECTED"
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: overview.theme.textMuted
+                    font.family: overview.runtime.fontMono
+                    font.pixelSize: overview.theme.fontSize(10)
+                }
+
+                ShellAction {
+                    width: 137
+                    height: 36
+                    runtime: overview.runtime
+                    theme: overview.theme
+                    motion: overview.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: overview.chosenFloating ? "TILE" : "FLOAT"
+                    icon: "󰉋"
+                    shortcut: "F"
+                    active: overview.chosenFloating
+                    enabled: !!overview.chosenWindow && !overview.moveMode && !overview.movePending && !overview.actionPending
+                    onActivated: overview.toggleWindowState("float")
+                }
+                ShellAction {
+                    width: 137
+                    height: 36
+                    runtime: overview.runtime
+                    theme: overview.theme
+                    motion: overview.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: overview.chosenPinned ? "UNPIN" : "PIN"
+                    icon: "󰐃"
+                    shortcut: "P"
+                    active: overview.chosenPinned
+                    enabled: !!overview.chosenWindow && overview.chosenFloating && !overview.moveMode && !overview.movePending && !overview.actionPending
+                    onActivated: overview.toggleWindowState("pin")
+                }
+            }
         }
     }
 
@@ -259,21 +545,51 @@ PanelWindow {
         focus: overview.open
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape) {
-                overview.hide();
+                if (overview.moveMode)
+                    overview.cancelMove();
+                else
+                    overview.hide();
+            } else if (event.key === Qt.Key_M && !overview.movePending) {
+                overview.startMove(overview.selectedIndex);
+            } else if (event.key === Qt.Key_F && !overview.moveMode) {
+                overview.toggleWindowState("float");
+            } else if (event.key === Qt.Key_P && !overview.moveMode) {
+                overview.toggleWindowState("pin");
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                overview.activateWindow(overview.selectedIndex);
+                if (overview.moveMode)
+                    overview.executeMove(overview.destinationWorkspace);
+                else
+                    overview.activateWindow(overview.selectedIndex);
             } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
-                overview.focusWorkspace(event.key - Qt.Key_0);
+                if (overview.moveMode)
+                    overview.destinationWorkspace = event.key - Qt.Key_0;
+                else
+                    overview.focusWorkspace(event.key - Qt.Key_0);
             } else if (event.key === Qt.Key_0) {
-                overview.focusWorkspace(10);
+                if (overview.moveMode)
+                    overview.destinationWorkspace = 10;
+                else
+                    overview.focusWorkspace(10);
             } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
-                overview.selectedIndex = Math.max(0, overview.selectedIndex - 1);
+                if (overview.moveMode)
+                    overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 1);
+                else
+                    overview.chooseIndex(Math.max(0, overview.selectedIndex - 1));
             } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
-                overview.selectedIndex = Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 1));
+                if (overview.moveMode)
+                    overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 1);
+                else
+                    overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 1)));
             } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
-                overview.selectedIndex = Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 3));
+                if (overview.moveMode)
+                    overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 3);
+                else
+                    overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 3)));
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
-                overview.selectedIndex = Math.max(0, overview.selectedIndex - 3);
+                if (overview.moveMode)
+                    overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 3);
+                else
+                    overview.chooseIndex(Math.max(0, overview.selectedIndex - 3));
             } else {
                 return;
             }
