@@ -890,14 +890,41 @@ in
           pkgs.coreutils
           pkgs.slurp
           pkgs.wf-recorder
+          pkgs.pulseaudio
         ];
         text = ''
-          geometry="$(slurp -d)" || exit 0
+          settings="''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
+          if [ -f "$settings" ]; then
+            { IFS= read -r output && IFS= read -r geometry && IFS= read -r audio; } < "$settings" || exit 2
+            rm -f -- "$settings"
+            [[ "$output" =~ ^[a-zA-Z0-9_.-]+$ ]] || exit 2
+            [[ "$geometry" =~ ^-?[0-9]+,-?[0-9]+\ [0-9]+x[0-9]+$ ]] || exit 2
+            case "$audio" in none|system|microphone) ;; *) exit 2 ;; esac
+            args=(--output "$output")
+          else
+            # Explicit live-select alternative for callers outside the hub.
+            geometry="$(slurp -d)" || exit 0
+            audio=none
+            args=()
+          fi
           [ -n "$geometry" ] || exit 0
           directory="''${LINUX_DESKTOP_RECORDING_DIR:-$HOME/Videos/Screencasts}"
           mkdir -p "$directory"
           output="$directory/Recording-$(date +%Y%m%d-%H%M%S)-$$.mp4"
-          exec wf-recorder --geometry "$geometry" --file "$output"
+          case "$audio" in
+            system)
+              sink="$(pactl get-default-sink)"
+              [ -n "$sink" ] || exit 2
+              args+=("--audio=''${sink}.monitor")
+              ;;
+            microphone)
+              source="$(pactl get-default-source)"
+              [ -n "$source" ] || exit 2
+              args+=("--audio=$source")
+              ;;
+          esac
+          printf 'recording\n%s\n%s\n' "$(date +%s)" "$output" > "''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+          exec wf-recorder "''${args[@]}" --geometry "$geometry" --file "$output"
         '';
       };
 
@@ -957,12 +984,69 @@ in
 
       recordingToggle = pkgs.writeShellApplication {
         name = "linux-desktop-recording-toggle";
-        runtimeInputs = [ pkgs.systemd ];
+        runtimeInputs = [
+          pkgs.systemd
+          pkgs.coreutils
+        ];
         text = ''
-          if systemctl --user --quiet is-active linux-desktop-recording.service; then
-            exec systemctl --user stop linux-desktop-recording.service
+          service=linux-desktop-recording.service
+          case "''${1:-status}" in
+            status)
+              if systemctl --user --quiet is-active "$service"; then echo active; else echo inactive; fi
+              ;;
+            stop)
+              state="''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+              if systemctl --user --quiet is-active "$service"; then
+                if [ -r "$state" ]; then
+                  { IFS= read -r previous && IFS= read -r started && IFS= read -r savedPath; } < "$state" || true
+                  if [[ "$previous" == recording || "$previous" == finalising ]] && [ -n "''${started:-}" ] && [ -n "''${savedPath:-}" ]; then
+                    printf 'finalising\n%s\n%s\n' "$started" "$savedPath" > "$state"
+                  fi
+                fi
+                systemctl --user stop "$service"
+              fi
+              rm -f -- "''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
+              ;;
+            start)
+              [ "$#" -eq 4 ] || exit 2
+              [[ "$2" =~ ^[a-zA-Z0-9_.-]+$ ]] || exit 2
+              [[ "$3" =~ ^-?[0-9]+,-?[0-9]+\ [0-9]+x[0-9]+$ ]] || exit 2
+              case "$4" in none|system|microphone) ;; *) exit 2 ;; esac
+              if systemctl --user --quiet is-active "$service"; then exit 3; fi
+              umask 077
+              config="''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.conf"
+              temp="$(mktemp "''${XDG_RUNTIME_DIR:?}/.linux-desktop-recording.XXXXXXXX")"
+              printf '%s\n%s\n%s\n' "$2" "$3" "$4" > "$temp"
+              mv -f -- "$temp" "$config"
+              if ! systemctl --user start --no-block "$service"; then
+                rm -f -- "$config"
+                exit 1
+              fi
+              ;;
+            *) exit 2 ;;
+          esac
+        '';
+      };
+
+      recordingFinalize = pkgs.writeShellApplication {
+        name = "linux-desktop-recording-finalize";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.ffmpeg
+          pkgs.libnotify
+        ];
+        text = ''
+          state="''${XDG_RUNTIME_DIR:?}/linux-desktop-recording.state"
+          [ -r "$state" ] || exit 0
+          { IFS= read -r previous && IFS= read -r started && IFS= read -r savedPath; } < "$state" || exit 0
+          [[ "$savedPath" == /*/Recording-*.mp4 ]] || exit 0
+          case "$previous" in recording|finalising) ;; *) exit 0 ;; esac
+          if [ -s "$savedPath" ] && ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$savedPath" | grep -qx video; then
+            printf 'completed\n%s\n%s\n' "$started" "$savedPath" > "$state"
+            notify-send --app-name=linux-desktop "Recording saved" "$(basename "$savedPath")" || true
           else
-            exec systemctl --user start --no-block linux-desktop-recording.service
+            printf 'failed\n%s\n%s\n' "$started" "$savedPath" > "$state"
+            notify-send --app-name=linux-desktop -u critical "Recording failed" "Could not finalise the selected capture" || true
           fi
         '';
       };
@@ -1133,6 +1217,7 @@ in
           };
           Service = {
             ExecStart = lib.getExe recordRegion;
+            ExecStopPost = lib.getExe recordingFinalize;
             KillSignal = "SIGINT";
             TimeoutStopSec = 15;
             Restart = "no";
@@ -1168,6 +1253,7 @@ in
           };
 
           Service = {
+            ExecStartPre = "${lib.getExe' pkgs.coreutils "touch"} %t/linux-desktop-recording.state";
             ExecStart = "${lib.getExe launcher} --no-duplicate";
             Restart = "on-failure";
             RestartSec = 1;
