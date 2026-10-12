@@ -18,6 +18,7 @@ QtObject {
     required property NotificationState notificationState
     required property NotificationPopup notificationPopup
     required property Motion motion
+    signal frozenCaptureRequested(bool copy)
 
     function hideTransient(except: string): void {
         if (except !== "cheatsheet" && cheatsheet.open)
@@ -243,7 +244,8 @@ QtObject {
     }
 
     function captureRegion(copy: bool): void {
-        captureScreenshot(copy, "area");
+        // Snapshot the scene before hiding menus and other transient layers.
+        frozenCaptureRequested(copy);
     }
 
     function invokeCommand(commandId: string): void {
@@ -265,6 +267,8 @@ QtObject {
             nightLightState.cooler();
         else if (commandId === "colour.pick")
             pickColour();
+        else if (commandId === "capture.liveRegion")
+            captureScreenshot(true, "area");
         else if (commandId === "capture.region")
             captureRegion(true);
         else if (commandId === "capture.saveRegion")
