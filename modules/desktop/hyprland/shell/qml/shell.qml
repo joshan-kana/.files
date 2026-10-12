@@ -195,6 +195,10 @@ ShellRoot {
         id: notifications
     }
 
+    RecordingState {
+        id: recording
+    }
+
     SpectrumState {
         id: spectrum
         // The analyser has no consumer when the bar and media views are closed.
@@ -211,6 +215,8 @@ ShellRoot {
         system: system
         powerProfile: powerProfile
         notificationState: notifications
+        recordingState: recording
+        onRecordingStopRequested: actions.toggleRecording()
         onMediaRequested: (screen, origin) => actions.toggleMedia(screen, origin)
         onSystemRequested: (screen, origin) => actions.toggleSystem(screen, origin)
         onTrayMenuRequested: (screen, origin, index) => actions.showSystem(screen, origin, "tray:" + index)
@@ -377,7 +383,7 @@ ShellRoot {
             {
                 id: "capture.recordToggle",
                 name: "Start / Stop Screen Recording",
-                description: "Select a Wayland region; use again to finish and save the recording",
+                description: "Select live recording region and audio; use again to stop and save",
                 icon: "media-record",
                 key: runtime.shortcut("capture.recordToggle"),
                 keywords: ["screen", "record", "video", "capture", "screencast", "mp4"]
@@ -613,7 +619,8 @@ ShellRoot {
         notificationState: notifications
         notificationPopup: notificationPopup
         motion: motion
-        onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen)
+        onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
+        onRecordingSelectionRequested: screenshotPicker.begin(false, screens.focusedScreen, "record")
     }
 
     GlobalShortcut {
