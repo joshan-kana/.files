@@ -10,6 +10,7 @@ Column {
     required property Motion motion
     property bool microphone: false
     property bool showMixer: false
+    property bool inline: false
     property int baseIndex: 0
     property int selectedAudioIndex: 0
     signal selectionRequested(int index)
@@ -49,7 +50,116 @@ Column {
     spacing: theme.spacing2
 
     Row {
+        id: inlineControl
+        visible: quick.inline
         width: parent.width
+        height: 39
+        spacing: quick.theme.spacing2
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: quick.muted ? (quick.microphone ? "󰍭" : "󰖁") : (quick.microphone ? "󰍬" : "󰕾")
+            color: quick.muted ? quick.theme.warning : quick.theme.accent
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: quick.theme.fontSize(19)
+        }
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 82
+            text: (quick.selectedAudioIndex === quick.baseIndex ? "▸ " : "") + (quick.microphone ? "Input" : "Output")
+            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.accent : quick.theme.textStrong
+            font.family: quick.runtime.fontMono
+            font.pixelSize: quick.theme.fontSize(12)
+            font.weight: Font.DemiBold
+        }
+
+        ShellSlider {
+            width: Math.max(1, inlineControl.width - 82 - inlineControl.children[0].implicitWidth - 39 - inlineMute.width - inlineDevices.width - inlineMixer.width - inlineControl.spacing * (quick.showMixer ? 6 : 5))
+            anchors.verticalCenter: parent.verticalCenter
+            theme: quick.theme
+            motion: quick.motion
+            enabled: quick.available
+            value: quick.level
+            animateValueChanges: true
+            accentColor: quick.muted ? quick.theme.warning : quick.theme.accent
+            trackHeight: 11
+            handleSize: 18
+            onValueRequested: value => {
+                if (quick.microphone)
+                    quick.system.setMicrophoneVolume(value);
+                else
+                    quick.system.setVolume(value);
+            }
+        }
+
+        Text {
+            width: 39
+            anchors.verticalCenter: parent.verticalCenter
+            text: quick.muted ? "MUTE" : quick.percent + "%"
+            horizontalAlignment: Text.AlignRight
+            color: quick.theme.text
+            font.family: quick.runtime.fontMono
+            font.pixelSize: quick.theme.fontSize(11)
+        }
+
+        ShellAction {
+            id: inlineMute
+            width: 35
+            height: 33
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            iconOnly: true
+            active: quick.muted
+            activeColor: quick.theme.warning
+            enabled: quick.available
+            icon: quick.microphone ? (quick.muted ? "󰍭" : "󰍬") : (quick.muted ? "󰖁" : "󰕾")
+            title: "Mute"
+            onActivated: {
+                if (quick.microphone)
+                    quick.system.toggleMicrophoneMute();
+                else
+                    quick.system.toggleMute();
+            }
+        }
+
+        ShellAction {
+            id: inlineDevices
+            width: 35
+            height: 33
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            iconOnly: true
+            active: quick.chooserOpen
+            enabled: quick.devices.length > 0
+            icon: "󰏴"
+            title: "Select audio device"
+            onActivated: quick.toggleDeviceChooser()
+        }
+
+        ShellAction {
+            id: inlineMixer
+            visible: quick.showMixer
+            width: quick.showMixer ? 35 : 0
+            height: 33
+            anchors.verticalCenter: parent.verticalCenter
+            runtime: quick.runtime
+            theme: quick.theme
+            motion: quick.motion
+            iconOnly: true
+            icon: "󰓃"
+            title: "Application mixer"
+            onActivated: quick.mixerRequested()
+        }
+    }
+
+    Row {
+        width: parent.width
+        visible: !quick.inline
         height: 28
         spacing: quick.theme.spacing2
 
@@ -140,6 +250,7 @@ Column {
 
     Row {
         width: parent.width
+        visible: !quick.inline
         height: 34
         spacing: quick.theme.spacing2
 
