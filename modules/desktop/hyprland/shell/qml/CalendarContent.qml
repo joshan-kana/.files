@@ -27,7 +27,10 @@ FocusScope {
 
     implicitWidth: 780
     implicitHeight: content.implicitHeight
-    readonly property real daySize: Math.min(31, Math.max(23, (width - 300 - theme.spacing5 * 2 - theme.spacing1 * 6) / 7))
+    // Wider dates and compact rows use the whole calendar card without
+    // inflating Home. Selection becomes a deliberate horizontal pill.
+    readonly property real daySize: Math.min(52, Math.max(30, (width - 265 - theme.spacing4 * 2 - theme.spacing1 * 6) / 7))
+    readonly property real dayHeight: Math.min(35, Math.max(27, 29 * theme.textScale))
     focus: engaged
 
     onEngagedChanged: {
@@ -213,7 +216,7 @@ FocusScope {
             width: parent.width
             spacing: calendar.theme.spacing3
             WeatherSummary {
-                width: (featured.width - featured.spacing) * 0.42
+                width: (featured.width - featured.spacing) * 0.53
                 theme: calendar.theme
                 motion: calendar.motion
                 weather: calendar.weather
@@ -222,7 +225,7 @@ FocusScope {
 
             AgendaList {
                 id: agendaView
-                width: (featured.width - featured.spacing) * 0.58
+                width: (featured.width - featured.spacing) * 0.47
                 runtime: calendar.runtime
                 theme: calendar.theme
                 motion: calendar.motion
@@ -311,7 +314,7 @@ FocusScope {
                             delegate: CalendarDay {
                                 required property var modelData
                                 width: calendar.daySize
-                                height: calendar.daySize
+                                height: calendar.dayHeight
                                 theme: calendar.theme
                                 motion: calendar.motion
                                 header: true
@@ -324,7 +327,7 @@ FocusScope {
                     Item {
                         id: monthViewport
                         width: weekdayRow.implicitWidth
-                        height: 6 * calendar.daySize + 5 * calendar.theme.spacing1
+                        height: 6 * calendar.dayHeight + 5 * calendar.theme.spacing1
                         clip: true
                         CalendarMonthGrid {
                             id: incomingMonth
@@ -332,6 +335,7 @@ FocusScope {
                             motion: calendar.motion
                             spacing: calendar.theme.spacing1
                             daySize: calendar.daySize
+                            cellHeight: calendar.dayHeight
                             monthLayout: calendar.calendarLayout
                             selectedDay: calendar.selectedDay
                             y: calendar.sliding ? calendar.slideDirection * monthViewport.height * (1 - calendar.slideProgress) : 0
@@ -345,6 +349,7 @@ FocusScope {
                             motion: calendar.motion
                             spacing: calendar.theme.spacing1
                             daySize: calendar.daySize
+                            cellHeight: calendar.dayHeight
                             monthLayout: calendar.outgoingLayout
                             y: -calendar.slideDirection * monthViewport.height * calendar.slideProgress
                         }
