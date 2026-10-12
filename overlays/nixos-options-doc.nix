@@ -39,8 +39,11 @@ let
 in
 {
   nixpkgs.overlays = [
-    (_final: prev: {
-      nixosOptionsDoc = wrapNixosOptionsDoc prev.path prev.nixosOptionsDoc;
-    })
+    (
+      _final: prev:
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
+        nixosOptionsDoc = wrapNixosOptionsDoc prev.path prev.nixosOptionsDoc;
+      }
+    )
   ];
 }

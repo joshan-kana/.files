@@ -112,7 +112,11 @@
       self,
       nixpkgs,
       nixpkgs-stable,
+      nix-darwin,
+      determinate,
+      home-manager,
       home-manager-stable,
+      stylix,
       stylix-stable,
       treefmt-nix,
       pre-commit-hooks,
@@ -278,8 +282,8 @@
           system,
           hostModule,
           nixpkgsInput ? nixpkgs,
-          homeManagerInput ? inputs.home-manager,
-          stylixInput ? inputs.stylix,
+          homeManagerInput ? home-manager,
+          stylixInput ? stylix,
           moduleRegistryInput ? moduleRegistry,
           configurationOutputName ? configurationName,
           configurationFlakeSubdirectory ? null,
@@ -287,6 +291,7 @@
         }:
         let
           inherit ((lib.systems.elaborate system)) isDarwin;
+          nativeModules = if isDarwin then "darwinModules" else "nixosModules";
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
@@ -294,7 +299,7 @@
               hostModule;
           host = import hostFile;
         in
-        (if isDarwin then inputs.nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem) {
+        (if isDarwin then nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem) {
           inherit system;
           specialArgs = {
             inherit
@@ -309,30 +314,24 @@
           };
           modules = [
             ./modules/options
-            (semantic.rootModule (
-              lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
-            ))
-            ./overlays/comin.nix
-          ]
-          ++ lib.optionals (!isDarwin) [
-            stylixInput.nixosModules.stylix
-            homeManagerInput.nixosModules.home-manager
+            stylixInput.${nativeModules}.stylix
+            homeManagerInput.${nativeModules}.home-manager
             ./overlays/bottles.nix
+            ./overlays/comin.nix
             ./overlays/gh-dash.nix
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
-          ]
-          ++ lib.optionals isDarwin [
-            inputs.home-manager.darwinModules.home-manager
-            inputs.stylix.darwinModules.stylix
-            inputs.determinate.darwinModules.default
             ./overlays/hammerspoon.nix
             ./overlays/mac-slicers.nix
             ./overlays/mac-apps.nix
+            (semantic.rootModule (
+              lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
+            ))
           ]
+          ++ lib.optionals isDarwin [ determinate.darwinModules.default ]
           ++ extraModules;
         };
 
