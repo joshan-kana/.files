@@ -1,4 +1,4 @@
-// Explicit arithmetic only. Never evaluate launcher input as JavaScript or shell.
+// Parse arithmetic directly from launcher search without JavaScript or shell evaluation.
 function calculate(input) {
     if (!input || input.length > 100)
         return null;
