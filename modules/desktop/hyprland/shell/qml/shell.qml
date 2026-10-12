@@ -234,6 +234,14 @@ ShellRoot {
         motion: motion
     }
 
+    ScreenshotPicker {
+        id: screenshotPicker
+        runtime: runtime
+        theme: theme
+        motion: motion
+        onSnapshotReady: actions.hideTransient("")
+    }
+
     OverviewPanel {
         id: overviewPanel
         screen: screens.focusedScreen
@@ -339,11 +347,18 @@ ShellRoot {
             },
             {
                 id: "capture.region",
-                name: "Copy Screen Region",
-                description: "Select a region or window and copy the screenshot",
+                name: "Copy Frozen Screen Region",
+                description: "Freeze the focused display, select pixels and copy them",
                 icon: "camera-photo",
                 key: runtime.shortcut("capture.region"),
                 keywords: ["screenshot", "capture", "snip", "clipboard", "region", "image"]
+            },
+            {
+                id: "capture.liveRegion",
+                name: "Copy Live Screen Region",
+                description: "Select a region directly from the live desktop",
+                icon: "camera-photo",
+                keywords: ["live", "screenshot", "region", "screen", "copy"]
             },
             {
                 id: "capture.output",
@@ -369,8 +384,8 @@ ShellRoot {
             },
             {
                 id: "capture.saveRegion",
-                name: "Save Screen Region",
-                description: "Select a region or window and save a screenshot",
+                name: "Save Frozen Screen Region",
+                description: "Freeze the focused display, select pixels and save a PNG",
                 icon: "camera-photo",
                 keywords: ["screenshot", "capture", "save", "file", "region", "image"]
             },
@@ -598,6 +613,7 @@ ShellRoot {
         notificationState: notifications
         notificationPopup: notificationPopup
         motion: motion
+        onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen)
     }
 
     GlobalShortcut {
