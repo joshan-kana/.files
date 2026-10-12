@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   system,
@@ -7,8 +8,8 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  # Root-only directory containing the bootstrap credentials used by backup jobs.
-  backupCredentialsDir = "/var/lib/backup-credentials";
+  # Bootstrap paths are shared with the evaluated recovery documentation.
+  backupCredentialsDir = config.dotfiles.backups.secrets.credentialsDir;
 
   # Collect generated `restic-<name>` wrapper commands so Zsh completion can be attached to them.
   resticWrapperCommandsFor =
@@ -70,18 +71,16 @@ in
       inherit (config.dotfiles.users) primary;
 
       # Runtime bootstrap inputs consumed by Restic/rclone; their contents stay outside Nix.
-      backupRcloneConfig = "${backupCredentialsDir}/rclone.conf";
-      backupPassword = "${backupCredentialsDir}/secrets-restic-password";
+      inherit (config.dotfiles.backups.secrets) rcloneConfigFile passwordFile;
 
-      # Give every host an independent encrypted repository under the shared remote.
-      repository = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
+      # Repository identity comes from the same policy as the recovery guide.
+      repository = config.dotfiles.backups.secrets.repository;
 
       # Clear stale Restic locks before a scheduled backup starts.
       unlock = ''
         #!${pkgs.runtimeShell}
         ${pkgs.restic}/bin/restic unlock
       '';
-      macCredentialsDir = "${primary.homeRoot}/${primary.name}/Library/Application Support/SecretsBackup";
       macBackup = pkgs.writeShellApplication {
         name = "secrets-backup";
         runtimeInputs = with pkgs; [
@@ -89,8 +88,8 @@ in
           rclone
         ];
         text = ''
-          export RCLONE_CONFIG=${lib.escapeShellArg "${macCredentialsDir}/rclone.conf"}
-          export RESTIC_PASSWORD_FILE=${lib.escapeShellArg "${macCredentialsDir}/secrets-restic-password"}
+          export RCLONE_CONFIG=${lib.escapeShellArg rcloneConfigFile}
+          export RESTIC_PASSWORD_FILE=${lib.escapeShellArg passwordFile}
           export RESTIC_REPOSITORY=${lib.escapeShellArg repository}
           case "''${1:-backup}" in
             backup)
@@ -150,8 +149,7 @@ in
         secrets = {
           inherit repository;
           backupPrepareCommand = unlock;
-          passwordFile = backupPassword;
-          rcloneConfigFile = backupRcloneConfig;
+          inherit passwordFile rcloneConfigFile;
           paths = [ config.dotfiles.secretsDir ];
           timerConfig = {
             OnCalendar = "*:0/15";
@@ -162,8 +160,7 @@ in
 
         secrets-maintenance = {
           inherit repository;
-          passwordFile = backupPassword;
-          rcloneConfigFile = backupRcloneConfig;
+          inherit passwordFile rcloneConfigFile;
           paths = [ ];
           pruneOpts = [
             "--keep-within 1d"
