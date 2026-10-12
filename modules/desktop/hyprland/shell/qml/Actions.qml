@@ -14,6 +14,7 @@ QtObject {
     required property MediaState mediaState
     required property SystemState systemState
     required property BrightnessState brightnessState
+    required property NightLightState nightLightState
     required property NotificationState notificationState
     required property NotificationPopup notificationPopup
     required property Motion motion
@@ -254,6 +255,14 @@ QtObject {
             toggleOverview();
         else if (commandId === "clipboard.toggle")
             toggleClipboard();
+        else if (commandId === "nightLight.toggle")
+            nightLightState.toggle();
+        else if (commandId === "nightLight.auto")
+            nightLightState.toggleAuto();
+        else if (commandId === "nightLight.warmer")
+            nightLightState.warmer();
+        else if (commandId === "nightLight.cooler")
+            nightLightState.cooler();
         else if (commandId === "colour.pick")
             pickColour();
         else if (commandId === "capture.region")
