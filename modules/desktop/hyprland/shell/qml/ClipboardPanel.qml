@@ -17,6 +17,16 @@ PanelWindow {
     property int selectedIndex: 0
     property bool hideAfterCopy: false
     property string copyFeedback: ""
+    property string previewText: ""
+    property int previewTextEntryId: -1
+    // cliphist list already supplies selected text: render that in the same
+    // frame as navigation, then replace it with the full decoded entry.
+    readonly property string selectedText: currentEntry && currentEntry.kind === "TEXT" ? (previewTextEntryId === currentEntry.id ? previewText : currentEntry.preview) : ""
+    property string previewImagePath: ""
+    property bool previewRevealed: false
+    property int previewJobId: -1
+    property string previewJobKind: ""
+    readonly property var currentEntry: filteredEntries.length > 0 ? filteredEntries[Math.max(0, Math.min(selectedIndex, filteredEntries.length - 1))] : null
     signal copyCompleted(bool success)
 
     readonly property var filteredEntries: {
@@ -62,6 +72,68 @@ PanelWindow {
         }
     }
 
+    property StdioCollector previewOutput: StdioCollector {}
+    property Process previewProcess: Process {
+        stdout: panel.previewOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0 && panel.currentEntry && panel.open && panel.currentEntry.id === panel.previewJobId && (panel.previewJobKind === "text" || panel.previewRevealed)) {
+                if (panel.previewJobKind === "text") {
+                    panel.previewText = panel.previewOutput.text.slice(0, 8192);
+                    panel.previewTextEntryId = panel.previewJobId;
+                } else
+                    panel.previewImagePath = panel.previewOutput.text.trim();
+            }
+            if (panel.currentEntry && panel.open && (panel.currentEntry.id !== panel.previewJobId || (panel.currentEntry.kind === "IMAGE" && panel.previewRevealed && panel.previewJobKind !== "image")))
+                previewTimer.restart();
+            if (!panel.open && !panel.closing)
+                panel.clearPreviewFiles();
+        }
+    }
+
+    Timer {
+        id: previewTimer
+        // Coalesce rapid navigation within one event loop, not 100 ms.
+        interval: 0
+        onTriggered: panel.loadPreview()
+    }
+
+    onCurrentEntryChanged: {
+        previewTextEntryId = -1;
+        previewText = "";
+        previewImagePath = "";
+        previewRevealed = false;
+        if (open)
+            previewTimer.restart();
+    }
+
+    function loadPreview(): void {
+        if (!open || !currentEntry || runtime.clipboardPreview.length === 0 || previewProcess.running)
+            return;
+        if (currentEntry.kind !== "TEXT" && !previewRevealed)
+            return;
+        previewJobId = currentEntry.id;
+        previewJobKind = currentEntry.kind === "TEXT" ? "text" : "image";
+        if (previewJobKind === "text")
+            previewProcess.exec([runtime.cliphist, "decode", String(previewJobId)]);
+        else
+            previewProcess.exec([runtime.clipboardPreview, "image", String(previewJobId)]);
+    }
+
+    function revealPreview(): void {
+        if (!currentEntry || currentEntry.kind === "TEXT")
+            return;
+        previewRevealed = true;
+        previewTimer.restart();
+    }
+
+    function clearPreviewFiles(): void {
+        previewImagePath = "";
+        previewTextEntryId = -1;
+        previewText = "";
+        if (runtime.clipboardPreview.length > 0)
+            Quickshell.execDetached([runtime.clipboardPreview, "clear"]);
+    }
+
     property Process copyProcess: Process {
         stderr: panel.copyError
         onExited: (exitCode, exitStatus) => {
@@ -77,7 +149,11 @@ PanelWindow {
     Timer {
         id: closeTimer
         interval: panel.motion.normal + (panel.motion.enabled ? 24 : 0)
-        onTriggered: panel.closing = false
+        onTriggered: {
+            panel.closing = false;
+            if (!panel.open && !panel.previewProcess.running)
+                panel.clearPreviewFiles();
+        }
     }
 
     onFilteredEntriesChanged: {
@@ -102,10 +178,16 @@ PanelWindow {
                 suspicious++;
         }
 
-        if (suspicious >= 3 || suspicious / sample.length > 0.08)
+        if (/^\[\[ binary data .* (png|jpeg|jpg|webp|gif|bmp) \d+x\d+ \]\]$/i.test(compact))
+            return {
+                kind: "IMAGE",
+                preview: compact.slice(3, -3)
+            };
+
+        if (suspicious >= 3 || suspicious / sample.length > 0.08 || compact.startsWith("[[ binary data"))
             return {
                 kind: "BINARY",
-                preview: "[image or binary clipboard item]"
+                preview: "[binary clipboard item]"
             };
 
         return {
@@ -152,6 +234,7 @@ PanelWindow {
         copyFeedback = "";
         selectedIndex = 0;
         refresh();
+        previewTimer.restart();
         search.forceActiveFocus();
     }
 
@@ -165,6 +248,8 @@ PanelWindow {
 
         if (closing)
             closeTimer.restart();
+        else if (!previewProcess.running)
+            clearPreviewFiles();
     }
 
     function toggle(): void {
@@ -212,7 +297,7 @@ PanelWindow {
     ShellSurface {
         id: card
 
-        width: Math.min(panel.width - 80, 820)
+        width: Math.min(panel.width - 72, 1020)
         height: Math.min(panel.height - 120, 680)
         anchors.centerIn: parent
 
@@ -323,9 +408,10 @@ PanelWindow {
 
                 anchors {
                     top: header.bottom
-                    right: parent.right
+                    right: previewPane.visible ? previewPane.left : parent.right
                     bottom: footer.top
                     left: parent.left
+                    rightMargin: previewPane.visible ? panel.theme.spacing3 : 0
                     topMargin: panel.theme.spacing4
                     bottomMargin: panel.theme.spacing4
                 }
@@ -350,6 +436,8 @@ PanelWindow {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
                         const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
                         panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    } else if (event.key === Qt.Key_Space && panel.currentEntry && panel.currentEntry.kind === "IMAGE") {
+                        panel.revealPreview();
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         panel.activateSelected();
                     } else {
@@ -392,10 +480,10 @@ PanelWindow {
                         spacing: panel.theme.spacing3
 
                         Text {
-                            width: 56
+                            width: 64
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.kind
-                            color: item.modelData.kind === "BINARY" ? panel.theme.warning : panel.theme.accent
+                            color: item.modelData.kind !== "TEXT" ? panel.theme.warning : panel.theme.accent
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
@@ -403,7 +491,7 @@ PanelWindow {
                         }
 
                         Text {
-                            width: parent.width - 56 - parent.spacing
+                            width: parent.width - 64 - parent.spacing
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.preview
                             color: panel.theme.text
@@ -415,6 +503,154 @@ PanelWindow {
                 }
 
                 onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+            }
+
+            ShellSurface {
+                id: previewPane
+                visible: card.width >= 820
+                anchors {
+                    top: list.top
+                    right: parent.right
+                    bottom: list.bottom
+                }
+                width: 340
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: panel.theme.radiusMedium
+                clip: true
+
+                Column {
+                    anchors {
+                        fill: parent
+                        margins: panel.theme.spacing4
+                    }
+                    spacing: panel.theme.spacing3
+
+                    Row {
+                        width: parent.width
+                        spacing: panel.theme.spacing2
+                        Text {
+                            text: "◈"
+                            color: panel.theme.accent
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(19)
+                        }
+                        Column {
+                            spacing: panel.theme.spacing1
+                            ShellText {
+                                text: "SELECTED ITEM"
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                color: panel.theme.textMuted
+                                font.pixelSize: panel.theme.fontSize(10)
+                            }
+                            ShellText {
+                                text: panel.currentEntry ? panel.currentEntry.kind + " · #" + panel.currentEntry.id : "EMPTY"
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                color: panel.theme.textStrong
+                                font.pixelSize: panel.theme.fontSize(12)
+                                font.weight: Font.DemiBold
+                            }
+                        }
+                    }
+
+                    ShellSurface {
+                        width: parent.width
+                        height: Math.max(90, previewPane.height - 178)
+                        theme: panel.theme
+                        motion: panel.motion
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: panel.theme.radiusMedium
+                        clip: true
+
+                        Flickable {
+                            id: textPreview
+                            anchors {
+                                fill: parent
+                                margins: panel.theme.spacing3
+                            }
+                            visible: !!panel.currentEntry && panel.currentEntry.kind === "TEXT"
+                            contentHeight: previewBody.implicitHeight
+                            contentWidth: width
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+
+                            Text {
+                                id: previewBody
+                                width: textPreview.width
+                                text: panel.selectedText
+                                wrapMode: Text.WrapAnywhere
+                                color: panel.theme.textStrong
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(12)
+                                lineHeight: 1.4
+                                textFormat: Text.PlainText
+                            }
+                        }
+
+                        Image {
+                            anchors {
+                                fill: parent
+                                margins: panel.theme.spacing2
+                            }
+                            visible: !!panel.currentEntry && panel.currentEntry.kind === "IMAGE" && panel.previewRevealed && panel.previewImagePath.length > 0
+                            source: panel.previewImagePath.length > 0 ? "file://" + panel.previewImagePath : ""
+                            asynchronous: true
+                            cache: false
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+
+                        Column {
+                            visible: !!panel.currentEntry && panel.currentEntry.kind !== "TEXT" && (!panel.previewRevealed || panel.previewImagePath.length === 0)
+                            anchors.centerIn: parent
+                            width: parent.width - panel.theme.spacing5 * 2
+                            spacing: panel.theme.spacing4
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "▧"
+                                color: panel.theme.accent
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(44)
+                            }
+                            ShellText {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                text: panel.currentEntry && panel.currentEntry.kind === "IMAGE" ? (panel.previewRevealed ? "Rendering thumbnail…" : "Image preview hidden") : "Binary item · Preview unavailable"
+                                color: panel.theme.textMuted
+                                font.pixelSize: panel.theme.fontSize(11)
+                            }
+                            ShellAction {
+                                visible: !!panel.currentEntry && panel.currentEntry.kind === "IMAGE" && !panel.previewRevealed
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Math.min(parent.width, 196)
+                                runtime: panel.runtime
+                                theme: panel.theme
+                                motion: panel.motion
+                                compact: true
+                                icon: "◉"
+                                title: "Reveal image"
+                                shortcut: "SPACE"
+                                onActivated: panel.revealPreview()
+                            }
+                        }
+                    }
+
+                    ShellText {
+                        width: parent.width
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        text: panel.copyFeedback.length > 0 ? panel.copyFeedback : "ENTER COPY · J/K NAVIGATE"
+                        color: panel.copyFeedback === "COPY FAILED" ? panel.theme.warning : panel.theme.textMuted
+                        font.pixelSize: panel.theme.fontSize(10)
+                        elide: Text.ElideRight
+                    }
+                }
             }
 
             Text {
