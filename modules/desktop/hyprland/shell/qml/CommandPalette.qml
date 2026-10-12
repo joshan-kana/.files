@@ -4,6 +4,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import Quickshell.Io
 import "Calculator.js" as Calculator
+import "SymbolLibrary.js" as SymbolLibrary
 
 PanelWindow {
     id: palette
@@ -11,6 +12,7 @@ PanelWindow {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property ClipboardPanel clipboardPanel
 
     property var commands: []
     signal commandTriggered(string commandId)
@@ -19,6 +21,20 @@ PanelWindow {
     property bool closing: false
     property bool copyOnSuccessClose: false
     property string copyFeedback: ""
+    property bool clipboardQueried: false
+    property bool awaitingClipboardCopy: false
+
+    Connections {
+        target: palette.clipboardPanel
+        function onCopyCompleted(success) {
+            if (!palette.awaitingClipboardCopy)
+                return;
+            palette.awaitingClipboardCopy = false;
+            palette.copyFeedback = success ? "COPIED" : "COPY FAILED";
+            if (success && palette.copyOnSuccessClose)
+                palette.hide();
+        }
+    }
 
     Process {
         id: calculationCopy
@@ -113,19 +129,42 @@ PanelWindow {
     function filteredItems(): var {
         const query = search.text.trim().toLowerCase();
 
-        const calculation = query.match(/^calc\s+(.+)$/);
-        if (calculation) {
-            const result = Calculator.calculate(calculation[1]);
-            return result === null ? [] : [
-                {
-                    kind: "calculation",
-                    name: "= " + result,
-                    genericName: calculation[1] + " · Enter to copy",
-                    icon: "accessories-calculator",
-                    key: "COPY",
-                    result: result
-                }
-            ];
+        const symbolMode = query.match(/^(?:emoji|symbol|sym)(?:\s+(.*))?$/);
+        if (symbolMode)
+            return SymbolLibrary.search(symbolMode[1] || "");
+
+        const clipboardMode = query.match(/^clip(?:\s+(.*))?$/);
+        if (clipboardMode) {
+            const searchText = (clipboardMode[1] || "").toLowerCase();
+            return (clipboardPanel.entries || []).filter(entry => !searchText || entry.preview.toLowerCase().includes(searchText)).slice(0, 9).map((entry, index) => ({
+                        kind: "clipboard",
+                        name: entry.kind === "TEXT" ? "Clipboard text " + (index + 1) : "Clipboard image / data " + (index + 1),
+                        genericName: entry.preview,
+                        icon: "edit-paste",
+                        key: "COPY",
+                        entryId: entry.id
+                    }));
+        }
+
+        const explicitCalculation = query.match(/^calc\s+(.+)$/);
+        const expression = explicitCalculation ? explicitCalculation[1] : query;
+        // Arithmetic works directly in search; other queries retain fuzzy app/action matching.
+        const arithmeticQuery = /^[\d\s().+\-*/^]+$/.test(expression) && /\d/.test(expression) && /[+\-*/^]/.test(expression);
+        if (explicitCalculation || arithmeticQuery) {
+            const result = Calculator.calculate(expression);
+            if (result !== null)
+                return [
+                    {
+                        kind: "calculation",
+                        name: "= " + result,
+                        genericName: expression + " · Enter to copy",
+                        icon: "accessories-calculator",
+                        key: "COPY",
+                        result: result
+                    }
+                ];
+            if (explicitCalculation)
+                return [];
         }
 
         const commandItems = (commands || []).map(command => ({
@@ -174,8 +213,15 @@ PanelWindow {
         closeTimer.stop();
         closing = false;
         setLauncherSubmap(true);
-        search.text = "";
         copyFeedback = "";
+        clipboardQueried = false;
+        awaitingClipboardCopy = false;
+        // Preserve the query across dismissals, including after copying a result.
+        // Reopening a clipboard search must refresh cliphist without a text edit.
+        if (/^clip(?:\s|$)/i.test(search.text.trim())) {
+            clipboardQueried = true;
+            clipboardPanel.refresh();
+        }
         open = true;
         if (resultModel.values.length === 0)
             results.currentIndex = -1;
@@ -217,7 +263,14 @@ PanelWindow {
 
         const entry = resultModel.values[results.currentIndex];
 
-        if (entry.kind === "calculation") {
+        if (entry.kind === "clipboard") {
+            copyOnSuccessClose = !keepOpen;
+            awaitingClipboardCopy = clipboardPanel.copyEntry(entry.entryId, false);
+            copyFeedback = awaitingClipboardCopy ? "COPYING" : "CLIPBOARD BUSY";
+            return;
+        }
+
+        if (entry.kind === "calculation" || entry.kind === "symbol") {
             copyFeedback = "COPYING";
             copyOnSuccessClose = !keepOpen;
             calculationCopy.exec(["wl-copy", "--type", "text/plain", entry.result]);
@@ -304,7 +357,7 @@ PanelWindow {
                 spacing: theme.spacing1
 
                 Text {
-                    text: "COMMAND PALETTE · SYSTEM + APPLICATIONS"
+                    text: "COMMAND PALETTE · APPS / ACTIONS / CLIP / EMOJI / MATH"
                     color: theme.accent
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelEyebrow
@@ -382,7 +435,7 @@ PanelWindow {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: "Apps, actions, calc 2*(3+4)…"
+                        text: "Apps, actions, clip, emoji, 2*(3+4)…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
@@ -390,6 +443,14 @@ PanelWindow {
 
                     onTextChanged: {
                         palette.copyFeedback = "";
+                        if (/^clip(?:\s|$)/i.test(search.text.trim())) {
+                            if (!palette.clipboardQueried) {
+                                palette.clipboardQueried = true;
+                                palette.clipboardPanel.refresh();
+                            }
+                        } else {
+                            palette.clipboardQueried = false;
+                        }
                         results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
                     }
 
@@ -414,7 +475,7 @@ PanelWindow {
                     }
                 }
 
-                Text {
+                KeyChord {
                     id: shortcutHint
 
                     anchors {
@@ -423,11 +484,10 @@ PanelWindow {
                         verticalCenter: parent.verticalCenter
                     }
 
-                    text: runtime.shortcut("launcher.toggle")
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
-                    font.letterSpacing: 0.8
+                    shortcut: runtime.shortcut("launcher.toggle")
+                    fontFamily: runtime.fontMono
+                    fontSize: theme.fontSize(11)
+                    textColor: theme.textMuted
                 }
             }
 
@@ -523,6 +583,7 @@ PanelWindow {
                             height: parent.height
 
                             Image {
+                                visible: !modelData.glyph
                                 anchors.centerIn: parent
                                 width: 29
                                 height: 29
@@ -532,11 +593,18 @@ PanelWindow {
                                 asynchronous: true
                                 fillMode: Image.PreserveAspectFit
                             }
+                            Text {
+                                anchors.centerIn: parent
+                                visible: !!modelData.glyph
+                                text: modelData.glyph || ""
+                                color: theme.textStrong
+                                font.pixelSize: theme.fontSize(24)
+                            }
                         }
 
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: Math.max(90, parent.width - 204)
+                            width: Math.max(90, parent.width - 240)
                             spacing: 1
 
                             Text {
@@ -560,16 +628,19 @@ PanelWindow {
                             }
                         }
 
-                        Text {
+                        Item {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 86
-                            text: modelData.key.length > 0 ? modelData.key : (result.ListView.isCurrentItem ? "↵  RUN" : "")
-                            horizontalAlignment: Text.AlignRight
-                            color: theme.accent
-                            font.family: runtime.fontMono
-                            font.pixelSize: theme.fontSize(10)
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 0.8
+                            width: 122
+                            height: parent.height
+
+                            KeyChord {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                shortcut: result.modelData.key.length > 0 ? result.modelData.key : (result.ListView.isCurrentItem ? "↵ RUN" : "")
+                                fontFamily: runtime.fontMono
+                                fontSize: theme.fontSize(11)
+                                textColor: theme.accent
+                            }
                         }
                     }
 
