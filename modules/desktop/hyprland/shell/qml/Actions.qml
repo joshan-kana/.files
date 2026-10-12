@@ -235,6 +235,12 @@ QtObject {
         Quickshell.execDetached(copy ? ["grimblast", "copy", target] : ["grimblast", "--notify", "save", target]);
     }
 
+    function pickColour(): void {
+        hideTransient("");
+        if (runtime.colourPicker.length > 0)
+            Quickshell.execDetached([runtime.colourPicker]);
+    }
+
     function captureRegion(copy: bool): void {
         captureScreenshot(copy, "area");
     }
@@ -248,6 +254,8 @@ QtObject {
             toggleOverview();
         else if (commandId === "clipboard.toggle")
             toggleClipboard();
+        else if (commandId === "colour.pick")
+            pickColour();
         else if (commandId === "capture.region")
             captureRegion(true);
         else if (commandId === "capture.saveRegion")
