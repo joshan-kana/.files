@@ -185,6 +185,15 @@
         programs.zsh.profileExtra = lib.mkBefore ''
           if [[ -x /opt/homebrew/bin/brew ]]; then
             eval "$(/opt/homebrew/bin/brew shellenv)"
+            # Prefer declaratively managed tools while Homebrew remains in use.
+            typeset -U path
+            path=(
+              "$HOME/.local/bin"
+              "/etc/profiles/per-user/$USER/bin"
+              "/run/current-system/sw/bin"
+              "$HOME/.nix-profile/bin"
+              "''${path[@]}"
+            )
           fi
         '';
       };
