@@ -10,7 +10,7 @@ Item {
 
     property bool open: false
     visible: open
-    implicitHeight: 690
+    implicitHeight: 780
 
     signal keyboardRequested
 
@@ -35,7 +35,7 @@ Item {
             glyph: "◴"
             eyebrow: "Performance / live"
             title: "Resources"
-            detail: "CPU · Memory · Network · Disk · Last " + panel.resourceState.historyLength * 2 + "s"
+            detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historyLength * 2 + "s"
         }
 
         Row {
@@ -166,6 +166,69 @@ Item {
 
         ShellSurface {
             width: parent.width
+            height: 90
+            theme: panel.theme
+            motion: panel.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: panel.theme.radiusMedium
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: panel.theme.spacing3
+                spacing: panel.theme.spacing4
+                Repeater {
+                    model: [
+                        {
+                            title: "GPU LOAD",
+                            value: panel.resourceState.gpuPercent >= 0 ? Math.round(panel.resourceState.gpuPercent) + "%" : "Unavailable",
+                            detail: "Supported driver counter"
+                        },
+                        {
+                            title: "CPU TEMPERATURE",
+                            value: panel.resourceState.cpuTemperature >= 0 ? panel.resourceState.cpuTemperature.toFixed(1) + "°C" : "Unavailable",
+                            detail: "Supported thermal sensor"
+                        },
+                        {
+                            title: "GPU TEMPERATURE",
+                            value: panel.resourceState.gpuTemperature >= 0 ? panel.resourceState.gpuTemperature.toFixed(1) + "°C" : "Unavailable",
+                            detail: "Supported thermal sensor"
+                        }
+                    ]
+                    delegate: Column {
+                        id: sensorColumn
+                        required property var modelData
+                        width: (parent.width - 2 * panel.theme.spacing4) / 3
+                        spacing: 2
+                        Text {
+                            text: sensorColumn.modelData.title
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(10)
+                        }
+                        Text {
+                            width: parent.width
+                            text: sensorColumn.modelData.value
+                            color: sensorColumn.modelData.value === "Unavailable" ? panel.theme.textMuted : panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(14)
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width
+                            text: sensorColumn.modelData.detail
+                            color: panel.theme.textMuted
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(9)
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+        }
+
+        ShellSurface {
+            width: parent.width
             height: 205
             theme: panel.theme
             motion: panel.motion
@@ -220,7 +283,7 @@ Item {
         }
 
         Text {
-            text: "R refresh  ·  ESC back  ·  Sampled every 2s while open · disk every 10s"
+            text: "R refresh  ·  ESC back  ·  Sampled every 2s while open · disk/sensors every 10s"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(10)
