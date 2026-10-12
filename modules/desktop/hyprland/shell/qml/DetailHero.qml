@@ -16,6 +16,8 @@ ShellSurface {
 
     implicitHeight: 126
     surfaceLayer: ShellSurface.Group
+    luminous: true
+    luminousColor: hero.glyphColor
     fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.21))
     cornerRadius: theme.radiusLarge
 
