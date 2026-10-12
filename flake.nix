@@ -293,27 +293,15 @@
           extraModules ? [ ],
         }:
         let
-          inherit (lib.systems.elaborate system) isDarwin isLinux;
-          nativeModules =
-            if isDarwin then
-              "darwinModules"
-            else if isLinux then
-              "nixosModules"
-            else
-              null;
+          inherit (lib.systems.elaborate system) isDarwin;
+          nativeModules = if isDarwin then "darwinModules" else "nixosModules";
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
             else
               hostModule;
           host = import hostFile;
-          systemConstructor =
-            if isDarwin then
-              nix-darwin.lib.darwinSystem
-            else if isLinux then
-              nixpkgsInput.lib.nixosSystem
-            else
-              null;
+          systemConstructor = if isDarwin then nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem;
         in
         systemConstructor {
           inherit system;
