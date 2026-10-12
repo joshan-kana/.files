@@ -1,4 +1,5 @@
 {
+  editScope,
   extendScope,
   moduleRegistry,
   ...
@@ -14,26 +15,37 @@
 
   dotfiles.users.primary.homeRoot = "/Users";
 
-  system = extendScope moduleRegistry.system {
-    authentication = _: {
-      security.pam.services.sudo_local.touchIdAuth = true;
-    };
-
-    preferences = _: {
-      system.defaults = {
-        dock = {
-          autohide = true;
-          show-recents = false;
-          tilesize = 47;
-          mru-spaces = false;
+  system =
+    extendScope
+      (editScope moduleRegistry.system {
+        autoDeploy = _: {
+          # OrbStack occupies port 4243 on this Mac.
+          services.comin.exporter = {
+            listen_address = "127.0.0.1";
+            port = 4244;
+          };
         };
-        NSGlobalDomain = {
-          KeyRepeat = 2;
-          InitialKeyRepeat = 15;
+      })
+      {
+        authentication = _: {
+          security.pam.services.sudo_local.touchIdAuth = true;
+        };
+
+        preferences = _: {
+          system.defaults = {
+            dock = {
+              autohide = true;
+              show-recents = false;
+              tilesize = 47;
+              mru-spaces = false;
+            };
+            NSGlobalDomain = {
+              KeyRepeat = 2;
+              InitialKeyRepeat = 15;
+            };
+          };
         };
       };
-    };
-  };
 
   cli = extendScope moduleRegistry.cli {
     automake = { pkgs, ... }: {
