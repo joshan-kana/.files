@@ -220,89 +220,18 @@ Item {
         selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, devices.length - 1)));
     }
 
-    ShellSurface {
+    DetailHero {
         id: header
-
         width: parent.width
-        height: 146
+        height: 128
+        runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        surfaceLayer: ShellSurface.Group
-        cornerRadius: panel.theme.radiusLarge
-
-        ShellSurface {
-            width: 78
-            height: 78
-            anchors.left: parent.left
-            anchors.leftMargin: panel.theme.spacing4
-            anchors.verticalCenter: parent.verticalCenter
-            theme: panel.theme
-            motion: panel.motion
-            surfaceLayer: ShellSurface.Control
-            cornerRadius: panel.theme.radiusMedium
-
-            Text {
-                anchors.centerIn: parent
-                text: "ᛒ"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(39)
-            }
-        }
-
-        Column {
-            anchors {
-                fill: parent
-                margins: panel.theme.spacing4
-                leftMargin: panel.theme.spacing4 + 96
-            }
-            spacing: panel.theme.spacing2
-
-            Text {
-                text: panel.adapterAvailable ? "Bluetooth · " + (panel.adapter.enabled ? "on" : "off") : "Bluetooth · unavailable"
-                color: panel.adapterAvailable && panel.adapter.enabled ? panel.theme.positive : panel.theme.warning
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(11)
-                font.weight: Font.Medium
-            }
-
-            Text {
-                text: panel.adapterAvailable ? (panel.adapter.name || panel.adapter.adapterId || "Bluetooth") : "Bluetooth"
-                color: panel.theme.textStrong
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSubpanelTitle
-                font.weight: Font.DemiBold
-            }
-
-            Row {
-                width: parent.width
-                spacing: panel.theme.spacing3
-
-                Text {
-                    visible: panel.adapterAvailable
-                    text: panel.system.bluetoothEnabled ? "Radio on" : "Radio off"
-                    color: panel.system.bluetoothEnabled ? panel.theme.accent : panel.theme.critical
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-
-                Text {
-                    visible: panel.adapterAvailable && panel.system.bluetoothEnabled
-                    text: panel.system.bluetoothDiscovering ? "SCANNING" : "SCAN IDLE"
-                    color: panel.system.bluetoothDiscovering ? panel.theme.positive : panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-
-                Text {
-                    visible: panel.adapterAvailable
-                    text: panel.system.bluetoothConnectedCount + " CONNECTED"
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                }
-            }
-        }
+        glyph: panel.system.bluetoothEnabled ? "󰂯" : "󰂲"
+        glyphColor: panel.system.bluetoothEnabled ? panel.theme.positive : panel.theme.textMuted
+        eyebrow: "Connectivity / Bluetooth"
+        title: "Bluetooth"
+        detail: !panel.adapterAvailable ? "No adapter available" : panel.system.bluetoothEnabled ? panel.system.bluetoothConnectedCount + " connected · " + (panel.system.bluetoothDiscovering ? "Scanning…" : "Scan idle") : "Radio disabled"
     }
 
     Item {

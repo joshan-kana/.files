@@ -42,7 +42,7 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 920
-    implicitHeight: 470
+    implicitHeight: 512
     focus: engaged
 
     onEngagedChanged: {
@@ -89,12 +89,31 @@ FocusScope {
     Item {
         anchors.fill: parent
 
+        ShellSurface {
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+            }
+            height: header.height + content.theme.spacing4 * 2
+            theme: content.theme
+            motion: content.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: content.theme.radiusLarge
+            fillColor: Qt.tint(content.theme.surfaceRaised, Qt.rgba(content.theme.accent.r, content.theme.accent.g, content.theme.accent.b, 0.12))
+        }
+
         Row {
             id: header
             anchors {
                 top: parent.top
                 left: parent.left
                 right: parent.right
+            }
+            anchors {
+                topMargin: content.theme.spacing4
+                leftMargin: content.theme.spacing4
+                rightMargin: content.theme.spacing4
             }
             spacing: content.theme.spacing4
 
@@ -178,13 +197,13 @@ FocusScope {
                 top: header.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: content.theme.spacing4
+                topMargin: content.theme.spacing5
             }
             spacing: 0
 
             ShellSurface {
                 width: parent.width
-                height: 142
+                height: 172
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
