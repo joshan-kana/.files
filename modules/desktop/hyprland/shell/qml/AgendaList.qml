@@ -10,6 +10,7 @@ Column {
     required property AgendaState agenda
     required property string startDate
     property int firstEventIndex: 0
+    property bool featured: false
     readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - 4))
     readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + 4)
 
@@ -47,15 +48,42 @@ Column {
 
     ShellSurface {
         width: parent.width
-        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(4, panel.agenda.events.length) * 54 + panel.theme.spacing2 : 72
+        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(4, panel.agenda.events.length) * 54 + panel.theme.spacing2 : (panel.featured ? 134 : 72)
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: panel.theme.radiusMedium
 
+        Column {
+            anchors {
+                left: parent.left
+                top: parent.top
+                right: parent.right
+                margins: panel.theme.spacing4
+            }
+            visible: panel.featured && panel.agenda.events.length === 0
+            spacing: panel.theme.spacing2
+
+            Text {
+                text: "Today"
+                color: panel.theme.textStrong
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(20)
+                font.weight: Font.DemiBold
+            }
+            Text {
+                width: parent.width
+                text: panel.agenda.loading ? "Reading calendar…" : panel.agenda.configured ? "No upcoming events" : "Set up local calendar ↗"
+                color: panel.theme.text
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(11)
+                wrapMode: Text.WordWrap
+            }
+        }
+
         Text {
             anchors.centerIn: parent
-            visible: panel.agenda.events.length === 0 || !panel.agenda.configured || panel.agenda.errorMessage.length > 0
+            visible: !panel.featured && (panel.agenda.events.length === 0 || !panel.agenda.configured || panel.agenda.errorMessage.length > 0)
             width: parent.width - panel.theme.spacing4 * 2
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap

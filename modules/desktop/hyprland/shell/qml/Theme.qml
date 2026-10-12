@@ -24,7 +24,7 @@ QtObject {
     readonly property int radiusSmall: 12
     readonly property int radiusMedium: 22
     readonly property int radiusLarge: 36
-    readonly property int radiusPanel: 44
+    readonly property int radiusPanel: 54
     readonly property real squircleExponent: runtime.squircleExponent
 
     readonly property real borderThin: 1
@@ -42,8 +42,8 @@ QtObject {
     readonly property color layer2: surfaceRaised
     readonly property color layer3: Qt.rgba(accent.r, accent.g, accent.b, 0.095)
     readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, 0.24)
-    readonly property color expressiveSurface: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.075))
-    readonly property color expressiveSurfaceStrong: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.14))
+    readonly property color expressiveSurface: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.06))
+    readonly property color expressiveSurfaceStrong: Qt.tint(surfaceRaised, Qt.rgba(accent.r, accent.g, accent.b, 0.11))
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)
