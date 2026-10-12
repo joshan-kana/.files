@@ -19,10 +19,25 @@ QtObject {
     property var previousCpuStats: null
     property var cpuHistory: []
     property var memoryHistory: []
+    property var networkHistory: []
+    property string networkInterface: ""
+    property real networkDownload: 0
+    property real networkUpload: 0
+    property var previousNetworkStats: null
+    property real diskTotal: 0
+    property real diskUsed: 0
+    readonly property real diskPercent: diskTotal > 0 ? diskUsed / diskTotal : 0
+    property int diskTicks: 0
     readonly property int historyLength: 30
 
     function kibString(value: real): string {
         return (value / 1048576).toFixed(1) + " GiB";
+    }
+
+    function speedString(value: real): string {
+        if (value >= 1048576)
+            return (value / 1048576).toFixed(1) + " MiB/s";
+        return (value / 1024).toFixed(1) + " KiB/s";
     }
 
     function updateHistory(values: var, value: real): var {
@@ -35,6 +50,8 @@ QtObject {
 
         fileMeminfo.reload();
         fileStat.reload();
+        fileNetDev.reload();
+        fileRoute.reload();
         const mem = fileMeminfo.text();
         const stat = fileStat.text();
 
@@ -62,11 +79,50 @@ QtObject {
 
         cpuHistory = updateHistory(cpuHistory, cpuPercent);
         memoryHistory = updateHistory(memoryHistory, memoryPercent);
+
+        const defaultRoute = fileRoute.text().split("\n").slice(1).map(line => line.trim().split(/\s+/)).find(fields => fields.length > 2 && fields[1] === "00000000");
+        const activeInterface = defaultRoute ? defaultRoute[0] : "";
+        if (activeInterface !== networkInterface) {
+            networkInterface = activeInterface;
+            previousNetworkStats = null;
+        }
+        const networkLine = fileNetDev.text().split("\n").find(line => line.split(":")[0].trim() === activeInterface);
+        if (activeInterface && networkLine) {
+            const fields = networkLine.split(":")[1].trim().split(/\s+/);
+            const receive = Number(fields[0]);
+            const transmit = Number(fields[8]);
+            const now = Date.now();
+            if (Number.isFinite(receive) && Number.isFinite(transmit)) {
+                if (previousNetworkStats) {
+                    const elapsed = (now - previousNetworkStats.time) / 1000;
+                    if (elapsed > 0.1) {
+                        networkDownload = Math.max(0, (receive - previousNetworkStats.receive) / elapsed);
+                        networkUpload = Math.max(0, (transmit - previousNetworkStats.transmit) / elapsed);
+                    }
+                }
+                previousNetworkStats = {
+                    receive,
+                    transmit,
+                    time: now
+                };
+            }
+        } else {
+            networkDownload = 0;
+            networkUpload = 0;
+        }
+        networkHistory = updateHistory(networkHistory, networkDownload + networkUpload);
+        if (++diskTicks >= 5) {
+            diskTicks = 0;
+            if (!diskProcess.running)
+                diskProcess.exec(["df", "-Pk", "/"]);
+        }
     }
 
     onActiveChanged: {
         if (active) {
             previousCpuStats = null;
+            previousNetworkStats = null;
+            diskTicks = 4;
             refresh();
         }
     }
@@ -76,6 +132,25 @@ QtObject {
     }
     property FileView fileStat: FileView {
         path: "/proc/stat"
+    }
+    property FileView fileNetDev: FileView {
+        path: "/proc/net/dev"
+    }
+    property FileView fileRoute: FileView {
+        path: "/proc/net/route"
+    }
+    property StdioCollector diskOutput: StdioCollector {}
+    property Process diskProcess: Process {
+        stdout: root.diskOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                return;
+            const fields = root.diskOutput.text.trim().split("\n").slice(1)[0]?.trim().split(/\s+/) || [];
+            if (fields.length >= 4) {
+                root.diskTotal = Number(fields[1]) || 0;
+                root.diskUsed = Number(fields[2]) || 0;
+            }
+        }
     }
     property Timer updater: Timer {
         interval: 2000
