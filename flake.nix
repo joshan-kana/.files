@@ -272,14 +272,69 @@
           };
         };
 
-      mkHost = import ./lib/host-configurations.nix {
-        inherit
-          inputs
-          lib
-          moduleRegistry
-          semantic
-          ;
-      };
+      mkHost =
+        configurationName:
+        {
+          system,
+          hostModule,
+          nixpkgsInput ? nixpkgs,
+          homeManagerInput ? inputs.home-manager,
+          stylixInput ? inputs.stylix,
+          moduleRegistryInput ? moduleRegistry,
+          configurationOutputName ? configurationName,
+          configurationFlakeSubdirectory ? null,
+          extraModules ? [ ],
+        }:
+        let
+          inherit ((lib.systems.elaborate system)) isDarwin;
+          hostFile =
+            if builtins.pathExists (hostModule + "/default.nix") then
+              hostModule + "/default.nix"
+            else
+              hostModule;
+          host = import hostFile;
+        in
+        (if isDarwin then inputs.nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem) {
+          inherit system;
+          specialArgs = {
+            inherit
+              configurationName
+              configurationOutputName
+              configurationFlakeSubdirectory
+              inputs
+              system
+              ;
+            inherit (semantic) editScope extendScope;
+            moduleRegistry = moduleRegistryInput;
+          };
+          modules = [
+            ./modules/options
+            (semantic.rootModule (
+              lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
+            ))
+            ./overlays/comin.nix
+          ]
+          ++ lib.optionals (!isDarwin) [
+            stylixInput.nixosModules.stylix
+            homeManagerInput.nixosModules.home-manager
+            ./overlays/bottles.nix
+            ./overlays/gh-dash.nix
+            ./overlays/libreoffice.nix
+            ./overlays/nixos-options-doc.nix
+            ./overlays/nvtop.nix
+            ./overlays/tuicr.nix
+            ./overlays/webhook.nix
+          ]
+          ++ lib.optionals isDarwin [
+            inputs.home-manager.darwinModules.home-manager
+            inputs.stylix.darwinModules.stylix
+            inputs.determinate.darwinModules.default
+            ./overlays/hammerspoon.nix
+            ./overlays/mac-slicers.nix
+            ./overlays/mac-apps.nix
+          ]
+          ++ extraModules;
+        };
 
       hostSpecs = {
         nixos = {
