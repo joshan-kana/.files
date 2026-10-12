@@ -2,13 +2,13 @@
   description = "My first flake!";
 
   inputs = {
-    # Nixpkgs: a collection of packages for the Nix package manager
+    # Nixpkgs: package collections and system modules.
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
-    # Stable Nixpkgs for server hosts where predictable updates matter more.
+    # Stable Nixpkgs for configurations requiring predictable releases.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # Hermes Agent: native NixOS service/module.
+    # Hermes Agent: packaged agent and service integration.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -17,10 +17,10 @@
     # Prebuilt AI agent packages.
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    # First-party OpenClaw NixOS service module.
+    # OpenClaw: packaged service integration.
     nix-openclaw.url = "github:openclaw/nix-openclaw";
 
-    # Stylix: systemwide theming and typography across NixOS and macOS.
+    # Stylix: declarative themes and typography.
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,7 +37,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Home Manager: declarative user configuration on Linux and macOS.
+    # Home Manager: declarative user configuration.
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -78,10 +78,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Determinate Nix CLI and manpages for the NixOS hosts.
+    # Determinate Nix CLI and manual pages.
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
-    # Determinate Nix: native macOS integration and daemon ownership.
+    # Determinate Nix integration and daemon ownership.
     determinate = {
       url = "github:DeterminateSystems/determinate";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -293,16 +293,29 @@
           extraModules ? [ ],
         }:
         let
-          inherit ((lib.systems.elaborate system)) isDarwin;
-          nativeModules = if isDarwin then "darwinModules" else "nixosModules";
+          inherit (lib.systems.elaborate system) isDarwin isLinux;
+          nativeModules =
+            if isDarwin then
+              "darwinModules"
+            else if isLinux then
+              "nixosModules"
+            else
+              throw "Unsupported host platform: ${system}";
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
             else
               hostModule;
           host = import hostFile;
+          systemConstructor =
+            if isDarwin then
+              nix-darwin.lib.darwinSystem
+            else if isLinux then
+              nixpkgsInput.lib.nixosSystem
+            else
+              throw "Unsupported host platform: ${system}";
         in
-        (if isDarwin then nix-darwin.lib.darwinSystem else nixpkgsInput.lib.nixosSystem) {
+        systemConstructor {
           inherit system;
           specialArgs = {
             inherit
