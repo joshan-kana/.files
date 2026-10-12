@@ -58,7 +58,7 @@ Item {
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: panel.theme.radiusLarge
-                    fillColor: Qt.tint(panel.theme.surfaceRaised, Qt.rgba(tile.gaugeColor.r, tile.gaugeColor.g, tile.gaugeColor.b, cpu ? 0.17 : 0.10))
+                    fillColor: panel.theme.blend(panel.theme.groupBase, tile.gaugeColor, cpu ? (panel.theme.dark ? 0.13 : 0.08) : (panel.theme.dark ? 0.08 : 0.05))
 
                     Column {
                         anchors.centerIn: parent
