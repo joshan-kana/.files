@@ -106,14 +106,14 @@ PanelWindow {
     // Derive the destination geometry from the live view, not only the cache:
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
-    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing5 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing5 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
-        measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing5 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing5 * 2;
+        measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2;
     }
 
     Timer {
@@ -315,9 +315,11 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        fillColor: Qt.tint(host.theme.background, Qt.rgba(host.theme.surfaceRaised.r, host.theme.surfaceRaised.g, host.theme.surfaceRaised.b, 0.71))
+        readonly property color panelTone: Qt.tint(host.theme.background, Qt.rgba(host.theme.surfaceRaised.r, host.theme.surfaceRaised.g, host.theme.surfaceRaised.b, 0.71))
+        fillColor: Qt.rgba(panelTone.r, panelTone.g, panelTone.b, host.theme.runtime.panelOpacity)
         luminous: true
         luminousColor: host.theme.accent
+        lightIntensity: 1.45
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
         borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
         borderWidth: host.theme.borderThin
@@ -338,8 +340,8 @@ PanelWindow {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                leftMargin: host.theme.spacing5
-                rightMargin: host.theme.spacing5
+                leftMargin: host.theme.spacing4
+                rightMargin: host.theme.spacing4
                 topMargin: host.theme.spacing3
             }
             runtime: host.runtime
@@ -362,7 +364,7 @@ PanelWindow {
             // Use intrinsic tab content and the stable viewport budget. Testing
             // against contentViewport.height would make this Text's own wrap
             // height a dependency of its content, creating a binding loop.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing5 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
             text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (host.loadedContent && host.loadedContent.implicitHeight > scrollBudget ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
@@ -377,8 +379,8 @@ PanelWindow {
                 right: parent.right
                 bottom: hubFooter.top
                 topMargin: host.theme.spacing3
-                leftMargin: host.theme.spacing5
-                rightMargin: host.theme.spacing5
+                leftMargin: host.theme.spacing4
+                rightMargin: host.theme.spacing4
                 bottomMargin: host.theme.spacing3
             }
             clip: true
@@ -393,7 +395,7 @@ PanelWindow {
             Loader {
                 id: contentLoaderA
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                 height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
@@ -413,7 +415,7 @@ PanelWindow {
             Loader {
                 id: contentLoaderB
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing5 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                 height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))

@@ -131,7 +131,7 @@ let
   };
 
   shellVisual = {
-    panelOpacity = 0.99;
+    panelOpacity = 0.96;
     focusOpacity = 0.96;
     scrimOpacity = 0.50;
     squircleExponent = 4.5;
