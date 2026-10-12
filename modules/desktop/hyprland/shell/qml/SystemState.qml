@@ -36,11 +36,25 @@ QtObject {
     readonly property bool microphoneMuted: microphoneAvailable && audioSource.audio.muted
 
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
-    readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null)
-    readonly property var audioInputStreams: pipewireNodes.filter(node => node !== null && node.isStream && !node.isSink && node.audio !== null)
+    // Peak monitors create internal PipeWire capture nodes. Never offer those
+    // as application streams, or monitoring the mixer recursively produces
+    // more peak monitors and destabilises the Qt node model.
+    // PipeWire assigns the executable name to these native internal monitor
+    // nodes, rather than the pw_stream_new name. Exclude both spellings.
+    function isInternalPeak(node: var): bool {
+        return node.name === "quickshell-peak-monitor" || node.name === ".quickshell-wrapped";
+    }
+    readonly property var audioStreams: pipewireNodes.filter(node => node !== null && node.isStream && node.isSink && node.audio !== null && !isInternalPeak(node))
+    readonly property var audioInputStreams: pipewireNodes.filter(node => node !== null && node.isStream && !node.isSink && node.audio !== null && !isInternalPeak(node))
     // Shell-internal capture is not an application to adjust in the mixers.
-    readonly property var audioApplicationStreams: audioStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
-    readonly property var audioCaptureStreams: audioInputStreams.filter(node => !system.streamDisplayName(node).startsWith("linux-desktop-spectrum"))
+    // Exclude monitor plumbing from the mixer to avoid recursively creating
+    // peak monitors for peak monitors. These are not application audio.
+    function isUserAudioStream(node: var): bool {
+        const name = streamDisplayName(node);
+        return !name.startsWith("linux-desktop-spectrum") && !name.startsWith("Quickshell Peak Detect");
+    }
+    readonly property var audioApplicationStreams: audioStreams.filter(node => isUserAudioStream(node))
+    readonly property var audioCaptureStreams: audioInputStreams.filter(node => isUserAudioStream(node))
 
     readonly property var outputDevices: pipewireNodes.filter(node => node && !node.isStream && node.isSink && node.audio)
     readonly property var inputDevices: pipewireNodes.filter(node => node && !node.isStream && !node.isSink && node.audio)

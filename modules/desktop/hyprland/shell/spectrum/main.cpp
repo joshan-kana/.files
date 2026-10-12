@@ -33,6 +33,12 @@ constexpr float kHighHz = 20000.0F;
 constexpr float kFloorDb = -72.0F;
 constexpr float kAttackSeconds = 0.004F;
 constexpr float kReleaseSeconds = 0.045F;
+// Short, punchy envelopes for low-frequency transients. At low frequencies,
+// narrower filters ring well after the kick; cap the Q to avoid smearing.
+constexpr float kBassCutoffHz = 250.0F;
+constexpr float kBassMaxQ = 4.0F;
+constexpr float kBassAttackSeconds = 0.002F;
+constexpr float kBassReleaseSeconds = 0.028F;
 constexpr float kRmsSeconds = 0.030F;
 constexpr unsigned kPublishHz = 120;
 
@@ -95,13 +101,16 @@ class Analyzer {
         float frequency = kLowHz;
         for (std::size_t i = 0; i < kBandCount; ++i) {
             centers_[i] = frequency;
-            filters_[i].configure(static_cast<float>(sampleRate_), frequency, q);
+            filters_[i].configure(static_cast<float>(sampleRate_), frequency,
+                                  frequency < kBassCutoffHz ? std::min(q, kBassMaxQ) : q);
             envelopes_[i] = 0.0F;
             frequency *= ratio;
         }
 
         attackAlpha_ = 1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) * kAttackSeconds));
         releaseAlpha_ = 1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) * kReleaseSeconds));
+        bassAttackAlpha_ = 1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) * kBassAttackSeconds));
+        bassReleaseAlpha_ = 1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) * kBassReleaseSeconds));
         rmsAlpha_ = 1.0F - std::exp(-1.0F / (static_cast<float>(sampleRate_) * kRmsSeconds));
         publishEveryFrames_ = std::max<uint32_t>(1, sampleRate_ / kPublishHz);
         framesSincePublish_ = 0;
@@ -128,7 +137,10 @@ class Analyzer {
 
             for (std::size_t band = 0; band < kBandCount; ++band) {
                 const float filtered = std::abs(filters_[band].process(mono));
-                const float alpha = filtered > envelopes_[band] ? attackAlpha_ : releaseAlpha_;
+                const bool bassBand = centers_[band] < kBassCutoffHz;
+                const float alpha = filtered > envelopes_[band]
+                                        ? (bassBand ? bassAttackAlpha_ : attackAlpha_)
+                                        : (bassBand ? bassReleaseAlpha_ : releaseAlpha_);
                 envelopes_[band] += (filtered - envelopes_[band]) * alpha;
             }
         }
@@ -240,6 +252,8 @@ class Analyzer {
 
     float attackAlpha_ = 0.0F;
     float releaseAlpha_ = 0.0F;
+    float bassAttackAlpha_ = 0.0F;
+    float bassReleaseAlpha_ = 0.0F;
     float rmsAlpha_ = 0.0F;
     float rmsPower_ = 0.0F;
     float peakEnvelope_ = 0.0F;
