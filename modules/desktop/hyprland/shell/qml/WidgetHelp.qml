@@ -11,6 +11,7 @@ Item {
     property bool open: false
     property string title: "Controls"
     property var bindings: []
+    property real backdropRadius: theme.radiusLarge
 
     signal dismissed
 
@@ -29,7 +30,7 @@ Item {
     SquircleSurface {
         anchors.fill: parent
         exponent: help.theme.squircleExponent
-        cornerRadius: help.theme.radiusLarge
+        cornerRadius: help.backdropRadius
         fillColor: Qt.rgba(help.theme.background.r, help.theme.background.g, help.theme.background.b, 0.68)
         borderColor: "transparent"
         borderWidth: 0
@@ -53,6 +54,7 @@ Item {
         motion: help.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: theme.radiusLarge
+        elevated: true
 
         MouseArea {
             anchors.fill: parent
@@ -99,15 +101,15 @@ Item {
                         theme: help.theme
                         motion: help.motion
                         surfaceLayer: ShellSurface.Control
-                        selected: true
                         cornerRadius: theme.radiusSmall
+                        fillColor: help.theme.selectedTabFill
 
                         KeyChord {
                             id: keyLabel
                             anchors.centerIn: parent
                             shortcut: helpBinding.modelData.key
                             fontFamily: help.runtime.fontMono
-                            textColor: help.theme.accent
+                            textColor: help.theme.text
                             fontSize: help.theme.fontSize(11)
                         }
                     }
