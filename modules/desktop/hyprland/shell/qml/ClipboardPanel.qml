@@ -15,6 +15,9 @@ PanelWindow {
     property bool closing: false
     property var entries: []
     property int selectedIndex: 0
+    property bool hideAfterCopy: false
+    property string copyFeedback: ""
+    signal copyCompleted(bool success)
 
     readonly property var filteredEntries: {
         const query = search.text.trim().toLowerCase();
@@ -61,6 +64,14 @@ PanelWindow {
 
     property Process copyProcess: Process {
         stderr: panel.copyError
+        onExited: (exitCode, exitStatus) => {
+            const success = exitCode === 0;
+            panel.copyFeedback = success ? "COPIED" : "COPY FAILED";
+            panel.copyCompleted(success);
+            if (success && panel.hideAfterCopy)
+                panel.hide();
+            panel.hideAfterCopy = false;
+        }
     }
 
     Timer {
@@ -137,6 +148,7 @@ PanelWindow {
         closeTimer.stop();
         closing = false;
         search.text = "";
+        copyFeedback = "";
         selectedIndex = 0;
         open = true;
         refresh();
@@ -161,15 +173,20 @@ PanelWindow {
             show();
     }
 
+    function copyEntry(entryId: int, closeOnSuccess: bool): bool {
+        if (runtime.clipboardCopy.length === 0 || copyProcess.running)
+            return false;
+        hideAfterCopy = closeOnSuccess;
+        copyFeedback = "COPYING";
+        copyProcess.exec([runtime.clipboardCopy, String(entryId)]);
+        return true;
+    }
+
     function activateSelected(): void {
-        if (filteredEntries.length === 0 || runtime.clipboardCopy.length === 0)
+        if (filteredEntries.length === 0)
             return;
-
         const safeIndex = Math.max(0, Math.min(selectedIndex, filteredEntries.length - 1));
-        const entry = filteredEntries[safeIndex];
-
-        copyProcess.exec([runtime.clipboardCopy, String(entry.id)]);
-        hide();
+        copyEntry(filteredEntries[safeIndex].id, true);
     }
 
     Rectangle {
