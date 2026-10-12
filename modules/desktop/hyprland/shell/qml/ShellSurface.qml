@@ -18,10 +18,11 @@ SquircleSurface {
     property bool luminous: false
     property bool hovered: false
     property color luminousColor: theme.accent
+    property real lightIntensity: 1
 
     exponent: theme.squircleExponent
     lightColor: luminousColor
-    lightStrength: luminous ? (hovered ? 0.19 : 0.105) : 0
+    lightStrength: luminous ? (hovered ? 0.19 : 0.105) * lightIntensity : 0
 
     Behavior on lightStrength {
         NumberAnimation {
