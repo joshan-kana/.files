@@ -2,6 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import Quickshell.Io
+import "Calculator.js" as Calculator
 
 PanelWindow {
     id: palette
@@ -15,6 +17,17 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    property bool copyOnSuccessClose: false
+    property string copyFeedback: ""
+
+    Process {
+        id: calculationCopy
+        onExited: (exitCode, exitStatus) => {
+            palette.copyFeedback = exitCode === 0 ? "COPIED" : "COPY FAILED";
+            if (exitCode === 0 && palette.copyOnSuccessClose)
+                palette.hide();
+        }
+    }
 
     visible: open || closing
     color: "transparent"
@@ -100,6 +113,21 @@ PanelWindow {
     function filteredItems(): var {
         const query = search.text.trim().toLowerCase();
 
+        const calculation = query.match(/^calc\s+(.+)$/);
+        if (calculation) {
+            const result = Calculator.calculate(calculation[1]);
+            return result === null ? [] : [
+                {
+                    kind: "calculation",
+                    name: "= " + result,
+                    genericName: calculation[1] + " · Enter to copy",
+                    icon: "accessories-calculator",
+                    key: "COPY",
+                    result: result
+                }
+            ];
+        }
+
         const commandItems = (commands || []).map(command => ({
                     kind: "command",
                     name: command.name,
@@ -147,6 +175,7 @@ PanelWindow {
         closing = false;
         setLauncherSubmap(true);
         search.text = "";
+        copyFeedback = "";
         open = true;
         if (resultModel.values.length === 0)
             results.currentIndex = -1;
@@ -187,6 +216,13 @@ PanelWindow {
             return;
 
         const entry = resultModel.values[results.currentIndex];
+
+        if (entry.kind === "calculation") {
+            copyFeedback = "COPYING";
+            copyOnSuccessClose = !keepOpen;
+            calculationCopy.exec(["wl-copy", "--type", "text/plain", entry.result]);
+            return;
+        }
 
         if (!keepOpen)
             hide();
@@ -346,13 +382,16 @@ PanelWindow {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: "Search apps and actions…"
+                        text: "Apps, actions, calc 2*(3+4)…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
                     }
 
-                    onTextChanged: results.currentIndex = resultModel.values.length > 0 ? 0 : -1
+                    onTextChanged: {
+                        palette.copyFeedback = "";
+                        results.currentIndex = resultModel.values.length > 0 ? 0 : -1;
+                    }
 
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Tab) {
@@ -568,7 +607,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: resultModel.values.length + " RESULTS"
+                    text: palette.copyFeedback || resultModel.values.length + " RESULTS"
                     color: theme.textMuted
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(10)
