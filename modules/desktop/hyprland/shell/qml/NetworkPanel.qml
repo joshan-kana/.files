@@ -26,6 +26,126 @@ Item {
     property var savedProfiles: []
     property int savedIndex: 0
     property string actionUuid: ""
+    property bool detailView: false
+    property bool detailConnected: false
+    property string detailName: ""
+    property string detailDevice: ""
+    property string detailType: ""
+    property string detailUuid: ""
+    property var detailRows: []
+    property bool detailError: false
+    readonly property bool detailPending: detailProcess.running
+
+    property StdioCollector detailOutput: StdioCollector {}
+    property Process detailProcess: Process {
+        stdout: panel.detailOutput
+        onExited: (exitCode, exitStatus) => {
+            if (!panel.detailView)
+                return;
+            if (exitCode !== 0) {
+                panel.detailError = true;
+                return;
+            }
+            panel.detailRows = panel.parseLinkDetails(panel.detailOutput.text);
+            panel.detailError = panel.detailRows.length === 0;
+        }
+    }
+
+    function parseLinkDetails(source: string): var {
+        const all = [];
+        let info = null;
+        for (const line of source.split("\n")) {
+            const fields = splitNmcli(line);
+            if (fields.length < 2)
+                continue;
+            const field = fields[0].replace(/\[\d+\]$/, "");
+            const value = fields.slice(1).join(":").trim();
+            if (field === "GENERAL.DEVICE") {
+                info = {
+                    name: value,
+                    properties: {}
+                };
+                all.push(info);
+            }
+            if (info && value.length > 0) {
+                if (!info.properties[field])
+                    info.properties[field] = [];
+                info.properties[field].push(value);
+            }
+        }
+        const current = all.find(device => device.name === detailDevice) || all.find(device => (device.properties["GENERAL.CONNECTION"] || []).includes(detailName)) || (detailDevice.length === 0 ? all.find(device => (device.properties["GENERAL.STATE"] || []).some(value => value.startsWith("100"))) : null);
+        if (!current)
+            return [];
+        const values = current.properties;
+        const result = [];
+        const add = (label, property, maximum) => {
+            const matches = (values[property] || []).slice(0, maximum);
+            if (matches.length > 0)
+                result.push({
+                    label,
+                    value: matches.join(" · ")
+                });
+        };
+        add("DEVICE", "GENERAL.DEVICE", 1);
+        add("CONNECTION", "GENERAL.CONNECTION", 1);
+        add("STATUS", "GENERAL.STATE", 1);
+        add("IPv4", "IP4.ADDRESS", 2);
+        add("GATEWAY", "IP4.GATEWAY", 1);
+        add("DNS", "IP4.DNS", 3);
+        add("IPv6", "IP6.ADDRESS", 2);
+        add("IPv6 GATEWAY", "IP6.GATEWAY", 1);
+        add("IPv6 DNS", "IP6.DNS", 2);
+        add("MAC", "GENERAL.HWADDR", 1);
+        add("MTU", "GENERAL.MTU", 1);
+        return result;
+    }
+
+    function refreshDetails(): void {
+        if (!detailView || !detailConnected || runtime.nmcli.length === 0 || detailProcess.running)
+            return;
+        detailError = false;
+        detailProcess.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", "GENERAL.DEVICE,GENERAL.CONNECTION,GENERAL.STATE,GENERAL.HWADDR,GENERAL.MTU,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,IP6.GATEWAY,IP6.DNS", "device", "show"]);
+    }
+
+    function toggleDetailView(): void {
+        if (passwordPrompt)
+            return;
+        if (detailView) {
+            detailView = false;
+            detailRows = [];
+            keyboardRequested();
+            return;
+        }
+        const profile = savedView ? savedSelected : selectedNetwork();
+        detailName = profile ? profile.name : system.networkName;
+        detailDevice = savedView && profile && profile.connected ? profile.device : "";
+        detailType = savedView && profile ? profile.label : system.wifiAvailable ? "WI-FI" : "WIRED";
+        detailUuid = savedView && profile ? profile.uuid : "";
+        detailConnected = profile ? Boolean(profile.connected) : system.networkConnected;
+        detailRows = detailConnected ? [] : [
+            {
+                label: "PROFILE",
+                value: detailName || "UNAVAILABLE"
+            },
+            {
+                label: "TYPE",
+                value: detailType
+            },
+            {
+                label: "STATUS",
+                value: "DISCONNECTED"
+            },
+            {
+                label: "UUID",
+                value: detailUuid || "NO PROFILE"
+            }
+        ];
+        detailError = false;
+        detailView = true;
+        refreshDetails();
+        keyboardRequested();
+    }
+
     readonly property bool actionBusy: profileAction.running
     readonly property var savedSelected: savedProfiles.length > 0 ? savedProfiles[Math.max(0, Math.min(savedIndex, savedProfiles.length - 1))] : null
 
@@ -53,6 +173,8 @@ Item {
             panel.statusError = exitCode !== 0;
             panel.actionUuid = "";
             panel.refreshSaved();
+            if (panel.detailView)
+                panel.refreshDetails();
         }
     }
 
@@ -107,6 +229,7 @@ Item {
     function toggleSavedView(): void {
         if (passwordPrompt)
             return;
+        detailView = false;
         savedView = !savedView;
         statusText = "";
         statusError = false;
@@ -129,7 +252,7 @@ Item {
     readonly property var networks: system.wifiNetworks || []
     readonly property bool passwordPrompt: pendingNetwork !== null
 
-    implicitHeight: header.height + panel.theme.spacing3 * 2 + (savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
+    implicitHeight: header.height + panel.theme.spacing3 * 2 + (detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
     visible: open
 
     function selectedNetwork(): var {
@@ -156,6 +279,7 @@ Item {
         statusError = false;
         selectedIndex = selectedNetworkIndex();
         savedView = false;
+        detailView = false;
         savedIndex = 0;
 
         if (system.wifiDevice)
@@ -173,11 +297,17 @@ Item {
         statusText = "";
         statusError = false;
         savedView = false;
+        detailView = false;
+        detailRows = [];
         open = false;
         keyboardRequested();
     }
 
     function moveHalfPage(direction: int): void {
+        if (detailView) {
+            detailList.contentY = Math.max(0, Math.min(detailList.contentHeight - detailList.height, detailList.contentY + direction * detailList.height / 2));
+            return;
+        }
         if (savedView) {
             savedIndex = Math.max(0, Math.min(savedProfiles.length - 1, savedIndex + direction * 4));
             return;
@@ -188,6 +318,10 @@ Item {
     }
 
     function moveSelection(delta: int): void {
+        if (detailView) {
+            detailList.contentY = Math.max(0, Math.min(detailList.contentHeight - detailList.height, detailList.contentY + delta * 64));
+            return;
+        }
         if (savedView) {
             savedIndex = Math.max(0, Math.min(savedProfiles.length - 1, savedIndex + delta));
             return;
@@ -241,6 +375,8 @@ Item {
     }
 
     function activateSelected(): void {
+        if (detailView)
+            return;
         if (savedView) {
             activateSaved();
             return;
@@ -302,11 +438,11 @@ Item {
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion
-        glyph: panel.system.wifiConnected ? "󰤨" : panel.system.networkConnected ? "󰈀" : "󰤭"
+        glyph: panel.detailView ? "󰋼" : panel.system.wifiConnected ? "󰤨" : panel.system.networkConnected ? "󰈀" : "󰤭"
         glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
         eyebrow: "Connectivity / " + panel.system.connectivityText
-        title: panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
-        detail: panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
+        title: panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
+        detail: panel.detailView ? panel.detailName + " · " + panel.detailType : panel.savedView ? panel.savedProfiles.length + " NetworkManager profiles · VPN / Wi-Fi" : panel.system.networkConnected ? panel.system.networkName : "No active network"
     }
 
     Item {
@@ -325,7 +461,7 @@ Item {
             id: networkList
 
             anchors.fill: parent
-            visible: !panel.savedView && panel.system.wifiAvailable && panel.system.wifiEnabled && !panel.passwordPrompt
+            visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable && panel.system.wifiEnabled && !panel.passwordPrompt
             model: panel.networks
             spacing: panel.theme.spacing2
             clip: true
@@ -445,7 +581,7 @@ Item {
         ListView {
             id: savedList
             anchors.fill: parent
-            visible: panel.savedView
+            visible: panel.savedView && !panel.detailView
             model: panel.savedProfiles
             currentIndex: panel.savedIndex
             spacing: panel.theme.spacing2
@@ -522,6 +658,76 @@ Item {
                         font.pixelSize: panel.theme.fontSize(9)
                     }
                 }
+            }
+        }
+
+        ListView {
+            id: detailList
+            anchors.fill: parent
+            visible: panel.detailView
+            model: panel.detailRows
+            spacing: panel.theme.spacing2
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            delegate: ShellSurface {
+                id: detailRow
+                required property var modelData
+                width: ListView.view.width
+                height: 52
+                theme: panel.theme
+                motion: panel.motion
+                surfaceLayer: ShellSurface.Control
+                cornerRadius: panel.theme.radiusMedium
+                Row {
+                    anchors {
+                        fill: parent
+                        margins: panel.theme.spacing3
+                    }
+                    spacing: panel.theme.spacing3
+                    Text {
+                        width: 115
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: detailRow.modelData.label
+                        color: panel.theme.accent
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - 115 - parent.spacing)
+                        text: detailRow.modelData.value
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                        color: panel.theme.textStrong
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(11)
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+            }
+        }
+
+        Column {
+            anchors.centerIn: parent
+            visible: panel.detailView && panel.detailRows.length === 0
+            spacing: panel.theme.spacing3
+            width: parent.width
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: panel.detailPending ? "READING NETWORKMANAGER…" : panel.detailError ? "CONNECTION DETAILS UNAVAILABLE" : "NO ACTIVE INTERFACE"
+                color: panel.detailError ? panel.theme.warning : panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(10)
+            }
+            Text {
+                width: parent.width
+                text: panel.detailUuid.length ? "PROFILE  " + panel.detailUuid : "DETAILS ARE READ-ONLY"
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(9)
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
             }
         }
 
@@ -623,7 +829,7 @@ Item {
                 right: parent.right
             }
             height: 160
-            visible: !panel.savedView && !panel.system.wifiAvailable && !panel.passwordPrompt
+            visible: !panel.detailView && !panel.savedView && !panel.system.wifiAvailable && !panel.passwordPrompt
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -665,7 +871,7 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            visible: !panel.savedView && panel.system.wifiAvailable && !panel.system.wifiEnabled && !panel.passwordPrompt
+            visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable && !panel.system.wifiEnabled && !panel.passwordPrompt
             width: parent.width
             text: panel.system.wifiHardwareEnabled ? "WI-FI RADIO DISABLED // PRESS W" : "WI-FI DISABLED BY HARDWARE"
             horizontalAlignment: Text.AlignHCenter
@@ -704,7 +910,7 @@ Item {
             spacing: panel.theme.spacing4
 
             Text {
-                visible: panel.savedView || panel.system.wifiAvailable
+                visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
                 text: "↑↓  SELECT   ENTER  JOIN/DROP"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
@@ -713,7 +919,7 @@ Item {
             }
 
             Text {
-                visible: !panel.savedView && panel.system.wifiAvailable
+                visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable
                 text: "W  WI-FI"
                 color: panel.theme.accent
                 font.family: panel.runtime.fontMono
@@ -722,6 +928,7 @@ Item {
             }
 
             Text {
+                visible: !panel.detailView
                 text: panel.savedView ? "P  SCAN" : "P  SAVED"
                 color: panel.theme.accent
                 font.family: panel.runtime.fontMono
@@ -730,8 +937,32 @@ Item {
             }
 
             Text {
-                visible: panel.savedView
+                visible: panel.savedView && !panel.detailView
                 text: "R  REFRESH"
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontKeyHint
+            }
+
+            ShellAction {
+                width: 111
+                height: 30
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: panel.detailView ? "󰅌" : "󰋼"
+                title: panel.detailView ? "BACK" : "DETAILS"
+                shortcut: "I"
+                active: panel.detailView
+                onActivated: panel.toggleDetailView()
+            }
+
+            Text {
+                visible: panel.detailView
+                text: "R  REFRESH  ·  J/K SCROLL"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontKeyHint
