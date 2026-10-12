@@ -85,6 +85,10 @@
       environment.systemPackages = [ pkgs.ninja ];
     };
 
+    nixd = { pkgs, ... }: {
+      environment.systemPackages = [ pkgs.nixd ];
+    };
+
     sevenzip = { pkgs, ... }: {
       environment.systemPackages = [ pkgs._7zz ];
     };
