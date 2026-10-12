@@ -31,6 +31,7 @@ QtObject {
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
     readonly property string colourPicker: root.configData.tools.colourPicker
+    readonly property string nightLightControl: root.configData.tools.nightLightControl
 
     readonly property string fontMono: root.configData.fonts.mono
 
@@ -135,6 +136,7 @@ QtObject {
                 property string wallpaperLibrary: ""
                 property string recordingToggle: ""
                 property string colourPicker: ""
+                property string nightLightControl: ""
             }
 
             property var keybindings: []
