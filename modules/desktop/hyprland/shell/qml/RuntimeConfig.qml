@@ -32,6 +32,7 @@ QtObject {
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
+    readonly property string recordingLibrary: root.configData.tools.recordingLibrary
     readonly property string frozenCapture: root.configData.tools.frozenCapture
     readonly property string colourPicker: root.configData.tools.colourPicker
     readonly property string nightLightControl: root.configData.tools.nightLightControl
@@ -140,6 +141,7 @@ QtObject {
                 property string themeSet: ""
                 property string wallpaperLibrary: ""
                 property string recordingToggle: ""
+                property string recordingLibrary: ""
                 property string frozenCapture: ""
                 property string colourPicker: ""
                 property string nightLightControl: ""
