@@ -743,13 +743,9 @@ in
           pkgs.libnotify
         ];
         text = ''
-          selected="$(hyprpicker --format=hex --quiet)" || exit 0
-          if ! [[ "$selected" =~ ^#[[:xdigit:]]{6}$ ]]; then
-            printf 'Colour picker returned an invalid colour\n' >&2
-            exit 1
-          fi
-          printf '%s' "$selected" | wl-copy --type text/plain
-          notify-send --app-name=linux-desktop "Colour copied" "$selected"
+          # Let the picker own cancellation, clipboard copying and confirmation.
+          # Its normal stdout is colour-styled, not a plain HEX token.
+          exec hyprpicker --format=hex --no-fancy --autocopy --notify
         '';
       };
 
