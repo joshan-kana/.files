@@ -33,16 +33,6 @@ let
         ;
     };
 
-  mkMeh =
-    args:
-    mk (
-      args
-      // {
-        mainMod = false;
-        mehMod = true;
-      }
-    );
-
   exec = value: {
     type = "exec";
     inherit value;
@@ -132,51 +122,59 @@ let
     };
 in
 [
-  (mkMeh {
-    keys = "1";
+  (mk {
+    keys = "SUPER + ALT + 1";
+    mainMod = false;
     id = "terminal.open";
     action = exec terminal;
     section = "APPS";
     description = "Terminal";
   })
-  (mkMeh {
-    keys = "2";
+  (mk {
+    keys = "SUPER + ALT + 2";
+    mainMod = false;
     action = exec "spotify";
     section = "APPS";
     description = "Spotify";
   })
-  (mkMeh {
-    keys = "3";
+  (mk {
+    keys = "SUPER + ALT + 3";
+    mainMod = false;
     action = exec "brave";
     section = "APPS";
     description = "Brave";
   })
-  (mkMeh {
-    keys = "4";
+  (mk {
+    keys = "SUPER + ALT + 4";
+    mainMod = false;
     action = exec "floorp";
     section = "APPS";
     description = "Floorp";
   })
-  (mkMeh {
-    keys = "5";
+  (mk {
+    keys = "SUPER + ALT + 5";
+    mainMod = false;
     action = exec "thunderbird";
     section = "APPS";
     description = "Thunderbird";
   })
-  (mkMeh {
-    keys = "6";
+  (mk {
+    keys = "SUPER + ALT + 6";
+    mainMod = false;
     action = exec "code";
     section = "APPS";
     description = "Visual Studio Code";
   })
-  (mkMeh {
-    keys = "7";
+  (mk {
+    keys = "SUPER + ALT + 7";
+    mainMod = false;
     action = exec "obsidian --disable-gpu";
     section = "APPS";
     description = "Obsidian";
   })
-  (mkMeh {
-    keys = "E";
+  (mk {
+    keys = "SUPER + ALT + E";
+    mainMod = false;
     action = exec "nautilus";
     section = "APPS";
     description = "Files";
@@ -188,8 +186,9 @@ in
     section = "AUDIO & MEDIA";
     description = "Application mixer";
   })
-  (mkMeh {
-    keys = "V";
+  (mk {
+    keys = "SUPER + ALT + V";
+    mainMod = false;
     action = exec "[float] easyeffects";
     section = "AUDIO & MEDIA";
     description = "Audio effects";
