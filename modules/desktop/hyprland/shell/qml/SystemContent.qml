@@ -1480,7 +1480,10 @@ FocusScope {
                         return;
 
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        networkPanel.closeView();
+                        if (networkPanel.detailView)
+                            networkPanel.toggleDetailView();
+                        else
+                            networkPanel.closeView();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         networkPanel.moveSelection(-1);
@@ -1494,10 +1497,16 @@ FocusScope {
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         networkPanel.activateSelected();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_P) {
+                    } else if (event.key === Qt.Key_I) {
+                        networkPanel.toggleDetailView();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_R && networkPanel.detailView) {
+                        networkPanel.refreshDetails();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_P && !networkPanel.detailView) {
                         networkPanel.toggleSavedView();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_R && networkPanel.savedView) {
+                    } else if (event.key === Qt.Key_R && networkPanel.savedView && !networkPanel.detailView) {
                         networkPanel.refreshSaved();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_W && !networkPanel.savedView) {
