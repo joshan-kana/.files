@@ -17,7 +17,7 @@ Item {
     property string shortcut: ""
     property bool connected: false
     property color signalColor: connected ? theme.accent : theme.textMuted
-    readonly property color foreground: connected ? theme.background : theme.textStrong
+    readonly property color foreground: theme.textStrong
 
     signal activated
 
@@ -43,7 +43,7 @@ Item {
         luminous: true
         luminousColor: tile.theme.accent
         hovered: interaction.containsMouse
-        fillColor: tile.connected ? tile.theme.accent : tile.theme.expressiveSurfaceStrong
+        fillColor: tile.connected ? Qt.tint(tile.theme.surfaceRaised, Qt.rgba(tile.theme.accent.r, tile.theme.accent.g, tile.theme.accent.b, 0.58)) : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
             id: glyphSurface
@@ -58,7 +58,7 @@ Item {
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: tile.theme.radiusMedium
-            fillColor: tile.connected ? Qt.rgba(tile.theme.background.r, tile.theme.background.g, tile.theme.background.b, 0.17) : tile.theme.expressiveSurface
+            fillColor: tile.connected ? Qt.rgba(tile.theme.textStrong.r, tile.theme.textStrong.g, tile.theme.textStrong.b, 0.14) : tile.theme.expressiveSurface
 
             Text {
                 anchors.centerIn: parent

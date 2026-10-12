@@ -789,7 +789,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 182 : 155
+                    height: root.media.available ? 204 : 156
                     visible: true
                     theme: root.theme
                     motion: root.motion
@@ -832,12 +832,12 @@ FocusScope {
 
                         Row {
                             width: parent.width
-                            height: 48
+                            height: 60
                             spacing: root.theme.spacing3
 
                             ShellSurface {
-                                width: 48
-                                height: 48
+                                width: 60
+                                height: 60
                                 theme: root.theme
                                 motion: root.motion
                                 surfaceLayer: ShellSurface.Control
@@ -864,7 +864,7 @@ FocusScope {
                             }
 
                             Column {
-                                width: Math.max(1, parent.width - 48 - parent.spacing - root.theme.spacing5)
+                                width: Math.max(1, parent.width - 60 - (root.media.available ? mediaInlineTransport.width : 0) - parent.spacing * (root.media.available ? 2 : 1) - root.theme.spacing2)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
@@ -882,7 +882,7 @@ FocusScope {
                                     width: parent.width
                                     color: root.theme.textStrong
                                     font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(13)
+                                    font.pixelSize: root.theme.fontSize(16)
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -897,26 +897,24 @@ FocusScope {
                                     elide: Text.ElideRight
                                 }
                             }
-                        }
-
-                        Item {
-                            width: parent.width
-                            height: root.media.available ? 40 : 0
-                            visible: root.media.available
 
                             MediaTransport {
-                                anchors.centerIn: parent
+                                id: mediaInlineTransport
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: root.media.available
+                                width: root.media.available ? implicitWidth : 0
                                 media: root.media
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
                                 compact: true
+                                minimal: true
                             }
                         }
 
                         Item {
                             width: parent.width
-                            height: 56
+                            height: root.media.available ? 94 : 60
                             visible: true
 
                             SpectrumScale {
