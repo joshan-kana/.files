@@ -1,9 +1,11 @@
 { lib, system, ... }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isLinux isDarwin;
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
+  darwinOnly =
+    scope: lib.setFunctionArgs (args: lib.optionalAttrs isDarwin (scope args)) (lib.functionArgs scope);
 in
 lib.optionalAttrs isLinux {
   # Shared graphical-session infrastructure. Applications, audio, and
@@ -36,4 +38,4 @@ lib.optionalAttrs isLinux {
   */
   gnome = linuxOnly (import ./gnome);
 }
-// lib.optionalAttrs (lib.systems.elaborate system).isDarwin (import ./darwin.nix)
+// lib.mapAttrs (_: darwinOnly) (import ./darwin.nix)

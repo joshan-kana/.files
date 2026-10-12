@@ -10,6 +10,8 @@ let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
   linuxOnly =
     scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
+  darwinOnly =
+    scope: lib.setFunctionArgs (args: lib.optionalAttrs isDarwin (scope args)) (lib.functionArgs scope);
 in
 {
   brave = _: {
@@ -217,4 +219,4 @@ in
   };
 
 }
-// lib.optionalAttrs isDarwin (import ./darwin.nix)
+// lib.mapAttrs (_: darwinOnly) (import ./darwin.nix)
