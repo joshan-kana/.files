@@ -9,6 +9,7 @@ Item {
     required property Theme theme
     required property Motion motion
     property bool compact: false
+    property bool minimal: false
 
     implicitWidth: buttons.implicitWidth
     implicitHeight: buttons.implicitHeight
@@ -23,42 +24,49 @@ Item {
                     label: "◀",
                     hint: ",",
                     enabled: root.media.canGoPrevious,
-                    action: "previous"
+                    action: "previous",
+                    glyph: "󰒮"
                 },
                 {
                     label: "−5s",
                     hint: root.compact ? "⇧H" : "←",
                     enabled: root.media.seekable,
-                    action: "back"
+                    action: "back",
+                    glyph: "󰒫"
                 },
                 {
                     label: root.media.playing ? "Pause" : "Play",
                     hint: "Space",
                     enabled: root.media.canTogglePlaying,
-                    action: "play"
+                    action: "play",
+                    glyph: root.media.playing ? "󰏤" : "󰐊"
                 },
                 {
                     label: "+5s",
                     hint: root.compact ? "⇧L" : "→",
                     enabled: root.media.seekable,
-                    action: "forward"
+                    action: "forward",
+                    glyph: "󰒬"
                 },
                 {
                     label: "▶",
                     hint: ".",
                     enabled: root.media.canGoNext,
-                    action: "next"
+                    action: "next",
+                    glyph: "󰒭"
                 }
             ]
 
             delegate: ShellAction {
                 required property var modelData
-                width: modelData.action === "play" ? 108 : (root.compact ? 72 : 76)
-                height: 40
+                width: root.minimal ? (modelData.action === "play" ? 45 : 34) : modelData.action === "play" ? 108 : (root.compact ? 72 : 76)
+                height: root.minimal ? 36 : 40
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
                 compact: true
+                iconOnly: root.minimal
+                icon: modelData.glyph
                 title: modelData.label
                 shortcut: modelData.hint
                 active: modelData.action === "play" && root.media.playing
