@@ -416,6 +416,26 @@ in
   })
 
   (mk {
+    keys = "Caps_Lock";
+    mainMod = false;
+    id = "keyboard.capsLock";
+    action = global "linux-desktop:keyboard-caps-lock";
+    flags.non_consuming = true;
+    section = "KEYBOARD";
+    description = "Report compositor Caps Lock state";
+    cheatsheet = false;
+  })
+  (mk {
+    keys = "Num_Lock";
+    mainMod = false;
+    id = "keyboard.numLock";
+    action = global "linux-desktop:keyboard-num-lock";
+    flags.non_consuming = true;
+    section = "KEYBOARD";
+    description = "Report compositor Num Lock state";
+    cheatsheet = false;
+  })
+  (mk {
     keys = "XF86AudioRaiseVolume";
     mainMod = false;
     id = "audio.volumeUp";
