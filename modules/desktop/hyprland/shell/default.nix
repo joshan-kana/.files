@@ -731,6 +731,7 @@ in
           clipboardPreview = lib.getExe clipboardPreview;
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
+          nmcli = lib.getExe' pkgs.networkmanager "nmcli";
           powerprofilesctl = lib.getExe' pkgs.power-profiles-daemon "powerprofilesctl";
           powerprofilesMonitor = lib.getExe' pkgs.dbus "dbus-monitor";
           sessionCommand = lib.getExe sessionCommand;
