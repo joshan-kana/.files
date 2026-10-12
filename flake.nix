@@ -300,7 +300,7 @@
             else if isLinux then
               "nixosModules"
             else
-              throw "Unsupported host platform: ${system}";
+              null;
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
@@ -313,7 +313,7 @@
             else if isLinux then
               nixpkgsInput.lib.nixosSystem
             else
-              throw "Unsupported host platform: ${system}";
+              null;
         in
         systemConstructor {
           inherit system;

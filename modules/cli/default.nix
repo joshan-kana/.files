@@ -140,7 +140,7 @@ in
           else if isLinux then
             ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS''
           else
-            throw "Unsupported host platform: ${system}";
+            null;
       };
       aliases = {
         syscd = commands.cd;

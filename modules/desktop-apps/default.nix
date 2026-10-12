@@ -33,7 +33,7 @@ in
         else if isLinux then
           [ pkgs.mullvad-vpn ]
         else
-          throw "Unsupported host platform: ${system}";
+          [ ];
     }
     // lib.optionalAttrs isLinux {
       services.mullvad-vpn.enable = true;
@@ -60,7 +60,7 @@ in
         else if isLinux then
           ".mozilla/firefox"
         else
-          throw "Unsupported host platform: ${system}";
+          null;
     };
   };
 
@@ -143,7 +143,7 @@ in
       else if isLinux then
         [ pkgs.libreoffice ]
       else
-        throw "Unsupported host platform: ${system}";
+        [ ];
   };
 
   sunshine = _: {
@@ -168,7 +168,7 @@ in
       else if isLinux then
         [ pkgs.vlc ]
       else
-        throw "Unsupported host platform: ${system}";
+        [ ];
   };
 
   mopidy = _: {
