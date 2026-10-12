@@ -31,8 +31,6 @@ done
 
 ## Recover host secrets
 
-{{#include ../_shared/secrets-recovery-prerequisites.inc}}
-
 Skip this section when `SECRETS_BACKUP_ENABLED=false`. Otherwise stage the
 external bootstrap files in `/tmp` under the filenames expected by the
 generated environment, then install them with private permissions:

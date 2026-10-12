@@ -1,7 +1,5 @@
 ## Restore existing host secrets when applicable
 
-{{#include secrets-recovery-prerequisites.inc}}
-
 `SECRETS_BACKUP_ENABLED` comes from the evaluated target configuration. If it is `false`, skip this section.
 
 For a host with secrets backup enabled, copy its external bootstrap files into the installer as `/tmp/rclone.conf` and `/tmp/secrets-restic-password`:
