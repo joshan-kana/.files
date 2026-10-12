@@ -163,7 +163,7 @@ jobs:
           HOST_PROFILE: ${{ matrix.profile }}
         run: |
           if [[ "$HOST_KIND" == darwin ]]; then
-            sudo install -d -m 1777 /nix/build
+            sudo install -d -m 0755 /nix/build
             installable=".#darwinConfigurations.$HOST_PROFILE.system"
           else
             installable=".#nixosConfigurations.$HOST_PROFILE.config.system.build.toplevel"
