@@ -15,6 +15,10 @@
   dotfiles.users.primary.homeRoot = "/Users";
 
   system = extendScope moduleRegistry.system {
+    authentication = _: {
+      security.pam.services.sudo_local.touchIdAuth = true;
+    };
+
     preferences = _: {
       system.defaults = {
         dock = {
