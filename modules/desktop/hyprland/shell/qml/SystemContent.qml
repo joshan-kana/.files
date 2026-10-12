@@ -1436,7 +1436,13 @@ FocusScope {
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         networkPanel.activateSelected();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_W) {
+                    } else if (event.key === Qt.Key_P) {
+                        networkPanel.toggleSavedView();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_R && networkPanel.savedView) {
+                        networkPanel.refreshSaved();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_W && !networkPanel.savedView) {
                         networkPanel.toggleWifi();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_A) {
