@@ -14,10 +14,8 @@
 
   dotfiles.users.primary.homeRoot = "/Users";
 
-  system =
-    args@{ config, ... }:
-    (moduleRegistry.system args)
-    // {
+  system = extendScope moduleRegistry.system {
+    preferences = _: {
       system.defaults = {
         dock = {
           autohide = true;
@@ -30,12 +28,16 @@
           InitialKeyRepeat = 15;
         };
       };
+    };
+
+    homeManager = { config, ... }: {
       home-manager = {
         backupFileExtension = "before-nix";
         extraSpecialArgs.configurationName = config.dotfiles.profile.name;
         sharedModules = [ ../../modules/options ];
       };
     };
+  };
 
   cli = extendScope moduleRegistry.cli {
     automake = { pkgs, ... }: {
