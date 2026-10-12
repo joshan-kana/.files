@@ -2,7 +2,7 @@ local hs = _G.hs
 
 -- Shared yabai command wrappers used by init.lua and feature modules.
 
-local YABAI = "/run/current-system/sw/bin/yabai -m "
+local YABAI = string.format("%q -m ", require("nix_runtime").yabai)
 local M = {}
 
 --- Run a yabai command, discarding output.

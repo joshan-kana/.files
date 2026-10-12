@@ -3,7 +3,6 @@ local hs = _G.hs
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
-require("theme").apply("framer") -- Set default theme (change to "tokyo-night" etc.)
 
 -- Sticky Hyper mode
 -- hyper+tab toggles a modal in which bare keys act as hyper bindings.

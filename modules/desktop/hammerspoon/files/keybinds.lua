@@ -22,6 +22,36 @@ local cheatsheet = require("cheatsheet")
 local app_switcher = require("app_switcher")
 local space_stash = require("space_stash")
 
+local QUICK_ACCESS = "hs-quick-access"
+
+local function quickSpace()
+	local spaces = yabai_utils.json("query --spaces") or {}
+	local before = {}
+	for _, space in ipairs(spaces) do
+		if space.label == QUICK_ACCESS then
+			return space
+		end
+		before[space.uuid] = true
+	end
+
+	local current = yabai_utils.json("query --spaces --space")
+	if not current or not yabai_utils.ok("space --create " .. current.display) then
+		hs.alert.show("Cannot create quick workspace (check yabai scripting addition)")
+		return nil
+	end
+
+	for _, space in ipairs(yabai_utils.json("query --spaces") or {}) do
+		if not before[space.uuid] then
+			if yabai_utils.ok("space " .. space.index .. " --label " .. QUICK_ACCESS) then
+				return space
+			end
+			break
+		end
+	end
+	hs.alert.show("Could not label quick workspace")
+	return nil
+end
+
 local bindings = {
 	-- Free AltTab-style canvas switcher
 	{
@@ -183,11 +213,16 @@ local bindings = {
 		mods = "hyper",
 		key = "s",
 		fn = function()
-			local space = yabai_utils.json("query --spaces --space")
-			if space then
-				yabai_utils.exec(
-					"space --focus " .. (space.label == "hs-quick-access" and "recent" or "hs-quick-access")
-				)
+			local current = yabai_utils.json("query --spaces --space")
+			if current then
+				if current.label == QUICK_ACCESS then
+					yabai_utils.ok("space --focus recent")
+				else
+					local target = quickSpace()
+					if target then
+						yabai_utils.ok("space --focus " .. target.index)
+					end
+				end
 			end
 		end,
 		section = "DISPLAYS & SPACES",
@@ -196,7 +231,15 @@ local bindings = {
 	{
 		mods = "hyper + shift",
 		key = "s",
-		cmd = "window --space hs-quick-access",
+		fn = function()
+			local win = yabai_utils.json("query --windows --window")
+			if win then
+				local target = quickSpace()
+				if target and not yabai_utils.windowCmd(win.id, "--space " .. target.index) then
+					hs.alert.show("Could not send window to quick workspace")
+				end
+			end
+		end,
 		section = "DISPLAYS & SPACES",
 		desc = "Send window to quick workspace",
 	},
