@@ -639,6 +639,7 @@ in
           agendaSetup = lib.getExe agendaSetup;
           brightnessctl = lib.getExe pkgs.brightnessctl;
           cliphist = lib.getExe pkgs.cliphist;
+          emojiTest = "${pkgs.unicode-emoji}/share/unicode/emoji/emoji-test.txt";
           clipboardCopy = lib.getExe clipboardCopy;
           lockSession = lib.getExe lockCommand;
           networkConnectionEditor = lib.getExe' pkgs.networkmanagerapplet "nm-connection-editor";
