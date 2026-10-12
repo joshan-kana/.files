@@ -16,13 +16,13 @@ ShellSurface {
 
     implicitHeight: 126
     surfaceLayer: ShellSurface.Group
-    fillColor: theme.expressiveSurfaceStrong
+    fillColor: Qt.tint(theme.surfaceRaised, Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.21))
     cornerRadius: theme.radiusLarge
 
     ShellSurface {
         id: iconTile
-        width: 74
-        height: 74
+        width: 68
+        height: 68
         anchors {
             left: parent.left
             leftMargin: hero.theme.spacing4
@@ -32,7 +32,7 @@ ShellSurface {
         motion: hero.motion
         surfaceLayer: ShellSurface.Control
         cornerRadius: hero.theme.radiusMedium
-        fillColor: Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.17)
+        fillColor: Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.19)
 
         Text {
             anchors.centerIn: parent
