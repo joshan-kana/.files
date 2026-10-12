@@ -750,8 +750,15 @@ let
     let
       inherit (host) config;
       primary = config.dotfiles.users.primary;
+      homeManager = config.home-manager;
+      launchAgents = homeManager.users.${primary.name}.launchd.agents;
+      agentLabel = name: launchAgents.${name}.config.Label;
     in
     ''
+      export BACKUP_JOB_LABEL=${lib.escapeShellArg (agentLabel "secrets-backup")}
+      export BACKUP_MAINTENANCE_JOB_LABEL=${lib.escapeShellArg (agentLabel "secrets-backup-maintenance")}
+      export ATTIC_WATCH_JOB_LABEL=${lib.escapeShellArg (agentLabel "attic-watch-store")}
+      export HOME_MANAGER_BACKUP_EXTENSION=${lib.escapeShellArg homeManager.backupFileExtension}
       export HOST_NAME=${lib.escapeShellArg name}
       export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
       export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}

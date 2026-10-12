@@ -1,109 +1,87 @@
 # Installation guide for `mac`
 
-`mac` is the nix-darwin configuration for the existing MacBook. This is an
-in-place migration, not a macOS reinstall. Keep the current applications,
-secrets, and working services until their declarative replacements have been
-verified. Do not activate this configuration unattended.
+This guide installs the evaluated nix-darwin host configuration. Use a local
+terminal with administrator access and a working Nix daemon.
 
 ## Current evaluated target
 
-The built manual generates these values from `darwinConfigurations.mac`. Load
-them in the Mac shell before running commands that reference the variables:
+Load the generated host environment in the shell before running the commands
+below:
 
 ```sh
 {{#include ../../generated/hosts/mac.sh}}
 ```
 
-## Prepare the Mac
+## Prepare the target
 
-Install a working Nix daemon first (the configuration uses Determinate Nix),
-then make sure the `.files` checkout and its submodules are available at
-`$DOTFILES_REPO`. Verify the target before making changes:
+Check out the configuration and its submodules at the evaluated repository path,
+then verify the host target:
 
 ```sh
 cd "$DOTFILES_REPO"
-nix eval --raw .#darwinConfigurations.mac.config.system.build.toplevel.drvPath
-nix eval --raw .#darwinConfigurations.mac.config.dotfiles.paths.repoPath
+nix eval --raw ".#darwinConfigurations.${HOST_NAME}.config.system.build.toplevel.drvPath"
 ```
 
-Before the first switch:
+Before installation, verify that a recent backup can be restored and that the
+host's private secrets, backup credentials, Comin credentials, and cache token
+are available. The backup and deployment modules define which runtime files
+these services require; keep the credentials outside the Nix store.
 
-1. Verify a current Time Machine backup and a recoverable encrypted secrets
-   snapshot. Keep the original backup scripts and LaunchAgent plists for
-   rollback. Do not initialize a new Restic repository when recovering the
-   existing one.
-2. Restore the runtime backup credentials under
-   `~/Library/Application Support/SecretsBackup`, and provision the Comin SSH
-   deploy key and Attic upload token through the existing private secrets
-   recovery process. Never put credential contents in Git or the Nix store.
-3. Preserve the existing Hammerspoon, yabai, Karabiner, SSH, Tailscale and
-   application settings. Check system-extension and Accessibility permissions,
-   and arrange physical-console access before changing remote-access services.
-4. Review the existing secrets-backup LaunchAgents. The replacement agents use
-   the same labels; the old agents must not remain loaded alongside them.
-
-Inspect the existing backup launchd jobs:
+Check for already loaded backup jobs before enabling their declarative
+replacements:
 
 ```sh
-launchctl list | grep 'com.joshankana.secrets-backup' || true
+launchctl list | grep -F "$BACKUP_JOB_LABEL" || true
+launchctl list | grep -F "$BACKUP_MAINTENANCE_JOB_LABEL" || true
 ```
 
-## Build the configuration
+If existing backup jobs are loaded, preserve their plists for recovery and
+unload them before switching. Do not initialize or overwrite an existing Restic
+repository.
 
-From the repository checkout:
+## Build
 
 ```sh
+cd "$DOTFILES_REPO"
 nix flake check --no-build
-nix build --no-link .#darwinConfigurations.mac.system
+nix build --no-link ".#darwinConfigurations.${HOST_NAME}.system"
 ```
-
-Review the evaluated changes before switching. In the same maintenance session,
-retain recovery copies of the old backup LaunchAgent plists, unload the existing
-backup jobs, and remove their plists from `~/Library/LaunchAgents` so they do
-not restart at login. Keep the original files available for rollback.
 
 ## Install
 
-For the first activation, when `darwin-rebuild` is not yet on `PATH`:
+For the first activation, when `darwin-rebuild` is not on `PATH`:
 
 ```sh
-cd "$DOTFILES_REPO"
 sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- \
   switch --flake ".#$HOST_NAME"
 ```
 
-For subsequent changes, use the configured `sup` and `sbld` commands (`nh
-darwin`). Do not remove existing Homebrew or vendor-managed apps merely because
-Nix has installed another copy.
+Use the configured `sup` or `sbld` commands for later updates and builds.
 
-## Verify the installation
+## Verify
 
-Check the system generation, managed services, and the replacement backup jobs:
+Check the active generation and the launchd services configured for this host:
 
 ```sh
 sudo darwin-rebuild --list-generations
-launchctl list | grep -E 'com.joshankana.(secrets-backup|attic-watch-store)' || true
-nix eval --raw .#darwinConfigurations.mac.config.networking.hostName
+launchctl list | grep -F "$BACKUP_JOB_LABEL" || true
+launchctl list | grep -F "$BACKUP_MAINTENANCE_JOB_LABEL" || true
+launchctl list | grep -F "$ATTIC_WATCH_JOB_LABEL" || true
 ```
 
-Verify that there is exactly one scheduled secrets backup and maintenance job.
-Run `secrets-backup backup`, check the new repository snapshot, and perform a
-restore into a temporary directory before removing the old backup setup. Test
-SSH from the server, Tailscale connectivity, Comin, Attic publication,
-Hammerspoon/yabai and Karabiner. Confirm native applications open with their
-existing data and macOS permissions before retiring any old installation.
+Run `secrets-backup backup`, confirm that a repository snapshot was created, and
+restore files into a temporary directory to verify recovery. Check SSH, Tailscale,
+Comin, cache access, Hammerspoon, yabai, Karabiner and required applications.
 
 ## Rollback
 
-If activation fails, use the previous nix-darwin generation:
+To activate the previous nix-darwin generation:
 
 ```sh
 sudo darwin-rebuild --rollback
 ```
 
-Restore the preserved LaunchAgent plists and load the original backup jobs if
-the new backup service has not been verified. Home Manager keeps conflicting
-home files with the `.before-nix` suffix on first activation; inspect those
-copies before changing the originals. Retain the working application bundles,
-settings, licences and recovery backups until the new setup has survived a
-reboot and a normal working session.
+If a previous backup job needs to be restored, reload its preserved plist and
+verify the resulting schedule. Home Manager preserves conflicting files using
+the evaluated suffix `$HOME_MANAGER_BACKUP_EXTENSION`; inspect those copies
+before replacing any user files.
