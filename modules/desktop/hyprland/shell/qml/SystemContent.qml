@@ -712,7 +712,7 @@ FocusScope {
                 cornerRadius: theme.radiusLarge
                 luminous: true
                 luminousColor: root.theme.accent
-                fillColor: Qt.tint(root.theme.surfaceRaised, Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.09))
+                fillColor: root.theme.blend(root.theme.groupBase, root.theme.accent, root.theme.dark ? 0.07 : 0.035)
 
                 Column {
                     id: audioStack
@@ -798,7 +798,7 @@ FocusScope {
                     luminous: true
                     lightIntensity: 1.25
                     luminousColor: root.theme.accent
-                    fillColor: Qt.tint(root.theme.surfaceRaised, Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.13))
+                    fillColor: root.theme.blend(root.theme.groupBase, root.theme.accent, root.theme.dark ? 0.095 : 0.05)
 
                     StateLayer {
                         theme: root.theme
