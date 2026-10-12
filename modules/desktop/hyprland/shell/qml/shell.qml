@@ -169,6 +169,7 @@ ShellRoot {
 
     ResourceState {
         id: resources
+        runtime: runtime
         active: expansionState.hasCurrent && expansionState.currentName === "system" && expansionHost.systemContent !== null && expansionHost.systemContent.resourcesOpen
     }
 
