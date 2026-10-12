@@ -8,6 +8,21 @@ Item {
     required property Motion motion
     property string currentTab: ""
     readonly property int selectedIndex: currentTab === "home" ? 0 : currentTab === "activity" ? 2 : 1
+    // Move in logical tab units, so the active selection stays aligned while
+    // the shell changes its width during the measured-origin morph.
+    property real animatedIndex: selectedIndex
+    property bool initialized: false
+    Component.onCompleted: initialized = true
+
+    Behavior on animatedIndex {
+        enabled: root.initialized && root.motion.enabled
+        NumberAnimation {
+            duration: root.motion.spatialSlow
+            easing.type: root.motion.spatialType
+            easing.bezierCurve: root.motion.spatialCurve
+        }
+    }
+
     signal tabRequested(string destination)
 
     implicitHeight: 46
@@ -25,22 +40,16 @@ Item {
 
         SquircleSurface {
             id: slidingSelection
-            x: root.theme.spacing1 + (track.width - 2 * root.theme.spacing1) / 3 * root.selectedIndex
+            x: root.theme.spacing1 + (track.width - 2 * root.theme.spacing1) / 3 * root.animatedIndex
             y: root.theme.spacing1
             width: (track.width - 2 * root.theme.spacing1) / 3
             height: track.height - 2 * root.theme.spacing1
             exponent: root.theme.squircleExponent
             cornerRadius: root.theme.radiusLarge
-            fillColor: root.theme.blend(root.theme.controlBase, root.theme.accent, root.theme.dark ? 0.52 : 0.34)
-            lightColor: root.theme.accent
-            lightStrength: 0.14
-
-            Behavior on x {
-                Anim {
-                    motion: root.motion
-                    type: Anim.FastSpatial
-                }
-            }
+            fillColor: root.theme.selectedTabFill
+            // Do not bloom the whole active tab with the accent colour.
+            lightColor: root.theme.textStrong
+            lightStrength: 0.025
         }
 
         Row {
