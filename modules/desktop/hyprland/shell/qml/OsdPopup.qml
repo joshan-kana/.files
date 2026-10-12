@@ -11,7 +11,8 @@ PanelWindow {
     required property Motion motion
 
     property bool closing: false
-    readonly property color accentColor: osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.positive : theme.accent)
+    readonly property bool keyboardMode: osd.kind === "keyboard"
+    readonly property color accentColor: keyboardMode && osd.keyboardLocked ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.positive : theme.accent)
 
     visible: osd.visible || closing
     color: "transparent"
@@ -100,7 +101,7 @@ PanelWindow {
 
                 Text {
                     id: valueText
-                    text: popup.osd.value + "%"
+                    text: popup.keyboardMode ? (popup.osd.keyboardLocked ? "󰪛  ON" : "󰪜  OFF") : popup.osd.value + "%"
                     color: popup.theme.textStrong
                     font.family: popup.runtime.fontMono
                     font.pixelSize: popup.theme.fontSize(12)
@@ -109,6 +110,7 @@ PanelWindow {
             }
 
             Rectangle {
+                visible: !popup.keyboardMode
                 anchors {
                     right: parent.right
                     bottom: parent.bottom
