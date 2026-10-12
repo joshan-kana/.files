@@ -1,116 +1,101 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Templates
 
 Item {
     id: root
-
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
     property string currentTab: ""
-
     readonly property int selectedIndex: currentTab === "home" ? 0 : currentTab === "activity" ? 2 : 1
-
     signal tabRequested(string destination)
 
-    implicitHeight: 48
+    implicitHeight: 46
 
-    TabBar {
-        id: tabs
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
+    ShellSurface {
+        id: track
+        width: parent.width
+        height: 42
+        anchors.horizontalCenter: parent.horizontalCenter
+        theme: root.theme
+        motion: root.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: root.theme.radiusLarge
+        fillColor: root.theme.expressiveSurface
+
+        SquircleSurface {
+            id: slidingSelection
+            x: root.theme.spacing1 + (track.width - 2 * root.theme.spacing1) / 3 * root.selectedIndex
+            y: root.theme.spacing1
+            width: (track.width - 2 * root.theme.spacing1) / 3
+            height: track.height - 2 * root.theme.spacing1
+            exponent: root.theme.squircleExponent
+            cornerRadius: root.theme.radiusLarge
+            fillColor: root.theme.accent
+
+            Behavior on x {
+                Anim {
+                    motion: root.motion
+                    type: Anim.FastSpatial
+                }
+            }
         }
-        implicitHeight: 40
-        currentIndex: root.selectedIndex
-        background: null
 
-        contentItem: RowLayout {
+        Row {
+            anchors {
+                fill: parent
+                margins: root.theme.spacing1
+            }
             spacing: 0
 
             Repeater {
-                model: tabs.contentModel
-            }
-        }
-
-        Repeater {
-            model: [
-                {
-                    text: "HOME",
-                    name: "home"
-                },
-                {
-                    text: "CONTROLS",
-                    name: "controls"
-                },
-                {
-                    text: "ACTIVITY",
-                    name: "activity"
-                }
-            ]
-
-            delegate: TabButton {
-                id: tab
-                required property var modelData
-                readonly property bool chosen: tabs.currentIndex === TabBar.index
-
-                Layout.fillWidth: true
-                Layout.preferredWidth: 1
-                implicitHeight: 40
-                background: null
-
-                contentItem: Item {
-                    ShellSurface {
-                        anchors.fill: parent
-                        theme: root.theme
-                        motion: root.motion
-                        surfaceLayer: ShellSurface.Control
-                        cornerRadius: root.theme.radiusMedium
-                        fillColor: tab.hovered ? root.theme.layer3 : "transparent"
+                model: [
+                    {
+                        label: "Home",
+                        destination: "home"
+                    },
+                    {
+                        label: "Controls",
+                        destination: "controls"
+                    },
+                    {
+                        label: "Activity",
+                        destination: "activity"
                     }
+                ]
+
+                delegate: Item {
+                    id: tab
+                    required property var modelData
+                    required property int index
+                    readonly property bool chosen: root.selectedIndex === index
+                    width: parent.width / 3
+                    height: parent.height
+                    Accessible.role: Accessible.Button
+                    Accessible.name: modelData.label
 
                     Text {
                         anchors.centerIn: parent
-                        text: tab.modelData.text
-                        color: tab.chosen ? root.theme.accent : root.theme.textMuted
+                        text: tab.modelData.label
+                        color: tab.chosen ? root.theme.background : root.theme.textMuted
                         font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(11)
+                        font.pixelSize: root.theme.fontSize(12)
                         font.weight: tab.chosen ? Font.DemiBold : Font.Medium
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: root.motion.effectsFast
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.tabRequested(tab.modelData.destination)
                     }
                 }
-
-                onClicked: root.tabRequested(modelData.name)
             }
-        }
-    }
-
-    Item {
-        id: indicator
-        anchors.top: tabs.bottom
-        anchors.topMargin: root.theme.spacing1
-        width: tabs.width / 3
-        height: 3
-
-        // Animate the tab index once, then map it into live layout geometry.
-        // Animating x itself restarts the motion at every panel width change.
-        property real animatedIndex: root.selectedIndex
-        x: tabs.width / 3 * animatedIndex
-
-        Behavior on animatedIndex {
-            Anim {
-                motion: root.motion
-                type: Anim.FastSpatial
-            }
-        }
-
-        SquircleSurface {
-            anchors.fill: parent
-            cornerRadius: 2
-            exponent: root.theme.squircleExponent
-            fillColor: root.theme.accent
         }
     }
 }

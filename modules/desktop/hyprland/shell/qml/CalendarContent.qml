@@ -25,9 +25,9 @@ FocusScope {
     signal closeRequested
     signal forecastRequested
 
-    implicitWidth: 750
+    implicitWidth: 780
     implicitHeight: content.implicitHeight
-    readonly property real daySize: Math.min(66, Math.max(42, (width - theme.spacing5 * 2 - theme.spacing2 * 6) / 7))
+    readonly property real daySize: Math.min(31, Math.max(23, (width - 300 - theme.spacing5 * 2 - theme.spacing1 * 6) / 7))
     focus: engaged
 
     onEngagedChanged: {
@@ -173,6 +173,42 @@ FocusScope {
         spacing: calendar.theme.spacing3
 
         Row {
+            width: parent.width
+            spacing: calendar.theme.spacing3
+
+            Column {
+                width: parent.width * 0.70
+                spacing: calendar.theme.spacing1
+
+                Text {
+                    text: Qt.formatDate(clock.date, "dddd · d MMMM yyyy").toUpperCase()
+                    color: calendar.theme.accent
+                    font.family: calendar.runtime.fontMono
+                    font.pixelSize: calendar.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.7
+                }
+                Text {
+                    text: clock.date.getHours() < 12 ? "Good morning." : clock.date.getHours() < 17 ? "Good afternoon." : "Good evening."
+                    color: calendar.theme.textStrong
+                    font.family: calendar.runtime.fontMono
+                    font.pixelSize: calendar.theme.fontPanelTitle
+                    font.weight: Font.DemiBold
+                }
+            }
+            Text {
+                width: parent.width * 0.30 - parent.spacing
+                anchors.bottom: parent.bottom
+                text: (calendar.weather.city || "LOCAL").toUpperCase() + " · WEATHER"
+                horizontalAlignment: Text.AlignRight
+                color: calendar.theme.textMuted
+                font.family: calendar.runtime.fontMono
+                font.pixelSize: calendar.theme.fontSize(10)
+                elide: Text.ElideRight
+            }
+        }
+
+        Row {
             id: featured
             width: parent.width
             spacing: calendar.theme.spacing3
@@ -192,117 +228,126 @@ FocusScope {
                 motion: calendar.motion
                 agenda: agenda
                 startDate: calendar.selectedDateKey
+                featured: true
             }
         }
 
         ShellSurface {
             width: parent.width
-            height: monthContents.implicitHeight + calendar.theme.spacing4 * 2
+            height: Math.max(200, monthViewport.height + calendar.theme.spacing4 * 2 + 30)
             theme: calendar.theme
             motion: calendar.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: calendar.theme.radiusLarge
 
-            Column {
+            Row {
                 id: monthContents
                 anchors {
-                    left: parent.left
-                    right: parent.right
-                    top: parent.top
+                    fill: parent
                     margins: calendar.theme.spacing4
                 }
                 spacing: calendar.theme.spacing3
-                Row {
-                    width: parent.width
+
+                Column {
+                    width: Math.min(220, parent.width * 0.34)
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: calendar.theme.spacing2
 
-                    Column {
-                        width: parent.width - previous.width - next.width - calendar.theme.spacing2 * 2
-                        spacing: calendar.theme.spacing1
-
-                        Text {
-                            text: Qt.formatDate(calendar.viewingDate, "MMMM yyyy")
-                            color: calendar.theme.textStrong
-                            font.family: calendar.runtime.fontMono
-                            font.pixelSize: calendar.theme.fontSize(22)
-                            font.weight: Font.DemiBold
-                        }
-
-                        Text {
-                            text: calendar.selectedDay > 0 ? "Selected · " + Qt.formatDate(calendar.selectedDate, "ddd d MMM") : " "
-                            color: calendar.theme.accent
-                            font.family: calendar.runtime.fontMono
-                            font.pixelSize: calendar.theme.fontSize(10)
-                        }
+                    Text {
+                        text: "YOUR MONTH"
+                        color: calendar.theme.accent
+                        font.family: calendar.runtime.fontMono
+                        font.pixelSize: calendar.theme.fontPanelEyebrow
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.8
+                    }
+                    Text {
+                        width: parent.width
+                        text: Qt.formatDate(calendar.viewingDate, "MMMM yyyy")
+                        wrapMode: Text.WordWrap
+                        color: calendar.theme.textStrong
+                        font.family: calendar.runtime.fontMono
+                        font.pixelSize: calendar.theme.fontSize(22)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        width: parent.width
+                        text: "Selected · " + Qt.formatDate(calendar.selectedDate, "dddd d")
+                        color: calendar.theme.textMuted
+                        font.family: calendar.runtime.fontMono
+                        font.pixelSize: calendar.theme.fontSize(10)
+                        wrapMode: Text.Wrap
                     }
 
-                    CalendarNavButton {
-                        id: previous
-                        theme: calendar.theme
-                        motion: calendar.motion
-                        icon: ""
-                        onActivated: calendar.browseMonths(-1)
-                    }
-
-                    CalendarNavButton {
-                        id: next
-                        theme: calendar.theme
-                        motion: calendar.motion
-                        icon: ""
-                        onActivated: calendar.browseMonths(1)
-                    }
-                }
-
-                Grid {
-                    id: weekdayRow
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    columns: 7
-                    spacing: calendar.theme.spacing2
-
-                    Repeater {
-                        model: CalendarLayout.weekDays
-
-                        delegate: CalendarDay {
-                            required property var modelData
-
-                            width: calendar.daySize
-                            height: calendar.daySize
+                    Row {
+                        spacing: calendar.theme.spacing2
+                        CalendarNavButton {
+                            id: previous
                             theme: calendar.theme
                             motion: calendar.motion
-                            header: true
-                            day: 0
-                            heading: modelData.day
+                            icon: ""
+                            onActivated: calendar.browseMonths(-1)
+                        }
+                        CalendarNavButton {
+                            id: next
+                            theme: calendar.theme
+                            motion: calendar.motion
+                            icon: ""
+                            onActivated: calendar.browseMonths(1)
                         }
                     }
                 }
 
-                Item {
-                    id: monthViewport
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: weekdayRow.implicitWidth
-                    height: 6 * calendar.daySize + 5 * calendar.theme.spacing2
-                    clip: true
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: calendar.theme.spacing1
 
-                    CalendarMonthGrid {
-                        id: incomingMonth
-                        theme: calendar.theme
-                        motion: calendar.motion
-                        daySize: calendar.daySize
-                        monthLayout: calendar.calendarLayout
-                        selectedDay: calendar.selectedDay
-                        y: calendar.sliding ? calendar.slideDirection * monthViewport.height * (1 - calendar.slideProgress) : 0
-                        onDayActivated: cellIndex => calendar.chooseDate(cellIndex)
+                    Grid {
+                        id: weekdayRow
+                        columns: 7
+                        spacing: calendar.theme.spacing1
+                        Repeater {
+                            model: CalendarLayout.weekDays
+                            delegate: CalendarDay {
+                                required property var modelData
+                                width: calendar.daySize
+                                height: calendar.daySize
+                                theme: calendar.theme
+                                motion: calendar.motion
+                                header: true
+                                day: 0
+                                heading: modelData.day
+                            }
+                        }
                     }
 
-                    CalendarMonthGrid {
-                        id: departingMonth
-                        visible: calendar.sliding
-                        interactive: false
-                        theme: calendar.theme
-                        motion: calendar.motion
-                        daySize: calendar.daySize
-                        monthLayout: calendar.outgoingLayout
-                        y: -calendar.slideDirection * monthViewport.height * calendar.slideProgress
+                    Item {
+                        id: monthViewport
+                        width: weekdayRow.implicitWidth
+                        height: 6 * calendar.daySize + 5 * calendar.theme.spacing1
+                        clip: true
+                        CalendarMonthGrid {
+                            id: incomingMonth
+                            theme: calendar.theme
+                            motion: calendar.motion
+                            spacing: calendar.theme.spacing1
+                            daySize: calendar.daySize
+                            monthLayout: calendar.calendarLayout
+                            selectedDay: calendar.selectedDay
+                            y: calendar.sliding ? calendar.slideDirection * monthViewport.height * (1 - calendar.slideProgress) : 0
+                            onDayActivated: cellIndex => calendar.chooseDate(cellIndex)
+                        }
+                        CalendarMonthGrid {
+                            id: departingMonth
+                            visible: calendar.sliding
+                            interactive: false
+                            theme: calendar.theme
+                            motion: calendar.motion
+                            spacing: calendar.theme.spacing1
+                            daySize: calendar.daySize
+                            monthLayout: calendar.outgoingLayout
+                            y: -calendar.slideDirection * monthViewport.height * calendar.slideProgress
+                        }
                     }
                 }
             }
