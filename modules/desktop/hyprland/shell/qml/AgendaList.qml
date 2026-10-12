@@ -53,7 +53,7 @@ Column {
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: panel.featured ? panel.theme.radiusLarge : panel.theme.radiusMedium
-        fillColor: panel.featured ? Qt.tint(panel.theme.surfaceRaised, Qt.rgba(panel.theme.accent.r, panel.theme.accent.g, panel.theme.accent.b, 0.09)) : panel.theme.expressiveSurface
+        fillColor: panel.featured ? panel.theme.blend(panel.theme.groupBase, panel.theme.accent, panel.theme.dark ? 0.055 : 0.035) : panel.theme.expressiveSurface
         luminous: panel.featured
         luminousColor: panel.theme.accent
 

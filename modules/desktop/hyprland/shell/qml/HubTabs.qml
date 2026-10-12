@@ -31,7 +31,9 @@ Item {
             height: track.height - 2 * root.theme.spacing1
             exponent: root.theme.squircleExponent
             cornerRadius: root.theme.radiusLarge
-            fillColor: root.theme.accent
+            fillColor: root.theme.blend(root.theme.controlBase, root.theme.accent, root.theme.dark ? 0.52 : 0.34)
+            lightColor: root.theme.accent
+            lightStrength: 0.14
 
             Behavior on x {
                 Anim {
@@ -77,7 +79,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: tab.modelData.label
-                        color: tab.chosen ? root.theme.background : root.theme.textMuted
+                        color: tab.chosen ? root.theme.textStrong : root.theme.textMuted
                         font.family: root.runtime.fontMono
                         font.pixelSize: root.theme.fontSize(12)
                         font.weight: tab.chosen ? Font.DemiBold : Font.Medium
