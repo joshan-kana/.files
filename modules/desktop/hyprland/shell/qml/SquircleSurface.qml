@@ -55,6 +55,23 @@ Item {
         return points;
     }
 
+    // A continuous highlight along the same upper superellipse contour.
+    // The edge follows the native geometry, including very rounded corners.
+    function buildTopEdge(inset: real): string {
+        const w = width - inset * 2;
+        const h = height - inset * 2;
+        const r = Math.min(Math.max(0, cornerRadius - inset), w / 2, h / 2);
+        if (w <= 0 || h <= 0 || r <= 0)
+            return "";
+        let path = "M " + point(inset) + " " + point(inset + r);
+        path += buildCorner(inset + r, inset + r, r, Math.PI, Math.PI * 1.5);
+        path += " L " + point(width - inset - r) + " " + point(inset);
+        path += buildCorner(width - inset - r, inset + r, r, -Math.PI / 2, 0);
+        return path;
+    }
+
+    readonly property string topEdgePathData: buildTopEdge(0.95)
+
     function buildPath(inset: real): string {
         const innerWidth = width - inset * 2;
         const innerHeight = height - inset * 2;
@@ -123,6 +140,18 @@ Item {
 
             PathSvg {
                 path: root.fillPathData
+            }
+        }
+
+        ShapePath {
+            fillColor: "transparent"
+            strokeColor: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, Math.min(0.36, root.lightStrength * 1.65))
+            strokeWidth: 1.4
+            joinStyle: ShapePath.RoundJoin
+            capStyle: ShapePath.RoundCap
+
+            PathSvg {
+                path: root.topEdgePathData
             }
         }
 
