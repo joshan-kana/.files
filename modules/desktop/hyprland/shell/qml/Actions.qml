@@ -1,7 +1,9 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 QtObject {
+    id: actions
     required property RuntimeConfig runtime
     required property ScreenRouter screenRouter
     required property AmbientBar ambientBar
@@ -19,6 +21,20 @@ QtObject {
     required property NotificationPopup notificationPopup
     required property Motion motion
     signal frozenCaptureRequested(bool copy)
+    signal recordingSelectionRequested
+    property StdioCollector recordingStatusOutput: StdioCollector {}
+    property Process recordingStatus: Process {
+        stdout: actions.recordingStatusOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                return;
+            if (actions.recordingStatusOutput.text.trim() === "active") {
+                Quickshell.execDetached([actions.runtime.recordingToggle, "stop"]);
+            } else {
+                actions.recordingSelectionRequested();
+            }
+        }
+    }
 
     function hideTransient(except: string): void {
         if (except !== "cheatsheet" && cheatsheet.open)
@@ -226,9 +242,8 @@ QtObject {
     }
 
     function toggleRecording(): void {
-        hideTransient("");
-        if (runtime.recordingToggle.length > 0)
-            Quickshell.execDetached([runtime.recordingToggle]);
+        if (runtime.recordingToggle.length > 0 && !recordingStatus.running)
+            recordingStatus.exec([runtime.recordingToggle, "status"]);
     }
 
     function captureScreenshot(copy: bool, target: string): void {
