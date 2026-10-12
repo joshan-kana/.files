@@ -8,12 +8,14 @@
 {
   inherit (moduleRegistry)
     nix
-    networking
-    backups
     theme
-    desktopApps
+    networking
     virtualisation
+    desktopApps
+    backups
     ;
+
+  dotfiles.users.primary.homeRoot = "/Users";
 
   system = editScope moduleRegistry.system {
     compatibility = _: {
@@ -24,7 +26,6 @@
     };
 
     identity = { config, ... }: {
-      dotfiles.users.primary.homeRoot = "/Users";
       home-manager = {
         backupFileExtension = "before-nix";
         extraSpecialArgs.configurationName = config.dotfiles.profile.name;
