@@ -95,10 +95,10 @@ Variants {
         onWidthChanged: Qt.callLater(publishOrigins)
 
         visible: bars.shown
-        implicitHeight: 56
+        implicitHeight: 62
         color: "transparent"
         exclusionMode: ExclusionMode.Normal
-        exclusiveZone: bars.shown ? 56 : 0
+        exclusiveZone: bars.shown ? 62 : 0
 
         anchors {
             top: true
@@ -122,16 +122,19 @@ Variants {
         readonly property int focusedWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 1
         readonly property var normalWorkspaces: Hyprland.workspaces.values.filter(workspace => workspace.id > 0).sort((a, b) => a.id - b.id)
         // Workspace pills lose detail before competing with the centred clock.
-        readonly property real fullWorkspaceWidth: normalWorkspaces.length > 0 ? 28 + Math.max(0, normalWorkspaces.length - 1) * 22 + bars.theme.spacing3 * 2 : 0
+        // Display only real workspaces. Hyprland creates workspace objects
+        // for occupied or currently active workspaces; do not manufacture slots.
+        readonly property var workspaceIds: normalWorkspaces.map(workspace => workspace.id)
+        readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? 37 + Math.max(0, workspaceIds.length - 1) * 31 + bars.theme.spacing3 * 2 : 0
 
         Item {
             id: barContent
 
             anchors.fill: parent
             anchors {
-                leftMargin: 14
-                rightMargin: 14
-                topMargin: 8
+                leftMargin: 17
+                rightMargin: 17
+                topMargin: 14
                 bottomMargin: 8
             }
 
@@ -145,7 +148,11 @@ Variants {
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
-                cornerRadius: theme.radiusMedium
+                cornerRadius: theme.radiusIsland
+                exponent: Math.min(4, theme.squircleExponent)
+                luminous: true
+                luminousColor: theme.accent
+                hovered: workspaceHover.hovered
 
                 HoverHandler {
                     id: workspaceHover
@@ -153,7 +160,7 @@ Variants {
                 StateLayer {
                     theme: bars.theme
                     motion: bars.motion
-                    cornerRadius: bars.theme.radiusMedium
+                    cornerRadius: bars.theme.radiusIsland
                     manualHover: workspaceHover.hovered
                     onActivated: {
                         if (bar.hyprMonitor && bar.hyprMonitor.activeWorkspace)
@@ -168,33 +175,33 @@ Variants {
                     spacing: 6
 
                     Repeater {
-                        model: bar.fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? bar.normalWorkspaces : bar.normalWorkspaces.filter(workspace => workspace.id === bar.focusedWorkspaceId)
+                        model: bar.fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? bar.workspaceIds : [bar.focusedWorkspaceId]
 
                         delegate: Item {
                             id: workspace
                             required property var modelData
 
-                            readonly property int number: modelData.id
+                            readonly property int number: modelData
                             readonly property bool active: bar.focusedWorkspaceId === number
 
-                            width: active ? 28 : 16
+                            width: active ? 37 : 25
                             height: 28
 
                             MouseArea {
                                 anchors.fill: parent
                                 z: 1
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: workspace.modelData.activate()
+                                onClicked: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
                             }
 
                             SquircleSurface {
                                 anchors.centerIn: parent
-                                width: workspace.active ? 28 : 8
-                                height: workspace.active ? 28 : 8
+                                width: workspace.active ? 37 : 23
+                                height: 28
 
                                 exponent: bars.theme.squircleExponent
-                                cornerRadius: workspace.active ? 9 : 4
-                                fillColor: workspace.active ? bars.theme.accent : Qt.rgba(bars.theme.textMuted.r, bars.theme.textMuted.g, bars.theme.textMuted.b, 0.55)
+                                cornerRadius: workspace.active ? 12 : 10
+                                fillColor: workspace.active ? bars.theme.accent : "transparent"
                                 borderColor: "transparent"
                                 borderWidth: 0
 
@@ -224,9 +231,9 @@ Variants {
 
                                 Text {
                                     anchors.centerIn: parent
-                                    visible: workspace.active
+                                    visible: true
                                     text: workspace.number
-                                    color: bars.theme.background
+                                    color: workspace.active ? bars.theme.background : bars.theme.textMuted
                                     font.family: bars.runtime.fontMono
                                     font.pixelSize: bars.theme.fontSize(11)
                                     font.weight: Font.DemiBold
@@ -268,7 +275,11 @@ Variants {
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
-                cornerRadius: theme.radiusMedium
+                cornerRadius: theme.radiusIsland
+                exponent: Math.min(4, theme.squircleExponent)
+                luminous: true
+                luminousColor: theme.accent
+                hovered: clockPress.containsMouse
 
                 Row {
                     id: clockRow
@@ -284,12 +295,12 @@ Variants {
                         font.weight: Font.Medium
                     }
 
-                    Rectangle {
+                    Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 4
-                        height: 4
-                        radius: 2
-                        color: bars.theme.warning
+                        text: "✳"
+                        color: bars.theme.accent
+                        font.family: bars.runtime.fontMono
+                        font.pixelSize: bars.theme.fontSize(14)
                     }
 
                     Text {
@@ -303,9 +314,10 @@ Variants {
                 }
 
                 StateLayer {
+                    id: clockPress
                     theme: bars.theme
                     motion: bars.motion
-                    cornerRadius: bars.theme.radiusMedium
+                    cornerRadius: bars.theme.radiusIsland
                     onActivated: bars.calendarRequested(bar.modelData, bars.originFor(bar.modelData, "calendar"))
                 }
             }
@@ -326,7 +338,7 @@ Variants {
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
-                cornerRadius: bars.theme.radiusMedium
+                cornerRadius: bars.theme.radiusIsland
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
 
@@ -359,9 +371,10 @@ Variants {
                 }
 
                 StateLayer {
+                    id: notificationPress
                     theme: bars.theme
                     motion: bars.motion
-                    cornerRadius: bars.theme.radiusMedium
+                    cornerRadius: bars.theme.radiusIsland
                     onActivated: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
                 }
             }
