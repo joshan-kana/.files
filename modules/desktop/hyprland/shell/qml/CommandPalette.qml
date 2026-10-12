@@ -24,6 +24,75 @@ PanelWindow {
     property bool clipboardQueried: false
     property bool awaitingClipboardCopy: false
     property var unicodeEntries: []
+    readonly property bool clipboardMode: /^clip(?:\s|$)/i.test(search.text.trim())
+    readonly property var selectedClip: clipboardMode && results.currentIndex >= 0 && results.currentIndex < resultModel.values.length ? resultModel.values[results.currentIndex] : null
+    property string previewText: ""
+    property int previewTextId: -1
+    property string previewImagePath: ""
+    property bool previewRevealed: false
+    property int previewJobId: -1
+    property string previewJobKind: ""
+    readonly property string selectedText: selectedClip && selectedClip.entryKind === "TEXT" ? (previewTextId === selectedClip.entryId ? previewText : selectedClip.genericName) : ""
+
+    property StdioCollector previewOutput: StdioCollector {}
+    property Process previewProcess: Process {
+        stdout: palette.previewOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0 && palette.open && palette.selectedClip && palette.selectedClip.entryId === palette.previewJobId) {
+                if (palette.previewJobKind === "text") {
+                    palette.previewText = palette.previewOutput.text.slice(0, 8192);
+                    palette.previewTextId = palette.previewJobId;
+                } else if (palette.previewRevealed)
+                    palette.previewImagePath = palette.previewOutput.text.trim();
+            }
+            if (palette.open && palette.selectedClip && palette.selectedClip.entryId !== palette.previewJobId)
+                previewTimer.restart();
+            if (!palette.open && !palette.closing)
+                palette.clearPreview();
+        }
+    }
+    Timer {
+        id: previewTimer
+        interval: 0
+        onTriggered: palette.loadPreview()
+    }
+    onSelectedClipChanged: {
+        previewText = "";
+        previewTextId = -1;
+        previewImagePath = "";
+        previewRevealed = false;
+        if (open && clipboardMode)
+            previewTimer.restart();
+    }
+    onClipboardModeChanged: {
+        if (!clipboardMode && !previewProcess.running)
+            clearPreview();
+    }
+    function clearPreview(): void {
+        previewText = "";
+        previewTextId = -1;
+        previewImagePath = "";
+        if (runtime.clipboardPreview.length > 0)
+            Quickshell.execDetached([runtime.clipboardPreview, "clear"]);
+    }
+    function loadPreview(): void {
+        if (!open || !selectedClip || previewProcess.running)
+            return;
+        if (selectedClip.entryKind !== "TEXT" && (!previewRevealed || selectedClip.entryKind !== "IMAGE"))
+            return;
+        previewJobId = selectedClip.entryId;
+        previewJobKind = selectedClip.entryKind === "TEXT" ? "text" : "image";
+        if (previewJobKind === "text")
+            previewProcess.exec([runtime.cliphist, "decode", String(previewJobId)]);
+        else
+            previewProcess.exec([runtime.clipboardPreview, "image", String(previewJobId)]);
+    }
+    function revealImage(): void {
+        if (!selectedClip || selectedClip.entryKind !== "IMAGE")
+            return;
+        previewRevealed = true;
+        previewTimer.restart();
+    }
 
     FileView {
         id: unicodeData
@@ -82,7 +151,11 @@ PanelWindow {
         id: closeTimer
         // Keep the layer surface alive until the longer card scale finishes.
         interval: motion.normal + (motion.enabled ? 24 : 0)
-        onTriggered: palette.closing = false
+        onTriggered: {
+            palette.closing = false;
+            if (!palette.open && !palette.previewProcess.running)
+                palette.clearPreview();
+        }
     }
 
     ScriptModel {
@@ -154,7 +227,8 @@ PanelWindow {
                         genericName: entry.preview,
                         icon: "edit-paste",
                         key: "COPY",
-                        entryId: entry.id
+                        entryId: entry.id,
+                        entryKind: entry.kind
                     }));
         }
 
@@ -240,6 +314,8 @@ PanelWindow {
             results.currentIndex = -1;
         else if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
             results.currentIndex = 0;
+        if (clipboardMode)
+            previewTimer.restart();
         search.forceActiveFocus();
     }
 
@@ -254,6 +330,8 @@ PanelWindow {
         setLauncherSubmap(false);
         if (closing)
             closeTimer.restart();
+        else if (!previewProcess.running)
+            clearPreview();
     }
 
     function toggle(): void {
@@ -325,7 +403,13 @@ PanelWindow {
     ShellSurface {
         id: card
 
-        width: Math.min(palette.width - 80, 780)
+        width: Math.min(palette.width - 80, palette.clipboardMode ? 1060 : 780)
+        Behavior on width {
+            Anim {
+                motion: palette.motion
+                type: Anim.FastSpatial
+            }
+        }
         height: Math.min(palette.height - 120, 675)
         anchors {
             horizontalCenter: parent.horizontalCenter
@@ -510,9 +594,10 @@ PanelWindow {
 
                 anchors {
                     top: searchBox.bottom
-                    right: parent.right
+                    right: previewPane.visible ? previewPane.left : parent.right
                     bottom: footer.top
                     left: parent.left
+                    rightMargin: previewPane.visible ? theme.spacing3 : 0
                     topMargin: theme.spacing3
                     bottomMargin: theme.spacing3
                 }
@@ -539,6 +624,8 @@ PanelWindow {
                     } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));
                         results.currentIndex = Math.max(0, Math.min(resultModel.values.length - 1, results.currentIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                    } else if (event.key === Qt.Key_Space && palette.selectedClip && palette.selectedClip.entryKind === "IMAGE") {
+                        palette.revealImage();
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         palette.launchCurrent((event.modifiers & Qt.ShiftModifier) !== 0);
                     } else {
@@ -679,6 +766,128 @@ PanelWindow {
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(12)
                     font.letterSpacing: 1.5
+                }
+            }
+
+            ShellSurface {
+                id: previewPane
+                visible: palette.clipboardMode && card.width >= 890
+                anchors {
+                    top: results.top
+                    right: parent.right
+                    bottom: results.bottom
+                }
+                width: 300
+                theme: palette.theme
+                motion: palette.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: theme.radiusMedium
+                clip: true
+
+                Column {
+                    anchors {
+                        fill: parent
+                        margins: theme.spacing4
+                    }
+                    spacing: theme.spacing3
+                    Text {
+                        text: "CLIPBOARD DETAIL · " + (palette.selectedClip ? palette.selectedClip.entryKind : "EMPTY")
+                        color: theme.accent
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        width: parent.width
+                        text: palette.selectedClip ? "ENTRY #" + palette.selectedClip.entryId : "No selection"
+                        color: theme.textStrong
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(12)
+                    }
+                    ShellSurface {
+                        width: parent.width
+                        height: Math.max(86, previewPane.height - 147)
+                        theme: palette.theme
+                        motion: palette.motion
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: theme.radiusMedium
+                        clip: true
+                        Flickable {
+                            id: textPreview
+                            visible: !!palette.selectedClip && palette.selectedClip.entryKind === "TEXT"
+                            anchors {
+                                fill: parent
+                                margins: theme.spacing3
+                            }
+                            contentWidth: width
+                            contentHeight: previewBody.implicitHeight
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            Text {
+                                id: previewBody
+                                width: textPreview.width
+                                text: palette.selectedText
+                                textFormat: Text.PlainText
+                                color: theme.textStrong
+                                font.family: runtime.fontMono
+                                font.pixelSize: theme.fontSize(11)
+                                wrapMode: Text.WrapAnywhere
+                                lineHeight: 1.4
+                            }
+                        }
+                        Image {
+                            anchors {
+                                fill: parent
+                                margins: theme.spacing2
+                            }
+                            visible: !!palette.selectedClip && palette.selectedClip.entryKind === "IMAGE" && palette.previewRevealed && palette.previewImagePath.length > 0
+                            source: palette.previewImagePath.length > 0 ? "file://" + palette.previewImagePath : ""
+                            asynchronous: true
+                            cache: false
+                            fillMode: Image.PreserveAspectFit
+                        }
+                        Column {
+                            anchors.centerIn: parent
+                            width: parent.width - theme.spacing4 * 2
+                            spacing: theme.spacing3
+                            visible: !!palette.selectedClip && palette.selectedClip.entryKind !== "TEXT" && (!palette.previewRevealed || palette.previewImagePath.length === 0)
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "▧"
+                                color: theme.accent
+                                font.family: runtime.fontMono
+                                font.pixelSize: theme.fontSize(42)
+                            }
+                            Text {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                text: palette.selectedClip && palette.selectedClip.entryKind === "IMAGE" ? (palette.previewRevealed ? "Decoding image…" : "Image preview hidden") : "Binary preview unavailable"
+                                color: theme.textMuted
+                                font.family: runtime.fontMono
+                                font.pixelSize: theme.fontSize(10)
+                            }
+                            ShellAction {
+                                visible: !!palette.selectedClip && palette.selectedClip.entryKind === "IMAGE" && !palette.previewRevealed
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: 194
+                                runtime: palette.runtime
+                                theme: palette.theme
+                                motion: palette.motion
+                                compact: true
+                                title: "Reveal image"
+                                shortcut: "SPACE"
+                                icon: "◉"
+                                onActivated: palette.revealImage()
+                            }
+                        }
+                    }
+                    Text {
+                        text: "↵ COPY · J/K SELECT"
+                        color: theme.textMuted
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(9)
+                    }
                 }
             }
 
