@@ -4,6 +4,8 @@ _:
   nixpkgs.overlays = [
     (
       final: prev:
+      # These patches target an older gh-dash release and cannot be applied
+      # to the newer Darwin package without rebasing the patches.
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
         gh-dash =
           (builtins.getFlake "github:NixOS/nixpkgs/279b4a8275f032c566576b3f181fa0f27197f588")
