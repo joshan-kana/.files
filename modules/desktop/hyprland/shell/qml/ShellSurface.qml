@@ -15,8 +15,21 @@ SquircleSurface {
     property int surfaceLayer: ShellSurface.Pane
     property bool selected: false
     property bool outlined: false
+    property bool luminous: false
+    property bool hovered: false
+    property color luminousColor: theme.accent
 
     exponent: theme.squircleExponent
+    lightColor: luminousColor
+    lightStrength: luminous ? (hovered ? 0.19 : 0.105) : 0
+
+    Behavior on lightStrength {
+        NumberAnimation {
+            duration: root.motion.effectsFast
+            easing.type: root.motion.effectsType
+            easing.bezierCurve: root.motion.effectsCurve
+        }
+    }
     cornerRadius: theme.radiusMedium
     fillColor: {
         if (selected)
@@ -33,8 +46,8 @@ SquircleSurface {
             return theme.layer1;
         }
     }
-    borderColor: outlined ? theme.subtleBorder : "transparent"
-    borderWidth: outlined ? theme.borderThin : 0
+    borderColor: luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
+    borderWidth: luminous || outlined ? theme.borderThin : 0
 
     Behavior on fillColor {
         ColorAnimation {

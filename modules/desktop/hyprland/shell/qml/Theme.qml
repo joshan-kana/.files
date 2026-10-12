@@ -23,6 +23,7 @@ QtObject {
 
     readonly property int radiusSmall: 12
     readonly property int radiusMedium: 22
+    readonly property int radiusIsland: 19
     readonly property int radiusLarge: 36
     readonly property int radiusPanel: 54
     readonly property real squircleExponent: runtime.squircleExponent

@@ -100,6 +100,8 @@ FocusScope {
             motion: content.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: content.theme.radiusLarge
+            luminous: true
+            luminousColor: content.theme.accent
             fillColor: Qt.tint(content.theme.surfaceRaised, Qt.rgba(content.theme.accent.r, content.theme.accent.g, content.theme.accent.b, 0.12))
         }
 
@@ -208,6 +210,8 @@ FocusScope {
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusMedium
+                luminous: true
+                luminousColor: content.theme.accent
                 clip: true
 
                 SpectrumCurve {

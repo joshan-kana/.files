@@ -40,6 +40,9 @@ Item {
         motion: tile.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: tile.theme.radiusLarge
+        luminous: true
+        luminousColor: tile.theme.accent
+        hovered: interaction.containsMouse
         fillColor: tile.connected ? tile.theme.accent : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
