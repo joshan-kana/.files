@@ -10,7 +10,7 @@ Item {
     required property SpectrumScale frequencyScale
 
     readonly property var geometry: {
-        const values = spectrum.displayBands || [];
+        const values = spectrum.bands || [];
         if (values.length < 2)
             return {
                 outline: "",
@@ -18,8 +18,8 @@ Item {
             };
 
         const points = [];
-        for (let source = 0; source < values.length; source++) {
-            const raw = values[source] || 0;
+        for (let source = 0; source < values.length; source += 2) {
+            const raw = Math.max(values[source] || 0, values[Math.min(source + 1, values.length - 1)] || 0);
             points.push({
                 x: frequencyScale.fromNormalized(source / Math.max(1, values.length - 1)) * width,
                 y: height - Math.max(2, Math.pow(Math.max(0, Math.min(1, raw)), 0.82) * height * 0.92)
