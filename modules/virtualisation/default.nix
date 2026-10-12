@@ -57,4 +57,3 @@ in
   */
   vm = linuxOnly (import ./vm.nix);
 }
-// import ./darwin.nix

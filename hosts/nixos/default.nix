@@ -1,6 +1,5 @@
 {
   extendScope,
-  lib,
   inputs,
   moduleRegistry,
   pkgs,
@@ -21,8 +20,6 @@
     ;
 
   imports = [
-    (moduleRegistry.profiles { inherit lib; }).linux.core
-    (moduleRegistry.profiles { inherit lib; }).linux.desktop
     inputs.spicetify-nix.nixosModules.spicetify
   ];
 

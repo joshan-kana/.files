@@ -16,7 +16,6 @@
     ;
 
   imports = [
-    (moduleRegistry.profiles { inherit lib; }).linux.core
     ./generated.nix
     "${modulesPath}/virtualisation/lxc-container.nix"
   ];
