@@ -9,22 +9,21 @@ Item {
     required property SpectrumScale frequencyScale
 
     property int barCount: 48
-    readonly property var values: spectrum.displayBands || []
-    readonly property int count: Math.min(barCount, values.length)
+    readonly property var values: spectrum.bands || []
+    readonly property int count: Math.min(barCount, Math.ceil(values.length / 2))
 
     function levelFor(index: int): real {
         if (count === 0)
             return 0;
 
-        // Native 48-band output must not re-spread peaks across neighbours.
-        // Smaller islands use disjoint frequency buckets, so a dominant note
-        // belongs to exactly one compact bar rather than leaking to both.
-        const start = Math.floor(index * values.length / count);
-        const end = Math.max(start + 1, Math.floor((index + 1) * values.length / count));
-        let level = 0;
-        for (let i = start; i < end; ++i)
-            level = Math.max(level, values[i] || 0);
-        return Math.pow(Math.max(0, Math.min(1, level)), 0.88);
+        const source = Math.round(index / Math.max(1, count - 1) * (values.length - 1));
+        const previous = index > 0 ? Math.round((index - 1) / Math.max(1, count - 1) * (values.length - 1)) : source;
+        const next = index < count - 1 ? Math.round((index + 1) / Math.max(1, count - 1) * (values.length - 1)) : source;
+        let peak = 0;
+        for (let sample = Math.floor((previous + source) / 2); sample <= Math.ceil((source + next) / 2); sample++)
+            peak = Math.max(peak, values[sample] || 0);
+
+        return Math.pow(Math.max(0, Math.min(1, peak)), 0.88);
     }
 
     Repeater {
