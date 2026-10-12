@@ -21,9 +21,26 @@ Item {
     property bool resetPending: false
 
     readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()))
-    readonly property string outputName: {
+    property string selectedOutput: ""
+    property string currentRequestOutput: ""
+    property bool currentRefreshPending: false
+    readonly property string hostOutput: {
         const window = QsWindow.window as QsWindow;
         return window && window.screen ? window.screen.name : "all";
+    }
+    readonly property var outputChoices: {
+        const choices = ["all"];
+        for (const screen of Quickshell.screens) {
+            if (screen.name.length > 0 && !choices.includes(screen.name))
+                choices.push(screen.name);
+        }
+        return choices;
+    }
+    readonly property string outputName: outputChoices.includes(selectedOutput) ? selectedOutput : outputChoices.includes(hostOutput) ? hostOutput : "all"
+    readonly property string outputLabel: outputName === "all" ? "All displays" : outputName
+    onOutputNameChanged: {
+        if (open && !busy)
+            refreshCurrent();
     }
     readonly property bool busy: applyProcess.running || resetProcess.running
     readonly property bool searching: searchField.activeFocus
@@ -71,11 +88,15 @@ Item {
     property Process currentProcess: Process {
         stdout: panel.currentOutput
         onExited: (code, status) => {
-            if (code === 0) {
+            if (code === 0 && panel.currentRequestOutput === panel.outputName) {
                 panel.currentPath = panel.currentOutput.text.trim();
                 const position = panel.filteredEntries.indexOf(panel.currentPath);
                 if (position >= 0)
                     panel.selectedIndex = position;
+            }
+            if (panel.currentRefreshPending) {
+                panel.currentRefreshPending = false;
+                Qt.callLater(() => panel.refreshCurrent());
             }
         }
     }
@@ -107,7 +128,17 @@ Item {
     }
 
     function openView(): void {
+        selectedOutput = hostOutput;
         open = true;
+    }
+    function cycleOutput(): void {
+        if (!open || busy || outputChoices.length < 2)
+            return;
+        const index = outputChoices.indexOf(outputName);
+        selectedOutput = outputChoices[(index + 1) % outputChoices.length];
+        currentPath = "";
+        statusText = "TARGET · " + outputLabel.toUpperCase();
+        keyboardRequested();
     }
     function closeView(): void {
         open = false;
@@ -124,8 +155,14 @@ Item {
     }
 
     function refreshCurrent(): void {
-        if (runtime.wallpaperLibrary.length > 0 && !currentProcess.running)
-            currentProcess.exec([runtime.wallpaperLibrary, "current", outputName]);
+        if (runtime.wallpaperLibrary.length === 0 || !open)
+            return;
+        if (currentProcess.running) {
+            currentRefreshPending = true;
+            return;
+        }
+        currentRequestOutput = outputName;
+        currentProcess.exec([runtime.wallpaperLibrary, "current", currentRequestOutput]);
     }
 
     function selectedPath(): string {
@@ -154,7 +191,7 @@ Item {
     function applySelected(): void {
         if (busy || !selectedPath() || runtime.wallpaperLibrary.length === 0)
             return;
-        statusText = "Applying wallpaper…";
+        statusText = "Applying wallpaper to " + outputLabel + "…";
         applyProcess.exec([runtime.wallpaperLibrary, "set", outputName, resizeMode, selectedPath()]);
     }
 
@@ -166,7 +203,7 @@ Item {
             statusText = "Restoring wallpaper after current selection…";
             return;
         }
-        statusText = "Restoring Stylix wallpaper…";
+        statusText = "Restoring Stylix wallpaper on " + outputLabel + "…";
         resetProcess.exec([runtime.wallpaperLibrary, "reset", outputName]);
     }
 
@@ -189,7 +226,7 @@ Item {
             glyph: "▧"
             eyebrow: "Appearance / wallpapers"
             title: "Wallpaper library"
-            detail: panel.outputName + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
+            detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
         }
 
         ShellSurface {
@@ -205,7 +242,7 @@ Item {
                 anchors {
                     fill: parent
                     leftMargin: panel.theme.spacing3
-                    rightMargin: panel.theme.spacing3
+                    rightMargin: outputButton.width + panel.theme.spacing3 * 2
                 }
                 verticalAlignment: TextInput.AlignVCenter
                 text: panel.searchText
@@ -227,12 +264,35 @@ Item {
                 }
             }
 
+            ShellAction {
+                id: outputButton
+                anchors {
+                    right: parent.right
+                    verticalCenter: parent.verticalCenter
+                    rightMargin: panel.theme.spacing1
+                }
+                width: 161
+                height: parent.height - panel.theme.spacing1 * 2
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                icon: panel.outputName === "all" ? "󰍺" : "󰍹"
+                title: panel.outputLabel
+                shortcut: "M"
+                enabled: !panel.busy && panel.outputChoices.length > 1
+                onActivated: panel.cycleOutput()
+            }
+
             Text {
                 anchors {
                     left: parent.left
                     leftMargin: panel.theme.spacing3
                     verticalCenter: parent.verticalCenter
                 }
+                width: Math.max(1, parent.width - outputButton.width - panel.theme.spacing4 * 2)
+                elide: Text.ElideRight
                 visible: searchField.text.length === 0 && !searchField.activeFocus
                 text: "/  Search wallpapers"
                 color: panel.theme.textMuted
