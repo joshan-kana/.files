@@ -239,7 +239,6 @@
           "nvidia-geforce-now"
           "open-webui"
           "openclaw"
-          "orbstack"
           "orcaslicer@nightly"
           "parsec"
           "raycast"
@@ -305,7 +304,8 @@
   };
 
   virtualisation = extendScope moduleRegistry.virtualisation {
-    orbStack = _: {
+    orbStack = { pkgs, ... }: {
+      environment.systemPackages = [ pkgs.orbstack ];
       home = _: {
         home.shellAliases.o = "orb";
         programs.zsh.profileExtra = ''
