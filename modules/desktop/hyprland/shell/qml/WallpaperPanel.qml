@@ -371,6 +371,38 @@ Item {
                     readonly property bool current: PathView.isCurrentItem
                     readonly property bool animatedFile: /\.(mp4|webm|mkv|mov|gif)$/i.test(modelData)
                     property string posterPath: ""
+                    property string motionPosterPath: ""
+                    property StdioCollector motionPosterOutput: StdioCollector {}
+                    property Process motionPosterProcess: Process {
+                        stdout: entry.motionPosterOutput
+                        onExited: (code, status) => {
+                            if (code === 0 && entry.current)
+                                entry.motionPosterPath = entry.motionPosterOutput.text.trim();
+                        }
+                    }
+                    Timer {
+                        id: motionPreviewDebounce
+                        interval: 220
+                        onTriggered: {
+                            if (entry.animatedFile && entry.current && panel.open && panel.motion.enabled && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running)
+                                entry.motionPosterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail-animated", entry.modelData]);
+                        }
+                    }
+                    onCurrentChanged: {
+                        if (current && animatedFile && panel.open && panel.motion.enabled)
+                            motionPreviewDebounce.restart();
+                    }
+                    Connections {
+                        target: panel
+                        function onOpenChanged(): void {
+                            if (panel.open && entry.current && entry.animatedFile && panel.motion.enabled)
+                                motionPreviewDebounce.restart();
+                            if (!panel.open) {
+                                motionPreviewDebounce.stop();
+                                entry.motionPosterPath = "";
+                            }
+                        }
+                    }
                     property StdioCollector posterOutput: StdioCollector {}
                     property Process posterProcess: Process {
                         stdout: entry.posterOutput
@@ -383,6 +415,8 @@ Item {
                     Component.onCompleted: {
                         if (animatedFile && panel.runtime.wallpaperLibrary.length > 0)
                             posterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail", modelData]);
+                        if (current && animatedFile && panel.open && panel.motion.enabled)
+                            motionPreviewDebounce.restart();
                     }
                     width: 360
                     height: 305
@@ -425,6 +459,19 @@ Item {
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
+                        }
+
+                        AnimatedImage {
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: parent.right
+                            }
+                            height: parent.height
+                            source: entry.current && panel.open && panel.motion.enabled && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
+                            fillMode: Image.PreserveAspectCrop
+                            playing: entry.current && panel.open && panel.motion.enabled
+                            visible: status === AnimatedImage.Ready && playing
                         }
 
                         Text {
