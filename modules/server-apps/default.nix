@@ -78,4 +78,9 @@ _: {
     Native Paperless-ngx document service.
   */
   paperless = import ./paperless;
+
+  /**
+    PostgreSQL database infrastructure shared by server applications.
+  */
+  postgresql = import ./postgresql;
 }
