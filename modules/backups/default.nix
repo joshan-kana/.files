@@ -8,7 +8,7 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  # Bootstrap paths are shared with the evaluated recovery documentation.
+  # Keep backup credentials outside the Nix store.
   backupCredentialsDir = config.dotfiles.backups.secrets.credentialsDir;
 
   # Collect generated `restic-<name>` wrapper commands so Zsh completion can be attached to them.

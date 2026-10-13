@@ -89,6 +89,7 @@
         '';
       };
     };
+
     mas = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.mas ];
     };
