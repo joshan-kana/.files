@@ -1,9 +1,46 @@
-{ flakeRef, host }:
+{
+  flakeRef,
+  host ? null,
+}:
 
 let
   flake = builtins.getFlake flakeRef;
-  system = builtins.getAttr host flake.nixosConfigurations;
-  lib = if system ? pkgs && system.pkgs ? lib then system.pkgs.lib else flake.inputs.nixpkgs.lib;
+  bootstrapLib = flake.inputs.nixpkgs.lib;
+
+  # Derive host targets from the flake's configuration outputs instead of
+  # binding this browser to a particular host platform.
+  configurationOutputs = builtins.filter (bootstrapLib.hasSuffix "Configurations") (
+    builtins.attrNames flake
+  );
+  hostRecords = bootstrapLib.concatMap (
+    outputName:
+    let
+      configurations = builtins.getAttr outputName flake;
+    in
+    if builtins.isAttrs configurations then
+      map (name: { inherit name outputName; }) (builtins.attrNames configurations)
+    else
+      [ ]
+  ) configurationOutputs;
+  hosts = bootstrapLib.unique (map (record: record.name) hostRecords);
+
+  matches = builtins.filter (record: record.name == host) hostRecords;
+  selected =
+    if builtins.length matches == 1 then
+      builtins.head matches
+    else if matches == [ ] then
+      throw "Unknown configuration host: ${toString host}"
+    else
+      throw "Host ${host} appears in more than one configuration output";
+  system = builtins.getAttr host (builtins.getAttr selected.outputName flake);
+  lib = if system ? pkgs && system.pkgs ? lib then system.pkgs.lib else bootstrapLib;
+  systemScope = lib.removeSuffix "Configurations" selected.outputName;
+  systemLabel =
+    if systemScope == "nixos" then
+      "NixOS"
+    else
+      lib.toUpper (builtins.substring 0 1 systemScope)
+      + builtins.substring 1 (builtins.stringLength systemScope) systemScope;
 
   inputRoots =
     prefix: inputs:
@@ -136,12 +173,13 @@ in
     originPath
     sourcePath
     system
+    hosts
     ;
 
   scopes = {
-    nixos = {
-      kind = "nixos";
-      label = "NixOS";
+    ${systemScope} = {
+      kind = systemScope;
+      label = systemLabel;
       user = null;
       inherit (system) options config;
     };

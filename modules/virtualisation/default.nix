@@ -1,6 +1,15 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  lib,
+  pkgs,
+  system,
+  ...
+}:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+in
+lib.optionalAttrs isLinux {
   /**
     Shared OCI/Docker container runtime and image-locking support.
   */

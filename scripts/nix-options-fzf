@@ -60,8 +60,9 @@ Prefixes:
   Use a concrete option as [prefix] to jump near that option.
 
 Scopes:
-  NixOS options use scope "nixos". Each configured Home Manager user uses
-  "home-manager:<user>". Omit --scope when an option name is unique; ambiguous
+  System scopes are derived from the flake configuration output names.
+  Each Home Manager user uses "home-manager:<user>". Omit --scope when
+  an option name is unique; ambiguous
   names fail and list the available scopes. Interactive selections retain scope.
   Run "${cmd_name} <host-or-alias> --scopes" to list scopes for a host.
 
@@ -72,7 +73,7 @@ List modes:
   Override startup mode with NIX_OPTIONS_FZF_LIST_MODE=flat or grouped.
 
 Hosts:
-  Hosts are discovered from flake.nixosConfigurations.
+  Hosts are discovered from the flake configuration outputs.
   Aliases are derived from host names. Run:
     ${cmd_name} --hosts
 
@@ -102,7 +103,7 @@ nix_bin="${NIX_BIN:-nix}"
 repo_cache_key="$(printf '%s\0' "$repo" | sha256sum | awk '{print substr($1, 1, 16)}')"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-options/$repo_cache_key"
 preview_script="$cache_dir/preview-option"
-hosts_cache="$cache_dir/hosts.json"
+hosts_cache="$cache_dir/hosts-v3.json"
 value_cache_dir="$cache_dir/values-v3"
 mkdir -p "$cache_dir" "$value_cache_dir"
 
@@ -190,7 +191,11 @@ list_hosts() {
 
   if [ ! -s "$hosts_cache" ]; then
     tmp="$hosts_cache.tmp.$$"
-    if "$nix_bin" eval --impure --json "$flake#nixosConfigurations" --apply builtins.attrNames > "$tmp"; then
+    local flake_literal
+    local scope_lib_literal
+    flake_literal="$(jq -Rn --arg s "$flake" '$s')"
+    scope_lib_literal="$(jq -Rn --arg s "$repo/scripts/nix-options-scopes.nix" '$s')"
+    if "$nix_bin" eval --impure --json --expr "let scopes = import (builtins.toPath $scope_lib_literal) { flakeRef = $flake_literal; }; in scopes.hosts" > "$tmp"; then
       mv "$tmp" "$hosts_cache"
     else
       rm -f "$tmp"
@@ -210,8 +215,8 @@ host_aliases() {
   printf '%s\n' "$h"
 
   case "$stripped" in
-    nixos-*)
-      stripped="${stripped#nixos-}"
+    *-*)
+      stripped="${stripped#*-}"
       printf '%s\n' "$stripped"
       ;;
   esac
@@ -1563,7 +1568,7 @@ build_cache() {
   host_literal="$(nix_string "$build_host")"
   scope_lib_literal="$(nix_string "$scope_lib_path")"
 
-  echo "Building scoped option docs cache for nixosConfigurations.$build_host using $nix_bin..." >&2
+  echo "Building scoped option docs cache for $build_host using $nix_bin..." >&2
   write_docs_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_lib_literal"
 
   if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then

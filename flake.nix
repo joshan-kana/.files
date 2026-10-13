@@ -2,13 +2,13 @@
   description = "My first flake!";
 
   inputs = {
-    # Nixpkgs: a collection of packages for the Nix package manager
+    # Nixpkgs: package collections and system modules.
     nixpkgs.url = "nixpkgs/nixos-unstable";
 
-    # Stable Nixpkgs for server hosts where predictable updates matter more.
+    # Stable Nixpkgs for configurations requiring predictable releases.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # Hermes Agent: native NixOS service/module.
+    # Hermes Agent: packaged agent and service integration.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -17,10 +17,10 @@
     # Prebuilt AI agent packages.
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    # First-party OpenClaw NixOS service module.
+    # OpenClaw: packaged service integration.
     nix-openclaw.url = "github:openclaw/nix-openclaw";
 
-    # Stylix: systemwide theming and typography for NixOS
+    # Stylix: declarative themes and typography.
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -31,7 +31,19 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
-    # Home Manager: a tool for managing dotfiles using Nix
+    # nix-darwin: declarative macOS system configuration.
+    nix-darwin = {
+      url = "github:nix-darwin/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Package metadata for upstream macOS application bundles.
+    homebrew-cask = {
+      url = "github:Homebrew/homebrew-cask";
+      flake = false;
+    };
+
+    # Home Manager: declarative user configuration.
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -72,7 +84,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Determinate Nix CLI and manual pages.
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
+
+    # Determinate Nix integration and daemon ownership.
+    determinate = {
+      url = "github:DeterminateSystems/determinate";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
@@ -102,6 +121,8 @@
       self,
       nixpkgs,
       nixpkgs-stable,
+      nix-darwin,
+      determinate,
       home-manager,
       home-manager-stable,
       stylix,
@@ -158,6 +179,7 @@
           programs = {
             deadnix.enable = true;
             nixfmt.enable = true;
+            stylua.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -220,6 +242,11 @@
                 priority = 2;
               };
               typos.priority = 1;
+              lua-lint = {
+                command = lib.getExe pkgs.lua54Packages.luacheck;
+                includes = [ "*.lua" ];
+                priority = 2;
+              };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
@@ -243,7 +270,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|lua|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -258,7 +285,7 @@
           };
         };
 
-      nixosHost =
+      mkHost =
         configurationName:
         {
           system,
@@ -272,35 +299,45 @@
           extraModules ? [ ],
         }:
         let
+          inherit (lib.systems.elaborate system) isDarwin isLinux;
+          nativeModules =
+            if isDarwin then
+              "darwinModules"
+            else if isLinux then
+              "nixosModules"
+            else
+              throw "Unsupported host system: ${system}";
           hostFile =
             if builtins.pathExists (hostModule + "/default.nix") then
               hostModule + "/default.nix"
             else
               hostModule;
-          hostScope = import hostFile;
-          hostScopeWithFile = lib.setFunctionArgs (args: (hostScope args) // { _file = toString hostFile; }) (
-            lib.functionArgs hostScope
-          );
+          host = import hostFile;
+          systemConstructor =
+            if isDarwin then
+              nix-darwin.lib.darwinSystem
+            else if isLinux then
+              nixpkgsInput.lib.nixosSystem
+            else
+              throw "Unsupported host system: ${system}";
         in
-        nixpkgsInput.lib.nixosSystem {
+        systemConstructor {
           inherit system;
           specialArgs = {
             inherit
-              configurationFlakeSubdirectory
               configurationName
               configurationOutputName
+              configurationFlakeSubdirectory
               inputs
+              system
               ;
-            inherit (semantic)
-              editScope
-              extendScope
-              ;
+            inherit (semantic) editScope extendScope;
             moduleRegistry = moduleRegistryInput;
           };
           modules = [
             ./modules/options
-            stylixInput.nixosModules.stylix
-            homeManagerInput.nixosModules.home-manager
+            stylixInput.${nativeModules}.stylix
+            homeManagerInput.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
             ./overlays/gh-dash.nix
@@ -309,12 +346,31 @@
             ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
-            (semantic.rootModule hostScopeWithFile)
+            ./overlays/arc.nix
+            ./overlays/arduino-ide.nix
+            ./overlays/chatgpt.nix
+            ./overlays/bambu-studio.nix
+            ./overlays/cryptomator.nix
+            ./overlays/hammerspoon.nix
+            ./overlays/heroic.nix
+            ./overlays/iterm2.nix
+            ./overlays/linear.nix
+            ./overlays/notion.nix
+            ./overlays/open-webui.nix
+            ./overlays/prusaslicer.nix
+            ./overlays/qmk-toolbox.nix
+            ./overlays/raspberry-pi-imager.nix
+            ./overlays/reaper.nix
+            ./overlays/vial.nix
+            (semantic.rootModule (
+              lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
+            ))
           ]
+          ++ lib.optionals isDarwin [ determinate.darwinModules.default ]
           ++ extraModules;
         };
 
-      nixosHostSpecs = {
+      hostSpecs = {
         nixos = {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos;
@@ -337,7 +393,15 @@
           system = "x86_64-linux";
           hostModule = ./hosts/nixos-server;
         };
+
+        mac = {
+          system = "aarch64-darwin";
+          hostModule = ./hosts/mac;
+        };
       };
+
+      nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
+      darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
 
       themeScope = moduleRegistry.theme {
         inherit lib;
@@ -357,7 +421,7 @@
               in
               {
                 name = outputName;
-                value = nixosHost configurationName (
+                value = mkHost configurationName (
                   hostSpec
                   // {
                     moduleRegistryInput = moduleRegistry // {
@@ -382,6 +446,7 @@
           pkgs = pkgsFor system;
           source = self;
           configurations = self.nixosConfigurations;
+          inherit (self) darwinConfigurations;
         };
 
       docsCommandsFor =
@@ -524,6 +589,9 @@
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+        }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
@@ -664,6 +732,7 @@
           };
         }
       );
-      nixosConfigurations = lib.mapAttrs nixosHost nixosHostSpecs;
+      darwinConfigurations = lib.mapAttrs mkHost darwinHostSpecs;
+      nixosConfigurations = lib.mapAttrs mkHost nixosHostSpecs;
     };
 }

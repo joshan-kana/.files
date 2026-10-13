@@ -3,10 +3,13 @@
   configurationFlakeSubdirectory,
   configurationOutputName,
   pkgs,
+  lib,
+  system,
   ...
 }:
 
 let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   inherit (config) dotfiles;
   inherit (dotfiles.defaults) editor;
   inherit (dotfiles.users) primary;
@@ -109,12 +112,17 @@ let
     OLLAMA_URL = dotfiles.services.ollama.url;
     NIXOS_REBUILD_FLAGS = dotfiles.rebuild.flags;
   };
+
 in
 {
-  environment.sessionVariables = sessionVariables;
-
   home = _: {
     home.sessionVariables = sessionVariables;
+  };
+
+  # The Darwin system module has no environment.sessionVariables option.
+  # Home Manager still receives the same shared values on both systems.
+  config = lib.optionalAttrs isLinux {
+    environment.sessionVariables = sessionVariables;
   };
 
   systemCommands =
@@ -123,7 +131,14 @@ in
       commands = {
         cd = "cd $DOTFILES";
         systemUpdate = "nix run ${repoPath}#system-update --";
-        rebuild = action: "nh os ${action} --hostname \"$FLK_PROFILE\" -- $NIXOS_REBUILD_FLAGS";
+        rebuild =
+          action:
+          if isDarwin then
+            ''nh darwin ${action} "$NH_OS_FLAKE#$FLK_PROFILE"''
+          else if isLinux then
+            ''nh os ${action} --hostname "$FLK_PROFILE" -- $NIXOS_REBUILD_FLAGS''
+          else
+            null;
       };
       aliases = {
         syscd = commands.cd;
@@ -132,15 +147,17 @@ in
         sfu = commands.systemUpdate;
         sysbld = commands.rebuild "build";
         sbld = commands.rebuild "build";
-        sysboot = commands.rebuild "boot";
-        sboot = commands.rebuild "boot";
         sysup = commands.rebuild "switch";
         sup = commands.rebuild "switch";
-        systest = commands.rebuild "test";
-        stest = commands.rebuild "test";
         edit = "edit-config";
         sedit = "edit-config";
         sysedit = "edit-config";
+      }
+      // lib.optionalAttrs isLinux {
+        sysboot = commands.rebuild "boot";
+        sboot = commands.rebuild "boot";
+        systest = commands.rebuild "test";
+        stest = commands.rebuild "test";
       };
       editConfig = pkgs.writeShellApplication {
         name = "edit-config";
@@ -164,35 +181,40 @@ in
 
       vm =
         { pkgs, ... }:
-        let
-          aliases = {
-            sysvm = "build-vm";
-            svm = "build-vm";
-          };
-          buildVm = pkgs.writeShellApplication {
-            name = "build-vm";
-            text = ''
-              read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
-              sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
-            '';
-          };
-        in
-        {
-          environment.shellAliases = aliases;
-          environment.systemPackages = [ buildVm ];
+        lib.optionalAttrs isLinux (
+          let
+            aliases = {
+              sysvm = "build-vm";
+              svm = "build-vm";
+            };
+            buildVm = pkgs.writeShellApplication {
+              name = "build-vm";
+              text = ''
+                read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
+                sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
+              '';
+            };
+          in
+          {
+            environment.shellAliases = aliases;
+            environment.systemPackages = [ buildVm ];
 
-          home = _: {
-            home.shellAliases = aliases;
-            home.packages = [ buildVm ];
-          };
-        };
+            home = _: {
+              home.shellAliases = aliases;
+              home.packages = [ buildVm ];
+            };
+          }
+        );
     };
 
   nh = args: {
-    inherit ((nhConfig args)) programs;
-
     home = args: {
       inherit ((nhConfig args)) programs;
+    };
+    config = lib.optionalAttrs isLinux {
+      programs = lib.recursiveUpdate (nhConfig args).programs {
+        nh.enable = true;
+      };
     };
   };
 
@@ -244,10 +266,13 @@ in
     in
     {
       environment.shellAliases = aliases;
-      programs = (direnvConfig args).programs // {
-        zsh = {
-          shellAliases = zshAliases;
-          interactiveShellInit = hook;
+      config = lib.optionalAttrs isLinux {
+        programs = lib.recursiveUpdate (direnvConfig args).programs {
+          direnv.enable = true;
+          zsh = {
+            shellAliases = zshAliases;
+            interactiveShellInit = hook;
+          };
         };
       };
 
@@ -297,18 +322,20 @@ in
 
   ollama =
     _:
-    let
-      aliases = {
-        ollama = "docker exec -it ollama ollama";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
+    lib.optionalAttrs isLinux (
+      let
+        aliases = {
+          ollama = "docker exec -it ollama ollama";
+        };
+      in
+      {
+        environment.shellAliases = aliases;
 
-      home = _: {
-        home.shellAliases = aliases;
-      };
-    };
+        home = _: {
+          home.shellAliases = aliases;
+        };
+      }
+    );
 
   jujutsu =
     _:
@@ -459,16 +486,19 @@ in
     {
       environment.systemPackages = [ stash ];
       environment.shellAliases = aliases;
-      programs.git.config = gitSettings // {
-        gpg.format = gitSigningFormat;
-      };
-
       home = _: {
         home.packages = [ stash ];
         home.shellAliases = aliases;
         programs.git = {
           settings = gitSettings;
           signing.format = gitSigningFormat;
+        };
+      };
+
+      config = lib.optionalAttrs isLinux {
+        programs.git.enable = true;
+        programs.git.config = gitSettings // {
+          gpg.format = gitSigningFormat;
         };
       };
 
@@ -501,13 +531,16 @@ in
           };
         };
 
-      lazygit = args: {
-        inherit (lazygitConfig args) programs;
-
-        home = args: {
+      lazygit =
+        args:
+        {
+          home = args: {
+            inherit (lazygitConfig args) programs;
+          };
+        }
+        // lib.optionalAttrs isLinux {
           inherit (lazygitConfig args) programs;
         };
-      };
     };
 
   zsh =
@@ -520,10 +553,13 @@ in
     in
     {
       environment.shellAliases = aliases;
-      programs.zsh = (zshConfig args).programs.zsh // {
-        enableBashCompletion = true;
+      config = lib.optionalAttrs isLinux {
+        programs.zsh = (zshConfig args).programs.zsh // {
+          enable = true;
+          enableBashCompletion = true;
+        };
+        users.defaultUserShell = pkgs.zsh;
       };
-      users.defaultUserShell = pkgs.zsh;
 
       home = args: {
         home.shellAliases = aliases;
@@ -555,7 +591,9 @@ in
     };
 
   yazi = _: {
-    programs.yazi.enable = true;
+    config = lib.optionalAttrs isLinux {
+      programs.yazi.enable = true;
+    };
 
     home = _: {
       programs.yazi.shellWrapperName = "y";
@@ -629,7 +667,11 @@ in
     };
 
   starship = args: {
-    inherit (starshipConfig args) programs;
+    config = lib.optionalAttrs isLinux {
+      programs = lib.recursiveUpdate (starshipConfig args).programs {
+        starship.enable = true;
+      };
+    };
 
     home = args: {
       programs.starship = (starshipConfig args).programs.starship // {
@@ -718,7 +760,11 @@ in
       };
     in
     {
-      inherit (neovimConfig args) programs;
+      config = lib.optionalAttrs isLinux {
+        programs = lib.recursiveUpdate (neovimConfig args).programs {
+          neovim.enable = true;
+        };
+      };
       environment.shellAliases = aliases;
 
       home = args: {
@@ -745,7 +791,7 @@ in
 
       home = _: {
         home.shellAliases = aliases;
-        programs.mpv.scripts = with pkgs; [ mpvScripts.mpris ];
+        programs.mpv.scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
       };
     };
 
@@ -757,9 +803,11 @@ in
     environment.systemPackages = [ pkgs.wget ];
   };
 
-  lshw = _: {
-    environment.systemPackages = [ pkgs.lshw ];
-  };
+  lshw =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.lshw ];
+    };
 
   fastfetch =
     _:
@@ -773,37 +821,56 @@ in
       environment.systemPackages = [ pkgs.fastfetch ];
 
       home = _: {
+        home.packages = [ pkgs.fastfetch ];
         home.shellAliases = aliases;
       };
     };
 
   tree = _: {
     environment.systemPackages = [ pkgs.tree ];
+
+    home = _: {
+      home.packages = [ pkgs.tree ];
+    };
   };
 
   glow = _: {
     environment.systemPackages = [ pkgs.glow ];
+
+    home = _: {
+      home.packages = [ pkgs.glow ];
+    };
   };
 
   stow = _: {
     environment.systemPackages = [ pkgs.stow ];
   };
 
-  systemdManagerTui = _: {
-    environment.systemPackages = [ pkgs.systemd-manager-tui ];
-  };
+  systemdManagerTui =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.systemd-manager-tui ];
+    };
 
   youtubeTui = _: {
     environment.systemPackages = [ pkgs.youtube-tui ];
   };
 
-  killall = _: {
-    environment.systemPackages = [ pkgs.killall ];
+  ytDlp = _: {
+    environment.systemPackages = [ pkgs.yt-dlp ];
   };
 
-  xdgUtils = _: {
-    environment.systemPackages = [ pkgs.xdg-utils ];
-  };
+  killall =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.killall ];
+    };
+
+  xdgUtils =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.xdg-utils ];
+    };
 
   trashCli = _: {
     environment.systemPackages = [ pkgs.trash-cli ];
@@ -861,6 +928,41 @@ in
 
   dust = _: {
     environment.systemPackages = [ pkgs.dust ];
+
+    home = _: {
+      home.packages = [ pkgs.dust ];
+    };
+  };
+
+  nixShell = _: {
+    home = _: {
+      home.packages = [
+        (pkgs.writeShellApplication {
+          name = "ns";
+          text = ''
+            if (( $# == 0 )); then
+              echo "usage: ns package1 package2 ... [-- command args...]" >&2
+              exit 2
+            fi
+
+            packages=()
+            while (( $# )); do
+              if [[ "$1" == "--" ]]; then
+                shift
+                break
+              fi
+              packages+=("nixpkgs#$1")
+              shift
+            done
+
+            if (( $# )); then
+              exec nix shell "''${packages[@]}" --command "$@"
+            fi
+            exec nix shell "''${packages[@]}"
+          '';
+        })
+      ];
+    };
   };
 
 }
