@@ -29,6 +29,24 @@ PanelWindow {
     readonly property real topEdge: Math.min(startY, endY)
     readonly property real selectionWidth: Math.abs(endX - startX)
     readonly property real selectionHeight: Math.abs(endY - startY)
+    // The Wayland selection is in logical units, while grim exports physical
+    // pixels. One crop owns both the export arguments and displayed dimensions.
+    readonly property var selectedPixels: {
+        const fullWidth = Math.max(1, frozen.implicitWidth);
+        const fullHeight = Math.max(1, frozen.implicitHeight);
+        const scaleX = fullWidth / Math.max(1, picker.width);
+        const scaleY = fullHeight / Math.max(1, picker.height);
+        const x = Math.max(0, Math.min(fullWidth - 1, Math.floor(picker.leftEdge * scaleX)));
+        const y = Math.max(0, Math.min(fullHeight - 1, Math.floor(picker.topEdge * scaleY)));
+        const w = Math.max(1, Math.min(fullWidth - x, Math.ceil(picker.selectionWidth * scaleX)));
+        const h = Math.max(1, Math.min(fullHeight - y, Math.ceil(picker.selectionHeight * scaleY)));
+        return {
+            x,
+            y,
+            w,
+            h
+        };
+    }
     signal snapshotReady
 
     screen: captureScreen
@@ -107,14 +125,7 @@ PanelWindow {
     function capture(): void {
         if (!open || exporting || selectionWidth < 5 || selectionHeight < 5)
             return;
-        const scaleX = frozen.implicitWidth / Math.max(1, width);
-        const scaleY = frozen.implicitHeight / Math.max(1, height);
-        const x = Math.floor(leftEdge * scaleX);
-        const y = Math.floor(topEdge * scaleY);
-        const fullWidth = Math.max(1, frozen.implicitWidth);
-        const fullHeight = Math.max(1, frozen.implicitHeight);
-        const w = Math.max(1, Math.min(fullWidth - x, Math.ceil(selectionWidth * scaleX)));
-        const h = Math.max(1, Math.min(fullHeight - y, Math.ceil(selectionHeight * scaleY)));
+        const pixelRect = selectedPixels;
         if (selectionMode === "record") {
             // The image is a selection backdrop only. The recorder captures
             // the live output, never the frozen image.
@@ -127,7 +138,7 @@ PanelWindow {
         }
         exporting = true;
         statusText = copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…";
-        exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(x), String(y), String(w), String(h)]);
+        exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
     }
 
     function moveSelection(dx: real, dy: real, resize: bool): void {
@@ -326,7 +337,7 @@ PanelWindow {
         z: 5
         x: picker.leftEdge + picker.selectionWidth / 2 - implicitWidth / 2
         y: picker.topEdge + picker.selectionHeight + picker.theme.spacing2
-        text: Math.round(picker.selectionWidth) + " × " + Math.round(picker.selectionHeight)
+        text: picker.selectedPixels.w + " × " + picker.selectedPixels.h + " PIXELS"
         color: picker.theme.textStrong
         font.family: picker.runtime.fontMono
         font.pixelSize: picker.theme.fontSize(11)
