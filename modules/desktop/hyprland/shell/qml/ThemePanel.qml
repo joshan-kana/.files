@@ -223,7 +223,7 @@ Item {
         }
         readonly property int columnCount: width < 580 || panel.theme.textScale >= 1.5 ? 1 : 2
         cellWidth: width / columnCount
-        cellHeight: 206
+        cellHeight: 230
         model: panel.themes
         clip: true
         currentIndex: panel.selectedIndex
@@ -272,95 +272,156 @@ Item {
                     }
                     spacing: panel.theme.spacing2
 
+                    // Miniature window surfaces sample the official registry
+                    // colours. They are intentionally schematic, not another
+                    // themed app implementation or a hard-coded Base16 skin.
                     ShellSurface {
+                        id: palettePreview
                         width: parent.width
-                        height: 122
+                        height: 145
                         theme: panel.theme
                         motion: panel.motion
                         surfaceLayer: ShellSurface.Group
                         cornerRadius: panel.theme.radiusMedium
                         fillColor: themeCard.preview ? themeCard.preview.background : panel.theme.surface
+                        borderWidth: 1
+                        borderColor: themeCard.preview ? themeCard.preview.outline : panel.theme.subtleBorder
                         clip: true
 
+                        Rectangle {
+                            width: parent.width
+                            height: 23
+                            radius: 8
+                            color: themeCard.preview ? themeCard.preview.surface : panel.theme.surface
+                        }
                         Row {
-                            anchors {
-                                top: parent.top
-                                left: parent.left
-                                right: parent.right
-                                margins: panel.theme.spacing2
-                            }
+                            x: 10
+                            y: 8
                             spacing: 5
                             Repeater {
                                 model: 3
                                 delegate: Rectangle {
                                     required property int index
-                                    width: index === 0 ? 28 : 8
-                                    height: 8
+                                    width: 7
+                                    height: 7
                                     radius: 4
                                     color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[index % themeCard.preview.swatches.length] : panel.theme.accent
                                 }
                             }
                         }
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: 9
+                            width: 32
+                            height: 5
+                            radius: 3
+                            color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                            opacity: 0.3
+                        }
+                        Rectangle {
+                            x: parent.width - 32
+                            y: 8
+                            width: 21
+                            height: 7
+                            radius: 4
+                            color: themeCard.preview && themeCard.preview.swatches.length > 3 ? themeCard.preview.swatches[3] : panel.theme.accent
+                            opacity: 0.85
+                        }
 
                         Rectangle {
-                            x: 12
-                            y: 28
-                            width: parent.width * 0.57
-                            height: 73
+                            id: samplePane
+                            x: 10
+                            y: 32
+                            width: Math.max(90, parent.width * 0.6)
+                            height: 84
                             radius: 10
-                            color: themeCard.preview ? Qt.tint(themeCard.preview.background, Qt.rgba(themeCard.preview.text.r, themeCard.preview.text.g, themeCard.preview.text.b, 0.12)) : panel.theme.layer3
+                            color: themeCard.preview ? themeCard.preview.surface : panel.theme.surfaceRaised
 
                             Rectangle {
-                                x: 9
-                                y: 9
-                                width: parent.width - 18
-                                height: 8
-                                radius: 4
-                                color: themeCard.preview && themeCard.preview.swatches.length ? themeCard.preview.swatches[0] : panel.theme.accent
+                                x: 10
+                                y: 10
+                                width: parent.width - 20
+                                height: 6
+                                radius: 3
+                                color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[0] : panel.theme.accent
+                            }
+                            Text {
+                                x: 10
+                                y: 22
+                                text: "Ag"
+                                color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(22)
+                                font.weight: Font.DemiBold
                             }
                             Rectangle {
-                                x: 9
-                                y: 24
-                                width: parent.width * 0.72
+                                x: 46
+                                y: 34
+                                width: Math.max(8, parent.width - 60)
                                 height: 5
                                 radius: 3
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
-                                opacity: 0.65
+                                opacity: 0.8
                             }
                             Rectangle {
-                                x: 9
-                                y: 36
-                                width: parent.width * 0.47
-                                height: 5
-                                radius: 3
+                                x: 46
+                                y: 46
+                                width: Math.max(8, (parent.width - 60) * 0.65)
+                                height: 4
+                                radius: 2
                                 color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
-                                opacity: 0.42
+                                opacity: 0.35
                             }
                             Rectangle {
-                                x: 9
-                                y: 54
-                                width: parent.width - 18
-                                height: 8
-                                radius: 4
+                                x: 10
+                                y: 64
+                                width: Math.max(8, parent.width * 0.42)
+                                height: 9
+                                radius: 5
                                 color: themeCard.preview && themeCard.preview.swatches.length > 1 ? themeCard.preview.swatches[1] : panel.theme.accent
-                                opacity: 0.80
                             }
                         }
 
                         Column {
-                            anchors {
-                                right: parent.right
-                                rightMargin: 12
-                                verticalCenter: parent.verticalCenter
+                            x: samplePane.x + samplePane.width + 12
+                            y: samplePane.y + 5
+                            width: Math.max(1, parent.width - x - 10)
+                            spacing: 9
+                            Repeater {
+                                model: 3
+                                delegate: Row {
+                                    id: sampleMetric
+                                    required property int index
+                                    width: parent.width
+                                    spacing: 4
+                                    Rectangle {
+                                        width: 9
+                                        height: 9
+                                        radius: 5
+                                        color: themeCard.preview && themeCard.preview.swatches.length > 0 ? themeCard.preview.swatches[(sampleMetric.index + 2) % themeCard.preview.swatches.length] : panel.theme.accent
+                                    }
+                                    Rectangle {
+                                        width: Math.max(4, sampleMetric.width - 18 - sampleMetric.index * 9)
+                                        height: 6
+                                        radius: 3
+                                        color: themeCard.preview ? themeCard.preview.text : panel.theme.textStrong
+                                        opacity: 0.6 - sampleMetric.index * 0.13
+                                    }
+                                }
                             }
+                        }
+                        Row {
+                            x: 10
+                            y: parent.height - 15
+                            width: parent.width - 20
                             spacing: 5
                             Repeater {
                                 model: themeCard.preview ? themeCard.preview.swatches : []
                                 delegate: Rectangle {
                                     required property var modelData
-                                    width: 28
-                                    height: 11
-                                    radius: 5
+                                    width: Math.max(1, (palettePreview.width - 20 - 20) / 5)
+                                    height: 6
+                                    radius: 3
                                     color: modelData
                                 }
                             }
