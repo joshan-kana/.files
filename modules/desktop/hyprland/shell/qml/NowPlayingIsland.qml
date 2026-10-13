@@ -54,6 +54,19 @@ Item {
         outlined: true
         fillColor: theme.paneBase
 
+        // One uninterrupted hover shape, shared by the two pointer targets.
+        // Neither target draws its own partial-width highlight.
+        StateLayer {
+            theme: island.theme
+            motion: island.motion
+            cornerRadius: theme.radiusIsland
+            stateColor: island.theme.textStrong
+            acceptedButtons: Qt.NoButton
+            hoverEnabled: false
+            manualHover: mainHitArea.containsMouse || playbackHitArea.containsMouse
+            manualPress: mainHitArea.pressed || playbackHitArea.pressed
+        }
+
         Item {
             id: artwork
 
@@ -132,7 +145,7 @@ Item {
             width: island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
             height: 37
             anchors {
-                right: state.left
+                right: playbackZone.left
                 rightMargin: island.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
@@ -156,58 +169,60 @@ Item {
             }
         }
 
-        ShellSurface {
-            id: state
+        Item {
+            id: playbackZone
+            width: 54
+            height: parent.height
+            anchors.right: parent.right
 
-            width: 30
-            height: 30
-            anchors {
-                right: parent.right
-                rightMargin: 5
-                verticalCenter: parent.verticalCenter
+            ShellSurface {
+                id: state
+                width: 34
+                height: 34
+                anchors.centerIn: parent
+
+                theme: island.theme
+                motion: island.motion
+                surfaceLayer: ShellSurface.Control
+                selected: island.media.playing
+                cornerRadius: theme.radiusSmall
+                luminous: playbackHitArea.containsMouse && island.media.canTogglePlaying
+                hovered: playbackHitArea.containsMouse
+                lightIntensity: 0.8
+
+                Text {
+                    anchors.centerIn: parent
+                    text: island.media.playing ? "Ⅱ" : "▶"
+                    color: island.media.playing ? island.theme.accent : island.theme.textMuted
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
+                    font.weight: Font.Bold
+                }
             }
 
-            theme: island.theme
-            motion: island.motion
-            surfaceLayer: ShellSurface.Control
-            selected: island.media.playing
-            cornerRadius: theme.radiusSmall
-
-            Text {
-                anchors.centerIn: parent
-                text: island.media.playing ? "Ⅱ" : "▶"
-                color: island.media.playing ? island.theme.accent : island.theme.textMuted
-                font.family: island.runtime.fontMono
-                font.pixelSize: island.theme.fontSize(10)
-                font.weight: Font.Bold
+            // The entire right-hand zone is a play/pause target, including
+            // the spacing around the inset button. No dead strip at the edge.
+            MouseArea {
+                id: playbackHitArea
+                anchors.fill: parent
+                enabled: island.media.canTogglePlaying
+                hoverEnabled: true
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: island.media.togglePlaying()
             }
         }
 
-        // The full island opens Now Playing, except for the dedicated
-        // playback control on the right. Each target owns its pointer area.
-        Item {
+        MouseArea {
+            id: mainHitArea
             anchors {
                 left: parent.left
-                right: state.left
+                right: playbackZone.left
                 top: parent.top
                 bottom: parent.bottom
             }
-
-            StateLayer {
-                theme: island.theme
-                motion: island.motion
-                cornerRadius: theme.radiusIsland
-                onActivated: island.activated()
-            }
-        }
-
-        StateLayer {
-            parent: state
-            theme: island.theme
-            motion: island.motion
-            disabled: !island.media.canTogglePlaying
-            cornerRadius: theme.radiusSmall
-            onActivated: island.media.togglePlaying()
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: island.activated()
         }
     }
 }
