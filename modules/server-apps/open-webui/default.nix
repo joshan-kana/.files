@@ -139,6 +139,7 @@ in
         path = with pkgs; [
           bash
           chromium
+          codex
           computerSudo
           coreutils
           curl
