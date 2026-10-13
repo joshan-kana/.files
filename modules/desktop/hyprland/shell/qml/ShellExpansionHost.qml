@@ -476,7 +476,23 @@ PanelWindow {
             }
         }
 
+        Connections {
+            target: host.systemContent
+            function onHelpScrollRequested(steps: int): void {
+                scopedHelp.scrollHints(steps);
+            }
+        }
+
+        Connections {
+            target: host.mediaContent
+            function onHelpScrollRequested(steps: int): void {
+                scopedHelp.scrollHints(steps);
+            }
+        }
+
         WidgetHelp {
+            id: scopedHelp
+            keyboardScroll: true
             anchors.fill: parent
             runtime: host.runtime
             theme: host.theme
