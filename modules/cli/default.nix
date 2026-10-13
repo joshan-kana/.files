@@ -25,8 +25,6 @@ let
   };
   gitSigningFormat = "openpgp";
   toml = pkgs.formats.toml { };
-  linuxOnly =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
   tuicrConfig = toml.generate "tuicr-config.toml" {
     theme = "stylix";
     diff_view = "side-by-side";
@@ -181,31 +179,32 @@ in
         home.shellAliases = aliases;
       };
 
-      vm = linuxOnly (
+      vm =
         { pkgs, ... }:
-        let
-          aliases = {
-            sysvm = "build-vm";
-            svm = "build-vm";
-          };
-          buildVm = pkgs.writeShellApplication {
-            name = "build-vm";
-            text = ''
-              read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
-              sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
-            '';
-          };
-        in
-        {
-          environment.shellAliases = aliases;
-          environment.systemPackages = [ buildVm ];
+        lib.optionalAttrs isLinux (
+          let
+            aliases = {
+              sysvm = "build-vm";
+              svm = "build-vm";
+            };
+            buildVm = pkgs.writeShellApplication {
+              name = "build-vm";
+              text = ''
+                read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
+                sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
+              '';
+            };
+          in
+          {
+            environment.shellAliases = aliases;
+            environment.systemPackages = [ buildVm ];
 
-          home = _: {
-            home.shellAliases = aliases;
-            home.packages = [ buildVm ];
-          };
-        }
-      );
+            home = _: {
+              home.shellAliases = aliases;
+              home.packages = [ buildVm ];
+            };
+          }
+        );
     };
 
   nh = args: {
@@ -321,21 +320,22 @@ in
       };
     };
 
-  ollama = linuxOnly (
+  ollama =
     _:
-    let
-      aliases = {
-        ollama = "docker exec -it ollama ollama";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
+    lib.optionalAttrs isLinux (
+      let
+        aliases = {
+          ollama = "docker exec -it ollama ollama";
+        };
+      in
+      {
+        environment.shellAliases = aliases;
 
-      home = _: {
-        home.shellAliases = aliases;
-      };
-    }
-  );
+        home = _: {
+          home.shellAliases = aliases;
+        };
+      }
+    );
 
   jujutsu =
     _:
@@ -803,9 +803,11 @@ in
     environment.systemPackages = [ pkgs.wget ];
   };
 
-  lshw = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.lshw ];
-  });
+  lshw =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.lshw ];
+    };
 
   fastfetch =
     _:
@@ -844,9 +846,11 @@ in
     environment.systemPackages = [ pkgs.stow ];
   };
 
-  systemdManagerTui = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.systemd-manager-tui ];
-  });
+  systemdManagerTui =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.systemd-manager-tui ];
+    };
 
   youtubeTui = _: {
     environment.systemPackages = [ pkgs.youtube-tui ];
@@ -856,13 +860,17 @@ in
     environment.systemPackages = [ pkgs.yt-dlp ];
   };
 
-  killall = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.killall ];
-  });
+  killall =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.killall ];
+    };
 
-  xdgUtils = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.xdg-utils ];
-  });
+  xdgUtils =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.xdg-utils ];
+    };
 
   trashCli = _: {
     environment.systemPackages = [ pkgs.trash-cli ];
