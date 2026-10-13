@@ -348,20 +348,23 @@ Column {
     }
 
     Repeater {
-        model: quick.streams
+        // Retain two delegates across transient PipeWire stream changes.
+        // The underlying JS-array model must not own delegate metaobjects.
+        model: 2
 
         delegate: Row {
             id: streamRow
-            required property var modelData
             required property int index
+            readonly property var stream: quick.streams[index] || null
+            visible: !!stream
             width: quick.width
-            height: 36
+            height: visible ? 36 : 0
             spacing: quick.theme.spacing2
 
             Text {
                 width: 116
                 anchors.verticalCenter: parent.verticalCenter
-                text: (quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "▸ " : "") + quick.system.streamDisplayName(streamRow.modelData)
+                text: (quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "▸ " : "") + (streamRow.stream ? quick.system.streamDisplayName(streamRow.stream) : "")
                 elide: Text.ElideRight
                 color: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? quick.theme.accent : quick.theme.textMuted
                 font.family: quick.runtime.fontMono
@@ -377,8 +380,8 @@ Column {
                 width: 105
                 height: 28
                 theme: quick.theme
-                node: streamRow.modelData
-                muted: !!streamRow.modelData.audio?.muted
+                node: streamRow.stream
+                muted: !!streamRow.stream?.audio?.muted
                 monitoring: quick.meterEnabled
             }
             ShellSlider {
@@ -386,13 +389,13 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 theme: quick.theme
                 motion: quick.motion
-                value: streamRow.modelData.audio?.volume ?? 0
+                value: streamRow.stream?.audio?.volume ?? 0
                 animateValueChanges: true
-                enabled: !!streamRow.modelData.audio
-                accentColor: streamRow.modelData.audio?.muted ? quick.theme.warning : quick.theme.accent
+                enabled: !!streamRow.stream?.audio
+                accentColor: streamRow.stream?.audio?.muted ? quick.theme.warning : quick.theme.accent
                 trackHeight: 5
                 handleSize: 12
-                onValueRequested: value => quick.system.setStreamVolume(streamRow.modelData, value)
+                onValueRequested: value => quick.system.setStreamVolume(streamRow.stream, value)
             }
             ShellSurface {
                 id: streamMute
@@ -401,13 +404,13 @@ Column {
                 theme: quick.theme
                 motion: quick.motion
                 surfaceLayer: ShellSurface.Control
-                selected: !!streamRow.modelData.audio?.muted
+                selected: !!streamRow.stream?.audio?.muted
                 cornerRadius: quick.theme.radiusSmall
 
                 Text {
                     anchors.centerIn: parent
-                    text: streamRow.modelData.audio?.muted ? "󰖁" : "󰕾"
-                    color: streamRow.modelData.audio?.muted ? quick.theme.warning : quick.theme.textStrong
+                    text: streamRow.stream?.audio?.muted ? "󰖁" : "󰕾"
+                    color: streamRow.stream?.audio?.muted ? quick.theme.warning : quick.theme.textStrong
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: quick.theme.fontSize(13)
                 }
@@ -415,7 +418,7 @@ Column {
                     theme: quick.theme
                     motion: quick.motion
                     cornerRadius: quick.theme.radiusSmall
-                    onActivated: quick.system.toggleStreamMute(streamRow.modelData)
+                    onActivated: quick.system.toggleStreamMute(streamRow.stream)
                 }
             }
         }
