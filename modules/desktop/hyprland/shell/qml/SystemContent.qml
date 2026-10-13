@@ -245,8 +245,8 @@ FocusScope {
                             action: "Toggle Notifications / Stay awake / Motion"
                         },
                         {
-                            key: "T / SHIFT+T",
-                            action: "Night Light / automatic schedule"
+                            key: "T / SHIFT+T / ALT+T",
+                            action: "Night Light / warmer / cooler"
                         },
                         {
                             key: "O",
@@ -632,110 +632,6 @@ FocusScope {
                 }
             }
 
-            Text {
-                text: "SYSTEM · QUICK SETTINGS"
-                color: root.theme.accent
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontPanelEyebrow
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1.4
-            }
-
-            ShellSurface {
-                width: parent.width
-                height: 80
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: root.theme.radiusLarge
-
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: root.theme.spacing3
-                    spacing: root.theme.spacing2
-
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(130, parent.width - nightToggle.width - nightAuto.width - nightWarmer.width - nightCooler.width - parent.spacing * 4)
-                        spacing: 4
-                        Text {
-                            text: "Night light"
-                            color: root.theme.textStrong
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(15)
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            width: parent.width
-                            text: root.nightLight.error.length > 0 ? root.nightLight.error : root.nightLight.detail
-                            color: root.nightLight.error.length > 0 ? root.theme.warning : root.theme.textMuted
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(10)
-                            elide: Text.ElideRight
-                        }
-                    }
-                    QuickSettingChip {
-                        id: nightToggle
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 100
-                        height: 54
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: root.nightLight.active ? "Warm" : "Off"
-                        icon: root.nightLight.active ? "󰖔" : "󰖙"
-                        shortcut: "T"
-                        active: root.nightLight.active
-                        activeColor: root.theme.warning
-                        enabled: root.nightLight.supported && !root.nightLight.busy
-                        onActivated: root.nightLight.toggle()
-                    }
-                    QuickSettingChip {
-                        id: nightAuto
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 97
-                        height: 54
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        title: "Auto"
-                        icon: root.nightLight.automatic ? "󰃰" : "󰃯"
-                        shortcut: "⇧T"
-                        active: root.nightLight.automatic
-                        enabled: root.nightLight.supported && !root.nightLight.busy
-                        onActivated: root.nightLight.toggleAuto()
-                    }
-                    ShellAction {
-                        id: nightWarmer
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 48
-                        height: 48
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        title: "−500"
-                        icon: "󰖔"
-                        enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
-                        onActivated: root.nightLight.warmer()
-                    }
-                    ShellAction {
-                        id: nightCooler
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 48
-                        height: 48
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        title: "+500"
-                        icon: "󰖙"
-                        enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
-                        onActivated: root.nightLight.cooler()
-                    }
-                }
-            }
-
             Grid {
                 id: connectionTiles
                 width: parent.width
@@ -799,7 +695,7 @@ FocusScope {
             Grid {
                 id: actionStrip
                 width: parent.width
-                columns: width < 600 || root.theme.textScale >= 1.5 ? 3 : 5
+                columns: width < 600 || root.theme.textScale >= 1.5 ? 3 : 6
                 columnSpacing: root.theme.spacing2
                 rowSpacing: root.theme.spacing2
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
@@ -862,6 +758,21 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
+                    icon: root.nightLight.active ? "󰖔" : "󰖙"
+                    title: root.nightLight.supported ? "Night " + root.nightLight.temperature + "K" : "Night unavailable"
+                    shortcut: "T"
+                    active: root.nightLight.active
+                    activeColor: root.theme.warning
+                    enabled: root.nightLight.supported && !root.nightLight.busy
+                    onActivated: root.nightLight.toggle()
+                }
+
+                QuickSettingChip {
+                    width: actionStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
                     icon: root.system.batteryAvailable ? (root.system.batteryPercent <= 20 ? "󰁺" : "󰁹") : "󰐥"
                     title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
                     shortcut: "O"
@@ -869,6 +780,50 @@ FocusScope {
                     active: root.powerProfile.current === "power-saver"
                     activeColor: root.theme.warning
                     onActivated: root.powerProfile.cycle()
+                }
+            }
+
+            Row {
+                width: parent.width
+                spacing: root.theme.spacing2
+                visible: root.nightLight.supported
+                height: visible ? 36 : 0
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(130, parent.width - warmerButton.width - coolerButton.width - parent.spacing * 2)
+                    text: root.nightLight.error.length > 0 ? root.nightLight.error : "NIGHT LIGHT  ·  " + root.nightLight.temperature + "K"
+                    color: root.nightLight.error.length > 0 ? root.theme.warning : root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    elide: Text.ElideRight
+                }
+                ShellAction {
+                    id: warmerButton
+                    width: 91
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "−500K"
+                    shortcut: "SHIFT+T"
+                    enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
+                    onActivated: root.nightLight.warmer()
+                }
+                ShellAction {
+                    id: coolerButton
+                    width: 91
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    horizontalCompact: true
+                    title: "+500K"
+                    shortcut: "ALT+T"
+                    enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
+                    onActivated: root.nightLight.cooler()
                 }
             }
 
@@ -1701,7 +1656,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_T) {
                     if ((event.modifiers & Qt.ShiftModifier) !== 0)
-                        root.nightLight.toggleAuto();
+                        root.nightLight.warmer();
+                    else if ((event.modifiers & Qt.AltModifier) !== 0)
+                        root.nightLight.cooler();
                     else
                         root.nightLight.toggle();
                     event.accepted = true;
