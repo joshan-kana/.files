@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pam
 import Quickshell.Wayland
 
@@ -114,17 +115,81 @@ WlSessionLock {
     }
 
     WlSessionLockSurface {
+        id: lockSurface
         color: lock.theme.background
+        property string lockImage: lock.runtime.wallpaper
+        readonly property string outputName: screen && screen.name.length > 0 ? screen.name : "all"
+        property string queriedOutput: ""
+        property string pendingPoster: ""
+        property string posterInFlight: ""
+
+        // Session locking never depends on video playback, Wayland wallpaper
+        // services or the availability of the selected file. Render the
+        // immutable Stylix image immediately and asynchronously replace it
+        // with the still frame of the effective per-output wallpaper.
+        property StdioCollector currentOutput: StdioCollector {}
+        property Process currentProcess: Process {
+            stdout: lockSurface.currentOutput
+            onExited: (exitCode, exitStatus) => {
+                if (lockSurface.queriedOutput !== lockSurface.outputName) {
+                    Qt.callLater(() => lockSurface.resolveWallpaper());
+                    return;
+                }
+                if (exitCode !== 0)
+                    return;
+                const current = lockSurface.currentOutput.text.trim();
+                lockSurface.pendingPoster = current.startsWith("/") ? current : "";
+                lockSurface.startPoster();
+            }
+        }
+        property StdioCollector posterOutput: StdioCollector {}
+        property Process posterProcess: Process {
+            stdout: lockSurface.posterOutput
+            onExited: (exitCode, exitStatus) => {
+                if (exitCode === 0 && lockSurface.posterInFlight === lockSurface.pendingPoster) {
+                    const still = lockSurface.posterOutput.text.trim();
+                    if (still.startsWith("/"))
+                        lockSurface.lockImage = "file://" + still;
+                }
+                // A monitor change may have invalidated this asynchronous
+                // preview. Resolve the replacement only after the old process
+                // exits; never display a stale preview for a new output.
+                Qt.callLater(() => lockSurface.startPoster());
+            }
+        }
+        function startPoster(): void {
+            if (!pendingPoster.length || posterProcess.running || posterInFlight === pendingPoster)
+                return;
+            posterInFlight = pendingPoster;
+            posterProcess.exec([lock.runtime.wallpaperLibrary, "thumbnail", pendingPoster]);
+        }
+        function resolveWallpaper(): void {
+            if (lock.runtime.wallpaperLibrary.length === 0 || currentProcess.running)
+                return;
+            queriedOutput = outputName;
+            currentProcess.exec([lock.runtime.wallpaperLibrary, "current", outputName]);
+        }
+        Component.onCompleted: Qt.callLater(() => resolveWallpaper())
+        onOutputNameChanged: {
+            lockImage = lock.runtime.wallpaper;
+            pendingPoster = "";
+            posterInFlight = "";
+            Qt.callLater(() => resolveWallpaper());
+        }
 
         Item {
             anchors.fill: parent
 
             Image {
                 anchors.fill: parent
-                source: lock.runtime.wallpaper
+                source: lockSurface.lockImage
                 asynchronous: true
                 cache: true
                 fillMode: Image.PreserveAspectCrop
+                onStatusChanged: {
+                    if (status === Image.Error)
+                        lockSurface.lockImage = lock.runtime.wallpaper;
+                }
             }
 
             Rectangle {
