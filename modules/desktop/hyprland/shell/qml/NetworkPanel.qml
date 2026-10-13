@@ -33,8 +33,55 @@ Item {
     property string detailType: ""
     property string detailUuid: ""
     property var detailRows: []
+    property var detailBaseRows: []
     property bool detailError: false
-    readonly property bool detailPending: detailProcess.running
+    property string profileQueryUuid: ""
+    readonly property bool detailPending: detailProcess.running || profileDetailsProcess.running
+
+    property StdioCollector profileDetailsOutput: StdioCollector {}
+    property Process profileDetailsProcess: Process {
+        stdout: panel.profileDetailsOutput
+        onExited: (exitCode, exitStatus) => {
+            if (!panel.detailView || panel.detailConnected || panel.profileQueryUuid !== panel.detailUuid)
+                return;
+            panel.detailError = exitCode !== 0;
+            panel.detailRows = panel.detailBaseRows.concat(exitCode === 0 ? panel.parseProfileDetails(panel.profileDetailsOutput.text) : [
+                {
+                    label: "CONFIG STATUS",
+                    value: "SAVED PROFILE NO LONGER AVAILABLE"
+                }
+            ]);
+        }
+    }
+
+    function parseProfileDetails(source: string): var {
+        // Never request or render credentials, PSKs, keys or VPN secrets.
+        // These are saved configuration values, not live interface addresses.
+        const allowed = {
+            "connection.interface-name": "DEVICE CONFIG",
+            "connection.autoconnect": "AUTO CONNECT",
+            "ipv4.method": "IPv4 MODE",
+            "ipv4.addresses": "IPv4 CONFIG",
+            "ipv4.gateway": "GATEWAY CONFIG",
+            "ipv4.dns": "DNS CONFIG",
+            "ipv6.method": "IPv6 MODE",
+            "ipv6.addresses": "IPv6 CONFIG",
+            "ipv6.gateway": "IPv6 GATEWAY",
+            "ipv6.dns": "IPv6 DNS"
+        };
+        const values = {};
+        for (const line of source.split("\n")) {
+            const fields = splitNmcli(line);
+            const key = fields[0];
+            const value = fields.slice(1).join(":").trim();
+            if (Object.prototype.hasOwnProperty.call(allowed, key) && value && value !== "--")
+                values[key] = value;
+        }
+        return Object.keys(allowed).filter(key => values[key]).map(key => ({
+                    label: allowed[key],
+                    value: values[key]
+                }));
+    }
 
     property StdioCollector detailOutput: StdioCollector {}
     property Process detailProcess: Process {
@@ -101,10 +148,18 @@ Item {
     }
 
     function refreshDetails(): void {
-        if (!detailView || !detailConnected || runtime.nmcli.length === 0 || detailProcess.running)
+        if (!detailView || runtime.nmcli.length === 0)
             return;
         detailError = false;
-        detailProcess.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", "GENERAL.DEVICE,GENERAL.CONNECTION,GENERAL.STATE,GENERAL.HWADDR,GENERAL.MTU,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,IP6.GATEWAY,IP6.DNS", "device", "show"]);
+        if (!detailConnected) {
+            if (detailUuid.length === 0 || profileDetailsProcess.running)
+                return;
+            profileQueryUuid = detailUuid;
+            profileDetailsProcess.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", "connection.interface-name,connection.autoconnect,ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns,ipv6.method,ipv6.addresses,ipv6.gateway,ipv6.dns", "connection", "show", "uuid", detailUuid]);
+            return;
+        }
+        if (!detailProcess.running)
+            detailProcess.exec([runtime.nmcli, "--escape", "yes", "-t", "-f", "GENERAL.DEVICE,GENERAL.CONNECTION,GENERAL.STATE,GENERAL.HWADDR,GENERAL.MTU,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,IP6.GATEWAY,IP6.DNS", "device", "show"]);
     }
 
     function toggleDetailView(): void {
@@ -113,6 +168,7 @@ Item {
         if (detailView) {
             detailView = false;
             detailRows = [];
+            detailBaseRows = [];
             keyboardRequested();
             return;
         }
@@ -140,6 +196,7 @@ Item {
                 value: detailUuid || "NO PROFILE"
             }
         ];
+        detailBaseRows = detailRows;
         detailError = false;
         detailView = true;
         refreshDetails();
@@ -299,6 +356,7 @@ Item {
         savedView = false;
         detailView = false;
         detailRows = [];
+        detailBaseRows = [];
         open = false;
         keyboardRequested();
     }
@@ -699,7 +757,7 @@ Item {
                         text: detailRow.modelData.value
                         elide: Text.ElideRight
                         textFormat: Text.PlainText
-                        color: panel.theme.textStrong
+                        color: detailRow.modelData.label === "CONFIG STATUS" ? panel.theme.warning : panel.theme.textStrong
                         font.family: panel.runtime.fontMono
                         font.pixelSize: panel.theme.fontSize(11)
                         horizontalAlignment: Text.AlignRight
