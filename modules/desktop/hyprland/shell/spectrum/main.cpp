@@ -33,10 +33,11 @@ constexpr float kHighHz = 20000.0F;
 constexpr float kFloorDb = -72.0F;
 constexpr float kAttackSeconds = 0.004F;
 constexpr float kReleaseSeconds = 0.045F;
-// Short, punchy envelopes for low-frequency transients. At low frequencies,
-// narrower filters ring well after the kick; cap the Q to avoid smearing.
+// Keep sub-bass tones spatially distinct without gating small peaks. A
+// moderate Q retains transient response while reducing adjacent-frequency
+// leakage compared with the broad original filters.
 constexpr float kBassCutoffHz = 250.0F;
-constexpr float kBassMaxQ = 4.0F;
+constexpr float kBassMaxQ = 8.0F;
 constexpr float kBassAttackSeconds = 0.002F;
 constexpr float kBassReleaseSeconds = 0.028F;
 constexpr float kRmsSeconds = 0.030F;
