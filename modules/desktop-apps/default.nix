@@ -1,5 +1,14 @@
-{ inputs, pkgs, ... }:
+{
+  inputs,
+  lib,
+  pkgs,
+  system,
+  ...
+}:
 
+let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+in
 {
   brave = _: {
     environment.systemPackages = [ pkgs.brave ];
@@ -9,31 +18,51 @@
     environment.systemPackages = [ pkgs.bitwarden-desktop ];
   };
 
-  warp = _: {
-    environment.systemPackages = [ pkgs.warp-terminal ];
-  };
+  warp =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.warp-terminal ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "warp" ];
+      }
+    );
 
-  mullvad = _: {
-    services.mullvad-vpn.enable = true;
-    environment.systemPackages = [ pkgs.mullvad-vpn ];
-  };
+  mullvad =
+    _:
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.mullvad-vpn ];
+      services.mullvad-vpn.enable = true;
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "mullvad-vpn" ];
+    };
 
   chromium = _: {
-    environment.systemPackages = [ pkgs.chromium ];
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.chromium ];
+    };
   };
 
   zen = _: {
-    environment.systemPackages = [
-      inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.beta
-    ];
+    environment.systemPackages = [ inputs.zen-browser.packages.${system}.beta ];
   };
 
   firefox = _: {
+    environment.systemPackages = lib.optionals isDarwin [ pkgs.firefox-bin ];
     home = _: {
+      programs.firefox.package = if isDarwin then pkgs.firefox-bin else pkgs.firefox;
       stylix.targets.firefox.profileNames = [ "themed" ];
       stylix.targets.firefox.colorTheme.enable = true;
       programs.firefox.profiles.themed.extensions.force = true;
-      programs.firefox.configPath = ".mozilla/firefox";
+      programs.firefox.configPath =
+        if isDarwin then
+          "Library/Application Support/Firefox"
+        else if isLinux then
+          ".mozilla/firefox"
+        else
+          null;
     };
   };
 
@@ -63,34 +92,32 @@
   };
 
   thunderbird = _: {
-    environment.systemPackages = [ pkgs.thunderbird ];
+    environment.systemPackages = [ (if isDarwin then pkgs.thunderbird-bin else pkgs.thunderbird) ];
   };
 
   obsidian = _: {
     environment.systemPackages = [ pkgs.obsidian ];
   };
 
-  filelight = _: {
-    environment.systemPackages = [ pkgs.kdePackages.filelight ];
-  };
-
-  gimp = _: {
-    environment.systemPackages = [ pkgs.gimp ];
-  };
-
-  gparted = _: {
-    environment.systemPackages = [ pkgs.gparted ];
-  };
+  gimp =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.gimp ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "gimp" ];
+    };
 
   githubDesktop = _: {
-    environment.systemPackages = [ pkgs.github-desktop ];
-  };
-
-  nautilus = _: {
-    environment.systemPackages = [ pkgs.nautilus ];
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.github-desktop ];
+    };
   };
 
   vscode = _: {
+    environment.systemPackages = [ pkgs.vscode ];
     home = _: {
       programs.vscode = { };
     };
@@ -100,26 +127,38 @@
     environment.systemPackages = [ pkgs.jetbrains.pycharm ];
   };
 
-  libreoffice = _: {
-    environment.systemPackages = [ pkgs.libreoffice ];
-  };
+  libreoffice =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.libreoffice ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "libreoffice" ];
+      }
+    );
 
   sunshine = _: {
     environment.systemPackages = [ pkgs.sunshine ];
-    networking.firewall.allowedTCPPorts = [ 47990 ];
+    config = lib.optionalAttrs isLinux {
+      networking.firewall.allowedTCPPorts = [ 47990 ];
+    };
   };
 
   moonlight = _: {
     environment.systemPackages = [ pkgs.moonlight-qt ];
   };
 
-  waypipe = _: {
-    environment.systemPackages = [ pkgs.waypipe ];
-  };
-
-  vlc = _: {
-    environment.systemPackages = [ pkgs.vlc ];
-  };
+  vlc =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.vlc ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "vlc" ];
+      }
+    );
 
   mopidy = _: {
     home = _: {
@@ -138,34 +177,79 @@
     };
   };
 
-  # The local Ollama service is managed outside this shared module, but these
-  # desktop hosts intentionally expose its established ports.
-  ollama = _: {
-    networking.firewall.allowedTCPPorts = [
-      11434
-      11435
-    ];
-  };
+  ollama =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        networking.firewall.allowedTCPPorts = [
+          11434
+          11435
+        ];
+      }
+      // lib.optionalAttrs isDarwin {
+        environment.systemPackages = [ pkgs.ollama ];
+        launchd.user.agents.ollama.serviceConfig = {
+          ProgramArguments = [
+            (lib.getExe pkgs.ollama)
+            "serve"
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          # Preserve the previous IPv4/IPv6 LAN listener.
+          EnvironmentVariables.OLLAMA_HOST = "[::]:11434";
+        };
+      }
+    );
   spotify =
     { lib, options, ... }:
-    lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
-      programs.spicetify.enable = true;
+    (lib.optionalAttrs isLinux (
+      lib.optionalAttrs (lib.hasAttrByPath [ "programs" "spicetify" ] options) {
+        programs.spicetify.enable = true;
+      }
+    ))
+    // lib.optionalAttrs isDarwin {
+      # The pinned Darwin Nixpkgs source depends on a stalled Wayback download.
+      homebrew.casks = [ "spotify" ];
     };
 
   discord = _: {
     environment.systemPackages = [ pkgs.discord ];
   };
 
-  dropbox = _: {
-    environment.systemPackages = [ pkgs.dropbox ];
-  };
+  dropbox =
+    _:
+    {
+      config = lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.dropbox ];
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "dropbox" ];
+    };
 
   onlyoffice = _: {
-    environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
+    };
   };
 
   twingate = _: {
-    services.twingate.enable = true;
+    config = lib.optionalAttrs isLinux {
+      services.twingate.enable = true;
+    };
   };
-
+}
+// lib.optionalAttrs isLinux {
+  filelight = _: {
+    environment.systemPackages = [ pkgs.kdePackages.filelight ];
+  };
+  gparted = _: {
+    environment.systemPackages = [ pkgs.gparted ];
+  };
+  nautilus = _: {
+    environment.systemPackages = [ pkgs.nautilus ];
+  };
+  waypipe = _: {
+    environment.systemPackages = [ pkgs.waypipe ];
+  };
 }

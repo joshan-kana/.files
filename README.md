@@ -1,6 +1,6 @@
 # .files
 
-Nix flake for my NixOS systems, Home Manager configuration, and home infrastructure.
+Nix flake for my NixOS systems, macOS workstation, Home Manager configuration, and home infrastructure.
 
 Configuration is organised by **semantic ownership**: code lives with the application, capability, or idea it belongs to rather than being grouped by native Nix option namespace.
 

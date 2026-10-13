@@ -1,5 +1,6 @@
 {
   configurations,
+  darwinConfigurations ? { },
   lib,
   pkgs,
   semanticScopeOptions,
@@ -13,6 +14,7 @@ let
   # 3. Overlay generated files onto the handwritten docs/manual source tree.
   # 4. Render the assembled Markdown tree with mdBook.
   hostNames = builtins.attrNames configurations;
+  runbookHostNames = builtins.attrNames (configurations // darwinConfigurations);
   serverHost = configurations.nixos-server;
   serverConfig = serverHost.config;
 
@@ -723,7 +725,7 @@ let
             "\n  - [Backup / application recovery](runbooks/nixos-server/backup-recovery.md)\n  - [Vault / ZFS recovery](runbooks/nixos-server/vault-zfs-recovery.md)";
       in
       "- [`${name}`](runbooks/${name}/index.md)\n  - [Installation guide](runbooks/${name}/install.md)${serverRecovery}"
-    ) hostNames}
+    ) runbookHostNames}
 
     # Systems
 
@@ -742,6 +744,34 @@ let
     - [Semantic scopes](configuration/scopes.md)
     - [dotfiles options](configuration/options.md)
   '';
+
+  darwinRunbookEnvironment =
+    name: host:
+    let
+      inherit (host) config;
+      primary = config.dotfiles.users.primary;
+      secretBackup = config.dotfiles.backups.secrets;
+      launchAgents = config.home-manager.users.${primary.name}.launchd.agents;
+      enabledAgentLabels = map (agent: agent.config.Label) (
+        builtins.attrValues (lib.filterAttrs (_: agent: agent.enable && agent.config ? Label) launchAgents)
+      );
+    in
+    ''
+      export HOST_NAME=${lib.escapeShellArg name}
+      export SYSTEM=${lib.escapeShellArg host.pkgs.stdenv.hostPlatform.system}
+      export PROFILE=${lib.escapeShellArg config.dotfiles.profile.name}
+      export DOTFILES_REPO=${lib.escapeShellArg config.dotfiles.paths.repoPath}
+      export PRIMARY_USER=${lib.escapeShellArg primary.name}
+      export PRIMARY_HOME=${lib.escapeShellArg "${primary.homeRoot}/${primary.name}"}
+      export USER_SECRETS_DIR=${lib.escapeShellArg config.dotfiles.secretsDir}
+      export SECRETS_BACKUP_ENABLED=${lib.escapeShellArg (lib.boolToString config.dotfiles.resolvedScopes.backups.secrets.enable)}
+      export SECRETS_REPOSITORY=${lib.escapeShellArg secretBackup.repository}
+      export SECRETS_RCLONE_CONFIG=${lib.escapeShellArg secretBackup.rcloneConfigFile}
+      export SECRETS_PASSWORD_FILE=${lib.escapeShellArg secretBackup.passwordFile}
+      MANAGED_LAUNCHD_LABELS=(
+      ${lib.concatMapStringsSep "\n" (label: "  ${lib.escapeShellArg label}") enabledAgentLabels}
+      )
+    '';
 
   serverRunbookEnvironment = ''
     ${hostRunbookEnvironment "nixos-server" serverHost}
@@ -763,12 +793,15 @@ let
   systemFiles = lib.mapAttrs' (
     name: _: lib.nameValuePair "systems/${name}.md" (systemMarkdown name)
   ) configurations;
-  hostRunbookIndexFiles = lib.genAttrs' hostNames (
+  hostRunbookIndexFiles = lib.genAttrs' runbookHostNames (
     name: lib.nameValuePair "runbooks/${name}/index.md" (hostRunbookIndexMarkdown name)
   );
   hostEnvironmentFiles = lib.mapAttrs' (
     name: host: lib.nameValuePair "generated/hosts/${name}.sh" (hostRunbookEnvironment name host)
   ) configurations;
+  darwinHostEnvironmentFiles = lib.mapAttrs' (
+    name: host: lib.nameValuePair "generated/hosts/${name}.sh" (darwinRunbookEnvironment name host)
+  ) darwinConfigurations;
 
   generatedFiles = {
     "SUMMARY.md" = summaryMarkdown;
@@ -784,7 +817,8 @@ let
   }
   // systemFiles
   // hostRunbookIndexFiles
-  // hostEnvironmentFiles;
+  // hostEnvironmentFiles
+  // darwinHostEnvironmentFiles;
 
   # Materialize generated strings as store files so docsSource can overlay them
   # onto the handwritten source tree with normal file operations.
@@ -795,13 +829,13 @@ let
   # Every configured host must have one human-authored installation procedure.
   missingInstallRunbooks = lib.filter (
     name: !(builtins.pathExists "${source}/docs/manual/src/runbooks/${name}/install.md")
-  ) hostNames;
+  ) runbookHostNames;
 
   # Assemble the complete Markdown source tree.
   docsSource =
     assert lib.assertMsg (missingInstallRunbooks == [ ]) ''
       Missing install/recovery runbook(s) for: ${lib.concatStringsSep ", " missingInstallRunbooks}
-      Add docs/manual/src/runbooks/<configuration>/install.md for every nixosConfigurations entry.
+      Add docs/manual/src/runbooks/<configuration>/install.md for every configured host.
     '';
     pkgs.runCommand "dotfiles-docs-source"
       {

@@ -1,12 +1,15 @@
 {
+  config,
   lib,
   pkgs,
+  system,
   ...
 }:
 
 let
-  # Root-only directory containing the bootstrap credentials used by backup jobs.
-  backupCredentialsDir = "/var/lib/backup-credentials";
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  # Keep backup credentials outside the Nix store.
+  backupCredentialsDir = config.dotfiles.backups.secrets.credentialsDir;
 
   # Collect generated `restic-<name>` wrapper commands so Zsh completion can be attached to them.
   resticWrapperCommandsFor =
@@ -23,10 +26,12 @@ in
     rclone
   ];
 
-  # Ensure the backup bootstrap directory exists and is accessible only to root.
-  systemd.tmpfiles.rules = [
-    "d ${backupCredentialsDir} 0700 root root - -"
-  ];
+  config = lib.optionalAttrs isLinux {
+    # Ensure the backup bootstrap directory exists and is accessible only to root.
+    systemd.tmpfiles.rules = [
+      "d ${backupCredentialsDir} 0700 root root - -"
+    ];
+  };
 
   home =
     {
@@ -37,7 +42,8 @@ in
     }:
 
     let
-      resticWrapperCommands = resticWrapperCommandsFor osConfig.services.restic.backups;
+      resticWrapperCommands =
+        if isLinux then resticWrapperCommandsFor osConfig.services.restic.backups else [ ];
     in
     {
       # Register Restic wrapper completions after Home Manager initializes Zsh completion.
@@ -52,6 +58,7 @@ in
   secrets =
     {
       config,
+      lib,
       pkgs,
       ...
     }:
@@ -64,25 +71,85 @@ in
       inherit (config.dotfiles.users) primary;
 
       # Runtime bootstrap inputs consumed by Restic/rclone; their contents stay outside Nix.
-      backupRcloneConfig = "${backupCredentialsDir}/rclone.conf";
-      backupPassword = "${backupCredentialsDir}/secrets-restic-password";
+      inherit (config.dotfiles.backups.secrets) rcloneConfigFile passwordFile;
 
-      # Give every host an independent encrypted repository under the shared remote.
-      repository = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
+      # Repository identity comes from the same policy as the recovery guide.
+      repository = config.dotfiles.backups.secrets.repository;
 
       # Clear stale Restic locks before a scheduled backup starts.
       unlock = ''
         #!${pkgs.runtimeShell}
         ${pkgs.restic}/bin/restic unlock
       '';
+      macBackup = pkgs.writeShellApplication {
+        name = "secrets-backup";
+        runtimeInputs = with pkgs; [
+          restic
+          rclone
+        ];
+        text = ''
+          export RCLONE_CONFIG=${lib.escapeShellArg rcloneConfigFile}
+          export RESTIC_PASSWORD_FILE=${lib.escapeShellArg passwordFile}
+          export RESTIC_REPOSITORY=${lib.escapeShellArg repository}
+          case "''${1:-backup}" in
+            backup)
+              restic unlock
+              exec restic backup --quiet ${lib.escapeShellArg config.dotfiles.secretsDir}
+              ;;
+            maintenance)
+              restic forget --quiet --prune --keep-within 1d \
+                --keep-hourly ${toString retention.hourly} \
+                --keep-daily ${toString retention.daily} \
+                --keep-weekly ${toString retention.weekly} \
+                --keep-monthly ${toString retention.monthly}
+              exec restic check --quiet --read-data
+              ;;
+            *) echo "usage: secrets-backup {backup|maintenance}" >&2; exit 2 ;;
+          esac
+        '';
+      };
     in
     {
+      home =
+        _:
+        lib.optionalAttrs isDarwin {
+          home.packages = [ macBackup ];
+          launchd.agents = {
+            secrets-backup = {
+              enable = true;
+              config = {
+                Label = "com.joshankana.secrets-backup";
+                ProgramArguments = [
+                  "${lib.getExe macBackup}"
+                  "backup"
+                ];
+                StartInterval = 900;
+                RunAtLoad = true;
+              };
+            };
+            secrets-backup-maintenance = {
+              enable = true;
+              config = {
+                Label = "com.joshankana.secrets-backup-maintenance";
+                ProgramArguments = [
+                  "${lib.getExe macBackup}"
+                  "maintenance"
+                ];
+                StartCalendarInterval = {
+                  Hour = 3;
+                  Minute = 30;
+                };
+              };
+            };
+          };
+        };
+    }
+    // lib.optionalAttrs isLinux {
       services.restic.backups = {
         secrets = {
           inherit repository;
           backupPrepareCommand = unlock;
-          passwordFile = backupPassword;
-          rcloneConfigFile = backupRcloneConfig;
+          inherit passwordFile rcloneConfigFile;
           paths = [ config.dotfiles.secretsDir ];
           timerConfig = {
             OnCalendar = "*:0/15";
@@ -93,8 +160,7 @@ in
 
         secrets-maintenance = {
           inherit repository;
-          passwordFile = backupPassword;
-          rcloneConfigFile = backupRcloneConfig;
+          inherit passwordFile rcloneConfigFile;
           paths = [ ];
           pruneOpts = [
             "--keep-within 1d"

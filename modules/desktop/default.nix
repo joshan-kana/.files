@@ -1,4 +1,9 @@
-_: {
+{ lib, system, ... }:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+in
+lib.optionalAttrs isLinux {
   # Shared graphical-session infrastructure. Applications, audio, and
   # virtualisation live at the top semantic level instead of under desktop.
   security.polkit.enable = true;

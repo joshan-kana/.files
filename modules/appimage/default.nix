@@ -1,6 +1,14 @@
-{ pkgs, ... }:
-
 {
+  lib,
+  pkgs,
+  system,
+  ...
+}:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+in
+lib.optionalAttrs isLinux {
   boot.binfmt.registrations.appimage = {
     wrapInterpreterInShell = false;
     interpreter = "${pkgs.appimage-run}/bin/appimage-run";

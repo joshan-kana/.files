@@ -2,6 +2,7 @@
   lib,
   pkgs,
   scopeConfig,
+  system,
   ...
 }:
 
@@ -9,6 +10,7 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
+  inherit (lib.systems.elaborate system) isLinux;
 in
 {
   scopeOptions.name = lib.mkOption {
@@ -22,7 +24,6 @@ in
     image = activeAssets.wallpaper;
 
     inherit (activeTheme) fonts polarity;
-    inherit (activeAssets) cursor;
   }
   // lib.optionalAttrs (activeTheme ? colors) {
     base16Scheme = {
@@ -31,6 +32,10 @@ in
       variant = activeTheme.polarity;
       palette = activeTheme.colors;
     };
+  };
+
+  config = lib.optionalAttrs isLinux {
+    stylix.cursor = activeAssets.cursor;
   };
 
   fonts =
@@ -46,6 +51,8 @@ in
       # Stylix already installs its configured fonts and sets the standard
       # fontconfig defaults. Keep only the additional symbol fallback here.
       fonts.packages = [ nerdSymbols ];
+    }
+    // lib.optionalAttrs isLinux {
       fonts.fontconfig.defaultFonts.monospace = lib.mkAfter [
         "Symbols Nerd Font Mono"
         "Symbols Nerd Font"

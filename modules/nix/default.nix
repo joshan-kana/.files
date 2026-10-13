@@ -2,24 +2,16 @@
   config,
   inputs,
   pkgs,
+  lib,
+  system,
   ...
 }:
 
 let
   atticCache = "dotfiles";
   atticEndpoint = "http://nixos-server.home:8080";
-  nixBuilderSecret = "${config.dotfiles.server.secretsDir or config.dotfiles.secretsDir}/nix-builder";
-in
-{
-  nixpkgs.config.allowUnfree = true;
-
-  nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
-
-  environment.systemPackages = [
-    inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-manual-manpages-only
-  ];
-
-  nix.settings = {
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  settings = {
     trusted-users = [
       "root"
       config.dotfiles.users.primary.name
@@ -48,32 +40,62 @@ in
     builders-use-substitutes = true;
   };
 
-  builders = _: {
-    nix = {
-      distributedBuilds = true;
-      buildMachines = [
-        {
-          hostName = "mac.home";
-          protocol = "ssh-ng";
-          sshUser = config.dotfiles.users.primary.name;
-          sshKey = nixBuilderSecret;
-          publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUltSDMwckd3cm82d0V2UTltQkhoZ1k3TExtbTdjam9ibXcrSUJ2NjdRanEK";
-          system = "aarch64-darwin";
-          maxJobs = 12;
-        }
-        {
-          hostName = "mac.home:32223";
-          protocol = "ssh-ng";
-          sshUser = config.dotfiles.users.primary.name;
-          sshKey = nixBuilderSecret;
-          publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUM3bFdSS3h5cXFJWXhSckJ6cU83eU9vcVBKTWQ5R2ZQSU9oUnpMMEpGVUcK";
-          system = "aarch64-linux";
-          maxJobs = 12;
-        }
-      ];
-    };
-  };
+  nixBuilderSecret = "${config.dotfiles.server.secretsDir or config.dotfiles.secretsDir}/nix-builder";
+in
+{
+  nixpkgs.config.allowUnfree = true;
+}
+// lib.optionalAttrs isLinux {
+  nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
+  nix.settings = settings;
 
+  environment.systemPackages = [
+    inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-manual-manpages-only
+  ];
+
+}
+// {
+  builders =
+    _:
+    lib.optionalAttrs isLinux {
+      nix = {
+        distributedBuilds = true;
+        buildMachines = [
+          {
+            hostName = "mac.home";
+            protocol = "ssh-ng";
+            sshUser = config.dotfiles.users.primary.name;
+            sshKey = nixBuilderSecret;
+            publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUltSDMwckd3cm82d0V2UTltQkhoZ1k3TExtbTdjam9ibXcrSUJ2NjdRanEK";
+            system = "aarch64-darwin";
+            maxJobs = 12;
+          }
+          {
+            hostName = "mac.home:32223";
+            protocol = "ssh-ng";
+            sshUser = config.dotfiles.users.primary.name;
+            sshKey = nixBuilderSecret;
+            publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUM3bFdSS3h5cXFJWXhSckJ6cU83eU9vcVBKTWQ5R2ZQSU9oUnpMMEpGVUcK";
+            system = "aarch64-linux";
+            maxJobs = 12;
+          }
+        ];
+      };
+    };
+}
+// lib.optionalAttrs isDarwin {
+  nix.enable = false;
+  determinateNix.customSettings =
+    builtins.removeAttrs settings [
+      "substituters"
+      "trusted-public-keys"
+    ]
+    // {
+      extra-substituters = settings.substituters;
+      extra-trusted-public-keys = settings.trusted-public-keys;
+    };
+}
+// {
   home = _: {
     programs.attic-client = {
       enable = true;
@@ -84,9 +106,26 @@ in
           token-file = "${config.dotfiles.secretsDir}/attic-token";
         };
       };
-      watchStore = [ atticCache ];
+      watchStore = lib.optionals isLinux [ atticCache ];
+    };
+    launchd = lib.optionalAttrs isDarwin {
+      agents.attic-watch-store = {
+        enable = true;
+        config = {
+          Label = "com.joshankana.attic-watch-store";
+          ProgramArguments = [
+            "${lib.getExe pkgs.attic-client}"
+            "watch-store"
+            atticCache
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 30;
+        };
+      };
     };
   };
-
+}
+// lib.optionalAttrs isLinux {
   programs.nix-ld.enable = true;
 }

@@ -2,6 +2,7 @@
   configurationName,
   config,
   lib,
+  system,
   ...
 }:
 
@@ -61,13 +62,45 @@ in
     profile.name = mkOption {
       type = types.str;
       default = configurationName;
-      description = "NixOS configuration name for this host.";
+      description = "Configuration name for this host.";
     };
 
     secretsDir = mkOption {
       type = types.str;
       default = "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}/.secrets";
       description = "Absolute directory containing primary-user secrets.";
+    };
+
+    backups.secrets = {
+      repository = mkOption {
+        type = types.str;
+        default = "rclone:dropbox:Archives/Backups/secrets/${config.dotfiles.profile.name}";
+        description = "Encrypted repository holding this host's private secrets.";
+      };
+
+      credentialsDir = mkOption {
+        type = types.str;
+        default =
+          if (lib.systems.elaborate system).isDarwin then
+            "${config.dotfiles.users.primary.homeRoot}/${config.dotfiles.users.primary.name}/Library/Application Support/SecretsBackup"
+          else if (lib.systems.elaborate system).isLinux then
+            "/var/lib/backup-credentials"
+          else
+            throw "Unsupported host system: ${system}";
+        description = "Directory for external backup bootstrap credentials.";
+      };
+
+      rcloneConfigFile = mkOption {
+        type = types.str;
+        default = "${config.dotfiles.backups.secrets.credentialsDir}/rclone.conf";
+        description = "Runtime path for the backup transport configuration.";
+      };
+
+      passwordFile = mkOption {
+        type = types.str;
+        default = "${config.dotfiles.backups.secrets.credentialsDir}/secrets-restic-password";
+        description = "Runtime path for the encrypted repository password.";
+      };
     };
 
     backups.retention = {

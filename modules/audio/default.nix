@@ -1,6 +1,14 @@
-{ pkgs, ... }:
-
 {
+  lib,
+  pkgs,
+  system,
+  ...
+}:
+
+let
+  inherit (lib.systems.elaborate system) isLinux;
+in
+lib.optionalAttrs isLinux {
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
