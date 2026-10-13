@@ -16,7 +16,11 @@ Item {
     property string glyph: ""
     property string shortcut: ""
     property bool connected: false
-    property color signalColor: connected ? theme.accent : theme.textMuted
+    property bool pending: false
+    property bool scanning: false
+    property bool failed: false
+    property bool unavailable: false
+    readonly property color signalColor: failed ? theme.critical : pending || scanning ? theme.warning : connected ? theme.accent : theme.textMuted
     readonly property color foreground: theme.textStrong
 
     signal activated
@@ -32,7 +36,7 @@ Item {
     }
 
     Accessible.role: Accessible.Button
-    Accessible.name: title + ", " + detail
+    Accessible.name: title + ", " + detail + ", " + status
 
     ShellSurface {
         anchors.fill: parent
@@ -40,10 +44,10 @@ Item {
         motion: tile.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: tile.theme.radiusLarge
-        luminous: true
-        luminousColor: tile.theme.accent
+        luminous: tile.connected || tile.pending || tile.scanning || tile.failed
+        luminousColor: tile.signalColor
         hovered: interaction.containsMouse
-        fillColor: tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.theme.accent, tile.theme.dark ? 0.34 : 0.23) : tile.theme.expressiveSurfaceStrong
+        fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.theme.accent, tile.theme.dark ? 0.34 : 0.23) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
             id: glyphSurface
@@ -58,12 +62,12 @@ Item {
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: tile.theme.radiusMedium
-            fillColor: tile.connected ? Qt.rgba(tile.theme.textStrong.r, tile.theme.textStrong.g, tile.theme.textStrong.b, 0.14) : tile.theme.expressiveSurface
+            fillColor: tile.connected ? Qt.rgba(tile.theme.textStrong.r, tile.theme.textStrong.g, tile.theme.textStrong.b, 0.14) : tile.pending || tile.scanning || tile.failed ? tile.theme.blend(tile.theme.expressiveSurface, tile.signalColor, 0.17) : tile.theme.expressiveSurface
 
             Text {
                 anchors.centerIn: parent
                 text: tile.glyph
-                color: tile.foreground
+                color: tile.unavailable ? tile.theme.textMuted : tile.foreground
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: tile.theme.fontSize(24)
             }
@@ -102,8 +106,8 @@ Item {
             Text {
                 width: parent.width
                 text: tile.status
-                color: tile.foreground
-                opacity: 0.76
+                color: tile.signalColor
+                opacity: tile.failed || tile.pending || tile.scanning ? 1 : 0.88
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(9)
                 font.weight: Font.DemiBold
@@ -129,7 +133,7 @@ Item {
         theme: tile.theme
         motion: tile.motion
         selected: tile.connected
-        stateColor: tile.foreground
+        stateColor: tile.signalColor
         cornerRadius: tile.theme.radiusLarge
         onActivated: tile.activated()
     }
