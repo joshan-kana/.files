@@ -212,7 +212,6 @@
         ];
         casks = [
           "aldente"
-          "bambu-studio"
           "cardinal"
           "chatgpt"
           "codex-app"
@@ -243,9 +242,7 @@
           "orbstack"
           "orcaslicer@nightly"
           "parsec"
-          "prusaslicer"
           "raycast"
-          "reaper"
           "softube-central"
           "steam"
           "tailscale-app"
