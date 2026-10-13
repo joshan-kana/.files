@@ -484,13 +484,22 @@ in
         };
       };
 
-      tuicr = _: {
-        home = _: {
-          home.packages = [ pkgs.tuicr ];
-          programs.git.settings.alias.review = "!tuicr -w";
-          xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+      tuicr =
+        _:
+        let
+          aliases = {
+            tre = "tuicr -r main..HEAD -w";
+          };
+        in
+        {
+          environment.shellAliases = aliases;
+          home = _: {
+            home.packages = [ pkgs.tuicr ];
+            home.shellAliases = aliases;
+            programs.git.settings.alias.review = "!tuicr -w";
+            xdg.configFile."tuicr/config.toml".source = tuicrConfig;
+          };
         };
-      };
 
       lazygit = args: {
         inherit (lazygitConfig args) programs;
