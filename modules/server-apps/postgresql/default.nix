@@ -1,5 +1,5 @@
 { pkgs, ... }:
 
 {
-  services.postgresql.package = pkgs.postgresql_16;
+  services.postgresql.package = pkgs.postgresql_18;
 }
