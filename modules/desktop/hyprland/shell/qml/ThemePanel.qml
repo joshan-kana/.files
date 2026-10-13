@@ -383,6 +383,7 @@ Item {
                         }
 
                         Column {
+                            id: metricsColumn
                             x: samplePane.x + samplePane.width + 12
                             y: samplePane.y + 5
                             width: Math.max(1, parent.width - x - 10)
@@ -392,7 +393,7 @@ Item {
                                 delegate: Row {
                                     id: sampleMetric
                                     required property int index
-                                    width: parent.width
+                                    width: metricsColumn.width
                                     spacing: 4
                                     Rectangle {
                                         width: 9
@@ -423,6 +424,54 @@ Item {
                                     height: 6
                                     radius: 3
                                     color: modelData
+                                }
+                            }
+                        }
+
+                        // Wallpaper-derived themes have no fixed scheme until
+                        // activation. Show their source image instead of
+                        // borrowing an unrelated currently active palette.
+                        Item {
+                            anchors.fill: parent
+                            visible: themeCard.modelData.name === "wallpaper"
+                            Image {
+                                anchors.fill: parent
+                                source: panel.runtime.wallpaper.length > 0 ? "file://" + panel.runtime.wallpaper : ""
+                                sourceSize: Qt.size(400, 220)
+                                asynchronous: true
+                                cache: true
+                                fillMode: Image.PreserveAspectCrop
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                color: Qt.rgba(0.06, 0.07, 0.09, 0.55)
+                            }
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 5
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "󰸉"
+                                    font.family: "Symbols Nerd Font"
+                                    font.pixelSize: panel.theme.fontSize(25)
+                                    color: "#ffffff"
+                                }
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "DYNAMIC PALETTE"
+                                    color: "#ffffff"
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(11)
+                                    font.weight: Font.DemiBold
+                                    font.letterSpacing: 0.7
+                                }
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: "DERIVED FROM WALLPAPER"
+                                    color: "#ffffff"
+                                    opacity: 0.8
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(9)
                                 }
                             }
                         }
