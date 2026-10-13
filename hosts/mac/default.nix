@@ -221,7 +221,6 @@
           "hammerspoon"
           "homerow"
           "ilok-license-manager"
-          "inkscape"
           "iterm2"
           "izotope-product-portal"
           "jordanbaird-ice"
