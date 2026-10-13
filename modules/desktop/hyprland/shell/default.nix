@@ -1078,9 +1078,31 @@ in
           case "$action" in
             list)
               [ -d "$recordings" ] || exit 0
-              find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
+              # Recordings are scanned once on open. Fetch duration metadata
+              # here so selection never waits for thumbnail frame decoding.
+              umask 077
+              metadata_dir="''${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-metadata"
+              [ ! -L "$metadata_dir" ] || exit 2
+              mkdir -p -- "$metadata_dir"
+              chmod 700 -- "$metadata_dir"
+              while IFS=$'\t' read -r modified name size; do
+                [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || continue
+                path="$recordings/$name"
+                [ -f "$path" ] && [ ! -L "$path" ] || continue
+                key="$(printf '%s|%s|%s' "$name" "$modified" "$size" | sha256sum | cut -d' ' -f1)"
+                metadata="$metadata_dir/$key"
+                if [ ! -s "$metadata" ]; then
+                  duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path" || true)"
+                  [[ "$duration" =~ ^[0-9]+(\.[0-9]+)?$ ]] || duration=0
+                  tmp="$(mktemp "$metadata_dir/.duration-XXXXXXXX")"
+                  printf '%s\n' "$duration" > "$tmp"
+                  mv -- "$tmp" "$metadata"
+                fi
+                read -r duration < "$metadata"
+                printf '%s\t%s\t%s\t%s\n' "$modified" "$name" "$size" "$duration"
+              done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
                 -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4' \
-                -printf '%T@\t%f\t%s\n' | sort -rn | sed -n '1,100p'
+                -printf '%T@\t%f\t%s\n' | sort -rn | sed -n '1,100p')
               ;;
             clear-preview)
               [ ! -L "$preview_dir" ] || exit 2
@@ -1107,8 +1129,7 @@ in
               ffmpeg -hide_banner -loglevel error -ss 0.2 -i "$path" \
                 -vf 'scale=510:300:force_original_aspect_ratio=decrease' \
                 -frames:v 1 -y "$output" >/dev/null
-              duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path")"
-              printf '%s\n%s\n' "$output" "$duration"
+              printf '%s\n' "$output"
               trap - EXIT
               ;;
             *) exit 2 ;;
