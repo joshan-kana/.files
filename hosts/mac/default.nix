@@ -218,7 +218,6 @@
           "cryptomator"
           "google-chrome"
           "gstreamer-runtime"
-          "hammerspoon"
           "homerow"
           "ilok-license-manager"
           "iterm2"
