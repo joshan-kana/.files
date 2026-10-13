@@ -842,13 +842,19 @@ in
             chmod 600 "$temp_state"
             mv -f "$temp_state" "$state_file"
           }
-          scheduled_now() {
-            local hour
+          # Preserve the current effective state when migrating an older
+          # automatic schedule to manual-only control.
+          if [ "$mode" = auto ]; then
             hour="$(date +%H)"
-            (( 10#$hour >= 19 || 10#$hour < 7 ))
-          }
+            if (( 10#$hour >= 19 || 10#$hour < 7 )); then
+              mode=manual
+            else
+              mode=off
+            fi
+            persist
+          fi
           should_run() {
-            [ "$mode" = manual ] || { [ "$mode" = auto ] && scheduled_now; }
+            [ "$mode" = manual ]
           }
           apply() {
             if should_run; then
@@ -870,12 +876,7 @@ in
               apply
               ;;
             toggle)
-              if [ "$mode" = manual ] || { [ "$mode" = auto ] && scheduled_now; }; then mode=off; else mode=manual; fi
-              persist
-              apply
-              ;;
-            auto)
-              if [ "$mode" = auto ]; then mode=manual; else mode=auto; fi
+              if [ "$mode" = manual ]; then mode=off; else mode=manual; fi
               persist
               apply
               ;;
@@ -886,7 +887,7 @@ in
               if should_run; then apply; fi
               ;;
             *)
-              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|auto|warmer|cooler}\n' >&2
+              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|warmer|cooler}\n' >&2
               exit 2
               ;;
           esac
@@ -1215,27 +1216,6 @@ in
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
-      systemd.user.timers = {
-        linux-desktop-night-light-evening = {
-          Unit.Description = "Apply Night Light evening schedule";
-          Timer = {
-            OnCalendar = "*-*-* 19:00:00";
-            Persistent = true;
-            Unit = "linux-desktop-night-light-apply.service";
-          };
-          Install.WantedBy = [ "timers.target" ];
-        };
-        linux-desktop-night-light-morning = {
-          Unit.Description = "Apply Night Light morning schedule";
-          Timer = {
-            OnCalendar = "*-*-* 07:00:00";
-            Persistent = true;
-            Unit = "linux-desktop-night-light-apply.service";
-          };
-          Install.WantedBy = [ "timers.target" ];
-        };
-      };
-
       systemd.user.services = {
         linux-desktop-wallpaper-image = {
           Unit = {
@@ -1277,7 +1257,7 @@ in
 
         linux-desktop-night-light = {
           Unit = {
-            Description = "Hyprland colour temperature (manual or scheduled)";
+            Description = "Manual Hyprland colour temperature";
             After = [ "hyprland-session.target" ];
             PartOf = [ "hyprland-session.target" ];
           };
@@ -1289,7 +1269,7 @@ in
 
         linux-desktop-night-light-apply = {
           Unit = {
-            Description = "Apply current Night Light schedule at session start and schedule boundaries";
+            Description = "Restore manual Night Light state at session start";
             After = [ "hyprland-session.target" ];
           };
           Service = {
