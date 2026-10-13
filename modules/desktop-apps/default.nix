@@ -31,17 +31,12 @@ in
 
   mullvad =
     _:
-    {
-      environment.systemPackages =
-        if isDarwin then
-          [ pkgs.mullvad ]
-        else if isLinux then
-          [ pkgs.mullvad-vpn ]
-        else
-          [ ];
-    }
-    // lib.optionalAttrs isLinux {
+    lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.mullvad-vpn ];
       services.mullvad-vpn.enable = true;
+    }
+    // lib.optionalAttrs isDarwin {
+      homebrew.casks = [ "mullvad-vpn" ];
     };
 
   chromium = _: {

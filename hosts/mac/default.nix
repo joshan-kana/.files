@@ -45,6 +45,46 @@
             };
           };
         };
+
+        homebrew = _: {
+          homebrew = {
+            enable = true;
+            onActivation.cleanup = "none";
+          };
+        };
+
+        gstreamerRuntime = _: {
+          homebrew.casks = [ "gstreamer-runtime" ];
+        };
+
+        gzRendering8 = _: {
+          homebrew = {
+            brews = [ "osrf/simulation/gz-rendering8" ];
+            taps = [
+              "osrf/simulation"
+            ];
+          };
+        };
+
+        moltenVk = _: {
+          homebrew.brews = [ "molten-vk" ];
+        };
+
+        qt5 = _: {
+          homebrew.brews = [ "qt@5" ];
+        };
+
+        speexdsp = _: {
+          homebrew.brews = [ "speexdsp" ];
+        };
+
+        vulkanLoader = _: {
+          homebrew.brews = [ "vulkan-loader" ];
+        };
+
+        zlib = _: {
+          homebrew.brews = [ "zlib" ];
+        };
       };
 
   cli = extendScope moduleRegistry.cli {
@@ -82,6 +122,20 @@
             pvm = "ssh nixos-arm-parallels";
           };
         };
+        programs.zsh.profileExtra = lib.mkBefore ''
+          if [[ -x /opt/homebrew/bin/brew ]]; then
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+            # Prefer declaratively managed tools while Homebrew remains in use.
+            typeset -U path
+            path=(
+              "$HOME/.local/bin"
+              "/etc/profiles/per-user/$USER/bin"
+              "/run/current-system/sw/bin"
+              "$HOME/.nix-profile/bin"
+              "''${path[@]}"
+            )
+          fi
+        '';
         programs.zsh.initContent = lib.mkAfter ''
           zd() {
             zip -qry /tmp/upload.zip . && osascript -e 'set the clipboard to POSIX file "/tmp/upload.zip"'
@@ -121,6 +175,68 @@
     uv = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.uv ];
     };
+    blockGooseCli = _: {
+      homebrew.brews = [ "block-goose-cli" ];
+    };
+
+    cocoaWay = _: {
+      homebrew = {
+        brews = [ "j-x-z/tap/cocoa-way" ];
+        taps = [
+          "j-x-z/tap"
+        ];
+      };
+    };
+
+    crush = _: {
+      homebrew = {
+        brews = [ "charmbracelet/tap/crush" ];
+        taps = [
+          "charmbracelet/tap"
+        ];
+      };
+    };
+
+    peekaboo = _: {
+      homebrew = {
+        brews = [ "steipete/tap/peekaboo" ];
+        taps = [
+          "steipete/tap"
+        ];
+      };
+    };
+
+    piCodingAgent = _: {
+      homebrew.brews = [ "pi-coding-agent" ];
+    };
+
+    qmk = _: {
+      homebrew = {
+        brews = [ "qmk/qmk/qmk" ];
+        taps = [
+          "qmk/qmk"
+          "osx-cross/arm"
+          "osx-cross/avr"
+        ];
+      };
+    };
+
+    rust = _: {
+      homebrew.brews = [ "rust" ];
+    };
+
+    sessionwiki = _: {
+      homebrew = {
+        brews = [ "youdie006/tap/sessionwiki" ];
+        taps = [
+          "youdie006/tap"
+        ];
+      };
+    };
+
+    waypipeDarwin = _: {
+      homebrew.brews = [ "j-x-z/tap/waypipe-darwin" ];
+    };
   };
 
   desktop = extendScope moduleRegistry.desktop {
@@ -134,6 +250,30 @@
       homebrew.casks = [ "raycast" ];
     };
     yabai = import ../../modules/desktop/yabai;
+
+    aldente = _: {
+      homebrew.casks = [ "aldente" ];
+    };
+
+    homerow = _: {
+      homebrew.casks = [ "homerow" ];
+    };
+
+    jordanbairdIce = _: {
+      homebrew.casks = [ "jordanbaird-ice" ];
+    };
+
+    linearmouse = _: {
+      homebrew.casks = [ "linearmouse" ];
+    };
+
+    logiOptions = _: {
+      homebrew.casks = [ "logi-options+" ];
+    };
+
+    xquartz = _: {
+      homebrew.casks = [ "xquartz" ];
+    };
   };
 
   desktopApps = extendScope moduleRegistry.desktopApps {
@@ -177,87 +317,84 @@
       environment.systemPackages = [ pkgs.linear-mac ];
     };
 
-    macHomebrew = _: {
-      homebrew = {
-        enable = true;
-        onActivation.cleanup = "none";
-        # Keep remaining vendor and specialist packages declarative while
-        # migrating supported applications to native Nix packages.
-        taps = [
-          "charmbracelet/tap"
-          "j-x-z/tap"
-          "osrf/simulation"
-          "osx-cross/arm"
-          "osx-cross/avr"
-          "qmk/qmk"
-          "steipete/tap"
-          "youdie006/tap"
-        ];
-        brews = [
-          "block-goose-cli"
-          "charmbracelet/tap/crush"
-          "j-x-z/tap/cocoa-way"
-          "j-x-z/tap/waypipe-darwin"
-          "molten-vk"
-          "osrf/simulation/gz-rendering8"
-          "pi-coding-agent"
-          "qmk/qmk/qmk"
-          "qt@5"
-          "rust"
-          "speexdsp"
-          "steipete/tap/peekaboo"
-          "vulkan-loader"
-          "youdie006/tap/sessionwiki"
-          "zlib"
-        ];
-        casks = [
-          "aldente"
-          "cardinal"
-          "chatgpt"
-          "codex-app"
-          "google-chrome"
-          "gstreamer-runtime"
-          "homerow"
-          "ilok-license-manager"
-          "iterm2"
-          "izotope-product-portal"
-          "jordanbaird-ice"
-          "kicad"
-          "krita"
-          "linearmouse"
-          "logi-options+"
-          "microsoft-auto-update"
-          "microsoft-office"
-          "microsoft-teams"
-          "mullvad-vpn"
-          "native-access"
-          "nvidia-geforce-now"
-          "open-webui"
-          "openclaw"
-          "orcaslicer@nightly"
-          "parsec"
-          "softube-central"
-          "steam"
-          "utm@beta"
-          "xquartz"
-        ];
-      };
-      home = { lib, ... }: {
-        programs.zsh.profileExtra = lib.mkBefore ''
-          if [[ -x /opt/homebrew/bin/brew ]]; then
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-            # Prefer declaratively managed tools while Homebrew remains in use.
-            typeset -U path
-            path=(
-              "$HOME/.local/bin"
-              "/etc/profiles/per-user/$USER/bin"
-              "/run/current-system/sw/bin"
-              "$HOME/.nix-profile/bin"
-              "''${path[@]}"
-            )
-          fi
-        '';
-      };
+    cardinal = _: {
+      homebrew.casks = [ "cardinal" ];
+    };
+
+    chatgpt = _: {
+      homebrew.casks = [ "chatgpt" ];
+    };
+
+    codexApp = _: {
+      homebrew.casks = [ "codex-app" ];
+    };
+
+    googleChrome = _: {
+      homebrew.casks = [ "google-chrome" ];
+    };
+
+    ilokLicenseManager = _: {
+      homebrew.casks = [ "ilok-license-manager" ];
+    };
+
+    iterm2 = _: {
+      homebrew.casks = [ "iterm2" ];
+    };
+
+    izotopeProductPortal = _: {
+      homebrew.casks = [ "izotope-product-portal" ];
+    };
+
+    kicad = _: {
+      homebrew.casks = [ "kicad" ];
+    };
+
+    krita = _: {
+      homebrew.casks = [ "krita" ];
+    };
+
+    microsoftAutoUpdate = _: {
+      homebrew.casks = [ "microsoft-auto-update" ];
+    };
+
+    microsoftOffice = _: {
+      homebrew.casks = [ "microsoft-office" ];
+    };
+
+    microsoftTeams = _: {
+      homebrew.casks = [ "microsoft-teams" ];
+    };
+
+    nativeAccess = _: {
+      homebrew.casks = [ "native-access" ];
+    };
+
+    nvidiaGeforceNow = _: {
+      homebrew.casks = [ "nvidia-geforce-now" ];
+    };
+
+    openWebui = _: {
+      homebrew.casks = [ "open-webui" ];
+    };
+
+    openclaw = _: {
+      homebrew.casks = [ "openclaw" ];
+    };
+
+    orcaSlicerNightly = _: {
+      homebrew.casks = [ "orcaslicer@nightly" ];
+    };
+
+    parsec = _: {
+      homebrew.casks = [ "parsec" ];
+    };
+
+    softubeCentral = _: {
+      homebrew.casks = [ "softube-central" ];
+    };
+
+    steam = _: {
+      homebrew.casks = [ "steam" ];
     };
 
     notion = { pkgs, ... }: {
@@ -304,6 +441,10 @@
           fi
         '';
       };
+    };
+
+    utm = _: {
+      homebrew.casks = [ "utm@beta" ];
     };
   };
 }
