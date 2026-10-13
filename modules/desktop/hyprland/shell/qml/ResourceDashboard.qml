@@ -9,6 +9,10 @@ Item {
     required property ResourceState resourceState
 
     property bool open: false
+    property bool showCores: false
+    function toggleCoreView(): void {
+        showCores = !showCores;
+    }
     visible: open
     implicitHeight: 780
 
@@ -86,7 +90,8 @@ Item {
                             motion: panel.motion
                             accentColor: tile.gaugeColor
                             value: tile.percentage
-                            label: "Used"
+                            known: tile.cpu ? panel.resourceState.cpuSampleReady : panel.resourceState.memoryTotal > 0
+                            label: known ? "Used" : "Sampling"
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -239,42 +244,141 @@ Item {
                 anchors.fill: parent
                 anchors.margins: panel.theme.spacing3
                 spacing: panel.theme.spacing2
-                Repeater {
-                    model: 3
-                    delegate: Column {
-                        id: historyRow
-                        required property int index
-                        readonly property var values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
-                        readonly property real maxValue: index === 2 ? Math.max(131072, ...values) : 1
-                        width: parent.width
-                        spacing: 2
-                        Text {
-                            text: historyRow.index === 0 ? "CPU HISTORY" : historyRow.index === 1 ? "MEMORY HISTORY" : "NETWORK HISTORY"
-                            color: panel.theme.textMuted
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(9)
-                        }
-                        Row {
+
+                Row {
+                    width: parent.width
+                    height: 25
+                    spacing: panel.theme.spacing3
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - viewToggle.width - parent.spacing)
+                        text: panel.showCores ? "LOGICAL CORES · " + panel.resourceState.coreUsage.length + " ACTIVE COUNTERS" : "RESOURCE HISTORY · LAST " + panel.resourceState.historyLength * 2 + "s"
+                        color: panel.theme.textStrong
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+                    ShellAction {
+                        id: viewToggle
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 114
+                        height: 25
+                        runtime: panel.runtime
+                        theme: panel.theme
+                        motion: panel.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: panel.showCores ? "󰥔" : "󰍛"
+                        title: panel.showCores ? "HISTORY" : "CORES"
+                        shortcut: "C"
+                        onActivated: panel.toggleCoreView()
+                    }
+                }
+
+                Column {
+                    visible: !panel.showCores
+                    width: parent.width
+                    spacing: panel.theme.spacing2
+                    Repeater {
+                        model: 3
+                        delegate: Column {
+                            id: historyRow
+                            required property int index
+                            readonly property var values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
+                            readonly property real maxValue: index === 2 ? Math.max(131072, ...values) : 1
                             width: parent.width
-                            height: 29
-                            spacing: 3
-                            Repeater {
-                                model: panel.resourceState.historyLength
-                                delegate: Item {
-                                    id: bar
-                                    required property int index
-                                    readonly property real fraction: historyRow.maxValue > 0 ? (historyRow.values[index] || 0) / historyRow.maxValue : 0
-                                    width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
-                                    height: parent.height
-                                    Rectangle {
-                                        anchors.bottom: parent.bottom
-                                        width: parent.width
-                                        height: Math.max(2, parent.height * bar.fraction)
-                                        radius: 2
-                                        color: historyRow.index === 0 ? panel.theme.accent : historyRow.index === 1 ? panel.theme.positive : panel.theme.warning
-                                        opacity: 0.55 + bar.fraction * 0.45
+                            spacing: 2
+                            Text {
+                                text: historyRow.index === 0 ? "CPU HISTORY" : historyRow.index === 1 ? "MEMORY HISTORY" : "NETWORK HISTORY"
+                                color: panel.theme.textMuted
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(9)
+                            }
+                            Row {
+                                width: parent.width
+                                height: 25
+                                spacing: 3
+                                Repeater {
+                                    model: panel.resourceState.historyLength
+                                    delegate: Item {
+                                        id: bar
+                                        required property int index
+                                        readonly property real fraction: historyRow.maxValue > 0 ? (historyRow.values[index] || 0) / historyRow.maxValue : 0
+                                        width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
+                                        height: parent.height
+                                        Rectangle {
+                                            anchors.bottom: parent.bottom
+                                            width: parent.width
+                                            height: Math.max(2, parent.height * bar.fraction)
+                                            radius: 2
+                                            color: historyRow.index === 0 ? panel.theme.accent : historyRow.index === 1 ? panel.theme.positive : panel.theme.warning
+                                            opacity: 0.55 + bar.fraction * 0.45
+                                        }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                Grid {
+                    id: coreGrid
+                    visible: panel.showCores
+                    width: parent.width
+                    columns: Math.min(8, Math.max(1, panel.resourceState.coreUsage.length))
+                    readonly property int rowCount: Math.max(1, Math.ceil(Math.min(32, panel.resourceState.coreUsage.length) / columns))
+                    columnSpacing: panel.theme.spacing2
+                    rowSpacing: panel.theme.spacing2
+                    Repeater {
+                        model: panel.showCores ? panel.resourceState.coreUsage.slice(0, 32) : []
+                        delegate: ShellSurface {
+                            id: coreTile
+                            required property var modelData
+                            readonly property bool hasSample: modelData.utilisation >= 0
+                            readonly property real usage: hasSample ? modelData.utilisation : 0
+                            width: (coreGrid.width - (coreGrid.columns - 1) * coreGrid.columnSpacing) / coreGrid.columns
+                            height: Math.min(59, Math.max(26, Math.floor((126 - (coreGrid.rowCount - 1) * coreGrid.rowSpacing) / coreGrid.rowCount)))
+                            theme: panel.theme
+                            motion: panel.motion
+                            surfaceLayer: ShellSurface.Control
+                            cornerRadius: panel.theme.radiusSmall
+                            fillColor: panel.theme.blend(panel.theme.controlBase, usage >= 0.8 ? panel.theme.warning : panel.theme.accent, 0.06 + usage * 0.30)
+                            Row {
+                                anchors {
+                                    fill: parent
+                                    leftMargin: panel.theme.spacing2
+                                    rightMargin: panel.theme.spacing2
+                                }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "C" + String(coreTile.modelData.index).padStart(2, "0")
+                                    color: panel.theme.textMuted
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(9)
+                                }
+                                Item {
+                                    width: Math.max(0, parent.width - 58)
+                                    height: 1
+                                }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: coreTile.hasSample ? Math.round(coreTile.usage * 100) + "%" : "··"
+                                    color: coreTile.usage >= 0.8 ? panel.theme.warning : panel.theme.textStrong
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(coreGrid.rowCount <= 2 ? 10 : 9)
+                                    font.weight: Font.DemiBold
+                                }
+                            }
+                            Rectangle {
+                                anchors {
+                                    left: parent.left
+                                    bottom: parent.bottom
+                                }
+                                width: Math.min(parent.width, Math.max(0, parent.width * coreTile.usage))
+                                height: 3
+                                color: coreTile.usage >= 0.8 ? panel.theme.warning : panel.theme.accent
+                                radius: 1.5
                             }
                         }
                     }
@@ -283,7 +387,7 @@ Item {
         }
 
         Text {
-            text: "R refresh  ·  ESC back  ·  Sampled every 2s while open · disk/sensors every 10s"
+            text: "C cores/history · R refresh · ESC back · sampled every 2s while open; disk/sensors every 10s"
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(10)
