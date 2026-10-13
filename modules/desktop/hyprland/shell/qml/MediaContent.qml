@@ -60,7 +60,10 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 920
-    implicitHeight: 620
+    // Keep every action reachable without paging away from its controls on
+    // 768p/compact screens; larger viewports retain the immersive spectrum.
+    readonly property bool compactHeight: height < 760
+    implicitHeight: compactHeight ? 550 : 620
     focus: engaged
 
     onEngagedChanged: {
@@ -139,8 +142,8 @@ FocusScope {
             spacing: content.theme.spacing4
 
             ShellSurface {
-                width: 168
-                height: 168
+                width: content.compactHeight ? 120 : 168
+                height: width
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
@@ -168,7 +171,7 @@ FocusScope {
             }
 
             Column {
-                width: header.width - 168 - header.spacing
+                width: header.width - (content.compactHeight ? 120 : 168) - header.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: content.theme.spacing2
 
@@ -185,7 +188,7 @@ FocusScope {
                     text: content.media.title
                     color: content.theme.textStrong
                     font.family: content.runtime.fontMono
-                    font.pixelSize: content.theme.fontSize(28)
+                    font.pixelSize: content.theme.fontSize(content.compactHeight ? 22 : 28)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -218,13 +221,13 @@ FocusScope {
                 top: header.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: content.theme.spacing5
+                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
             }
             spacing: 0
 
             ShellSurface {
                 width: parent.width
-                height: 220
+                height: content.compactHeight ? 150 : 220
                 theme: content.theme
                 motion: content.motion
                 surfaceLayer: ShellSurface.Group
@@ -360,9 +363,9 @@ FocusScope {
                 top: spectrumSlot.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: content.theme.spacing5
+                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
             }
-            spacing: content.theme.spacing3
+            spacing: content.compactHeight ? content.theme.spacing2 : content.theme.spacing3
 
             ShellSlider {
                 id: progressTrack
@@ -427,22 +430,24 @@ FocusScope {
             }
         }
 
-        Row {
+        Column {
+            id: mediaActions
             anchors {
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom
             }
-            spacing: content.theme.spacing3
+            height: implicitHeight
+            spacing: content.theme.spacing2
 
-            // Keep optional MPRIS capabilities visible rather than relying on
-            // hidden keyboard actions or an additional player daemon.
+            // Separate playback modes from presentation/navigation, so
+            // competing mnemonics never form one dense, unreadable strip.
             Row {
                 spacing: content.theme.spacing2
 
                 ShellAction {
-                    width: 120
-                    height: 38
+                    width: 142
+                    height: 42
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -457,8 +462,8 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: 124
-                    height: 38
+                    width: 140
+                    height: 42
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
@@ -473,78 +478,82 @@ FocusScope {
                 }
 
                 ShellAction {
-                    width: 250
-                    height: 38
+                    width: 148
+                    height: 42
                     runtime: content.runtime
                     theme: content.theme
                     motion: content.motion
                     compact: true
                     horizontalCompact: true
                     icon: "󰎄"
-                    title: content.media.available ? content.media.identity + "  " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
+                    title: content.media.available ? "PLAYER " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
                     shortcut: "P"
                     active: content.media.playerCount > 1
                     enabled: content.media.playerCount > 1
                     onActivated: content.media.cyclePlayer()
                 }
             }
+
             Item {
-                width: Math.max(1, parent.width - parent.children[0].width - parent.children[2].width - parent.spacing * 2)
-                height: 1
-            }
+                width: parent.width
+                height: 42
 
-            Row {
-                spacing: content.theme.spacing2
+                Row {
+                    anchors.right: parent.right
+                    spacing: content.theme.spacing2
 
-                ShellAction {
-                    width: 94
-                    height: 30
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    title: content.visualizerMode.toUpperCase()
-                    shortcut: "V"
-                    active: true
-                    onActivated: content.toggleVisualizer()
-                }
+                    ShellAction {
+                        width: 114
+                        height: 42
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: content.visualizerMode.toUpperCase()
+                        shortcut: "V"
+                        active: true
+                        onActivated: content.toggleVisualizer()
+                    }
 
-                ShellAction {
-                    width: 95
-                    height: 30
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    title: content.lyricsVisible ? "LYRICS" : "SPECTRUM"
-                    shortcut: "Y"
-                    active: content.lyricsVisible
-                    onActivated: content.lyricsVisible = !content.lyricsVisible
-                }
+                    ShellAction {
+                        width: 116
+                        height: 42
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: content.lyricsVisible ? "LYRICS ON" : "LYRICS OFF"
+                        shortcut: "Y"
+                        active: content.lyricsVisible
+                        onActivated: content.lyricsVisible = !content.lyricsVisible
+                    }
 
-                ShellAction {
-                    width: 36
-                    height: 30
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    iconOnly: true
-                    iconHint: true
-                    shortcut: "?"
-                    icon: "󰋗"
-                    title: "Keyboard help"
-                    onActivated: content.helpOpen = true
-                }
+                    ShellAction {
+                        width: 42
+                        height: 42
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        iconOnly: true
+                        iconHint: true
+                        shortcut: "?"
+                        icon: "󰋗"
+                        title: "Keyboard help"
+                        onActivated: content.helpOpen = true
+                    }
 
-                ShellAction {
-                    width: 96
-                    height: 30
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    title: content.returnToControls ? "BACK" : "CLOSE"
-                    onActivated: content.closeRequested()
+                    ShellAction {
+                        width: 100
+                        height: 42
+                        runtime: content.runtime
+                        theme: content.theme
+                        motion: content.motion
+                        compact: true
+                        title: content.returnToControls ? "BACK" : "CLOSE"
+                        onActivated: content.closeRequested()
+                    }
                 }
             }
         }
