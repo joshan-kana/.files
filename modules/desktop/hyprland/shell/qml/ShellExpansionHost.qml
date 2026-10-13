@@ -27,6 +27,7 @@ PanelWindow {
     // one Loader destroys the old view instantly, causing a hard content cut
     // even though the surrounding surface continues to morph.
     property int activeSlot: -1
+    property Loader pendingOutgoing: null
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
@@ -35,10 +36,34 @@ PanelWindow {
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
     readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
 
+    function finishContentHandoff(incoming: Loader): void {
+        if (incoming !== activeLoader || incoming.sourceComponent !== currentComponent || !incoming.item)
+            return;
+
+        geometryUpdate.restart();
+        if (pendingOutgoing && pendingOutgoing !== incoming) {
+            // Keep the old view visible until the async replacement is ready.
+            pendingOutgoing.opacity = 0;
+            if (motion.enabled)
+                contentEnter.restart();
+            else
+                incoming.opacity = 1;
+            contentTransition.restart();
+        } else {
+            incoming.opacity = 1;
+        }
+        pendingOutgoing = null;
+        Qt.callLater(() => {
+            if (host.expansionState.hasCurrent && host.loadedContent === incoming.item)
+                host.loadedContent.forceActiveFocus();
+        });
+    }
+
     function presentComponent(next: Component): void {
         if (!next) {
             contentTransition.stop();
             contentEnter.stop();
+            pendingOutgoing = null;
             contentLoaderA.sourceComponent = null;
             contentLoaderB.sourceComponent = null;
             activeSlot = -1;
@@ -49,36 +74,24 @@ PanelWindow {
             return;
 
         const incoming = activeSlot === 0 ? contentLoaderB : contentLoaderA;
-        const outgoing = activeLoader;
+        const previous = activeLoader;
+        // Reopening from a closed hub is not a tab handoff. Showing its last
+        // Media/Home view while Controls asynchronously constructs would
+        // present stale information beneath the newly selected tab.
+        const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
         contentTransition.stop();
         contentEnter.stop();
         incoming.opacity = 0;
-        // Enable the destination before constructing its FocusScope. Its
-        // onEngagedChanged requests keyboard focus during instantiation.
         activeSlot = incoming === contentLoaderA ? 0 : 1;
+        pendingOutgoing = outgoing;
+        if (outgoing) {
+            outgoing.opacity = 1;
+        } else if (previous) {
+            previous.opacity = 0;
+            previous.sourceComponent = null;
+        }
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
-        if (outgoing) {
-            // Overlap just the tails of the fades: a fully sequential handoff
-            // leaves an empty squircle for a frame, while a full crossfade
-            // ghosts two readable pages over the morph.
-            outgoing.opacity = 0;
-            if (motion.enabled)
-                contentEnter.restart();
-            else
-                incoming.opacity = 1;
-            contentTransition.restart();
-        } else {
-            incoming.opacity = 1;
-        }
-        geometryUpdate.restart();
-        // FocusScope descendants request focus as they are constructed, but
-        // Loader can replace that focus while finishing the load. Restore it
-        // once the destination is fully attached to the active loader.
-        Qt.callLater(() => {
-            if (host.expansionState.hasCurrent && host.currentComponent === next && host.loadedContent)
-                host.loadedContent.forceActiveFocus();
-        });
     }
 
     onCurrentComponentChanged: presentComponent(currentComponent)
@@ -164,8 +177,12 @@ PanelWindow {
             geometryUpdate.restart();
         }
     }
-    readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
-    readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
+    // A first-time async load must not expand an empty panel. Keep the
+    // measured bar-origin shell until content is ready, then morph to its
+    // final dimensions. Tab handoffs retain their measured outgoing size.
+    readonly property bool waitingForInitialContent: contentExpanded && !loadedContent && !pendingOutgoing
+    readonly property real targetWidth: contentExpanded && !waitingForInitialContent ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
+    readonly property real targetHeight: contentExpanded && !waitingForInitialContent ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
     // The Wayland layer surface is a stable transparent viewport. Morph only
     // the inner squircle: resizing/repositioning PanelWindow every tab switch
     // causes separate compositor commits and visibly lagging/jumping edges.
@@ -437,6 +454,7 @@ PanelWindow {
 
             Loader {
                 id: contentLoaderA
+                asynchronous: true
                 readonly property Item contentItem: item as Item
                 width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                 height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
@@ -452,11 +470,12 @@ PanelWindow {
                         easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
-                onLoaded: geometryUpdate.restart()
+                onLoaded: host.finishContentHandoff(contentLoaderA)
             }
 
             Loader {
                 id: contentLoaderB
+                asynchronous: true
                 readonly property Item contentItem: item as Item
                 width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
                 height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
@@ -472,7 +491,7 @@ PanelWindow {
                         easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
-                onLoaded: geometryUpdate.restart()
+                onLoaded: host.finishContentHandoff(contentLoaderB)
             }
         }
 
