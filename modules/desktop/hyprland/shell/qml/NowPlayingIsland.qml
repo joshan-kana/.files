@@ -183,12 +183,31 @@ Item {
             }
         }
 
+        // The full island opens Now Playing, except for the dedicated
+        // playback control on the right. Each target owns its pointer area.
+        Item {
+            anchors {
+                left: parent.left
+                right: state.left
+                top: parent.top
+                bottom: parent.bottom
+            }
+
+            StateLayer {
+                theme: island.theme
+                motion: island.motion
+                cornerRadius: theme.radiusIsland
+                onActivated: island.activated()
+            }
+        }
+
         StateLayer {
-            id: islandPress
+            parent: state
             theme: island.theme
             motion: island.motion
-            cornerRadius: theme.radiusIsland
-            onActivated: island.activated()
+            disabled: !island.media.canTogglePlaying
+            cornerRadius: theme.radiusSmall
+            onActivated: island.media.togglePlaying()
         }
     }
 }
