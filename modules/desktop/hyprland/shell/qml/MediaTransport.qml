@@ -21,35 +21,35 @@ Item {
         Repeater {
             model: [
                 {
-                    label: "◀",
+                    label: "Previous track",
                     hint: ",",
                     enabled: root.media.canGoPrevious,
                     action: "previous",
                     glyph: "󰒮"
                 },
                 {
-                    label: "−5s",
+                    label: "Seek backward five seconds",
                     hint: root.compact ? "SHIFT+H" : "H",
                     enabled: root.media.seekable,
                     action: "back",
                     glyph: "󰒫"
                 },
                 {
-                    label: root.media.playing ? "Pause" : "Play",
+                    label: root.media.playing ? "Pause playback" : "Resume playback",
                     hint: "Space",
                     enabled: root.media.canTogglePlaying,
                     action: "play",
                     glyph: root.media.playing ? "󰏤" : "󰐊"
                 },
                 {
-                    label: "+5s",
+                    label: "Seek forward five seconds",
                     hint: root.compact ? "SHIFT+L" : "L",
                     enabled: root.media.seekable,
                     action: "forward",
                     glyph: "󰒬"
                 },
                 {
-                    label: "▶",
+                    label: "Next track",
                     hint: ".",
                     enabled: root.media.canGoNext,
                     action: "next",
