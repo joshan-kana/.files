@@ -332,13 +332,6 @@ ShellRoot {
                 keywords: ["night", "light", "warm", "display", "temperature", "blue"]
             },
             {
-                id: "nightLight.auto",
-                name: "Night Light Automatic Schedule",
-                description: "Toggle automatic Night Light, 19:00–07:00 local time",
-                icon: "preferences-system-time",
-                keywords: ["night", "light", "auto", "schedule", "timer", "evening"]
-            },
-            {
                 id: "nightLight.warmer",
                 name: "Night Light Warmer",
                 description: "Reduce Night Light colour temperature by 500K",
