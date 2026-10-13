@@ -553,7 +553,7 @@ Item {
                         }
                         Text {
                             width: parent.width
-                            text: "Add files to ~/Pictures/Wallpapers to build a gallery"
+                            text: "Add files to ~/wallpapers to build a gallery"
                             color: panel.theme.text
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(10)
@@ -582,7 +582,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: panel.filteredEntries.length === 0 && (panel.loading || panel.searchText.length > 0 || panel.runtime.wallpaper.length === 0)
-                text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/Pictures/Wallpapers"
+                text: panel.loading ? "Loading wallpapers…" : panel.searchText.length > 0 ? "No matching wallpapers" : "Add images, GIFs or videos to ~/wallpapers"
                 color: panel.theme.textMuted
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(11)
