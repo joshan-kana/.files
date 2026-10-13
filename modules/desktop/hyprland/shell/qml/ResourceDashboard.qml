@@ -14,7 +14,7 @@ Item {
         showCores = !showCores;
     }
     visible: open
-    implicitHeight: 780
+    implicitHeight: 882
 
     signal keyboardRequested
 
@@ -234,7 +234,7 @@ Item {
 
         ShellSurface {
             width: parent.width
-            height: 205
+            height: 237
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Group
@@ -282,42 +282,19 @@ Item {
                     spacing: panel.theme.spacing2
                     Repeater {
                         model: 3
-                        delegate: Column {
-                            id: historyRow
+                        delegate: ResourceHistoryGraph {
+                            id: historyGraph
                             required property int index
-                            readonly property var values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
-                            readonly property real maxValue: index === 2 ? Math.max(131072, ...values) : 1
                             width: parent.width
-                            spacing: 2
-                            Text {
-                                text: historyRow.index === 0 ? "CPU HISTORY" : historyRow.index === 1 ? "MEMORY HISTORY" : "NETWORK HISTORY"
-                                color: panel.theme.textMuted
-                                font.family: panel.runtime.fontMono
-                                font.pixelSize: panel.theme.fontSize(9)
-                            }
-                            Row {
-                                width: parent.width
-                                height: 25
-                                spacing: 3
-                                Repeater {
-                                    model: panel.resourceState.historyLength
-                                    delegate: Item {
-                                        id: bar
-                                        required property int index
-                                        readonly property real fraction: historyRow.maxValue > 0 ? (historyRow.values[index] || 0) / historyRow.maxValue : 0
-                                        width: Math.max(3, (parent.width - (panel.resourceState.historyLength - 1) * 3) / panel.resourceState.historyLength)
-                                        height: parent.height
-                                        Rectangle {
-                                            anchors.bottom: parent.bottom
-                                            width: parent.width
-                                            height: Math.max(2, parent.height * bar.fraction)
-                                            radius: 2
-                                            color: historyRow.index === 0 ? panel.theme.accent : historyRow.index === 1 ? panel.theme.positive : panel.theme.warning
-                                            opacity: 0.55 + bar.fraction * 0.45
-                                        }
-                                    }
-                                }
-                            }
+                            height: 54
+                            runtime: panel.runtime
+                            theme: panel.theme
+                            label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"
+                            values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
+                            maximum: index === 2 ? Math.max(131072, ...values) : 1
+                            graphColor: index === 0 ? panel.theme.accent : index === 1 ? panel.theme.positive : panel.theme.warning
+                            currentText: index === 0 ? Math.round(panel.resourceState.cpuPercent * 100) + "%" : index === 1 ? Math.round(panel.resourceState.memoryPercent * 100) + "%" : panel.resourceState.speedString(panel.resourceState.networkDownload + panel.resourceState.networkUpload)
+                            sampleLimit: panel.resourceState.historyLength
                         }
                     }
                 }
