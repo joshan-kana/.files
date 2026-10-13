@@ -214,7 +214,6 @@
           "cardinal"
           "chatgpt"
           "codex-app"
-          "cryptomator"
           "google-chrome"
           "gstreamer-runtime"
           "homerow"
