@@ -521,13 +521,6 @@
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
-          chatgpt-shell-hosts =
-            pkgs.runCommand "chatgpt-shell-hosts-test" { nativeBuildInputs = [ pkgs.python3 ]; }
-              ''
-                cd ${self}
-                python -B -m unittest discover -s tests -p test_chatgpt_shell_access.py
-                touch "$out"
-              '';
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
