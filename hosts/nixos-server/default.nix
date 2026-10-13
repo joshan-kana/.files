@@ -700,8 +700,4 @@
       ];
     };
 
-  compatibility = _: {
-    system.stateVersion = "25.05";
-  };
-
 }
