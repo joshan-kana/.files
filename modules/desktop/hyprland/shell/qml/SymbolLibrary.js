@@ -115,41 +115,29 @@ function matches(term, entry, allowFuzzy) {
 
 function search(term, unicodeEntries) {
     const query = (term || "").trim().toLowerCase();
-    if (!query)
-        return curated.slice(0, 9);
-
-    // Keep a bounded top nine; repeated full sorts would steal animation frames.
-    const extra = unicodeEntries || [];
-    const best = [];
     const seen = new Set();
-    function insert(entry, score) {
-        let at = best.findIndex(previous => previous.score > score);
-        if (at === -1)
-            at = best.length;
-        if (at < 9) {
-            best.splice(at, 0, { entry, score });
-            if (best.length > 9)
-                best.pop();
-        }
+    const available = [];
+    // Keep the curated symbols first and never show duplicate codepoints.
+    for (const entry of curated.concat(unicodeEntries || [])) {
+        if (seen.has(entry.glyph))
+            continue;
+        seen.add(entry.glyph);
+        available.push(entry);
     }
-    function collect(fuzzy) {
-        best.length = 0;
-        seen.clear();
-        for (const entries of [curated, extra]) {
-            for (const entry of entries) {
-                if (seen.has(entry.glyph))
-                    continue;
-                seen.add(entry.glyph);
-                const score = matches(query, entry, fuzzy);
-                if (Number.isFinite(score) && (fuzzy ? score < 83 : score < 70))
-                    insert(entry, score);
-            }
+    if (!query)
+        return available;
+
+    function ranked(fuzzy) {
+        const result = [];
+        for (const entry of available) {
+            const rank = matches(query, entry, fuzzy);
+            if (Number.isFinite(rank) && (fuzzy ? rank < 83 : rank < 70))
+                result.push({ entry, rank });
         }
+        result.sort((a, b) => a.rank - b.rank || a.entry.searchName.localeCompare(b.entry.searchName));
+        return result.map(item => item.entry);
     }
-    collect(false);
-    // Fuzzy results are fallback, not padding beneath a strong match.
-    if (best.length === 0 && query.length >= 3)
-        collect(true);
-    const threshold = best.length > 0 && best[0].score >= 70 ? best[0].score + 2 : Infinity;
-    return best.filter(item => item.score <= threshold).map(item => item.entry);
+
+    const exact = ranked(false);
+    return exact.length === 0 && query.length >= 3 ? ranked(true) : exact;
 }
