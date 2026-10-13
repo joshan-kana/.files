@@ -8,8 +8,6 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  linuxOnly =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
   brave = _: {
@@ -106,10 +104,6 @@ in
     environment.systemPackages = [ pkgs.obsidian ];
   };
 
-  filelight = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.kdePackages.filelight ];
-  });
-
   gimp =
     _:
     {
@@ -121,19 +115,11 @@ in
       homebrew.casks = [ "gimp" ];
     };
 
-  gparted = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.gparted ];
-  });
-
   githubDesktop = _: {
     config = lib.optionalAttrs isLinux {
       environment.systemPackages = [ pkgs.github-desktop ];
     };
   };
-
-  nautilus = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.nautilus ];
-  });
 
   vscode = _: {
     environment.systemPackages = [ pkgs.vscode ];
@@ -167,10 +153,6 @@ in
   moonlight = _: {
     environment.systemPackages = [ pkgs.moonlight-qt ];
   };
-
-  waypipe = linuxOnly (_: {
-    environment.systemPackages = [ pkgs.waypipe ];
-  });
 
   vlc =
     _:
@@ -261,5 +243,18 @@ in
       services.twingate.enable = true;
     };
   };
-
+}
+// lib.optionalAttrs isLinux {
+  filelight = _: {
+    environment.systemPackages = [ pkgs.kdePackages.filelight ];
+  };
+  gparted = _: {
+    environment.systemPackages = [ pkgs.gparted ];
+  };
+  nautilus = _: {
+    environment.systemPackages = [ pkgs.nautilus ];
+  };
+  waypipe = _: {
+    environment.systemPackages = [ pkgs.waypipe ];
+  };
 }

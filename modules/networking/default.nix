@@ -10,35 +10,8 @@ let
     PasswordAuthentication = false;
     KbdInteractiveAuthentication = false;
   };
-  linuxOnly =
-    scope: lib.setFunctionArgs (args: lib.optionalAttrs isLinux (scope args)) (lib.functionArgs scope);
 in
 {
-  /**
-    NetworkManager-based host networking.
-  */
-  networkManager = linuxOnly (_: {
-    networking.networkmanager.enable = true;
-  });
-
-  /**
-    Multicast DNS discovery through Avahi.
-  */
-  mdns = linuxOnly (
-    { lib, pkgs, ... }:
-    {
-      services.avahi = {
-        enable = true;
-        openFirewall = true;
-      };
-
-      # Keep `.local` NSS resolution without the full mDNS fallback, which
-      # probes arbitrary reverse lookups and can block them for five seconds.
-      system.nssModules = [ pkgs.nssmdns ];
-      system.nssDatabases.hosts = lib.mkBefore [ "mdns4_minimal [NOTFOUND=return]" ];
-    }
-  );
-
   /**
     Tailscale client daemon for ordinary hosts.
   */
@@ -74,4 +47,29 @@ in
       );
     };
   };
+}
+// lib.optionalAttrs isLinux {
+  /**
+    NetworkManager-based host networking.
+  */
+  networkManager = _: {
+    networking.networkmanager.enable = true;
+  };
+
+  /**
+    Multicast DNS discovery through Avahi.
+  */
+  mdns =
+    { lib, pkgs, ... }:
+    {
+      services.avahi = {
+        enable = true;
+        openFirewall = true;
+      };
+
+      # Keep `.local` NSS resolution without the full mDNS fallback, which
+      # probes arbitrary reverse lookups and can block them for five seconds.
+      system.nssModules = [ pkgs.nssmdns ];
+      system.nssDatabases.hosts = lib.mkBefore [ "mdns4_minimal [NOTFOUND=return]" ];
+    };
 }
