@@ -119,6 +119,10 @@ FocusScope {
         }
     ] : resourcesPanel.open ? [
         {
+            key: "C",
+            action: "Switch between sampled resource history and per-core CPU activity"
+        },
+        {
             key: "R",
             action: "Refresh now"
         },
@@ -1491,6 +1495,9 @@ FocusScope {
                 if (resourcesPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         resourcesPanel.closeView();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_C) {
+                        resourcesPanel.toggleCoreView();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R) {
                         root.resourceState.refresh();
