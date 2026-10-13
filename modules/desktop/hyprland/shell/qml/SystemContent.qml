@@ -237,6 +237,10 @@ FocusScope {
                             action: "Play-pause / previous / next media"
                         },
                         {
+                            key: "SHIFT+H/L",
+                            action: "Seek media backward / forward five seconds"
+                        },
+                        {
                             key: "S / SHIFT+R / SHIFT+P",
                             action: "MPRIS shuffle / repeat / choose player"
                         },
@@ -266,6 +270,7 @@ FocusScope {
                         }
                     ]))))
 
+    signal helpScrollRequested(int steps)
     signal closeRequested
     signal themeTerminalActiveChanged(bool active)
     signal mediaRequested
@@ -1359,6 +1364,18 @@ FocusScope {
                 if (root.helpOpen) {
                     if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         root.helpOpen = false;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                        root.helpScrollRequested(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                        root.helpScrollRequested(-1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                        root.helpScrollRequested(4);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) {
+                        root.helpScrollRequested(-4);
                         event.accepted = true;
                     }
                     return;
