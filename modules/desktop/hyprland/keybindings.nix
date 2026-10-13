@@ -595,6 +595,20 @@ in
     description = "Toggle animations";
   })
   (mk {
+    keys = "SHIFT + G";
+    id = "media.wallpaperSpectrum";
+    action = global "linux-desktop:wallpaper-spectrum";
+    section = "AUDIO & MEDIA";
+    description = "Toggle wallpaper spectrum";
+  })
+  (mk {
+    keys = "SHIFT + N";
+    id = "media.reactiveShell";
+    action = global "linux-desktop:music-reactive";
+    section = "AUDIO & MEDIA";
+    description = "Toggle music-reactive shell";
+  })
+  (mk {
     keys = "SHIFT + O";
     id = "window.effects.toggle";
     action = exec "linux-desktop-window-effects-toggle";
