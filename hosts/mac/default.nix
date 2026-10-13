@@ -184,8 +184,6 @@
         # migrating supported applications to native Nix packages.
         taps = [
           "charmbracelet/tap"
-          "esengine/reasonix"
-          "italomandara/cxpatcher"
           "j-x-z/tap"
           "osrf/simulation"
           "qmk/qmk"
