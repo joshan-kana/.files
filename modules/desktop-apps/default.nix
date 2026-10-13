@@ -50,7 +50,9 @@ in
   };
 
   firefox = _: {
+    environment.systemPackages = lib.optionals isDarwin [ pkgs.firefox-bin ];
     home = _: {
+      programs.firefox.package = if isDarwin then pkgs.firefox-bin else pkgs.firefox;
       stylix.targets.firefox.profileNames = [ "themed" ];
       stylix.targets.firefox.colorTheme.enable = true;
       programs.firefox.profiles.themed.extensions.force = true;
@@ -90,7 +92,7 @@ in
   };
 
   thunderbird = _: {
-    environment.systemPackages = [ pkgs.thunderbird ];
+    environment.systemPackages = [ (if isDarwin then pkgs.thunderbird-bin else pkgs.thunderbird) ];
   };
 
   obsidian = _: {
