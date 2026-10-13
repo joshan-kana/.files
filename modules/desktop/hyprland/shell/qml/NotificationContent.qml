@@ -46,8 +46,6 @@ FocusScope {
     onEngagedChanged: {
         if (engaged)
             Qt.callLater(focusKeyboard);
-        else
-            notificationState.markRead();
     }
 
     onGroupsChanged: {
@@ -148,7 +146,9 @@ FocusScope {
             }
 
             Text {
-                text: "J/K apps · H/L items · E expand · 1–9 act · S quiet · C clear · Del dismiss · Esc back"
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: "J/K apps · H/L items · E expand · M read/unread · ⇧M all read · ⇧N all unread · Del dismiss"
                 color: center.theme.textMuted
                 font.family: center.runtime.fontMono
                 font.pixelSize: center.theme.fontSize(9)
@@ -283,7 +283,7 @@ FocusScope {
                                 font.weight: Font.DemiBold
                             }
                             Text {
-                                text: groupItem.modelData.notifications.length + " notifications " + (groupItem.expanded ? "󰅃" : "󰅀")
+                                text: groupItem.modelData.notifications.length + " notifications · " + groupItem.modelData.notifications.filter(item => !center.notificationState.isRead(item)).length + " unread " + (groupItem.expanded ? "󰅃" : "󰅀")
                                 color: center.theme.textMuted
                                 font.family: center.runtime.fontMono
                                 font.pixelSize: center.theme.fontSize(9)
@@ -311,6 +311,7 @@ FocusScope {
                             required property int index
                             width: groupColumn.width
                             notification: modelData
+                            read: center.notificationState.isRead(modelData)
                             runtime: center.runtime
                             theme: center.theme
                             motion: center.motion
@@ -328,6 +329,7 @@ FocusScope {
                             }
                             onDefaultRequested: center.notificationState.invokeDefault(modelData)
                             onActionRequested: action => center.notificationState.invokeAction(modelData, action)
+                            onReadToggled: center.notificationState.toggleRead(modelData)
                             onDismissRequested: center.dismissNotification(modelData)
                         }
                     }
@@ -343,6 +345,32 @@ FocusScope {
                 bottom: parent.bottom
             }
             spacing: center.theme.spacing4
+            ShellAction {
+                runtime: center.runtime
+                theme: center.theme
+                motion: center.motion
+                compact: true
+                enabled: center.notificationState.unreadCount > 0
+                width: 44
+                height: 40
+                iconOnly: true
+                icon: "󰄭"
+                title: "Mark all read"
+                onActivated: center.notificationState.markAllRead()
+            }
+            ShellAction {
+                runtime: center.runtime
+                theme: center.theme
+                motion: center.motion
+                compact: true
+                enabled: center.notificationState.count > center.notificationState.unreadCount
+                width: 44
+                height: 40
+                iconOnly: true
+                icon: "󰄬"
+                title: "Mark all unread"
+                onActivated: center.notificationState.markAllUnread()
+            }
             ShellAction {
                 runtime: center.runtime
                 theme: center.theme
@@ -391,6 +419,15 @@ FocusScope {
                     const group = center.selectedGroup();
                     if (group && center.expandedGroupKey === group.key)
                         center.selectedMemberIndex = Math.max(0, Math.min(group.notifications.length - 1, center.selectedMemberIndex + ((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1)));
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_M && (event.modifiers & Qt.ShiftModifier)) {
+                    center.notificationState.markAllRead();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_N && (event.modifiers & Qt.ShiftModifier)) {
+                    center.notificationState.markAllUnread();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_M) {
+                    center.notificationState.toggleRead(center.selectedNotification());
                     event.accepted = true;
                 } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
                     const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
