@@ -246,7 +246,6 @@
           "prusaslicer"
           "raycast"
           "reaper"
-          "reasonix"
           "softube-central"
           "steam"
           "tailscale-app"
