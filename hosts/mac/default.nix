@@ -175,6 +175,7 @@
     uv = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.uv ];
     };
+
     blockGooseCli = _: {
       homebrew.brews = [ "block-goose-cli" ];
     };
