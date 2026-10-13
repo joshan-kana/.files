@@ -312,6 +312,30 @@ in
           runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
           action="''${1:-}"
           output="''${2:-all}"
+          if [ "$action" = thumbnail-animated ]; then
+            image="$output"
+            [ -f "$image" ] && [[ "$image" = /* ]] || exit 2
+            case "''${image,,}" in *.gif|*.mp4|*.webm|*.mkv|*.mov) ;; *) exit 2 ;; esac
+            # The selected item alone gets a short, muted cached motion
+            # preview. No decoding or background player when the gallery is
+            # closed or global reduced motion is active.
+            cache="''${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
+            mkdir -p "$cache"
+            key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
+            thumb="$cache/$key-motion.gif"
+            exec 9>"$cache/$key-motion.lock"
+            flock 9
+            if [ ! -s "$thumb" ]; then
+              tmp="$(mktemp "$cache/.animated.XXXXXXXX.gif")"
+              trap 'rm -f "$tmp"' EXIT
+              ffmpeg -nostdin -v error -i "$image" -t 2.5 \
+                -vf 'fps=8,scale=320:200:force_original_aspect_ratio=decrease:flags=fast_bilinear' \
+                -loop 0 -y "$tmp"
+              mv -f "$tmp" "$thumb"
+            fi
+            printf '%s\n' "$thumb"
+            exit 0
+          fi
           if [ "$action" = thumbnail ]; then
             image="$output"
             [ -f "$image" ] && [[ "$image" = /* ]] || exit 2
@@ -417,7 +441,7 @@ in
               systemctl --user start --no-block linux-desktop-wallpaper-image.service
               ;;
             *)
-              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|motion on\|off}\n' >&2
+              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
               exit 2
               ;;
           esac
