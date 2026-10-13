@@ -23,7 +23,6 @@ PanelWindow {
     // frame as navigation, then replace it with the full decoded entry.
     readonly property string selectedText: currentEntry && currentEntry.kind === "TEXT" ? (previewTextEntryId === currentEntry.id ? previewText : currentEntry.preview) : ""
     property string previewImagePath: ""
-    property bool previewRevealed: false
     property int previewJobId: -1
     property string previewJobKind: ""
     readonly property var currentEntry: filteredEntries.length > 0 ? filteredEntries[Math.max(0, Math.min(selectedIndex, filteredEntries.length - 1))] : null
@@ -76,14 +75,14 @@ PanelWindow {
     property Process previewProcess: Process {
         stdout: panel.previewOutput
         onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0 && panel.currentEntry && panel.open && panel.currentEntry.id === panel.previewJobId && (panel.previewJobKind === "text" || panel.previewRevealed)) {
+            if (exitCode === 0 && panel.currentEntry && panel.open && panel.currentEntry.id === panel.previewJobId && (panel.previewJobKind === "text" || panel.currentEntry.kind === "IMAGE")) {
                 if (panel.previewJobKind === "text") {
                     panel.previewText = panel.previewOutput.text.slice(0, 8192);
                     panel.previewTextEntryId = panel.previewJobId;
                 } else
                     panel.previewImagePath = panel.previewOutput.text.trim();
             }
-            if (panel.currentEntry && panel.open && (panel.currentEntry.id !== panel.previewJobId || (panel.currentEntry.kind === "IMAGE" && panel.previewRevealed && panel.previewJobKind !== "image")))
+            if (panel.currentEntry && panel.open && (panel.currentEntry.id !== panel.previewJobId || (panel.currentEntry.kind === "IMAGE" && panel.previewJobKind !== "image")))
                 previewTimer.restart();
             if (!panel.open && !panel.closing)
                 panel.clearPreviewFiles();
@@ -101,7 +100,6 @@ PanelWindow {
         previewTextEntryId = -1;
         previewText = "";
         previewImagePath = "";
-        previewRevealed = false;
         if (open)
             previewTimer.restart();
     }
@@ -109,7 +107,7 @@ PanelWindow {
     function loadPreview(): void {
         if (!open || !currentEntry || runtime.clipboardPreview.length === 0 || previewProcess.running)
             return;
-        if (currentEntry.kind !== "TEXT" && !previewRevealed)
+        if (currentEntry.kind !== "TEXT" && currentEntry.kind !== "IMAGE")
             return;
         previewJobId = currentEntry.id;
         previewJobKind = currentEntry.kind === "TEXT" ? "text" : "image";
@@ -117,13 +115,6 @@ PanelWindow {
             previewProcess.exec([runtime.cliphist, "decode", String(previewJobId)]);
         else
             previewProcess.exec([runtime.clipboardPreview, "image", String(previewJobId)]);
-    }
-
-    function revealPreview(): void {
-        if (!currentEntry || currentEntry.kind === "TEXT")
-            return;
-        previewRevealed = true;
-        previewTimer.restart();
     }
 
     function clearPreviewFiles(): void {
@@ -436,8 +427,6 @@ PanelWindow {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
                         const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
                         panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
-                    } else if (event.key === Qt.Key_Space && panel.currentEntry && panel.currentEntry.kind === "IMAGE") {
-                        panel.revealPreview();
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         panel.activateSelected();
                     } else {
@@ -595,7 +584,7 @@ PanelWindow {
                                 fill: parent
                                 margins: panel.theme.spacing2
                             }
-                            visible: !!panel.currentEntry && panel.currentEntry.kind === "IMAGE" && panel.previewRevealed && panel.previewImagePath.length > 0
+                            visible: !!panel.currentEntry && panel.currentEntry.kind === "IMAGE" && panel.previewImagePath.length > 0
                             source: panel.previewImagePath.length > 0 ? "file://" + panel.previewImagePath : ""
                             asynchronous: true
                             cache: false
@@ -604,7 +593,7 @@ PanelWindow {
                         }
 
                         Column {
-                            visible: !!panel.currentEntry && panel.currentEntry.kind !== "TEXT" && (!panel.previewRevealed || panel.previewImagePath.length === 0)
+                            visible: !!panel.currentEntry && panel.currentEntry.kind !== "TEXT" && panel.previewImagePath.length === 0
                             anchors.centerIn: parent
                             width: parent.width - panel.theme.spacing5 * 2
                             spacing: panel.theme.spacing4
@@ -621,22 +610,9 @@ PanelWindow {
                                 wrapMode: Text.WordWrap
                                 runtime: panel.runtime
                                 theme: panel.theme
-                                text: panel.currentEntry && panel.currentEntry.kind === "IMAGE" ? (panel.previewRevealed ? "Rendering thumbnail…" : "Image preview hidden") : "Binary item · Preview unavailable"
+                                text: panel.currentEntry && panel.currentEntry.kind === "IMAGE" ? "Rendering thumbnail…" : "Binary item · Preview unavailable"
                                 color: panel.theme.textMuted
                                 font.pixelSize: panel.theme.fontSize(11)
-                            }
-                            ShellAction {
-                                visible: !!panel.currentEntry && panel.currentEntry.kind === "IMAGE" && !panel.previewRevealed
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                width: Math.min(parent.width, 196)
-                                runtime: panel.runtime
-                                theme: panel.theme
-                                motion: panel.motion
-                                compact: true
-                                icon: "◉"
-                                title: "Reveal image"
-                                shortcut: "SPACE"
-                                onActivated: panel.revealPreview()
                             }
                         }
                     }
