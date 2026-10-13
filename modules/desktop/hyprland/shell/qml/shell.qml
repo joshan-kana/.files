@@ -44,6 +44,13 @@ ShellRoot {
         id: screens
     }
 
+    PolkitDialog {
+        runtime: root.runtimeRef
+        theme: root.themeRef
+        motion: root.motionRef
+        screens: screens
+    }
+
     WeatherState {
         id: weather
         runtime: runtime
