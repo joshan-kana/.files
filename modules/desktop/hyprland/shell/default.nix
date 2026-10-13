@@ -538,6 +538,7 @@ in
       agendaIcalSource = pkgs.writeText "linux-desktop-ical-sync.py" ''
         import hashlib
         import os
+        import re
         import stat
         import sys
         import tempfile
@@ -681,6 +682,20 @@ in
                                     old.unlink()
                 except Exception:
                     failed += 1
+            directory = Path.home() / ".secrets" / FEED_DIRECTORY
+            if directory.is_dir() and not directory.is_symlink():
+                # Removing or renaming a .url file intentionally removes only
+                # that source's previously imported events. When the private
+                # source directory itself is unavailable, retain all caches.
+                active_namespaces = {namespace_for(source) for source, _ in feed_sources}
+                base = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "calendars" / "personal"
+                if base.is_dir() and not base.is_symlink():
+                    for cached in base.glob(PREFIX + "*.ics"):
+                        if not re.fullmatch(r"google-ical-[0-9a-f]{24}--[0-9a-f]{64}\.ics", cached.name):
+                            continue
+                        if not any(cached.name.startswith(name) for name in active_namespaces):
+                            if cached.is_file() and not cached.is_symlink():
+                                cached.unlink()
             if failed:
                 # Do not write private feed URLs or event titles to the journal.
                 print("iCalendar refresh failed for " + str(failed) + " source(s); cached events retained", file=sys.stderr)
