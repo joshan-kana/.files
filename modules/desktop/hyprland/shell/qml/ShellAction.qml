@@ -16,6 +16,7 @@ Item {
     property bool compact: false
     property bool horizontalCompact: false
     property bool iconOnly: false
+    property bool iconHint: false
     property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
 
     signal activated
@@ -128,8 +129,9 @@ Item {
     Text {
         visible: root.iconOnly
         anchors.centerIn: parent
+        anchors.verticalCenterOffset: root.iconHint ? -6 : 0
         width: root.width
-        height: root.height
+        height: root.iconHint ? Math.max(20, root.height - 14) : root.height
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: root.icon
@@ -149,6 +151,17 @@ Item {
         fontFamily: root.runtime.fontMono
         textColor: root.theme.textMuted
         fontSize: root.theme.fontKeyHint
+    }
+
+    KeyChord {
+        visible: root.iconOnly && root.iconHint && root.shortcut.length > 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 3
+        shortcut: root.shortcut
+        fontFamily: root.runtime.fontMono
+        textColor: root.theme.textMuted
+        fontSize: root.theme.fontSize(8)
     }
 
     StateLayer {
