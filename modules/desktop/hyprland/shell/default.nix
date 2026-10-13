@@ -307,7 +307,7 @@ in
           pkgs.util-linux
         ];
         text = ''
-          library="$HOME/Pictures/Wallpapers"
+          library="$HOME/wallpapers"
           state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
           runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
           action="''${1:-}"
