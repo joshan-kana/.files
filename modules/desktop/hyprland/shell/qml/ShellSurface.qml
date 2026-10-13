@@ -21,12 +21,14 @@ SquircleSurface {
     property real lightIntensity: 1
     property bool elevated: false
 
+    readonly property real musicGlow: theme.musicReactiveEnabled && motion.enabled ? Math.max(0, Math.min(0.15, theme.musicReactiveEnergy * 0.13)) : 0
+
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
 
     exponent: theme.squircleExponent
     lightColor: luminousColor
-    lightStrength: luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0
+    lightStrength: (luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0) + musicGlow
 
     Behavior on lightStrength {
         NumberAnimation {
