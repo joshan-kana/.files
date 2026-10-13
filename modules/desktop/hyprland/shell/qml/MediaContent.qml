@@ -541,7 +541,6 @@ FocusScope {
                     motion: content.motion
                     compact: true
                     title: content.returnToControls ? "BACK" : "CLOSE"
-                    shortcut: "Esc"
                     onActivated: content.closeRequested()
                 }
             }
