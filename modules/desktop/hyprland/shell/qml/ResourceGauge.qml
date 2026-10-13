@@ -6,6 +6,9 @@ Item {
     required property Theme theme
     required property Motion motion
     property real value: 0
+    // Keep the ring geometry, but do not manufacture "0%" before a first
+    // authoritative sample is available.
+    property bool known: true
     property color accentColor: theme.accent
     property string label: ""
     property bool compact: false
@@ -16,6 +19,7 @@ Item {
     implicitHeight: compact ? 34 : 126
 
     onAnimatedValueChanged: face.requestPaint()
+    onKnownChanged: face.requestPaint()
     onAccentColorChanged: face.requestPaint()
     onCompactChanged: face.requestPaint()
 
@@ -43,7 +47,7 @@ Item {
             ctx.stroke();
             ctx.beginPath();
             ctx.strokeStyle = gauge.accentColor;
-            ctx.arc(width / 2, height / 2, radius, start, start + sweep * gauge.animatedValue);
+            ctx.arc(width / 2, height / 2, radius, start, start + sweep * (gauge.known ? gauge.animatedValue : 0));
             ctx.stroke();
         }
     }
@@ -54,7 +58,7 @@ Item {
         visible: !gauge.compact
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Math.round(gauge.animatedValue * 100) + "%"
+            text: gauge.known ? Math.round(gauge.animatedValue * 100) + "%" : "··"
             color: gauge.accentColor
             font.family: gauge.theme.runtime.fontMono
             font.pixelSize: gauge.theme.fontSize(24)

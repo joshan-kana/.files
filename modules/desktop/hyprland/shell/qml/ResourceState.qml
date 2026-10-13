@@ -18,7 +18,10 @@ QtObject {
     readonly property real swapUsed: Math.max(0, swapTotal - swapFree)
     readonly property real swapPercent: swapTotal > 0 ? swapUsed / swapTotal : 0
     property real cpuPercent: 0
+    property bool cpuSampleReady: false
     property var previousCpuStats: null
+    property var previousCoreStats: ({})
+    property var coreUsage: []
     property var cpuHistory: []
     property var memoryHistory: []
     property var networkHistory: []
@@ -50,6 +53,63 @@ QtObject {
         return [...values, value].slice(-historyLength);
     }
 
+    function updateCpu(stat: string): void {
+        if (!active)
+            return;
+        const cpuLine = stat.match(/^cpu\s+([\d\s]+)/m);
+        if (cpuLine) {
+            const values = cpuLine[1].trim().split(/\s+/).map(Number);
+            const total = values.reduce((sum, n) => sum + n, 0);
+            const idle = values[3] + (values[4] || 0);
+            if (previousCpuStats) {
+                const elapsed = total - previousCpuStats.total;
+                const idleDelta = idle - previousCpuStats.idle;
+                if (elapsed > 0) {
+                    cpuPercent = Math.max(0, Math.min(1, 1 - idleDelta / elapsed));
+                    cpuSampleReady = true;
+                }
+            }
+            previousCpuStats = {
+                total,
+                idle
+            };
+        }
+
+        // Use the same /proc/stat snapshot and the same active-only 2-second
+        // sampler as overall CPU usage. These are actual per-logical-core
+        // deltas, not copies of the overall utilisation ring.
+        const nextCoreStats = {};
+        const samples = [];
+        for (const line of stat.split("\n")) {
+            const match = line.match(/^cpu(\d+)\s+([\d\s]+)$/);
+            if (!match)
+                continue;
+            const index = Number(match[1]);
+            const fields = match[2].trim().split(/\s+/).map(Number);
+            if (fields.length < 4 || fields.some(value => !Number.isFinite(value)))
+                continue;
+            const total = fields.reduce((sum, value) => sum + value, 0);
+            const idle = fields[3] + (fields[4] || 0);
+            const previous = previousCoreStats[index];
+            const elapsed = previous ? total - previous.total : 0;
+            const idleDelta = previous ? idle - previous.idle : 0;
+            const utilisation = elapsed > 0 ? Math.max(0, Math.min(1, 1 - idleDelta / elapsed)) : -1;
+            nextCoreStats[index] = {
+                total,
+                idle
+            };
+            samples.push({
+                index,
+                utilisation
+            });
+        }
+        previousCoreStats = nextCoreStats;
+        coreUsage = samples.sort((a, b) => a.index - b.index);
+
+        if (cpuSampleReady)
+            cpuHistory = updateHistory(cpuHistory, cpuPercent);
+    }
+
     function refresh(): void {
         if (!active)
             return;
@@ -59,31 +119,12 @@ QtObject {
         fileNetDev.reload();
         fileRoute.reload();
         const mem = fileMeminfo.text();
-        const stat = fileStat.text();
 
         memoryTotal = Number(mem.match(/^MemTotal:\s*(\d+)/m)?.[1] || 0);
         memoryAvailable = Number(mem.match(/^MemAvailable:\s*(\d+)/m)?.[1] || 0);
         swapTotal = Number(mem.match(/^SwapTotal:\s*(\d+)/m)?.[1] || 0);
         swapFree = Number(mem.match(/^SwapFree:\s*(\d+)/m)?.[1] || 0);
 
-        const cpuLine = stat.match(/^cpu\s+([\d\s]+)/m);
-        if (cpuLine) {
-            const values = cpuLine[1].trim().split(/\s+/).map(Number);
-            const total = values.reduce((sum, n) => sum + n, 0);
-            const idle = values[3] + (values[4] || 0);
-            if (previousCpuStats) {
-                const elapsed = total - previousCpuStats.total;
-                const idleDelta = idle - previousCpuStats.idle;
-                if (elapsed > 0)
-                    cpuPercent = Math.max(0, Math.min(1, 1 - idleDelta / elapsed));
-            }
-            previousCpuStats = {
-                total,
-                idle
-            };
-        }
-
-        cpuHistory = updateHistory(cpuHistory, cpuPercent);
         memoryHistory = updateHistory(memoryHistory, memoryPercent);
 
         const defaultRoute = fileRoute.text().split("\n").slice(1).map(line => line.trim().split(/\s+/)).find(fields => fields.length > 2 && fields[1] === "00000000");
@@ -132,6 +173,13 @@ QtObject {
     onActiveChanged: {
         if (active) {
             previousCpuStats = null;
+            previousCoreStats = {};
+            cpuSampleReady = false;
+            cpuPercent = 0;
+            coreUsage = [];
+            cpuHistory = [];
+            memoryHistory = [];
+            networkHistory = [];
             previousNetworkStats = null;
             diskTicks = 4;
             sensorTicks = 4;
@@ -144,6 +192,9 @@ QtObject {
     }
     property FileView fileStat: FileView {
         path: "/proc/stat"
+        // reload() is asynchronous; reading text() immediately afterwards
+        // returns the previous snapshot. Calculate deltas only when loaded.
+        onLoaded: root.updateCpu(text())
     }
     property FileView fileNetDev: FileView {
         path: "/proc/net/dev"
