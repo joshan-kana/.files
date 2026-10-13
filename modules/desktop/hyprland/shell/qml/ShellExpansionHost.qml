@@ -170,6 +170,22 @@ PanelWindow {
     // causes separate compositor commits and visibly lagging/jumping edges.
     readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, 960) : 1
     readonly property real viewportHeight: screen ? Math.max(1, screen.height - (theme.barHeight + theme.spacing1) - theme.spacing4) : 1
+    // Match the bar's measured source when it lies inside our compositor-safe
+    // viewport. Off-viewport islands start at the nearest visible edge, rather
+    // than forcing a new full-width Wayland surface or compositor relayout.
+    readonly property real originHalfWidth: Math.min(viewportWidth / 2, Math.max(1, expansionState.originWidth / 2))
+    readonly property real localOriginCenter: screen ? expansionState.originCenter - (screen.width - viewportWidth) / 2 : viewportWidth / 2
+    readonly property real boundedOriginCenter: Math.max(originHalfWidth, Math.min(viewportWidth - originHalfWidth, localOriginCenter))
+    property real animatedSurfaceCenter: contentExpanded ? viewportWidth / 2 : boundedOriginCenter
+
+    Behavior on animatedSurfaceCenter {
+        enabled: host.contentExpanded || host.closing
+        NumberAnimation {
+            duration: host.motion.morph
+            easing.type: host.motion.morphType
+            easing.bezierCurve: host.motion.morphCurve
+        }
+    }
 
     screen: expansionState.screen
     visible: expansionState.hasCurrent || closing
@@ -304,7 +320,9 @@ PanelWindow {
     ShellSurface {
         id: shellSurface
 
-        x: (host.width - width) / 2
+        // The centre moves independently of width so the two morph curves do
+        // not repeatedly restart each other as the target's width changes.
+        x: Math.max(0, Math.min(host.width - width, host.animatedSurfaceCenter - width / 2))
         y: 0
         width: Math.min(host.width, host.targetWidth)
         height: Math.min(host.height, host.targetHeight)
