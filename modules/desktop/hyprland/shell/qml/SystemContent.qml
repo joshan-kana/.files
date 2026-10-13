@@ -751,11 +751,14 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     title: "Network"
-                    detail: root.system.networkConnected ? root.system.networkName : "No connection"
-                    status: root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "OFFLINE"
-                    glyph: root.system.wifiConnected ? "󰤨" : "󰈀"
+                    detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
+                    status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
+                    glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
                     shortcut: "N"
                     connected: root.system.networkConnected
+                    pending: networkPanel.open && (networkPanel.profileAction.running || networkPanel.pendingNetwork !== null)
+                    failed: networkPanel.open && networkPanel.statusError
+                    unavailable: root.system.networkDevices.length === 0
                     onActivated: root.openNetwork()
                 }
 
@@ -766,11 +769,15 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     title: "Bluetooth"
-                    detail: root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
-                    status: root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
+                    detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
+                    status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
                     glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
                     shortcut: "B"
                     connected: root.system.bluetoothEnabled
+                    scanning: root.system.bluetoothDiscovering
+                    pending: root.system.bluetoothDevices.some(device => device && device.pairing)
+                    failed: bluetoothPanel.open && bluetoothPanel.statusError
+                    unavailable: !root.system.bluetoothAvailable
                     onActivated: root.openBluetooth()
                 }
             }
