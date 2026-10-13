@@ -20,9 +20,16 @@ in
     environment.systemPackages = [ pkgs.bitwarden-desktop ];
   };
 
-  warp = _: {
-    environment.systemPackages = [ pkgs.warp-terminal ];
-  };
+  warp =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.warp-terminal ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "warp" ];
+      }
+    );
 
   mullvad =
     _:
@@ -139,15 +146,16 @@ in
     environment.systemPackages = [ pkgs.jetbrains.pycharm ];
   };
 
-  libreoffice = _: {
-    environment.systemPackages =
-      if isDarwin then
-        [ pkgs.libreoffice-bin ]
-      else if isLinux then
-        [ pkgs.libreoffice ]
-      else
-        [ ];
-  };
+  libreoffice =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.libreoffice ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "libreoffice" ];
+      }
+    );
 
   sunshine = _: {
     environment.systemPackages = [ pkgs.sunshine ];
@@ -164,15 +172,16 @@ in
     environment.systemPackages = [ pkgs.waypipe ];
   });
 
-  vlc = _: {
-    environment.systemPackages =
-      if isDarwin then
-        [ pkgs.vlc-bin ]
-      else if isLinux then
-        [ pkgs.vlc ]
-      else
-        [ ];
-  };
+  vlc =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        environment.systemPackages = [ pkgs.vlc ];
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "vlc" ];
+      }
+    );
 
   mopidy = _: {
     home = _: {

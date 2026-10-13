@@ -129,8 +129,8 @@
       # installs LaunchAgents from the removed pre-15 package layout.
       homebrew.casks = [ "karabiner-elements" ];
     };
-    raycast = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.raycast ];
+    raycast = _: {
+      homebrew.casks = [ "raycast" ];
     };
     yabai = import ../../modules/desktop/yabai;
   };
@@ -227,7 +227,6 @@
           "jordanbaird-ice"
           "kicad"
           "krita"
-          "libreoffice"
           "linearmouse"
           "logi-options+"
           "microsoft-auto-update"
@@ -240,13 +239,9 @@
           "openclaw"
           "orcaslicer@nightly"
           "parsec"
-          "raycast"
           "softube-central"
           "steam"
-          "tailscale-app"
           "utm@beta"
-          "vlc"
-          "warp"
           "xquartz"
         ];
       };

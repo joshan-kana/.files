@@ -1,6 +1,5 @@
 {
   lib,
-  pkgs,
   system,
   ...
 }:
@@ -53,7 +52,8 @@ in
         };
       }
       // lib.optionalAttrs isDarwin {
-        environment.systemPackages = [ pkgs.tailscale-gui ];
+        # The vendor app owns its macOS network extension and VPN entitlement.
+        homebrew.casks = [ "tailscale-app" ];
       }
     );
 
