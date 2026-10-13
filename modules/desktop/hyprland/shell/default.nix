@@ -533,6 +533,136 @@ in
         '';
       };
 
+      # The subscribed iCal URL is a runtime-only secret. Google Calendar
+      # publishes a standard VCALENDAR feed; khal already owns local event UI.
+      agendaIcalSource = pkgs.writeText "linux-desktop-ical-sync.py" ''
+        import hashlib
+        import os
+        import stat
+        import sys
+        import tempfile
+        import urllib.parse
+        import urllib.request
+        from pathlib import Path
+
+        from icalendar import Calendar
+
+        MAX_FEED_BYTES = 12 * 1024 * 1024
+        PREFIX = "google-ical-"
+
+
+        class HttpsRedirects(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, url):
+                if urllib.parse.urlsplit(url).scheme != "https":
+                    raise ValueError("insecure calendar redirect")
+                return super().redirect_request(req, fp, code, msg, headers, url)
+
+
+        def read_feed():
+            secret = Path.home() / ".secrets" / "calendar-ical-url"
+            if not secret.exists():
+                return None
+            if secret.is_symlink() or stat.S_IMODE(secret.stat().st_mode) & 0o077:
+                raise ValueError("calendar feed credential must be a private regular file")
+            if not secret.is_file():
+                raise ValueError("calendar feed credential must be a regular file")
+            url = secret.read_text(encoding="utf-8").strip()
+            if urllib.parse.urlsplit(url).scheme != "https":
+                raise ValueError("calendar feed must use HTTPS")
+            opener = urllib.request.build_opener(HttpsRedirects())
+            with opener.open(urllib.request.Request(url), timeout=18) as response:
+                if urllib.parse.urlsplit(response.geturl()).scheme != "https":
+                    raise ValueError("insecure calendar response")
+                data = response.read(MAX_FEED_BYTES + 1)
+            if len(data) > MAX_FEED_BYTES:
+                raise ValueError("calendar feed too large")
+            return data
+
+
+        def split_events(data):
+            if not data.strip().startswith(b"BEGIN:VCALENDAR") or b"END:VCALENDAR" not in data:
+                raise ValueError("not an iCalendar feed")
+            feed = Calendar.from_ical(data)
+            if str(feed.get("VERSION", "")) != "2.0":
+                raise ValueError("unsupported calendar version")
+            zones = [entry for entry in feed.subcomponents if entry.name == "VTIMEZONE"]
+            events = {}
+            event_count = 0
+            for entry in feed.subcomponents:
+                if entry.name != "VEVENT":
+                    continue
+                uid = str(entry.get("UID", "")).strip()
+                if not uid:
+                    raise ValueError("calendar event without UID")
+                events.setdefault(uid, []).append(entry)
+                event_count += 1
+                if event_count > 40000:
+                    raise ValueError("too many calendar events")
+            files = {}
+            for uid, entries in events.items():
+                item = Calendar()
+                item.add("VERSION", "2.0")
+                item.add("PRODID", "-//linux-desktop//local iCalendar subscription//")
+                for zone in zones:
+                    item.add_component(zone)
+                for event in entries:
+                    item.add_component(event)
+                name = PREFIX + hashlib.sha256(uid.encode("utf-8")).hexdigest() + ".ics"
+                files[name] = item.to_ical()
+            return files
+
+
+        def sync_files(files):
+            base = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "calendars" / "personal"
+            if base.is_symlink():
+                raise ValueError("calendar directory cannot be a symlink")
+            base.mkdir(parents=True, exist_ok=True, mode=0o700)
+            staged = []
+            try:
+                for name, data in files.items():
+                    fd, filename = tempfile.mkstemp(prefix=".ical-stage-", dir=base)
+                    staged.append((Path(filename), base / name))
+                    with os.fdopen(fd, "wb") as destination:
+                        destination.write(data)
+                    os.chmod(filename, 0o600)
+                for tmp, destination in staged:
+                    os.replace(tmp, destination)
+                existing = set(files)
+                for path in base.glob(PREFIX + "*.ics"):
+                    if path.name not in existing and path.is_file() and not path.is_symlink():
+                        path.unlink()
+            finally:
+                for temporary, _ in staged:
+                    temporary.unlink(missing_ok=True)
+
+
+        def main():
+            try:
+                raw = read_feed()
+                if raw is None:
+                    return 0
+                files = split_events(raw)
+                sync_files(files)
+                return 0
+            except Exception:
+                # Never print URL-bearing urllib exceptions, response bodies or
+                # parsed private event data into the user service journal.
+                print("iCalendar refresh failed; previous local events retained", file=sys.stderr)
+                return 1
+
+
+        if __name__ == "__main__":
+            sys.exit(main())
+      '';
+
+      agendaIcalSync = pkgs.writeShellApplication {
+        name = "linux-desktop-ical-sync";
+        runtimeInputs = [ (pkgs.python3.withPackages (python: [ python.icalendar ])) ];
+        text = ''
+          exec python3 ${agendaIcalSource}
+        '';
+      };
+
       agendaSetup = pkgs.writeShellApplication {
         name = "linux-desktop-agenda-setup";
         runtimeInputs = [ pkgs.coreutils ];
@@ -1203,6 +1333,7 @@ in
         recordingToggle
         colourPicker
         nightLightControl
+        agendaIcalSync
         pkgs.quickshell
         pkgs.mpvpaper
         spectrumAnalyzer
@@ -1216,7 +1347,30 @@ in
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
+      systemd.user.timers.linux-desktop-ical-sync = {
+        Unit.Description = "Refresh the local read-only iCalendar subscription";
+        Timer = {
+          OnCalendar = "*:0/30";
+          RandomizedDelaySec = "90s";
+          Persistent = true;
+          Unit = "linux-desktop-ical-sync.service";
+        };
+        Install.WantedBy = [ "timers.target" ];
+      };
+
       systemd.user.services = {
+        linux-desktop-ical-sync = {
+          Unit = {
+            Description = "Refresh subscribed iCalendar events for khal";
+            ConditionPathExists = "%h/.secrets/calendar-ical-url";
+          };
+          Service = {
+            Type = "oneshot";
+            ExecStart = lib.getExe agendaIcalSync;
+            TimeoutStartSec = 45;
+          };
+        };
+
         linux-desktop-wallpaper-image = {
           Unit = {
             Description = "Apply the Stylix wallpaper with awww transitions";
