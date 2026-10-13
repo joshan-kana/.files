@@ -224,7 +224,7 @@ in
     id = "capture.recordToggle";
     action = global "linux-desktop:record-toggle";
     section = "UTILITIES";
-    description = "Start or stop recording a selected screen region";
+    description = "Screen record";
   })
   (mk {
     keys = "SUPER + SHIFT + S";
@@ -232,7 +232,7 @@ in
     id = "capture.region";
     action = global "linux-desktop:capture-region";
     section = "UTILITIES";
-    description = "Copy selected screen region to clipboard";
+    description = "Screenshot";
   })
   (mk {
     keys = "SUPER + SPACE";
