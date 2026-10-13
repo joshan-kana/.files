@@ -282,8 +282,12 @@ PanelWindow {
     function focusWorkspace(id: int): void {
         if (id < 1 || id > 10)
             return;
-        hide();
+        // Workspace browsing is internal to Overview; only explicit activation,
+        // Escape or the canonical global toggle dismisses the surface.
         Hyprland.dispatch('hl.dsp.focus({ workspace = "' + id + '" })');
+        const next = windows.findIndex(toplevel => toplevel.workspace && toplevel.workspace.id === id);
+        if (next >= 0)
+            chooseIndex(next);
     }
     function activateWindow(index: int): void {
         const toplevel = windows[index];
