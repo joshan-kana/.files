@@ -37,8 +37,9 @@ ShellRoot {
         id: theme
         runtime: runtime
         musicReactiveEnabled: root.musicReactiveEnabled
-        // Quantise without adding timers, reducing shape redraw churn.
-        musicReactiveEnergy: musicReactiveEnabled && motion.enabled ? Math.round(Math.min(1, Math.max(0, spectrum.bass * 1.2 + spectrum.rms * 0.8)) * 20) / 20 : 0
+        musicReactiveEnergy: reactive.sustain
+        musicReactiveBeat: reactive.beatPulse
+        musicReactiveTreble: reactive.treble
     }
 
     Motion {
@@ -217,6 +218,12 @@ ShellRoot {
         id: spectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
         active: (media.playing && (ambientBar.shown || (expansionState.hasCurrent && expansionState.currentName === "system"))) || (expansionState.hasCurrent && expansionState.currentName === "media") || (motion.enabled && (root.wallpaperSpectrumEnabled || root.musicReactiveEnabled))
+    }
+
+    MusicReactiveState {
+        id: reactive
+        spectrum: root.spectrumRef
+        enabled: root.musicReactiveEnabled && motion.enabled
     }
 
     WallpaperSpectrum {
@@ -1206,6 +1213,22 @@ ShellRoot {
 
         function spectrumSequence(): int {
             return spectrum.sequence;
+        }
+
+        function musicReactiveOn(): bool {
+            return root.musicReactiveEnabled;
+        }
+
+        function musicReactiveBassLevel(): real {
+            return reactive.sustain;
+        }
+
+        function musicReactiveBeatLevel(): real {
+            return reactive.beatPulse;
+        }
+
+        function wallpaperSpectrumOn(): bool {
+            return root.wallpaperSpectrumEnabled;
         }
 
         function systemOpen(): bool {
