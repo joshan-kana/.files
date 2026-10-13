@@ -161,6 +161,17 @@ PanelWindow {
     ScriptModel {
         id: resultModel
         values: palette.filteredItems()
+        // Partial expressions and rapidly changing search modes can have no
+        // matches. Select a new valid result as soon as the model changes,
+        // rather than leaving Enter targeted at the stale empty model.
+        onValuesChanged: {
+            if (!palette.open)
+                return;
+            if (values.length === 0)
+                results.currentIndex = -1;
+            else if (results.currentIndex < 0 || results.currentIndex >= values.length)
+                results.currentIndex = 0;
+        }
     }
 
     function subsequencePenalty(haystack: string, query: string): int {
@@ -605,7 +616,9 @@ PanelWindow {
                 model: resultModel
                 spacing: theme.spacing1
                 clip: true
-                currentIndex: resultModel.values.length > 0 ? 0 : -1
+                currentIndex: -1
+                // The model update and keyboard handlers own the selection;
+                // rebinding it to model length would override J/K navigation.
                 // Autorepeated navigation must be immediate; the focused
                 // surface itself still animates its tonal state.
                 highlightMoveDuration: 0
