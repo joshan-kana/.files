@@ -863,7 +863,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     icon: root.system.batteryAvailable ? (root.system.batteryPercent <= 20 ? "󰁺" : "󰁹") : "󰐥"
-                    title: root.system.batteryAvailable ? "Battery " + root.system.batteryPercent + "%" : root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power"
+                    title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"

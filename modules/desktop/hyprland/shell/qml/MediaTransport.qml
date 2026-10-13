@@ -29,7 +29,7 @@ Item {
                 },
                 {
                     label: "−5s",
-                    hint: root.compact ? "⇧H" : "←",
+                    hint: root.compact ? "SHIFT+H" : "H",
                     enabled: root.media.seekable,
                     action: "back",
                     glyph: "󰒫"
@@ -43,7 +43,7 @@ Item {
                 },
                 {
                     label: "+5s",
-                    hint: root.compact ? "⇧L" : "→",
+                    hint: root.compact ? "SHIFT+L" : "L",
                     enabled: root.media.seekable,
                     action: "forward",
                     glyph: "󰒬"
@@ -59,13 +59,14 @@ Item {
 
             delegate: ShellAction {
                 required property var modelData
-                width: root.minimal ? (modelData.action === "play" ? 45 : 34) : modelData.action === "play" ? 108 : (root.compact ? 72 : 76)
-                height: root.minimal ? 36 : 40
+                width: root.minimal ? (modelData.action === "play" ? 58 : 48) : (modelData.action === "play" ? 86 : 70)
+                height: 46
                 runtime: root.runtime
                 theme: root.theme
                 motion: root.motion
                 compact: true
-                iconOnly: root.minimal
+                iconOnly: true
+                iconHint: true
                 icon: modelData.glyph
                 title: modelData.label
                 shortcut: modelData.hint
