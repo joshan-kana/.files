@@ -27,9 +27,41 @@
         };
       })
       {
-        authentication = _: {
-          security.pam.services.sudo_local.touchIdAuth = true;
-        };
+        authentication =
+          { lib, pkgs, ... }:
+          let
+            # Nixpkgs restricts this PAM module to Linux, but the upstream
+            # implementation also supports Darwin.
+            pamSshAgentAuth = pkgs.pam_ssh_agent_auth.overrideAttrs (old: {
+              meta = old.meta // {
+                platforms = [ pkgs.stdenv.hostPlatform.system ];
+              };
+              NIX_CFLAGS_COMPILE = "-std=gnu17";
+              postPatch = (old.postPatch or "") + ''
+                # Avoid Darwin's fortified stdio macros conflicting with the
+                # bundled snprintf compatibility implementation.
+                substituteInPlace openbsd-compat/bsd-snprintf.c --replace-fail '#include "includes.h"' $'#include "includes.h"\n#undef snprintf\n#undef vsnprintf\n#undef SNPRINTF_CONST\n#define SNPRINTF_CONST const'
+              '';
+            });
+          in
+          {
+            # Sudo must trust root-owned keys, not the user's writable SSH
+            # authorized_keys file. Only the iPhone identity is allowed.
+            environment.etc."security/ssh-agent-sudo-keys".text = ''
+              ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG8zj5nCZ+5bBGYao1fSq9jKVYElfzlCr8klXeS0eMU4 iphone-a-shell
+            '';
+
+            security.pam.services.sudo_local = {
+              touchIdAuth = true;
+              text = lib.mkBefore ''
+                auth       sufficient     ${pamSshAgentAuth}/libexec/pam_ssh_agent_auth.so file=/etc/security/ssh-agent-sudo-keys
+              '';
+            };
+
+            security.sudo.extraConfig = ''
+              Defaults env_keep += "SSH_AUTH_SOCK"
+            '';
+          };
 
         preferences = _: {
           system.defaults = {
