@@ -12,6 +12,19 @@ Item {
     property string title: "Controls"
     property var bindings: []
     property real backdropRadius: theme.radiusLarge
+    property bool keyboardScroll: false
+
+    function scrollHints(rows: int): void {
+        if (!open)
+            return;
+        const limit = Math.max(0, hintsViewport.contentHeight - hintsViewport.height);
+        hintsViewport.contentY = Math.max(0, Math.min(limit, hintsViewport.contentY + rows * (30 + theme.spacing3)));
+    }
+
+    onOpenChanged: {
+        if (open)
+            hintsViewport.contentY = 0;
+    }
 
     signal dismissed
 
@@ -61,78 +74,87 @@ Item {
             onClicked: mouse => mouse.accepted = true
         }
 
-        Column {
-            id: content
-
+        Flickable {
+            id: hintsViewport
             anchors {
                 fill: parent
                 margins: help.theme.spacing5
             }
-            spacing: help.theme.spacing3
+            contentWidth: width
+            contentHeight: content.implicitHeight
+            flickableDirection: Flickable.VerticalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
 
-            Text {
-                width: parent.width
-                text: help.title
-                color: help.theme.textStrong
-                font.family: help.runtime.fontMono
-                font.pixelSize: help.theme.fontSize(19)
-                font.weight: Font.DemiBold
-            }
+            Column {
+                id: content
+                width: hintsViewport.width
+                spacing: help.theme.spacing3
 
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: help.theme.subtleBorder
-            }
+                Text {
+                    width: parent.width
+                    text: help.title
+                    color: help.theme.textStrong
+                    font.family: help.runtime.fontMono
+                    font.pixelSize: help.theme.fontSize(19)
+                    font.weight: Font.DemiBold
+                }
 
-            Repeater {
-                model: help.bindings
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: help.theme.subtleBorder
+                }
 
-                delegate: Row {
-                    id: helpBinding
-                    required property var modelData
+                Repeater {
+                    model: help.bindings
 
-                    width: content.width
-                    spacing: help.theme.spacing3
+                    delegate: Row {
+                        id: helpBinding
+                        required property var modelData
 
-                    ShellSurface {
-                        width: Math.max(64, Math.min(132, keyLabel.implicitWidth + theme.spacing4))
-                        height: 30
-                        theme: help.theme
-                        motion: help.motion
-                        surfaceLayer: ShellSurface.Control
-                        cornerRadius: theme.radiusSmall
-                        fillColor: help.theme.selectedTabFill
+                        width: content.width
+                        spacing: help.theme.spacing3
 
-                        KeyChord {
-                            id: keyLabel
-                            anchors.centerIn: parent
-                            shortcut: helpBinding.modelData.key
-                            fontFamily: help.runtime.fontMono
-                            textColor: help.theme.text
-                            fontSize: help.theme.fontSize(11)
+                        ShellSurface {
+                            width: Math.max(64, Math.min(132, keyLabel.implicitWidth + theme.spacing4))
+                            height: 30
+                            theme: help.theme
+                            motion: help.motion
+                            surfaceLayer: ShellSurface.Control
+                            cornerRadius: theme.radiusSmall
+                            fillColor: help.theme.selectedTabFill
+
+                            KeyChord {
+                                id: keyLabel
+                                anchors.centerIn: parent
+                                shortcut: helpBinding.modelData.key
+                                fontFamily: help.runtime.fontMono
+                                textColor: help.theme.text
+                                fontSize: help.theme.fontSize(11)
+                            }
+                        }
+
+                        Text {
+                            width: parent.width - parent.children[0].width - parent.spacing
+                            anchors.verticalCenter: parent.children[0].verticalCenter
+                            text: helpBinding.modelData.action
+                            color: help.theme.text
+                            font.family: help.runtime.fontMono
+                            font.pixelSize: help.theme.fontSize(12)
+                            wrapMode: Text.WordWrap
                         }
                     }
-
-                    Text {
-                        width: parent.width - parent.children[0].width - parent.spacing
-                        anchors.verticalCenter: parent.children[0].verticalCenter
-                        text: helpBinding.modelData.action
-                        color: help.theme.text
-                        font.family: help.runtime.fontMono
-                        font.pixelSize: help.theme.fontSize(12)
-                        elide: Text.ElideRight
-                    }
                 }
-            }
 
-            Text {
-                width: parent.width
-                text: "? or Esc to return"
-                horizontalAlignment: Text.AlignRight
-                color: help.theme.textMuted
-                font.family: help.runtime.fontMono
-                font.pixelSize: help.theme.fontSize(10)
+                Text {
+                    width: parent.width
+                    text: help.keyboardScroll ? "J/K scroll · U/D page · ?/Esc return" : "? or Esc to return"
+                    horizontalAlignment: Text.AlignRight
+                    color: help.theme.textMuted
+                    font.family: help.runtime.fontMono
+                    font.pixelSize: help.theme.fontSize(10)
+                }
             }
         }
     }

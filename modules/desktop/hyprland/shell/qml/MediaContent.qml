@@ -56,6 +56,7 @@ FocusScope {
         }
     ]
 
+    signal helpScrollRequested(int steps)
     signal closeRequested
 
     implicitWidth: 920
@@ -528,8 +529,10 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     iconOnly: true
+                    iconHint: true
+                    shortcut: "?"
                     icon: "󰋗"
-                    title: "Help (?)"
+                    title: "Keyboard help"
                     onActivated: content.helpOpen = true
                 }
 
@@ -557,6 +560,18 @@ FocusScope {
                 if (content.helpOpen) {
                     if (helpKey || event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         content.helpOpen = false;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                        content.helpScrollRequested(1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                        content.helpScrollRequested(-1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                        content.helpScrollRequested(4);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) {
+                        content.helpScrollRequested(-4);
                         event.accepted = true;
                     }
                     return;
