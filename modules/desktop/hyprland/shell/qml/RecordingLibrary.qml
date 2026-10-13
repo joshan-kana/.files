@@ -13,6 +13,7 @@ Item {
 
     property bool open: false
     property var entries: []
+    property string listingSignature: ""
     property int selectedIndex: 0
     property string previewName: ""
     property string previewPath: ""
@@ -43,6 +44,7 @@ Item {
         open = true;
         selectedIndex = 0;
         entries = [];
+        listingSignature = "";
         deletePending = "";
         statusText = "";
         refresh();
@@ -134,12 +136,23 @@ Item {
             if (!library.open)
                 return;
             if (exitCode === 0) {
+                const nextEntries = library.parseListing(library.listOutput.text);
+                const nextSignature = JSON.stringify(nextEntries);
+                // Replacing an identical JS-array model destroys and recreates
+                // its Qt delegate metadata without any visible result. This
+                // was racing recorder state changes and keyboard navigation.
+                if (nextSignature === library.listingSignature)
+                    return;
                 const previous = library.selectedEntry ? library.selectedEntry.name : "";
-                library.entries = library.parseListing(library.listOutput.text);
-                const same = library.entries.findIndex(entry => entry.name === previous);
-                // Preserve success/failure feedback across an automatic refresh;
-                // only explicit navigation dismisses the prior action message.
-                library.selectedIndex = Math.max(0, Math.min(library.entries.length - 1, same >= 0 ? same : library.selectedIndex));
+                const same = nextEntries.findIndex(entry => entry.name === previous);
+                const nextIndex = Math.max(0, Math.min(nextEntries.length - 1, same >= 0 ? same : library.selectedIndex));
+                Qt.callLater(() => {
+                    if (!library.open || nextSignature === library.listingSignature)
+                        return;
+                    library.listingSignature = nextSignature;
+                    library.entries = nextEntries;
+                    library.selectedIndex = nextIndex;
+                });
             } else {
                 library.statusError = true;
                 library.statusText = "RECORDING DIRECTORY UNAVAILABLE";
@@ -176,6 +189,10 @@ Item {
         onTriggered: library.loadPreview()
     }
     onSelectedEntryChanged: {
+        // A list refresh can replace the metadata object without changing the
+        // selected clip. Keep its decoded preview until the actual file changes.
+        if (selectedEntry && previewName === selectedEntry.name)
+            return;
         previewPath = "";
         if (open && selectedEntry)
             previewTimer.restart();
