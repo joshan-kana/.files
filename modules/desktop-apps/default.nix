@@ -200,14 +200,27 @@ in
     };
   };
 
-  # The local Ollama service is managed outside this shared module, but these
-  # desktop hosts intentionally expose its established ports.
-  ollama = linuxOnly (_: {
-    networking.firewall.allowedTCPPorts = [
-      11434
-      11435
-    ];
-  });
+  ollama =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        networking.firewall.allowedTCPPorts = [
+          11434
+          11435
+        ];
+      }
+      // lib.optionalAttrs isDarwin {
+        environment.systemPackages = [ pkgs.ollama ];
+        launchd.user.agents.ollama.serviceConfig = {
+          ProgramArguments = [
+            (lib.getExe pkgs.ollama)
+            "serve"
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+        };
+      }
+    );
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (

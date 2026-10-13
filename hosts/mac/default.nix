@@ -198,7 +198,6 @@
           "j-x-z/tap/cocoa-way"
           "j-x-z/tap/waypipe-darwin"
           "molten-vk"
-          "ollama"
           "osrf/simulation/gz-rendering8"
           "pi-coding-agent"
           "qmk/qmk/qmk"
