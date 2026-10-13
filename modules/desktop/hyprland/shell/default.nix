@@ -383,8 +383,15 @@ in
               fi
               ;;
             current)
-              if [ -f "$state_file" ]; then
-                { IFS= read -r resize && IFS= read -r image; } < "$state_file" || exit 1
+              # An all-output override also applies to screens that have no
+              # more-specific override. Report the effective wallpaper, not
+              # the Stylix default hidden beneath an active all-output image.
+              current_file="$state_file"
+              if [ ! -f "$current_file" ] && [ "$output" != all ]; then
+                current_file="$state_dir/all.wall"
+              fi
+              if [ -f "$current_file" ]; then
+                { IFS= read -r resize && IFS= read -r image; } < "$current_file" || exit 1
                 printf '%s\n' "$image"
               else
                 jq -er '.wallpaper' "$runtime"
