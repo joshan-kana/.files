@@ -66,17 +66,20 @@ FocusScope {
             topMargin: mixer.theme.spacing4
             bottomMargin: mixer.theme.spacing4
         }
-        model: mixer.streams
+        model: mixer.streams.length
         spacing: mixer.theme.spacing3
         clip: true
         currentIndex: mixer.selectedIndex
         boundsBehavior: Flickable.StopAtBounds
-        onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0)
+                positionViewAtIndex(currentIndex, ListView.Contain);
+        }
 
         delegate: ShellSurface {
             id: streamRow
-            required property var modelData
             required property int index
+            readonly property var stream: mixer.streams[index] || null
             readonly property bool chosen: index === mixer.selectedIndex
 
             width: ListView.view.width
@@ -112,8 +115,8 @@ FocusScope {
                         spacing: 2
                         Text {
                             width: parent.width
-                            text: mixer.system.streamDisplayName(streamRow.modelData)
-                            color: streamRow.modelData.audio && streamRow.modelData.audio.muted ? mixer.theme.warning : mixer.theme.textStrong
+                            text: streamRow.stream ? mixer.system.streamDisplayName(streamRow.stream) : ""
+                            color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.textStrong
                             font.family: mixer.runtime.fontMono
                             font.pixelSize: mixer.theme.fontSize(12)
                             font.weight: Font.DemiBold
@@ -121,7 +124,7 @@ FocusScope {
                         }
                         Text {
                             width: parent.width
-                            text: (mixer.system.audioCaptureStreams.indexOf(streamRow.modelData) >= 0 ? "INPUT · " : "OUTPUT · ") + mixer.system.streamTechnicalName(streamRow.modelData)
+                            text: (mixer.system.audioCaptureStreams.indexOf(streamRow.stream) >= 0 ? "INPUT · " : "OUTPUT · ") + (streamRow.stream ? mixer.system.streamTechnicalName(streamRow.stream) : "")
                             color: mixer.theme.textMuted
                             font.family: mixer.runtime.fontMono
                             font.pixelSize: mixer.theme.fontSize(9)
@@ -132,8 +135,8 @@ FocusScope {
                     Text {
                         id: volumeLabel
                         anchors.verticalCenter: parent.verticalCenter
-                        text: streamRow.modelData.audio ? (streamRow.modelData.audio.muted ? "MUTED" : Math.round(streamRow.modelData.audio.volume * 100) + "%") : "—"
-                        color: streamRow.modelData.audio && streamRow.modelData.audio.muted ? mixer.theme.warning : mixer.theme.accent
+                        text: streamRow.stream?.audio ? (streamRow.stream?.audio.muted ? "MUTED" : Math.round(streamRow.stream?.audio.volume * 100) + "%") : "—"
+                        color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.accent
                         font.family: mixer.runtime.fontMono
                         font.pixelSize: mixer.theme.fontSize(10)
                         font.weight: Font.DemiBold
@@ -148,12 +151,12 @@ FocusScope {
                         motion: mixer.motion
                         cornerRadius: mixer.theme.radiusSmall
                         surfaceLayer: ShellSurface.Control
-                        selected: !!streamRow.modelData.audio?.muted
+                        selected: !!streamRow.stream?.audio?.muted
 
                         Text {
                             anchors.centerIn: parent
-                            text: streamRow.modelData.audio?.muted ? "󰝟" : "󰕾"
-                            color: streamRow.modelData.audio?.muted ? mixer.theme.warning : mixer.theme.textStrong
+                            text: streamRow.stream?.audio?.muted ? "󰝟" : "󰕾"
+                            color: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.textStrong
                             font.family: "Symbols Nerd Font"
                             font.pixelSize: mixer.theme.fontSize(15)
                         }
@@ -163,7 +166,7 @@ FocusScope {
                             cornerRadius: mixer.theme.radiusSmall
                             onActivated: {
                                 mixer.selectedIndex = streamRow.index;
-                                mixer.system.toggleStreamMute(streamRow.modelData);
+                                mixer.system.toggleStreamMute(streamRow.stream);
                             }
                         }
                     }
@@ -180,8 +183,8 @@ FocusScope {
                         height: 29
                         anchors.verticalCenter: parent.verticalCenter
                         theme: mixer.theme
-                        node: streamRow.modelData
-                        muted: !!streamRow.modelData.audio?.muted
+                        node: streamRow.stream
+                        muted: !!streamRow.stream?.audio?.muted
                         monitoring: mixer.active
                     }
 
@@ -190,14 +193,14 @@ FocusScope {
                         anchors.verticalCenter: parent.verticalCenter
                         theme: mixer.theme
                         motion: mixer.motion
-                        enabled: !!streamRow.modelData.audio
-                        value: streamRow.modelData.audio ? streamRow.modelData.audio.volume : 0
-                        accentColor: streamRow.modelData.audio?.muted ? mixer.theme.warning : mixer.theme.accent
+                        enabled: !!streamRow.stream?.audio
+                        value: streamRow.stream?.audio ? streamRow.stream?.audio.volume : 0
+                        accentColor: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.accent
                         trackHeight: 11
                         handleSize: 19
                         onValueRequested: value => {
                             mixer.selectedIndex = streamRow.index;
-                            mixer.system.setStreamVolume(streamRow.modelData, value);
+                            mixer.system.setStreamVolume(streamRow.stream, value);
                         }
                     }
                 }
