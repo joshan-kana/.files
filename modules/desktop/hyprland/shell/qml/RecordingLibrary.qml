@@ -16,7 +16,6 @@ Item {
     property int selectedIndex: 0
     property string previewName: ""
     property string previewPath: ""
-    property real previewDuration: 0
     property string deletePending: ""
     property string statusText: ""
     property bool statusError: false
@@ -69,16 +68,18 @@ Item {
         const result = [];
         for (const row of output.split("\n")) {
             const columns = row.split("\t");
-            if (columns.length !== 3 || !/^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$/.test(columns[1]))
+            if (columns.length !== 4 || !/^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$/.test(columns[1]))
                 continue;
             const size = Number(columns[2]);
             const modified = Number(columns[0]);
-            if (!Number.isFinite(size) || !Number.isFinite(modified))
+            const duration = Number(columns[3]);
+            if (!Number.isFinite(size) || !Number.isFinite(modified) || !Number.isFinite(duration))
                 continue;
             result.push({
                 name: columns[1],
                 size,
-                modified
+                modified,
+                duration
             });
         }
         return result.slice(0, 100);
@@ -152,7 +153,6 @@ Item {
             if (library.open && library.selectedEntry && library.selectedEntry.name === library.previewName && exitCode === 0) {
                 const lines = library.previewOutput.text.trim().split("\n");
                 library.previewPath = lines[0] || "";
-                library.previewDuration = Number(lines[1]) || 0;
             }
             if (library.open && library.selectedEntry && library.selectedEntry.name !== library.previewName)
                 previewTimer.restart();
@@ -177,7 +177,6 @@ Item {
     }
     onSelectedEntryChanged: {
         previewPath = "";
-        previewDuration = 0;
         if (open && selectedEntry)
             previewTimer.restart();
     }
@@ -332,7 +331,7 @@ Item {
                 }
                 Text {
                     width: parent.width
-                    text: library.selectedEntry ? library.timeLabel(library.previewDuration) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CLIP"
+                    text: library.selectedEntry ? library.timeLabel(library.selectedEntry.duration) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CLIP"
                     color: library.theme.textStrong
                     font.family: library.runtime.fontMono
                     font.pixelSize: library.theme.fontSize(11)

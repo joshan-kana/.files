@@ -69,17 +69,28 @@ PanelWindow {
     }
 
     function begin(copy: bool, target: var, mode: string): void {
-        if (open || pending || exporting || !target || runtime.frozenCapture.length === 0)
+        if (open || pending || exporting || !target || (mode !== "record" && runtime.frozenCapture.length === 0))
             return;
         captureScreen = target;
         copying = copy;
         selectionMode = mode;
         if (mode !== "record")
             audioMode = "none";
-        pending = true;
         initialiseSelection = true;
         statusText = "";
-        snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name]);
+        if (mode === "record") {
+            // Screen recording selects a live region; only screenshots freeze.
+            // No image capture or private snapshot file is created here.
+            open = true;
+            Qt.callLater(() => {
+                initialiseRect();
+                if (open)
+                    keyboard.forceActiveFocus();
+            });
+        } else {
+            pending = true;
+            snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name]);
+        }
     }
 
     function initialiseRect(): void {
@@ -127,8 +138,7 @@ PanelWindow {
             return;
         const pixelRect = selectedPixels;
         if (selectionMode === "record") {
-            // The image is a selection backdrop only. The recorder captures
-            // the live output, never the frozen image.
+            // Recorder geometry stays in compositor logical coordinates.
             const recordGeometry = String(Math.round(leftEdge + (captureScreen.x || 0))) + "," + String(Math.round(topEdge + (captureScreen.y || 0))) + " " + String(Math.ceil(selectionWidth)) + "x" + String(Math.ceil(selectionHeight));
             const outputName = captureScreen.name;
             const selectedAudio = audioMode;
@@ -199,7 +209,8 @@ PanelWindow {
     Image {
         id: frozen
         anchors.fill: parent
-        source: picker.snapshotPath.length > 0 ? "file://" + picker.snapshotPath : ""
+        source: picker.selectionMode !== "record" && picker.snapshotPath.length > 0 ? "file://" + picker.snapshotPath : ""
+        visible: picker.selectionMode !== "record"
         fillMode: Image.Stretch
         asynchronous: true
         cache: false
@@ -337,7 +348,7 @@ PanelWindow {
         z: 5
         x: picker.leftEdge + picker.selectionWidth / 2 - implicitWidth / 2
         y: picker.topEdge + picker.selectionHeight + picker.theme.spacing2
-        text: picker.selectedPixels.w + " × " + picker.selectedPixels.h + " PIXELS"
+        text: picker.selectionMode === "record" ? Math.ceil(picker.selectionWidth) + " × " + Math.ceil(picker.selectionHeight) + " REGION" : picker.selectedPixels.w + " × " + picker.selectedPixels.h + " PIXELS"
         color: picker.theme.textStrong
         font.family: picker.runtime.fontMono
         font.pixelSize: picker.theme.fontSize(11)
