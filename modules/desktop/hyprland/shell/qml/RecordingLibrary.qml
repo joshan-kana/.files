@@ -245,16 +245,21 @@ Item {
                     fill: parent
                     margins: library.theme.spacing2
                 }
-                model: library.entries
+                // Numeric model avoids transient file objects becoming
+                // delegate metaobjects during recorder finalisation.
+                model: library.entries.length
                 currentIndex: library.selectedIndex
                 spacing: library.theme.spacing2
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0)
+                        positionViewAtIndex(currentIndex, ListView.Contain);
+                }
                 delegate: ShellSurface {
                     id: recordRow
-                    required property var modelData
                     required property int index
+                    readonly property var entry: library.entries[index] || null
                     width: ListView.view.width
                     height: 61
                     theme: library.theme
@@ -277,7 +282,7 @@ Item {
                         spacing: library.theme.spacing1
                         Text {
                             width: parent.width
-                            text: recordRow.modelData.name.replace(/^Recording-/, "")
+                            text: recordRow.entry ? recordRow.entry.name.replace(/^Recording-/, "") : ""
                             textFormat: Text.PlainText
                             color: library.theme.textStrong
                             font.family: library.runtime.fontMono
@@ -286,7 +291,7 @@ Item {
                             elide: Text.ElideRight
                         }
                         Text {
-                            text: library.formatBytes(recordRow.modelData.size) + " · MP4"
+                            text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + " · MP4"
                             color: library.theme.textMuted
                             font.family: library.runtime.fontMono
                             font.pixelSize: library.theme.fontSize(9)
