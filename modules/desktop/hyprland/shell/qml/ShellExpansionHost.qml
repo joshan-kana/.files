@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import "KeyGlyphs.js" as KeyGlyphs
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -408,27 +407,90 @@ PanelWindow {
             onTabRequested: destination => host.navigate(destination)
         }
 
-        Text {
+        Column {
             id: hubFooter
             width: Math.max(1, parent.width - host.theme.spacing3 * 2)
+            height: implicitHeight
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
                 bottomMargin: host.theme.spacing3
             }
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            // Use intrinsic tab content and the stable viewport budget. Testing
-            // against contentViewport.height would make this Text's own wrap
-            // height a dependency of its content, creating a binding loop.
+            spacing: host.theme.spacing1
+
+            // Tab/back/scroll navigation belongs in the shared footer, while
+            // action mnemonics stay on controls. Centre the group as one line;
+            // optional scrolling gets a separate, non-crowded second line.
             readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
-            // Detail views own their action hints. The shared hub footer only
-            // describes tab navigation and escape, avoiding duplicate gallery
-            // selection instructions on top of ThemePanel's local footer.
-            text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (host.loadedContent && host.loadedContent.implicitHeight > scrollBudget ? "     PGUP/PGDN  SCROLL" : "")
-            color: host.theme.textMuted
-            font.family: host.runtime.fontMono
-            font.pixelSize: host.theme.fontKeyHint
+            readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: host.theme.spacing3
+
+                Repeater {
+                    model: [
+                        {
+                            shortcut: "Z",
+                            label: "Next"
+                        },
+                        {
+                            shortcut: "SHIFT+Z",
+                            label: "Previous"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back / Close"
+                        },
+                        {
+                            shortcut: "SHIFT+ESC",
+                            label: "Close"
+                        }
+                    ]
+                    delegate: Row {
+                        id: navigationHint
+                        required property var modelData
+                        spacing: host.theme.spacing2
+                        height: Math.max(keyText.implicitHeight, actionLabel.implicitHeight)
+
+                        KeyChord {
+                            id: keyText
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: navigationHint.modelData.shortcut
+                            fontFamily: host.runtime.fontMono
+                            textColor: host.theme.textStrong
+                            fontSize: host.theme.fontKeyHint
+                        }
+                        Text {
+                            id: actionLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: navigationHint.modelData.label
+                            color: host.theme.textMuted
+                            font.family: host.runtime.fontMono
+                            font.pixelSize: host.theme.fontKeyHint
+                        }
+                    }
+                }
+            }
+
+            Row {
+                visible: hubFooter.scrollHintsVisible
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: host.theme.spacing2
+                KeyChord {
+                    anchors.verticalCenter: parent.verticalCenter
+                    shortcut: "PGUP/PGDN"
+                    fontFamily: host.runtime.fontMono
+                    textColor: host.theme.textStrong
+                    fontSize: host.theme.fontKeyHint
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Scroll"
+                    color: host.theme.textMuted
+                    font.family: host.runtime.fontMono
+                    font.pixelSize: host.theme.fontKeyHint
+                }
+            }
         }
 
         Flickable {
