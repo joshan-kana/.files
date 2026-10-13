@@ -7,7 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
-from typing import Literal, get_args
+from typing import Literal
 
 from mcp.server import MCPServer
 
@@ -18,7 +18,6 @@ MAX_JOBS = 64
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
-Host = Literal["nixos-server", "mac", "nixos-arm-parallels"]
 
 
 @dataclass(frozen=True)
@@ -51,9 +50,13 @@ SSH = [
     "-oStrictHostKeyChecking=yes",
     f"-oUserKnownHostsFile={CREDENTIALS}/chatgpt-shell-known-hosts",
 ]
+LOCAL_HOST = os.environ["CHATGPT_SHELL_LOCAL_HOST"]
 REMOTE_TARGETS = {name: RemoteTarget(**target) for name, target in json.loads(os.environ["CHATGPT_SHELL_REMOTE_TARGETS"]).items()}
-if set(REMOTE_TARGETS) != set(get_args(Host)) - {"nixos-server"}:
-    raise RuntimeError("configured remote targets do not match the Host type")
+if not LOCAL_HOST or LOCAL_HOST in REMOTE_TARGETS:
+    raise RuntimeError("local host must be nonempty and distinct from remote targets")
+
+# The runtime Literal is also the MCP tool schema: only Nix-configured hosts are accepted.
+Host = Literal[tuple([LOCAL_HOST, *REMOTE_TARGETS])]
 
 _ALLOWED_ENV = {
     "GH_TOKEN",
@@ -69,7 +72,7 @@ COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWE
 
 def _command_env(host: Host) -> dict[str, str]:
     environment = COMMAND_ENV.copy()
-    if host != "nixos-server" and REMOTE_TARGETS[host].sudo:
+    if host != LOCAL_HOST and REMOTE_TARGETS[host].sudo:
         environment["SSH_AUTH_SOCK"] = REMOTE_SUDO_AGENT
     return environment
 
@@ -135,7 +138,7 @@ def _validate_cwd(cwd: str | None) -> str | None:
 
 
 def _build_argv(host: Host, script: str) -> list[str]:
-    if host == "nixos-server":
+    if host == LOCAL_HOST:
         environment = "\n".join(
             [
                 f"export PATH={shlex.quote(COMMAND_PATH)}:$PATH",

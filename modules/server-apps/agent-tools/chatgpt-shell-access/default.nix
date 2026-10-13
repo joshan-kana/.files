@@ -124,6 +124,7 @@ in
         pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
       }/bin/python3 ${./chatgpt-shell-access.py}";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
+      CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
       CHATGPT_SHELL_LOCAL_USER = primary.name;
       CHATGPT_SHELL_BASH = "${pkgs.bash}/bin/bash";
       CHATGPT_SHELL_REMOTE_SUDO_AGENT = remoteSudoAgentSocket;
