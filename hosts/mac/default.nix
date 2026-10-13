@@ -322,8 +322,8 @@
       homebrew.casks = [ "cardinal" ];
     };
 
-    chatgpt = _: {
-      homebrew.casks = [ "chatgpt" ];
+    chatgpt = { pkgs, ... }: {
+      environment.systemPackages = [ pkgs.chatgpt-mac ];
     };
 
     codexApp = _: {
@@ -338,8 +338,8 @@
       homebrew.casks = [ "ilok-license-manager" ];
     };
 
-    iterm2 = _: {
-      homebrew.casks = [ "iterm2" ];
+    iterm2 = { pkgs, ... }: {
+      environment.systemPackages = [ pkgs.iterm2-mac ];
     };
 
     izotopeProductPortal = _: {
@@ -374,8 +374,8 @@
       homebrew.casks = [ "nvidia-geforce-now" ];
     };
 
-    openWebui = _: {
-      homebrew.casks = [ "open-webui" ];
+    openWebui = { pkgs, ... }: {
+      environment.systemPackages = [ pkgs.open-webui-mac ];
     };
 
     openclaw = _: {

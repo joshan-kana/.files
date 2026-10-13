@@ -348,12 +348,15 @@
             ./overlays/webhook.nix
             ./overlays/arc.nix
             ./overlays/arduino-ide.nix
+            ./overlays/chatgpt.nix
             ./overlays/bambu-studio.nix
             ./overlays/cryptomator.nix
             ./overlays/hammerspoon.nix
             ./overlays/heroic.nix
+            ./overlays/iterm2.nix
             ./overlays/linear.nix
             ./overlays/notion.nix
+            ./overlays/open-webui.nix
             ./overlays/prusaslicer.nix
             ./overlays/qmk-toolbox.nix
             ./overlays/raspberry-pi-imager.nix
