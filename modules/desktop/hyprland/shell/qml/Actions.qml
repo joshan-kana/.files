@@ -22,6 +22,8 @@ QtObject {
     required property Motion motion
     signal frozenCaptureRequested(bool copy)
     signal recordingSelectionRequested
+    signal wallpaperSpectrumToggleRequested
+    signal musicReactiveToggleRequested
     property StdioCollector recordingStatusOutput: StdioCollector {}
     property Process recordingStatus: Process {
         stdout: actions.recordingStatusOutput
@@ -268,6 +270,10 @@ QtObject {
             lockSession();
         else if (commandId === "audio.mixer")
             toggleAudioMixer();
+        else if (commandId === "media.wallpaperSpectrum")
+            wallpaperSpectrumToggleRequested();
+        else if (commandId === "media.reactiveShell")
+            musicReactiveToggleRequested();
         else if (commandId === "overview.toggle")
             toggleOverview();
         else if (commandId === "clipboard.toggle")
