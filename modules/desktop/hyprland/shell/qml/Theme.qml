@@ -15,6 +15,11 @@ QtObject {
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
 
+    // Single event-driven signal for every shell surface that opts into the
+    // music-reactive treatment. Theme remains the only visual style owner.
+    property bool musicReactiveEnabled: false
+    property real musicReactiveEnergy: 0
+
     readonly property real textScale: runtime.textScale
 
     function fontSize(size: real): int {
