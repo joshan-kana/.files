@@ -36,8 +36,29 @@ QtObject {
             readNotifications = readNotifications.filter(notification => history.includes(notification));
     }
 
-    function markRead(): void {
+    function isRead(notification): bool {
+        return !!notification && readNotifications.includes(notification);
+    }
+
+    function setRead(notification, read: bool): void {
+        if (!notification || !history.includes(notification))
+            return;
+        if (read && !isRead(notification))
+            readNotifications = [...readNotifications, notification];
+        else if (!read && isRead(notification))
+            readNotifications = readNotifications.filter(item => item !== notification);
+    }
+
+    function toggleRead(notification): void {
+        setRead(notification, !isRead(notification));
+    }
+
+    function markAllRead(): void {
         readNotifications = [...history];
+    }
+
+    function markAllUnread(): void {
+        readNotifications = [];
     }
 
     property NotificationServer server: NotificationServer {
