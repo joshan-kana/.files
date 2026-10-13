@@ -22,6 +22,9 @@ ShellRoot {
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
 
+    property bool wallpaperSpectrumEnabled: false
+    property bool musicReactiveEnabled: false
+
     function toggleBar(): void {
         ambientBar.shown = !ambientBar.shown;
     }
@@ -33,6 +36,9 @@ ShellRoot {
     Theme {
         id: theme
         runtime: runtime
+        musicReactiveEnabled: root.musicReactiveEnabled
+        // Quantise without adding timers, reducing shape redraw churn.
+        musicReactiveEnergy: musicReactiveEnabled && motion.enabled ? Math.round(Math.min(1, Math.max(0, spectrum.bass * 1.2 + spectrum.rms * 0.8)) * 20) / 20 : 0
     }
 
     Motion {
@@ -209,8 +215,16 @@ ShellRoot {
 
     SpectrumState {
         id: spectrum
-        // The analyser has no consumer when the bar and media views are closed.
-        active: (media.playing && (ambientBar.shown || (expansionState.hasCurrent && expansionState.currentName === "system"))) || (expansionState.hasCurrent && expansionState.currentName === "media")
+        // No DSP client unless a visible spectrum consumer needs live audio.
+        active: (media.playing && (ambientBar.shown || (expansionState.hasCurrent && expansionState.currentName === "system"))) || (expansionState.hasCurrent && expansionState.currentName === "media") || (motion.enabled && (root.wallpaperSpectrumEnabled || root.musicReactiveEnabled))
+    }
+
+    WallpaperSpectrum {
+        id: wallpaperSpectrum
+        spectrum: root.spectrumRef
+        theme: root.themeRef
+        motion: root.motionRef
+        enabled: root.wallpaperSpectrumEnabled
     }
 
     AmbientBar {
@@ -308,6 +322,22 @@ ShellRoot {
         theme: theme
         motion: motion
         commands: [
+            {
+                id: "media.wallpaperSpectrum",
+                name: "Toggle Wallpaper Spectrum",
+                description: "Show the live audio spectrum over the wallpaper",
+                icon: "audio-x-generic",
+                key: runtime.shortcut("media.wallpaperSpectrum"),
+                keywords: ["spectrum", "wallpaper", "music", "visualiser", "audio", "reactive"]
+            },
+            {
+                id: "media.reactiveShell",
+                name: "Toggle Music-reactive Shell",
+                description: "Light up shell surfaces using live music frequencies",
+                icon: "audio-x-generic",
+                key: runtime.shortcut("media.reactiveShell"),
+                keywords: ["reactive", "visual", "music", "effects", "audio", "shell"]
+            },
             {
                 id: "overview.toggle",
                 name: "Workspaces & Window Overview",
@@ -622,6 +652,8 @@ ShellRoot {
         motion: motion
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
         onRecordingSelectionRequested: screenshotPicker.begin(false, screens.focusedScreen, "record")
+        onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumEnabled = !root.wallpaperSpectrumEnabled
+        onMusicReactiveToggleRequested: root.musicReactiveEnabled = !root.musicReactiveEnabled
     }
 
     GlobalShortcut {
@@ -720,6 +752,20 @@ ShellRoot {
         name: "keyboard-num-lock"
         description: "Show Num Lock state"
         onPressed: osd.refreshKeyboardLocks("num")
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "wallpaper-spectrum"
+        description: "Toggle live wallpaper music spectrum"
+        onPressed: root.wallpaperSpectrumEnabled = !root.wallpaperSpectrumEnabled
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "music-reactive"
+        description: "Toggle music-reactive desktop surfaces"
+        onPressed: root.musicReactiveEnabled = !root.musicReactiveEnabled
     }
 
     GlobalShortcut {
