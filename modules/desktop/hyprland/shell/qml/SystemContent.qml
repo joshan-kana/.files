@@ -894,14 +894,52 @@ FocusScope {
                 }
             }
 
-            Text {
-                visible: false
+            Flow {
                 width: parent.width
-                text: "J/K  SELECT AUDIO     H/L  LEVEL     M  MUTE     X  MIC"
-                horizontalAlignment: Text.AlignRight
-                color: root.theme.textMuted
-                font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontSize(11)
+                spacing: root.theme.spacing3
+                Repeater {
+                    model: [
+                        {
+                            shortcut: "J/K",
+                            label: "Select audio"
+                        },
+                        {
+                            shortcut: "H/L",
+                            label: "Level"
+                        },
+                        {
+                            shortcut: "M",
+                            label: "Mute"
+                        },
+                        {
+                            shortcut: "X",
+                            label: "Mic"
+                        }
+                    ]
+                    delegate: Row {
+                        id: audioHint
+                        required property var modelData
+                        spacing: root.theme.spacing1
+                        height: Math.max(audioKey.implicitHeight, audioLabel.implicitHeight)
+
+                        KeyChord {
+                            id: audioKey
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: audioHint.modelData.shortcut
+                            fontFamily: root.runtime.fontMono
+                            textColor: root.theme.textStrong
+                            fontSize: root.theme.fontSize(10)
+                        }
+                        Text {
+                            id: audioLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: audioHint.modelData.label
+                            color: root.theme.textMuted
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontSize(10)
+                        }
+                    }
+                }
             }
 
             Column {
@@ -915,7 +953,7 @@ FocusScope {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - recordingsButton.width - parent.spacing)
-                        text: root.media.available ? "MEDIA  ·  ⬆H/L SEEK" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
+                        text: root.media.available ? "MEDIA" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono
                         font.pixelSize: root.theme.fontSize(10)
