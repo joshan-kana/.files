@@ -41,6 +41,36 @@ PanelWindow {
     property string copyFeedback: ""
     property var unicodeEntries: []
 
+    // Rebuild these indexes only when desktop entries or registered actions
+    // change, not once per typed character or scope selection.
+    readonly property var indexedCommands: (commands || []).map(command => indexSearchEntry({
+            kind: "command",
+            name: command.name,
+            genericName: command.description || "Desktop action",
+            icon: command.icon || "system-run",
+            key: command.key || "",
+            commandId: command.id,
+            keywords: command.keywords || []
+        }))
+    readonly property var indexedApplications: [...DesktopEntries.applications.values].map(entry => indexSearchEntry({
+            kind: "application",
+            name: entry.name,
+            genericName: entry.genericName || entry.comment || "Application",
+            icon: entry.icon || "application-x-executable",
+            key: "",
+            desktopEntry: entry,
+            keywords: entry.keywords || []
+        }))
+
+    function indexSearchEntry(entry): var {
+        entry.searchName = entry.name.toLowerCase();
+        entry.searchGeneric = (entry.genericName || "").toLowerCase();
+        entry.searchWords = entry.searchName.split(/\s+/);
+        entry.searchKeywords = entry.keywords.map(keyword => keyword.toLowerCase());
+        entry.searchBinding = (entry.key || "").toLowerCase();
+        return entry;
+    }
+
     FileView {
         id: unicodeData
         path: palette.runtime.emojiTest
@@ -152,15 +182,15 @@ PanelWindow {
     }
 
     function score(item, query): int {
-        const name = item.name.toLowerCase();
-        const generic = (item.genericName || "").toLowerCase();
-        const keywords = (item.keywords || []).map(keyword => keyword.toLowerCase());
-        const binding = (item.key || "").toLowerCase();
+        const name = item.searchName;
+        const generic = item.searchGeneric;
+        const keywords = item.searchKeywords;
+        const binding = item.searchBinding;
         if (name === query)
             return 0;
         if (name.startsWith(query))
             return 10;
-        if (name.split(/\s+/).some(word => word.startsWith(query)))
+        if (item.searchWords.some(word => word.startsWith(query)))
             return 15;
         if (name.includes(query))
             return 20;
@@ -208,25 +238,8 @@ PanelWindow {
                 return [];
         }
 
-        const commandItems = (commands || []).map(command => ({
-                    kind: "command",
-                    name: command.name,
-                    genericName: command.description || "Desktop action",
-                    icon: command.icon || "system-run",
-                    key: command.key || "",
-                    commandId: command.id,
-                    keywords: command.keywords || []
-                }));
-
-        const applicationItems = [...DesktopEntries.applications.values].map(entry => ({
-                    kind: "application",
-                    name: entry.name,
-                    genericName: entry.genericName || entry.comment || "Application",
-                    icon: entry.icon || "application-x-executable",
-                    key: "",
-                    desktopEntry: entry,
-                    keywords: entry.keywords || []
-                }));
+        const commandItems = indexedCommands;
+        const applicationItems = indexedApplications;
 
         const items = searchScope === "apps" ? applicationItems : searchScope === "actions" ? commandItems : commandItems.concat(applicationItems);
         // Keep the empty Unified surface short without truncating any search
