@@ -218,6 +218,8 @@ in
           ];
           RunAtLoad = true;
           KeepAlive = true;
+          # Preserve the previous IPv4/IPv6 LAN listener.
+          EnvironmentVariables.OLLAMA_HOST = "[::]:11434";
         };
       }
     );
