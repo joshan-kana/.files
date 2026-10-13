@@ -329,6 +329,14 @@ assert_contains "$(<"$post_clear_stderr")" "cache miss:" "cold value after clear
 hosts_output="$(run_nf --hosts)"
 assert_contains "$hosts_output" $'nixos\taliases:' "host table exact name"
 assert_contains "$hosts_output" "nixos-orbstack" "host table"
+assert_contains "$hosts_output" $'mac\taliases: mac, m' "Darwin host discovery"
+
+mac_scopes="$(run_nf mac --scopes)"
+assert_contains "$mac_scopes" $'darwin\tDarwin' "Darwin system scope"
+assert_contains "$mac_scopes" $'home-manager:joshan\tHome Manager: joshan' "Darwin Home Manager scope"
+assert_contains "$(run_nf mac --scope darwin --value system.defaults.dock.autohide)" $'current/effective value:\ntrue' "Darwin configured system option"
+assert_contains "$(run_nf mac --scope "$hm_scope" --value programs.zsh.enable)" $'current/effective value:\ntrue' "Darwin Home Manager value"
+
 
 run_nf n --scopes >/dev/null
 assert_eq "$(run_nf --default-host)" "nixos" "remembered alias resolution"
@@ -353,8 +361,8 @@ run_nf o --scopes >/dev/null
 
 refresh_all_stderr="$test_cache/refresh-all.stderr"
 run_nf --refresh-all >/dev/null 2> "$refresh_all_stderr"
-assert_eq "$(grep -c '^Building scoped option docs cache' "$refresh_all_stderr")" 4 "all-host refresh"
-for refreshed_host in nixos nixos-arm-parallels nixos-orbstack nixos-server; do
+assert_eq "$(grep -c '^Building scoped option docs cache' "$refresh_all_stderr")" 5 "all-host refresh"
+for refreshed_host in mac nixos nixos-arm-parallels nixos-orbstack nixos-server; do
   [ -s "$cache_root/option-scopes-v3-$refreshed_host.json" ] || fail "missing refreshed cache for $refreshed_host"
 done
 
