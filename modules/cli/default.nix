@@ -849,10 +849,11 @@ in
   });
 
   youtubeTui = _: {
-    environment.systemPackages = [
-      pkgs.youtube-tui
-      pkgs.yt-dlp
-    ];
+    environment.systemPackages = [ pkgs.youtube-tui ];
+  };
+
+  ytDlp = _: {
+    environment.systemPackages = [ pkgs.yt-dlp ];
   };
 
   killall = linuxOnly (_: {
