@@ -120,7 +120,7 @@ in
     settings = {
       model = {
         provider = "openai-codex";
-        default = "gpt-5.6-luna";
+        default = "gpt-6-luna";
       };
       toolsets = [ "all" ];
     };
