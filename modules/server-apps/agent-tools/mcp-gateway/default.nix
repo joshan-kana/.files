@@ -30,8 +30,10 @@ let
             }
           ];
         };
+        # ChatGPT's GitHub file reader and issue editor interrupt normal replies.
+        # Codex retains both tools; ChatGPT uses shell access for issue writes.
         mcpAuthorization.rules = [
-          ''apiKey.client != "chatgpt" || mcp.tool.target != "github" || mcp.tool.name != "get_file_contents"''
+          ''apiKey.client != "chatgpt" || mcp.tool.target != "github" || (mcp.tool.name != "get_file_contents" && mcp.tool.name != "issue_write")''
         ];
       };
       targets = [
