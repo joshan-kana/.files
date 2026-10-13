@@ -59,8 +59,9 @@ PanelWindow {
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
         if (outgoing) {
-            // Stagger the content handoff. Full crossfades leave both pages
-            // readable at once, producing ghosted text over the morph.
+            // Overlap just the tails of the fades: a fully sequential handoff
+            // leaves an empty squircle for a frame, while a full crossfade
+            // ghosts two readable pages over the morph.
             outgoing.opacity = 0;
             if (motion.enabled)
                 contentEnter.restart();
@@ -85,7 +86,7 @@ PanelWindow {
 
     Timer {
         id: contentEnter
-        interval: Math.max(1, host.motion.effectsFast)
+        interval: Math.max(1, Math.round(host.motion.effectsFast * 0.85))
         repeat: false
         onTriggered: {
             if (host.activeLoader)
@@ -426,8 +427,8 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3
             }
             clip: true
-            // Keep the outgoing view alive for its short fade-out, then
-            // fade the incoming view in over the same morphing squircle.
+            // Keep the outgoing view until the new view is loaded and overlap
+            // only the fade tails while the squircle morphs.
             // Scaling only compensates while the animated viewport narrows.
             contentWidth: width
             contentHeight: host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : height
