@@ -49,7 +49,6 @@ in
   environment.systemPackages = with pkgs; [
     wl-clipboard
     brightnessctl
-    polkit_gnome
     networkmanagerapplet
     grimblast
     nwg-panel
@@ -275,15 +274,6 @@ in
 
           window_rule = [
             {
-              match.class = "polkit-kde-authentication-agent-1";
-              float = true;
-              center = true;
-              size = [
-                500
-                250
-              ];
-            }
-            {
               # The theme prompt must coexist with the centre picker and the
               # desktop, even on the system-owned special workspace.
               match.class = "LinuxDesktopThemeSwitch";
@@ -306,7 +296,6 @@ in
                 function()
                   hl.exec_cmd("nm-applet --indicator")
                   hl.exec_cmd("dropbox")
-                  hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
                 end
               '')
             ];
