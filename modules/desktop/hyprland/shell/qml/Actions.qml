@@ -274,8 +274,6 @@ QtObject {
             toggleClipboard();
         else if (commandId === "nightLight.toggle")
             nightLightState.toggle();
-        else if (commandId === "nightLight.auto")
-            nightLightState.toggleAuto();
         else if (commandId === "nightLight.warmer")
             nightLightState.warmer();
         else if (commandId === "nightLight.cooler")
