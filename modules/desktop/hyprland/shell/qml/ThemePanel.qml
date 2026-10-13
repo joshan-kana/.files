@@ -538,34 +538,5 @@ Item {
             font.weight: Font.DemiBold
             font.letterSpacing: 0.6
         }
-
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing4
-
-            Text {
-                text: "↑/↓  SELECT"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                text: "ENTER  SWITCH"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                text: "ESC  BACK"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-        }
     }
 }
