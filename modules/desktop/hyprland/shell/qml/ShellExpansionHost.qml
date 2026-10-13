@@ -405,10 +405,10 @@ PanelWindow {
             // against contentViewport.height would make this Text's own wrap
             // height a dependency of its content, creating a binding loop.
             readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
-            // The focused Theme gallery uses the same canonical navigation
-            // hint row as the hub. Never stack a second footer inside it.
-            readonly property bool selectingTheme: !!host.systemContent && host.systemContent.themeOpen
-            text: KeyGlyphs.display((selectingTheme ? "H/J/K/L  SELECT     ENTER  SWITCH     " : "") + "Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (host.loadedContent && host.loadedContent.implicitHeight > scrollBudget ? "     PGUP/PGDN  SCROLL" : "")
+            // Detail views own their action hints. The shared hub footer only
+            // describes tab navigation and escape, avoiding duplicate gallery
+            // selection instructions on top of ThemePanel's local footer.
+            text: KeyGlyphs.display("Z  NEXT     SHIFT+Z  PREVIOUS     ESC  BACK / CLOSE     SHIFT+ESC  CLOSE") + (host.loadedContent && host.loadedContent.implicitHeight > scrollBudget ? "     PGUP/PGDN  SCROLL" : "")
             color: host.theme.textMuted
             font.family: host.runtime.fontMono
             font.pixelSize: host.theme.fontKeyHint
