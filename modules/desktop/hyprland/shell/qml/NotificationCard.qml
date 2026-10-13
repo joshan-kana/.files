@@ -11,6 +11,7 @@ SquircleSurface {
     required property Motion motion
 
     property bool selected: false
+    property bool read: false
     property bool expanded: false
     property int groupCount: 1
     property bool dismissing: false
@@ -19,6 +20,7 @@ SquircleSurface {
     signal activated
     signal defaultRequested
     signal actionRequested(int index)
+    signal readToggled
     signal dismissRequested
 
     function dismissAnimated(): void {
@@ -122,7 +124,7 @@ SquircleSurface {
 
             Text {
                 text: (card.notification && card.notification.appName || "SYSTEM").toUpperCase()
-                color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.critical : card.theme.accent
+                color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.critical : card.read ? card.theme.textMuted : card.theme.accent
                 font.family: card.runtime.fontMono
                 font.pixelSize: card.theme.fontSize(9)
                 font.weight: Font.DemiBold
@@ -130,8 +132,21 @@ SquircleSurface {
             }
 
             Item {
-                width: Math.max(0, parent.width - parent.children[0].width - details.width)
+                width: Math.max(0, parent.width - parent.children[0].width - details.width - readToggle.width - card.theme.spacing2)
                 height: 1
+            }
+
+            ShellAction {
+                id: readToggle
+                width: 34
+                height: 28
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                iconOnly: true
+                icon: card.read ? "󰄭" : "󰄬"
+                title: card.read ? "Mark unread" : "Mark read"
+                onActivated: card.readToggled()
             }
 
             Text {
