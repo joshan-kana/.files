@@ -11,8 +11,7 @@ QtObject {
     property string mode: "off"
     property int temperature: 4500
     property string error: ""
-    readonly property bool automatic: mode === "auto"
-    readonly property string detail: automatic ? "Auto · 19:00–07:00 · " + temperature + "K" : active ? "Warm · " + temperature + "K" : "Off · " + temperature + "K"
+    readonly property string detail: active ? "Warm · " + temperature + "K" : "Off · " + temperature + "K"
 
     property StdioCollector stateOutput: StdioCollector {}
     property StdioCollector stateError: StdioCollector {}
@@ -59,9 +58,6 @@ QtObject {
     }
     function toggle(): void {
         change("toggle");
-    }
-    function toggleAuto(): void {
-        change("auto");
     }
     function warmer(): void {
         change("warmer");
