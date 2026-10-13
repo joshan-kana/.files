@@ -377,7 +377,10 @@ in
           case "$action" in
             list)
               if [ -d "$library" ]; then
-                find "$library" -type f \(                   -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o                   -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) -print                   | LC_ALL=C sort | jq -Rsc '[split("\n")[] | select(length > 0)]'
+                # The personal library can be a directory symlink into a
+                # mounted share (e.g. Parallels' Dropbox mapping). Follow
+                # only the supplied root symlink, not arbitrary nested links.
+                find -H "$library" -type f \(                   -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o                   -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \) -print                   | LC_ALL=C sort | jq -Rsc '[split("\n")[] | select(length > 0)]'
               else
                 printf '[]\n'
               fi
@@ -472,7 +475,7 @@ in
           [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || exit 0
           options='no-audio loop-file=inf hwdec=auto'
           [ "$resize" != crop ] || options="$options panscan=1"
-          exec mpvpaper -p -a full -l bottom -o "$options" "$output" "$video"
+          exec mpvpaper -p -a full -l background -o "$options" "$output" "$video"
         '';
       };
 
@@ -529,7 +532,7 @@ in
           trap 'exit 130' INT
           trap 'exit 143' TERM
 
-          mpvpaper -l bottom -o "$mpvOptions" '*' "$1"
+          mpvpaper -l background -o "$mpvOptions" '*' "$1"
         '';
       };
 
