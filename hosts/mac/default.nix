@@ -186,6 +186,8 @@
           "charmbracelet/tap"
           "j-x-z/tap"
           "osrf/simulation"
+          "osx-cross/arm"
+          "osx-cross/avr"
           "qmk/qmk"
           "steipete/tap"
           "youdie006/tap"
