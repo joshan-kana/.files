@@ -21,16 +21,25 @@ SquircleSurface {
     property real lightIntensity: 1
     property bool elevated: false
 
-    readonly property real musicGlow: theme.musicReactiveEnabled && motion.enabled ? Math.max(0, Math.min(0.15, theme.musicReactiveEnergy * 0.13)) : 0
+    // Shape tessellation is not free. React only on large structural
+    // surfaces; updating every control and its SVG gradient at audio cadence
+    // starves the QML scene graph and destroys frame pacing.
+    readonly property bool musicActive: theme.musicReactiveEnabled && motion.enabled && ((surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
+    readonly property real musicBass: musicActive ? theme.musicReactiveEnergy : 0
+    readonly property real musicBeat: musicActive ? theme.musicReactiveBeat : 0
+    readonly property real musicTreble: musicActive ? theme.musicReactiveTreble : 0
+    readonly property real musicGlow: musicBass * 0.55 + musicBeat * 0.38
+    readonly property color musicLight: theme.blend(theme.accent, theme.positive, musicTreble * 0.85)
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
 
     exponent: theme.squircleExponent
-    lightColor: luminousColor
-    lightStrength: (luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0) + musicGlow
+    lightColor: musicActive ? musicLight : luminousColor
+    lightStrength: Math.min(0.92, (luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0) + musicGlow)
 
     Behavior on lightStrength {
+        enabled: !root.musicActive
         NumberAnimation {
             duration: root.motion.effectsFast
             easing.type: root.motion.effectsType
@@ -39,24 +48,36 @@ SquircleSurface {
     }
     cornerRadius: theme.radiusMedium
     fillColor: {
+        let base;
         if (selected)
-            return theme.selectionFill;
-
-        switch (surfaceLayer) {
-        case ShellSurface.Background:
-            return theme.layer0;
-        case ShellSurface.Group:
-            return theme.expressiveSurface;
-        case ShellSurface.Control:
-            return theme.expressiveSurfaceStrong;
-        default:
-            return theme.layer1;
-        }
+            base = theme.selectionFill;
+        else
+            switch (surfaceLayer) {
+            case ShellSurface.Background:
+                base = theme.layer0;
+                break;
+            case ShellSurface.Group:
+                base = theme.expressiveSurface;
+                break;
+            case ShellSurface.Control:
+                base = theme.expressiveSurfaceStrong;
+                break;
+            default:
+                base = theme.layer1;
+                break;
+            }
+        // A sustained 808 colours the whole surface; transient attacks
+        // brighten its rim. This stays behind content and keeps text legible.
+        return musicActive ? theme.blend(base, musicLight, musicBass * 0.22 + musicBeat * 0.11) : base;
     }
-    borderColor: luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
-    borderWidth: luminous || outlined ? theme.borderThin : 0
+    borderColor: musicActive ? Qt.rgba(musicLight.r, musicLight.g, musicLight.b, Math.min(0.72, musicBass * 0.47 + musicBeat * 0.36)) : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
+    // Changing ShapePath stroke width each FFT update re-tessellates the
+    // native superellipse. The geometry changes once per toggle, never on
+    // music samples; its colour and luminance carry the modulation.
+    borderWidth: musicActive ? theme.borderThin : luminous || outlined ? theme.borderThin : 0
 
     Behavior on fillColor {
+        enabled: !root.musicActive
         ColorAnimation {
             duration: root.motion.effectsFast
             easing.type: root.motion.effectsType
