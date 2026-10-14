@@ -965,4 +965,18 @@ in
     };
   };
 
+  spotifyPlayer =
+    _:
+    let
+      aliases = {
+        sp = "spotify_player";
+      };
+    in
+    {
+      home = _: {
+        programs.spotify-player.enable = true;
+        home.shellAliases = aliases;
+      };
+    };
+
 }
