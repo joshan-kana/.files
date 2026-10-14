@@ -245,16 +245,17 @@ FocusScope {
             width: parent.width
             spacing: calendar.theme.spacing3
             WeatherSummary {
-                width: (featured.width - featured.spacing) * 0.53
+                width: (featured.width - featured.spacing) * 0.37
                 theme: calendar.theme
                 motion: calendar.motion
                 weather: calendar.weather
+                height: agendaView.height
                 onForecastRequested: calendar.forecastRequested()
             }
 
             AgendaList {
                 id: agendaView
-                width: (featured.width - featured.spacing) * 0.47
+                width: (featured.width - featured.spacing) * 0.63
                 runtime: calendar.runtime
                 theme: calendar.theme
                 motion: calendar.motion
@@ -436,13 +437,13 @@ FocusScope {
         visible: calendar.calendarPickerOpen && agenda.calendars.length > 0
         x: Math.max(0, parent.width - width - calendar.theme.spacing2)
         y: featured.y + calendar.theme.spacing4
-        width: Math.min(330, parent.width - calendar.theme.spacing3 * 2)
+        width: Math.min(350, parent.width - calendar.theme.spacing3 * 2)
         height: pickerItems.implicitHeight + calendar.theme.spacing3 * 2
         theme: calendar.theme
         motion: calendar.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: calendar.theme.radiusLarge
-        fillColor: calendar.theme.panelBase
+        fillColor: calendar.theme.layer0
         elevated: true
         outlined: true
 

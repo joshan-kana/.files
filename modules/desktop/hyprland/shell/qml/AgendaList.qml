@@ -11,58 +11,64 @@ Column {
     required property string startDate
     property int firstEventIndex: 0
     property bool featured: false
+    readonly property int pageSize: 4
+    readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - pageSize))
+    readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + pageSize)
     signal calendarsRequested
-    readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - 4))
-    readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + 4)
+
+    width: parent.width
+    spacing: theme.spacing2
+    onStartDateChanged: firstEventIndex = 0
+    onAgendaChanged: firstEventIndex = 0
 
     function scrollEvents(amount: int): void {
-        firstEventIndex = Math.max(0, Math.min(firstEventIndex + amount, Math.max(0, agenda.events.length - 4)));
+        firstEventIndex = Math.max(0, Math.min(firstEventIndex + amount, Math.max(0, agenda.events.length - pageSize)));
     }
 
-    onStartDateChanged: firstEventIndex = 0
-
-    spacing: theme.spacing2
-    width: parent.width
-
     Row {
+        id: header
         width: parent.width
+        spacing: panel.theme.spacing2
 
         Text {
-            text: "AGENDA / NEXT 7 DAYS"
+            anchors.verticalCenter: parent.verticalCenter
+            text: "AGENDA · NEXT 7 DAYS"
             color: panel.theme.accent
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontPanelEyebrow
             font.weight: Font.DemiBold
         }
         Item {
-            width: Math.max(0, parent.width - parent.children[0].implicitWidth - status.implicitWidth - calendarButton.width - panel.theme.spacing2 * 2)
+            width: Math.max(0, header.width - header.children[0].implicitWidth - count.implicitWidth - calendarButton.width - header.spacing * 3)
             height: 1
+        }
+        Text {
+            id: count
+            anchors.verticalCenter: parent.verticalCenter
+            text: panel.agenda.loading ? "SYNCING" : panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "SET UP"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
         }
         ShellAction {
             id: calendarButton
-            width: panel.agenda.calendars.length > 0 ? 30 : 0
-            height: 28
+            width: panel.agenda.calendars.length > 0 ? 32 : 0
+            height: 30
             visible: width > 0
             iconOnly: true
             icon: "󰃀"
-            title: "Choose calendars"
+            title: "Choose calendars (C)"
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
             onActivated: panel.calendarsRequested()
         }
-        Text {
-            id: status
-            text: panel.agenda.loading ? "UPDATING" : (panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "NOT CONFIGURED")
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-        }
     }
 
     ShellSurface {
+        id: body
         width: parent.width
-        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(4, panel.agenda.events.length) * 54 + panel.theme.spacing2 : (panel.featured ? 169 : 72)
+        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(panel.pageSize, panel.agenda.events.length) * 67 + panel.theme.spacing2 : (panel.featured ? 169 : 72)
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
@@ -70,58 +76,100 @@ Column {
         fillColor: panel.featured ? panel.theme.blend(panel.theme.groupBase, panel.theme.accent, panel.theme.dark ? 0.055 : 0.035) : panel.theme.expressiveSurface
         luminous: panel.featured
         luminousColor: panel.theme.accent
-
-        Text {
-            visible: panel.featured && panel.agenda.events.length === 0
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-                margins: panel.theme.spacing3
-            }
-            text: "󰃰"
-            color: panel.theme.accent
-            opacity: 0.19
-            font.family: "Symbols Nerd Font"
-            font.pixelSize: panel.theme.fontSize(75)
-        }
+        clip: true
 
         Column {
             anchors {
-                left: parent.left
-                top: parent.top
-                right: parent.right
-                margins: panel.theme.spacing4
+                fill: parent
+                margins: panel.theme.spacing2 / 2
             }
-            visible: panel.featured && panel.agenda.events.length === 0
-            spacing: panel.theme.spacing2
+            visible: panel.agenda.configured && panel.agenda.errorMessage.length === 0
+            spacing: 0
 
-            Text {
-                text: "Today"
-                color: panel.theme.textStrong
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(27)
-                font.weight: Font.DemiBold
-            }
-            Text {
-                width: parent.width
-                text: panel.agenda.loading ? "Reading calendar…" : panel.agenda.configured ? "No upcoming events" : "Set up local calendar ↗"
-                color: panel.theme.text
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(11)
-                wrapMode: Text.WordWrap
+            Repeater {
+                model: panel.agenda.events.slice(panel.visibleStart, panel.visibleEnd)
+                delegate: Item {
+                    id: eventRow
+                    required property var modelData
+                    required property int index
+                    width: parent.width
+                    height: 67
+
+                    Column {
+                        anchors {
+                            fill: parent
+                            leftMargin: panel.theme.spacing3
+                            rightMargin: panel.theme.spacing3
+                            topMargin: panel.theme.spacing2
+                        }
+                        spacing: 5
+                        Text {
+                            width: parent.width
+                            text: eventRow.modelData.title
+                            color: panel.theme.textStrong
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(12)
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Row {
+                            id: eventMeta
+                            width: parent.width
+                            spacing: panel.theme.spacing2
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: (eventRow.modelData.dateKind ? eventRow.modelData.dateKind + " " : "") + (eventRow.modelData.date === panel.startDate ? "TODAY" : eventRow.modelData.date.slice(5)) + (eventRow.modelData.time ? " · " + eventRow.modelData.time : "")
+                                color: panel.theme.accent
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(10)
+                            }
+                            Item {
+                                width: Math.max(0, eventMeta.width - eventMeta.children[0].implicitWidth - eventSource.implicitWidth - eventMeta.spacing * 2)
+                                height: 1
+                            }
+                            Text {
+                                id: eventSource
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: eventRow.modelData.calendar || "Local"
+                                color: panel.theme.textMuted
+                                font.family: panel.runtime.fontMono
+                                font.pixelSize: panel.theme.fontSize(10)
+                                maximumLineCount: 1
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                    Rectangle {
+                        visible: panel.visibleStart + eventRow.index < panel.agenda.events.length - 1
+                        anchors {
+                            left: parent.left
+                            right: parent.right
+                            bottom: parent.bottom
+                            leftMargin: panel.theme.spacing3
+                            rightMargin: panel.theme.spacing3
+                        }
+                        height: 1
+                        color: panel.theme.subtleBorder
+                        opacity: 0.65
+                    }
+                }
             }
         }
 
-        Text {
+        Column {
+            visible: panel.agenda.events.length === 0 || !panel.agenda.configured || panel.agenda.errorMessage.length > 0
             anchors.centerIn: parent
-            visible: !panel.featured && (panel.agenda.events.length === 0 || !panel.agenda.configured || panel.agenda.errorMessage.length > 0)
             width: parent.width - panel.theme.spacing4 * 2
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : (panel.agenda.configured ? "No upcoming events" : "󰃰  Create local calendar  ↗"))
-            color: panel.theme.textStrong
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(11)
+            spacing: panel.theme.spacing2
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: panel.agenda.errorMessage || (panel.agenda.loading ? "Reading calendar…" : panel.agenda.configured ? "No upcoming events" : "Set up local calendar")
+                color: panel.theme.textStrong
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(panel.featured ? 15 : 11)
+                wrapMode: Text.WordWrap
+            }
         }
 
         StateLayer {
@@ -144,73 +192,12 @@ Column {
                 }
             }
         }
-
-        Column {
-            anchors {
-                fill: parent
-                margins: panel.theme.spacing1
-            }
-            visible: panel.agenda.configured && panel.agenda.errorMessage.length === 0
-            spacing: 0
-
-            Repeater {
-                model: panel.agenda.events.slice(panel.visibleStart, panel.visibleEnd)
-                delegate: Item {
-                    id: eventRow
-                    required property var modelData
-                    width: parent.width
-                    height: 54
-
-                    Row {
-                        anchors {
-                            fill: parent
-                            leftMargin: panel.theme.spacing2
-                            rightMargin: panel.theme.spacing2
-                        }
-                        spacing: panel.theme.spacing3
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 80
-                            text: eventRow.modelData.date === panel.startDate ? (eventRow.modelData.time || "ALL DAY") : (eventRow.modelData.date.slice(5) + (eventRow.modelData.time ? " " + eventRow.modelData.time : ""))
-                            color: panel.theme.accent
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(10)
-                            font.weight: Font.DemiBold
-                        }
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 80 - panel.theme.spacing3
-                            spacing: panel.theme.spacing1
-                            Text {
-                                width: parent.width
-                                text: eventRow.modelData.title
-                                color: panel.theme.textStrong
-                                font.family: panel.runtime.fontMono
-                                font.pixelSize: panel.theme.fontSize(12)
-                                font.weight: Font.Medium
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                visible: eventRow.modelData.location.length > 0 || eventRow.modelData.calendar.length > 0
-                                width: parent.width
-                                text: eventRow.modelData.calendar + (eventRow.modelData.location ? " · " + eventRow.modelData.location : "")
-                                color: panel.theme.textStrong
-                                opacity: 0.85
-                                font.family: panel.runtime.fontMono
-                                font.pixelSize: panel.theme.fontSize(10)
-                                elide: Text.ElideRight
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     Text {
-        visible: panel.agenda.events.length > 4
-        text: "Events " + (panel.visibleStart + 1) + "–" + panel.visibleEnd + " of " + panel.agenda.events.length + " · U/D scroll"
-        color: panel.theme.textStrong
+        visible: panel.agenda.events.length > panel.pageSize
+        text: (panel.visibleStart + 1) + "–" + panel.visibleEnd + " / " + panel.agenda.events.length + "  ·  U/D SCROLL"
+        color: panel.theme.textMuted
         font.family: panel.runtime.fontMono
         font.pixelSize: panel.theme.fontSize(10)
     }
