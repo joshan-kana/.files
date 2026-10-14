@@ -869,14 +869,20 @@ Item {
                 }
             }
 
-            Text {
+            KeyHintStrip {
                 width: parent.width
-                text: "ENTER  CONNECT   //   ESC  CANCEL"
-                horizontalAlignment: Text.AlignHCenter
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(8)
-                font.letterSpacing: 0.8
+                runtime: panel.runtime
+                theme: panel.theme
+                hints: [
+                    {
+                        shortcut: "ENTER",
+                        label: "Connect"
+                    },
+                    {
+                        shortcut: "ESC",
+                        label: "Cancel"
+                    }
+                ]
             }
         }
 
@@ -964,82 +970,67 @@ Item {
         }
 
         Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: panel.theme.spacing4
-
-            Text {
-                visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
-                text: "↑↓  SELECT   ENTER  JOIN/DROP"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
+            width: parent.width
+            spacing: panel.theme.spacing2
+            KeyHintStrip {
+                width: Math.max(1, parent.width - detailsButton.width - parent.spacing)
+                runtime: panel.runtime
+                theme: panel.theme
+                hints: [
+                    {
+                        shortcut: "J/K",
+                        label: "Select",
+                        visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
+                    },
+                    {
+                        shortcut: "ENTER",
+                        label: "Connect",
+                        visible: !panel.detailView && (panel.savedView || panel.system.wifiAvailable)
+                    },
+                    {
+                        shortcut: "W",
+                        label: "Wi-Fi",
+                        visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable
+                    },
+                    {
+                        shortcut: "P",
+                        label: panel.savedView ? "Scan" : "Saved",
+                        visible: !panel.detailView
+                    },
+                    {
+                        shortcut: "R",
+                        label: "Refresh",
+                        visible: panel.savedView || panel.detailView
+                    },
+                    {
+                        shortcut: "J/K",
+                        label: "Scroll",
+                        visible: panel.detailView
+                    },
+                    {
+                        shortcut: "A",
+                        label: "Advanced"
+                    },
+                    {
+                        shortcut: "ESC",
+                        label: "Back"
+                    }
+                ]
             }
-
-            Text {
-                visible: !panel.detailView && !panel.savedView && panel.system.wifiAvailable
-                text: "W  WI-FI"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                visible: !panel.detailView
-                text: panel.savedView ? "P  SCAN" : "P  SAVED"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                visible: panel.savedView && !panel.detailView
-                text: "R  REFRESH"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
             ShellAction {
-                width: 111
-                height: 30
-                anchors.verticalCenter: parent.verticalCenter
+                id: detailsButton
+                width: 116
+                height: 40
                 runtime: panel.runtime
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
                 horizontalCompact: true
                 icon: panel.detailView ? "󰅌" : "󰋼"
-                title: panel.detailView ? "BACK" : "DETAILS"
+                title: panel.detailView ? "Back" : "Details"
                 shortcut: "I"
                 active: panel.detailView
                 onActivated: panel.toggleDetailView()
-            }
-
-            Text {
-                visible: panel.detailView
-                text: "R  REFRESH  ·  J/K SCROLL"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "A  ADVANCED"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
-            }
-
-            Text {
-                text: "ESC  BACK"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                font.letterSpacing: 0.8
             }
         }
     }
