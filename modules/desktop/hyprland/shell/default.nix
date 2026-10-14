@@ -830,9 +830,11 @@ in
             if not (CONFIG / "khal/config").is_file():
                 return {"configured": False, "calendars": selected, "events": []}
             from datetime import date, timedelta
-            end = (date.fromisoformat(start) + timedelta(days=6)).isoformat()
+            last_day = date.fromisoformat(start) + timedelta(days=6)
+            end = last_day.isoformat()
             args = ["khal", "list", "--json", "uid", "--json", "title", "--json", "start-date",
-                    "--json", "start-time", "--json", "end-time", "--json", "location", start, end]
+                    "--json", "start-time", "--json", "end-date", "--json", "end-time",
+                    "--json", "location", start, end]
             output = subprocess.run(args, capture_output=True, text=True, check=True).stdout
             index = read_index()
             known = {feed["id"]: feed["name"] for feed in feeds}
@@ -845,11 +847,33 @@ in
                     origins = index.get(uid_hash, set())
                     if origins and not any(source in known and source not in disabled for source in origins):
                         continue
+                    event_start = event.get("start-date", "")
+                    event_end = event.get("end-date", "")
+                    if event_start > end:
+                        continue
+                    carried = event_start < start
+                    display_date = event_start
+                    display_time = event.get("start-time", "")
+                    if carried:
+                        if not event_end:
+                            continue
+                        # Khal also includes events spanning the entire week.
+                        # Do not put month-old starting dates before this week's
+                        # appointments. Include carryovers only when they end
+                        # within the selected week.
+                        finish = date.fromisoformat(event_end)
+                        if not event.get("start-time") and not event.get("end-time"):
+                            finish -= timedelta(days=1)  # all-day end is exclusive
+                        if not date.fromisoformat(start) <= finish <= last_day:
+                            continue
+                        display_date = finish.isoformat()
+                        display_time = event.get("end-time", "")
                     source = next((known[item] for item in sorted(origins) if item in known), "Local")
                     events.append({
                         "calendar": source,
-                        "date": event.get("start-date", ""),
-                        "time": event.get("start-time", ""),
+                        "date": display_date,
+                        "time": display_time,
+                        "dateKind": "ENDS" if carried else "",
                         "endTime": event.get("end-time", ""),
                         "title": event.get("title", ""),
                         "location": event.get("location", "") or "",
