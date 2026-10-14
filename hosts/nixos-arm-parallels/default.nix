@@ -18,6 +18,7 @@
     appimage
     audio
     virtualisation
+    desktop
     ;
 
   imports = [
@@ -25,10 +26,6 @@
   ];
 
   dotfiles.defaults.terminal = "alacritty";
-
-  desktop = editScope moduleRegistry.desktop {
-    hyprland.shell.nightLightBackend = "shader";
-  };
 
   hardware = import ./hardware.nix;
 
