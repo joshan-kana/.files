@@ -1,6 +1,5 @@
 {
   config,
-  editScope,
   lib,
   moduleRegistry,
   pkgs,
@@ -19,6 +18,7 @@
     audio
     virtualisation
     desktopApps
+    desktop
     ;
 
   imports = [
@@ -26,10 +26,6 @@
   ];
 
   dotfiles.defaults.terminal = "alacritty";
-
-  desktop = editScope moduleRegistry.desktop {
-    hyprland.shell.nightLightBackend = "shader";
-  };
 
   hardware = import ./hardware.nix;
 
