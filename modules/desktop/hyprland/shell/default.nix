@@ -51,18 +51,45 @@ let
     }
   );
 
+  # Give the system's Polkit prompt a stable, human-readable operation name.
+  themeElevation = pkgs.writeShellApplication {
+    name = "linux-desktop-theme-elevation";
+    runtimeInputs = [ pkgs.systemd ];
+    text = ''
+      exec run0 --unit=linux-desktop-theme-activation --description="Activate the selected Linux desktop theme" "$@"
+    '';
+  };
+
   # The chooser is a frontend to the canonical full-system themed output.
   themeSet = pkgs.writeShellApplication {
     name = "theme-set";
     runtimeInputs = [
       pkgs.coreutils
       pkgs.jq
+      pkgs.systemd
     ];
     text = ''
       configuredTheme=${lib.escapeShellArg configuredTheme}
       repoPath=${lib.escapeShellArg config.dotfiles.paths.repoPath}
       manifest=${lib.escapeShellArg (toString themeManifest)}
       expectedUser=${lib.escapeShellArg primaryUser}
+      operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
+      operationUnit=linux-desktop-theme-apply.scope
+
+      set_phase() {
+        mkdir -p "$operationDir"
+        chmod 700 "$operationDir"
+        printf '%s\n' "$1" >"$operationDir/phase"
+      }
+
+      finish_operation() {
+        result=$?
+        if [ "$result" -eq 0 ]; then
+          set_phase completed
+        elif [ "$(cat "$operationDir/phase" 2>/dev/null || :)" != cancelled ]; then
+          set_phase failed
+        fi
+      }
 
       validate_theme() {
         case "$1" in
@@ -82,6 +109,25 @@ let
         current)
           printf '%s\n' "$configuredTheme"
           ;;
+        status)
+          phase="$(cat "$operationDir/phase" 2>/dev/null || printf idle)"
+          target="$(cat "$operationDir/target" 2>/dev/null || :)"
+          active=false
+          if systemctl --user --quiet is-active "$operationUnit"; then active=true; fi
+          jq -n --arg phase "$phase" --arg target "$target" --argjson running "$active" '{phase:$phase,target:$target,running:$running}'
+          ;;
+        logs)
+          if [ -f "$operationDir/output.log" ]; then tail -n 12 "$operationDir/output.log" | cut -c1-150; fi
+          ;;
+        cancel)
+          phase="$(cat "$operationDir/phase" 2>/dev/null || :)"
+          if [ "$phase" != building ] && [ "$phase" != preparing ]; then
+            printf 'Cancellation is only safe before authorization/activation.\n' >&2
+            exit 1
+          fi
+          systemctl --user stop "$operationUnit"
+          set_phase cancelled
+          ;;
         switch)
           selected="''${2:-}"
           validate_theme "$selected"
@@ -89,17 +135,32 @@ let
             printf 'Theme chooser is configured for user %s\n' "$expectedUser" >&2
             exit 1
           fi
-          # A separate systemd scope survives Quickshell restarting during
-          # full-system NixOS theme activation.
           if [ "''${3:-}" != "--scoped" ]; then
-            exec ${lib.getExe' pkgs.systemd "systemd-run"} --user --scope --quiet --collect -- "$0" switch "$selected" --scoped
+            if systemctl --user --quiet is-active "$operationUnit"; then
+              printf 'A theme activation is already running.\n' >&2
+              exit 1
+            fi
+            mkdir -p "$operationDir"
+            chmod 700 "$operationDir"
+            printf '%s\n' "$selected" >"$operationDir/target"
+            : >"$operationDir/output.log"
+            chmod 600 "$operationDir/output.log" "$operationDir/target"
+            set_phase preparing
+            exec systemd-run --user --scope --quiet --collect --unit=linux-desktop-theme-apply --description="Apply desktop theme $selected" -- "$0" switch "$selected" --scoped
           fi
-          # Use the compositor's existing Polkit dialog via run0. The Nix
-          # store pkexec binary is intentionally not setuid-root on this host.
-          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy ${lib.getExe' pkgs.systemd "run0"} --no-nom --diff never
+          exec >>"$operationDir/output.log" 2>&1
+          trap finish_operation EXIT
+          set_phase building
+          printf 'Building %s...\n' "$selected"
+          ${lib.getExe pkgs.nh} os build "$repoPath/themes" --hostname "${configurationName}-$selected" --no-nom --diff never
+          set_phase authorizing
+          printf 'Requesting permission to activate %s...\n' "$selected"
+          set_phase activating
+          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy ${lib.getExe themeElevation} --no-nom --diff never
+          printf 'Activated %s.\n' "$selected"
           ;;
         *)
-          printf 'Usage: theme-set {list [--json]|current|switch <theme>}\n' >&2
+          printf 'Usage: theme-set {list [--json]|current|switch <theme>|status|logs|cancel}\n' >&2
           exit 2
           ;;
       esac
@@ -170,15 +231,6 @@ in
     type = lib.types.float;
     default = 1.0;
     description = "Scale text in the Hyprland desktop shell.";
-  };
-
-  scopeOptions.nightLightBackend = lib.mkOption {
-    type = lib.types.enum [
-      "ctm"
-      "shader"
-    ];
-    default = "ctm";
-    description = "Colour-temperature backend; use the compositor shader on virtual displays where output CTM is invisible.";
   };
 
   scopeOptions.videoWallpaper = lib.mkOption {
@@ -1135,119 +1187,77 @@ in
           pkgs.coreutils
           pkgs.systemd
           pkgs.hyprsunset
-          pkgs.hyprland
-          pkgs.python3
         ];
         text = ''
-                    set -euo pipefail
-                    backend=${lib.escapeShellArg scopeConfig.nightLightBackend}
-                    state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop"
-                    state_file="$state_dir/night-light"
-                    mode=off
-                    temperature=4500
-                    if [ -r "$state_file" ]; then
-                      read -r mode temperature < "$state_file" || true
-                    fi
-                    case "$mode" in off|manual|auto) ;; *) mode=off ;; esac
-                    if ! [[ "$temperature" =~ ^[0-9]+$ ]]; then temperature=4500; fi
-                    if (( temperature < 2500 || temperature > 6500 )); then
-                      temperature=4500
-                    fi
-                    persist() {
-                      mkdir -p "$state_dir"
-                      temp_state="$(mktemp --tmpdir="$state_dir" night-light-XXXXXXXX)"
-                      printf '%s %s\n' "$mode" "$temperature" > "$temp_state"
-                      chmod 600 "$temp_state"
-                      mv -f "$temp_state" "$state_file"
-                    }
-                    # Preserve the current effective state when migrating an older
-                    # automatic schedule to manual-only control.
-                    if [ "$mode" = auto ]; then
-                      hour="$(date +%H)"
-                      if (( 10#$hour >= 19 || 10#$hour < 7 )); then
-                        mode=manual
-                      else
-                        mode=off
-                      fi
-                      persist
-                    fi
-                    should_run() {
-                      [ "$mode" = manual ]
-                    }
-                    apply() {
-                      if should_run; then
-                        systemctl --user restart linux-desktop-night-light.service
-                      else
-                        systemctl --user stop linux-desktop-night-light.service
-                      fi
-                    }
-                    case "''${1:-state}" in
-                      state)
-                        active=false
-                        if systemctl --user --quiet is-active linux-desktop-night-light.service; then active=true; fi
-                        printf '{"mode":"%s","temperature":%s,"active":%s,"supported":true}\n' "$mode" "$temperature" "$active"
-                        ;;
-                      run)
-                        if [ "$backend" = shader ]; then
-                          shader_file="''${XDG_RUNTIME_DIR:?}/linux-desktop-night-light.frag"
-                          python3 - "$temperature" "$shader_file" <<'PYSHADER'
-          import os
-          import sys
-          import tempfile
-          from pathlib import Path
-
-          kelvin = int(sys.argv[1])
-          result = Path(sys.argv[2])
-          blend = max(0.0, min(1.0, (kelvin - 2500) / 4000))
-          green = 0.6237827 + 0.3762173 * blend
-          blue = 0.27477717 + 0.72522283 * blend
-          shader = f"""#version 300 es
-          precision highp float;
-          in vec2 v_texcoord;
-          uniform sampler2D tex;
-          out vec4 fragColor;
-          void main() {{
-              vec4 colour = texture(tex, v_texcoord);
-              fragColor = vec4(colour.rgb * vec3(1.0, {green:.7f}, {blue:.7f}), colour.a);
-          }}
-          """
-          fd, temporary = tempfile.mkstemp(prefix=".night-light-", dir=result.parent)
-          try:
-              with os.fdopen(fd, "w") as stream:
-                  stream.write(shader)
-              os.replace(temporary, result)
-          finally:
-              Path(temporary).unlink(missing_ok=True)
-          PYSHADER
-                          hyprctl -i 0 eval "hl.config({ decoration = { screen_shader = '$shader_file' } })"
-                        else
-                          exec hyprsunset --temperature "$temperature"
-                        fi
-                        ;;
-                      clear)
-                        if [ "$backend" = shader ]; then
-                          hyprctl -i 0 eval 'hl.config({ decoration = { screen_shader = "[[EMPTY]]" } })'
-                        fi
-                        ;;
-                      apply)
-                        apply
-                        ;;
-                      toggle)
-                        if [ "$mode" = manual ]; then mode=off; else mode=manual; fi
-                        persist
-                        apply
-                        ;;
-                      warmer|cooler)
-                        if [ "$1" = warmer ]; then temperature=$((temperature - 500)); else temperature=$((temperature + 500)); fi
-                        temperature=$((temperature < 2500 ? 2500 : temperature > 6500 ? 6500 : temperature))
-                        persist
-                        if should_run; then apply; fi
-                        ;;
-                      *)
-                        printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|warmer|cooler}\n' >&2
-                        exit 2
-                        ;;
-                    esac
+          set -euo pipefail
+          state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop"
+          state_file="$state_dir/night-light"
+          mode=off
+          temperature=4500
+          if [ -r "$state_file" ]; then
+            read -r mode temperature < "$state_file" || true
+          fi
+          case "$mode" in off|manual|auto) ;; *) mode=off ;; esac
+          if ! [[ "$temperature" =~ ^[0-9]+$ ]]; then temperature=4500; fi
+          if (( temperature < 2500 || temperature > 6500 )); then
+            temperature=4500
+          fi
+          persist() {
+            mkdir -p "$state_dir"
+            temp_state="$(mktemp --tmpdir="$state_dir" night-light-XXXXXXXX)"
+            printf '%s %s\n' "$mode" "$temperature" > "$temp_state"
+            chmod 600 "$temp_state"
+            mv -f "$temp_state" "$state_file"
+          }
+          # Preserve the current effective state when migrating an older
+          # automatic schedule to manual-only control.
+          if [ "$mode" = auto ]; then
+            hour="$(date +%H)"
+            if (( 10#$hour >= 19 || 10#$hour < 7 )); then
+              mode=manual
+            else
+              mode=off
+            fi
+            persist
+          fi
+          should_run() {
+            [ "$mode" = manual ]
+          }
+          apply() {
+            if should_run; then
+              systemctl --user restart linux-desktop-night-light.service
+            else
+              systemctl --user stop linux-desktop-night-light.service
+            fi
+          }
+          case "''${1:-state}" in
+            state)
+              active=false
+              if systemctl --user --quiet is-active linux-desktop-night-light.service; then active=true; fi
+              printf '{"mode":"%s","temperature":%s,"active":%s,"supported":true}\n' "$mode" "$temperature" "$active"
+              ;;
+            run)
+              exec hyprsunset --temperature "$temperature"
+              ;;
+            apply)
+              apply
+              ;;
+            toggle)
+              if [ "$mode" = manual ]; then mode=off; else mode=manual; fi
+              persist
+              apply
+              ;;
+            warmer|cooler)
+              if [ "$1" = warmer ]; then temperature=$((temperature - 500)); else temperature=$((temperature + 500)); fi
+              temperature=$((temperature < 2500 ? 2500 : temperature > 6500 ? 6500 : temperature))
+              persist
+              if should_run; then apply; fi
+              ;;
+            *)
+              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|warmer|cooler}\n' >&2
+              exit 2
+              ;;
+          esac
         '';
       };
 
@@ -1644,11 +1654,6 @@ in
           Service = {
             ExecStart = "${lib.getExe nightLightControl} run";
             Restart = "no";
-          }
-          // lib.optionalAttrs (scopeConfig.nightLightBackend == "shader") {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStop = "${lib.getExe nightLightControl} clear";
           };
         };
 
