@@ -256,16 +256,34 @@ FocusScope {
         font.pixelSize: mixer.theme.fontSize(11)
     }
 
-    Text {
+    KeyHintStrip {
         id: footer
-        anchors {
-            right: parent.right
-            bottom: parent.bottom
-        }
-        text: "J/K SELECT   U/D PAGE   H/L VOLUME   M MUTE   ESC BACK"
-        color: mixer.theme.textMuted
-        font.family: mixer.runtime.fontMono
-        font.pixelSize: mixer.theme.fontKeyHint
+        width: parent.width
+        anchors.bottom: parent.bottom
+        runtime: mixer.runtime
+        theme: mixer.theme
+        hints: [
+            {
+                shortcut: "J/K",
+                label: "Select"
+            },
+            {
+                shortcut: "U/D",
+                label: "Page"
+            },
+            {
+                shortcut: "H/L",
+                label: "Volume"
+            },
+            {
+                shortcut: "M",
+                label: "Mute"
+            },
+            {
+                shortcut: "ESC",
+                label: "Back"
+            }
+        ]
     }
 
     FocusScope {
