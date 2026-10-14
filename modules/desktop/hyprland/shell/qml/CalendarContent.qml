@@ -383,17 +383,40 @@ FocusScope {
         Row {
             width: parent.width
 
-            Text {
-                id: dateCaption
-                text: "J/K months · H/L days · U/D events · C calendars"
-                color: calendar.theme.textStrong
-                opacity: 0.85
-                font.family: calendar.runtime.fontMono
-                font.pixelSize: calendar.theme.fontSize(11)
+            Row {
+                id: calendarHints
+                spacing: calendar.theme.spacing2
+                Repeater {
+                    model: [
+                        {
+                            shortcut: "J/K",
+                            label: "Months"
+                        },
+                        {
+                            shortcut: "H/L",
+                            label: "Days"
+                        },
+                        {
+                            shortcut: "U/D",
+                            label: "Events"
+                        },
+                        {
+                            shortcut: "C",
+                            label: "Calendars"
+                        }
+                    ]
+                    delegate: KeyHint {
+                        required property var modelData
+                        shortcut: modelData.shortcut
+                        label: modelData.label
+                        runtime: calendar.runtime
+                        theme: calendar.theme
+                    }
+                }
             }
 
             Item {
-                width: Math.max(0, parent.width - dateCaption.implicitWidth - resetButton.implicitWidth)
+                width: Math.max(0, parent.width - calendarHints.implicitWidth - resetButton.implicitWidth)
                 height: 1
             }
 
@@ -403,7 +426,9 @@ FocusScope {
                 height: 30
                 iconOnly: true
                 icon: "󰃰"
-                title: "Today (T)"
+                title: "Today"
+                shortcut: "T"
+                iconHint: true
                 runtime: calendar.runtime
                 theme: calendar.theme
                 motion: calendar.motion
@@ -523,11 +548,31 @@ FocusScope {
                 }
             }
 
-            Text {
-                text: "J/K SELECT  ·  SPACE TOGGLE  ·  ESC CLOSE"
-                font.family: calendar.runtime.fontMono
-                font.pixelSize: calendar.theme.fontSize(9)
-                color: calendar.theme.textMuted
+            Row {
+                spacing: calendar.theme.spacing2
+                Repeater {
+                    model: [
+                        {
+                            shortcut: "J/K",
+                            label: "Select"
+                        },
+                        {
+                            shortcut: "SPACE",
+                            label: "Toggle"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Close"
+                        }
+                    ]
+                    delegate: KeyHint {
+                        required property var modelData
+                        shortcut: modelData.shortcut
+                        label: modelData.label
+                        runtime: calendar.runtime
+                        theme: calendar.theme
+                    }
+                }
             }
         }
     }
