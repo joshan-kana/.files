@@ -1,12 +1,10 @@
 {
   inputs,
   configurationName,
-  config,
-  scopeConfig,
-  system,
   lib,
   pkgs,
-  themeVariant ? null,
+  scopeConfig,
+  system,
   ...
 }:
 
@@ -86,9 +84,6 @@ let
       </plist>
     '';
 in
-assert lib.assertMsg (
-  wallpaperTheme.wallpaperSha256 == wallpaperSha256
-) "modules/theme/palettes/wallpaper.yaml is stale; regenerate it from modules/theme/wallpaper.png";
 {
   bootSplash =
     { config, pkgs, ... }:
@@ -346,26 +341,14 @@ assert lib.assertMsg (
     enable = true;
     image = activeAssets.wallpaper;
 
-    inherit (activeTheme) fonts;
-
-    inherit (activeTheme) polarity;
-
-    inherit (activeAssets) cursor;
-
-    base16Scheme = activeTheme.palette;
-  };
-
-  environment.systemPackages = lib.optionals buildRuntimeVariants [ themeSet ];
-
-  systemd.user.services.theme-restore = lib.mkIf buildRuntimeVariants {
-    description = "Restore selected desktop theme";
-    wantedBy = [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
-    after = [ "graphical-session-pre.target" ];
-    unitConfig.ConditionUser = primaryUser;
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${lib.getExe themeSet} restore";
+    inherit (activeTheme) fonts polarity;
+  }
+  // lib.optionalAttrs (activeTheme ? colors) {
+    base16Scheme = {
+      system = "base16";
+      name = activeTheme.label;
+      variant = activeTheme.polarity;
+      palette = activeTheme.colors;
     };
   }
   // lib.optionalAttrs isLinux {

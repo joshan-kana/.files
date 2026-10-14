@@ -299,7 +299,6 @@ in
         };
       }
     );
-
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (
