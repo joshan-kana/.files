@@ -81,6 +81,11 @@ QtObject {
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)
+    readonly property int keycapHeight: Math.max(25, fontSize(20))
+    readonly property int keycapInset: 7
+    readonly property int keyHintGap: 8
+    readonly property int keyHintGroupGap: 28
+    readonly property int minActionTarget: 44
     readonly property int fontPanelEyebrow: fontSize(11)
     readonly property int fontPanelTitle: fontSize(27)
     readonly property int fontSubpanelEyebrow: fontSize(10)

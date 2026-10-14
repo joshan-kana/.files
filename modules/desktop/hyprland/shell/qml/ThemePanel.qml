@@ -21,6 +21,10 @@ Item {
     property int selectedIndex: 0
     property string statusText: ""
     property bool statusError: false
+    property bool operationRunning: false
+    property string operationPhase: "idle"
+    property string operationTarget: ""
+    property string operationLog: ""
 
     Connections {
         target: panel.runtime
@@ -59,18 +63,70 @@ Item {
         }
     }
 
-    // Keep the prompt's launch process alive so the hub can relinquish its
-    // keyboard grab without disappearing. The terminal runs on the dedicated
-    // system workspace, independent of the user's Super+X workspace.
+    // Launch only; the scoped operation is owned and tracked by systemd.
     property StdioCollector switchErrors: StdioCollector {}
     property Process switchProcess: Process {
         stderr: panel.switchErrors
         onExited: (exitCode, exitStatus) => {
-            panel.switchFinished();
-            panel.statusText = exitCode === 0 ? "THEME APPLIED" : (panel.switchErrors.text.includes("Exited(127)") ? "AUTHORIZATION CANCELLED OR UNAVAILABLE" : "THEME SWITCH FAILED · CHECK SYSTEM LOG");
-            panel.statusError = exitCode !== 0;
+            panel.refreshOperation();
             panel.refreshCurrentTheme();
         }
+    }
+
+    // The job is a systemd scope with persistent state/logs; the view only
+    // observes it, so shell restarts do not erase build progress or cancel it.
+    property StdioCollector statusOutput: StdioCollector {}
+    property StdioCollector logOutput: StdioCollector {}
+    property Process statusProcess: Process {
+        stdout: panel.statusOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                return;
+            try {
+                const status = JSON.parse(panel.statusOutput.text);
+                panel.operationRunning = status.running;
+                panel.operationPhase = status.phase;
+                panel.operationTarget = status.target;
+                if (status.running && (status.phase === "authorizing" || status.phase === "activating"))
+                    panel.switchLaunched();
+                else
+                    panel.switchFinished();
+                if (status.phase === "completed" || status.phase === "failed" || status.phase === "cancelled") {
+                    panel.statusText = status.phase === "completed" ? "THEME ACTIVATED" : status.phase === "cancelled" ? "THEME BUILD CANCELLED" : "LAST THEME ACTIVATION FAILED";
+                    panel.statusError = status.phase === "failed";
+                }
+            } catch (error) {
+                panel.setError("", "THEME OPERATION STATE UNAVAILABLE");
+            }
+        }
+    }
+    property Process logProcess: Process {
+        stdout: panel.logOutput
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0)
+                panel.operationLog = panel.logOutput.text.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "").trim();
+        }
+    }
+    property Timer operationPoll: Timer {
+        interval: 900
+        repeat: true
+        running: panel.open || panel.operationRunning
+        onTriggered: panel.refreshOperation()
+    }
+    function refreshOperation(): void {
+        if (runtime.themeSet.length === 0)
+            return;
+        if (!statusProcess.running)
+            statusProcess.exec([runtime.themeSet, "status"]);
+        if (!logProcess.running && (operationRunning || operationPhase === "failed"))
+            logProcess.exec([runtime.themeSet, "logs"]);
+    }
+    function cancelOperation(): void {
+        if (!operationRunning || (operationPhase !== "preparing" && operationPhase !== "building"))
+            return;
+        statusText = "STOPPING THEME BUILD…";
+        Quickshell.execDetached([runtime.themeSet, "cancel"]);
+        Qt.callLater(refreshOperation);
     }
 
     property Process currentProcess: Process {
@@ -148,6 +204,7 @@ Item {
 
     function openView(): void {
         open = true;
+        refreshOperation();
         selectedIndex = 0;
         refresh();
         keyboardRequested();
@@ -176,7 +233,7 @@ Item {
     }
 
     function activateSelected(): void {
-        if (runtime.themeSet.length === 0 || switchProcess.running)
+        if (runtime.themeSet.length === 0 || switchProcess.running || operationRunning)
             return;
 
         const selected = selectedTheme();
@@ -191,8 +248,9 @@ Item {
 
         statusText = "APPLYING " + (selected.label || selected.name).toUpperCase() + "…";
         statusError = false;
-        // The Polkit confirmation needs keyboard focus outside our layer.
-        switchLaunched();
+        operationRunning = true;
+        operationPhase = "preparing";
+        operationTarget = selected.name;
         Qt.callLater(() => {
             if (switchProcess && !switchProcess.running)
                 switchProcess.exec([runtime.themeSet, "switch", selected.name]);
@@ -265,6 +323,43 @@ Item {
                 cornerRadius: panel.theme.radiusLarge
                 borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
                 borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
+
+                Item {
+                    width: 30
+                    height: 30
+                    anchors {
+                        right: parent.right
+                        top: parent.top
+                        margins: panel.theme.spacing3
+                    }
+                    visible: panel.operationRunning && themeCard.modelData.name === panel.operationTarget
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: "transparent"
+                        border.width: 2
+                        border.color: panel.theme.accent
+                        opacity: 0.7
+                    }
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: width / 2
+                        anchors {
+                            top: parent.top
+                            horizontalCenter: parent.horizontalCenter
+                        }
+                        color: panel.theme.accent
+                    }
+                    RotationAnimation on rotation {
+                        from: 0
+                        to: 360
+                        duration: 1150
+                        loops: Animation.Infinite
+                        easing.type: Easing.InOutCubic
+                        running: panel.operationRunning && panel.motion.enabled
+                    }
+                }
 
                 Column {
                     anchors {
@@ -525,14 +620,78 @@ Item {
         }
         spacing: panel.theme.spacing2
 
+        Row {
+            anchors.right: parent.right
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: [
+                    {
+                        shortcut: "H/L",
+                        label: "Choose"
+                    },
+                    {
+                        shortcut: "J/K",
+                        label: "Rows"
+                    },
+                    {
+                        shortcut: "ENTER",
+                        label: "Apply"
+                    },
+                    {
+                        shortcut: "ESC",
+                        label: "Back"
+                    }
+                ]
+                delegate: KeyHint {
+                    required property var modelData
+                    shortcut: modelData.shortcut
+                    label: modelData.label
+                    theme: panel.theme
+                    runtime: panel.runtime
+                }
+            }
+        }
+
+        Row {
+            width: parent.width
+            visible: panel.operationRunning
+            spacing: panel.theme.spacing2
+            Text {
+                width: Math.max(1, parent.width - cancelButton.width - parent.spacing)
+                anchors.verticalCenter: parent.verticalCenter
+                text: panel.operationPhase.toUpperCase() + " · " + panel.themeLabel(panel.operationTarget)
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontKeyHint
+                elide: Text.ElideRight
+            }
+            ShellAction {
+                id: cancelButton
+                width: 125
+                height: 36
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: panel.operationPhase === "building" || panel.operationPhase === "preparing" ? "Cancel build" : "Activating"
+                icon: "󰅖"
+                shortcut: "X"
+                enabled: panel.operationPhase === "building" || panel.operationPhase === "preparing"
+                onActivated: panel.cancelOperation()
+            }
+        }
         Text {
             width: parent.width
-            text: "H/L CHOOSE  ·  J/K ROWS  ·  ENTER APPLY  ·  ESC BACK"
+            visible: panel.operationRunning || panel.operationPhase === "failed"
+            text: panel.operationLog
+            maximumLineCount: 3
+            elide: Text.ElideLeft
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontKeyHint
-            horizontalAlignment: Text.AlignRight
-            elide: Text.ElideRight
+            font.pixelSize: panel.theme.fontSize(9)
         }
 
         Text {
