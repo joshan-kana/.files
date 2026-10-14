@@ -221,7 +221,11 @@ in
   direnv =
     args:
     let
-      aliases.da = "direnv allow";
+      aliases = {
+        da = "direnv allow";
+        db = "direnv block";
+        dr = "direnv reload";
+      };
       zshAliases.dt = "direnv_hook_toggle";
       hook = ''
         _direnv_hook() {
