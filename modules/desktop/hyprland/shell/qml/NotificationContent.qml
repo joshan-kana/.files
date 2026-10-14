@@ -40,7 +40,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: groups.length === 0 ? 254 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)
+    implicitHeight: groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)
     focus: engaged
 
     onEngagedChanged: {
@@ -264,7 +264,7 @@ FocusScope {
         ShellSurface {
             anchors.centerIn: list
             width: list.width
-            height: 112
+            height: 148
             visible: center.groups.length === 0
             theme: center.theme
             motion: center.motion
