@@ -325,43 +325,6 @@ Item {
                 borderColor: themeCard.index === panel.selectedIndex ? panel.theme.accent : "transparent"
                 borderWidth: themeCard.index === panel.selectedIndex ? panel.theme.borderFocus * 2 : 0
 
-                Item {
-                    width: 30
-                    height: 30
-                    anchors {
-                        right: parent.right
-                        top: parent.top
-                        margins: panel.theme.spacing3
-                    }
-                    visible: panel.operationRunning && themeCard.modelData.name === panel.operationTarget
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: "transparent"
-                        border.width: 2
-                        border.color: panel.theme.accent
-                        opacity: 0.7
-                    }
-                    Rectangle {
-                        width: 8
-                        height: 8
-                        radius: width / 2
-                        anchors {
-                            top: parent.top
-                            horizontalCenter: parent.horizontalCenter
-                        }
-                        color: panel.theme.accent
-                    }
-                    RotationAnimation on rotation {
-                        from: 0
-                        to: 360
-                        duration: 1150
-                        loops: Animation.Infinite
-                        easing.type: Easing.InOutCubic
-                        running: panel.operationRunning && panel.motion.enabled
-                    }
-                }
-
                 Column {
                     anchors {
                         fill: parent
