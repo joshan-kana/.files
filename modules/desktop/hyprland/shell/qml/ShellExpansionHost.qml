@@ -419,7 +419,7 @@ PanelWindow {
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: host.theme.spacing3
+                spacing: host.theme.keyHintGroupGap
 
                 Repeater {
                     model: [
@@ -434,36 +434,20 @@ PanelWindow {
                     ].concat(host.detailVisible ? [] : [
                         {
                             shortcut: "ESC",
-                            label: "Back / Close"
+                            label: "Close"
                         }
                     ]).concat([
                         {
                             shortcut: "SHIFT+ESC",
-                            label: "Close"
+                            label: "Close all"
                         }
                     ])
-                    delegate: Row {
-                        id: navigationHint
+                    delegate: KeyHint {
                         required property var modelData
-                        spacing: host.theme.spacing2
-                        height: Math.max(keyText.implicitHeight, actionLabel.implicitHeight)
-
-                        KeyChord {
-                            id: keyText
-                            anchors.verticalCenter: parent.verticalCenter
-                            shortcut: navigationHint.modelData.shortcut
-                            fontFamily: host.runtime.fontMono
-                            textColor: host.theme.textStrong
-                            fontSize: host.theme.fontKeyHint
-                        }
-                        Text {
-                            id: actionLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: navigationHint.modelData.label
-                            color: host.theme.textMuted
-                            font.family: host.runtime.fontMono
-                            font.pixelSize: host.theme.fontKeyHint
-                        }
+                        shortcut: modelData.shortcut
+                        label: modelData.label
+                        runtime: host.runtime
+                        theme: host.theme
                     }
                 }
             }
