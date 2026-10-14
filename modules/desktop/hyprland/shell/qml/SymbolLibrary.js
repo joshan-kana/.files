@@ -113,31 +113,51 @@ function matches(term, entry, allowFuzzy) {
     return 70 + penalty;
 }
 
-function search(term, unicodeEntries) {
-    const query = (term || "").trim().toLowerCase();
+// A bounded results model is essential: ScriptModel synchronously diffs all
+// entries whenever TextInput changes. Deduplicate only when the data changes.
+const maxResults = 64;
+let indexedUnicode = null;
+let prepared = [];
+let previousQuery = "";
+let previousResults = [];
+
+function prepare(unicodeEntries) {
+    if (indexedUnicode === unicodeEntries)
+        return;
+    indexedUnicode = unicodeEntries;
     const seen = new Set();
-    const available = [];
-    // Keep the curated symbols first and never show duplicate codepoints.
+    prepared = [];
     for (const entry of curated.concat(unicodeEntries || [])) {
         if (seen.has(entry.glyph))
             continue;
         seen.add(entry.glyph);
-        available.push(entry);
+        prepared.push(entry);
     }
+    previousQuery = "";
+    previousResults = [];
+}
+
+function search(term, unicodeEntries) {
+    const query = (term || "").trim().toLowerCase();
+    prepare(unicodeEntries);
     if (!query)
-        return available;
+        return prepared.slice(0, maxResults);
+    if (query === previousQuery)
+        return previousResults;
 
     function ranked(fuzzy) {
-        const result = [];
-        for (const entry of available) {
+        const results = [];
+        for (const entry of prepared) {
             const rank = matches(query, entry, fuzzy);
             if (Number.isFinite(rank) && (fuzzy ? rank < 83 : rank < 70))
-                result.push({ entry, rank });
+                results.push({ entry, rank });
         }
-        result.sort((a, b) => a.rank - b.rank || a.entry.searchName.localeCompare(b.entry.searchName));
-        return result.map(item => item.entry);
+        results.sort((a, b) => a.rank - b.rank || a.entry.searchName.localeCompare(b.entry.searchName));
+        return results.slice(0, maxResults).map(item => item.entry);
     }
 
     const exact = ranked(false);
-    return exact.length === 0 && query.length >= 3 ? ranked(true) : exact;
+    previousQuery = query;
+    previousResults = exact.length === 0 && query.length >= 3 ? ranked(true) : exact;
+    return previousResults;
 }
