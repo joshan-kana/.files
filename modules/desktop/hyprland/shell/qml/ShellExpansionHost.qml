@@ -28,6 +28,7 @@ PanelWindow {
     readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
+    readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
     readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
@@ -103,9 +104,12 @@ PanelWindow {
         });
     }
 
+    // Begin the incoming fade within one or two frames of the outgoing fade.
+    // A longer sequential wait strands otherwise-ready Home/Controls/Activity
+    // content behind an empty surface, especially after reopening another tab.
     Timer {
         id: contentEnter
-        interval: Math.max(1, Math.round(host.motion.effectsFast * 0.85))
+        interval: Math.max(1, Math.round(host.motion.effectsFast * 0.20))
         repeat: false
         onTriggered: {
             if (host.activeLoader)
@@ -610,6 +614,15 @@ PanelWindow {
                 else if (host.mediaContent)
                     host.mediaContent.helpOpen = false;
             }
+        }
+
+        LoadingOutline {
+            anchors.fill: parent
+            surface: shellSurface
+            active: host.themeOperationVisible
+            motionEnabled: host.motion.enabled
+            highlightColor: host.theme.accent
+            lineWidth: 3
         }
     }
 }
