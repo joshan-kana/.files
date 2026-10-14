@@ -40,7 +40,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: Math.max(360, 235 + Math.min(groups.length, 5) * 116)
+    implicitHeight: groups.length === 0 ? 254 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)
     focus: engaged
 
     onEngagedChanged: {
@@ -134,31 +134,137 @@ FocusScope {
             width: parent.width
             spacing: center.theme.spacing1
 
-            DetailHero {
+            Row {
+                id: titleBar
                 width: parent.width
-                runtime: center.runtime
-                theme: center.theme
-                motion: center.motion
-                glyph: center.notificationState.unreadCount > 0 ? "󰂚" : "󰂛"
-                eyebrow: "Activity / notifications"
-                title: "Notifications"
-                detail: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
+                spacing: center.theme.spacing3
+                Column {
+                    spacing: center.theme.spacing1
+                    Text {
+                        text: "Notifications"
+                        color: center.theme.textStrong
+                        font.family: center.runtime.fontMono
+                        font.pixelSize: center.theme.fontSize(21)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        text: center.notificationState.count + " total · " + center.notificationState.unreadCount + " unread"
+                        color: center.theme.textMuted
+                        font.family: center.runtime.fontMono
+                        font.pixelSize: center.theme.fontSize(10)
+                    }
+                }
+                Item {
+                    width: Math.max(0, titleBar.width - titleBar.children[0].implicitWidth - actions.implicitWidth - titleBar.spacing * 2)
+                    height: 1
+                }
+                Row {
+                    id: actions
+                    spacing: center.theme.spacing2
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        enabled: center.notificationState.unreadCount > 0
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: "󰄭"
+                        title: "Mark all read"
+                        shortcut: "SHIFT+M"
+                        iconHint: true
+                        onActivated: center.notificationState.markAllRead()
+                    }
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        enabled: center.notificationState.count > center.notificationState.unreadCount
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: "󰄬"
+                        title: "Mark all unread"
+                        shortcut: "SHIFT+N"
+                        iconHint: true
+                        onActivated: center.notificationState.markAllUnread()
+                    }
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        active: center.notificationState.silent
+                        activeColor: center.theme.warning
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: center.notificationState.silent ? "󰂛" : "󰂚"
+                        title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
+                        shortcut: "S"
+                        iconHint: true
+                        onActivated: center.notificationState.toggleSilent()
+                    }
+                    ShellAction {
+                        runtime: center.runtime
+                        theme: center.theme
+                        motion: center.motion
+                        compact: true
+                        enabled: center.notificationState.count > 0
+                        width: center.theme.minActionTarget
+                        height: center.theme.minActionTarget
+                        iconOnly: true
+                        icon: "󰆴"
+                        title: "Clear all"
+                        shortcut: "C"
+                        iconHint: true
+                        onActivated: center.notificationState.clearAll()
+                    }
+                }
             }
 
-            Text {
-                width: parent.width
-                wrapMode: Text.Wrap
-                text: "J/K apps · H/L items · E expand · M read/unread · ⇧M all read · ⇧N all unread · Del dismiss"
-                color: center.theme.textMuted
-                font.family: center.runtime.fontMono
-                font.pixelSize: center.theme.fontSize(9)
+            Row {
+                spacing: center.theme.spacing2
+                Repeater {
+                    model: [
+                        {
+                            shortcut: "J/K",
+                            label: "Apps"
+                        },
+                        {
+                            shortcut: "H/L",
+                            label: "Items"
+                        },
+                        {
+                            shortcut: "E",
+                            label: "Expand"
+                        },
+                        {
+                            shortcut: "M",
+                            label: "Read"
+                        },
+                        {
+                            shortcut: "DEL",
+                            label: "Dismiss"
+                        }
+                    ]
+                    delegate: KeyHint {
+                        required property var modelData
+                        shortcut: modelData.shortcut
+                        label: modelData.label
+                        runtime: center.runtime
+                        theme: center.theme
+                    }
+                }
             }
         }
 
         ShellSurface {
             anchors.centerIn: list
             width: list.width
-            height: 146
+            height: 112
             visible: center.groups.length === 0
             theme: center.theme
             motion: center.motion
@@ -198,7 +304,7 @@ FocusScope {
             anchors {
                 top: header.bottom
                 right: parent.right
-                bottom: footer.top
+                bottom: parent.bottom
                 left: parent.left
                 topMargin: center.theme.spacing4
                 bottomMargin: center.theme.spacing4
@@ -336,68 +442,6 @@ FocusScope {
                 }
             }
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
-        }
-
-        Row {
-            id: footer
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-            }
-            spacing: center.theme.spacing4
-            ShellAction {
-                runtime: center.runtime
-                theme: center.theme
-                motion: center.motion
-                compact: true
-                enabled: center.notificationState.unreadCount > 0
-                width: 44
-                height: 40
-                iconOnly: true
-                icon: "󰄭"
-                title: "Mark all read"
-                onActivated: center.notificationState.markAllRead()
-            }
-            ShellAction {
-                runtime: center.runtime
-                theme: center.theme
-                motion: center.motion
-                compact: true
-                enabled: center.notificationState.count > center.notificationState.unreadCount
-                width: 44
-                height: 40
-                iconOnly: true
-                icon: "󰄬"
-                title: "Mark all unread"
-                onActivated: center.notificationState.markAllUnread()
-            }
-            ShellAction {
-                runtime: center.runtime
-                theme: center.theme
-                motion: center.motion
-                compact: true
-                active: center.notificationState.silent
-                activeColor: center.theme.warning
-                width: 44
-                height: 40
-                iconOnly: true
-                icon: center.notificationState.silent ? "󰂛" : "󰂚"
-                title: center.notificationState.silent ? "Resume alerts" : "Pause alerts"
-                onActivated: center.notificationState.toggleSilent()
-            }
-            ShellAction {
-                runtime: center.runtime
-                theme: center.theme
-                motion: center.motion
-                compact: true
-                enabled: center.notificationState.count > 0
-                width: 44
-                height: 40
-                iconOnly: true
-                icon: "󰆴"
-                title: "Clear all"
-                onActivated: center.notificationState.clearAll()
-            }
         }
 
         FocusScope {

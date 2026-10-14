@@ -13,6 +13,10 @@ PanelWindow {
 
     property bool open: false
     property bool closing: false
+    // Workspace activation can cause the compositor to hand the keyboard to
+    // a toplevel, even while our overview layer is still visible. Reassert
+    // layer-shell keyboard interactivity without closing the overview.
+    property bool keyboardFocusRefreshing: false
     property int selectedIndex: 0
     property string selectedAddress: ""
     property bool moveMode: false
@@ -49,7 +53,18 @@ PanelWindow {
         left: true
     }
     WlrLayershell.namespace: "linux-desktop-overview"
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open && !keyboardFocusRefreshing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    onFocusedWorkspaceChanged: {
+        if (!open)
+            return;
+        keyboardFocusRefreshing = true;
+        Qt.callLater(() => {
+            keyboardFocusRefreshing = false;
+            if (open)
+                keyboard.forceActiveFocus();
+        });
+    }
 
     function windowAddress(toplevel: var): string {
         return toplevel ? String((toplevel.lastIpcObject || {}).address || "") : "";
@@ -384,15 +399,60 @@ PanelWindow {
                     font.weight: Font.DemiBold
                 }
                 Item {
-                    width: Math.max(0, parent.width - parent.children[0].width - shortcutHint.width)
+                    width: Math.max(0, parent.width - parent.children[0].implicitWidth - shortcutHints.implicitWidth)
                     height: 1
                 }
-                Text {
-                    id: shortcutHint
-                    text: overview.moveMode ? "H/L DESTINATION   1–0 CHOOSE   ENTER MOVE   ESC CANCEL" : "H/J/K/L NAVIGATE   M MOVE   F FLOAT   P PIN   ENTER FOCUS"
-                    color: overview.theme.textMuted
-                    font.family: overview.runtime.fontMono
-                    font.pixelSize: overview.theme.fontSize(10)
+                Row {
+                    id: shortcutHints
+                    spacing: overview.theme.spacing2
+                    Repeater {
+                        model: overview.moveMode ? [
+                            {
+                                shortcut: "H/L",
+                                label: "Target"
+                            },
+                            {
+                                shortcut: "1–0",
+                                label: "Choose"
+                            },
+                            {
+                                shortcut: "ENTER",
+                                label: "Move"
+                            },
+                            {
+                                shortcut: "ESC",
+                                label: "Cancel"
+                            }
+                        ] : [
+                            {
+                                shortcut: "H/J/K/L",
+                                label: "Navigate"
+                            },
+                            {
+                                shortcut: "M",
+                                label: "Move"
+                            },
+                            {
+                                shortcut: "F",
+                                label: "Float"
+                            },
+                            {
+                                shortcut: "P",
+                                label: "Pin"
+                            },
+                            {
+                                shortcut: "ENTER",
+                                label: "Focus"
+                            }
+                        ]
+                        delegate: KeyHint {
+                            required property var modelData
+                            shortcut: modelData.shortcut
+                            label: modelData.label
+                            runtime: overview.runtime
+                            theme: overview.theme
+                        }
+                    }
                 }
             }
 
