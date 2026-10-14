@@ -180,6 +180,7 @@
             deadnix.enable = true;
             nixfmt.enable = true;
             qmlformat.enable = true;
+            stylua.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -289,7 +290,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };

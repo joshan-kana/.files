@@ -2,6 +2,7 @@
   lib,
   pkgs,
   scopeConfig,
+  system,
   ...
 }:
 
@@ -88,7 +89,6 @@ in
     image = activeAssets.wallpaper;
 
     inherit (activeTheme) fonts polarity;
-    inherit (activeAssets) cursor;
   }
   // lib.optionalAttrs (activeTheme ? colors) {
     base16Scheme = {
@@ -97,6 +97,10 @@ in
       variant = activeTheme.polarity;
       palette = activeTheme.colors;
     };
+  };
+
+  config = lib.optionalAttrs isLinux {
+    stylix.cursor = activeAssets.cursor;
   };
 
   fonts =
