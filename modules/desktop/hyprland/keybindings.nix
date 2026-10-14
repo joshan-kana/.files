@@ -611,7 +611,7 @@ in
   (mk {
     keys = "SHIFT + O";
     id = "window.effects.toggle";
-    action = exec "linux-desktop-window-effects-toggle";
+    action = global "linux-desktop:window-effects";
     section = "WINDOWS";
     description = "Toggle window transparency";
   })
