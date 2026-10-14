@@ -535,16 +535,15 @@ FocusScope {
                     }
 
                     ShellAction {
-                        width: 42
+                        width: 80
                         height: 42
                         runtime: content.runtime
                         theme: content.theme
                         motion: content.motion
-                        iconOnly: true
-                        iconHint: true
+                        compact: true
+                        horizontalCompact: true
                         shortcut: "?"
-                        icon: "󰋗"
-                        title: "Keyboard help"
+                        title: "Help"
                         onActivated: content.helpOpen = true
                     }
 
