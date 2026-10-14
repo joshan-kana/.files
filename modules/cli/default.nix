@@ -473,6 +473,7 @@ in
       };
       aliases = {
         gs = "git status";
+        gf = "git fetch --prune";
         gl = "git log";
         gb = "git branch -avv";
         gw = "git switch";
