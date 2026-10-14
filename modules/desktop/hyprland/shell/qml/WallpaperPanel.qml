@@ -220,6 +220,7 @@ Item {
 
         DetailHero {
             width: parent.width
+            quiet: true
             runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
