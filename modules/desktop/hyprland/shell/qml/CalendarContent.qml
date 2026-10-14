@@ -278,14 +278,6 @@ FocusScope {
                                 font.pixelSize: calendar.theme.fontSize(22)
                                 font.weight: Font.DemiBold
                             }
-                            Text {
-                                width: parent.width
-                                text: "Selected · " + Qt.formatDate(calendar.selectedDate, "dddd d")
-                                color: calendar.theme.textMuted
-                                font.family: calendar.runtime.fontMono
-                                font.pixelSize: calendar.theme.fontSize(10)
-                                wrapMode: Text.Wrap
-                            }
 
                             Row {
                                 spacing: calendar.theme.spacing2

@@ -53,7 +53,8 @@ Item {
                 fill: parent
                 margins: chip.theme.spacing2
             }
-            spacing: chip.theme.spacing1
+            // The icon remains centred; give the label slightly more breathing room beneath it.
+            spacing: chip.theme.spacing1 + 3
 
             Item {
                 width: parent.width
