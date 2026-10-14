@@ -60,7 +60,7 @@ Item {
                 height: Math.max(chip.theme.keycapHeight - 3, chip.theme.fontSize(21))
                 Text {
                     anchors {
-                        left: parent.left
+                        horizontalCenter: parent.horizontalCenter
                         verticalCenter: parent.verticalCenter
                     }
                     text: chip.icon
