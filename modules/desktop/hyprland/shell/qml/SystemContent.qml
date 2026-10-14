@@ -887,52 +887,28 @@ FocusScope {
                 }
             }
 
-            Flow {
+            KeyHintStrip {
                 width: parent.width
-                spacing: root.theme.spacing3
-                Repeater {
-                    model: [
-                        {
-                            shortcut: "J/K",
-                            label: "Select audio"
-                        },
-                        {
-                            shortcut: "H/L",
-                            label: "Level"
-                        },
-                        {
-                            shortcut: "M",
-                            label: "Mute"
-                        },
-                        {
-                            shortcut: "X",
-                            label: "Mic"
-                        }
-                    ]
-                    delegate: Row {
-                        id: audioHint
-                        required property var modelData
-                        spacing: root.theme.spacing1
-                        height: Math.max(audioKey.implicitHeight, audioLabel.implicitHeight)
-
-                        KeyChord {
-                            id: audioKey
-                            anchors.verticalCenter: parent.verticalCenter
-                            shortcut: audioHint.modelData.shortcut
-                            fontFamily: root.runtime.fontMono
-                            textColor: root.theme.textStrong
-                            fontSize: root.theme.fontSize(10)
-                        }
-                        Text {
-                            id: audioLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: audioHint.modelData.label
-                            color: root.theme.textMuted
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(10)
-                        }
+                runtime: root.runtime
+                theme: root.theme
+                hints: [
+                    {
+                        shortcut: "J/K",
+                        label: "Select audio"
+                    },
+                    {
+                        shortcut: "H/L",
+                        label: "Level"
+                    },
+                    {
+                        shortcut: "M",
+                        label: "Mute"
+                    },
+                    {
+                        shortcut: "X",
+                        label: "Mic"
                     }
-                }
+                ]
             }
 
             Column {
@@ -1271,12 +1247,21 @@ FocusScope {
                     }
                 }
 
-                Text {
+                KeyHintStrip {
+                    width: 225
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "[]  PREV / NEXT · ENTER OPEN"
-                    color: root.theme.textMuted
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(9)
+                    runtime: root.runtime
+                    theme: root.theme
+                    hints: [
+                        {
+                            shortcut: "[ / ]",
+                            label: "Tray"
+                        },
+                        {
+                            shortcut: "ENTER",
+                            label: "Open"
+                        }
+                    ]
                 }
             }
         }
@@ -1594,6 +1579,9 @@ FocusScope {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
                         themePanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_X && themePanel.operationRunning) {
+                        themePanel.cancelOperation();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         themePanel.activateSelected();

@@ -25,50 +25,10 @@ Column {
         firstEventIndex = Math.max(0, Math.min(firstEventIndex + amount, Math.max(0, agenda.events.length - pageSize)));
     }
 
-    Row {
-        id: header
-        width: parent.width
-        spacing: panel.theme.spacing2
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "AGENDA · NEXT 7 DAYS"
-            color: panel.theme.accent
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontPanelEyebrow
-            font.weight: Font.DemiBold
-        }
-        Item {
-            width: Math.max(0, header.width - header.children[0].implicitWidth - count.implicitWidth - calendarButton.width - header.spacing * 3)
-            height: 1
-        }
-        Text {
-            id: count
-            anchors.verticalCenter: parent.verticalCenter
-            text: panel.agenda.loading ? "SYNCING" : panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "SET UP"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
-        }
-        ShellAction {
-            id: calendarButton
-            width: panel.agenda.calendars.length > 0 ? 32 : 0
-            height: 30
-            visible: width > 0
-            iconOnly: true
-            icon: "󰃀"
-            title: "Choose calendars (C)"
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            onActivated: panel.calendarsRequested()
-        }
-    }
-
     ShellSurface {
         id: body
         width: parent.width
-        height: panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(panel.pageSize, panel.agenda.events.length) * 67 + panel.theme.spacing2 : (panel.featured ? 169 : 72)
+        height: (panel.agenda.events.length > 0 && panel.agenda.configured && panel.agenda.errorMessage.length === 0 ? Math.min(panel.pageSize, panel.agenda.events.length) * 67 + panel.theme.spacing2 : (panel.featured ? 169 : 72)) + header.height + panel.theme.spacing2
         theme: panel.theme
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
@@ -78,10 +38,56 @@ Column {
         luminousColor: panel.theme.accent
         clip: true
 
+        Row {
+            id: header
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                margins: panel.theme.spacing3
+            }
+            spacing: panel.theme.spacing2
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "AGENDA · NEXT 7 DAYS"
+                color: panel.theme.accent
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+            }
+            Item {
+                width: Math.max(0, header.width - header.children[0].implicitWidth - count.implicitWidth - calendarButton.width - header.spacing * 3)
+                height: 1
+            }
+            Text {
+                id: count
+                anchors.verticalCenter: parent.verticalCenter
+                text: panel.agenda.loading ? "SYNCING" : panel.agenda.configured ? panel.agenda.events.length + " EVENTS" : "SET UP"
+                color: panel.theme.textMuted
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontSize(10)
+            }
+            ShellAction {
+                id: calendarButton
+                width: panel.agenda.calendars.length > 0 ? 32 : 0
+                height: 30
+                visible: width > 0
+                iconOnly: true
+                icon: "󰃀"
+                title: "Choose calendars (C)"
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                onActivated: panel.calendarsRequested()
+            }
+        }
+
         Column {
             anchors {
                 fill: parent
                 margins: panel.theme.spacing2 / 2
+                topMargin: header.height + panel.theme.spacing3
             }
             visible: panel.agenda.configured && panel.agenda.errorMessage.length === 0
             spacing: 0
@@ -196,7 +202,7 @@ Column {
 
     Text {
         visible: panel.agenda.events.length > panel.pageSize
-        text: (panel.visibleStart + 1) + "–" + panel.visibleEnd + " / " + panel.agenda.events.length + "  ·  U/D SCROLL"
+        text: (panel.visibleStart + 1) + "–" + panel.visibleEnd + " / " + panel.agenda.events.length + ""
         color: panel.theme.textMuted
         font.family: panel.runtime.fontMono
         font.pixelSize: panel.theme.fontSize(10)
