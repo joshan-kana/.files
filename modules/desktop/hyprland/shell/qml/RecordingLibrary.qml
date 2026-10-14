@@ -415,12 +415,32 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
         }
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "J/K SELECT · ENTER OPEN · D TRASH · R REFRESH · ESC BACK"
-            color: library.theme.textMuted
-            font.family: library.runtime.fontMono
-            font.pixelSize: library.theme.fontKeyHint
+        KeyHintStrip {
+            width: parent.width
+            runtime: library.runtime
+            theme: library.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Select"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Open"
+                },
+                {
+                    shortcut: "D",
+                    label: "Trash"
+                },
+                {
+                    shortcut: "R",
+                    label: "Refresh"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
+                }
+            ]
         }
     }
 }
