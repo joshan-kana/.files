@@ -81,6 +81,16 @@ PanelWindow {
         });
     }
 
+    function onLoaderReady(loader: Loader): void {
+        geometryUpdate.restart();
+        if (activeLoader !== loader || !expansionState.hasCurrent)
+            return;
+        Qt.callLater(() => {
+            if (host.expansionState.hasCurrent && host.activeLoader === loader && loader.item)
+                (loader.item as Item).forceActiveFocus();
+        });
+    }
+
     onCurrentComponentChanged: presentComponent(currentComponent)
     Component.onCompleted: {
         presentComponent(currentComponent);
@@ -517,7 +527,7 @@ PanelWindow {
                         easing.bezierCurve: host.activeSlot === 0 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
-                onLoaded: geometryUpdate.restart()
+                onLoaded: host.onLoaderReady(contentLoaderA)
             }
 
             Loader {
@@ -538,7 +548,7 @@ PanelWindow {
                         easing.bezierCurve: host.activeSlot === 1 ? host.motion.enterCurve : host.motion.exitCurve
                     }
                 }
-                onLoaded: geometryUpdate.restart()
+                onLoaded: host.onLoaderReady(contentLoaderB)
             }
         }
 
