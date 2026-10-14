@@ -73,6 +73,7 @@ ShellSurface {
         width: hero.theme.fontSize(26)
         anchors {
             left: parent.left
+            leftMargin: hero.theme.spacing4 + hero.theme.spacing2
             verticalCenter: parent.verticalCenter
         }
         text: hero.glyph
