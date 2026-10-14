@@ -16,6 +16,15 @@ FocusScope {
     required property NightLightState nightLight
     required property ResourceState resourceState
     required property PowerProfileState powerProfile
+    required property bool wallpaperSpectrumEnabled
+    required property bool musicReactiveEnabled
+    required property bool barVisible
+    required property bool windowTransparencyEnabled
+
+    signal wallpaperSpectrumToggleRequested
+    signal musicReactiveToggleRequested
+    signal barToggleRequested
+    signal windowTransparencyToggleRequested
 
     property bool engaged: false
     property bool mixerOpen: false
@@ -247,6 +256,10 @@ FocusScope {
                         {
                             key: "Q / I / R",
                             action: "Toggle Notifications / Stay awake / Motion"
+                        },
+                        {
+                            key: "SHIFT+G/N/B/O",
+                            action: "Wallpaper spectrum / Reactive shell / Bar / Window transparency"
                         },
                         {
                             key: "T / SHIFT+T / ALT+T",
@@ -778,6 +791,80 @@ FocusScope {
                     active: root.powerProfile.current === "power-saver"
                     activeColor: root.theme.warning
                     onActivated: root.powerProfile.cycle()
+                }
+            }
+
+            Row {
+                width: parent.width
+                Text {
+                    text: "VISUAL MODES"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.1
+                }
+            }
+
+            Grid {
+                id: visualModeStrip
+                x: root.theme.spacing2
+                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
+                columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
+                columnSpacing: root.theme.spacing2
+                rowSpacing: root.theme.spacing2
+                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰸉"
+                    title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
+                    shortcut: "SHIFT+G"
+                    active: root.wallpaperSpectrumEnabled
+                    onActivated: root.wallpaperSpectrumToggleRequested()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "♫"
+                    title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
+                    shortcut: "SHIFT+N"
+                    active: root.musicReactiveEnabled
+                    onActivated: root.musicReactiveToggleRequested()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰍹"
+                    title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
+                    shortcut: "SHIFT+O"
+                    active: root.windowTransparencyEnabled
+                    onActivated: root.windowTransparencyToggleRequested()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰀻"
+                    title: root.barVisible ? "Bar visible" : "Bar hidden"
+                    shortcut: "SHIFT+B"
+                    active: !root.barVisible
+                    onActivated: root.barToggleRequested()
                 }
             }
 
@@ -1698,8 +1785,20 @@ FocusScope {
                     else
                         root.nightLight.toggle();
                     event.accepted = true;
+                } else if (event.key === Qt.Key_O && (event.modifiers & Qt.ShiftModifier)) {
+                    root.windowTransparencyToggleRequested();
+                    event.accepted = true;
                 } else if (event.key === Qt.Key_O && root.powerProfile.available) {
                     root.powerProfile.cycle();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_N && (event.modifiers & Qt.ShiftModifier)) {
+                    root.musicReactiveToggleRequested();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_B && (event.modifiers & Qt.ShiftModifier)) {
+                    root.barToggleRequested();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_G && (event.modifiers & Qt.ShiftModifier)) {
+                    root.wallpaperSpectrumToggleRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N) {
                     root.openNetwork();
