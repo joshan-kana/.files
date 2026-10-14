@@ -547,6 +547,7 @@ FocusScope {
 
                 ShellAction {
                     id: appearanceButton
+                    headerEntry: true
                     anchors.verticalCenter: parent.verticalCenter
                     width: controlsHeading.entryWidth
                     height: 36
@@ -562,6 +563,7 @@ FocusScope {
                 }
                 ShellAction {
                     id: wallpaperButton
+                    headerEntry: true
                     anchors.verticalCenter: parent.verticalCenter
                     width: controlsHeading.entryWidth
                     height: 36
@@ -577,6 +579,7 @@ FocusScope {
                 }
                 ShellAction {
                     id: sessionButton
+                    headerEntry: true
                     anchors.verticalCenter: parent.verticalCenter
                     width: controlsHeading.entryWidth
                     height: 36
@@ -703,7 +706,7 @@ FocusScope {
                 id: actionStrip
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 600 || root.theme.textScale >= 1.5 ? 3 : 6
+                columns: width < 560 || root.theme.textScale >= 1.5 ? 2 : 4
                 columnSpacing: root.theme.spacing2
                 rowSpacing: root.theme.spacing2
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
@@ -715,7 +718,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                    title: root.notificationState.silent ? "Alerts paused" : "Alerts"
+                    title: root.notificationState.silent ? "Silent" : "Alerts"
                     shortcut: "Q"
                     active: root.notificationState.silent
                     activeColor: root.theme.warning
@@ -741,38 +744,10 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    icon: root.motion.enabled ? "󰔎" : "󰾅"
-                    title: root.motion.enabled ? "Animations" : "Motion off"
-                    shortcut: "R"
-                    active: !root.motion.enabled
-                    onActivated: root.motion.toggle()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth
-                    height: 64
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
                     icon: "󰍛"
                     title: "Resources"
                     shortcut: "G"
                     onActivated: root.openResources()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth
-                    height: 64
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.nightLight.active ? "󰖔" : "󰖙"
-                    title: root.nightLight.supported ? "Night " + root.nightLight.temperature + "K" : "Night unavailable"
-                    shortcut: "T"
-                    active: root.nightLight.active
-                    activeColor: root.theme.warning
-                    enabled: root.nightLight.supported && !root.nightLight.busy
-                    onActivated: root.nightLight.toggle()
                 }
 
                 QuickSettingChip {
@@ -807,7 +782,7 @@ FocusScope {
                 id: visualModeStrip
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
+                columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 3
                 columnSpacing: root.theme.spacing2
                 rowSpacing: root.theme.spacing2
                 readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
@@ -862,6 +837,33 @@ FocusScope {
                     shortcut: "SHIFT+B"
                     active: !root.barVisible
                     onActivated: root.barToggleRequested()
+                }
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: root.motion.enabled ? "󰔎" : "󰾅"
+                    title: root.motion.enabled ? "Animations" : "Motion off"
+                    shortcut: "R"
+                    active: !root.motion.enabled
+                    onActivated: root.motion.toggle()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 64
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: root.nightLight.active ? "󰖔" : "󰖙"
+                    title: root.nightLight.supported ? "Night " + root.nightLight.temperature + "K" : "Night unavailable"
+                    shortcut: "T"
+                    active: root.nightLight.active
+                    activeColor: root.theme.warning
+                    enabled: root.nightLight.supported && !root.nightLight.busy
+                    onActivated: root.nightLight.toggle()
                 }
             }
 
