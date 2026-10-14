@@ -72,13 +72,15 @@ PanelWindow {
             incoming.opacity = 1;
         }
         geometryUpdate.restart();
-        // FocusScope descendants request focus as they are constructed, but
-        // Loader can replace that focus while finishing the load. Restore it
-        // once the destination is fully attached to the active loader.
-        Qt.callLater(() => {
-            if (host.expansionState.hasCurrent && host.currentComponent === next && host.loadedContent)
-                host.loadedContent.forceActiveFocus();
-        });
+        // A tab switch may displace the destination's nested keyboard sink.
+        // Do not defer this work on a closed-to-open transition: the view's
+        // FocusScope already requests focus when it becomes engaged.
+        if (outgoing) {
+            Qt.callLater(() => {
+                if (host.expansionState.hasCurrent && host.currentComponent === next && host.loadedContent)
+                    host.loadedContent.forceActiveFocus();
+            });
+        }
     }
 
     function onLoaderReady(loader: Loader): void {
@@ -94,13 +96,12 @@ PanelWindow {
     onCurrentComponentChanged: presentComponent(currentComponent)
     Component.onCompleted: {
         presentComponent(currentComponent);
-        // Incubate all primary tabs offscreen, retaining them across hub closure.
+        // Incubate the other primary tabs even if a panel opens during startup.
+        // Their content stays cached across hub closure and tab changes.
         Qt.callLater(() => {
-            if (!host.expansionState.hasCurrent) {
-                contentLoaderA.sourceComponent = calendarComponent;
-                contentLoaderB.sourceComponent = systemComponent;
-                contentLoaderC.sourceComponent = activityComponent;
-            }
+            contentLoaderA.sourceComponent = calendarComponent;
+            contentLoaderB.sourceComponent = systemComponent;
+            contentLoaderC.sourceComponent = activityComponent;
         });
     }
 
