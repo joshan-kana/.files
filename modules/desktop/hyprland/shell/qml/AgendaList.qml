@@ -11,7 +11,7 @@ Column {
     required property string startDate
     property int firstEventIndex: 0
     property bool featured: false
-    readonly property int pageSize: 4
+    readonly property int pageSize: featured ? 6 : 4
     readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - pageSize))
     readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + pageSize)
     signal calendarsRequested

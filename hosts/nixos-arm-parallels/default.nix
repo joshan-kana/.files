@@ -1,5 +1,6 @@
 {
   config,
+  editScope,
   lib,
   moduleRegistry,
   pkgs,
@@ -18,15 +19,16 @@
     audio
     virtualisation
     desktopApps
-    desktop
     ;
 
   imports = [
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
-  dotfiles = {
-    defaults.terminal = "alacritty";
+  dotfiles.defaults.terminal = "alacritty";
+
+  desktop = editScope moduleRegistry.desktop {
+    hyprland.shell.nightLightBackend = "shader";
   };
 
   hardware = import ./hardware.nix;
