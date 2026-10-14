@@ -36,10 +36,9 @@ PanelWindow {
 
     function presentComponent(next: Component): void {
         if (!next) {
-            contentTransition.stop();
             contentEnter.stop();
-            contentLoaderA.sourceComponent = null;
-            contentLoaderB.sourceComponent = null;
+            if (activeLoader)
+                activeLoader.opacity = 0;
             activeSlot = -1;
             return;
         }
@@ -47,10 +46,10 @@ PanelWindow {
         if (activeLoader && activeLoader.sourceComponent === next)
             return;
 
-        const incoming = activeSlot === 0 ? contentLoaderB : contentLoaderA;
+        const cached = contentLoaderA.sourceComponent === next ? contentLoaderA : contentLoaderB.sourceComponent === next ? contentLoaderB : null;
+        const incoming = cached && cached !== activeLoader ? cached : activeSlot === 0 ? contentLoaderB : contentLoaderA;
         const previous = activeLoader;
         const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
-        contentTransition.stop();
         contentEnter.stop();
         incoming.opacity = 0;
         // Enable the destination before constructing its FocusScope. Its
@@ -58,10 +57,8 @@ PanelWindow {
         activeSlot = incoming === contentLoaderA ? 0 : 1;
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
-        if (!outgoing && previous) {
+        if (!outgoing && previous)
             previous.opacity = 0;
-            previous.sourceComponent = null;
-        }
         if (outgoing) {
             // Overlap just the tails of the fades: a fully sequential handoff
             // leaves an empty squircle for a frame, while a full crossfade
@@ -71,7 +68,6 @@ PanelWindow {
                 contentEnter.restart();
             else
                 incoming.opacity = 1;
-            contentTransition.restart();
         } else {
             incoming.opacity = 1;
         }
@@ -86,7 +82,17 @@ PanelWindow {
     }
 
     onCurrentComponentChanged: presentComponent(currentComponent)
-    Component.onCompleted: presentComponent(currentComponent)
+    Component.onCompleted: {
+        presentComponent(currentComponent);
+        // Incubate the two most-used tabs in the background, before the first
+        // interaction. Keep them alive across close/reopen until replaced.
+        Qt.callLater(() => {
+            if (!host.expansionState.hasCurrent) {
+                contentLoaderA.sourceComponent = calendarComponent;
+                contentLoaderB.sourceComponent = systemComponent;
+            }
+        });
+    }
 
     Timer {
         id: contentEnter
@@ -98,15 +104,6 @@ PanelWindow {
         }
     }
 
-    Timer {
-        id: contentTransition
-        interval: Math.max(1, host.motion.morph)
-        repeat: false
-        onTriggered: {
-            const outgoing = host.activeSlot === 0 ? contentLoaderB : contentLoaderA;
-            outgoing.sourceComponent = null;
-        }
-    }
     readonly property Component currentComponent: {
         switch (expansionState.currentName) {
         case "media":
@@ -494,19 +491,20 @@ PanelWindow {
                 bottomMargin: host.theme.spacing3
             }
             clip: true
-            // Keep the outgoing view until the new view is loaded and overlap
-            // only the fade tails while the squircle morphs.
+            // Retain the last two views while the hub is open, so returning to
+            // Home or Controls does not reconstruct their expensive models.
             // Scaling only compensates while the animated viewport narrows.
             contentWidth: width
-            contentHeight: host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : height
+            contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : 0)
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
 
             Loader {
                 id: contentLoaderA
+                asynchronous: true
                 readonly property Item contentItem: item as Item
                 width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
+                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
                 x: (contentViewport.width - width * scale) / 2
@@ -524,9 +522,10 @@ PanelWindow {
 
             Loader {
                 id: contentLoaderB
+                asynchronous: true
                 readonly property Item contentItem: item as Item
                 width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
-                height: Math.max(contentViewport.height, contentItem ? contentItem.implicitHeight : 0)
+                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
                 x: (contentViewport.width - width * scale) / 2
