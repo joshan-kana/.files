@@ -9,12 +9,13 @@ FocusScope {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property AppearancePreferences appearance
 
     property bool engaged: false
     property bool returnToControls: false
     property bool helpOpen: false
-    property string visualizerMode: "bars"
-    property bool lyricsVisible: false
+    readonly property string visualizerMode: appearance.mediaVisualizerMode
+    readonly property bool lyricsVisible: appearance.mediaLyricsVisible
     property bool scrubbing: false
     property real scrubFraction: 0
     readonly property var helpBindings: [
@@ -72,7 +73,6 @@ FocusScope {
         } else {
             helpOpen = false;
             scrubbing = false;
-            lyricsVisible = false;
         }
     }
 
@@ -90,7 +90,11 @@ FocusScope {
     }
 
     function toggleVisualizer(): void {
-        visualizerMode = visualizerMode === "bars" ? "curve" : "bars";
+        appearance.toggleMediaVisualizer();
+    }
+
+    function toggleLyrics(): void {
+        appearance.toggleMediaLyrics();
     }
 
     function displayedPosition(): real {
@@ -527,7 +531,7 @@ FocusScope {
                         title: content.lyricsVisible ? "LYRICS ON" : "LYRICS OFF"
                         shortcut: "Y"
                         active: content.lyricsVisible
-                        onActivated: content.lyricsVisible = !content.lyricsVisible
+                        onActivated: content.toggleLyrics()
                     }
 
                     ShellAction {
@@ -599,7 +603,7 @@ FocusScope {
                     content.toggleVisualizer();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Y) {
-                    content.lyricsVisible = !content.lyricsVisible;
+                    content.toggleLyrics();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_S) {
                     content.media.toggleShuffle();
