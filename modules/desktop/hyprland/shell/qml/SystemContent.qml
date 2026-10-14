@@ -543,15 +543,12 @@ FocusScope {
                 height: 40
                 spacing: root.theme.spacing2
 
-                Item {
-                    width: Math.max(0, controlsHeading.width - appearanceButton.width - wallpaperButton.width - sessionButton.width - helpButton.width - controlsHeading.spacing * 4)
-                    height: 1
-                }
+                readonly property real entryWidth: Math.max(1, (width - helpButton.width - spacing * 3) / 3)
 
                 ShellAction {
                     id: appearanceButton
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 102
+                    width: controlsHeading.entryWidth
                     height: 36
                     runtime: root.runtime
                     theme: root.theme
@@ -566,7 +563,7 @@ FocusScope {
                 ShellAction {
                     id: wallpaperButton
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 123
+                    width: controlsHeading.entryWidth
                     height: 36
                     runtime: root.runtime
                     theme: root.theme
@@ -581,7 +578,7 @@ FocusScope {
                 ShellAction {
                     id: sessionButton
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 105
+                    width: controlsHeading.entryWidth
                     height: 36
                     runtime: root.runtime
                     theme: root.theme
