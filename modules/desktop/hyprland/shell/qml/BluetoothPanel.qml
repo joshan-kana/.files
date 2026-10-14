@@ -470,70 +470,44 @@ Item {
             elide: Text.ElideRight
         }
 
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing3
-
-            Text {
-                text: "↑/↓  SELECT"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "ENTER  LINK"
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "B  RADIO"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "D  SCAN"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-        }
-
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing3
-
-            Text {
-                text: "P  PAIR"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "T  TRUST"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: panel.forgetAddress.length > 0 ? "F  CONFIRM" : "F  FORGET"
-                color: panel.forgetAddress.length > 0 ? panel.theme.warning : panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
-
-            Text {
-                text: "ESC  BACK"
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-            }
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Select"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Link"
+                },
+                {
+                    shortcut: "B",
+                    label: "Radio"
+                },
+                {
+                    shortcut: "D",
+                    label: "Scan"
+                },
+                {
+                    shortcut: "P",
+                    label: "Pair"
+                },
+                {
+                    shortcut: "T",
+                    label: "Trust"
+                },
+                {
+                    shortcut: "F",
+                    label: panel.forgetAddress.length > 0 ? "Confirm" : "Forget"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
+                }
+            ]
         }
     }
 }

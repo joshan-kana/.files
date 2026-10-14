@@ -363,11 +363,24 @@ Item {
             }
         }
 
-        Text {
-            text: "C cores/history · R refresh · ESC back · sampled every 2s while open; disk/sensors every 10s"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(10)
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "C",
+                    label: "Cores/history"
+                },
+                {
+                    shortcut: "R",
+                    label: "Refresh"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
+                }
+            ]
         }
     }
 }
