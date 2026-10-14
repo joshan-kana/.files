@@ -7,6 +7,7 @@
 }:
 
 let
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   chromiumSystemTheme = 2; # 0 = Classic, 1 = GTK, 2 = Qt
   braveWithSystemTheme = pkgs.brave.overrideAttrs (old: {
     postInstall = (old.postInstall or "") + ''
@@ -18,7 +19,7 @@ let
 in
 {
   brave = _: {
-    environment.systemPackages = [ braveWithSystemTheme ];
+    environment.systemPackages = [ (if isLinux then braveWithSystemTheme else pkgs.brave) ];
   };
 
   bitwarden = _: {
@@ -47,10 +48,12 @@ in
     };
 
   chromium = _: {
-    environment.systemPackages = [ pkgs.chromium ];
-    programs.chromium = {
-      enable = true;
-      initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
+    config = lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.chromium ];
+      programs.chromium = {
+        enable = true;
+        initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
+      };
     };
   };
 
@@ -209,7 +212,6 @@ in
         };
       }
     );
-
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (
