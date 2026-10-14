@@ -30,6 +30,7 @@ PanelWindow {
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
+    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
     readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
 
@@ -430,15 +431,17 @@ PanelWindow {
                             shortcut: "SHIFT+Z",
                             label: "Previous"
                         },
+                    ].concat(host.detailVisible ? [] : [
                         {
                             shortcut: "ESC",
                             label: "Back / Close"
-                        },
+                        }
+                    ]).concat([
                         {
                             shortcut: "SHIFT+ESC",
                             label: "Close"
                         }
-                    ]
+                    ])
                     delegate: Row {
                         id: navigationHint
                         required property var modelData
