@@ -22,11 +22,10 @@ PanelWindow {
     property bool closing: false
     property bool themeTerminalActive: false
 
-    // Keep the outgoing component alive while the new view enters. Replacing
-    // one Loader destroys the old view instantly, causing a hard content cut
-    // even though the surrounding surface continues to morph.
+    // One prepared view per primary tab. Detail views share a fourth loader;
+    // primary navigation must never evict its neighbour or block on creation.
     property int activeSlot: -1
-    readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : null
+    readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
@@ -46,15 +45,14 @@ PanelWindow {
         if (activeLoader && activeLoader.sourceComponent === next)
             return;
 
-        const cached = contentLoaderA.sourceComponent === next ? contentLoaderA : contentLoaderB.sourceComponent === next ? contentLoaderB : null;
-        const incoming = cached && cached !== activeLoader ? cached : activeSlot === 0 ? contentLoaderB : contentLoaderA;
+        const incoming = next === calendarComponent ? contentLoaderA : next === systemComponent ? contentLoaderB : next === activityComponent ? contentLoaderC : contentLoaderD;
         const previous = activeLoader;
         const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
         contentEnter.stop();
         incoming.opacity = 0;
         // Enable the destination before constructing its FocusScope. Its
         // onEngagedChanged requests keyboard focus during instantiation.
-        activeSlot = incoming === contentLoaderA ? 0 : 1;
+        activeSlot = incoming === contentLoaderA ? 0 : incoming === contentLoaderB ? 1 : incoming === contentLoaderC ? 2 : 3;
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
         if (!outgoing && previous)
@@ -94,12 +92,12 @@ PanelWindow {
     onCurrentComponentChanged: presentComponent(currentComponent)
     Component.onCompleted: {
         presentComponent(currentComponent);
-        // Incubate the two most-used tabs in the background, before the first
-        // interaction. Keep them alive across close/reopen until replaced.
+        // Incubate all primary tabs offscreen, retaining them across hub closure.
         Qt.callLater(() => {
             if (!host.expansionState.hasCurrent) {
                 contentLoaderA.sourceComponent = calendarComponent;
                 contentLoaderB.sourceComponent = systemComponent;
+                contentLoaderC.sourceComponent = activityComponent;
             }
         });
     }
@@ -549,6 +547,48 @@ PanelWindow {
                     }
                 }
                 onLoaded: host.onLoaderReady(contentLoaderB)
+            }
+
+            Loader {
+                id: contentLoaderC
+                asynchronous: true
+                readonly property Item contentItem: item as Item
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                transformOrigin: Item.TopLeft
+                scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                x: (contentViewport.width - width * scale) / 2
+                opacity: 0
+                enabled: host.activeSlot === 2
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: host.activeSlot === 2 ? host.motion.contentFade : host.motion.effectsFast
+                        easing.type: host.motion.enterType
+                        easing.bezierCurve: host.activeSlot === 2 ? host.motion.enterCurve : host.motion.exitCurve
+                    }
+                }
+                onLoaded: host.onLoaderReady(contentLoaderC)
+            }
+
+            Loader {
+                id: contentLoaderD
+                asynchronous: true
+                readonly property Item contentItem: item as Item
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                transformOrigin: Item.TopLeft
+                scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                x: (contentViewport.width - width * scale) / 2
+                opacity: 0
+                enabled: host.activeSlot === 3
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: host.activeSlot === 3 ? host.motion.contentFade : host.motion.effectsFast
+                        easing.type: host.motion.enterType
+                        easing.bezierCurve: host.activeSlot === 3 ? host.motion.enterCurve : host.motion.exitCurve
+                    }
+                }
+                onLoaded: host.onLoaderReady(contentLoaderD)
             }
         }
 
