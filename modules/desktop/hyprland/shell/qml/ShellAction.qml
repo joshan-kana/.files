@@ -15,9 +15,10 @@ Item {
     property color activeColor: theme.accent
     property bool compact: false
     property bool horizontalCompact: false
+    property bool headerEntry: false
     property bool iconOnly: false
     property bool iconHint: false
-    property int horizontalPadding: compact ? theme.spacing3 : theme.spacing4
+    property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
     signal activated
 
