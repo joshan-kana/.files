@@ -22,11 +22,16 @@ ShellRoot {
     readonly property WeatherState weatherRef: weather
     readonly property NotificationState notificationsRef: notifications
 
-    property bool wallpaperSpectrumEnabled: false
-    property bool musicReactiveEnabled: false
+    readonly property bool wallpaperSpectrumEnabled: appearance.wallpaperSpectrumEnabled
+    readonly property bool musicReactiveEnabled: appearance.musicReactiveEnabled
 
     function toggleBar(): void {
-        ambientBar.shown = !ambientBar.shown;
+        appearance.toggleBar();
+    }
+
+    AppearancePreferences {
+        id: appearance
+        runtime: runtime
     }
 
     RuntimeConfig {
@@ -71,6 +76,7 @@ ShellRoot {
         id: mediaExpansionComponent
 
         MediaContent {
+            appearance: appearance
             media: root.mediaRef
             spectrum: root.spectrumRef
             runtime: root.runtimeRef
@@ -135,7 +141,15 @@ ShellRoot {
             nightLight: root.nightLightRef
             resourceState: root.resourcesRef
             powerProfile: root.powerProfileRef
+            wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
+            musicReactiveEnabled: root.musicReactiveEnabled
+            barVisible: appearance.barVisible
+            windowTransparencyEnabled: appearance.windowTransparencyEnabled
             engaged: expansionState.hasCurrent && expansionState.currentName === "system"
+            onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
+            onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
+            onBarToggleRequested: appearance.toggleBar()
+            onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
             requestedView: expansionState.currentView
             onCloseRequested: expansionState.close()
             onMediaRequested: actions.toggleMedia()
@@ -236,6 +250,7 @@ ShellRoot {
 
     AmbientBar {
         id: ambientBar
+        shown: appearance.barVisible
         runtime: runtime
         theme: theme
         motion: motion
@@ -331,7 +346,7 @@ ShellRoot {
         commands: [
             {
                 id: "media.wallpaperSpectrum",
-                name: "Toggle Wallpaper Spectrum",
+                name: root.wallpaperSpectrumEnabled ? "Disable Wallpaper Spectrum" : "Enable Wallpaper Spectrum",
                 description: "Show the live audio spectrum over the wallpaper",
                 icon: "audio-x-generic",
                 key: runtime.shortcut("media.wallpaperSpectrum"),
@@ -339,7 +354,7 @@ ShellRoot {
             },
             {
                 id: "media.reactiveShell",
-                name: "Toggle Music-reactive Shell",
+                name: root.musicReactiveEnabled ? "Disable Music-reactive Shell" : "Enable Music-reactive Shell",
                 description: "Light up shell surfaces using live music frequencies",
                 icon: "audio-x-generic",
                 key: runtime.shortcut("media.reactiveShell"),
@@ -659,8 +674,8 @@ ShellRoot {
         motion: motion
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
         onRecordingSelectionRequested: screenshotPicker.begin(false, screens.focusedScreen, "record")
-        onWallpaperSpectrumToggleRequested: root.wallpaperSpectrumEnabled = !root.wallpaperSpectrumEnabled
-        onMusicReactiveToggleRequested: root.musicReactiveEnabled = !root.musicReactiveEnabled
+        onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
+        onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
     }
 
     GlobalShortcut {
@@ -765,14 +780,14 @@ ShellRoot {
         appid: "linux-desktop"
         name: "wallpaper-spectrum"
         description: "Toggle live wallpaper music spectrum"
-        onPressed: root.wallpaperSpectrumEnabled = !root.wallpaperSpectrumEnabled
+        onPressed: appearance.toggleWallpaperSpectrum()
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "music-reactive"
         description: "Toggle music-reactive desktop surfaces"
-        onPressed: root.musicReactiveEnabled = !root.musicReactiveEnabled
+        onPressed: appearance.toggleMusicReactive()
     }
 
     GlobalShortcut {
@@ -822,6 +837,13 @@ ShellRoot {
         name: "theme"
         description: "Open theme picker"
         onPressed: actions.showTheme()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "window-effects"
+        description: "Toggle transparent windows"
+        onPressed: appearance.toggleWindowTransparency()
     }
 
     GlobalShortcut {
@@ -1169,6 +1191,14 @@ ShellRoot {
 
         function toggleBar(): void {
             root.toggleBar();
+        }
+
+        function toggleWindowEffects(): void {
+            appearance.toggleWindowTransparency();
+        }
+
+        function windowEffectsEnabled(): bool {
+            return appearance.windowTransparencyEnabled;
         }
 
         function idleInhibited(): bool {
