@@ -79,7 +79,7 @@ Item {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
                 leftMargin: tile.theme.spacing4
-                rightMargin: tile.theme.spacing4
+                rightMargin: tile.theme.spacing4 + shortcutHint.implicitWidth + tile.theme.spacing2
             }
             spacing: tile.theme.spacing2
 
@@ -115,16 +115,19 @@ Item {
             }
         }
 
-        KeyChord {
+        KeyHint {
+            id: shortcutHint
+            visible: tile.shortcut.length > 0
             anchors {
                 top: parent.top
                 right: parent.right
-                margins: tile.theme.spacing4
+                margins: tile.theme.spacing3
             }
             shortcut: tile.shortcut
-            fontFamily: tile.runtime.fontMono
-            textColor: tile.foreground
-            fontSize: tile.theme.fontKeyHint
+            compact: true
+            runtime: tile.runtime
+            theme: tile.theme
+            emphasized: tile.connected
         }
     }
 

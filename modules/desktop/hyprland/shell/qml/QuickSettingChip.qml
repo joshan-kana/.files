@@ -46,17 +46,40 @@ Item {
             }
         }
 
+        // Tiles share the same two-row layout: glyph and keycap above the
+        // title. Neither the shortcut nor its placement is widget-specific.
         Column {
-            anchors.centerIn: parent
-            width: parent.width - chip.theme.spacing2 * 2
+            anchors {
+                fill: parent
+                margins: chip.theme.spacing2
+            }
             spacing: chip.theme.spacing1
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: chip.icon
-                color: chip.active ? chip.activeColor : chip.theme.textStrong
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: chip.theme.fontSize(21)
+            Item {
+                width: parent.width
+                height: Math.max(chip.theme.keycapHeight - 3, chip.theme.fontSize(21))
+                Text {
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                    }
+                    text: chip.icon
+                    color: chip.active ? chip.activeColor : chip.theme.textStrong
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: chip.theme.fontSize(20)
+                }
+                KeyHint {
+                    visible: chip.shortcut.length > 0
+                    anchors {
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    shortcut: chip.shortcut
+                    compact: true
+                    runtime: chip.runtime
+                    theme: chip.theme
+                    emphasized: chip.active
+                }
             }
 
             Text {
@@ -69,19 +92,6 @@ Item {
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
                 elide: Text.ElideRight
             }
-        }
-
-        KeyChord {
-            visible: chip.shortcut.length > 0
-            anchors {
-                top: parent.top
-                right: parent.right
-                margins: chip.theme.spacing4
-            }
-            shortcut: chip.shortcut
-            fontFamily: chip.runtime.fontMono
-            textColor: chip.theme.textMuted
-            fontSize: chip.theme.fontSize(8)
         }
     }
 
