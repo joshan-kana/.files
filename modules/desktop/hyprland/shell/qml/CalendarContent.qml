@@ -21,6 +21,15 @@ FocusScope {
     property int slideDirection: 1
     property real slideProgress: 1
     property bool sliding: false
+    property bool calendarPickerOpen: false
+    property int calendarPickerIndex: 0
+
+    function toggleCalendarAt(index: int): void {
+        if (index < 0 || index >= agenda.calendars.length)
+            return;
+        const source = agenda.calendars[index];
+        agenda.setCalendarEnabled(source.id, !source.enabled);
+    }
 
     signal closeRequested
     signal forecastRequested
@@ -35,6 +44,7 @@ FocusScope {
 
     onEngagedChanged: {
         if (engaged) {
+            calendarPickerOpen = false;
             // Reopen directly on today; only deliberate month changes should slide.
             monthAnimation.stop();
             sliding = false;
@@ -129,7 +139,26 @@ FocusScope {
         anchors.fill: parent
         focus: true
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape) {
+            if (calendar.calendarPickerOpen) {
+                if (event.key === Qt.Key_Escape || event.key === Qt.Key_C) {
+                    calendar.calendarPickerOpen = false;
+                } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                    calendar.calendarPickerIndex = Math.min(agenda.calendars.length - 1, calendar.calendarPickerIndex + 1);
+                } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                    calendar.calendarPickerIndex = Math.max(0, calendar.calendarPickerIndex - 1);
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                    calendar.toggleCalendarAt(calendar.calendarPickerIndex);
+                } else {
+                    return;
+                }
+                event.accepted = true;
+                return;
+            }
+            if (event.key === Qt.Key_C && agenda.calendars.length > 0) {
+                calendar.calendarPickerIndex = 0;
+                calendar.calendarPickerOpen = true;
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
                 calendar.closeRequested();
                 event.accepted = true;
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_PageUp) {
@@ -232,6 +261,10 @@ FocusScope {
                 agenda: agenda
                 startDate: calendar.selectedDateKey
                 featured: true
+                onCalendarsRequested: {
+                    calendar.calendarPickerIndex = 0;
+                    calendar.calendarPickerOpen = !calendar.calendarPickerOpen;
+                }
             }
         }
 
@@ -363,7 +396,7 @@ FocusScope {
 
             Text {
                 id: dateCaption
-                text: "J/K months · H/L days · U/D events"
+                text: "J/K months · H/L days · U/D events · C calendars"
                 color: calendar.theme.textStrong
                 opacity: 0.85
                 font.family: calendar.runtime.fontMono
@@ -386,6 +419,126 @@ FocusScope {
                 theme: calendar.theme
                 motion: calendar.motion
                 onActivated: calendar.today()
+            }
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        z: 10
+        visible: calendar.calendarPickerOpen
+        onClicked: calendar.calendarPickerOpen = false
+    }
+
+    ShellSurface {
+        id: calendarPicker
+        z: 11
+        visible: calendar.calendarPickerOpen && agenda.calendars.length > 0
+        x: Math.max(0, parent.width - width - calendar.theme.spacing2)
+        y: featured.y + calendar.theme.spacing4
+        width: Math.min(330, parent.width - calendar.theme.spacing3 * 2)
+        height: pickerItems.implicitHeight + calendar.theme.spacing3 * 2
+        theme: calendar.theme
+        motion: calendar.motion
+        surfaceLayer: ShellSurface.Pane
+        cornerRadius: calendar.theme.radiusLarge
+        fillColor: calendar.theme.panelBase
+        elevated: true
+        outlined: true
+
+        Column {
+            id: pickerItems
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: parent.top
+                margins: calendar.theme.spacing3
+            }
+            spacing: calendar.theme.spacing2
+
+            Row {
+                width: parent.width
+                spacing: calendar.theme.spacing2
+                Text {
+                    text: "CALENDARS"
+                    font.family: calendar.runtime.fontMono
+                    font.pixelSize: calendar.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    color: calendar.theme.accent
+                }
+                Item {
+                    width: Math.max(0, parent.width - parent.children[0].implicitWidth - enabledLabel.implicitWidth - parent.spacing * 2)
+                    height: 1
+                }
+                Text {
+                    id: enabledLabel
+                    text: agenda.calendars.filter(source => source.enabled).length + " / " + agenda.calendars.length + " ON"
+                    font.family: calendar.runtime.fontMono
+                    font.pixelSize: calendar.theme.fontSize(10)
+                    color: calendar.theme.textMuted
+                }
+            }
+
+            Repeater {
+                model: agenda.calendars
+                delegate: ShellSurface {
+                    id: sourceRow
+                    required property var modelData
+                    required property int index
+                    readonly property bool highlighted: calendar.calendarPickerIndex === index
+                    width: pickerItems.width
+                    height: 40
+                    theme: calendar.theme
+                    motion: calendar.motion
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: calendar.theme.radiusMedium
+                    fillColor: highlighted ? calendar.theme.selectedTabFill : calendar.theme.expressiveSurface
+
+                    Row {
+                        anchors {
+                            fill: parent
+                            leftMargin: calendar.theme.spacing2
+                            rightMargin: calendar.theme.spacing2
+                        }
+                        spacing: calendar.theme.spacing2
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: sourceRow.modelData.enabled ? "󰄲" : "󰄱"
+                            color: sourceRow.modelData.enabled ? calendar.theme.accent : calendar.theme.textMuted
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: calendar.theme.fontSize(17)
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - calendar.theme.spacing2 - 34
+                            elide: Text.ElideRight
+                            text: sourceRow.modelData.name
+                            color: sourceRow.modelData.enabled ? calendar.theme.textStrong : calendar.theme.textMuted
+                            font.family: calendar.runtime.fontMono
+                            font.pixelSize: calendar.theme.fontSize(12)
+                        }
+                    }
+                    StateLayer {
+                        anchors.fill: parent
+                        theme: calendar.theme
+                        motion: calendar.motion
+                        cornerRadius: calendar.theme.radiusMedium
+                        Accessible.role: Accessible.CheckBox
+                        Accessible.name: sourceRow.modelData.name
+                        Accessible.checked: sourceRow.modelData.enabled
+                        onActivated: {
+                            calendar.calendarPickerIndex = sourceRow.index;
+                            calendar.toggleCalendarAt(sourceRow.index);
+                        }
+                    }
+                }
+            }
+
+            Text {
+                text: "J/K SELECT  ·  SPACE TOGGLE  ·  ESC CLOSE"
+                font.family: calendar.runtime.fontMono
+                font.pixelSize: calendar.theme.fontSize(9)
+                color: calendar.theme.textMuted
             }
         }
     }
