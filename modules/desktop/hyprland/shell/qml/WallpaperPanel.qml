@@ -600,7 +600,9 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                title: panel.resizeMode === "fit" ? "F  Fit" : "F  Fill"
+                title: panel.resizeMode === "fit" ? "Fit" : "Fill"
+                shortcut: "F"
+                horizontalCompact: true
                 onActivated: panel.toggleFit()
             }
 
@@ -611,7 +613,9 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                title: "R  Default"
+                title: "Default"
+                shortcut: "R"
+                horizontalCompact: true
                 enabled: !panel.busy
                 onActivated: panel.resetWallpaper()
             }
@@ -623,7 +627,9 @@ Item {
                 theme: panel.theme
                 motion: panel.motion
                 compact: true
-                title: "Enter  Apply"
+                title: "Apply"
+                shortcut: "ENTER"
+                horizontalCompact: true
                 enabled: panel.selectedPath().length > 0 && !panel.busy
                 onActivated: panel.applySelected()
             }

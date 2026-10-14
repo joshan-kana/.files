@@ -114,14 +114,15 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        KeyChord {
+        KeyHint {
             id: inlineHint
             visible: root.shortcut.length > 0
             anchors.verticalCenter: parent.verticalCenter
             shortcut: root.shortcut
-            fontFamily: root.runtime.fontMono
-            textColor: root.theme.textMuted
-            fontSize: root.theme.fontSize(9)
+            compact: true
+            runtime: root.runtime
+            theme: root.theme
+            emphasized: root.active
         }
     }
 
@@ -140,28 +141,30 @@ Item {
         font.pixelSize: root.theme.fontSize(17)
     }
 
-    KeyChord {
+    KeyHint {
         visible: !root.iconOnly && !root.horizontalCompact && root.shortcut.length > 0
         anchors {
             top: parent.top
             right: parent.right
-            margins: root.theme.spacing3
+            margins: root.theme.spacing2
         }
         shortcut: root.shortcut
-        fontFamily: root.runtime.fontMono
-        textColor: root.theme.textMuted
-        fontSize: root.theme.fontKeyHint
+        compact: true
+        runtime: root.runtime
+        theme: root.theme
+        emphasized: root.active
     }
 
-    KeyChord {
+    KeyHint {
         visible: root.iconOnly && root.iconHint && root.shortcut.length > 0
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 3
+        anchors.bottomMargin: 2
         shortcut: root.shortcut
-        fontFamily: root.runtime.fontMono
-        textColor: root.theme.textMuted
-        fontSize: root.theme.fontSize(8)
+        compact: true
+        runtime: root.runtime
+        theme: root.theme
+        emphasized: root.active
     }
 
     StateLayer {

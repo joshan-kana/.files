@@ -649,37 +649,31 @@ PanelWindow {
                 font.letterSpacing: 1.1
             }
 
-            Row {
+            KeyHintStrip {
                 id: footer
-                anchors {
-                    right: parent.right
-                    bottom: parent.bottom
-                }
-                spacing: panel.theme.spacing4
-
-                Text {
-                    text: search.activeFocus ? "TAB  NAVIGATE" : "J/K  MOVE   U/D  HALF PAGE"
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "ENTER  COPY"
-                    color: panel.theme.accent
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    text: "ESC  CLOSE"
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(9)
-                    font.letterSpacing: 1
-                }
+                width: parent.width
+                anchors.bottom: parent.bottom
+                runtime: panel.runtime
+                theme: panel.theme
+                hints: [
+                    {
+                        shortcut: search.activeFocus ? "TAB" : "J/K",
+                        label: search.activeFocus ? "Navigate" : "Move"
+                    },
+                    {
+                        shortcut: "U/D",
+                        label: "Half page",
+                        visible: !search.activeFocus
+                    },
+                    {
+                        shortcut: "ENTER",
+                        label: "Copy"
+                    },
+                    {
+                        shortcut: "ESC",
+                        label: "Close"
+                    }
+                ]
             }
         }
     }
