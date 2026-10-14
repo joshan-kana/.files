@@ -291,7 +291,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|md|nix|py|qml|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
