@@ -965,4 +965,30 @@ in
     };
   };
 
+  spotifyPlayer =
+    _:
+    let
+      aliases = {
+        sp = "spotify_player";
+      };
+    in
+    {
+      home = _: {
+        programs.spotify-player = {
+          enable = true;
+          settings = {
+            client_id_command = {
+              command = "cat";
+              args = [
+                "${dotfiles.secretsDir}/spotify-client-id"
+              ];
+            };
+
+            login_redirect_uri = "http://127.0.0.1:8989/login";
+          };
+        };
+        home.shellAliases = aliases;
+      };
+    };
+
 }
