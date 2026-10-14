@@ -62,10 +62,12 @@ Item {
     // Keep the prompt's launch process alive so the hub can relinquish its
     // keyboard grab without disappearing. The terminal runs on the dedicated
     // system workspace, independent of the user's Super+X workspace.
+    property StdioCollector switchErrors: StdioCollector {}
     property Process switchProcess: Process {
+        stderr: panel.switchErrors
         onExited: (exitCode, exitStatus) => {
             panel.switchFinished();
-            panel.statusText = exitCode === 0 ? "THEME SWITCH FINISHED" : "THEME SWITCH DID NOT COMPLETE";
+            panel.statusText = exitCode === 0 ? "THEME APPLIED" : (panel.switchErrors.text.includes("Exited(127)") ? "AUTHORIZATION CANCELLED OR UNAVAILABLE" : "THEME SWITCH FAILED · CHECK SYSTEM LOG");
             panel.statusError = exitCode !== 0;
             panel.refreshCurrentTheme();
         }
@@ -187,10 +189,9 @@ Item {
             return;
         }
 
-        statusText = "OPENING TERMINAL // " + (selected.label || selected.name).toUpperCase();
+        statusText = "APPLYING " + (selected.label || selected.name).toUpperCase() + "…";
         statusError = false;
-        // Release the hub grab before the terminal is created, but keep the
-        // palette visible. The process owns the handoff until the prompt exits.
+        // The Polkit confirmation needs keyboard focus outside our layer.
         switchLaunched();
         Qt.callLater(() => {
             if (switchProcess && !switchProcess.running)
@@ -506,10 +507,8 @@ Item {
                     selected: themeCard.index === panel.selectedIndex
                     cornerRadius: panel.theme.radiusLarge
                     onActivated: {
-                        if (panel.selectedIndex === themeCard.index)
-                            panel.activateSelected();
-                        else
-                            panel.selectedIndex = themeCard.index;
+                        panel.selectedIndex = themeCard.index;
+                        panel.activateSelected();
                     }
                 }
             }
@@ -525,6 +524,16 @@ Item {
             left: parent.left
         }
         spacing: panel.theme.spacing2
+
+        Text {
+            width: parent.width
+            text: "H/L CHOOSE  ·  J/K ROWS  ·  ENTER APPLY  ·  ESC BACK"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontKeyHint
+            horizontalAlignment: Text.AlignRight
+            elide: Text.ElideRight
+        }
 
         Text {
             width: parent.width
