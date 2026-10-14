@@ -186,6 +186,7 @@ Item {
 
     DetailHero {
         id: header
+        quiet: true
         width: parent.width
         runtime: panel.runtime
         theme: panel.theme
