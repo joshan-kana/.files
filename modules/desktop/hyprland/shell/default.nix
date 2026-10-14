@@ -94,9 +94,9 @@ let
           if [ "''${3:-}" != "--scoped" ]; then
             exec ${lib.getExe' pkgs.systemd "systemd-run"} --user --scope --quiet --collect -- "$0" switch "$selected" --scoped
           fi
-          # Polkit provides graphical authorisation in a normal desktop
-          # session; no SSH agent-backed sudo or disappearing terminal needed.
-          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy ${lib.getExe' pkgs.polkit "pkexec"} --no-nom --diff never
+          # Use the compositor's existing Polkit dialog via run0. The Nix
+          # store pkexec binary is intentionally not setuid-root on this host.
+          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy ${lib.getExe' pkgs.systemd "run0"} --no-nom --diff never
           ;;
         *)
           printf 'Usage: theme-set {list [--json]|current|switch <theme>}\n' >&2
@@ -1586,20 +1586,6 @@ in
       };
 
       systemd.user.services = {
-        linux-desktop-polkit-agent = {
-          Unit = {
-            Description = "Graphical authorization agent for the Linux desktop";
-            PartOf = [ "hyprland-session.target" ];
-            After = [ "hyprland-session.target" ];
-          };
-          Service = {
-            ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-            Restart = "on-failure";
-            RestartSec = 3;
-          };
-          Install.WantedBy = [ "hyprland-session.target" ];
-        };
-
         linux-desktop-ical-sync = {
           Unit = {
             Description = "Refresh subscribed iCalendar events for khal";
