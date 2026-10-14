@@ -299,7 +299,6 @@ in
         };
       }
     );
-
   spotify =
     _:
     lib.optionalAttrs (isLinux && isx86_64) {
