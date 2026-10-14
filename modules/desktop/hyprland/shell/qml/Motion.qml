@@ -1,10 +1,20 @@
 import QtQuick
 import Quickshell
+import Qt.labs.settings
 
 QtObject {
+    id: root
     required property RuntimeConfig runtime
 
-    property bool enabled: runtime.animationsEnabled
+    // A user-selected motion preference survives shell reload, logout and
+    // reboot independently of the Nix-generated runtime defaults.
+    property Settings preferences: Settings {
+        id: preferences
+        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        category: "Motion"
+        property bool animationsEnabled: root.runtime.animationsEnabled
+    }
+    readonly property bool enabled: preferences.animationsEnabled
 
     readonly property int instant: 0
     readonly property int fast: enabled ? 100 : 0
@@ -38,7 +48,14 @@ QtObject {
     readonly property int morphType: Easing.BezierSpline
     readonly property int effectsType: Easing.BezierSpline
 
-    Component.onCompleted: syncWallpaperMotion()
+    Component.onCompleted: {
+        syncCompositorMotion();
+        syncWallpaperMotion();
+    }
+
+    function syncCompositorMotion(): void {
+        Quickshell.execDetached(["hyprctl", "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
+    }
 
     function syncWallpaperMotion(): void {
         if (runtime.wallpaperLibrary.length > 0)
@@ -46,8 +63,8 @@ QtObject {
     }
 
     function toggle(): void {
-        enabled = !enabled;
-        Quickshell.execDetached(["hyprctl", "eval", "hl.config({ animations = { enabled = " + (enabled ? "true" : "false") + " } })"]);
+        preferences.animationsEnabled = !preferences.animationsEnabled;
+        syncCompositorMotion();
         syncWallpaperMotion();
     }
 }

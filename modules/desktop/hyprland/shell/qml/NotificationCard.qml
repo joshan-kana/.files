@@ -123,6 +123,8 @@ SquircleSurface {
             width: parent.width
 
             Text {
+                id: appName
+                anchors.verticalCenter: parent.verticalCenter
                 text: (card.notification && card.notification.appName || "SYSTEM").toUpperCase()
                 color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.critical : card.read ? card.theme.textMuted : card.theme.accent
                 font.family: card.runtime.fontMono
@@ -132,29 +134,35 @@ SquircleSurface {
             }
 
             Item {
-                width: Math.max(0, parent.width - parent.children[0].width - details.width - readToggle.width - card.theme.spacing2)
+                width: Math.max(0, parent.width - appName.implicitWidth - cardActions.implicitWidth - card.theme.spacing2)
                 height: 1
             }
 
-            ShellAction {
-                id: readToggle
-                width: 34
-                height: 28
-                runtime: card.runtime
-                theme: card.theme
-                motion: card.motion
-                iconOnly: true
-                icon: card.read ? "󰄭" : "󰄬"
-                title: card.read ? "Mark unread" : "Mark read"
-                onActivated: card.readToggled()
-            }
+            Row {
+                id: cardActions
+                spacing: card.theme.spacing2
+                anchors.verticalCenter: parent.verticalCenter
+                ShellAction {
+                    id: readToggle
+                    width: 34
+                    height: 28
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    icon: card.read ? "󰄭" : "󰄬"
+                    title: card.read ? "Mark unread" : "Mark read"
+                    onActivated: card.readToggled()
+                }
 
-            Text {
-                id: details
-                text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : "  EXPAND")
-                color: card.theme.textMuted
-                font.family: card.runtime.fontMono
-                font.pixelSize: card.theme.fontSize(8)
+                Text {
+                    id: details
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : "  EXPAND")
+                    color: card.theme.textMuted
+                    font.family: card.runtime.fontMono
+                    font.pixelSize: card.theme.fontSize(8)
+                }
             }
         }
 
