@@ -76,6 +76,12 @@ in
     home.shellAliases = aliases;
     home.packages = [ windowEffectsToggle ];
 
+    # Remove toolkit-owned titlebar buttons globally; the compositor owns
+    # window movement/closing, but GTK client headerbars are still usable.
+    gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
+    gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
+    dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
+
     wayland.windowManager.hyprland =
       let
         lua = lib.generators.mkLuaInline;

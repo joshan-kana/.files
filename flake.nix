@@ -432,7 +432,8 @@
 
       themeScope = moduleRegistry.theme {
         inherit lib;
-        pkgs = null;
+        pkgs = pkgsFor "aarch64-linux";
+        system = "aarch64-linux";
         scopeConfig = { };
       };
       themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
