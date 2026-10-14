@@ -12,6 +12,8 @@ QtObject {
     property bool configured: false
     property string errorMessage: ""
     property var events: []
+    property var calendars: []
+    property var pendingCalendarChanges: []
     property bool refreshPending: false
 
     function refresh(): void {
@@ -50,6 +52,37 @@ QtObject {
         onTriggered: agenda.refresh()
     }
 
+    function setCalendarEnabled(id: string, enabled: bool): void {
+        calendars = calendars.map(entry => entry.id === id ? Object.assign({}, entry, {
+                enabled: enabled
+            }) : entry);
+        pendingCalendarChanges = pendingCalendarChanges.concat([
+            {
+                id: id,
+                enabled: enabled
+            }
+        ]);
+        applyNextCalendarChange();
+    }
+
+    function applyNextCalendarChange(): void {
+        if (calendarChangeProcess.running || pendingCalendarChanges.length === 0)
+            return;
+        const entry = pendingCalendarChanges[0];
+        pendingCalendarChanges = pendingCalendarChanges.slice(1);
+        calendarChangeProcess.exec([runtime.agendaQuery, "--set-enabled", entry.id, entry.enabled ? "true" : "false"]);
+    }
+
+    property Process calendarChangeProcess: Process {
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                agenda.errorMessage = "Could not update calendar visibility";
+            agenda.refresh();
+            // Allow the process to transition to its idle state before the next write.
+            Qt.callLater(() => agenda.applyNextCalendarChange());
+        }
+    }
+
     function setup(): void {
         if (runtime.agendaSetup.length > 0 && !setupProcess.running)
             setupProcess.exec([runtime.agendaSetup]);
@@ -78,6 +111,7 @@ QtObject {
                     const response = JSON.parse(agenda.queryOutput.text);
                     agenda.configured = response.configured === true;
                     agenda.events = Array.isArray(response.events) ? response.events : [];
+                    agenda.calendars = Array.isArray(response.calendars) ? response.calendars : [];
                     agenda.errorMessage = "";
                 } catch (error) {
                     agenda.errorMessage = "Could not read calendar events";

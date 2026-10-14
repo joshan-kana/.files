@@ -11,6 +11,7 @@ Column {
     required property string startDate
     property int firstEventIndex: 0
     property bool featured: false
+    signal calendarsRequested
     readonly property int visibleStart: Math.min(firstEventIndex, Math.max(0, agenda.events.length - 4))
     readonly property int visibleEnd: Math.min(agenda.events.length, visibleStart + 4)
 
@@ -34,8 +35,21 @@ Column {
             font.weight: Font.DemiBold
         }
         Item {
-            width: Math.max(0, parent.width - parent.children[0].implicitWidth - status.implicitWidth)
+            width: Math.max(0, parent.width - parent.children[0].implicitWidth - status.implicitWidth - calendarButton.width - panel.theme.spacing2 * 2)
             height: 1
+        }
+        ShellAction {
+            id: calendarButton
+            width: panel.agenda.calendars.length > 0 ? 30 : 0
+            height: 28
+            visible: width > 0
+            iconOnly: true
+            icon: "󰃀"
+            title: "Choose calendars"
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            onActivated: panel.calendarsRequested()
         }
         Text {
             id: status
@@ -177,9 +191,9 @@ Column {
                                 elide: Text.ElideRight
                             }
                             Text {
-                                visible: eventRow.modelData.location.length > 0
+                                visible: eventRow.modelData.location.length > 0 || eventRow.modelData.calendar.length > 0
                                 width: parent.width
-                                text: eventRow.modelData.location
+                                text: eventRow.modelData.calendar + (eventRow.modelData.location ? " · " + eventRow.modelData.location : "")
                                 color: panel.theme.textStrong
                                 opacity: 0.85
                                 font.family: panel.runtime.fontMono
