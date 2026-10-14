@@ -530,17 +530,8 @@ FocusScope {
                 height: 40
                 spacing: root.theme.spacing2
 
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Control centre"
-                    color: root.theme.textStrong
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(23)
-                    font.weight: Font.DemiBold
-                }
-
                 Item {
-                    width: Math.max(1, controlsHeading.width - controlsHeading.children[0].implicitWidth - appearanceButton.width - wallpaperButton.width - sessionButton.width - helpButton.width - controlsHeading.spacing * 5)
+                    width: Math.max(0, controlsHeading.width - appearanceButton.width - wallpaperButton.width - sessionButton.width - helpButton.width - controlsHeading.spacing * 4)
                     height: 1
                 }
 
@@ -639,7 +630,8 @@ FocusScope {
 
             Grid {
                 id: connectionTiles
-                width: parent.width
+                x: root.theme.spacing2
+                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
                 columns: width < 560 || root.theme.textScale >= 1.5 ? 1 : 2
                 columnSpacing: root.theme.spacing3
                 rowSpacing: root.theme.spacing3
@@ -699,7 +691,8 @@ FocusScope {
 
             Grid {
                 id: actionStrip
-                width: parent.width
+                x: root.theme.spacing2
+                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
                 columns: width < 600 || root.theme.textScale >= 1.5 ? 3 : 6
                 columnSpacing: root.theme.spacing2
                 rowSpacing: root.theme.spacing2
