@@ -8,17 +8,20 @@ ShellSurface {
 
     required property RuntimeConfig runtime
 
+    // Quiet variant for detail views that need orientation without a hero banner.
+    property bool quiet: false
     property string eyebrow: ""
     property string title: ""
     property string detail: ""
     property string glyph: "◇"
     property color glyphColor: theme.accent
 
-    implicitHeight: 126
+    implicitHeight: quiet ? 66 : 126
     surfaceLayer: ShellSurface.Group
-    luminous: true
+    luminous: !quiet
     luminousColor: hero.glyphColor
-    fillColor: theme.blend(theme.groupBase, hero.glyphColor, theme.dark ? 0.12 : 0.07)
+    fillColor: quiet ? "transparent" : theme.blend(theme.groupBase, hero.glyphColor, theme.dark ? 0.12 : 0.07)
+    borderWidth: quiet ? 0 : theme.borderThin
     cornerRadius: theme.radiusLarge
     clip: true
 
@@ -36,11 +39,12 @@ ShellSurface {
         opacity: 0.11
         font.family: hero.runtime.fontMono
         font.pixelSize: hero.theme.fontSize(98)
-        visible: hero.glyph.length > 0
+        visible: !hero.quiet && hero.glyph.length > 0
     }
 
     ShellSurface {
         id: iconTile
+        visible: !hero.quiet
         width: 68
         height: 68
         anchors {
@@ -63,20 +67,35 @@ ShellSurface {
         }
     }
 
+    Text {
+        id: quietGlyph
+        visible: hero.quiet
+        width: hero.theme.fontSize(26)
+        anchors {
+            left: parent.left
+            verticalCenter: parent.verticalCenter
+        }
+        text: hero.glyph
+        color: hero.glyphColor
+        font.family: hero.runtime.fontMono
+        font.pixelSize: hero.theme.fontSize(25)
+    }
+
     Column {
         anchors {
-            left: iconTile.right
+            left: hero.quiet ? quietGlyph.right : iconTile.right
             right: parent.right
             verticalCenter: parent.verticalCenter
-            leftMargin: hero.theme.spacing4
-            rightMargin: hero.theme.spacing4
+            leftMargin: hero.quiet ? hero.theme.spacing2 : hero.theme.spacing4
+            rightMargin: hero.quiet ? 0 : hero.theme.spacing4
         }
-        spacing: hero.theme.spacing2
+        spacing: hero.quiet ? hero.theme.spacing1 : hero.theme.spacing2
 
         ShellText {
             width: parent.width
             runtime: hero.runtime
             theme: hero.theme
+            visible: !hero.quiet
             text: hero.eyebrow.toUpperCase()
             color: hero.glyphColor
             font.pixelSize: hero.theme.fontPanelEyebrow
@@ -90,7 +109,7 @@ ShellSurface {
             theme: hero.theme
             text: hero.title
             color: hero.theme.textStrong
-            font.pixelSize: hero.theme.fontSubpanelTitle
+            font.pixelSize: hero.quiet ? hero.theme.fontSize(18) : hero.theme.fontSubpanelTitle
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
