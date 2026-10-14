@@ -54,6 +54,7 @@ FocusScope {
     readonly property bool networkOpen: networkPanel.open
     readonly property bool bluetoothOpen: bluetoothPanel.open
     readonly property bool themeOpen: themePanel.open
+    readonly property bool themeOperationRunning: themePanel.open && themePanel.operationRunning
     readonly property bool wallpaperOpen: wallpaperPanel.open
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
