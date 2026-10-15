@@ -15,6 +15,7 @@ Common commands:
 ```sh
 nix fmt              # apply repository formatting/fixes
 nix flake check      # run repository validation
+nix run .#theme-warm -- --background  # prebuild and retain NixOS theme variants
 docs                 # build the generated manual
 docs-serve           # live-preview the generated manual
 nf                    # browse evaluated Nix options
