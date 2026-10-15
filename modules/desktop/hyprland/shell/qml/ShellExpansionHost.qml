@@ -23,10 +23,10 @@ PanelWindow {
     property bool themeTerminalActive: false
     property bool keyboardFocusReady: false
 
-    // One prepared view per primary tab. Detail views share a fourth loader;
-    // primary navigation must never evict its neighbour or block on creation.
+    // Precreate each hub view before its first invocation, including Media and
+    // Weather. No destination evicts another or constructs on the keypress.
     property int activeSlot: -1
-    readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : null
+    readonly property Loader activeLoader: activeSlot === 0 ? contentLoaderA : activeSlot === 1 ? contentLoaderB : activeSlot === 2 ? contentLoaderC : activeSlot === 3 ? contentLoaderD : activeSlot === 4 ? contentLoaderE : null
     readonly property Item loadedContent: activeLoader ? activeLoader.item as Item : null
     readonly property SystemContent systemContent: expansionState.currentName === "system" ? loadedContent as SystemContent : null
     readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
@@ -48,14 +48,14 @@ PanelWindow {
         if (activeLoader && activeLoader.sourceComponent === next)
             return;
 
-        const incoming = next === calendarComponent ? contentLoaderA : next === systemComponent ? contentLoaderB : next === activityComponent ? contentLoaderC : contentLoaderD;
+        const incoming = next === calendarComponent ? contentLoaderA : next === systemComponent ? contentLoaderB : next === activityComponent ? contentLoaderC : next === mediaComponent ? contentLoaderD : contentLoaderE;
         const previous = activeLoader;
         const outgoing = contentExpanded && !closing && expansionState.hasCurrent ? previous : null;
         contentEnter.stop();
         incoming.opacity = 0;
         // Enable the destination before constructing its FocusScope. Its
         // onEngagedChanged requests keyboard focus during instantiation.
-        activeSlot = incoming === contentLoaderA ? 0 : incoming === contentLoaderB ? 1 : incoming === contentLoaderC ? 2 : 3;
+        activeSlot = incoming === contentLoaderA ? 0 : incoming === contentLoaderB ? 1 : incoming === contentLoaderC ? 2 : incoming === contentLoaderD ? 3 : 4;
         incoming.sourceComponent = next;
         contentViewport.contentY = 0;
         if (!outgoing && previous)
@@ -99,12 +99,14 @@ PanelWindow {
     onCurrentComponentChanged: presentComponent(currentComponent)
     Component.onCompleted: {
         presentComponent(currentComponent);
-        // Incubate the other primary tabs even if a panel opens during startup.
-        // Their content stays cached across hub closure and tab changes.
+        // Prepare every hub destination during shell startup; their instances
+        // persist across closure, rather than constructing on the first key.
         Qt.callLater(() => {
             contentLoaderA.sourceComponent = calendarComponent;
             contentLoaderB.sourceComponent = systemComponent;
             contentLoaderC.sourceComponent = activityComponent;
+            contentLoaderD.sourceComponent = mediaComponent;
+            contentLoaderE.sourceComponent = weatherComponent;
         });
     }
 
@@ -206,8 +208,9 @@ PanelWindow {
         }
     }
 
-    screen: expansionState.screen
-    visible: expansionState.hasCurrent || closing
+    screen: expansionState.screen || Quickshell.screens[0]
+    visible: true
+    updatesEnabled: surfaceLifecycle.needsRendering
     color: "transparent"
     focusable: expansionState.hasCurrent && !themeTerminalActive
     exclusionMode: ExclusionMode.Ignore
@@ -228,9 +231,16 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: expansionState.hasCurrent && !themeTerminalActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-    mask: Region {
-        item: shellSurface
+    PopupSurfaceLifecycle {
+        id: surfaceLifecycle
+        prewarm: true
+        popup: host
+        exposed: host.expansionState.hasCurrent || host.closing
+        interactiveItem: shellSurface
+        fullWidth: Math.max(1, host.viewportWidth)
+        fullHeight: Math.max(1, host.viewportHeight)
     }
+    mask: surfaceLifecycle.inputRegion
 
     function navigate(destination: string): void {
         const next = destination === "home" ? "calendar" : destination === "activity" ? "activity" : "system";
@@ -597,6 +607,27 @@ PanelWindow {
                     }
                 }
                 onLoaded: host.onLoaderReady(contentLoaderD)
+            }
+
+            Loader {
+                id: contentLoaderE
+                asynchronous: true
+                readonly property Item contentItem: item as Item
+                width: Math.max(1, Math.min(host.viewportWidth - host.theme.spacing4 * 2, Math.max(600, contentItem ? contentItem.implicitWidth : 600)))
+                height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
+                transformOrigin: Item.TopLeft
+                scale: Math.min(1, contentViewport.width / Math.max(1, width))
+                x: (contentViewport.width - width * scale) / 2
+                opacity: 0
+                enabled: host.activeSlot === 4
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: host.activeSlot === 4 ? host.motion.contentFade : host.motion.effectsFast
+                        easing.type: host.motion.enterType
+                        easing.bezierCurve: host.activeSlot === 4 ? host.motion.enterCurve : host.motion.exitCurve
+                    }
+                }
+                onLoaded: host.onLoaderReady(contentLoaderE)
             }
         }
 
