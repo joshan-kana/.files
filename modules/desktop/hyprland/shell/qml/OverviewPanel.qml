@@ -1,11 +1,11 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Wayland
 
-PanelWindow {
+Item {
     id: overview
+    // Pre-constructed content hosted by the single permanent modal layer.
+    property var screen: null
 
     required property RuntimeConfig runtime
     required property Theme theme
@@ -43,23 +43,7 @@ PanelWindow {
     readonly property int focusedWorkspace: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
 
     visible: open || closing
-    focusable: open
-    color: "transparent"
-    exclusionMode: ExclusionMode.Ignore
-    anchors {
-        top: true
-        right: true
-        bottom: true
-        left: true
-    }
-    WlrLayershell.namespace: "linux-desktop-overview"
-    WlrLayershell.keyboardFocus: open && !keyboardFocusRefreshing ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    PopupFocusGrab {
-        popup: overview
-        suspended: overview.keyboardFocusRefreshing
-        onDismissed: overview.hide()
-    }
+    anchors.fill: parent
 
     onFocusedWorkspaceChanged: {
         if (!open)
@@ -328,7 +312,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: overview.theme.scrim
-        opacity: overview.open ? 1 : 0
+        opacity: 0 // Background dimming is compositor-owned in this benchmark.
         Behavior on opacity {
             NumberAnimation {
                 duration: overview.motion.fast
