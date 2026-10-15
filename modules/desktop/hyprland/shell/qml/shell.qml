@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Wayland
 
 ShellRoot {
     id: root
@@ -277,6 +278,35 @@ ShellRoot {
         audioMixerPanel: audioMixerPanel
         cheatsheet: cheatsheet
         screenshotPicker: screenshotPicker
+    }
+
+    // A single-pixel noninteractive Top layer triggers compositor dimming
+    // behind modals. The shared popup stays at Overlay level, so it retains
+    // its full brightness and stable backing viewport.
+    PanelWindow {
+        screen: modalHost.screen
+        visible: modalHost.dimActive
+        implicitWidth: 1
+        implicitHeight: 1
+        color: "transparent"
+        focusable: false
+        exclusionMode: ExclusionMode.Ignore
+        anchors {
+            top: true
+            left: true
+        }
+        WlrLayershell.namespace: "linux-desktop-modal-dim"
+        WlrLayershell.layer: WlrLayer.Top
+        mask: Region {
+            item: dimInputMask
+        }
+
+        Item {
+            id: dimInputMask
+            width: 0
+            height: 0
+            visible: false
+        }
     }
 
     ShortcutCheatsheet {
