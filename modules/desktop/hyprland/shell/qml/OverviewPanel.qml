@@ -53,7 +53,13 @@ PanelWindow {
         left: true
     }
     WlrLayershell.namespace: "linux-desktop-overview"
-    WlrLayershell.keyboardFocus: open && !keyboardFocusRefreshing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open && !keyboardFocusRefreshing ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    PopupFocusGrab {
+        popup: overview
+        suspended: overview.keyboardFocusRefreshing
+        onDismissed: overview.hide()
+    }
 
     onFocusedWorkspaceChanged: {
         if (!open)
