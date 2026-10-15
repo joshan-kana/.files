@@ -1138,6 +1138,7 @@ in
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
+          notificationOpen = lib.getExe notificationOpen;
           frozenCapture = lib.getExe frozenCapture;
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
@@ -1247,6 +1248,13 @@ in
               persist
               apply
               ;;
+            set)
+              [ "$#" -eq 2 ] && [[ "$2" =~ ^[0-9]+$ ]] || exit 2
+              temperature="$2"
+              (( temperature >= 2500 && temperature <= 6500 )) || exit 2
+              persist
+              if should_run; then apply; fi
+              ;;
             warmer|cooler)
               if [ "$1" = warmer ]; then temperature=$((temperature - 500)); else temperature=$((temperature + 500)); fi
               temperature=$((temperature < 2500 ? 2500 : temperature > 6500 ? 6500 : temperature))
@@ -1254,7 +1262,7 @@ in
               if should_run; then apply; fi
               ;;
             *)
-              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|warmer|cooler}\n' >&2
+              printf 'Usage: linux-desktop-night-light {state|run|apply|toggle|set K|warmer|cooler}\n' >&2
               exit 2
               ;;
           esac
@@ -1426,6 +1434,31 @@ in
               ;;
             *) exit 2 ;;
           esac
+        '';
+      };
+
+      notificationOpen = pkgs.writeShellApplication {
+        name = "linux-desktop-open-capture";
+        runtimeInputs = [ pkgs.xdg-utils ];
+        text = ''
+          [ "$#" -eq 2 ] || exit 2
+          case "$1" in
+            screenshot)
+              path="$2"
+              name="''${path##*/}"
+              dir="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+              [[ "$name" =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || exit 2
+              [[ "$path" == "$dir/$name" ]] || exit 2
+              ;;
+            recording)
+              name="$2"
+              [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
+              path="$HOME/Videos/Screencasts/$name"
+              ;;
+            *) exit 2 ;;
+          esac
+          [ -f "$path" ] && [ ! -L "$path" ] || exit 1
+          exec xdg-open "$path"
         '';
       };
 
@@ -1650,6 +1683,9 @@ in
             Description = "Manual Hyprland colour temperature";
             After = [ "hyprland-session.target" ];
             PartOf = [ "hyprland-session.target" ];
+            # Rapid manual temperature changes must never permanently lock
+            # Night Light out with start-limit-hit.
+            StartLimitIntervalSec = 0;
           };
           Service = {
             ExecStart = "${lib.getExe nightLightControl} run";

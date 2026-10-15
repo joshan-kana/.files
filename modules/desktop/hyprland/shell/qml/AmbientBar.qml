@@ -393,25 +393,25 @@ Variants {
                 Row {
                     id: notificationRow
                     anchors.centerIn: parent
-                    height: 30
+                    height: 38
                     spacing: bars.theme.spacing2
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 30
-                        height: 30
+                        width: 38
+                        height: 38
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         text: bar.notificationState.silent ? "󰂛" : "󰂚"
                         color: bars.theme.textStrong
                         font.family: "Symbols Nerd Font"
-                        font.pixelSize: bars.theme.fontSize(19)
+                        font.pixelSize: bars.theme.fontSize(27)
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: bar.notificationState.count > 0
-                        height: 30
+                        height: 38
                         verticalAlignment: Text.AlignVCenter
                         text: bar.notificationState.count > 99 ? "99+" : String(bar.notificationState.count)
                         color: bars.theme.accent
