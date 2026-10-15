@@ -21,6 +21,7 @@ PanelWindow {
     property bool contentExpanded: false
     property bool closing: false
     property bool themeTerminalActive: false
+    property bool keyboardFocusReady: false
 
     // One prepared view per primary tab. Detail views share a fourth loader;
     // primary navigation must never evict its neighbour or block on creation.
@@ -293,10 +294,22 @@ PanelWindow {
         onActivated: host.cycleTab(-1)
     }
 
+    // Focus only the expansion surface at first. Hyprland may otherwise
+    // select the non-keyboard-focusable bar when a grab initially registers
+    // multiple committed surfaces. Admit the bar after this window acquires
+    // focus so clicks can still switch tabs without dismissing the hub.
+    Connections {
+        target: host.contentItem ? host.contentItem.Window.window : null
+
+        function onActiveChanged(): void {
+            if (host.contentItem.Window.window.active && host.expansionState.hasCurrent)
+                host.keyboardFocusReady = true;
+        }
+    }
+
     HyprlandFocusGrab {
-        active: host.expansionState.hasCurrent && !host.themeTerminalActive
-        // Bar-originated navigation stays inside the same focus group.
-        windows: [host].concat(host.barWindows)
+        active: host.expansionState.hasCurrent && host.backingWindowVisible && !host.themeTerminalActive
+        windows: host.keyboardFocusReady ? [host].concat(host.barWindows) : [host]
         onCleared: {
             if (!host.themeTerminalActive)
                 host.expansionState.close();
@@ -319,6 +332,7 @@ PanelWindow {
         target: host.expansionState
 
         function onHasCurrentChanged(): void {
+            host.keyboardFocusReady = false;
             if (host.expansionState.hasCurrent) {
                 if (!host.closing)
                     geometryUpdate.restart();
