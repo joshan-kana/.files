@@ -344,6 +344,25 @@ FocusScope {
         onTriggered: root.applyRequestedView()
     }
 
+    function prewarmDetails(): void {
+        // Stage heavy views after the three primary tabs are ready. No timers
+        // and no duplicate state: each Loader retains its constructed item.
+        mixerView.prewarm();
+        recordingsPanel.prewarm();
+        resourcesPanel.prewarm();
+        networkPanel.prewarm();
+        bluetoothPanel.prewarm();
+        wallpaperPanel.prewarm();
+        themePanel.prewarm();
+        sessionPanel.prewarm();
+        trayMenu.prewarm();
+    }
+
+    onMixerOpenChanged: {
+        if (mixerOpen)
+            mixerView.finishLoading();
+    }
+
     onEngagedChanged: {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
@@ -663,7 +682,7 @@ FocusScope {
                     glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
                     shortcut: "N"
                     connected: root.system.networkConnected
-                    pending: networkPanel.open && (networkPanel.profileAction.running || networkPanel.pendingNetwork !== null)
+                    pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
                     failed: networkPanel.open && networkPanel.statusError
                     unavailable: root.system.networkDevices.length === 0
                     onActivated: root.openNetwork()
@@ -1353,107 +1372,129 @@ FocusScope {
             }
         }
 
-        AudioMixerContent {
+        DeferredDetail {
             id: mixerView
             anchors.fill: parent
             visible: root.mixerOpen
-            active: root.engaged && root.mixerOpen
-            system: root.system
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-            onCloseRequested: root.closeMixer()
+            sourceComponent: Component {
+                AudioMixerContent {
+                    active: root.engaged && root.mixerOpen
+                    system: root.system
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onCloseRequested: root.closeMixer()
+                }
+            }
         }
 
-        RecordingLibrary {
+        DeferredDetail {
             id: recordingsPanel
             anchors.fill: parent
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            sourceComponent: Component {
+                RecordingLibrary {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
         }
 
-        ResourceDashboard {
+        DeferredDetail {
             id: resourcesPanel
             anchors.fill: parent
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-            resourceState: root.resourceState
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            sourceComponent: Component {
+                ResourceDashboard {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    resourceState: root.resourceState
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
         }
 
-        NetworkPanel {
+        DeferredDetail {
             id: networkPanel
-
             anchors.fill: parent
-
-            system: root.system
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            sourceComponent: Component {
+                NetworkPanel {
+                    system: root.system
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
         }
 
-        BluetoothPanel {
+        DeferredDetail {
             id: bluetoothPanel
-
             anchors.fill: parent
-
-            system: root.system
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            sourceComponent: Component {
+                BluetoothPanel {
+                    system: root.system
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
         }
 
-        WallpaperPanel {
+        DeferredDetail {
             id: wallpaperPanel
             anchors.fill: parent
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
+            sourceComponent: Component {
+                WallpaperPanel {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
         }
 
-        ThemePanel {
+        DeferredDetail {
             id: themePanel
-
             anchors.fill: parent
-
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
-            onSwitchLaunched: root.themeTerminalActiveChanged(true)
-            onSwitchFinished: root.themeTerminalActiveChanged(false)
+            sourceComponent: Component {
+                ThemePanel {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                    onSwitchLaunched: root.themeTerminalActiveChanged(true)
+                    onSwitchFinished: root.themeTerminalActiveChanged(false)
+                }
+            }
         }
 
-        SessionPanel {
+        DeferredDetail {
             id: sessionPanel
-
             anchors.fill: parent
-
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
-
-            onKeyboardRequested: keyboardFocus.forceActiveFocus()
-            onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
+            sourceComponent: Component {
+                SessionPanel {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                    onRevealSelection: (top, bottom) => root.revealContent(top, bottom)
+                }
+            }
         }
 
-        TrayMenuView {
+        DeferredDetail {
             id: trayMenu
-
             anchors.fill: parent
-
-            runtime: root.runtime
-            theme: root.theme
-            motion: root.motion
+            sourceComponent: Component {
+                TrayMenuView {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                }
+            }
         }
 
         FocusScope {
@@ -1514,34 +1555,34 @@ FocusScope {
                         wallpaperPanel.closeView();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Slash) {
-                        wallpaperPanel.enterSearch();
+                        wallpaperPanel.invoke("enterSearch");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-                        wallpaperPanel.moveSelection(-1);
+                        wallpaperPanel.invoke("moveSelection", -1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                        wallpaperPanel.moveSelection(1);
+                        wallpaperPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        wallpaperPanel.moveSelection(-3);
+                        wallpaperPanel.invoke("moveSelection", -3);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        wallpaperPanel.moveSelection(3);
+                        wallpaperPanel.invoke("moveSelection", 3);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                        wallpaperPanel.moveSelection(event.key === Qt.Key_U ? -6 : 6);
+                        wallpaperPanel.invoke("moveSelection", event.key === Qt.Key_U ? -6 : 6);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
-                        wallpaperPanel.cycleOutput();
+                        wallpaperPanel.invoke("cycleOutput");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_F) {
-                        wallpaperPanel.toggleFit();
+                        wallpaperPanel.invoke("toggleFit");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R) {
-                        wallpaperPanel.resetWallpaper();
+                        wallpaperPanel.invoke("resetWallpaper");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        wallpaperPanel.applySelected();
+                        wallpaperPanel.invoke("applySelected");
                         event.accepted = true;
                     }
                     return;
@@ -1550,23 +1591,23 @@ FocusScope {
                 if (recordingsPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         if (recordingsPanel.deletePending.length > 0)
-                            recordingsPanel.cancelDelete();
+                            recordingsPanel.invoke("cancelDelete");
                         else
                             recordingsPanel.closeView();
                     } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
-                        recordingsPanel.moveSelection(1);
+                        recordingsPanel.invoke("moveSelection", 1);
                     } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
-                        recordingsPanel.moveSelection(-1);
+                        recordingsPanel.invoke("moveSelection", -1);
                     } else if (event.key === Qt.Key_U) {
-                        recordingsPanel.moveSelection(-4);
+                        recordingsPanel.invoke("moveSelection", -4);
                     } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
-                        recordingsPanel.moveSelection(4);
+                        recordingsPanel.invoke("moveSelection", 4);
                     } else if (event.key === Qt.Key_D) {
-                        recordingsPanel.requestDelete();
+                        recordingsPanel.invoke("requestDelete");
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_O) {
-                        recordingsPanel.openSelected();
+                        recordingsPanel.invoke("openSelected");
                     } else if (event.key === Qt.Key_R) {
-                        recordingsPanel.refresh();
+                        recordingsPanel.invoke("refresh");
                     } else {
                         return;
                     }
@@ -1579,7 +1620,7 @@ FocusScope {
                         resourcesPanel.closeView();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_C) {
-                        resourcesPanel.toggleCoreView();
+                        resourcesPanel.invoke("toggleCoreView");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R) {
                         root.resourceState.refresh();
@@ -1593,31 +1634,31 @@ FocusScope {
                         bluetoothPanel.closeView();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        bluetoothPanel.moveSelection(-1);
+                        bluetoothPanel.invoke("moveSelection", -1);
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        bluetoothPanel.moveSelection(1);
+                        bluetoothPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        bluetoothPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        bluetoothPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        bluetoothPanel.activateSelected();
+                        bluetoothPanel.invoke("activateSelected");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_B) {
-                        bluetoothPanel.toggleBluetooth();
+                        bluetoothPanel.invoke("toggleBluetooth");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
-                        bluetoothPanel.toggleDiscovery();
+                        bluetoothPanel.invoke("toggleDiscovery");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_P) {
-                        bluetoothPanel.pairSelected();
+                        bluetoothPanel.invoke("pairSelected");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_T) {
-                        bluetoothPanel.toggleTrust();
+                        bluetoothPanel.invoke("toggleTrust");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_F) {
-                        bluetoothPanel.forgetSelected();
+                        bluetoothPanel.invoke("forgetSelected");
                         event.accepted = true;
                     }
 
@@ -1629,19 +1670,19 @@ FocusScope {
                         sessionPanel.closeView();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        sessionPanel.moveGrid(0, -1);
+                        sessionPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        sessionPanel.moveGrid(0, 1);
+                        sessionPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-                        sessionPanel.moveGrid(-1, 0);
+                        sessionPanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                        sessionPanel.moveGrid(1, 0);
+                        sessionPanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        sessionPanel.activateSelected();
+                        sessionPanel.invoke("activateSelected");
                         event.accepted = true;
                     }
 
@@ -1653,25 +1694,25 @@ FocusScope {
                         themePanel.closeView();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        themePanel.moveGrid(0, -1);
+                        themePanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        themePanel.moveGrid(0, 1);
+                        themePanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
-                        themePanel.moveGrid(-1, 0);
+                        themePanel.invoke("moveGrid", -1, 0);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
-                        themePanel.moveGrid(1, 0);
+                        themePanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        themePanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        themePanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_X && themePanel.operationRunning) {
-                        themePanel.cancelOperation();
+                        themePanel.invoke("cancelOperation");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        themePanel.activateSelected();
+                        themePanel.invoke("activateSelected");
                         event.accepted = true;
                     }
 
@@ -1684,36 +1725,36 @@ FocusScope {
 
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         if (networkPanel.detailView)
-                            networkPanel.toggleDetailView();
+                            networkPanel.invoke("toggleDetailView");
                         else
                             networkPanel.closeView();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        networkPanel.moveSelection(-1);
+                        networkPanel.invoke("moveSelection", -1);
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        networkPanel.moveSelection(1);
+                        networkPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        networkPanel.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        networkPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        networkPanel.activateSelected();
+                        networkPanel.invoke("activateSelected");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_I) {
-                        networkPanel.toggleDetailView();
+                        networkPanel.invoke("toggleDetailView");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R && networkPanel.detailView) {
-                        networkPanel.refreshDetails();
+                        networkPanel.invoke("refreshDetails");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_P && !networkPanel.detailView) {
-                        networkPanel.toggleSavedView();
+                        networkPanel.invoke("toggleSavedView");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_R && networkPanel.savedView && !networkPanel.detailView) {
-                        networkPanel.refreshSaved();
+                        networkPanel.invoke("refreshSaved");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_W && !networkPanel.savedView) {
-                        networkPanel.toggleWifi();
+                        networkPanel.invoke("toggleWifi");
                         event.accepted = true;
                     } else if (event.key === Qt.Key_A) {
                         Quickshell.execDetached([root.runtime.networkConnectionEditor]);
@@ -1725,19 +1766,19 @@ FocusScope {
 
                 if (trayMenu.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                        trayMenu.goBack();
+                        trayMenu.invoke("goBack");
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
-                        trayMenu.moveSelection(-1);
+                        trayMenu.invoke("moveSelection", -1);
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
-                        trayMenu.moveSelection(1);
+                        trayMenu.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        trayMenu.moveHalfPage(event.key === Qt.Key_U ? -1 : 1);
+                        trayMenu.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || (event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                        trayMenu.activateSelected();
+                        trayMenu.invoke("activateSelected");
                         event.accepted = true;
                     }
 

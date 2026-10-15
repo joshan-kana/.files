@@ -85,6 +85,8 @@ PanelWindow {
 
     function onLoaderReady(loader: Loader): void {
         geometryUpdate.restart();
+        if (contentLoaderA.item && contentLoaderB.item && contentLoaderC.item)
+            (contentLoaderB.item as SystemContent).prewarmDetails();
         if (activeLoader !== loader || !expansionState.hasCurrent)
             return;
         Qt.callLater(() => {
