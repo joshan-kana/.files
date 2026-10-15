@@ -223,6 +223,7 @@ ShellRoot {
 
     NotificationState {
         id: notifications
+        runtime: runtime
     }
 
     RecordingState {
@@ -708,6 +709,7 @@ ShellRoot {
         ambientBar: ambientBar
         expansionState: expansionState
         themePanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.themeOpen
+        sessionPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.sessionOpen
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
