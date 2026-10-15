@@ -707,6 +707,7 @@ ShellRoot {
         screenRouter: screens
         ambientBar: ambientBar
         expansionState: expansionState
+        themePanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.themeOpen
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
