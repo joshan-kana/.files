@@ -10,6 +10,7 @@ QtObject {
     required property ShellExpansionState expansionState
     // The detail can also be opened from Controls, not only the Super+Y shortcut.
     property bool themePanelOpen: false
+    property bool sessionPanelOpen: false
     required property ShortcutCheatsheet cheatsheet
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
@@ -197,6 +198,10 @@ QtObject {
     }
 
     function showSession(): void {
+        if (expansionState.hasCurrent && expansionState.currentName === "system" && (sessionPanelOpen || expansionState.currentView === "session")) {
+            expansionState.close();
+            return;
+        }
         showSystem(null, null, "session");
     }
 
