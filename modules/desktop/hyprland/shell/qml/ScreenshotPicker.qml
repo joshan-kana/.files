@@ -62,7 +62,12 @@ PanelWindow {
     }
     WlrLayershell.namespace: "linux-desktop-frozen-screenshot"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    PopupFocusGrab {
+        popup: picker
+        onDismissed: picker.dismiss(true)
+    }
 
     function clamp(value: real, minimum: real, maximum: real): real {
         return Math.max(minimum, Math.min(maximum, value));
@@ -82,11 +87,8 @@ PanelWindow {
             // Screen recording selects a live region; only screenshots freeze.
             // No image capture or private snapshot file is created here.
             open = true;
-            Qt.callLater(() => {
-                initialiseRect();
-                if (open)
-                    keyboard.forceActiveFocus();
-            });
+            keyboard.forceActiveFocus();
+            Qt.callLater(() => initialiseRect());
         } else {
             pending = true;
             snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name]);
@@ -113,11 +115,8 @@ PanelWindow {
         pending = false;
         snapshotReady();
         open = true;
-        Qt.callLater(() => {
-            initialiseRect();
-            if (open)
-                keyboard.forceActiveFocus();
-        });
+        keyboard.forceActiveFocus();
+        Qt.callLater(() => initialiseRect());
     }
 
     function dismiss(clearFile: bool): void {
