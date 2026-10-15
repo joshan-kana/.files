@@ -291,6 +291,15 @@ in
             sensitivity = -0.5;
           };
 
+          # This 1×1 Top-layer surface appears only for global modal
+          # widgets. The persistent Overlay-level modal host stays undimmed.
+          layer_rule = [
+            {
+              match.namespace = "^linux-desktop-modal-dim$";
+              dim_around = true;
+            }
+          ];
+
           window_rule = [
             {
               # The theme prompt must coexist with the centre picker and the
