@@ -186,6 +186,9 @@ in
 
             decoration = {
               rounding = 10;
+              # Modal layer dimming should be subtle, not the compositor's
+              # heavy 0.4 default. Authentication has its own themed scrim.
+              dim_around = 0.12;
 
               blur = {
                 enabled = true;
