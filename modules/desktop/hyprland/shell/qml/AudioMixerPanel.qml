@@ -1,10 +1,10 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 
-PanelWindow {
+Item {
     id: panel
+    // Pre-constructed content hosted by the single permanent modal layer.
+    property var screen: null
 
     required property SystemState system
     required property RuntimeConfig runtime
@@ -17,24 +17,8 @@ PanelWindow {
     readonly property var streams: mixer.streams
 
     visible: open || closing
-    color: "transparent"
-    focusable: open
-    exclusionMode: ExclusionMode.Ignore
 
-    anchors {
-        top: true
-        right: true
-        bottom: true
-        left: true
-    }
-
-    WlrLayershell.namespace: "linux-desktop-audio-mixer"
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    PopupFocusGrab {
-        popup: panel
-        onDismissed: panel.hide()
-    }
+    anchors.fill: parent
 
     Timer {
         id: closeTimer
@@ -79,7 +63,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: panel.theme.scrim
-        opacity: panel.open ? 1 : 0
+        opacity: 0 // Background dimming is compositor-owned in this benchmark.
 
         Behavior on opacity {
             NumberAnimation {

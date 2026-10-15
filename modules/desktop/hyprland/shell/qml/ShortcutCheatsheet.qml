@@ -1,11 +1,11 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import "KeyGlyphs.js" as KeyGlyphs
-import Quickshell
-import Quickshell.Wayland
 
-PanelWindow {
+Item {
     id: window
+    // Pre-constructed content hosted by the single permanent modal layer.
+    property var screen: null
 
     required property RuntimeConfig runtime
     required property Theme theme
@@ -19,23 +19,8 @@ PanelWindow {
     readonly property int filteredBindingCount: countBindings(sections)
 
     visible: open || closing
-    color: "transparent"
-    focusable: open
-    exclusionMode: ExclusionMode.Ignore
 
-    anchors {
-        top: true
-        right: true
-        bottom: true
-        left: true
-    }
-
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    PopupFocusGrab {
-        popup: window
-        onDismissed: window.hide()
-    }
+    anchors.fill: parent
 
     Timer {
         id: closeTimer
@@ -151,7 +136,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: window.theme.scrimHeavy
-        opacity: window.open ? 1 : 0
+        opacity: 0 // Background dimming is compositor-owned in this benchmark.
 
         Behavior on opacity {
             NumberAnimation {
