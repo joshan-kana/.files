@@ -467,6 +467,21 @@
         )
       );
 
+      # One GC root retains every theme for each NixOS host.
+      themeCachePackages =
+        system:
+        lib.mapAttrs' (
+          configurationName: _:
+          lib.nameValuePair "theme-cache-${configurationName}" (
+            (pkgsFor system).linkFarm "theme-cache-${configurationName}" (
+              map (themeName: {
+                name = themeName;
+                path = themedNixosConfigurations."${configurationName}-${themeName}".config.system.build.toplevel;
+              }) themeNames
+            )
+          )
+        ) (lib.filterAttrs (_: spec: spec.system == system) nixosHostSpecs);
+
       docsFor =
         system:
         import ./docs {
@@ -524,6 +539,7 @@
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
         }
+        // themeCachePackages system
       );
 
       devShells = forAllSystems (
@@ -726,6 +742,39 @@
                 '';
               };
 
+          themeWarm = pkgs.writeShellApplication {
+            name = "theme-warm";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.nix
+              pkgs.systemd
+            ];
+            text = ''
+              if [ "''${1:-}" = --background ]; then
+                shift
+                exec systemd-run --user --collect --unit=dotfiles-theme-warm \
+                  --property=Nice=10 --property=IOSchedulingClass=idle \
+                  -- "$0" "$@"
+              fi
+
+              host="''${1:-$(hostname -s)}"
+              case "$host" in
+                ${
+                  lib.concatStringsSep "|" (
+                    lib.attrNames (lib.filterAttrs (_: spec: spec.system == system) nixosHostSpecs)
+                  )
+                }) ;;
+                *) printf 'Unknown NixOS host: %s\n' "$host" >&2; exit 2 ;;
+              esac
+
+              cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache"
+              mkdir -p "$cacheDir"
+              exec nix build \
+                --out-link "$cacheDir/$host" \
+                "path:${self.outPath}#theme-cache-$host"
+            '';
+          };
+
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
@@ -743,6 +792,13 @@
             type = "app";
             program = lib.getExe updateContainerLock;
             meta.description = "Refresh immutable OCI container image digests";
+          };
+        }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          theme-warm = {
+            type = "app";
+            program = lib.getExe themeWarm;
+            meta.description = "Build and retain every registered NixOS theme for this host";
           };
         }
         // lib.optionalAttrs (updatePlasma != null) {
