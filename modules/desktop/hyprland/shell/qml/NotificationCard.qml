@@ -142,26 +142,28 @@ SquircleSurface {
                 id: cardActions
                 spacing: card.theme.spacing2
                 anchors.verticalCenter: parent.verticalCenter
-                ShellAction {
-                    id: readToggle
-                    width: 34
-                    height: 28
-                    runtime: card.runtime
-                    theme: card.theme
-                    motion: card.motion
-                    iconOnly: true
-                    icon: card.read ? "󰄭" : "󰄬"
-                    title: card.read ? "Mark unread" : "Mark read"
-                    onActivated: card.readToggled()
-                }
 
                 Text {
                     id: details
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : "  EXPAND")
+                    text: (card.groupCount > 1 ? card.groupCount + " ITEMS · " : "") + (card.expanded ? "󰅃" : "󰅀") + (card.safeActions.length > 0 ? "  " + card.safeActions.length + " ACTIONS" : card.notification && card.notification.appName === "linux-desktop" && (card.notification.summary === "Screenshot saved" || card.notification.summary === "Recording saved") ? "  OPEN" : "  EXPAND")
                     color: card.theme.textMuted
                     font.family: card.runtime.fontMono
                     font.pixelSize: card.theme.fontSize(8)
+                }
+
+                ShellAction {
+                    id: readToggle
+                    width: 36
+                    height: 36
+                    runtime: card.runtime
+                    theme: card.theme
+                    motion: card.motion
+                    iconOnly: true
+                    active: card.read
+                    icon: card.read ? "󰄭" : "󰄬"
+                    title: card.read ? "Mark unread" : "Mark read"
+                    onActivated: card.readToggled()
                 }
             }
         }
