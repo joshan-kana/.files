@@ -25,7 +25,14 @@ PanelWindow {
         return theme.accent;
     }
 
-    visible: notificationState.popupVisible || closing
+    visible: true
+    updatesEnabled: surfaceLifecycle.needsRendering
+    PopupSurfaceLifecycle {
+        id: surfaceLifecycle
+        popup: popup
+        exposed: popup.notificationState.popupVisible || popup.closing
+    }
+    mask: surfaceLifecycle.inputRegion
     color: "transparent"
     implicitWidth: 440
     implicitHeight: 170
