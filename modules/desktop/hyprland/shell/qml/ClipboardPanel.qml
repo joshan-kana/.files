@@ -51,7 +51,12 @@ PanelWindow {
     }
 
     WlrLayershell.namespace: "linux-desktop-clipboard"
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    PopupFocusGrab {
+        popup: panel
+        onDismissed: panel.hide()
+    }
 
     property StdioCollector queryOutput: StdioCollector {}
     property StdioCollector queryError: StdioCollector {}
