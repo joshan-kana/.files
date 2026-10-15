@@ -197,7 +197,9 @@ PanelWindow {
     readonly property real originHalfWidth: Math.min(viewportWidth / 2, Math.max(1, expansionState.originWidth / 2))
     readonly property real localOriginCenter: screen ? expansionState.originCenter - (screen.width - viewportWidth) / 2 : viewportWidth / 2
     readonly property real boundedOriginCenter: Math.max(originHalfWidth, Math.min(viewportWidth - originHalfWidth, localOriginCenter))
-    property real animatedSurfaceCenter: contentExpanded ? viewportWidth / 2 : boundedOriginCenter
+    // The visible close morph must shrink in place, not simultaneously drift
+    // toward the bar island. Reset its source centre only after fading out.
+    property real animatedSurfaceCenter: contentExpanded || closing ? viewportWidth / 2 : boundedOriginCenter
 
     Behavior on animatedSurfaceCenter {
         enabled: host.contentExpanded || host.closing
