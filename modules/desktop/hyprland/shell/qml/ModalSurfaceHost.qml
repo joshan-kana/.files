@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Hyprland
 
 // One mapped layer and framebuffer for all global modal actions. Their QML
 // trees are built at shell startup and only Item visibility changes on keys.
@@ -21,23 +20,10 @@ PanelWindow {
     readonly property bool transitioning: clipboardPanel.closing || launcher.closing || overviewPanel.closing || audioMixerPanel.closing || cheatsheet.closing
     readonly property bool contentVisible: open || transitioning
     readonly property bool captureExpanded: screenshotPicker.open
-    // A sole compact surface avoids the permanent fullscreen modal framebuffer.
-    // The frozen region screenshot temporarily expands this host to the output.
-    // The PR dims these five modal widgets, but not the hub, notifications,
-    // OSD, or region capture. The dim strength is deliberately subtle and
-    // configured by Hyprland to avoid the previous blanket dark backdrop.
-    readonly property bool dimActive: !captureExpanded && (launcher.open || cheatsheet.open || clipboardPanel.open || overviewPanel.open || audioMixerPanel.open)
-
-    function syncCompositorDim(): void {
-        Hyprland.dispatch("(function() if linux_desktop_modal_dim_rule then linux_desktop_modal_dim_rule:set_enabled(" + (host.dimActive ? "true" : "false") + ") end; return hl.dsp.no_op() end)()");
-    }
-    onDimActiveChanged: syncCompositorDim()
-    Component.onCompleted: {
-        Hyprland.dispatch('(function() if linux_desktop_modal_dim_rule then linux_desktop_modal_dim_rule:set_enabled(false) end; linux_desktop_modal_dim_rule=hl.layer_rule({name="linux-desktop-modal-dim",match={namespace="^linux-desktop-modal$"},dim_around=true});linux_desktop_modal_dim_rule:set_enabled(false);return hl.dsp.no_op() end)()');
-    }
-    Component.onDestruction: {
-        Hyprland.dispatch('(function() if linux_desktop_modal_dim_rule then linux_desktop_modal_dim_rule:set_enabled(false);linux_desktop_modal_dim_rule=nil end;return hl.dsp.no_op() end)()');
-    }
+    // A compact shared modal remains mapped without a fullscreen framebuffer.
+    // A separate 1×1 Top-layer dim trigger darkens the background only while
+    // one of these global widgets is open. The screenshot picker is exempt.
+    readonly property bool dimActive: !captureExpanded && (open || transitioning)
 
     screen: screenshotPicker.open && screenshotPicker.captureScreen ? screenshotPicker.captureScreen : screens.focusedScreen || Quickshell.screens[0]
     visible: true
