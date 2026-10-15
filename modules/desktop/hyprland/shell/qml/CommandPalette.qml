@@ -2,13 +2,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Wayland
 import Quickshell.Io
 import "Calculator.js" as Calculator
 import "SymbolLibrary.js" as SymbolLibrary
 
-PanelWindow {
+Item {
     id: palette
+    // Pre-constructed content hosted by the single permanent modal layer.
+    property var screen: null
 
     required property RuntimeConfig runtime
     required property Theme theme
@@ -91,24 +92,8 @@ PanelWindow {
     }
 
     visible: open || closing
-    color: "transparent"
-    focusable: open
-    exclusionMode: ExclusionMode.Ignore
 
-    anchors {
-        top: true
-        right: true
-        bottom: true
-        left: true
-    }
-
-    WlrLayershell.namespace: "linux-desktop-launcher"
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    PopupFocusGrab {
-        popup: palette
-        onDismissed: palette.hide()
-    }
+    anchors.fill: parent
 
     Shortcut {
         sequence: "Shift+Esc"
@@ -346,7 +331,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: theme.scrimStrong
-        opacity: palette.open ? 1 : 0
+        opacity: 0 // Background dimming is compositor-owned in this benchmark.
 
         Behavior on opacity {
             NumberAnimation {

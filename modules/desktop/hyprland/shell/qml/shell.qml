@@ -268,8 +268,20 @@ ShellRoot {
         onNotificationsRequested: (screen, origin) => actions.toggleNotifications(screen, origin)
     }
 
+    ModalSurfaceHost {
+        id: modalHost
+        screens: screens
+        clipboardPanel: clipboardPanel
+        launcher: launcher
+        overviewPanel: overviewPanel
+        audioMixerPanel: audioMixerPanel
+        cheatsheet: cheatsheet
+        screenshotPicker: screenshotPicker
+    }
+
     ShortcutCheatsheet {
         id: cheatsheet
+        parent: modalHost.contentItem
         screen: screens.focusedScreen
         runtime: runtime
         theme: theme
@@ -278,6 +290,7 @@ ShellRoot {
 
     ClipboardPanel {
         id: clipboardPanel
+        parent: modalHost.contentItem
         screen: screens.focusedScreen
         runtime: runtime
         theme: theme
@@ -286,6 +299,7 @@ ShellRoot {
 
     ScreenshotPicker {
         id: screenshotPicker
+        parent: modalHost.contentItem
         runtime: runtime
         theme: theme
         motion: motion
@@ -294,6 +308,7 @@ ShellRoot {
 
     OverviewPanel {
         id: overviewPanel
+        parent: modalHost.contentItem
         screen: screens.focusedScreen
         runtime: runtime
         theme: theme
@@ -302,6 +317,7 @@ ShellRoot {
 
     AudioMixerPanel {
         id: audioMixerPanel
+        parent: modalHost.contentItem
         screen: screens.focusedScreen
         system: system
         runtime: runtime
@@ -338,6 +354,7 @@ ShellRoot {
 
     CommandPalette {
         id: launcher
+        parent: modalHost.contentItem
         clipboardPanel: clipboardPanel
         screen: screens.focusedScreen
         runtime: runtime
