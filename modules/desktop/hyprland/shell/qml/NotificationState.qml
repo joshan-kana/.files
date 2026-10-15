@@ -5,6 +5,7 @@ import Qt.labs.settings
 
 QtObject {
     id: root
+    required property RuntimeConfig runtime
 
     property var latest: null
     property bool popupVisible: false
@@ -105,7 +106,23 @@ QtObject {
         notification.tracked = false;
     }
 
+    function captureKind(notification): string {
+        if (!notification || notification.appName !== "linux-desktop")
+            return "";
+        if (notification.summary === "Screenshot saved")
+            return "screenshot";
+        if (notification.summary === "Recording saved")
+            return "recording";
+        return "";
+    }
+
     function invokeDefault(notification): void {
+        const kind = captureKind(notification);
+        if (kind && runtime.notificationOpen.length > 0) {
+            Quickshell.execDetached([runtime.notificationOpen, kind, notification.body]);
+            setRead(notification, true);
+            return;
+        }
         invokeAction(notification, 0);
     }
 
