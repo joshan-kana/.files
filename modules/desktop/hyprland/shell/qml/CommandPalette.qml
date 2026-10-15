@@ -103,7 +103,12 @@ PanelWindow {
     }
 
     WlrLayershell.namespace: "linux-desktop-launcher"
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    PopupFocusGrab {
+        popup: palette
+        onDismissed: palette.hide()
+    }
 
     Shortcut {
         sequence: "Shift+Esc"
