@@ -11,7 +11,14 @@ PanelWindow {
 
     property bool open: false
 
-    visible: open
+    visible: true
+    updatesEnabled: surfaceLifecycle.needsRendering
+    PopupSurfaceLifecycle {
+        id: surfaceLifecycle
+        popup: overlay
+        exposed: overlay.open
+    }
+    mask: surfaceLifecycle.inputRegion
     color: "transparent"
     focusable: false
     exclusionMode: ExclusionMode.Ignore

@@ -14,7 +14,14 @@ PanelWindow {
     readonly property bool keyboardMode: osd.kind === "keyboard"
     readonly property color accentColor: keyboardMode && osd.keyboardLocked ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.positive : theme.accent)
 
-    visible: osd.visible || closing
+    visible: true
+    updatesEnabled: surfaceLifecycle.needsRendering
+    PopupSurfaceLifecycle {
+        id: surfaceLifecycle
+        popup: popup
+        exposed: popup.osd.visible || popup.closing
+    }
+    mask: surfaceLifecycle.inputRegion
     color: "transparent"
     implicitWidth: 370
     implicitHeight: 76

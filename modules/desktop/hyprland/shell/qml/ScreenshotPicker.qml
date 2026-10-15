@@ -2,10 +2,11 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Wayland
 
-PanelWindow {
+Item {
     id: picker
+    // Pre-constructed content hosted by the single permanent modal layer.
+    property var screen: captureScreen
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
@@ -49,25 +50,8 @@ PanelWindow {
     }
     signal snapshotReady
 
-    screen: captureScreen
     visible: open
-    focusable: open
-    color: "transparent"
-    exclusionMode: ExclusionMode.Ignore
-    anchors {
-        top: true
-        right: true
-        bottom: true
-        left: true
-    }
-    WlrLayershell.namespace: "linux-desktop-frozen-screenshot"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    PopupFocusGrab {
-        popup: picker
-        onDismissed: picker.dismiss(true)
-    }
+    anchors.fill: parent
 
     function clamp(value: real, minimum: real, maximum: real): real {
         return Math.max(minimum, Math.min(maximum, value));
