@@ -1653,7 +1653,11 @@ in
           };
           Service = {
             ExecStart = "${lib.getExe nightLightControl} run";
-            Restart = "no";
+            # Hyprsunset aborts when the Wayland/CTM connection disappears
+            # during a compositor reset. Recover while the session remains up;
+            # an explicit stop (Night Light off) must still stay stopped.
+            Restart = "on-failure";
+            RestartSec = 2;
           };
         };
 
