@@ -425,6 +425,10 @@ FocusScope {
                             selected: center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
                             expanded: groupItem.expanded && selected
                             onActivated: {
+                                if (center.notificationState.captureKind(modelData)) {
+                                    center.notificationState.invokeDefault(modelData);
+                                    return;
+                                }
                                 const sameSelection = center.selectedIndex === groupItem.index && center.selectedMemberIndex === index;
                                 center.selectedIndex = groupItem.index;
                                 center.selectedMemberIndex = index;
