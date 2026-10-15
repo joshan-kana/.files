@@ -492,7 +492,7 @@ Item {
     DetailHero {
         id: header
         width: parent.width
-        height: 128
+        height: implicitHeight
         runtime: panel.runtime
         theme: panel.theme
         motion: panel.motion

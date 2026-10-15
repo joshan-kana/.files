@@ -8,6 +8,8 @@ QtObject {
     required property ScreenRouter screenRouter
     required property AmbientBar ambientBar
     required property ShellExpansionState expansionState
+    // The detail can also be opened from Controls, not only the Super+Y shortcut.
+    property bool themePanelOpen: false
     required property ShortcutCheatsheet cheatsheet
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
@@ -187,6 +189,10 @@ QtObject {
     }
 
     function showTheme(): void {
+        if (expansionState.hasCurrent && expansionState.currentName === "system" && (themePanelOpen || expansionState.currentView === "theme")) {
+            expansionState.close();
+            return;
+        }
         showSystem(null, null, "theme");
     }
 

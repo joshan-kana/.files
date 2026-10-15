@@ -9,7 +9,7 @@ ShellSurface {
     required property RuntimeConfig runtime
 
     // Quiet variant for detail views that need orientation without a hero banner.
-    property bool quiet: false
+    property bool quiet: true
     property string eyebrow: ""
     property string title: ""
     property string detail: ""
