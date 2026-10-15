@@ -13,6 +13,7 @@ Item {
     property string label: ""
     property bool compact: false
     property string compactIcon: "󰁹"
+    property int compactIconSize: 14
     property real animatedValue: Math.max(0, Math.min(1, value))
 
     implicitWidth: compact ? 34 : 126
@@ -78,6 +79,6 @@ Item {
         text: gauge.compactIcon
         color: gauge.accentColor
         font.family: "Symbols Nerd Font"
-        font.pixelSize: gauge.theme.fontSize(14)
+        font.pixelSize: gauge.theme.fontSize(gauge.compactIconSize)
     }
 }

@@ -119,7 +119,10 @@ PanelWindow {
                     popup.notificationState.dismiss(popup.notification);
                 } else {
                     popup.notificationState.hidePopup();
-                    popup.centerRequested();
+                    if (popup.notificationState.captureKind(popup.notification))
+                        popup.notificationState.invokeDefault(popup.notification);
+                    else
+                        popup.centerRequested();
                 }
             }
         }
@@ -210,7 +213,7 @@ PanelWindow {
                 }
 
                 Text {
-                    text: "CLICK  HISTORY   //   RMB  DISMISS"
+                    text: popup.notificationState.captureKind(popup.notification) ? "CLICK  OPEN   //   RMB  DISMISS" : "CLICK  HISTORY   //   RMB  DISMISS"
                     color: popup.theme.textMuted
                     opacity: 0.62
                     font.family: popup.runtime.fontMono
