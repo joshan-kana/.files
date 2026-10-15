@@ -73,6 +73,8 @@ ShellRoot {
         id: expansionState
     }
 
+    // Retain the outgoing view until the host finishes its closing morph.
+    // Otherwise nested details reset mid-animation and redraw as Controls.
     Component {
         id: mediaExpansionComponent
 
@@ -83,7 +85,7 @@ ShellRoot {
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
-            engaged: expansionState.hasCurrent && expansionState.currentName === "media"
+            engaged: expansionState.currentName === "media"
             returnToControls: expansionState.currentView === "controls"
             onCloseRequested: {
                 if (returnToControls)
@@ -102,7 +104,7 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             weather: root.weatherRef
-            engaged: expansionState.hasCurrent && expansionState.currentName === "calendar"
+            engaged: expansionState.currentName === "calendar"
             onForecastRequested: actions.toggleWeather()
             onCloseRequested: expansionState.close()
         }
@@ -116,7 +118,7 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             weather: root.weatherRef
-            engaged: expansionState.hasCurrent && expansionState.currentName === "weather"
+            engaged: expansionState.currentName === "weather"
             onCalendarRequested: actions.toggleCalendar(expansionState.screen)
             onCloseRequested: {
                 if (expansionState.currentView === "calendar")
@@ -146,7 +148,7 @@ ShellRoot {
             musicReactiveEnabled: root.musicReactiveEnabled
             barVisible: appearance.barVisible
             windowTransparencyEnabled: appearance.windowTransparencyEnabled
-            engaged: expansionState.hasCurrent && expansionState.currentName === "system"
+            engaged: expansionState.currentName === "system"
             onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
             onBarToggleRequested: appearance.toggleBar()
@@ -165,7 +167,7 @@ ShellRoot {
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
-            engaged: expansionState.hasCurrent && expansionState.currentName === "activity"
+            engaged: expansionState.currentName === "activity"
             onCloseRequested: expansionState.close()
         }
     }
