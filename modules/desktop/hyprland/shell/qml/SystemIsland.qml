@@ -31,7 +31,12 @@ Item {
         Row {
             id: statusRow
             z: 1
-            anchors.centerIn: parent
+            anchors {
+                left: parent.left
+                leftMargin: island.theme.spacing4
+                verticalCenter: parent.verticalCenter
+            }
+            height: 30
             spacing: island.compact ? island.theme.spacing1 : island.theme.spacing3
 
             // Contextual statuses belong to this single background surface.
@@ -68,7 +73,10 @@ Item {
             }
 
             Text {
-                anchors.verticalCenter: parent.verticalCenter
+                width: 30
+                height: 30
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
                 text: island.system.networkConnected ? (island.system.wifiConnected ? "󰤨" : "󰈀") : "󰖪"
                 color: island.system.networkConnected ? island.theme.accent : island.theme.critical
                 font.family: "Symbols Nerd Font"
@@ -112,11 +120,14 @@ Item {
             }
             Text {
                 visible: !island.compact
-                anchors.verticalCenter: parent.verticalCenter
-                text: "⌄"
+                width: 20
+                height: 30
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: "󰅀"
                 color: island.theme.textMuted
-                font.family: island.runtime.fontMono
-                font.pixelSize: island.theme.fontSize(12)
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: island.theme.fontSize(16)
             }
         }
 
