@@ -30,7 +30,12 @@ PanelWindow {
         left: true
     }
 
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    PopupFocusGrab {
+        popup: window
+        onDismissed: window.hide()
+    }
 
     Timer {
         id: closeTimer
@@ -120,10 +125,7 @@ PanelWindow {
         closing = false;
         search.text = "";
         flick.contentY = 0;
-        Qt.callLater(() => {
-            if (open)
-                keySink.forceActiveFocus();
-        });
+        keySink.forceActiveFocus();
     }
 
     function hide(): void {
