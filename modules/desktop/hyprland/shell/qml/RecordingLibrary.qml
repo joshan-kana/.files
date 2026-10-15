@@ -207,7 +207,7 @@ Item {
     DetailHero {
         id: hero
         width: parent.width
-        height: 128
+        height: implicitHeight
         runtime: library.runtime
         theme: library.theme
         motion: library.motion
