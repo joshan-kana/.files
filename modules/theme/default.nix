@@ -274,6 +274,15 @@ in
             ''
           );
 
+      dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
+        if activeTheme.polarity == "light" then
+          "prefer-light"
+        else if activeTheme.polarity == "dark" then
+          "prefer-dark"
+        else
+          "default"
+      );
+
       gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
 

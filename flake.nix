@@ -146,7 +146,13 @@
 
       forAllSystems = f: lib.genAttrs systems f;
 
-      pkgsFor = system: import nixpkgs { inherit system; };
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          # Lint the same Quickshell version that hosts actually deploy.
+          overlays = (import ./overlays/quickshell.nix { }).nixpkgs.overlays;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -179,6 +185,7 @@
           programs = {
             deadnix.enable = true;
             nixfmt.enable = true;
+            qmlformat.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
             ruff-format = {
@@ -229,6 +236,25 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options =
+                  lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "--max-warnings"
+                    "0"
+                  ]
+                  ++ [
+                    "-I"
+                    "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "-I"
+                    "${pkgs.quickshell}/lib/qt-6/qml"
+                  ];
+                priority = 2;
+              };
+
               ruff-check.options = [
                 "--isolated"
                 "--select"
@@ -270,7 +296,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|lua|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -344,6 +370,7 @@
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/nvtop.nix
+            ./overlays/quickshell.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             ./overlays/arc.nix
@@ -405,7 +432,8 @@
 
       themeScope = moduleRegistry.theme {
         inherit lib;
-        pkgs = null;
+        pkgs = pkgsFor "aarch64-linux";
+        system = "aarch64-linux";
         scopeConfig = { };
       };
       themeNames = themeScope.scopeOptions.name.type.functor.payload.values;

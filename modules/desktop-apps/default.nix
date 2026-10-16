@@ -8,10 +8,18 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
+  chromiumSystemTheme = 2; # 0 = Classic, 1 = GTK, 2 = Qt
+  braveWithSystemTheme = pkgs.brave.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      cat > "$out/opt/brave.com/brave/initial_preferences" <<'EOF'
+      ${builtins.toJSON { extensions.theme.system_theme = chromiumSystemTheme; }}
+      EOF
+    '';
+  });
 in
 {
   brave = _: {
-    environment.systemPackages = [ pkgs.brave ];
+    environment.systemPackages = [ (if isLinux then braveWithSystemTheme else pkgs.brave) ];
   };
 
   bitwarden = _: {
@@ -42,6 +50,10 @@ in
   chromium = _: {
     config = lib.optionalAttrs isLinux {
       environment.systemPackages = [ pkgs.chromium ];
+      programs.chromium = {
+        enable = true;
+        initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
+      };
     };
   };
 
@@ -56,6 +68,11 @@ in
       stylix.targets.firefox.profileNames = [ "themed" ];
       stylix.targets.firefox.colorTheme.enable = true;
       programs.firefox.profiles.themed.extensions.force = true;
+      programs.firefox.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
+        lib.mkIf isLinux true;
+      programs.firefox.profiles.themed.userChrome = lib.optionalString isLinux ''
+        .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+      '';
       programs.firefox.configPath =
         if isDarwin then
           "Library/Application Support/Firefox"
@@ -71,6 +88,11 @@ in
       stylix.targets.floorp.profileNames = [ "themed" ];
       stylix.targets.floorp.colorTheme.enable = true;
       programs.floorp.profiles.themed.extensions.force = true;
+      programs.floorp.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
+        lib.mkIf isLinux true;
+      programs.floorp.profiles.themed.userChrome = lib.optionalString isLinux ''
+        .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+      '';
     };
   };
 
@@ -119,7 +141,10 @@ in
   vscode = _: {
     environment.systemPackages = [ pkgs.vscode ];
     home = _: {
-      programs.vscode = { };
+      programs.vscode.profiles.default.userSettings = lib.optionalAttrs isLinux {
+        "window.titleBarStyle" = "custom";
+        "window.controlsStyle" = "hidden";
+      };
     };
   };
 
@@ -200,7 +225,6 @@ in
         };
       }
     );
-
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (

@@ -8,6 +8,34 @@
 let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
+  windowEffectsToggle = pkgs.writeShellApplication {
+    name = "linux-desktop-window-effects-toggle";
+    runtimeInputs = [ pkgs.quickshell ];
+    text = ''
+      # The shell owns and persists this preference; never update Hyprland
+      # independently of the saved state. Target its Shell ID rather than the
+      # default Quickshell config, which does not exist on these hosts.
+      instance=""
+      candidate=""
+      while IFS= read -r line; do
+        case "$line" in
+          "Instance "*:)
+            candidate="''${line#Instance }"
+            candidate="''${candidate%:}"
+            ;;
+          "  Shell ID: linux-desktop")
+            instance="$candidate"
+            break
+            ;;
+        esac
+      done < <(quickshell list --all)
+      if [ -z "$instance" ]; then
+        printf 'Linux desktop shell is not running.\n' >&2
+        exit 1
+      fi
+      quickshell ipc --id "$instance" call desktop toggleWindowEffects
+    '';
+  };
   aliases = {
     h = "start-hyprland";
     HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
@@ -19,13 +47,24 @@ in
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
+  systemd.user.services = {
+    xdg-desktop-portal-hyprland = {
+      overrideStrategy = "asDropin";
+      serviceConfig.RestartSec = 3;
+    };
+    xdg-desktop-portal-gtk = {
+      overrideStrategy = "asDropin";
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     wl-clipboard
     brightnessctl
-    polkit_gnome
-    awww
     networkmanagerapplet
-    playerctl
     grimblast
     nwg-panel
     nwg-dock-hyprland
@@ -33,122 +72,10 @@ in
     wlr-randr
   ];
 
-  eww = _: {
-    home = _: {
-      programs.eww = {
-        package = pkgs.eww;
-        yuckConfig = builtins.readFile ./eww/eww.yuck;
-        scssConfig = builtins.readFile ./eww/eww.scss;
-      };
-    };
-  };
+  shell = import ./shell;
 
-  wofi = _: {
-    home = _: {
-      programs.wofi.settings = {
-        allow_images = true;
-        matching = "fuzzy";
-      };
-    };
-  };
-
-  rofi = _: {
-    home = _: {
-      programs.rofi = {
-        package = pkgs.rofi;
-        settings.terminal = terminal;
-        plugins = with pkgs; [ rofi-calc ];
-      };
-    };
-  };
-
-  tofi = _: {
-    environment.systemPackages = [ pkgs.tofi ];
-
-    home = { config, ... }: {
-      home.file.".config/tofi/config".text = ''
-        font = ${config.stylix.fonts.monospace.name}
-        font-size = 18
-        background-color = #${config.lib.stylix.colors.base00}
-        text-color = #${config.lib.stylix.colors.base07}
-        selection-color = #${config.lib.stylix.colors.base0A}
-        width = 45%
-        height = 35%
-        border-width = 5
-        border-color = #${config.lib.stylix.colors.base03}
-        corner-radius = 20
-      '';
-    };
-  };
-
-  waybar = _: {
-    home = _: {
-      programs.waybar.settings.mainBar = {
-        layer = "top";
-        spacing = 10;
-        modules-left = [
-          "hyprland/workspaces"
-          "mpris"
-        ];
-        modules-center = [ "clock" ];
-        modules-right = [
-          "backlight"
-          "wireplumber"
-          "battery"
-          "tray"
-        ];
-        "hyprland/workspaces" = {
-          on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'";
-          on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'";
-        };
-        mpris = {
-          interval = 1;
-          format = "{player}: {status_icon} {position}/{length}";
-          status-icons = {
-            playing = "▶";
-            paused = "⏸";
-          };
-        };
-        clock.format = "⎈ {:%a, %b %d |  %R}";
-        backlight = {
-          format = "{percent}% {icon}";
-          format-icons = [
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        battery = {
-          interval = 120;
-          format = "{capacity}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-            ""
-            ""
-          ];
-        };
-        wireplumber = {
-          format = "{volume}% {icon}";
-          format-icons = [
-            ""
-            ""
-            ""
-          ];
-          scroll-step = 0.35;
-        };
-        tray.spacing = 10;
-      };
-    };
-  };
-
-  swaylock = _: {
-    security.pam.services.swaylock = { };
-
-    home = _: {
-      programs.swaylock.package = pkgs.swaylock-effects;
-    };
+  lock = _: {
+    security.pam.services.linux-desktop = { };
   };
 
   cliphist = _: {
@@ -157,36 +84,24 @@ in
     };
   };
 
-  dunst = _: {
-    home = { config, ... }: {
-      services.dunst.settings.global = {
-        mouse_right_click = "do_action";
-        dmenu = "${config.home.homeDirectory}/.nix-profile/bin/rofi -dmenu";
-      };
-    };
-  };
-
-  avizo = _: {
-    home = _: {
-      services.avizo.settings.default = {
-        time = 1.0;
-        fade-in = 0.1;
-        fade-out = 0.2;
-        padding = 10;
-      };
-    };
-  };
-
   home = _: {
     # disable hyprpaper target to prevent crash loops
     stylix.targets.hyprland.hyprpaper.enable = false;
 
     home.shellAliases = aliases;
+    home.packages = [ windowEffectsToggle ];
+
+    # Remove toolkit-owned titlebar buttons globally; the compositor owns
+    # window movement/closing, but GTK client headerbars are still usable.
+    gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
+    gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
+    dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
 
     wayland.windowManager.hyprland =
       let
         lua = lib.generators.mkLuaInline;
         mod = keys: lua ''mainMod .. " + ${keys}"'';
+        meh = keys: lua ''mehMod .. " + ${keys}"'';
         bind = keys: dispatcher: {
           _args = [
             keys
@@ -201,10 +116,34 @@ in
           ];
         };
         modBind = keys: dispatcher: bind (mod keys) dispatcher;
-        modBindWith =
-          keys: dispatcher: flags:
-          bindWith (mod keys) dispatcher flags;
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
+        keybindings = import ./keybindings.nix {
+          inherit terminal;
+        };
+        globalKeybindings = lib.filter (binding: binding.submap == null) keybindings;
+        launcherKeybindings = lib.filter (binding: binding.submap == "launcher") keybindings;
+        resizeKeybindings = lib.filter (binding: binding.submap == "resize") keybindings;
+        actionDispatcher =
+          action:
+          if action.type == "exec" then
+            exec action.value
+          else if action.type == "global" then
+            ''hl.dsp.global("${action.value}")''
+          else
+            action.value;
+        renderBinding =
+          binding:
+          let
+            keys =
+              if binding.mehMod then
+                meh binding.keys
+              else if binding.mainMod then
+                mod binding.keys
+              else
+                binding.keys;
+            dispatcher = actionDispatcher binding.action;
+          in
+          if binding.flags == { } then bind keys dispatcher else bindWith keys dispatcher binding.flags;
       in
       {
         xwayland.enable = xwaylandEnabled;
@@ -212,6 +151,7 @@ in
 
         settings = {
           mainMod._var = "SUPER";
+          mehMod._var = "CTRL + ALT + SHIFT";
 
           config = {
             xwayland.force_zero_scaling = true;
@@ -246,17 +186,22 @@ in
 
             decoration = {
               rounding = 10;
+              # Modal layer dimming should be subtle, not the compositor's
+              # heavy 0.4 default. Authentication has its own themed scrim.
+              dim_around = 0.12;
 
               blur = {
                 enabled = true;
-                size = 3;
-                passes = 1;
+                size = 8;
+                passes = 2;
               };
 
               shadow = {
                 enabled = true;
-                range = 30;
-                render_power = 3;
+                range = 18;
+                render_power = 2;
+                color = lib.mkForce "rgba(${config.lib.stylix.colors.base0D}14)";
+                color_inactive = lib.mkForce "rgba(${config.lib.stylix.colors.base00}0e)";
               };
             };
 
@@ -351,139 +296,54 @@ in
             sensitivity = -0.5;
           };
 
-          window_rule = {
-            match.class = "polkit-kde-authentication-agent-1";
-            float = true;
-            center = true;
-            size = [
-              500
-              250
-            ];
-          };
+          # This 1×1 Top-layer surface appears only for global modal
+          # widgets. The persistent Overlay-level modal host stays undimmed.
+          layer_rule = [
+            {
+              match.namespace = "^linux-desktop-modal-dim$";
+              dim_around = true;
+            }
+          ];
+
+          window_rule = [
+            {
+              # The theme prompt must coexist with the centre picker and the
+              # desktop, even on the system-owned special workspace.
+              match.class = "LinuxDesktopThemeSwitch";
+              float = true;
+              size = [
+                640
+                390
+              ];
+              move = [
+                64
+                90
+              ];
+            }
+          ];
 
           on = {
             _args = [
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("awww-daemon && awww img ~/.config/home-manager/wallpaper.png")
-                  hl.exec_cmd("waybar")
                   hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("dunst")
-                  hl.exec_cmd("avizo-service")
-                  hl.exec_cmd("wl-paste --type text --watch cliphist store")
-                  hl.exec_cmd("wl-paste --type image --watch cliphist store")
-                  hl.exec_cmd("playerctld daemon")
                   hl.exec_cmd("dropbox")
-                  hl.exec_cmd("${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1")
                 end
               '')
             ];
           };
 
-          bind = [
-            # Favourite apps
-            (modBind "ALT + 1" (exec terminal))
-            (modBind "ALT + 2" (exec "spotify"))
-            (modBind "ALT + 3" (exec "brave"))
-            (modBind "ALT + 4" (exec "floorp"))
-            (modBind "ALT + 5" (exec "thunderbird"))
-            (modBind "ALT + 6" (exec "code"))
-            (modBind "ALT + 7" (exec "obsidian --disable-gpu"))
-            (modBind "ALT + E" (exec "nautilus"))
-            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer"))
-            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx"))
-
-            # Applets and launchers
-            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch"))
-            (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
-            (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
-
-            # Window management
-            (modBind "Q" "hl.dsp.window.close()")
-            (modBind "M" "hl.dsp.exit()")
-            (modBind "SHIFT + F" "hl.dsp.window.float()")
-            (modBind "SHIFT + P" "hl.dsp.window.pin()")
-            (modBind "P" "hl.dsp.window.pseudo()")
-            (modBind "J" ''hl.dsp.layout("togglesplit")'')
-            (modBind "F" ''hl.dsp.window.fullscreen({ mode = "maximized" })'')
-            (modBindWith "mouse:272" "hl.dsp.window.drag()" { mouse = true; })
-            (modBindWith "mouse:273" "hl.dsp.window.resize()" { mouse = true; })
-
-            # Focus
-            (modBind "A" ''hl.dsp.focus({ direction = "l" })'')
-            (modBind "D" ''hl.dsp.focus({ direction = "r" })'')
-            (modBind "W" ''hl.dsp.focus({ direction = "u" })'')
-            (modBind "S" ''hl.dsp.focus({ direction = "d" })'')
-
-            # Workspaces
-            (modBind "1" ''hl.dsp.focus({ workspace = "1" })'')
-            (modBind "2" ''hl.dsp.focus({ workspace = "2" })'')
-            (modBind "3" ''hl.dsp.focus({ workspace = "3" })'')
-            (modBind "4" ''hl.dsp.focus({ workspace = "4" })'')
-            (modBind "5" ''hl.dsp.focus({ workspace = "5" })'')
-            (modBind "6" ''hl.dsp.focus({ workspace = "6" })'')
-            (modBind "7" ''hl.dsp.focus({ workspace = "7" })'')
-            (modBind "8" ''hl.dsp.focus({ workspace = "8" })'')
-            (modBind "9" ''hl.dsp.focus({ workspace = "9" })'')
-            (modBind "0" ''hl.dsp.focus({ workspace = "10" })'')
-
-            (modBind "SHIFT + 1" ''hl.dsp.window.move({ workspace = "1", follow = false })'')
-            (modBind "SHIFT + 2" ''hl.dsp.window.move({ workspace = "2", follow = false })'')
-            (modBind "SHIFT + 3" ''hl.dsp.window.move({ workspace = "3", follow = false })'')
-            (modBind "SHIFT + 4" ''hl.dsp.window.move({ workspace = "4", follow = false })'')
-            (modBind "SHIFT + 5" ''hl.dsp.window.move({ workspace = "5", follow = false })'')
-            (modBind "SHIFT + 6" ''hl.dsp.window.move({ workspace = "6", follow = false })'')
-            (modBind "SHIFT + 7" ''hl.dsp.window.move({ workspace = "7", follow = false })'')
-            (modBind "SHIFT + 8" ''hl.dsp.window.move({ workspace = "8", follow = false })'')
-            (modBind "SHIFT + 9" ''hl.dsp.window.move({ workspace = "9", follow = false })'')
-            (modBind "SHIFT + 0" ''hl.dsp.window.move({ workspace = "10", follow = false })'')
-
-            (modBindWith "SHIFT + D" "hl.dsp.window.resize({ x = 50, y = 0, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + A" "hl.dsp.window.resize({ x = -50, y = 0, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + W" "hl.dsp.window.resize({ x = 0, y = -50, relative = true })" {
-              repeating = true;
-            })
-            (modBindWith "SHIFT + S" "hl.dsp.window.resize({ x = 0, y = 50, relative = true })" {
-              repeating = true;
-            })
-
-            (modBind "X" ''hl.dsp.workspace.toggle_special("magic")'')
-            (modBind "SHIFT + X" ''hl.dsp.window.move({ workspace = "special:magic", follow = true })'')
-            (modBind "mouse_down" ''hl.dsp.focus({ workspace = "e+1" })'')
-            (modBind "mouse_up" ''hl.dsp.focus({ workspace = "e-1" })'')
-            (modBind "CTRL + A" ''hl.dsp.focus({ workspace = "e-1" })'')
-            (modBind "CTRL + D" ''hl.dsp.focus({ workspace = "e+1" })'')
-
-            # Media keys
-            (bindWith "XF86AudioRaiseVolume" (exec "volumectl + 5") { repeating = true; })
-            (bindWith "XF86AudioLowerVolume" (exec "volumectl - 5") { repeating = true; })
-            (bind "XF86AudioMute" (exec "volumectl %"))
-            (modBind "ALT + X" (exec "playerctl play-pause"))
-            (modBind "ALT + C" (exec "playerctl next"))
-            (modBind "ALT + Z" (exec "playerctl previous"))
-            (modBindWith "ALT + D" (exec "playerctl position 10+") { repeating = true; })
-            (modBindWith "ALT + S" (exec "playerctl position 10-") { repeating = true; })
-            (modBind "ALT + W" (exec "playerctl shuffle toggle"))
-            (modBind "ALT + F" (exec "playerctld shift"))
-
-            # Brightness
-            (bindWith "XF86MonBrightnessUp" (exec "lightctl + 5") { repeating = true; })
-            (bindWith "XF86MonBrightnessDown" (exec "lightctl - 5") { repeating = true; })
-
-            (modBind "L" (exec "swaylock"))
-            (modBind "SHIFT + E" (exec "code ${config.dotfiles.paths.repoPath}/edit_config.code-workspace"))
-            (modBind "Escape" ''hl.dsp.submap("passthru")'')
-          ];
+          bind = map renderBinding globalKeybindings;
         };
 
-        submaps.passthru.settings.bind = [
-          (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
-        ];
+        submaps = {
+          launcher.settings.bind = map renderBinding launcherKeybindings;
+          resize.settings.bind = map renderBinding resizeKeybindings;
+          passthru.settings.bind = [
+            (modBind "SHIFT + Escape" ''hl.dsp.submap("reset")'')
+          ];
+        };
 
         # nwg-displays writes ~/.config/hypr/monitors.lua for Hyprland 0.55+.
         extraConfig = ''
