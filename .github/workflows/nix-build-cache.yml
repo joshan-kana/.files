@@ -168,7 +168,7 @@ jobs:
           else
             installable=".#nixosConfigurations.$HOST_PROFILE.config.system.build.toplevel"
           fi
-          nix build --no-link --print-out-paths "$installable" | tee "$RUNNER_TEMP/built-paths.txt"
+          nix build -L -v --no-link --print-out-paths "$installable" | tee "$RUNNER_TEMP/built-paths.txt"
 
       - name: Publish closure to Attic
         timeout-minutes: 90
