@@ -346,6 +346,7 @@
             ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
+            ./overlays/zed.nix
             ./overlays/arc.nix
             ./overlays/arduino-ide.nix
             ./overlays/chatgpt.nix
