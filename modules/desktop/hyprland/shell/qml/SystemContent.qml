@@ -710,9 +710,12 @@ FocusScope {
 
             Row {
                 width: parent.width
+                height: 36
                 spacing: root.theme.spacing2
 
                 Text {
+                    id: actionsHeading
+                    anchors.verticalCenter: parent.verticalCenter
                     text: "QUICK ACTIONS"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
@@ -720,6 +723,32 @@ FocusScope {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.1
                 }
+
+                Item {
+                    width: Math.max(1, parent.width - actionsHeading.implicitWidth - recordingsButton.width - parent.spacing * 2)
+                    height: 1
+                }
+
+                ShellAction {
+                    id: recordingsButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 152
+                    height: 30
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰕧"
+                    title: "RECORDINGS"
+                    shortcut: "C"
+                    onActivated: root.openRecordings()
+                }
+            }
+
+            Item {
+                width: 1
+                height: root.theme.spacing1
             }
 
             Grid {
@@ -797,6 +826,11 @@ FocusScope {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.1
                 }
+            }
+
+            Item {
+                width: 1
+                height: root.theme.spacing1
             }
 
             Grid {
@@ -1027,36 +1061,16 @@ FocusScope {
                 width: parent.width
                 spacing: root.theme.spacing2
 
-                Row {
+                Text {
                     width: parent.width
                     height: 30
-                    spacing: root.theme.spacing3
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(1, parent.width - recordingsButton.width - parent.spacing)
-                        text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(10)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1
-                        elide: Text.ElideRight
-                    }
-                    ShellAction {
-                        id: recordingsButton
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 152
-                        height: 30
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        horizontalCompact: true
-                        icon: "󰕧"
-                        title: "RECORDINGS"
-                        shortcut: "C"
-                        onActivated: root.openRecordings()
-                    }
+                    verticalAlignment: Text.AlignVCenter
+                    text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
                 }
 
                 ShellSurface {
