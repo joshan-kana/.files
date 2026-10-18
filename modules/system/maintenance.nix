@@ -51,21 +51,40 @@ let
   darwinJob =
     name: offset: command:
     pkgs.writeShellScript "maintenance-${name}" ''
-      set -eu
+      set -euo pipefail
       umask 077
-      state=/var/db/.files/maintenance
-      ${pkgs.coreutils}/bin/mkdir -p -m 700 "$state"
       export PATH=${lib.makeBinPath [ pkgs.coreutils ]}:/usr/bin:/bin
-      exec /usr/bin/lockf -k "$state/lock" ${pkgs.bash}/bin/bash ${./maintenance-due.sh} \
-        ${lib.escapeShellArgs (
-          [
-            name
-            (toString cleanupIntervalDays)
-            (timeString offset)
-          ]
-          ++ command
-        )}
+      state=/var/db/.files/maintenance
+      mkdir -p "$state"
+      exec 9>"$state/lock"
+      /usr/bin/lockf -s 9
+
+      # Find the latest scheduled date, even when the Mac missed several days.
+      today=$(date +%F)
+      if (( $(date +%s) < $(date -d "$today ${timeString offset}" +%s) )); then
+        today=$(date -d "$today 1 day ago" +%F)
+      fi
+      ${
+        if cleanupIntervalDays == 7 then
+          ''
+            weekday=$(date -d "$today" +%w)
+            due_day=$(date -d "$today $weekday days ago" +%F)
+          ''
+        else
+          ''
+            day=$(date -d "$today" +%-d)
+            due_day="''${today:0:8}$(printf '%02d' "$((1 + (day - 1) / ${toString cleanupIntervalDays} * ${toString cleanupIntervalDays}))")"
+          ''
+      }
+      due=$(date -d "$due_day ${timeString offset}" +%s)
+      stamp="$state/${name}"
+      if [[ -f "$stamp" ]] && read -r last < "$stamp" && [[ $last =~ ^[0-9]+$ ]] && ((last >= due)); then
+        exit 0
+      fi
+      ${lib.escapeShellArgs command}
+      printf '%s\n' "$due" > "$stamp"
     '';
+
 in
 assert cleanupIntervalDays >= 1 && cleanupIntervalDays <= 31;
 assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
