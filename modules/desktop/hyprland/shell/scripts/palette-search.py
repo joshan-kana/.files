@@ -4,6 +4,7 @@
 import json
 import mimetypes
 import os
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -378,6 +379,7 @@ def start_search_socket():
 
 def watch():
     """Rebuild on relevant Linux inotify changes, never on a recurring timer."""
+    signal.signal(signal.SIGTERM, lambda _signal, _frame: sys.exit(0))
 
     home = Path.home()
     config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
