@@ -78,14 +78,25 @@ Item {
             font.pixelSize: gauge.theme.fontSize(10)
         }
     }
+    // Centring a full-height Text item positions its font box, not its ink.
+    // The speaker glyph has asymmetric bearings, so use its painted bounds
+    // to centre it independently of the battery's existing presentation.
+    TextMetrics {
+        id: compactInk
+        font.family: "Symbols Nerd Font"
+        font.pixelSize: gauge.theme.fontSize(gauge.compactIconSize)
+        text: gauge.compactIcon
+    }
+
+    FontMetrics {
+        id: compactFont
+        font: compactInk.font
+    }
+
     Text {
         anchors.centerIn: parent
-        anchors.horizontalCenterOffset: gauge.compactIconOffsetX
-        anchors.verticalCenterOffset: gauge.compactIconOffsetY
-        width: gauge.compactRingTuning ? parent.width : implicitWidth
-        height: gauge.compactRingTuning ? parent.height : implicitHeight
-        horizontalAlignment: gauge.compactRingTuning ? Text.AlignHCenter : Text.AlignLeft
-        verticalAlignment: gauge.compactRingTuning ? Text.AlignVCenter : Text.AlignTop
+        anchors.horizontalCenterOffset: gauge.compactRingTuning ? compactInk.advanceWidth / 2 - compactInk.tightBoundingRect.x - compactInk.tightBoundingRect.width / 2 : gauge.compactIconOffsetX
+        anchors.verticalCenterOffset: gauge.compactRingTuning ? compactFont.height / 2 - compactFont.ascent - compactInk.tightBoundingRect.y - compactInk.tightBoundingRect.height / 2 : gauge.compactIconOffsetY
         visible: gauge.compact
         text: gauge.compactIcon
         color: gauge.accentColor
