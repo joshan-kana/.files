@@ -38,10 +38,7 @@ The default indexed roots are existing `~/Documents`, `~/Downloads`, `~/Desktop`
 
 ```json
 {
-  "roots": [
-    "~/Documents",
-    "~/repos"
-  ]
+  "roots": ["~/Documents", "~/repos"]
 }
 ```
 
@@ -81,16 +78,16 @@ System-control commands call the existing shell state/action owners. `volume 35`
 
 A palette result is a small descriptor, not a process:
 
-| Field | Purpose |
-| --- | --- |
-| `kind` | The built-in provider/result class (command, application, file, bookmark, quicklink, snippet, window or workspace). |
-| `name` | Human-readable label shown in the result list. |
-| `genericName` | One-line context and state. |
-| `icon` | Desktop icon-theme name. |
-| `keywords` | Optional search aliases, used by deterministic fuzzy matching. |
-| `key` | Optional existing shortcut hint; the keyboard binding itself remains owned by the compositor. |
-| `commandId` | Registered first-party action identifier, not a shell command. |
-| `parameterMode` | Optional validated input mode (percentage, target or confirmation). |
+| Field           | Purpose                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `kind`          | The built-in provider/result class (command, application, file, bookmark, quicklink, snippet, window or workspace). |
+| `name`          | Human-readable label shown in the result list.                                                                      |
+| `genericName`   | One-line context and state.                                                                                         |
+| `icon`          | Desktop icon-theme name.                                                                                            |
+| `keywords`      | Optional search aliases, used by deterministic fuzzy matching.                                                      |
+| `key`           | Optional existing shortcut hint; the keyboard binding itself remains owned by the compositor.                       |
+| `commandId`     | Registered first-party action identifier, not a shell command.                                                      |
+| `parameterMode` | Optional validated input mode (percentage, target or confirmation).                                                 |
 
 The **first-party command provider** is the declarative `commands` list at the shell's `CommandPalette` instance. Keep it close to the relevant `Actions` owner. New first-party commands must call the existing state/action owner; use `parameterMode` and the typed argument signal if values are needed, rather than constructing command lines from search text.
 
