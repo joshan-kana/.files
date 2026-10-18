@@ -762,7 +762,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -776,7 +776,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -790,19 +790,20 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: "󰍛"
                     title: "Resources"
                     shortcut: "G"
+                    activeColor: root.theme.roleColor("positive")
                     onActivated: root.openResources()
                 }
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -811,14 +812,17 @@ FocusScope {
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"
-                    activeColor: root.theme.warning
+                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.warning : root.theme.roleColor("positive")
                     onActivated: root.powerProfile.cycle()
                 }
             }
 
             Row {
                 width: parent.width
+                height: 36
+
                 Text {
+                    anchors.verticalCenter: parent.verticalCenter
                     text: "VISUAL MODES"
                     color: root.theme.textMuted
                     font.family: root.runtime.fontMono
@@ -844,7 +848,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -858,7 +862,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -866,13 +870,13 @@ FocusScope {
                     title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
                     shortcut: "SHIFT+N"
                     active: root.musicReactiveEnabled
-                    activeColor: root.theme.roleColor("media")
+                    activeColor: root.theme.roleColor("connectivity")
                     onActivated: root.musicReactiveToggleRequested()
                 }
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -886,7 +890,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -894,12 +898,12 @@ FocusScope {
                     title: root.barVisible ? "Bar visible" : "Bar hidden"
                     shortcut: "SHIFT+B"
                     active: !root.barVisible
-                    activeColor: root.theme.roleColor("warning")
+                    activeColor: root.theme.roleColor("positive")
                     onActivated: root.barToggleRequested()
                 }
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -913,7 +917,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth
-                    height: 64
+                    height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
