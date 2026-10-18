@@ -69,8 +69,8 @@ SquircleSurface {
     implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
     cornerRadius: theme.radiusMedium
     exponent: theme.squircleExponent
-    fillColor: selected ? theme.focusFill : theme.expressiveSurface
-    borderColor: selected ? theme.accent : notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : theme.outline
+    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.accent, theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
+    borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.accent : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
     MouseArea {
@@ -133,8 +133,19 @@ SquircleSurface {
                 font.letterSpacing: 1.2
             }
 
+            Rectangle {
+                id: unreadMarker
+                visible: !card.read
+                anchors.verticalCenter: parent.verticalCenter
+                width: visible ? 6 : 0
+                height: 6
+                radius: 3
+                color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.critical : card.theme.roleColor("connectivity")
+                opacity: card.selected ? 1 : 0.85
+            }
+
             Item {
-                width: Math.max(0, parent.width - appName.implicitWidth - cardActions.implicitWidth - card.theme.spacing2)
+                width: Math.max(0, parent.width - appName.implicitWidth - unreadMarker.width - cardActions.implicitWidth - card.theme.spacing2 * 2)
                 height: 1
             }
 
