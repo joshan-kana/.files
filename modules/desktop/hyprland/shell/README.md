@@ -26,6 +26,8 @@ For custom searches, create `~/.config/linux-desktop/quicklinks.json`:
 ]
 ```
 
+To target a specific installed browser, add a desktop-entry ID such as \`"browser": "firefox.desktop"\` to an entry. The launcher resolves it from installed application directories and uses its declared application handler; an unavailable browser produces visible feedback. You may also use \`{clipboard}\` in a URL template for an explicit, one-time clipboard search. Clipboard values are read only after a separate confirmation showing that they will be sent to the website. Clipboard searches are never run implicitly or stored in search history.
+
 The optional file replaces the built-in Quicklinks. Aliases are short lower-case identifiers; templates must use HTTP(S) and contain `{query}`. Search terms are URL-encoded. Invalid entries and executable URL schemes are rejected, and the file is reloaded when changed. Browser bookmarks are indexed read-only from supported Firefox and Chromium-family profiles rather than duplicated in this file.
 
 ## Local search
