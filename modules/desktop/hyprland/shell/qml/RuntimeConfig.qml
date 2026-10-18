@@ -33,6 +33,7 @@ QtObject {
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
     readonly property string urlOpen: root.configData.tools.urlOpen
     readonly property string paletteSearch: root.configData.tools.paletteSearch
+    readonly property string clipboardPaste: root.configData.tools.clipboardPaste
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
     readonly property string recordingLibrary: root.configData.tools.recordingLibrary
@@ -154,6 +155,7 @@ QtObject {
                 property string themeSet: ""
                 property string urlOpen: ""
                 property string paletteSearch: ""
+                property string clipboardPaste: ""
                 property string wallpaperLibrary: ""
                 property string recordingToggle: ""
                 property string recordingLibrary: ""
