@@ -116,22 +116,15 @@ Item {
                         width: content.width
                         spacing: help.theme.spacing3
 
-                        ShellSurface {
-                            width: Math.max(64, Math.min(132, keyLabel.implicitWidth + theme.spacing4))
-                            height: 30
-                            theme: help.theme
-                            motion: help.motion
-                            surfaceLayer: ShellSurface.Control
-                            cornerRadius: theme.radiusSmall
-                            fillColor: help.theme.selectedTabFill
+                        Item {
+                            width: 138
+                            height: 34
 
-                            KeyChord {
-                                id: keyLabel
+                            KeyHint {
                                 anchors.centerIn: parent
+                                runtime: help.runtime
+                                theme: help.theme
                                 shortcut: helpBinding.modelData.key
-                                fontFamily: help.runtime.fontMono
-                                textColor: help.theme.text
-                                fontSize: help.theme.fontSize(11)
                             }
                         }
 
