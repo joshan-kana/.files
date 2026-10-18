@@ -212,7 +212,7 @@ Item {
         theme: library.theme
         motion: library.motion
         glyph: "󰕧"
-        glyphColor: library.theme.accent
+        glyphColor: library.theme.roleColor("media")
         eyebrow: "Capture / Local library"
         title: "Recordings"
         detail: library.entries.length + (library.entries.length === 1 ? " clip" : " clips") + " · ~/Videos/Screencasts"
@@ -346,7 +346,7 @@ Item {
                         anchors.centerIn: parent
                         visible: library.previewPath.length === 0
                         text: library.selectedEntry ? "󰕧" : "󰋼"
-                        color: library.theme.accent
+                        color: library.theme.roleColor("media")
                         font.family: library.runtime.fontMono
                         font.pixelSize: library.theme.fontSize(38)
                     }
