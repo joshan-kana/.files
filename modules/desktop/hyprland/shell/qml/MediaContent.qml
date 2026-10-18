@@ -127,8 +127,8 @@ FocusScope {
             surfaceLayer: ShellSurface.Group
             cornerRadius: content.theme.radiusLarge
             luminous: true
-            luminousColor: content.theme.accent
-            fillColor: content.theme.blend(content.theme.groupBase, content.theme.accent, content.theme.dark ? 0.095 : 0.045)
+            luminousColor: content.theme.roleColor("media")
+            fillColor: content.theme.blend(content.theme.groupBase, content.theme.roleColor("media"), content.theme.dark ? 0.045 : 0.025)
         }
 
         Row {
@@ -168,7 +168,7 @@ FocusScope {
                     anchors.centerIn: parent
                     visible: content.media.artUrl.length === 0
                     text: "♫"
-                    color: content.theme.accent
+                    color: content.theme.roleColor("media")
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(48)
                 }
@@ -181,7 +181,7 @@ FocusScope {
 
                 Text {
                     text: content.media.available ? "Now playing" : "Media"
-                    color: content.theme.accent
+                    color: content.theme.roleColor("media")
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(12)
                     font.weight: Font.Medium
@@ -385,7 +385,7 @@ FocusScope {
                     return content.scrubbing ? content.scrubFraction : Math.max(0, Math.min(1, content.media.position / content.media.length));
                 }
                 enabled: content.media.seekable && content.media.length > 0
-                accentColor: theme.accent
+                accentColor: theme.roleColor("media")
                 trackHeight: 8
                 handleSize: 18
 
