@@ -68,7 +68,7 @@ Item {
                 motion: island.motion
                 compact: true
                 value: island.system.volume
-                accentColor: island.system.muted ? island.theme.warning : island.theme.accent
+                accentColor: island.system.muted ? island.theme.warning : island.theme.roleColor("media")
                 compactIconSize: 20
                 compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
             }
@@ -79,7 +79,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: island.system.networkConnected ? (island.system.wifiConnected ? "󰤨" : "󰈀") : "󰖪"
-                color: island.system.networkConnected ? island.theme.accent : island.theme.critical
+                color: island.system.networkConnected ? island.theme.roleColor("connectivity") : island.theme.critical
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: island.theme.fontSize(24)
             }
@@ -92,7 +92,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: island.system.bluetoothEnabled ? "󰂯" : "󰂲"
-                    color: island.system.bluetoothConnectedCount > 0 ? island.theme.accent : island.theme.textMuted
+                    color: island.system.bluetoothConnectedCount > 0 ? island.theme.roleColor("connectivity") : island.theme.textMuted
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: island.theme.fontSize(15)
                 }
