@@ -12,6 +12,7 @@ Item {
     property color accentColor: theme.accent
     property string label: ""
     property bool compact: false
+    property bool compactRingTuning: false
     property string compactIcon: "󰁹"
     property int compactIconSize: 14
     property real compactIconOffsetX: 0
@@ -39,11 +40,11 @@ Item {
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
-            // Both ends of the compact ring meet the same baseline.
-            // Opening the lower gap slightly also avoids a drooping left cap.
-            const radius = Math.max(1, Math.min(width, height) / 2 - (gauge.compact ? 5 : 12));
-            const start = Math.PI * 0.8;
-            const sweep = Math.PI * 1.4;
+            // Keep the standard gauge unchanged. The volume indicator alone
+            // uses an adjusted arc to correct its optical baseline.
+            const radius = Math.max(1, Math.min(width, height) / 2 - (gauge.compact ? (gauge.compactRingTuning ? 5 : 4) : 12));
+            const start = Math.PI * (gauge.compactRingTuning ? 0.8 : 0.75);
+            const sweep = Math.PI * (gauge.compactRingTuning ? 1.4 : 1.5);
             ctx.lineWidth = gauge.compact ? 3 : 9;
             ctx.lineCap = "round";
             ctx.beginPath();
@@ -81,10 +82,10 @@ Item {
         anchors.centerIn: parent
         anchors.horizontalCenterOffset: gauge.compactIconOffsetX
         anchors.verticalCenterOffset: gauge.compactIconOffsetY
-        width: parent.width
-        height: parent.height
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
+        width: gauge.compactRingTuning ? parent.width : implicitWidth
+        height: gauge.compactRingTuning ? parent.height : implicitHeight
+        horizontalAlignment: gauge.compactRingTuning ? Text.AlignHCenter : Text.AlignLeft
+        verticalAlignment: gauge.compactRingTuning ? Text.AlignVCenter : Text.AlignTop
         visible: gauge.compact
         text: gauge.compactIcon
         color: gauge.accentColor
