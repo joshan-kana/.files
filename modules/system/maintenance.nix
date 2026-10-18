@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  options,
   pkgs,
   system,
   ...
@@ -154,21 +153,9 @@ assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
   };
 }
 // lib.optionalAttrs isLinux {
-  services.journald =
-    if options.services.journald ? settings then
-      {
-        settings.Journal = {
-          SystemMaxUse = "1G";
-          SystemKeepFree = config.nix.settings.min-free;
-          MaxRetentionSec = "${toString retentionDays}day";
-        };
-      }
-    else
-      {
-        extraConfig = ''
-          SystemMaxUse=1G
-          SystemKeepFree=${config.nix.settings.min-free}
-          MaxRetentionSec=${toString retentionDays}day
-        '';
-      };
+  services.journald.settings.Journal = {
+    SystemMaxUse = "1G";
+    SystemKeepFree = config.nix.settings.min-free;
+    MaxRetentionSec = "${toString retentionDays}day";
+  };
 }

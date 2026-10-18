@@ -13,11 +13,8 @@
         "nixos-server": {
           "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos-server"
         },
-        "home-manager-unstable": {
+        "home-manager": {
           "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
-        },
-        "home-manager-stable": {
-          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos-server.options.home-manager.users.type.getSubOptions []"
         }
       }
     }

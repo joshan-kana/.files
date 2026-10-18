@@ -14,7 +14,7 @@ in
       actions.ENABLED = true;
 
       server = {
-        DOMAIN = server.lan.serverIp;
+        ROOT_URL = "http://${server.lan.serverIp}:3000/";
         HTTP_ADDR = server.lan.serverIp;
         HTTP_PORT = 3000;
         SSH_DOMAIN = server.lan.serverIp;
