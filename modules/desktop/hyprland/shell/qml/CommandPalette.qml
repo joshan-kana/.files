@@ -620,8 +620,8 @@ Item {
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: theme.selectionFill
-                    borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.28)
+                    fillColor: theme.blend(theme.layer2, theme.accent, theme.dark ? 0.07 : 0.045)
+                    borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, theme.dark ? 0.53 : 0.62)
                     borderWidth: theme.borderThin
                 }
 
@@ -648,14 +648,14 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusSmall
-                            fillColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.12)
-                            borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.36)
+                            fillColor: result.ListView.isCurrentItem ? theme.blend(theme.controlBase, theme.accent, 0.18) : theme.controlBase
+                            borderColor: result.ListView.isCurrentItem ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.55) : theme.subtleBorder
                             borderWidth: theme.borderThin
 
                             Text {
                                 anchors.centerIn: parent
                                 text: result.index + 1
-                                color: theme.accent
+                                color: result.ListView.isCurrentItem ? theme.accent : theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
                                 font.weight: Font.Bold
@@ -723,7 +723,7 @@ Item {
                                 shortcut: result.modelData.key.length > 0 ? result.modelData.key : (result.ListView.isCurrentItem ? "↵ RUN" : "")
                                 fontFamily: runtime.fontMono
                                 fontSize: theme.fontSize(11)
-                                textColor: theme.accent
+                                textColor: result.ListView.isCurrentItem ? theme.accent : theme.textMuted
                             }
                         }
                     }
