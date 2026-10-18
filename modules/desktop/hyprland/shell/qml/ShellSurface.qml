@@ -20,6 +20,18 @@ SquircleSurface {
     property color luminousColor: theme.accent
     property real lightIntensity: 1
     property bool elevated: false
+    property bool glassAllowed: true
+
+    // Change fill alpha, not the Item opacity: children, icons and text stay
+    // fully legible while the compositor blurs only the shaped backdrop.
+    fillOpacity: !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? 0.58 : 0.74
+
+    Behavior on fillOpacity {
+        Anim {
+            motion: root.motion
+            type: Anim.FastEffects
+        }
+    }
 
     // Shape tessellation is not free. React only on large structural
     // surfaces; updating every control and its SVG gradient at audio cadence
