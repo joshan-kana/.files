@@ -404,41 +404,40 @@
       nixosHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isLinux) hostSpecs;
       darwinHostSpecs = lib.filterAttrs (_: spec: (lib.systems.elaborate spec.system).isDarwin) hostSpecs;
 
-      themeScope = moduleRegistry.theme {
-        inherit lib;
-        pkgs = null;
-        scopeConfig = { };
-      };
-      themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
+      themeNames = builtins.attrNames (import ./modules/theme/registry.nix { inherit lib; }).variants;
 
-      themedNixosConfigurations = builtins.listToAttrs (
-        lib.concatLists (
-          lib.mapAttrsToList (
-            configurationName: hostSpec:
-            map (
-              themeName:
-              let
-                outputName = "${configurationName}-${themeName}";
-              in
-              {
-                name = outputName;
-                value = mkHost configurationName (
-                  hostSpec
-                  // {
-                    moduleRegistryInput = moduleRegistry // {
-                      theme = semantic.editScope moduleRegistry.theme {
-                        name = themeName;
+      themedConfigurations =
+        specs:
+        builtins.listToAttrs (
+          lib.concatLists (
+            lib.mapAttrsToList (
+              configurationName: hostSpec:
+              map (
+                themeName:
+                let
+                  outputName = "${configurationName}-${themeName}";
+                in
+                {
+                  name = outputName;
+                  value = mkHost configurationName (
+                    hostSpec
+                    // {
+                      moduleRegistryInput = moduleRegistry // {
+                        theme = semantic.editScope moduleRegistry.theme {
+                          name = themeName;
+                        };
                       };
-                    };
-                    configurationOutputName = outputName;
-                    configurationFlakeSubdirectory = "themes";
-                  }
-                );
-              }
-            ) themeNames
-          ) nixosHostSpecs
-        )
-      );
+                      configurationOutputName = outputName;
+                      configurationFlakeSubdirectory = "themes";
+                    }
+                  );
+                }
+              ) themeNames
+            ) specs
+          )
+        );
+      themedNixosConfigurations = themedConfigurations nixosHostSpecs;
+      themedDarwinConfigurations = themedConfigurations darwinHostSpecs;
 
       docsFor =
         system:
@@ -483,7 +482,7 @@
     in
     {
       lib = {
-        inherit semanticScopeOptions themedNixosConfigurations;
+        inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -699,6 +698,83 @@
                 '';
               };
 
+          themeWarm = pkgs.writeShellApplication {
+            name = "theme-warm";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.nix
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.systemd ];
+            text = ''
+              background=false
+              maxConfigs=6
+              while [ "$#" -gt 0 ]; do
+                case "$1" in
+                  -b|--background) background=true; shift ;;
+                  --max-configs)
+                    if [ "$#" -lt 2 ] || [[ ! "$2" =~ ^(0|[1-9][0-9]*)$ ]]; then
+                      echo "Expected a non-negative number after --max-configs (0 means unlimited)" >&2
+                      exit 2
+                    fi
+                    maxConfigs="$2"
+                    shift 2
+                    ;;
+                  *) break ;;
+                esac
+              done
+              host="$(hostname -s)"
+              if [ "$#" -gt 0 ] && [[ "$1" != -* ]]; then
+                host="$1"
+                shift
+              fi
+              case "$host" in
+                ${
+                  lib.concatStringsSep "|" (
+                    lib.attrNames (lib.filterAttrs (_: spec: spec.system == system) hostSpecs)
+                  )
+                }) ;;
+                *) printf 'Unknown host for ${system}: %s\n' "$host" >&2; exit 2 ;;
+              esac
+
+              cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache/$host"
+              mkdir -p "$cacheDir"
+              if [ "$background" = true ]; then
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                  exec systemd-run --user --collect --unit=dotfiles-theme-warm \
+                    --property=Nice=10 --property=IOSchedulingClass=idle \
+                    -- "$0" --max-configs "$maxConfigs" "$host" "$@"
+                ''}
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+                  exec launchctl submit -l dotfiles.theme-warm \
+                    -o "$cacheDir/warm.log" -e "$cacheDir/warm.err" \
+                    -- "$0" --max-configs "$maxConfigs" "$host" "$@"
+                ''}
+              fi
+
+              targets=()
+              batch=0
+              buildBatch() {
+                nix build "$@" --out-link "$cacheDir/batch-$batch" "''${targets[@]}"
+                targets=()
+                batch=$((batch + 1))
+              }
+              for theme in ${lib.escapeShellArgs themeNames}; do
+                targets+=("path:${self.outPath}#lib.${
+                  if pkgs.stdenv.hostPlatform.isDarwin then
+                    "themedDarwinConfigurations"
+                  else
+                    "themedNixosConfigurations"
+                }.$host-$theme.config.system.build.toplevel")
+                if [ "$maxConfigs" -ne 0 ] && [ "''${#targets[@]}" -ge "$maxConfigs" ]; then
+                  buildBatch "$@"
+                fi
+              done
+              if [ "''${#targets[@]}" -gt 0 ]; then
+                buildBatch "$@"
+              fi
+            '';
+          };
+
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
@@ -716,6 +792,11 @@
             type = "app";
             program = lib.getExe updateContainerLock;
             meta.description = "Refresh immutable OCI container image digests";
+          };
+          theme-warm = {
+            type = "app";
+            program = lib.getExe themeWarm;
+            meta.description = "Build and retain every registered theme for this host";
           };
         }
         // lib.optionalAttrs (updatePlasma != null) {

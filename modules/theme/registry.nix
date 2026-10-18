@@ -1,4 +1,7 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs ? null,
+}:
 
 let
   defaults = {
