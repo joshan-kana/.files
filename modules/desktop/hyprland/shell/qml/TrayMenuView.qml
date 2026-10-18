@@ -212,14 +212,13 @@ Item {
                         font.pixelSize: view.theme.fontSize(11)
                     }
 
-                    Text {
+                    MarqueeText {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - (entryDelegate.modelData.icon.length > 0 ? 20 + parent.spacing : 0) - (entryDelegate.modelData.buttonType !== QsMenuButtonType.None ? 18 + parent.spacing : 0) - (entryDelegate.modelData.hasChildren ? 18 : 0)
                         text: entryDelegate.modelData.text
                         color: view.theme.text
                         font.family: view.runtime.fontMono
                         font.pixelSize: view.theme.fontSize(12)
-                        elide: Text.ElideRight
                     }
 
                     Text {
