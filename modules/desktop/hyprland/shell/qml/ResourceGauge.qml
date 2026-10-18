@@ -14,6 +14,8 @@ Item {
     property bool compact: false
     property string compactIcon: "󰁹"
     property int compactIconSize: 14
+    property real compactIconOffsetX: 0
+    property real compactIconOffsetY: 0
     property real animatedValue: Math.max(0, Math.min(1, value))
 
     implicitWidth: compact ? 34 : 126
@@ -75,6 +77,8 @@ Item {
     }
     Text {
         anchors.centerIn: parent
+        anchors.horizontalCenterOffset: gauge.compactIconOffsetX
+        anchors.verticalCenterOffset: gauge.compactIconOffsetY
         visible: gauge.compact
         text: gauge.compactIcon
         color: gauge.accentColor
