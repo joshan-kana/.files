@@ -954,7 +954,7 @@ FocusScope {
                     motion: root.motion
                     compact: true
                     horizontalCompact: true
-                    title: "−500K"
+                    title: "−"
                     shortcut: "SHIFT+T"
                     enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
                     onActivated: root.nightLight.warmer()
@@ -968,7 +968,7 @@ FocusScope {
                     motion: root.motion
                     compact: true
                     horizontalCompact: true
-                    title: "+500K"
+                    title: "+"
                     shortcut: "ALT+T"
                     enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
                     onActivated: root.nightLight.cooler()
