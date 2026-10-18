@@ -16,6 +16,7 @@ MouseArea {
     property real hoverOpacity: 0.10
     property real pressOpacity: 0.16
     property real cornerRadius: theme.radiusMedium
+    property real exponent: theme.squircleExponent
 
     property real rippleX: width / 2
     property real rippleY: height / 2
@@ -80,7 +81,7 @@ MouseArea {
         id: hoverSurface
         anchors.fill: parent
         cornerRadius: root.cornerRadius
-        exponent: root.theme.squircleExponent
+        exponent: root.exponent
         fillColor: root.stateColor
         opacity: {
             if (root.pressed || root.manualPress)
