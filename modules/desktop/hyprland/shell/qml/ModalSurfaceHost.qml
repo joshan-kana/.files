@@ -31,12 +31,13 @@ PanelWindow {
     color: "transparent"
     focusable: open && !(overviewPanel.open && overviewPanel.keyboardFocusRefreshing)
     exclusionMode: ExclusionMode.Ignore
-    // Shortcuts has a substantially larger three-column layout. Allocate
-    // its framebuffer only while it is visible or finishing its exit,
-    // leaving other global modals at their original compact dimensions.
-    readonly property bool largeShortcuts: cheatsheet.open || cheatsheet.closing
-    implicitWidth: captureExpanded ? (screen ? screen.width : 2560) : largeShortcuts ? Math.min(screen ? screen.width - 80 : 1850, 1850) : 1200
-    implicitHeight: captureExpanded ? (screen ? screen.height : 1440) : largeShortcuts ? Math.min(screen ? screen.height - 80 : 1170, 1170) : 960
+    // Use one stable modal viewport for every ordinary widget. Resizing it
+    // from 1200×960 to the cheatsheet's larger bounds on first open caused
+    // the compositor to recenter its layer while content was appearing.
+    // Keep the allocated window stationary; PopupSurfaceLifecycle suppresses
+    // rendering and input while all modals are closed.
+    implicitWidth: captureExpanded ? (screen ? screen.width : 2560) : Math.min(screen ? screen.width - 80 : 1850, 1850)
+    implicitHeight: captureExpanded ? (screen ? screen.height : 1440) : Math.min(screen ? screen.height - 80 : 1170, 1170)
     anchors {
         top: true
         left: true
