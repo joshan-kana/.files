@@ -300,14 +300,13 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: panel.theme.spacing1
 
-                        Text {
+                        MarqueeText {
                             width: parent.width
                             text: panel.displayName(deviceRow.modelData)
                             color: panel.theme.textStrong
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(13)
                             font.weight: deviceRow.modelData.connected ? Font.DemiBold : Font.Normal
-                            elide: Text.ElideRight
                         }
 
                         Text {
