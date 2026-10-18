@@ -190,12 +190,11 @@ Column {
             font.pixelSize: quick.theme.fontSize(11)
             font.weight: Font.DemiBold
         }
-        Text {
+        MarqueeText {
             width: Math.max(1, parent.width - parent.children[0].implicitWidth - parent.children[1].implicitWidth - (quick.showMixer ? mixerLink.width : 0) - deviceLink.width - parent.spacing * (quick.showMixer ? 4 : 3))
             anchors.verticalCenter: parent.verticalCenter
             text: quick.device ? (quick.device.description || quick.device.name) : "Unavailable"
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignRight
+            alignRight: true
             color: quick.theme.textMuted
             font.family: quick.runtime.fontMono
             font.pixelSize: quick.theme.fontSize(9)

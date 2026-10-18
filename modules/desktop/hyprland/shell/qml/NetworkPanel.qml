@@ -568,14 +568,13 @@ Item {
                             width: parent.width
                             spacing: panel.theme.spacing2
 
-                            Text {
+                            MarqueeText {
                                 width: parent.width - statusBadge.width - parent.spacing
                                 text: networkRow.modelData.name
                                 color: panel.theme.textStrong
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(13)
                                 font.weight: networkRow.modelData.connected ? Font.DemiBold : Font.Normal
-                                elide: Text.ElideRight
                             }
 
                             Text {
