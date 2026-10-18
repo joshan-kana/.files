@@ -31,6 +31,8 @@ QtObject {
     readonly property string powerprofilesMonitor: root.configData.tools.powerprofilesMonitor
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
     readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
+    readonly property string urlOpen: root.configData.tools.urlOpen
+    readonly property string paletteSearch: root.configData.tools.paletteSearch
     readonly property string wallpaperLibrary: root.configData.tools.wallpaperLibrary
     readonly property string recordingToggle: root.configData.tools.recordingToggle
     readonly property string recordingLibrary: root.configData.tools.recordingLibrary
