@@ -17,6 +17,8 @@ Item {
     property string resizeMode: "fit"
     property string statusText: ""
     property int selectedIndex: 0
+    property string featuredPosterPath: ""
+    onSelectedIndexChanged: featuredPosterPath = ""
     property bool loading: false
     property bool resetPending: false
 
@@ -230,6 +232,29 @@ Item {
             detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
         }
 
+        AppearancePreview {
+            id: featuredPreview
+            width: parent.width
+            height: 174
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            mode: "wallpaper"
+            imagePath: {
+                const path = panel.selectedPath();
+                if (path.length === 0)
+                    return panel.runtime.wallpaper;
+                if (/\.(mp4|webm|mkv|mov|gif)$/i.test(path))
+                    return panel.featuredPosterPath;
+                return path;
+            }
+            selectionName: {
+                const path = panel.selectedPath();
+                return path.length > 0 ? path.slice(path.lastIndexOf("/") + 1) : "Default wallpaper";
+            }
+            context: panel.resizeMode.toUpperCase() + " · " + panel.outputLabel
+        }
+
         ShellSurface {
             width: parent.width
             height: 39
@@ -304,7 +329,7 @@ Item {
 
         Item {
             width: parent.width
-            height: 465
+            height: 300
 
             // Caelestia-style centre-selected wallpaper carousel, keeping our
             // own Theme/Motion/StateLayer and awww-backed selection action.
@@ -390,6 +415,8 @@ Item {
                         }
                     }
                     onCurrentChanged: {
+                        if (current)
+                            panel.featuredPosterPath = posterPath;
                         if (current && animatedFile && panel.open && panel.motion.enabled)
                             motionPreviewDebounce.restart();
                     }
@@ -408,8 +435,11 @@ Item {
                     property Process posterProcess: Process {
                         stdout: entry.posterOutput
                         onExited: (code, status) => {
-                            if (code === 0)
+                            if (code === 0) {
                                 entry.posterPath = entry.posterOutput.text.trim();
+                                if (entry.current)
+                                    panel.featuredPosterPath = entry.posterPath;
+                            }
                         }
                     }
 
@@ -419,8 +449,8 @@ Item {
                         if (current && animatedFile && panel.open && panel.motion.enabled)
                             motionPreviewDebounce.restart();
                     }
-                    width: 360
-                    height: 305
+                    width: 336
+                    height: 236
                     z: current ? 2 : 1
                     scale: current ? 1 : PathView.onPath ? 0.58 : 0.5
                     opacity: PathView.onPath ? (current ? 1 : 0.84) : 0
