@@ -30,10 +30,9 @@ Item {
     }
 
     function dismissOrReset(): void {
-        if (searchScope !== "unified")
-            chooseScope("unified");
-        else
-            hide();
+        // Dismissal never changes the selected search scope. When reopened,
+        // the last selected category is still active.
+        hide();
     }
 
     property bool open: false
@@ -265,7 +264,6 @@ Item {
         // Preserve visibility when reopening during the exit animation.
         open = true;
         closing = false;
-        searchScope = "unified";
         setLauncherSubmap(true);
         copyFeedback = "";
         if (resultModel.values.length === 0)
