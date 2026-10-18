@@ -154,11 +154,9 @@ Scope {
                     font.family: auth.runtime.fontMono
                     font.pixelSize: auth.theme.fontSize(12)
                 }
-                Text {
+                MarqueeText {
                     width: parent.width
                     text: auth.flow ? auth.flow.actionId : ""
-                    textFormat: Text.PlainText
-                    elide: Text.ElideMiddle
                     color: auth.theme.textMuted
                     font.family: auth.runtime.fontMono
                     font.pixelSize: auth.theme.fontSize(9)
@@ -167,14 +165,16 @@ Scope {
                 Row {
                     width: parent.width
                     spacing: auth.theme.spacing2
-                    Text {
+                    MarqueeText {
                         anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - (identityButton.visible ? identityButton.width + parent.spacing : 0))
                         text: "󰀄  " + (auth.flow && auth.flow.selectedIdentity ? auth.flow.selectedIdentity.displayName : "Local authentication")
                         color: auth.theme.textStrong
                         font.family: auth.runtime.fontMono
                         font.pixelSize: auth.theme.fontSize(11)
                     }
                     ShellAction {
+                        id: identityButton
                         visible: !!auth.flow && auth.flow.identities.length > 1
                         width: 96
                         height: 31

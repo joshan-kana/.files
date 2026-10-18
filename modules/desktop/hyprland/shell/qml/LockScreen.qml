@@ -349,8 +349,8 @@ WlSessionLock {
                             motion: lock.motion
                             surfaceLayer: ShellSurface.Group
                             cornerRadius: lock.theme.radiusMedium
-                            outlined: passwordInput.activeFocus
-                            borderColor: passwordInput.activeFocus ? lock.theme.accent : lock.theme.subtleBorder
+                            outlined: passwordInput.activeFocus || lock.statusError
+                            borderColor: lock.statusError ? lock.theme.critical : passwordInput.activeFocus ? lock.theme.accent : lock.theme.subtleBorder
 
                             TextInput {
                                 id: passwordInput
