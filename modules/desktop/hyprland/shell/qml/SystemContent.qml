@@ -717,7 +717,7 @@ FocusScope {
                     id: actionsHeading
                     anchors.verticalCenter: parent.verticalCenter
                     text: "QUICK ACTIONS"
-                    color: root.theme.roleColor("attention")
+                    color: root.theme.readableRoleColor("attention")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -824,7 +824,7 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "VISUAL MODES"
-                    color: root.theme.roleColor("display")
+                    color: root.theme.readableRoleColor("display")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -940,7 +940,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(130, parent.width - warmerButton.width - coolerButton.width - parent.spacing * 2)
                     text: root.nightLight.error.length > 0 ? root.nightLight.error : "NIGHT LIGHT  ·  " + root.nightLight.temperature + "K"
-                    color: root.nightLight.error.length > 0 ? root.theme.warning : root.theme.roleColor("warmth")
+                    color: root.nightLight.error.length > 0 ? root.theme.readableRoleColor("warning") : root.theme.readableRoleColor("warmth")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
                     elide: Text.ElideRight
@@ -1070,7 +1070,7 @@ FocusScope {
                     height: 30
                     verticalAlignment: Text.AlignVCenter
                     text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                    color: root.theme.roleColor("media")
+                    color: root.theme.readableRoleColor("media")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
                     font.weight: Font.DemiBold
