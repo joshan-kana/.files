@@ -17,6 +17,7 @@ QtObject {
     readonly property color accentSecondary: runtime.accentSecondary
     readonly property color accentTertiary: runtime.accentTertiary
     readonly property color accentWarm: runtime.accentWarm
+    readonly property color accentWorkspace: runtime.accentWorkspace
 
     // Stylix owns the palette. Components select a semantic role, not a
     // favourite colour; surface fills remain quiet regardless of the role.
@@ -25,7 +26,7 @@ QtObject {
         case "media":
             return accentSecondary;
         case "workspace":
-            return blend(paneBase, accentSecondary, dark ? 0.62 : 0.48);
+            return accentWorkspace;
         case "connectivity":
             return accentTertiary;
         case "warmth":
