@@ -636,6 +636,36 @@ ShellRoot {
                 keywords: ["alerts", "dismiss", "history"]
             },
             {
+                id: "launcher.toggleHistory",
+                name: launcher.rememberRecents ? "Disable Palette Recent Usage" : "Enable Palette Recent Usage",
+                description: "Opt out of recording recently executed application and command identities",
+                icon: "preferences-system-privacy",
+                keywords: ["history", "recent", "privacy", "launcher", "tracking"]
+            },
+            {
+                id: "launcher.clearRecent",
+                name: "Clear Recent Palette Items",
+                description: "Forget locally stored command and application recency",
+                icon: "edit-clear",
+                keywords: ["history", "recent", "privacy", "clear", "launcher"]
+            },
+            {
+                id: "audio.setVolume",
+                name: "Set Volume…",
+                description: "Set output volume to a percentage",
+                icon: "audio-volume-high",
+                parameterMode: "percent",
+                keywords: ["volume", "sound", "level", "percentage", "audio"]
+            },
+            {
+                id: "brightness.set",
+                name: "Set Brightness…",
+                description: "Set hardware brightness to a percentage",
+                icon: "display-brightness",
+                parameterMode: "percent",
+                keywords: ["brightness", "backlight", "level", "percentage", "display"]
+            },
+            {
                 id: "audio.volumeUp",
                 name: "Volume Up",
                 description: "Increase output volume by 5%",
@@ -702,6 +732,15 @@ ShellRoot {
             }
         ] : [])
         onCommandTriggered: commandId => actions.invokeCommand(commandId)
+        onArgumentCommandTriggered: (commandId, argument) => {
+            const percent = Number(argument);
+            if (!Number.isInteger(percent) || percent < 0 || percent > 100)
+                return;
+            if (commandId === "audio.setVolume" && system.audioAvailable)
+                system.setVolume(percent / 100);
+            else if (commandId === "brightness.set" && brightness.supported)
+                brightness.adjust(percent - brightness.percent);
+        }
     }
 
     Actions {
