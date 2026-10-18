@@ -251,8 +251,8 @@ Item {
         width: picker.selectionWidth
         height: picker.selectionHeight
         radius: 5
-        color: Qt.rgba(picker.theme.accent.r, picker.theme.accent.g, picker.theme.accent.b, 0.035)
-        border.color: picker.theme.accent
+        color: Qt.rgba(picker.theme.accentSecondary.r, picker.theme.accentSecondary.g, picker.theme.accentSecondary.b, 0.035)
+        border.color: picker.theme.roleColor("media")
         border.width: 2
         z: 2
         visible: picker.open
@@ -312,7 +312,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : "FROZEN REGION · " + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
-                color: picker.theme.accent
+                color: picker.theme.roleColor("media")
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
                 font.weight: Font.DemiBold

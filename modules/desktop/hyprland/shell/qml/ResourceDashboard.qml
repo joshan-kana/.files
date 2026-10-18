@@ -53,7 +53,7 @@ Item {
                     id: tile
                     required property int index
                     readonly property bool cpu: index === 0
-                    readonly property color gaugeColor: cpu ? panel.theme.accent : panel.theme.positive
+                    readonly property color gaugeColor: cpu ? panel.theme.accent : panel.theme.roleColor("media")
                     readonly property real percentage: cpu ? panel.resourceState.cpuPercent : panel.resourceState.memoryPercent
                     readonly property string detailText: cpu ? "Processor activity" : panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
                     width: (panel.width - panel.theme.spacing3) * (cpu ? 0.57 : 0.43)
@@ -62,7 +62,7 @@ Item {
                     motion: panel.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: panel.theme.radiusLarge
-                    fillColor: panel.theme.blend(panel.theme.groupBase, tile.gaugeColor, cpu ? (panel.theme.dark ? 0.13 : 0.08) : (panel.theme.dark ? 0.08 : 0.05))
+                    fillColor: panel.theme.blend(panel.theme.groupBase, tile.gaugeColor, cpu ? (panel.theme.dark ? 0.065 : 0.035) : (panel.theme.dark ? 0.055 : 0.03))
 
                     Column {
                         anchors.centerIn: parent
