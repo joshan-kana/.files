@@ -78,6 +78,15 @@ QtObject {
         return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
     }
 
+    // Small labels must remain readable on light and dark palettes.
+    // Return an existing Stylix token, never an interpolated accent colour.
+    function readableRoleColor(role: string): color {
+        const chosen = roleColor(role);
+        const light = Math.max(luminance(chosen), luminance(panelBase));
+        const dark = Math.min(luminance(chosen), luminance(panelBase));
+        return (light + 0.05) / (dark + 0.05) >= 4.5 ? chosen : textStrong;
+    }
+
     function blend(base: color, overlay: color, amount: real): color {
         const mix = Math.max(0, Math.min(1, amount));
         return Qt.rgba(base.r + (overlay.r - base.r) * mix, base.g + (overlay.g - base.g) * mix, base.b + (overlay.b - base.b) * mix, 1);
