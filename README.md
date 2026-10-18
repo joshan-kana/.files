@@ -21,6 +21,8 @@ docs-serve           # live-preview the generated manual
 nf                    # browse evaluated Nix options
 ```
 
+Theme warming builds six configurations per batch by default. Use `-- --max-configs 0` for unlimited (higher memory use), or `-- -b` for background execution.
+
 Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour belongs under `modules/`; host-specific differences stay with the same semantic scope under `hosts/<host>/`.
 
 ## Documentation
