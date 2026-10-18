@@ -1154,6 +1154,7 @@ in
           themeSet = lib.getExe themeSet;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
           paletteSearch = lib.getExe paletteSearch;
+          clipboardPaste = lib.getExe' pkgs.wl-clipboard "wl-paste";
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
