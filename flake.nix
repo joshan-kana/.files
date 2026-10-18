@@ -759,16 +759,16 @@
 
               cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache/$host"
               mkdir -p "$cacheDir"
+              targets=()
               for theme in ${lib.escapeShellArgs themeNames}; do
-                nix build --max-jobs 2 --cores 2 \
-                  --out-link "$cacheDir/$theme" \
-                  "path:${self.outPath}#lib.${
-                    if pkgs.stdenv.hostPlatform.isDarwin then
-                      "themedDarwinConfigurations"
-                    else
-                      "themedNixosConfigurations"
-                  }.$host-$theme.config.system.build.toplevel"
+                targets+=("path:${self.outPath}#lib.${
+                  if pkgs.stdenv.hostPlatform.isDarwin then
+                    "themedDarwinConfigurations"
+                  else
+                    "themedNixosConfigurations"
+                }.$host-$theme.config.system.build.toplevel")
               done
+              exec nix build --max-jobs 2 --cores 2 --out-link "$cacheDir/all" "''${targets[@]}"
             '';
           };
 
