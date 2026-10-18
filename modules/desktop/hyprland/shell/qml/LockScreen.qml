@@ -263,6 +263,7 @@ WlSessionLock {
 
                 theme: lock.theme
                 motion: lock.motion
+                glassAllowed: false
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: lock.authRevealed ? lock.theme.radiusPanel : lock.theme.radiusLarge
                 fillColor: lock.authRevealed ? lock.theme.expressiveSurface : lock.theme.surface

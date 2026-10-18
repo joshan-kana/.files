@@ -43,6 +43,7 @@ ShellRoot {
         id: theme
         runtime: runtime
         musicReactiveEnabled: root.musicReactiveEnabled
+        shellGlassEnabled: appearance.shellGlassEnabled
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
@@ -148,11 +149,13 @@ ShellRoot {
             musicReactiveEnabled: root.musicReactiveEnabled
             barVisible: appearance.barVisible
             windowTransparencyEnabled: appearance.windowTransparencyEnabled
+            shellGlassEnabled: appearance.shellGlassEnabled
             engaged: expansionState.currentName === "system"
             onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
             onBarToggleRequested: appearance.toggleBar()
             onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
+            onShellGlassToggleRequested: appearance.toggleShellGlass()
             requestedView: expansionState.currentView
             onCloseRequested: expansionState.close()
             onMediaRequested: actions.toggleMedia()
@@ -1289,6 +1292,14 @@ ShellRoot {
 
         function toggleWindowEffects(): void {
             appearance.toggleWindowTransparency();
+        }
+
+        function toggleShellGlass(): void {
+            appearance.toggleShellGlass();
+        }
+
+        function shellGlassEnabled(): bool {
+            return appearance.shellGlassEnabled;
         }
 
         function windowEffectsEnabled(): bool {

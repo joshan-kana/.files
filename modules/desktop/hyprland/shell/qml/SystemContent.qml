@@ -20,11 +20,13 @@ FocusScope {
     required property bool musicReactiveEnabled
     required property bool barVisible
     required property bool windowTransparencyEnabled
+    required property bool shellGlassEnabled
 
     signal wallpaperSpectrumToggleRequested
     signal musicReactiveToggleRequested
     signal barToggleRequested
     signal windowTransparencyToggleRequested
+    signal shellGlassToggleRequested
 
     property bool engaged: false
     property bool mixerOpen: false
@@ -259,8 +261,8 @@ FocusScope {
                             action: "Toggle Notifications / Stay awake / Motion"
                         },
                         {
-                            key: "SHIFT+G/N/B/O",
-                            action: "Wallpaper spectrum / Reactive shell / Bar / Window transparency"
+                            key: "SHIFT+G/N/B/O/F",
+                            action: "Wallpaper spectrum / Reactive shell / Bar / Window transparency / Frosted glass"
                         },
                         {
                             key: "T / SHIFT+T / ALT+T",
@@ -929,6 +931,23 @@ FocusScope {
                     enabled: root.nightLight.supported && !root.nightLight.busy
                     onActivated: root.nightLight.toggle()
                 }
+            }
+
+            ShellAction {
+                x: visualModeStrip.x
+                width: visualModeStrip.width
+                height: 48
+                runtime: root.runtime
+                theme: root.theme
+                motion: root.motion
+                horizontalCompact: true
+                showSwitch: true
+                icon: "󰊠"
+                title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
+                shortcut: "SHIFT+F"
+                active: root.shellGlassEnabled
+                activeColor: root.theme.roleColor("display")
+                onActivated: root.shellGlassToggleRequested()
             }
 
             Row {
@@ -1846,6 +1865,9 @@ FocusScope {
                         root.nightLight.cooler();
                     else
                         root.nightLight.toggle();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_F && (event.modifiers & Qt.ShiftModifier)) {
+                    root.shellGlassToggleRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_O && (event.modifiers & Qt.ShiftModifier)) {
                     root.windowTransparencyToggleRequested();
