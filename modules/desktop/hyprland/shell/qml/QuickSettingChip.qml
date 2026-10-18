@@ -16,7 +16,7 @@ Item {
 
     signal activated
 
-    implicitHeight: 66
+    implicitHeight: 78
     Accessible.role: Accessible.Button
     Accessible.name: title
 
@@ -51,10 +51,12 @@ Item {
         Column {
             anchors {
                 fill: parent
-                margins: chip.theme.spacing2
+                leftMargin: chip.theme.spacing2
+                rightMargin: chip.theme.spacing2
+                topMargin: chip.theme.spacing3 + 3
+                bottomMargin: chip.theme.spacing2
             }
-            // The icon remains centred; give the label slightly more breathing room beneath it.
-            spacing: chip.theme.spacing1 + 3
+            spacing: chip.theme.spacing2
 
             Item {
                 width: parent.width
@@ -65,7 +67,7 @@ Item {
                         verticalCenter: parent.verticalCenter
                     }
                     text: chip.icon
-                    color: chip.active ? chip.activeColor : chip.theme.textStrong
+                    color: chip.active ? chip.activeColor : chip.theme.blend(chip.theme.textStrong, chip.activeColor, 0.64)
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: chip.theme.fontSize(20)
                 }
