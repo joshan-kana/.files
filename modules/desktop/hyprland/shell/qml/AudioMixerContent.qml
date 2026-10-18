@@ -113,22 +113,20 @@ FocusScope {
                     Column {
                         width: parent.width - volumeLabel.implicitWidth - muteButton.width - parent.spacing * 2
                         spacing: 2
-                        Text {
+                        MarqueeText {
                             width: parent.width
                             text: streamRow.stream ? mixer.system.streamDisplayName(streamRow.stream) : ""
                             color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.textStrong
                             font.family: mixer.runtime.fontMono
                             font.pixelSize: mixer.theme.fontSize(12)
                             font.weight: Font.DemiBold
-                            elide: Text.ElideRight
                         }
-                        Text {
+                        MarqueeText {
                             width: parent.width
                             text: (mixer.system.audioCaptureStreams.indexOf(streamRow.stream) >= 0 ? "INPUT · " : "OUTPUT · ") + (streamRow.stream ? mixer.system.streamTechnicalName(streamRow.stream) : "")
                             color: mixer.theme.textMuted
                             font.family: mixer.runtime.fontMono
                             font.pixelSize: mixer.theme.fontSize(9)
-                            elide: Text.ElideMiddle
                         }
                     }
 
