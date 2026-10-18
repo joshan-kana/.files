@@ -195,7 +195,7 @@ FocusScope {
                         motion: mixer.motion
                         enabled: !!streamRow.stream?.audio
                         value: streamRow.stream?.audio ? streamRow.stream?.audio.volume : 0
-                        accentColor: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.accent
+                        accentColor: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.roleColor("media")
                         trackHeight: 11
                         handleSize: 19
                         onValueRequested: value => {
@@ -225,7 +225,7 @@ FocusScope {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "󰎆"
-                color: mixer.theme.accent
+                color: mixer.theme.roleColor("media")
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: mixer.theme.fontSize(32)
             }

@@ -1105,6 +1105,9 @@ in
           warning = colors.base0A;
           positive = colors.base0B;
           accent = colors.base0D;
+          accentSecondary = colors.base0E;
+          accentTertiary = colors.base0C;
+          accentWarm = colors.base09;
         };
 
         fonts.mono = config.stylix.fonts.monospace.name;
