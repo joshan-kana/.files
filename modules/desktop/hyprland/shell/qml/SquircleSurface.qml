@@ -7,6 +7,7 @@ Item {
     default property alias contentData: content.data
 
     property color fillColor: "transparent"
+    property real fillOpacity: 1
     property color borderColor: "transparent"
     property real borderWidth: 0
     property real cornerRadius: 28
@@ -131,7 +132,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
-            fillColor: root.fillColor
+            fillColor: Qt.rgba(root.fillColor.r, root.fillColor.g, root.fillColor.b, root.fillColor.a * root.fillOpacity)
             strokeColor: "transparent"
             strokeWidth: 0
 
