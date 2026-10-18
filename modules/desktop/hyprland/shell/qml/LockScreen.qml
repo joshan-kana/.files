@@ -343,6 +343,7 @@ WlSessionLock {
                         }
 
                         ShellSurface {
+                            id: passwordSurface
                             width: parent.width
                             height: 54
                             theme: lock.theme
@@ -413,6 +414,15 @@ WlSessionLock {
                                             passwordInput.forceActiveFocus();
                                     }
                                 }
+                            }
+
+                            LoadingOutline {
+                                anchors.fill: parent
+                                surface: passwordSurface
+                                active: lock.authenticating
+                                motionEnabled: lock.motion.enabled
+                                highlightColor: lock.theme.accent
+                                lineWidth: 2
                             }
                         }
 
