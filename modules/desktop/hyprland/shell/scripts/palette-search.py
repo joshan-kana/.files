@@ -2,9 +2,12 @@
 """Local filename and bookmark index for the native desktop palette."""
 
 import json
+import mimetypes
 import os
 import sqlite3
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "linux-desktop"
@@ -193,6 +196,78 @@ def update_bookmarks():
         connection.executemany("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)", bookmarks())
 
 
+def launch_with_application(desktop_id, filename):
+    """Open a previously indexed file with an installed desktop entry."""
+    if not isinstance(desktop_id, str) or not desktop_id or len(desktop_id) > 240:
+        return 2
+    if "/" in desktop_id or "\\" in desktop_id or desktop_id.startswith("."):
+        return 2
+    if preview_indexed_file(filename) is None:
+        return 2
+    entries = [Path.home() / ".local/share/applications"]
+    entries += [
+        Path(root) / "applications"
+        for root in os.environ.get(
+            "XDG_DATA_DIRS", "/run/current-system/sw/share:/etc/profiles/per-user/" + os.environ.get("USER", "") + "/share"
+        ).split(":")
+        if root
+    ]
+    names = [desktop_id] if desktop_id.endswith(".desktop") else [desktop_id + ".desktop"]
+    for directory in entries:
+        for name in names:
+            entry = directory / name
+            if entry.is_file():
+                try:
+                    subprocess.Popen(
+                        ["gio", "launch", str(entry), filename],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
+                    return 0
+                except OSError:
+                    return 1
+    return 1
+
+
+def preview_indexed_file(filename):
+    """Only inspect currently indexed local paths, never arbitrary user input."""
+    path = Path(filename)
+    roots = [root for root in search_roots() if is_indexable(path, root)]
+    if not path.is_absolute() or not roots:
+        return None
+    try:
+        with sqlite3.connect(f"file:{DB}?mode=ro", uri=True, timeout=0.25) as db:
+            indexed = db.execute("SELECT kind FROM items WHERE path = ? LIMIT 1", (str(path),)).fetchone()
+        if indexed is None or indexed[0] == 2:
+            return None
+        relative = path.relative_to(roots[0])
+        if any((roots[0] / Path(*relative.parts[:index])).is_symlink() for index in range(1, len(relative.parts) + 1)):
+            return None
+        details = path.stat()
+        if not (path.is_dir() or path.is_file()):
+            return None
+        mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        info = {
+            "name": path.name,
+            "path": str(path),
+            "type": "Directory" if path.is_dir() else mime,
+            "size": details.st_size if path.is_file() else None,
+            "modified": datetime.fromtimestamp(details.st_mtime).astimezone().strftime("%Y-%m-%d %H:%M"),
+            "excerpt": "",
+        }
+        if (
+            path.is_file()
+            and details.st_size <= 131072
+            and (mime.startswith("text/") or path.suffix.lower() in {".md", ".json", ".yaml", ".yml", ".toml", ".nix"})
+        ):
+            with path.open("rb") as source:
+                info["excerpt"] = source.read(768).decode("utf-8", errors="replace").replace("\r", "").replace("\n", " ↵ ").strip()[:480]
+        return info
+    except (OSError, sqlite3.Error, ValueError):
+        return None
+
+
 def start_search_socket():
     """Serve index searches from the existing watcher without spawning Python per key."""
     import socket
@@ -244,10 +319,16 @@ def start_search_socket():
                 try:
                     request = json.loads(line)
                     identifier = request["id"]
-                    phrase = request["query"]
-                    if not isinstance(identifier, int) or not 0 <= identifier <= 2147483647 or not isinstance(phrase, str):
+                    phrase = request.get("query")
+                    inspection = request.get("inspect")
+                    if not isinstance(identifier, int) or not 0 <= identifier <= 2147483647:
                         break
-                    payload = json.dumps({"id": identifier, "items": query(phrase)}, ensure_ascii=False)
+                    if isinstance(phrase, str) and inspection is None:
+                        payload = json.dumps({"id": identifier, "items": query(phrase)}, ensure_ascii=False)
+                    elif isinstance(inspection, str) and len(inspection) <= 4096 and phrase is None:
+                        payload = json.dumps({"id": identifier, "info": preview_indexed_file(inspection)}, ensure_ascii=False)
+                    else:
+                        break
                 except (KeyError, TypeError, ValueError):
                     break
                 with self.server.write_lock:
@@ -388,5 +469,7 @@ if __name__ == "__main__":
         watch()
     elif len(sys.argv) == 3 and sys.argv[1] == "search":
         print(json.dumps(query(sys.argv[2]), ensure_ascii=False))
+    elif len(sys.argv) == 4 and sys.argv[1] == "launch":
+        raise SystemExit(launch_with_application(sys.argv[2], sys.argv[3]))
     else:
-        raise SystemExit("usage: palette-search {index|watch|search <query>}")
+        raise SystemExit("usage: palette-search {index|watch|search <query>|launch <desktop-id> <path>}")
