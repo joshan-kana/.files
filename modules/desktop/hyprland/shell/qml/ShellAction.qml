@@ -124,6 +124,7 @@ Item {
             runtime: root.runtime
             theme: root.theme
             emphasized: root.active
+            emphasisColor: root.activeColor
         }
     }
 
@@ -154,6 +155,7 @@ Item {
         runtime: root.runtime
         theme: root.theme
         emphasized: root.active
+        emphasisColor: root.activeColor
     }
 
     KeyHint {
@@ -166,6 +168,7 @@ Item {
         runtime: root.runtime
         theme: root.theme
         emphasized: root.active
+        emphasisColor: root.activeColor
     }
 
     StateLayer {
