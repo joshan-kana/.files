@@ -34,7 +34,7 @@ Item {
         }
     }
 
-    implicitHeight: header.height + featuredPreview.height + panel.theme.spacing4 * 4 + Math.min(505, Math.max(280, Math.ceil(themes.length / 2) * themeList.cellHeight)) + footer.implicitHeight
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + Math.min(505, Math.max(280, Math.ceil(themes.length / 2) * themeList.cellHeight)) + footer.implicitHeight
     visible: open
 
     property StdioCollector registryOutput: StdioCollector {}
@@ -271,27 +271,10 @@ Item {
         detail: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
     }
 
-    AppearancePreview {
-        id: featuredPreview
-        anchors {
-            top: header.bottom
-            left: parent.left
-            right: parent.right
-            topMargin: panel.theme.spacing2
-        }
-        height: 155
-        runtime: panel.runtime
-        theme: panel.theme
-        motion: panel.motion
-        previewPalette: panel.selectedTheme() ? panel.selectedTheme().preview : null
-        selectionName: panel.selectedTheme() ? panel.themeLabel(panel.selectedTheme().name) : "Select a theme"
-        context: panel.selectedTheme() && panel.selectedTheme().name === panel.currentTheme ? "ACTIVE" : "PREVIEW"
-    }
-
     GridView {
         id: themeList
         anchors {
-            top: featuredPreview.bottom
+            top: header.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
