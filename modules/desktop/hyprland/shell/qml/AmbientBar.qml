@@ -239,8 +239,8 @@ Variants {
                         height: 34
                         exponent: bars.theme.squircleExponent
                         cornerRadius: 16
-                        fillColor: bars.theme.accent
-                        lightColor: bars.theme.textStrong
+                        fillColor: bars.theme.roleColor("workspace")
+                        lightColor: bars.theme.accentSecondary
                         lightStrength: 0.035
                         visible: bar.visibleWorkspaceIds.length > 0
                     }
@@ -267,7 +267,7 @@ Variants {
                                     text: workspace.number
                                     // Make the ink follow the sliding pill,
                                     // not the destination before it arrives.
-                                    color: Math.abs(workspaceSelection.x - workspace.index * (42 + workspaceRow.spacing)) < 21 ? bars.theme.background : bars.theme.textMuted
+                                    color: Math.abs(workspaceSelection.x - workspace.index * (42 + workspaceRow.spacing)) < 21 ? bars.theme.textStrong : bars.theme.textMuted
                                     font.family: bars.runtime.fontMono
                                     font.pixelSize: bars.theme.fontSize(12)
                                     font.weight: Font.DemiBold
