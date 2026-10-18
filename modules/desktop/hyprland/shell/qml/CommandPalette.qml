@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import Qt.labs.settings
+import QtCore
 import "Calculator.js" as Calculator
 import "SymbolLibrary.js" as SymbolLibrary
 import "PaletteUtilities.js" as PaletteUtilities
