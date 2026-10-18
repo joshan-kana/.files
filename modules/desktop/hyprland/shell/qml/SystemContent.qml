@@ -717,7 +717,7 @@ FocusScope {
                     id: actionsHeading
                     anchors.verticalCenter: parent.verticalCenter
                     text: "QUICK ACTIONS"
-                    color: root.theme.textMuted
+                    color: root.theme.roleColor("attention")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -770,7 +770,7 @@ FocusScope {
                     title: root.notificationState.silent ? "Silent" : "Alerts"
                     shortcut: "Q"
                     active: root.notificationState.silent
-                    activeColor: root.theme.warning
+                    activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
                     onActivated: root.notificationState.toggleSilent()
                 }
 
@@ -812,7 +812,7 @@ FocusScope {
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"
-                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.warning : root.theme.roleColor("positive")
+                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.roleColor("warning") : root.theme.roleColor("warmth")
                     onActivated: root.powerProfile.cycle()
                 }
             }
@@ -824,7 +824,7 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "VISUAL MODES"
-                    color: root.theme.textMuted
+                    color: root.theme.roleColor("display")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -884,7 +884,7 @@ FocusScope {
                     title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
                     shortcut: "SHIFT+O"
                     active: root.windowTransparencyEnabled
-                    activeColor: root.theme.roleColor("connectivity")
+                    activeColor: root.theme.roleColor("display")
                     onActivated: root.windowTransparencyToggleRequested()
                 }
 
@@ -940,7 +940,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(130, parent.width - warmerButton.width - coolerButton.width - parent.spacing * 2)
                     text: root.nightLight.error.length > 0 ? root.nightLight.error : "NIGHT LIGHT  ·  " + root.nightLight.temperature + "K"
-                    color: root.nightLight.error.length > 0 ? root.theme.warning : root.theme.textMuted
+                    color: root.nightLight.error.length > 0 ? root.theme.warning : root.theme.roleColor("warmth")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
                     elide: Text.ElideRight
@@ -1070,7 +1070,7 @@ FocusScope {
                     height: 30
                     verticalAlignment: Text.AlignVCenter
                     text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                    color: root.theme.textMuted
+                    color: root.theme.roleColor("media")
                     font.family: root.runtime.fontMono
                     font.pixelSize: root.theme.fontSize(10)
                     font.weight: Font.DemiBold
