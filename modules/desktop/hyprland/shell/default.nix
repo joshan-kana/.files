@@ -211,6 +211,16 @@ let
     '';
   };
 
+  palettePython = pkgs.python3.withPackages (packages: [ packages.watchdog ]);
+
+  paletteSearch = pkgs.writeShellApplication {
+    name = "linux-desktop-palette-search";
+    runtimeInputs = [ palettePython ];
+    text = ''
+      exec ${lib.getExe palettePython} ${./scripts/palette-search.py} "$@"
+    '';
+  };
+
   shellVisual = {
     panelOpacity = 1.0;
     focusOpacity = 0.96;
@@ -1139,6 +1149,8 @@ in
           powerprofilesMonitor = lib.getExe' pkgs.dbus "dbus-monitor";
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
+          urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
+          paletteSearch = lib.getExe paletteSearch;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
@@ -1598,6 +1610,7 @@ in
 
       home.packages = [
         launcher
+        paletteSearch
         developmentLauncher
         lockCommand
         sessionCommand
@@ -1633,6 +1646,20 @@ in
       };
 
       systemd.user.services = {
+        linux-desktop-palette-index = {
+          Unit = {
+            Description = "Watch local files and bookmarks for command palette indexing";
+            PartOf = [ "hyprland-session.target" ];
+          };
+          Service = {
+            Type = "simple";
+            ExecStart = "${lib.getExe paletteSearch} watch";
+            Restart = "on-failure";
+            RestartSec = "5s";
+          };
+          Install.WantedBy = [ "hyprland-session.target" ];
+        };
+
         linux-desktop-ical-sync = {
           Unit = {
             Description = "Refresh subscribed iCalendar events for khal";
