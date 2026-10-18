@@ -39,9 +39,11 @@ Item {
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
-            const radius = Math.max(1, Math.min(width, height) / 2 - (gauge.compact ? 4 : 12));
-            const start = Math.PI * 0.75;
-            const sweep = Math.PI * 1.5;
+            // Both ends of the compact ring meet the same baseline.
+            // Opening the lower gap slightly also avoids a drooping left cap.
+            const radius = Math.max(1, Math.min(width, height) / 2 - (gauge.compact ? 5 : 12));
+            const start = Math.PI * 0.8;
+            const sweep = Math.PI * 1.4;
             ctx.lineWidth = gauge.compact ? 3 : 9;
             ctx.lineCap = "round";
             ctx.beginPath();
@@ -79,6 +81,10 @@ Item {
         anchors.centerIn: parent
         anchors.horizontalCenterOffset: gauge.compactIconOffsetX
         anchors.verticalCenterOffset: gauge.compactIconOffsetY
+        width: parent.width
+        height: parent.height
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
         visible: gauge.compact
         text: gauge.compactIcon
         color: gauge.accentColor
