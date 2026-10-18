@@ -86,7 +86,9 @@ PanelWindow {
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: popup.theme.blend(popup.theme.groupBase, popup.urgencyColor, popup.theme.dark ? 0.07 : 0.04)
+        fillColor: popup.theme.groupBase
+        borderColor: popup.notification && popup.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
+        borderWidth: popup.theme.borderThin
 
         opacity: popup.notificationState.popupVisible ? 1 : 0
         scale: popup.notificationState.popupVisible ? 1 : 0.965
@@ -157,8 +159,30 @@ PanelWindow {
 
                 Row {
                     width: parent.width
+                    spacing: popup.theme.spacing2
+
+                    ShellSurface {
+                        id: appMark
+                        width: 26
+                        height: 26
+                        theme: popup.theme
+                        motion: popup.motion
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: popup.theme.radiusSmall
+                        fillColor: popup.theme.blend(popup.theme.controlBase, popup.urgencyColor, 0.15)
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: popup.notificationState.captureKind(popup.notification) === "screenshot" ? "󰹑" : popup.notificationState.captureKind(popup.notification) === "recording" ? "󰕧" : popup.notification && popup.notification.urgency === NotificationUrgency.Critical ? "󰀪" : "󰂚"
+                            color: popup.urgencyColor
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: popup.theme.fontSize(14)
+                        }
+                    }
 
                     Text {
+                        id: appName
+                        anchors.verticalCenter: parent.verticalCenter
                         text: popup.notification ? (popup.notification.appName || "SYSTEM").toUpperCase() : "SYSTEM"
                         color: popup.urgencyColor
                         font.family: popup.runtime.fontMono
@@ -168,13 +192,14 @@ PanelWindow {
                     }
 
                     Item {
-                        width: parent.width - parent.children[0].width - actionHint.width
+                        width: Math.max(0, parent.width - appMark.width - appName.implicitWidth - actionHint.implicitWidth - parent.spacing * 3)
                         height: 1
                     }
 
                     Text {
                         id: actionHint
-                        text: popup.notification && popup.notification.actions.length > 0 ? popup.notification.actions.length + " ACTION" + (popup.notification.actions.length === 1 ? "" : "S") : "NOTIFICATION"
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: !popup.notification ? "" : popup.notification.urgency === NotificationUrgency.Critical ? "CRITICAL" : popup.notification.actions.length > 0 ? popup.notification.actions.length + " ACTION" + (popup.notification.actions.length === 1 ? "" : "S") : popup.notificationState.captureKind(popup.notification) ? "OPEN" : ""
                         color: popup.theme.textMuted
                         font.family: popup.runtime.fontMono
                         font.pixelSize: popup.theme.fontSize(9)
