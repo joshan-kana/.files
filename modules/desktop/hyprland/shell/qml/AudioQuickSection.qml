@@ -139,7 +139,8 @@ Column {
 
         IconShortcutAction {
             id: inlineDevices
-            shortcut: "D"
+            // D acts on the keyboard-selected row; never show it twice.
+            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "D" : ""
             width: 44
             height: 66
             anchors.verticalCenter: parent.verticalCenter
