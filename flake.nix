@@ -738,16 +738,24 @@
             ]
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.systemd ];
             text = ''
-              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-                if [ "''${1:-}" = --background ]; then
-                  shift
-                  exec systemd-run --user --collect --unit=dotfiles-theme-warm \
-                    --property=Nice=10 --property=IOSchedulingClass=idle \
-                    -- "$0" "$@"
-                fi
-              ''}
-
-              host="''${1:-$(hostname -s)}"
+              background=false
+              maxEvals=4
+              host="$(hostname -s)"
+              while [ "$#" -gt 0 ]; do
+                case "$1" in
+                  -b|--background) background=true; shift ;;
+                  --max-evals)
+                    if [ "$#" -lt 2 ] || [[ ! "$2" =~ ^[1-9][0-9]*$ ]]; then
+                      echo "Expected a positive number after --max-evals" >&2
+                      exit 2
+                    fi
+                    maxEvals="$2"
+                    shift 2
+                    ;;
+                  -*) echo "Unknown option: $1" >&2; exit 2 ;;
+                  *) host="$1"; shift ;;
+                esac
+              done
               case "$host" in
                 ${
                   lib.concatStringsSep "|" (
@@ -759,7 +767,27 @@
 
               cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache/$host"
               mkdir -p "$cacheDir"
+              if [ "$background" = true ]; then
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                  exec systemd-run --user --collect --unit=dotfiles-theme-warm \
+                    --property=Nice=10 --property=IOSchedulingClass=idle \
+                    -- "$0" --max-evals "$maxEvals" "$host"
+                ''}
+                ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+                  exec launchctl submit -l dotfiles.theme-warm \
+                    -o "$cacheDir/warm.log" -e "$cacheDir/warm.err" \
+                    -- "$0" --max-evals "$maxEvals" "$host"
+                ''}
+              fi
+
               targets=()
+              batch=0
+              buildBatch() {
+                nix build --max-jobs 2 --cores 2 \
+                  --out-link "$cacheDir/batch-$batch" "''${targets[@]}"
+                targets=()
+                batch=$((batch + 1))
+              }
               for theme in ${lib.escapeShellArgs themeNames}; do
                 targets+=("path:${self.outPath}#lib.${
                   if pkgs.stdenv.hostPlatform.isDarwin then
@@ -767,8 +795,13 @@
                   else
                     "themedNixosConfigurations"
                 }.$host-$theme.config.system.build.toplevel")
+                if [ "''${#targets[@]}" -ge "$maxEvals" ]; then
+                  buildBatch
+                fi
               done
-              exec nix build --max-jobs 2 --cores 2 --out-link "$cacheDir/all" "''${targets[@]}"
+              if [ "''${#targets[@]}" -gt 0 ]; then
+                buildBatch
+              fi
             '';
           };
 
