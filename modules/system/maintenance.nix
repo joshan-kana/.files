@@ -2,6 +2,7 @@
   config,
   lib,
   options,
+  pkgs,
   system,
   ...
 }:
@@ -47,6 +48,24 @@ let
       [ (scheduledAt offset // { Weekday = 7; }) ]
     else
       map (day: scheduledAt offset // { Day = day; }) calendarDays;
+  darwinJob =
+    name: offset: command:
+    pkgs.writeShellScript "maintenance-${name}" ''
+      set -eu
+      umask 077
+      state=/var/db/.files/maintenance
+      ${pkgs.coreutils}/bin/mkdir -p -m 700 "$state"
+      export PATH=${lib.makeBinPath [ pkgs.coreutils ]}:/usr/bin:/bin
+      exec /usr/bin/lockf -k "$state/lock" ${pkgs.bash}/bin/bash ${./maintenance-due.sh} \
+        ${lib.escapeShellArgs (
+          [
+            name
+            (toString cleanupIntervalDays)
+            (timeString offset)
+          ]
+          ++ command
+        )}
+    '';
 in
 assert cleanupIntervalDays >= 1 && cleanupIntervalDays <= 31;
 assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
@@ -79,8 +98,29 @@ assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
 }
 // lib.optionalAttrs isDarwin {
   launchd.daemons = {
-    nix-gc.serviceConfig.RunAtLoad = lib.mkForce true;
-    nix-optimise.serviceConfig.RunAtLoad = lib.mkForce true;
+    nix-gc = {
+      command = lib.mkForce (
+        toString (
+          darwinJob "gc" 0 [
+            "${config.nix.package}/bin/nix-collect-garbage"
+            "--delete-older-than"
+            "${toString retentionDays}d"
+          ]
+        )
+      );
+      serviceConfig.RunAtLoad = lib.mkForce true;
+    };
+    nix-optimise = {
+      command = lib.mkForce (
+        toString (
+          darwinJob "optimise" 5 [
+            (lib.getExe' config.nix.package "nix-store")
+            "--optimise"
+          ]
+        )
+      );
+      serviceConfig.RunAtLoad = lib.mkForce true;
+    };
   };
 }
 // lib.optionalAttrs isLinux {
