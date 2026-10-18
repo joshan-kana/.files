@@ -50,16 +50,7 @@
     };
   };
 
-  system = editScope moduleRegistry.system {
-    maintenance = { config, ... }: {
-      # The server's pinned NixOS lacks typed journal settings.
-      services.journald.extraConfig = ''
-        SystemMaxUse=1G
-        SystemKeepFree=${config.nix.settings.min-free}
-        MaxRetentionSec=7day
-      '';
-    };
-  };
+  inherit (moduleRegistry) system;
 
   cli = extendScope moduleRegistry.cli {
     serverUtilities = { pkgs, ... }: {
