@@ -52,6 +52,9 @@ QtObject {
     readonly property color warning: root.configData.theme.warning
     readonly property color positive: root.configData.theme.positive
     readonly property color accent: root.configData.theme.accent
+    readonly property color accentSecondary: root.configData.theme.accentSecondary
+    readonly property color accentTertiary: root.configData.theme.accentTertiary
+    readonly property color accentWarm: root.configData.theme.accentWarm
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
@@ -106,6 +109,9 @@ QtObject {
                 property string warning: "#ffd24a"
                 property string positive: "#3de5f0"
                 property string accent: "#33a8ff"
+                property string accentSecondary: "#c792ea"
+                property string accentTertiary: "#3de5f0"
+                property string accentWarm: "#ffb454"
             }
 
             property JsonObject fonts: JsonObject {
