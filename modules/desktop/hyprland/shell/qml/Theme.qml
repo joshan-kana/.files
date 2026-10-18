@@ -24,6 +24,8 @@ QtObject {
         switch (role) {
         case "media":
             return accentSecondary;
+        case "workspace":
+            return blend(paneBase, accentSecondary, dark ? 0.62 : 0.48);
         case "connectivity":
             return accentTertiary;
         case "warmth":
