@@ -83,15 +83,14 @@ Item {
                 }
             }
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: chip.title
                 color: chip.theme.textStrong
-                horizontalAlignment: Text.AlignHCenter
+                alignCenter: true
                 font.family: chip.runtime.fontMono
                 font.pixelSize: chip.theme.fontSize(10)
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
-                elide: Text.ElideRight
             }
         }
     }
