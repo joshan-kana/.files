@@ -54,7 +54,7 @@ Column {
         id: inlineControl
         visible: quick.inline
         width: parent.width
-        height: 39
+        height: 66
         spacing: quick.theme.spacing2
 
         Text {
@@ -115,17 +115,15 @@ Column {
             font.pixelSize: quick.theme.fontSize(11)
         }
 
-        ShellAction {
+        IconShortcutAction {
             id: inlineMute
-            iconHint: true
             shortcut: quick.microphone ? "X" : "M"
-            width: 35
-            height: 33
+            width: 44
+            height: 66
             anchors.verticalCenter: parent.verticalCenter
             runtime: quick.runtime
             theme: quick.theme
             motion: quick.motion
-            iconOnly: true
             active: quick.muted
             activeColor: quick.theme.warning
             enabled: quick.available
@@ -139,17 +137,15 @@ Column {
             }
         }
 
-        ShellAction {
+        IconShortcutAction {
             id: inlineDevices
-            iconHint: true
             shortcut: "D"
-            width: 35
-            height: 33
+            width: 44
+            height: 66
             anchors.verticalCenter: parent.verticalCenter
             runtime: quick.runtime
             theme: quick.theme
             motion: quick.motion
-            iconOnly: true
             active: quick.chooserOpen
             enabled: quick.devices.length > 0
             icon: "󰏴"
@@ -157,18 +153,16 @@ Column {
             onActivated: quick.toggleDeviceChooser()
         }
 
-        ShellAction {
+        IconShortcutAction {
             id: inlineMixer
-            iconHint: true
             shortcut: "A"
             visible: quick.showMixer
-            width: quick.showMixer ? 35 : 0
-            height: 33
+            width: quick.showMixer ? 44 : 0
+            height: 66
             anchors.verticalCenter: parent.verticalCenter
             runtime: quick.runtime
             theme: quick.theme
             motion: quick.motion
-            iconOnly: true
             icon: "󰓃"
             title: "Application mixer"
             onActivated: quick.mixerRequested()
