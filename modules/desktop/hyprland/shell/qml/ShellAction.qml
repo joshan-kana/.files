@@ -18,6 +18,7 @@ Item {
     property bool headerEntry: false
     property bool iconOnly: false
     property bool iconHint: false
+    property bool inlineIconHint: false
     property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
     signal activated
@@ -130,7 +131,7 @@ Item {
 
     // Icon-only actions share one fixed glyph box, independent of font bearings.
     Text {
-        visible: root.iconOnly
+        visible: root.iconOnly && !root.inlineIconHint
         anchors.centerIn: parent
         anchors.verticalCenterOffset: root.iconHint ? -6 : 0
         width: root.width
@@ -141,6 +142,30 @@ Item {
         color: root.active ? root.activeColor : root.theme.textStrong
         font.family: "Symbols Nerd Font"
         font.pixelSize: root.theme.fontSize(17)
+    }
+
+    Row {
+        visible: root.iconOnly && root.iconHint && root.inlineIconHint
+        anchors.centerIn: parent
+        spacing: root.theme.spacing1
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.icon
+            color: root.active ? root.activeColor : root.theme.textStrong
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: root.theme.fontSize(16)
+        }
+
+        KeyHint {
+            anchors.verticalCenter: parent.verticalCenter
+            shortcut: root.shortcut
+            compact: true
+            runtime: root.runtime
+            theme: root.theme
+            emphasized: root.active
+            emphasisColor: root.activeColor
+        }
     }
 
     KeyHint {
@@ -159,7 +184,7 @@ Item {
     }
 
     KeyHint {
-        visible: root.iconOnly && root.iconHint && root.shortcut.length > 0
+        visible: root.iconOnly && root.iconHint && !root.inlineIconHint && root.shortcut.length > 0
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 2
