@@ -9,6 +9,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 BASE = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "linux-desktop"
 DB = BASE / "search.sqlite3"
@@ -196,38 +197,63 @@ def update_bookmarks():
         connection.executemany("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)", bookmarks())
 
 
-def launch_with_application(desktop_id, filename):
-    """Open a previously indexed file with an installed desktop entry."""
+def installed_desktop_entry(desktop_id):
     if not isinstance(desktop_id, str) or not desktop_id or len(desktop_id) > 240:
-        return 2
+        return None
     if "/" in desktop_id or "\\" in desktop_id or desktop_id.startswith("."):
-        return 2
-    if preview_indexed_file(filename) is None:
-        return 2
+        return None
     entries = [Path.home() / ".local/share/applications"]
     entries += [
         Path(root) / "applications"
         for root in os.environ.get(
-            "XDG_DATA_DIRS", "/run/current-system/sw/share:/etc/profiles/per-user/" + os.environ.get("USER", "") + "/share"
+            "XDG_DATA_DIRS",
+            "/run/current-system/sw/share:/etc/profiles/per-user/" + os.environ.get("USER", "") + "/share",
         ).split(":")
         if root
     ]
-    names = [desktop_id] if desktop_id.endswith(".desktop") else [desktop_id + ".desktop"]
+    name = desktop_id if desktop_id.endswith(".desktop") else desktop_id + ".desktop"
     for directory in entries:
-        for name in names:
-            entry = directory / name
-            if entry.is_file():
-                try:
-                    subprocess.Popen(
-                        ["gio", "launch", str(entry), filename],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        start_new_session=True,
-                    )
-                    return 0
-                except OSError:
-                    return 1
-    return 1
+        entry = directory / name
+        if entry.is_file():
+            return entry
+    return None
+
+
+def launch_with_application(desktop_id, filename):
+    """Open a previously indexed file with an installed desktop entry."""
+    entry = installed_desktop_entry(desktop_id)
+    if entry is None or preview_indexed_file(filename) is None:
+        return 2
+    try:
+        subprocess.Popen(
+            ["gio", "launch", str(entry), filename],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return 0
+    except OSError:
+        return 1
+
+
+def launch_url_with_application(desktop_id, url):
+    """Open an HTTP(S) URL using a user-selected, installed desktop entry."""
+    entry = installed_desktop_entry(desktop_id)
+    if entry is None or not isinstance(url, str) or len(url) > 4096:
+        return 2
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or any(ord(char) < 32 for char in url):
+        return 2
+    try:
+        subprocess.Popen(
+            ["gio", "launch", str(entry), url],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return 0
+    except OSError:
+        return 1
 
 
 def preview_indexed_file(filename):
@@ -471,5 +497,7 @@ if __name__ == "__main__":
         print(json.dumps(query(sys.argv[2]), ensure_ascii=False))
     elif len(sys.argv) == 4 and sys.argv[1] == "launch":
         raise SystemExit(launch_with_application(sys.argv[2], sys.argv[3]))
+    elif len(sys.argv) == 4 and sys.argv[1] == "launch-url":
+        raise SystemExit(launch_url_with_application(sys.argv[2], sys.argv[3]))
     else:
-        raise SystemExit("usage: palette-search {index|watch|search <query>|launch <desktop-id> <path>}")
+        raise SystemExit("usage: palette-search {index|watch|search <query>|launch <desktop-id> <path>|launch-url <desktop-id> <url>}")
