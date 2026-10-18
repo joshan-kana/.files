@@ -266,7 +266,10 @@ Item {
                     motion: library.motion
                     surfaceLayer: ShellSurface.Control
                     cornerRadius: library.theme.radiusMedium
-                    selected: index === library.selectedIndex
+                    selected: false
+                    outlined: index === library.selectedIndex
+                    fillColor: index === library.selectedIndex ? library.theme.blend(library.theme.controlBase, library.theme.roleColor("media"), library.theme.dark ? 0.075 : 0.045) : library.theme.controlBase
+                    borderColor: index === library.selectedIndex ? library.theme.roleColor("media") : library.theme.subtleBorder
                     StateLayer {
                         theme: library.theme
                         motion: library.motion
@@ -350,14 +353,13 @@ Item {
                         font.pixelSize: library.theme.fontSize(38)
                     }
                 }
-                Text {
+                MarqueeText {
                     width: parent.width
                     text: library.selectedEntry ? library.timeLabel(library.selectedEntry.duration) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CLIP"
                     color: library.theme.textStrong
                     font.family: library.runtime.fontMono
                     font.pixelSize: library.theme.fontSize(11)
                     font.weight: Font.DemiBold
-                    elide: Text.ElideRight
                 }
                 Row {
                     width: parent.width
