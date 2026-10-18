@@ -438,34 +438,38 @@
       };
       themeNames = themeScope.scopeOptions.name.type.functor.payload.values;
 
-      themedNixosConfigurations = builtins.listToAttrs (
-        lib.concatLists (
-          lib.mapAttrsToList (
-            configurationName: hostSpec:
-            map (
-              themeName:
-              let
-                outputName = "${configurationName}-${themeName}";
-              in
-              {
-                name = outputName;
-                value = mkHost configurationName (
-                  hostSpec
-                  // {
-                    moduleRegistryInput = moduleRegistry // {
-                      theme = semantic.editScope moduleRegistry.theme {
-                        name = themeName;
+      themedConfigurations =
+        specs:
+        builtins.listToAttrs (
+          lib.concatLists (
+            lib.mapAttrsToList (
+              configurationName: hostSpec:
+              map (
+                themeName:
+                let
+                  outputName = "${configurationName}-${themeName}";
+                in
+                {
+                  name = outputName;
+                  value = mkHost configurationName (
+                    hostSpec
+                    // {
+                      moduleRegistryInput = moduleRegistry // {
+                        theme = semantic.editScope moduleRegistry.theme {
+                          name = themeName;
+                        };
                       };
-                    };
-                    configurationOutputName = outputName;
-                    configurationFlakeSubdirectory = "themes";
-                  }
-                );
-              }
-            ) themeNames
-          ) nixosHostSpecs
-        )
-      );
+                      configurationOutputName = outputName;
+                      configurationFlakeSubdirectory = "themes";
+                    }
+                  );
+                }
+              ) themeNames
+            ) specs
+          )
+        );
+      themedNixosConfigurations = themedConfigurations nixosHostSpecs;
+      themedDarwinConfigurations = themedConfigurations darwinHostSpecs;
 
       docsFor =
         system:
@@ -510,7 +514,7 @@
     in
     {
       lib = {
-        inherit semanticScopeOptions themedNixosConfigurations;
+        inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -731,24 +735,26 @@
             runtimeInputs = [
               pkgs.coreutils
               pkgs.nix
-              pkgs.systemd
-            ];
+            ]
+            ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.systemd ];
             text = ''
-              if [ "''${1:-}" = --background ]; then
-                shift
-                exec systemd-run --user --collect --unit=dotfiles-theme-warm \
-                  --property=Nice=10 --property=IOSchedulingClass=idle \
-                  -- "$0" "$@"
-              fi
+              ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+                if [ "''${1:-}" = --background ]; then
+                  shift
+                  exec systemd-run --user --collect --unit=dotfiles-theme-warm \
+                    --property=Nice=10 --property=IOSchedulingClass=idle \
+                    -- "$0" "$@"
+                fi
+              ''}
 
               host="''${1:-$(hostname -s)}"
               case "$host" in
                 ${
                   lib.concatStringsSep "|" (
-                    lib.attrNames (lib.filterAttrs (_: spec: spec.system == system) nixosHostSpecs)
+                    lib.attrNames (lib.filterAttrs (_: spec: spec.system == system) hostSpecs)
                   )
                 }) ;;
-                *) printf 'Unknown NixOS host: %s\n' "$host" >&2; exit 2 ;;
+                *) printf 'Unknown host for ${system}: %s\n' "$host" >&2; exit 2 ;;
               esac
 
               cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache/$host"
@@ -756,7 +762,12 @@
               for theme in ${lib.escapeShellArgs themeNames}; do
                 nix build --max-jobs 2 --cores 2 \
                   --out-link "$cacheDir/$theme" \
-                  "path:${self.outPath}/themes#nixosConfigurations.$host-$theme.config.system.build.toplevel"
+                  "path:${self.outPath}#lib.${
+                    if pkgs.stdenv.hostPlatform.isDarwin then
+                      "themedDarwinConfigurations"
+                    else
+                      "themedNixosConfigurations"
+                  }.$host-$theme.config.system.build.toplevel"
               done
             '';
           };
@@ -779,12 +790,10 @@
             program = lib.getExe updateContainerLock;
             meta.description = "Refresh immutable OCI container image digests";
           };
-        }
-        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           theme-warm = {
             type = "app";
             program = lib.getExe themeWarm;
-            meta.description = "Build and retain every registered NixOS theme for this host";
+            meta.description = "Build and retain every registered theme for this host";
           };
         }
         // lib.optionalAttrs (updatePlasma != null) {
