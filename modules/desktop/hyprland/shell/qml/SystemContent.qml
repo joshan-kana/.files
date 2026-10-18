@@ -1154,33 +1154,30 @@ FocusScope {
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
-                                Text {
+                                MarqueeText {
                                     text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
                                     width: parent.width
                                     color: root.theme.accent
                                     font.family: root.runtime.fontMono
                                     font.pixelSize: root.theme.fontSize(10)
-                                    elide: Text.ElideRight
                                 }
 
-                                Text {
+                                MarqueeText {
                                     text: root.media.available ? root.media.title : "No active media player"
                                     width: parent.width
                                     color: root.theme.textStrong
                                     font.family: root.runtime.fontMono
                                     font.pixelSize: root.theme.fontSize(16)
                                     font.weight: Font.DemiBold
-                                    elide: Text.ElideRight
                                 }
 
-                                Text {
+                                MarqueeText {
                                     text: root.media.artist
                                     visible: root.media.available
                                     width: parent.width
                                     color: root.theme.textMuted
                                     font.family: root.runtime.fontMono
                                     font.pixelSize: root.theme.fontSize(10)
-                                    elide: Text.ElideRight
                                 }
                             }
 

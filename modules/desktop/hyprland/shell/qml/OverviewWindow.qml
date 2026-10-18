@@ -36,11 +36,10 @@ ShellSurface {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
             }
-            Text {
+            MarqueeText {
                 width: Math.max(1, parent.width - 30)
                 text: tile.toplevel ? (tile.toplevel.title || tile.toplevel.lastIpcObject.class || "Window") : "Window"
                 textFormat: Text.PlainText
-                elide: Text.ElideRight
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(11)
                 color: tile.theme.textStrong
