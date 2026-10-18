@@ -20,7 +20,7 @@ Item {
     property bool scanning: false
     property bool failed: false
     property bool unavailable: false
-    readonly property color signalColor: failed ? theme.critical : pending || scanning ? theme.warning : connected ? theme.accent : theme.textMuted
+    readonly property color signalColor: failed ? theme.critical : pending || scanning ? theme.warning : connected ? theme.roleColor("connectivity") : theme.textMuted
     readonly property color foreground: theme.textStrong
 
     signal activated
@@ -47,7 +47,7 @@ Item {
         luminous: tile.connected || tile.pending || tile.scanning || tile.failed
         luminousColor: tile.signalColor
         hovered: interaction.containsMouse
-        fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.theme.accent, tile.theme.dark ? 0.34 : 0.23) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
+        fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.signalColor, tile.theme.dark ? 0.095 : 0.065) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {
             id: glyphSurface
@@ -62,7 +62,7 @@ Item {
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: tile.theme.radiusMedium
-            fillColor: tile.connected ? Qt.rgba(tile.theme.textStrong.r, tile.theme.textStrong.g, tile.theme.textStrong.b, 0.14) : tile.pending || tile.scanning || tile.failed ? tile.theme.blend(tile.theme.expressiveSurface, tile.signalColor, 0.17) : tile.theme.expressiveSurface
+            fillColor: tile.connected ? tile.theme.blend(tile.theme.controlBase, tile.signalColor, 0.17) : tile.pending || tile.scanning || tile.failed ? tile.theme.blend(tile.theme.expressiveSurface, tile.signalColor, 0.17) : tile.theme.expressiveSurface
 
             Text {
                 anchors.centerIn: parent
