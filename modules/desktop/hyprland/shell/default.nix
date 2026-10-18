@@ -1108,6 +1108,7 @@ in
           accentSecondary = colors.base0E;
           accentTertiary = colors.base0C;
           accentWarm = colors.base09;
+          accentWorkspace = colors.base08;
         };
 
         fonts.mono = config.stylix.fonts.monospace.name;
