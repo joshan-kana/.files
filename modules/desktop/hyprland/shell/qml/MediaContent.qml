@@ -221,13 +221,11 @@ FocusScope {
 
         Column {
             id: spectrumSlot
-            readonly property bool hasContent: content.media.available && (content.lyricsVisible || content.media.playing || content.spectrum.hasEnergy)
-            visible: hasContent
             anchors {
                 top: header.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: hasContent ? (content.compactHeight ? content.theme.spacing3 : content.theme.spacing5) : 0
+                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
             }
             spacing: 0
 
@@ -235,7 +233,7 @@ FocusScope {
                 // Spectrum, curves and lyrics share the same surface as
                 // the album artwork and track details above them.
                 width: parent.width
-                height: spectrumSlot.hasContent ? (content.compactHeight ? 150 : 220) : 0
+                height: content.compactHeight ? 150 : 220
                 clip: true
 
                 SpectrumCurve {
@@ -249,7 +247,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: content.spectrum.hasEnergy && !content.lyricsVisible && (content.visualizerMode === "curve" || opacity > 0.01)
+                    visible: !content.lyricsVisible && (content.visualizerMode === "curve" || opacity > 0.01)
                     opacity: content.visualizerMode === "curve" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -276,7 +274,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: content.spectrum.hasEnergy && !content.lyricsVisible && (content.visualizerMode === "bars" || opacity > 0.01)
+                    visible: !content.lyricsVisible && (content.visualizerMode === "bars" || opacity > 0.01)
                     opacity: content.visualizerMode === "bars" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -306,7 +304,7 @@ FocusScope {
                     id: frequencyLabels
 
                     height: 18
-                    visible: !content.lyricsVisible && content.spectrum.hasEnergy
+                    visible: !content.lyricsVisible
                     anchors {
                         right: parent.right
                         bottom: parent.bottom
@@ -365,7 +363,7 @@ FocusScope {
                 top: spectrumSlot.bottom
                 left: parent.left
                 right: parent.right
-                topMargin: spectrumSlot.hasContent ? (content.compactHeight ? content.theme.spacing3 : content.theme.spacing5) : content.theme.spacing3
+                topMargin: content.compactHeight ? content.theme.spacing3 : content.theme.spacing5
             }
             spacing: content.compactHeight ? content.theme.spacing2 : content.theme.spacing3
 
