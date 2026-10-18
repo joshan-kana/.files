@@ -240,7 +240,7 @@ Variants {
                         exponent: bars.theme.squircleExponent
                         cornerRadius: 16
                         fillColor: bars.theme.roleColor("workspace")
-                        lightColor: bars.theme.accentSecondary
+                        lightColor: bars.theme.accentWorkspace
                         lightStrength: 0.035
                         visible: bar.visibleWorkspaceIds.length > 0
                     }
