@@ -11,6 +11,7 @@ Item {
     property bool showLabel: label.length > 0
     property bool compact: false
     property bool emphasized: false
+    property color emphasisColor: theme.accent
     property bool available: true
 
     implicitWidth: cap.width + (showLabel ? theme.keyHintGap + caption.implicitWidth : 0)
@@ -25,7 +26,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color: hint.emphasized ? hint.theme.selectionFill : hint.theme.controlBase
         border.width: hint.emphasized ? hint.theme.borderFocus : hint.theme.borderThin
-        border.color: hint.emphasized ? hint.theme.accent : hint.theme.subtleBorder
+        border.color: hint.emphasized ? hint.emphasisColor : hint.theme.subtleBorder
 
         KeyChord {
             id: chord
@@ -34,7 +35,7 @@ Item {
             fontFamily: hint.runtime.fontMono
             fontSize: hint.compact ? hint.theme.fontSize(9) : hint.theme.fontKeyHint
             modifierScale: 1
-            textColor: hint.emphasized ? hint.theme.accent : hint.theme.textStrong
+            textColor: hint.emphasized ? hint.emphasisColor : hint.theme.textStrong
         }
     }
 
