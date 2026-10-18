@@ -25,6 +25,7 @@ Item {
     readonly property bool overflows: overflowWidth > 1
 
     clip: true
+    implicitWidth: label.implicitWidth
     implicitHeight: label.implicitHeight
     height: implicitHeight
 
