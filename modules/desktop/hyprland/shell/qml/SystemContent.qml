@@ -896,6 +896,20 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
+                    icon: "󰊠"
+                    title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
+                    shortcut: "SHIFT+F"
+                    active: root.shellGlassEnabled
+                    activeColor: root.theme.roleColor("display")
+                    onActivated: root.shellGlassToggleRequested()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth
+                    height: 78
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
                     icon: "󰀻"
                     title: root.barVisible ? "Bar visible" : "Bar hidden"
                     shortcut: "SHIFT+B"
@@ -931,23 +945,6 @@ FocusScope {
                     enabled: root.nightLight.supported && !root.nightLight.busy
                     onActivated: root.nightLight.toggle()
                 }
-            }
-
-            ShellAction {
-                x: visualModeStrip.x
-                width: visualModeStrip.width
-                height: 48
-                runtime: root.runtime
-                theme: root.theme
-                motion: root.motion
-                horizontalCompact: true
-                showSwitch: true
-                icon: "󰊠"
-                title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
-                shortcut: "SHIFT+F"
-                active: root.shellGlassEnabled
-                activeColor: root.theme.roleColor("display")
-                onActivated: root.shellGlassToggleRequested()
             }
 
             Row {
