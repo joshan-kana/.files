@@ -193,18 +193,104 @@ def update_bookmarks():
         connection.executemany("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)", bookmarks())
 
 
+def start_search_socket():
+    """Serve index searches from the existing watcher without spawning Python per key."""
+    import socket
+    import socketserver
+    import stat
+    import threading
+
+    runtime = Path(os.environ["XDG_RUNTIME_DIR"])
+    endpoint = runtime / "linux-desktop-palette.sock"
+    if endpoint.exists() or endpoint.is_symlink():
+        info = endpoint.lstat()
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+            raise RuntimeError("palette search socket path is not an owned socket")
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+            if probe.connect_ex(str(endpoint)) == 0:
+                raise RuntimeError("palette search service already running")
+        endpoint.unlink()
+
+    class Server(socketserver.ThreadingUnixStreamServer):
+        daemon_threads = True
+        request_queue_size = 8
+
+        def __init__(self, address, handler):
+            self.clients = set()
+            self.write_lock = threading.RLock()
+            super().__init__(address, handler)
+
+        def notify(self):
+            with self.write_lock:
+                for client in list(self.clients):
+                    try:
+                        client.sendall(b'{"event":"updated"}\n')
+                    except OSError:
+                        self.clients.discard(client)
+
+    class Handler(socketserver.StreamRequestHandler):
+        def setup(self):
+            super().setup()
+            with self.server.write_lock:
+                self.server.clients.add(self.request)
+
+        def handle(self):
+            while True:
+                line = self.rfile.readline(1025)
+                if not line:
+                    break
+                if len(line) > 1024 or not line.endswith(b"\n"):
+                    break
+                try:
+                    request = json.loads(line)
+                    identifier = request["id"]
+                    phrase = request["query"]
+                    if not isinstance(identifier, int) or not 0 <= identifier <= 2147483647 or not isinstance(phrase, str):
+                        break
+                    payload = json.dumps({"id": identifier, "items": query(phrase)}, ensure_ascii=False)
+                except (KeyError, TypeError, ValueError):
+                    break
+                with self.server.write_lock:
+                    self.request.sendall((payload + "\n").encode())
+
+        def finish(self):
+            with self.server.write_lock:
+                self.server.clients.discard(self.request)
+            super().finish()
+
+    original_mask = os.umask(0o077)
+    try:
+        server = Server(str(endpoint), Handler)
+        os.chmod(endpoint, 0o600)
+    finally:
+        os.umask(original_mask)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 3600}, daemon=True)
+    thread.start()
+    return server, endpoint
+
+
 def watch():
     """Rebuild on relevant Linux inotify changes, never on a recurring timer."""
+
+    home = Path.home()
+    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
+    search_server, search_endpoint = start_search_socket()
+    try:
+        watch_changes(search_server, home, config)
+    finally:
+        search_server.server_close()
+        search_endpoint.unlink(missing_ok=True)
+
+
+def watch_changes(search_server, home, config):
     from queue import Empty, Queue
 
     from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
 
-    home = Path.home()
-    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
-
     while True:
         index()
+        search_server.notify()
         roots = search_roots()
         notifications = Queue()
         observer = Observer()
@@ -267,6 +353,7 @@ def watch():
                 if any(is_bookmark_change(path) for path in changed):
                     update_bookmarks()
                 update_changed_files(changed, roots)
+                search_server.notify()
         finally:
             observer.stop()
             observer.join()
