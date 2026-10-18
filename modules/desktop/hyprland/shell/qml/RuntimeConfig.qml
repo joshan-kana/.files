@@ -55,6 +55,7 @@ QtObject {
     readonly property color accentSecondary: root.configData.theme.accentSecondary
     readonly property color accentTertiary: root.configData.theme.accentTertiary
     readonly property color accentWarm: root.configData.theme.accentWarm
+    readonly property color accentWorkspace: root.configData.theme.accentWorkspace
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
@@ -112,6 +113,7 @@ QtObject {
                 property string accentSecondary: "#c792ea"
                 property string accentTertiary: "#3de5f0"
                 property string accentWarm: "#ffb454"
+                property string accentWorkspace: "#ff7a5c"
             }
 
             property JsonObject fonts: JsonObject {
