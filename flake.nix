@@ -467,21 +467,6 @@
         )
       );
 
-      # One GC root retains every theme for each NixOS host.
-      themeCachePackages =
-        system:
-        lib.mapAttrs' (
-          configurationName: _:
-          lib.nameValuePair "theme-cache-${configurationName}" (
-            (pkgsFor system).linkFarm "theme-cache-${configurationName}" (
-              map (themeName: {
-                name = themeName;
-                path = themedNixosConfigurations."${configurationName}-${themeName}".config.system.build.toplevel;
-              }) themeNames
-            )
-          )
-        ) (lib.filterAttrs (_: spec: spec.system == system) nixosHostSpecs);
-
       docsFor =
         system:
         import ./docs {
@@ -539,7 +524,6 @@
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
         }
-        // themeCachePackages system
       );
 
       devShells = forAllSystems (
@@ -767,11 +751,13 @@
                 *) printf 'Unknown NixOS host: %s\n' "$host" >&2; exit 2 ;;
               esac
 
-              cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache"
+              cacheDir="''${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/theme-cache/$host"
               mkdir -p "$cacheDir"
-              exec nix build \
-                --out-link "$cacheDir/$host" \
-                "path:${self.outPath}#theme-cache-$host"
+              for theme in ${lib.escapeShellArgs themeNames}; do
+                nix build --max-jobs 2 --cores 2 \
+                  --out-link "$cacheDir/$theme" \
+                  "path:${self.outPath}/themes#nixosConfigurations.$host-$theme.config.system.build.toplevel"
+              done
             '';
           };
 
