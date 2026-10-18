@@ -187,26 +187,24 @@ FocusScope {
                     font.weight: Font.Medium
                 }
 
-                Text {
+                MarqueeText {
                     width: parent.width
                     text: content.media.title
                     color: content.theme.textStrong
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(content.compactHeight ? 22 : 28)
                     font.weight: Font.DemiBold
-                    elide: Text.ElideRight
                 }
 
-                Text {
+                MarqueeText {
                     width: parent.width
                     text: content.media.artist || content.media.identity || "No MPRIS player connected"
                     color: content.theme.textMuted
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(13)
-                    elide: Text.ElideRight
                 }
 
-                Text {
+                MarqueeText {
                     width: parent.width
                     visible: content.media.album.length > 0
                     text: content.media.album
@@ -214,7 +212,6 @@ FocusScope {
                     opacity: 0.72
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(10)
-                    elide: Text.ElideRight
                 }
             }
         }
