@@ -408,19 +408,20 @@ FocusScope {
             }
 
             Item {
-                width: Math.max(0, parent.width - calendarHints.implicitWidth - resetButton.implicitWidth)
+                width: Math.max(0, parent.width - calendarHints.implicitWidth - resetButton.width)
                 height: 1
             }
 
             ShellAction {
                 id: resetButton
-                width: 36
+                width: 76
                 height: 30
                 iconOnly: true
                 icon: "󰃰"
                 title: "Today"
                 shortcut: "T"
                 iconHint: true
+                inlineIconHint: true
                 runtime: calendar.runtime
                 theme: calendar.theme
                 motion: calendar.motion
