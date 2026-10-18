@@ -240,7 +240,7 @@ Scope {
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     maximumLineCount: 3
-                    color: auth.flow && auth.flow.supplementaryIsError || auth.flow && auth.flow.failed ? auth.theme.warning : auth.theme.textMuted
+                    color: auth.flow && (auth.flow.supplementaryIsError || auth.flow.failed) ? auth.theme.critical : auth.theme.textMuted
                     font.family: auth.runtime.fontMono
                     font.pixelSize: auth.theme.fontSize(10)
                 }
