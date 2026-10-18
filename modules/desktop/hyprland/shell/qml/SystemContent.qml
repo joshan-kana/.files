@@ -1028,7 +1028,7 @@ FocusScope {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.max(1, parent.width - recordingsButton.width - parent.spacing)
-                        text: root.media.available ? "MEDIA" : "NOW PLAYING  ·  NO ACTIVE PLAYER"
+                        text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono
                         font.pixelSize: root.theme.fontSize(10)
@@ -1055,16 +1055,16 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 204 : 156
-                    visible: true
+                    height: root.media.available ? 204 : 0
+                    visible: root.media.available
                     theme: root.theme
                     motion: root.motion
                     surfaceLayer: ShellSurface.Group
                     cornerRadius: theme.radiusLarge
                     luminous: true
                     lightIntensity: 1.25
-                    luminousColor: root.theme.accent
-                    fillColor: root.theme.blend(root.theme.groupBase, root.theme.accent, root.theme.dark ? 0.095 : 0.05)
+                    luminousColor: root.theme.roleColor("media")
+                    fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
 
                     StateLayer {
                         theme: root.theme

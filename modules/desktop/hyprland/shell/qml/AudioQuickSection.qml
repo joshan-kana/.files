@@ -60,7 +60,7 @@ Column {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: quick.muted ? (quick.microphone ? "󰍭" : "󰖁") : (quick.microphone ? "󰍬" : "󰕾")
-            color: quick.muted ? quick.theme.warning : quick.theme.accent
+            color: quick.muted ? quick.theme.warning : quick.theme.roleColor("media")
             font.family: "Symbols Nerd Font"
             font.pixelSize: quick.theme.fontSize(19)
         }
@@ -94,7 +94,7 @@ Column {
             enabled: quick.available
             value: quick.level
             animateValueChanges: true
-            accentColor: quick.muted ? quick.theme.warning : quick.theme.accent
+            accentColor: quick.muted ? quick.theme.warning : quick.theme.roleColor("media")
             trackHeight: 11
             handleSize: 18
             onValueRequested: value => {
@@ -178,7 +178,7 @@ Column {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: quick.microphone ? "󰍬" : "󰕾"
-            color: quick.muted ? quick.theme.warning : quick.theme.accent
+            color: quick.muted ? quick.theme.warning : quick.theme.roleColor("media")
             font.family: "Symbols Nerd Font"
             font.pixelSize: quick.theme.fontSize(16)
         }
@@ -303,7 +303,7 @@ Column {
             enabled: quick.available
             value: quick.level
             animateValueChanges: true
-            accentColor: quick.muted ? quick.theme.warning : quick.theme.accent
+            accentColor: quick.muted ? quick.theme.warning : quick.theme.roleColor("media")
             trackHeight: 7
             handleSize: 15
             onValueRequested: value => {
@@ -392,7 +392,7 @@ Column {
                 value: streamRow.stream?.audio?.volume ?? 0
                 animateValueChanges: true
                 enabled: !!streamRow.stream?.audio
-                accentColor: streamRow.stream?.audio?.muted ? quick.theme.warning : quick.theme.accent
+                accentColor: streamRow.stream?.audio?.muted ? quick.theme.warning : quick.theme.roleColor("media")
                 trackHeight: 5
                 handleSize: 12
                 onValueRequested: value => quick.system.setStreamVolume(streamRow.stream, value)
