@@ -15,6 +15,12 @@ Item {
     property int initialPause: 1250
     property int endPause: 1450
     property bool alignRight: false
+    property bool alignCenter: false
+    property real scrollOffset: 0
+    onOverflowsChanged: {
+        if (!overflows)
+            scrollOffset = 0;
+    }
     readonly property real overflowWidth: Math.max(0, label.implicitWidth - width)
     readonly property bool overflows: overflowWidth > 1
 
@@ -24,7 +30,8 @@ Item {
 
     Text {
         id: label
-        x: marquee.alignRight && !marquee.overflows ? Math.max(0, marquee.width - implicitWidth) : 0
+        x: (marquee.overflows ? 0 : marquee.alignRight ? Math.max(0, marquee.width - implicitWidth) : marquee.alignCenter ? Math.max(0, (marquee.width - implicitWidth) / 2) : 0) + marquee.scrollOffset
+        anchors.verticalCenter: parent.verticalCenter
         width: implicitWidth
         textFormat: Text.PlainText
         verticalAlignment: Text.AlignVCenter
@@ -39,8 +46,8 @@ Item {
             duration: marquee.initialPause
         }
         NumberAnimation {
-            target: label
-            property: "x"
+            target: marquee
+            property: "scrollOffset"
             from: 0
             to: -marquee.overflowWidth
             duration: Math.max(700, Math.round(marquee.overflowWidth * 1000 / Math.max(1, marquee.scrollSpeed)))
@@ -50,8 +57,8 @@ Item {
             duration: marquee.endPause
         }
         NumberAnimation {
-            target: label
-            property: "x"
+            target: marquee
+            property: "scrollOffset"
             to: 0
             duration: 340
             easing.type: Easing.InOutQuad
