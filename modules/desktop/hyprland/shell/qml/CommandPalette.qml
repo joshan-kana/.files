@@ -190,47 +190,86 @@ Item {
         onFileChanged: reload()
     }
 
-    StdioCollector {
-        id: fileQueryOutput
+    property int fileRequestId: 0
+    property int pendingFileRequestId: 0
+
+    Socket {
+        id: indexSocket
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/linux-desktop-palette.sock"
+        connected: false
+
+        parser: SplitParser {
+            onRead: message => palette.onFileSocketMessage(message)
+        }
+
+        onConnectionStateChanged: {
+            if (connected && palette.open && palette.queuedFileQuery)
+                palette.runFileSearch();
+        }
+
+        onError: error => {
+            connected = false;
+            if (palette.open && palette.queuedFileQuery)
+                fileSocketReconnect.restart();
+        }
+    }
+
+    Timer {
+        id: fileSocketReconnect
+        interval: 750
+        onTriggered: {
+            if (palette.open && palette.queuedFileQuery)
+                indexSocket.connected = true;
+        }
     }
 
     Timer {
         id: fileSearchDebounce
-        interval: 85
+        interval: 50
         onTriggered: palette.runFileSearch()
     }
 
-    Process {
-        id: fileSearchProcess
-        stdout: fileQueryOutput
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0 && palette.activeFileQuery === search.text.trim() && palette.searchScope === "unified" && !palette.parameterTarget) {
-                try {
-                    const parsed = JSON.parse(fileQueryOutput.text);
-                    palette.localResults = Array.isArray(parsed) ? parsed : [];
-                } catch (error) {
-                    palette.localResults = [];
-                }
+    function onFileSocketMessage(message: string): void {
+        try {
+            const response = JSON.parse(message);
+            if (response.event === "updated") {
+                if (open && queuedFileQuery)
+                    fileSearchDebounce.restart();
+                return;
             }
-            if (palette.queuedFileQuery !== palette.activeFileQuery)
-                Qt.callLater(() => palette.runFileSearch());
+            if (!open || response.id !== pendingFileRequestId || queuedFileQuery !== search.text.trim() || searchScope !== "unified" || parameterTarget)
+                return;
+            localResults = Array.isArray(response.items) ? response.items : [];
+        } catch (error) {
+            console.warn("palette: unexpected index response", error);
         }
     }
 
     function queueFileSearch(): void {
         localResults = [];
-        queuedFileQuery = searchScope === "unified" && !parameterTarget && search.text.trim().length >= 2 ? search.text.trim() : "";
-        if (queuedFileQuery)
-            fileSearchDebounce.restart();
-        else
+        queuedFileQuery = open && searchScope === "unified" && !parameterTarget && search.text.trim().length >= 2 ? search.text.trim() : "";
+        if (!queuedFileQuery) {
             fileSearchDebounce.stop();
+            return;
+        }
+        if (!indexSocket.connected)
+            indexSocket.connected = true;
+        else
+            fileSearchDebounce.restart();
     }
 
     function runFileSearch(): void {
-        if (fileSearchProcess.running || !queuedFileQuery || !runtime.paletteSearch)
+        if (!open || !queuedFileQuery)
             return;
-        activeFileQuery = queuedFileQuery;
-        fileSearchProcess.exec([runtime.paletteSearch, "search", activeFileQuery]);
+        if (!indexSocket.connected) {
+            indexSocket.connected = true;
+            return;
+        }
+        pendingFileRequestId = ++fileRequestId;
+        indexSocket.write(JSON.stringify({
+            id: pendingFileRequestId,
+            query: queuedFileQuery
+        }) + "\n");
     }
 
     FileView {
@@ -541,6 +580,9 @@ Item {
         helpOpen = false;
         actionMode = false;
         parameterTarget = null;
+        fileSocketReconnect.stop();
+        fileSearchDebounce.stop();
+        indexSocket.connected = false;
         setLauncherSubmap(false);
         if (closing)
             closeTimer.restart();
