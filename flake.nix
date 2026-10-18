@@ -177,6 +177,8 @@
           projectRootFile = "flake.nix";
 
           programs = {
+            clang-format.enable = true;
+            prettier.enable = true;
             deadnix.enable = true;
             nixfmt.enable = true;
             qmlformat.enable = true;
@@ -229,6 +231,16 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+              clang-format.priority = 1;
+              prettier = {
+                includes = [ "*.js" ];
+                priority = 1;
+              };
+              quick-lint-js = {
+                command = lib.getExe pkgs.quick-lint-js;
+                includes = [ "*.js" ];
+                priority = 2;
+              };
 
               qml-lint = {
                 command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
@@ -262,6 +274,23 @@
                 priority = 2;
               };
               typos.priority = 1;
+              cppcheck = {
+                command = lib.getExe' pkgs.cppcheck "cppcheck";
+                priority = 2;
+                includes = [
+                  "*.c"
+                  "*.cc"
+                  "*.cpp"
+                  "*.h"
+                  "*.hh"
+                  "*.hpp"
+                ];
+                options = [
+                  "--enable=warning,style,performance,portability"
+                  "--error-exitcode=1"
+                  "--quiet"
+                ];
+              };
               lua-lint = {
                 command = lib.getExe pkgs.lua54Packages.luacheck;
                 includes = [ "*.lua" ];
@@ -290,7 +319,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(c|cc|cpp|h|hh|hpp|js|lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
