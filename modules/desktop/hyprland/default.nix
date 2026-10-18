@@ -189,11 +189,13 @@ in
               # Modal layer dimming should be subtle, not the compositor's
               # heavy 0.4 default. Authentication has its own themed scrim.
               dim_around = 0.12;
+              dim_special = 0.12;
 
               blur = {
                 enabled = true;
                 size = 8;
                 passes = 2;
+                special = true;
               };
 
               shadow = {
@@ -302,6 +304,21 @@ in
             {
               match.namespace = "^linux-desktop-modal-dim$";
               dim_around = true;
+            }
+          ];
+
+          # Inset the special workspace while preserving its existing
+          # tiling and window-toggle workflow, including moved windows.
+          workspace_rule = [
+            {
+              workspace = "special:magic";
+              gaps_in = 12;
+              gaps_out = {
+                top = 180;
+                right = 430;
+                bottom = 180;
+                left = 430;
+              };
             }
           ];
 
