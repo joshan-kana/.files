@@ -565,7 +565,7 @@ Item {
                     {
                         kind: "argument",
                         name: "Confirm " + parameterTarget.name,
-                        genericName: parameterTarget.parameterMode === "confirmClipboard" ? "Send clipboard text to this website · Escape to cancel" : "Enter to confirm · Escape to cancel",
+                        genericName: parameterTarget.parameterMode === "confirmClipboard" ? "Send clipboard to " + (parameterTarget.urlTemplate.match(/^https?:\/\/([^/?#]+)/) || ["", "this website"])[1] + " · Escape to cancel" : "Enter to confirm · Escape to cancel",
                         icon: "dialog-warning",
                         key: "↵ CONFIRM"
                     }
