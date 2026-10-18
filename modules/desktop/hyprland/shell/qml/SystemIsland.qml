@@ -60,6 +60,7 @@ Item {
 
             ResourceGauge {
                 id: volumeStatus
+                compactRingTuning: true
                 visible: !island.compact
                 width: 38
                 height: 38
