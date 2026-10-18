@@ -176,8 +176,13 @@ Item {
         id: snippetsFile
         path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/snippets.json"
         blockLoading: false
+        printErrors: false
         watchChanges: true
         onLoaded: palette.snippets = PaletteUtilities.parseSnippets(text())
+        onLoadedChanged: {
+            if (!loaded)
+                palette.snippets = [];
+        }
         onFileChanged: reload()
     }
 
@@ -185,8 +190,13 @@ Item {
         id: quicklinkFile
         path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/quicklinks.json"
         blockLoading: false
+        printErrors: false
         watchChanges: true
         onLoaded: palette.quicklinks = PaletteUtilities.parseQuicklinks(text())
+        onLoadedChanged: {
+            if (!loaded)
+                palette.quicklinks = PaletteUtilities.parseQuicklinks("");
+        }
         onFileChanged: reload()
     }
 
