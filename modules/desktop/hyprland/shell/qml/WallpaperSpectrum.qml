@@ -20,7 +20,7 @@ Variants {
 
         required property var modelData
         screen: modelData
-        visible: visuals.enabled && visuals.motion.enabled
+        visible: visuals.enabled && visuals.motion.enabled && visuals.spectrum.hasEnergy
         focusable: false
         exclusionMode: ExclusionMode.Ignore
         color: "transparent"
