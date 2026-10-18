@@ -27,6 +27,8 @@ let
 in
 assert cleanupIntervalDays >= 1 && cleanupIntervalDays <= 31;
 {
+  nix.settings.min-free = "2G";
+
   nix.gc = {
     automatic = true;
     options = "--delete-older-than ${toString retentionDays}d";
