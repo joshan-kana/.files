@@ -691,24 +691,22 @@ Item {
                             width: Math.max(90, parent.width - 240)
                             spacing: 1
 
-                            Text {
+                            MarqueeText {
                                 width: parent.width
                                 text: modelData.name
                                 color: theme.textStrong
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(14)
                                 font.weight: result.ListView.isCurrentItem ? Font.DemiBold : Font.Normal
-                                elide: Text.ElideRight
                             }
 
-                            Text {
+                            MarqueeText {
                                 width: parent.width
                                 visible: modelData.genericName && modelData.genericName.length > 0
                                 text: modelData.genericName
                                 color: theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
-                                elide: Text.ElideRight
                             }
                         }
 
