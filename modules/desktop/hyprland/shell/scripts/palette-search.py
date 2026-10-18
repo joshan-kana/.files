@@ -166,6 +166,33 @@ def query(text):
     ]
 
 
+def update_changed_files(paths, roots):
+    """Update ordinary files from inotify events without rescanning each root."""
+    if not DB.is_file():
+        index()
+        return
+    with sqlite3.connect(DB, timeout=2.0) as connection:
+        for path in paths:
+            if not any(is_indexable(path, root) for root in roots):
+                continue
+            connection.execute("DELETE FROM items WHERE path = ? AND kind != 2", (str(path),))
+            if path.is_file() and not path.is_symlink():
+                connection.execute(
+                    "INSERT OR REPLACE INTO items VALUES (?, ?, ?, ?)",
+                    (str(path), path.name, 0, ""),
+                )
+
+
+def update_bookmarks():
+    """Refresh browser bookmarks without walking any indexed directories."""
+    if not DB.is_file():
+        index()
+        return
+    with sqlite3.connect(DB, timeout=2.0) as connection:
+        connection.execute("DELETE FROM items WHERE kind = 2")
+        connection.executemany("INSERT OR IGNORE INTO items VALUES (?, ?, ?, ?)", bookmarks())
+
+
 def watch():
     """Rebuild on relevant Linux inotify changes, never on a recurring timer."""
     from queue import Empty, Queue
@@ -226,17 +253,20 @@ def watch():
         try:
             while True:
                 event = notifications.get()
-                change_layout = event.is_directory or Path(event.src_path) == config
+                batch = [event]
                 # Wait only after receiving an event to coalesce write bursts.
                 while True:
                     try:
-                        event = notifications.get(timeout=0.75)
-                        change_layout |= event.is_directory or Path(event.src_path) == config
+                        batch.append(notifications.get(timeout=0.35))
                     except Empty:
                         break
+                change_layout = any(event.is_directory or Path(event.src_path) == config for event in batch)
                 if change_layout:
                     break
-                index()
+                changed = {Path(path) for event in batch for path in (event.src_path, getattr(event, "dest_path", "")) if path}
+                if any(is_bookmark_change(path) for path in changed):
+                    update_bookmarks()
+                update_changed_files(changed, roots)
         finally:
             observer.stop()
             observer.join()
