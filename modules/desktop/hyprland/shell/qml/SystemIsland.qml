@@ -70,8 +70,8 @@ Item {
                 value: island.system.volume
                 accentColor: island.system.muted ? island.theme.warning : island.theme.roleColor("media")
                 compactIconSize: 20
-                compactIconOffsetX: 1
-                compactIconOffsetY: -1
+                compactIconOffsetX: 0
+                compactIconOffsetY: -2
                 compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
             }
 
