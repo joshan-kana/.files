@@ -362,26 +362,34 @@ Item {
             horizontalCenter: parent.horizontalCenter
             topMargin: picker.theme.spacing5
         }
-        width: Math.min(picker.width - 48, 760)
-        height: 65
+        width: Math.min(picker.width - 48, 900)
+        height: 78
         z: 5
         theme: picker.theme
         motion: picker.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: picker.theme.radiusLarge
         Column {
-            anchors.centerIn: parent
+            anchors {
+                left: parent.left
+                right: parent.right
+                leftMargin: picker.theme.spacing4
+                rightMargin: picker.selectionMode === "record" ? picker.theme.spacing4 : 145
+                verticalCenter: parent.verticalCenter
+            }
             spacing: picker.theme.spacing2
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+
+            MarqueeText {
+                width: parent.width
                 text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN REGION · " : "LIVE REGION · ") + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
                 color: picker.theme.roleColor("media")
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
                 font.weight: Font.DemiBold
             }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+
+            MarqueeText {
+                width: parent.width
                 text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "") + "ENTER CONFIRM · ESC CANCEL"
                 color: picker.theme.textMuted
                 font.family: picker.runtime.fontMono
