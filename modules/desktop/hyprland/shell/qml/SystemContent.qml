@@ -755,6 +755,7 @@ FocusScope {
                     title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
                     shortcut: "I"
                     active: root.system.idleInhibited
+                    activeColor: root.theme.roleColor("warmth")
                     onActivated: root.system.toggleIdleInhibited()
                 }
 
@@ -817,6 +818,7 @@ FocusScope {
                     title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
                     shortcut: "SHIFT+G"
                     active: root.wallpaperSpectrumEnabled
+                    activeColor: root.theme.roleColor("media")
                     onActivated: root.wallpaperSpectrumToggleRequested()
                 }
 
@@ -830,6 +832,7 @@ FocusScope {
                     title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
                     shortcut: "SHIFT+N"
                     active: root.musicReactiveEnabled
+                    activeColor: root.theme.roleColor("media")
                     onActivated: root.musicReactiveToggleRequested()
                 }
 
@@ -843,6 +846,7 @@ FocusScope {
                     title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
                     shortcut: "SHIFT+O"
                     active: root.windowTransparencyEnabled
+                    activeColor: root.theme.roleColor("connectivity")
                     onActivated: root.windowTransparencyToggleRequested()
                 }
 
@@ -856,6 +860,7 @@ FocusScope {
                     title: root.barVisible ? "Bar visible" : "Bar hidden"
                     shortcut: "SHIFT+B"
                     active: !root.barVisible
+                    activeColor: root.theme.roleColor("warning")
                     onActivated: root.barToggleRequested()
                 }
                 QuickSettingChip {
@@ -868,6 +873,7 @@ FocusScope {
                     title: root.motion.enabled ? "Animations" : "Motion off"
                     shortcut: "R"
                     active: !root.motion.enabled
+                    activeColor: root.theme.roleColor("warning")
                     onActivated: root.motion.toggle()
                 }
 
@@ -881,7 +887,7 @@ FocusScope {
                     title: root.nightLight.supported ? "Night " + root.nightLight.temperature + "K" : "Night unavailable"
                     shortcut: "T"
                     active: root.nightLight.active
-                    activeColor: root.theme.warning
+                    activeColor: root.theme.roleColor("warmth")
                     enabled: root.nightLight.supported && !root.nightLight.busy
                     onActivated: root.nightLight.toggle()
                 }
