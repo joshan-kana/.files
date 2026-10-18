@@ -8,6 +8,7 @@
 {
   inherit (moduleRegistry)
     nix
+    maintenance
     theme
     networking
     backups

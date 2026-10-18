@@ -7,46 +7,69 @@
 }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
-  cleanupRetentionDays = 7;
-  cleanupSchedule = "weekly";
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  cleanupIntervalDays = 7;
+  retentionDays = 7;
+  # Native stepped day-of-month schedules restart at each month boundary.
+  # The seven-day default uses a true weekly calendar schedule instead.
+  schedule = if cleanupIntervalDays == 7 then "weekly" else "*-*-01/${toString cleanupIntervalDays}";
+  calendarDays = lib.genList (i: 1 + i * cleanupIntervalDays) (
+    1 + builtins.div 30 cleanupIntervalDays
+  );
+  darwinInterval =
+    option:
+    if cleanupIntervalDays == 7 then
+      option.default
+    else
+      map (
+        day: (builtins.removeAttrs (builtins.head option.default) [ "Weekday" ]) // { Day = day; }
+      ) calendarDays;
 in
-lib.optionalAttrs isLinux {
+assert cleanupIntervalDays >= 1 && cleanupIntervalDays <= 31;
+{
   nix.gc = {
     automatic = true;
-    dates = cleanupSchedule;
-    options = "--delete-older-than ${toString cleanupRetentionDays}d";
+    options = "--delete-older-than ${toString retentionDays}d";
+  }
+  // lib.optionalAttrs isLinux {
+    dates =
+      if cleanupIntervalDays == 7 then
+        schedule
+      else
+        "${schedule} ${builtins.head options.nix.gc.dates.default}";
+  }
+  // lib.optionalAttrs isDarwin {
+    interval = darwinInterval options.nix.gc.interval;
   };
 
   nix.optimise = {
     automatic = true;
-    dates = [ cleanupSchedule ];
+  }
+  // lib.optionalAttrs isLinux {
+    dates =
+      if cleanupIntervalDays == 7 then
+        schedule
+      else
+        "${schedule} ${builtins.head options.nix.optimise.dates.default}";
+  }
+  // lib.optionalAttrs isDarwin {
+    interval = darwinInterval options.nix.optimise.interval;
   };
-
-  services.journald =
-    if options.services.journald ? settings then
-      {
-        settings.Journal = {
-          SystemMaxUse = "1G";
-          SystemKeepFree = config.nix.settings.min-free;
-          MaxRetentionSec = "${toString cleanupRetentionDays}day";
-        };
-      }
-    else
-      {
-        extraConfig = ''
-          SystemMaxUse=1G
-          SystemKeepFree=${config.nix.settings.min-free}
-          MaxRetentionSec=${toString cleanupRetentionDays}day
-        '';
-      };
-
+}
+// lib.optionalAttrs isLinux {
   virtualisation.docker.autoPrune = lib.mkIf config.virtualisation.docker.enable {
     enable = true;
-    dates = cleanupSchedule;
+    dates = schedule;
     flags = [
       "--all"
-      "--filter=until=${toString (cleanupRetentionDays * 24)}h"
+      "--filter=until=${toString (retentionDays * 24)}h"
     ];
+  };
+}
+// lib.optionalAttrs (isLinux && options.services.journald ? settings) {
+  services.journald.settings.Journal = {
+    SystemMaxUse = "1G";
+    SystemKeepFree = config.nix.settings.min-free;
+    MaxRetentionSec = "${toString retentionDays}day";
   };
 }

@@ -11,7 +11,6 @@
   inherit (moduleRegistry)
     system
     theme
-    maintenance
     ;
 
   imports = [
@@ -51,6 +50,30 @@
       python3.enable = false;
     };
   };
+
+  maintenance =
+    {
+      config,
+      lib,
+      options,
+      ...
+    }:
+    (moduleRegistry.maintenance {
+      inherit
+        config
+        lib
+        options
+        system
+        ;
+    })
+    // {
+      # The server's pinned NixOS does not expose typed journal settings yet.
+      services.journald.extraConfig = ''
+        SystemMaxUse=1G
+        SystemKeepFree=${config.nix.settings.min-free}
+        MaxRetentionSec=7day
+      '';
+    };
 
   cli = extendScope moduleRegistry.cli {
     serverUtilities = { pkgs, ... }: {
