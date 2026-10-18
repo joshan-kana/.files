@@ -18,6 +18,8 @@ Item {
     required property Motion motion
     required property ClipboardPanel clipboardPanel
 
+    property bool audioAvailable: false
+    property bool brightnessAvailable: false
     property var commands: []
     // Alt+1–4 are launcher-local scopes; physical global keys stay in the keymap.
     property string searchScope: "unified"
@@ -477,18 +479,25 @@ Item {
 
         if (searchScope === "unified") {
             const direct = rawQuery.match(/^(volume|brightness)\s+(\d{1,3})\s*%?$/i);
-            if (direct && Number(direct[2]) <= 100)
-                return [
-                    {
+            if (direct && Number(direct[2]) <= 100) {
+                const volumeRequest = direct[1].toLowerCase() === "volume";
+                const available = volumeRequest ? audioAvailable : brightnessAvailable;
+                return [available ? {
                         kind: "commandArgument",
-                        commandId: direct[1].toLowerCase() === "volume" ? "audio.setVolume" : "brightness.set",
+                        commandId: volumeRequest ? "audio.setVolume" : "brightness.set",
                         argument: direct[2],
                         name: "Set " + direct[1] + " to " + direct[2] + "%",
                         genericName: "Set using the existing desktop service",
                         icon: "preferences-system",
                         key: "↵ SET"
-                    }
-                ];
+                    } : {
+                        kind: "unavailable",
+                        name: volumeRequest ? "Audio Output Unavailable" : "Hardware Brightness Unavailable",
+                        genericName: volumeRequest ? "No controllable PipeWire output" : "No supported hardware backlight",
+                        icon: "dialog-warning",
+                        key: "UNAVAILABLE"
+                    }];
+            }
         }
 
         const conversion = searchScope === "unified" ? PaletteUtilities.convert(rawQuery) : null;
@@ -616,7 +625,7 @@ Item {
     }
 
     function optionsFor(entry: var): var {
-        if (!entry)
+        if (!entry || entry.kind === "unavailable")
             return [];
         let options = [
             {
@@ -743,8 +752,13 @@ Item {
         const entry = selectedEntry();
         if (!entry)
             return;
+        const options = optionsFor(entry);
+        if (options.length === 0) {
+            copyFeedback = "NO AVAILABLE ACTIONS";
+            return;
+        }
         actionTarget = entry;
-        actionEntries = optionsFor(entry);
+        actionEntries = options;
         actionMode = true;
         selectionIdentity = "";
         results.currentIndex = 0;
@@ -777,6 +791,10 @@ Item {
     function runEntry(entry: var, keepOpen: bool): void {
         if (!entry)
             return;
+        if (entry.kind === "unavailable") {
+            copyFeedback = "CONTROL UNAVAILABLE";
+            return;
+        }
         if (entry.kind === "calculation" || entry.kind === "symbol" || entry.kind === "snippet") {
             copyText(entry.kind === "snippet" ? entry.snippetText : entry.result, keepOpen);
             return;

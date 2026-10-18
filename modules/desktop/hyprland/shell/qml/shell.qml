@@ -393,6 +393,8 @@ ShellRoot {
         runtime: runtime
         theme: theme
         motion: motion
+        audioAvailable: system.audioAvailable
+        brightnessAvailable: brightness.supported
         commands: [
             {
                 id: "media.wallpaperSpectrum",
@@ -650,22 +652,6 @@ ShellRoot {
                 keywords: ["history", "recent", "privacy", "clear", "launcher"]
             },
             {
-                id: "audio.setVolume",
-                name: "Set Volume…",
-                description: "Set output volume to a percentage",
-                icon: "audio-volume-high",
-                parameterMode: "percent",
-                keywords: ["volume", "sound", "level", "percentage", "audio"]
-            },
-            {
-                id: "brightness.set",
-                name: "Set Brightness…",
-                description: "Set hardware brightness to a percentage",
-                icon: "display-brightness",
-                parameterMode: "percent",
-                keywords: ["brightness", "backlight", "level", "percentage", "display"]
-            },
-            {
                 id: "audio.volumeUp",
                 name: "Volume Up",
                 description: "Increase output volume by 5%",
@@ -713,7 +699,24 @@ ShellRoot {
                 key: runtime.shortcut("terminal.open"),
                 keywords: ["shell", "console"]
             }
-        ].concat(brightness.supported ? [
+        ].concat(system.audioAvailable ? [
+            {
+                id: "audio.setVolume",
+                name: "Set Volume…",
+                description: "Set output volume to a percentage",
+                icon: "audio-volume-high",
+                parameterMode: "percent",
+                keywords: ["volume", "sound", "level", "percentage", "audio"]
+            },
+        ] : []).concat(brightness.supported ? [
+            {
+                id: "brightness.set",
+                name: "Set Brightness…",
+                description: "Set hardware brightness to a percentage",
+                icon: "display-brightness",
+                parameterMode: "percent",
+                keywords: ["brightness", "backlight", "level", "percentage", "display"]
+            },
             {
                 id: "brightness.up",
                 name: "Brightness Up",
