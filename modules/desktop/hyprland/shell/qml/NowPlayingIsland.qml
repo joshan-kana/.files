@@ -119,23 +119,21 @@ Item {
             }
             spacing: 0
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: island.media.title
                 color: island.theme.textStrong
                 font.family: island.runtime.fontMono
                 font.pixelSize: island.theme.fontSize(11)
                 font.weight: Font.DemiBold
-                elide: Text.ElideRight
             }
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: island.media.artist
                 color: island.theme.textMuted
                 font.family: island.runtime.fontMono
                 font.pixelSize: island.theme.fontSize(9)
-                elide: Text.ElideRight
             }
         }
 

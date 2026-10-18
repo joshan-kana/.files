@@ -280,7 +280,7 @@ Item {
                             margins: library.theme.spacing2
                         }
                         spacing: library.theme.spacing1
-                        Text {
+                        MarqueeText {
                             width: parent.width
                             text: recordRow.entry ? recordRow.entry.name.replace(/^Recording-/, "") : ""
                             textFormat: Text.PlainText
@@ -288,7 +288,6 @@ Item {
                             font.family: library.runtime.fontMono
                             font.pixelSize: library.theme.fontSize(11)
                             font.weight: Font.DemiBold
-                            elide: Text.ElideRight
                         }
                         Text {
                             text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + " · MP4"
