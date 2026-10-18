@@ -739,10 +739,21 @@
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.systemd ];
             text = ''
               background=false
-              if [[ "''${1:-}" == -b || "''${1:-}" == --background ]]; then
-                background=true
-                shift
-              fi
+              maxConfigs=6
+              while [ "$#" -gt 0 ]; do
+                case "$1" in
+                  -b|--background) background=true; shift ;;
+                  --max-configs)
+                    if [ "$#" -lt 2 ] || [[ ! "$2" =~ ^(0|[1-9][0-9]*)$ ]]; then
+                      echo "Expected a non-negative number after --max-configs (0 means unlimited)" >&2
+                      exit 2
+                    fi
+                    maxConfigs="$2"
+                    shift 2
+                    ;;
+                  *) break ;;
+                esac
+              done
               host="$(hostname -s)"
               if [ "$#" -gt 0 ] && [[ "$1" != -* ]]; then
                 host="$1"
@@ -763,19 +774,19 @@
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                   exec systemd-run --user --collect --unit=dotfiles-theme-warm \
                     --property=Nice=10 --property=IOSchedulingClass=idle \
-                    -- "$0" "$host" "$@"
+                    -- "$0" --max-configs "$maxConfigs" "$host" "$@"
                 ''}
                 ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
                   exec launchctl submit -l dotfiles.theme-warm \
                     -o "$cacheDir/warm.log" -e "$cacheDir/warm.err" \
-                    -- "$0" "$host" "$@"
+                    -- "$0" --max-configs "$maxConfigs" "$host" "$@"
                 ''}
               fi
 
               targets=()
               batch=0
               buildBatch() {
-                nix build --max-jobs 6 "$@" --out-link "$cacheDir/batch-$batch" "''${targets[@]}"
+                nix build "$@" --out-link "$cacheDir/batch-$batch" "''${targets[@]}"
                 targets=()
                 batch=$((batch + 1))
               }
@@ -786,7 +797,7 @@
                   else
                     "themedNixosConfigurations"
                 }.$host-$theme.config.system.build.toplevel")
-                if [ "''${#targets[@]}" -eq 4 ]; then
+                if [ "$maxConfigs" -ne 0 ] && [ "''${#targets[@]}" -ge "$maxConfigs" ]; then
                   buildBatch "$@"
                 fi
               done
