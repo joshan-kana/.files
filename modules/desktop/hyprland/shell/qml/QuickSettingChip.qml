@@ -29,6 +29,7 @@ Item {
     }
 
     ShellSurface {
+        id: chipSurface
         anchors.fill: parent
         theme: chip.theme
         motion: chip.motion
@@ -106,7 +107,7 @@ Item {
         motion: chip.motion
         selected: chip.active
         stateColor: chip.activeColor
-        cornerRadius: chip.theme.radiusMedium
+        cornerRadius: chipSurface.cornerRadius
         onActivated: chip.activated()
     }
 }
