@@ -31,8 +31,12 @@ PanelWindow {
     color: "transparent"
     focusable: open && !(overviewPanel.open && overviewPanel.keyboardFocusRefreshing)
     exclusionMode: ExclusionMode.Ignore
-    implicitWidth: captureExpanded ? (screen ? screen.width : 2560) : 1200
-    implicitHeight: captureExpanded ? (screen ? screen.height : 1440) : 960
+    // Shortcuts has a substantially larger three-column layout. Allocate
+    // its framebuffer only while it is visible or finishing its exit,
+    // leaving other global modals at their original compact dimensions.
+    readonly property bool largeShortcuts: cheatsheet.open || cheatsheet.closing
+    implicitWidth: captureExpanded ? (screen ? screen.width : 2560) : largeShortcuts ? Math.min(screen ? screen.width - 80 : 1850, 1850) : 1200
+    implicitHeight: captureExpanded ? (screen ? screen.height : 1440) : largeShortcuts ? Math.min(screen ? screen.height - 80 : 1170, 1170) : 960
     anchors {
         top: true
         left: true
