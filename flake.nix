@@ -3,7 +3,7 @@
 
   inputs = {
     # Nixpkgs: package collections and system modules.
-    nixpkgs.url = "nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # Stable Nixpkgs for configurations requiring predictable releases.
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -87,12 +87,6 @@
     # Determinate Nix CLI and manual pages.
     determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/3";
 
-    # Determinate Nix integration and daemon ownership.
-    determinate = {
-      url = "github:DeterminateSystems/determinate";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
     computer = {
@@ -122,7 +116,6 @@
       nixpkgs,
       nixpkgs-stable,
       nix-darwin,
-      determinate,
       home-manager,
       home-manager-stable,
       stylix,
@@ -367,7 +360,6 @@
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
           ]
-          ++ lib.optionals isDarwin [ determinate.darwinModules.default ]
           ++ extraModules;
         };
 
