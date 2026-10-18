@@ -28,7 +28,9 @@ function parseQuicklinks(text) {
         // No javascript:, file:, shell schemes, or untrusted URL replacement.
         if (!/^https:\/\/[^\s{}]+/i.test(item.url) && !/^http:\/\/[^\s{}]+/i.test(item.url))
             return false;
-        if (item.url.length > 2048 || !/\{query\}/.test(item.url))
+        if (item.url.length > 2048 || !/\{(?:query|clipboard)\}/.test(item.url))
+            return false;
+        if (item.browser !== undefined && (typeof item.browser !== "string" || !/^[a-zA-Z0-9._-]{1,240}$/.test(item.browser)))
             return false;
         aliases.add(alias);
         return true;
@@ -37,6 +39,9 @@ function parseQuicklinks(text) {
         name: item.name.slice(0, 100),
         alias: item.alias.trim().toLowerCase(),
         urlTemplate: item.url,
+        browser: item.browser || "",
+        needsClipboard: item.url.includes("{clipboard}"),
+        needsQuery: item.url.includes("{query}"),
         keywords: Array.isArray(item.keywords) ? item.keywords.filter(word => typeof word === "string").slice(0, 12) : [],
         icon: "internet-web-browser",
         key: "↵ SEARCH",
@@ -44,10 +49,13 @@ function parseQuicklinks(text) {
     }));
 }
 
-function linkUrl(template, input) {
-    if (!input || !input.trim())
+function linkUrl(template, input, clipboardText) {
+    if (template.includes("{query}") && (!input || !input.trim()))
         return "";
-    return template.replace(/\{query\}/g, encodeURIComponent(input.trim()));
+    if (template.includes("{clipboard}") && clipboardText === undefined)
+        return "";
+    return template.replace(/\{query\}/g, encodeURIComponent((input || "").trim()))
+        .replace(/\{clipboard\}/g, encodeURIComponent(clipboardText || ""));
 }
 
 const UNITS = {
@@ -114,7 +122,7 @@ function quicklinkResult(link, query) {
         name: parameter ? link.name + " · " + parameter : link.name,
         url: linkUrl(link.urlTemplate, parameter),
         parameter: parameter,
-        promptOnActivation: !parameter
+        promptOnActivation: link.needsQuery && !parameter
     });
 }
 
