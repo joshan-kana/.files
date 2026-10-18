@@ -206,6 +206,8 @@ Item {
     property int pendingFileRequestId: 0
     property int pendingPreviewRequestId: 0
     property bool pendingFileOpenWith: false
+    property var pendingClipboardLink: null
+    property bool pendingQuicklinkKeepOpen: false
 
     Socket {
         id: indexSocket
@@ -361,6 +363,41 @@ Item {
         onLoadedChanged: {
             if (loaded)
                 palette.unicodeEntries = SymbolLibrary.parseUnicode(text());
+        }
+    }
+
+    StdioCollector {
+        id: quicklinkClipboardOutput
+    }
+
+    Process {
+        id: quicklinkClipboardRead
+        stdout: quicklinkClipboardOutput
+        onExited: (exitCode, exitStatus) => {
+            const link = palette.pendingClipboardLink;
+            palette.pendingClipboardLink = null;
+            if (exitCode !== 0 || !link) {
+                palette.copyFeedback = "TEXT CLIPBOARD UNAVAILABLE";
+                return;
+            }
+            const url = PaletteUtilities.linkUrl(link.urlTemplate, link.parameter, quicklinkClipboardOutput.text);
+            if (!url) {
+                palette.copyFeedback = "INVALID WEBSITE SEARCH";
+                return;
+            }
+            palette.openQuicklinkUrl(link, url, palette.pendingQuicklinkKeepOpen);
+        }
+    }
+
+    Process {
+        id: quicklinkBrowserProcess
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) {
+                palette.copyFeedback = "OPENED";
+                if (!palette.pendingQuicklinkKeepOpen)
+                    palette.hide();
+            } else
+                palette.copyFeedback = "BROWSER UNAVAILABLE";
         }
     }
 
@@ -523,12 +560,12 @@ Item {
                 const apps = indexedApplications;
                 return (rawQuery ? apps.filter(app => score(app, query) < 10000).sort((a, b) => score(a, query) - score(b, query)) : apps).slice(0, 100);
             }
-            if (parameterTarget.parameterMode === "confirm")
+            if (parameterTarget.parameterMode === "confirm" || parameterTarget.parameterMode === "confirmClipboard")
                 return [
                     {
                         kind: "argument",
                         name: "Confirm " + parameterTarget.name,
-                        genericName: "Enter to confirm · Escape to cancel",
+                        genericName: parameterTarget.parameterMode === "confirmClipboard" ? "Send clipboard text to this website · Escape to cancel" : "Enter to confirm · Escape to cancel",
                         icon: "dialog-warning",
                         key: "↵ CONFIRM"
                     }
@@ -755,7 +792,7 @@ Item {
                 icon: "edit-copy",
                 key: ""
             });
-        if (entry.kind === "quicklink")
+        if (entry.kind === "quicklink" && entry.needsQuery)
             options.push({
                 kind: "paletteAction",
                 action: "search",
@@ -889,6 +926,22 @@ Item {
         search.forceActiveFocus();
     }
 
+    function openQuicklinkUrl(link: var, url: string, keepOpen: bool): void {
+        pendingQuicklinkKeepOpen = keepOpen;
+        if (link.browser) {
+            if (quicklinkBrowserProcess.running) {
+                copyFeedback = "BROWSER IN PROGRESS";
+                return;
+            }
+            copyFeedback = "OPENING";
+            quicklinkBrowserProcess.exec([runtime.paletteSearch, "launch-url", link.browser, url]);
+            return;
+        }
+        if (!keepOpen)
+            hide();
+        Quickshell.execDetached([runtime.urlOpen, url]);
+    }
+
     function runEntry(entry: var, keepOpen: bool): void {
         if (!entry)
             return;
@@ -900,8 +953,12 @@ Item {
             copyText(entry.kind === "snippet" ? entry.snippetText : entry.result, keepOpen);
             return;
         }
-        if (entry.kind === "quicklink" && !entry.url) {
+        if (entry.kind === "quicklink" && entry.needsQuery && !entry.parameter) {
             beginParameter(entry, "search");
+            return;
+        }
+        if (entry.kind === "quicklink" && entry.needsClipboard) {
+            beginParameter(entry, "confirmClipboard");
             return;
         }
         if (entry.kind === "command" && entry.commandId === "notifications.clear") {
@@ -918,6 +975,11 @@ Item {
             argumentCommandTriggered(entry.commandId, entry.argument);
             return;
         }
+        if (entry.kind === "quicklink" && entry.url) {
+            rememberEntry(entry);
+            openQuicklinkUrl(entry, entry.url, keepOpen);
+            return;
+        }
         if (!keepOpen)
             hide();
         rememberEntry(entry);
@@ -931,8 +993,6 @@ Item {
             commandTriggered(entry.commandId);
         else if (entry.kind === "application" && entry.desktopEntry)
             entry.desktopEntry.execute();
-        else if (entry.kind === "quicklink" && entry.url)
-            Quickshell.execDetached([runtime.urlOpen, entry.url]);
         else if (entry.kind === "file" && entry.path)
             Quickshell.execDetached([runtime.urlOpen, entry.path]);
         else if (entry.kind === "bookmark" && entry.url)
@@ -1021,6 +1081,15 @@ Item {
             pendingFileOpenWith = true;
             copyFeedback = "OPENING";
             fileOpenWithProcess.exec([runtime.paletteSearch, "launch", desktopId, parameterTarget.path]);
+            return;
+        }
+        if (parameterTarget && parameterTarget.parameterMode === "confirmClipboard") {
+            if (quicklinkClipboardRead.running)
+                return;
+            pendingClipboardLink = parameterTarget;
+            pendingQuicklinkKeepOpen = keepOpen;
+            copyFeedback = "READING CLIPBOARD";
+            quicklinkClipboardRead.exec([runtime.clipboardPaste, "--no-newline", "--type", "text/plain"]);
             return;
         }
         if (parameterTarget && parameterTarget.parameterMode === "confirm") {
@@ -1286,7 +1355,7 @@ Item {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: palette.parameterTarget ? (palette.parameterTarget.parameterMode === "openWith" ? "Find an application…" : palette.parameterTarget.parameterMode === "confirm" ? "Press Enter again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
+                        text: palette.parameterTarget ? (palette.parameterTarget.parameterMode === "openWith" ? "Find an application…" : palette.parameterTarget.parameterMode === "confirmClipboard" ? "Enter confirms clipboard sharing" : palette.parameterTarget.parameterMode === "confirm" ? "Press Enter again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
