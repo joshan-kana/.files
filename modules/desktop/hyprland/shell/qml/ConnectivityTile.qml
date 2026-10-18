@@ -67,7 +67,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 text: tile.glyph
-                color: tile.unavailable ? tile.theme.textMuted : tile.foreground
+                color: tile.unavailable ? tile.theme.textMuted : tile.connected || tile.pending || tile.scanning || tile.failed ? tile.signalColor : tile.foreground
                 font.family: "Symbols Nerd Font"
                 font.pixelSize: tile.theme.fontSize(24)
             }
