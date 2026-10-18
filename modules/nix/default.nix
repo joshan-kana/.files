@@ -44,11 +44,12 @@ let
 in
 {
   nixpkgs.config.allowUnfree = true;
+  nix = {
+    package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
+    inherit settings;
+  };
 }
 // lib.optionalAttrs isLinux {
-  nix.package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
-  nix.settings = settings;
-
   environment.systemPackages = [
     inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-manual-manpages-only
   ];
@@ -81,18 +82,6 @@ in
           }
         ];
       };
-    };
-}
-// lib.optionalAttrs isDarwin {
-  nix.enable = false;
-  determinateNix.customSettings =
-    builtins.removeAttrs settings [
-      "substituters"
-      "trusted-public-keys"
-    ]
-    // {
-      extra-substituters = settings.substituters;
-      extra-trusted-public-keys = settings.trusted-public-keys;
     };
 }
 // {
