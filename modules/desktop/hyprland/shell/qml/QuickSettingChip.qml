@@ -67,7 +67,7 @@ Item {
                         verticalCenter: parent.verticalCenter
                     }
                     text: chip.icon
-                    color: chip.active ? chip.activeColor : chip.theme.blend(chip.theme.textStrong, chip.activeColor, 0.64)
+                    color: chip.active ? chip.activeColor : chip.theme.textStrong
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: chip.theme.fontSize(20)
                 }
