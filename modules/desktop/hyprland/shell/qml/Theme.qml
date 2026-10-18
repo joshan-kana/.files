@@ -27,6 +27,10 @@ QtObject {
             return accentSecondary;
         case "workspace":
             return accentWorkspace;
+        case "attention":
+            return critical;
+        case "display":
+            return accent;
         case "connectivity":
             return accentTertiary;
         case "warmth":
