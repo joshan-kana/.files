@@ -71,8 +71,6 @@ Item {
                 value: island.system.volume
                 accentColor: island.system.muted ? island.theme.warning : island.theme.roleColor("media")
                 compactIconSize: 20
-                compactIconOffsetX: 0
-                compactIconOffsetY: -2
                 compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
             }
 
@@ -120,7 +118,7 @@ Item {
                 compact: true
                 value: island.system.batteryPercent / 100
                 accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
-                compactIconSize: 20
+                compactIconSize: 18
                 compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
             }
             Text {
