@@ -10,6 +10,11 @@
   nix = import ./nix;
 
   /**
+    Periodic Nix store, journal, and container cleanup across hosts.
+  */
+  maintenance = import ./maintenance;
+
+  /**
     Shared visual theme policy and assets consumed by system and home configuration.
   */
   theme = import ./theme;

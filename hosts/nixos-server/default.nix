@@ -1,5 +1,6 @@
 {
   editScope,
+  extendScope,
   inputs,
   moduleRegistry,
   system,
@@ -10,7 +11,7 @@
   inherit (moduleRegistry)
     system
     theme
-    cli
+    maintenance
     ;
 
   imports = [
@@ -48,6 +49,16 @@
       nvd.enable = false;
       nixTree.enable = false;
       python3.enable = false;
+    };
+  };
+
+  cli = extendScope moduleRegistry.cli {
+    serverUtilities = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+        curl
+        jq
+        rsync
+      ];
     };
   };
 
@@ -616,51 +627,6 @@
         "a+ ${storage.dataRoot.path} - - - - u:${primary.name}:rwx,g:${storage.dataRoot.group.name}:rwx,d:u:${primary.name}:rwx,d:g:${storage.dataRoot.group.name}:rwx"
         "v ${storage.appData.root}/.snapshots 0750 root root - -"
         "a ${storage.appData.root}/.snapshots - - - - u::rwx,g::r-x,o::---,d:u::rwx,d:g::r-x,d:o::---"
-      ];
-    };
-  maintenance =
-    { pkgs, ... }:
-
-    let
-      cleanupRetentionDays = 7;
-      cleanupSchedule = "weekly";
-      minFree = "2G";
-    in
-    {
-      nix.gc = {
-        automatic = true;
-        dates = cleanupSchedule;
-        options = "--delete-older-than ${toString cleanupRetentionDays}d";
-      };
-
-      nix.optimise = {
-        automatic = true;
-        dates = [ cleanupSchedule ];
-      };
-
-      nix.settings = {
-        min-free = minFree;
-      };
-
-      services.journald.extraConfig = ''
-        SystemMaxUse=1G
-        SystemKeepFree=${minFree}
-        MaxRetentionSec=${toString cleanupRetentionDays}day
-      '';
-
-      virtualisation.docker.autoPrune = {
-        enable = true;
-        dates = cleanupSchedule;
-        flags = [
-          "--all"
-          "--filter=until=${toString (cleanupRetentionDays * 24)}h"
-        ];
-      };
-
-      environment.systemPackages = with pkgs; [
-        curl
-        jq
-        rsync
       ];
     };
   access =

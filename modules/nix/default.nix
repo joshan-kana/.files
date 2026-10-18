@@ -21,6 +21,7 @@ let
       "flakes"
     ];
     warn-dirty = false;
+    min-free = "2G";
     substituters = [
       "https://cache.nixos.org/"
       "https://install.determinate.systems"

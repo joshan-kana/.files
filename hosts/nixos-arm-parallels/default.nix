@@ -11,6 +11,7 @@
     system
     backups
     nix
+    maintenance
     theme
     cli
     networking

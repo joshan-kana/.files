@@ -10,6 +10,7 @@
   inherit (moduleRegistry)
     system
     backups
+    maintenance
     theme
     cli
     virtualisation

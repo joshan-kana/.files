@@ -10,6 +10,7 @@
   inherit (moduleRegistry)
     system
     nix
+    maintenance
     theme
     networking
     appimage
