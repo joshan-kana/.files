@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Qt.labs.settings
 
 Item {
     id: picker
@@ -20,6 +21,15 @@ Item {
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
     property string snapshotPath: ""
     property string statusText: ""
+    readonly property bool freezeEnabled: capturePreferences.freezeEnabled
+    property bool frozenForCapture: true
+    property bool liveExportPending: false
+    property Settings capturePreferences: Settings {
+        id: capturePreferences
+        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        category: "Capture"
+        property bool freezeEnabled: true
+    }
     property real startX: 0
     property real startY: 0
     property real endX: 0
@@ -33,8 +43,9 @@ Item {
     // The Wayland selection is in logical units, while grim exports physical
     // pixels. One crop owns both the export arguments and displayed dimensions.
     readonly property var selectedPixels: {
-        const fullWidth = Math.max(1, frozen.implicitWidth);
-        const fullHeight = Math.max(1, frozen.implicitHeight);
+        const ratio = captureScreen && captureScreen.devicePixelRatio ? captureScreen.devicePixelRatio : 1;
+        const fullWidth = Math.max(1, frozen.implicitWidth > 1 ? frozen.implicitWidth : Math.ceil(picker.width * ratio));
+        const fullHeight = Math.max(1, frozen.implicitHeight > 1 ? frozen.implicitHeight : Math.ceil(picker.height * ratio));
         const scaleX = fullWidth / Math.max(1, picker.width);
         const scaleY = fullHeight / Math.max(1, picker.height);
         const x = Math.max(0, Math.min(fullWidth - 1, Math.floor(picker.leftEdge * scaleX)));
@@ -67,15 +78,24 @@ Item {
             audioMode = "none";
         initialiseSelection = true;
         statusText = "";
+        frozenForCapture = mode !== "record" && freezeEnabled;
+        liveExportPending = false;
         if (mode === "record") {
             // Screen recording selects a live region; only screenshots freeze.
             // No image capture or private snapshot file is created here.
             open = true;
             keyboard.forceActiveFocus();
             Qt.callLater(() => initialiseRect());
-        } else {
+        } else if (frozenForCapture) {
             pending = true;
             snapshotProcess.exec([runtime.frozenCapture, "snapshot", target.name]);
+        } else {
+            // Live selection never displays an old frame. The final snapshot
+            // is collected only after the shared modal has been hidden.
+            snapshotReady();
+            open = true;
+            keyboard.forceActiveFocus();
+            Qt.callLater(() => initialiseRect());
         }
     }
 
@@ -94,7 +114,15 @@ Item {
     onHeightChanged: initialiseRect()
 
     function showSnapshot(): void {
-        if (!pending || frozen.status !== Image.Ready)
+        if (frozen.status !== Image.Ready)
+            return;
+        if (liveExportPending) {
+            liveExportPending = false;
+            const pixels = selectedPixels;
+            exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h)]);
+            return;
+        }
+        if (!pending)
             return;
         pending = false;
         snapshotReady();
@@ -112,6 +140,7 @@ Item {
         dragging = false;
         snapshotPath = "";
         statusText = "";
+        liveExportPending = false;
         if (clearFile && oldPath.length > 0)
             Quickshell.execDetached([runtime.frozenCapture, "clear", oldPath]);
     }
@@ -130,8 +159,20 @@ Item {
             return;
         }
         exporting = true;
-        statusText = copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…";
-        exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
+        if (!frozenForCapture) {
+            // The modal must disappear before grim reads the live desktop;
+            // leave the selection coordinates intact until export finishes.
+            statusText = copying ? "CAPTURING LIVE FRAME…" : "SAVING LIVE FRAME…";
+            if (snapshotPath.length > 0)
+                Quickshell.execDetached([runtime.frozenCapture, "clear", snapshotPath]);
+            snapshotPath = "";
+            open = false;
+            liveExportPending = true;
+            liveCaptureDelay.restart();
+        } else {
+            statusText = copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…";
+            exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
+        }
     }
 
     function moveSelection(dx: real, dy: real, resize: bool): void {
@@ -162,6 +203,16 @@ Item {
         begin(wasCopying, next, mode);
     }
 
+    Timer {
+        id: liveCaptureDelay
+        interval: 180
+        repeat: false
+        onTriggered: {
+            if (picker.liveExportPending && picker.captureScreen)
+                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name]);
+        }
+    }
+
     StdioCollector {
         id: snapshotOutput
     }
@@ -171,7 +222,14 @@ Item {
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
                 picker.pending = false;
-                console.warn("Frozen screenshot failed with exit code", exitCode);
+                if (picker.liveExportPending) {
+                    picker.liveExportPending = false;
+                    picker.exporting = false;
+                    picker.open = true;
+                    picker.statusText = "LIVE CAPTURE FAILED · ENTER RETRY · ESC CANCEL";
+                    keyboard.forceActiveFocus();
+                }
+                console.warn("Screenshot snapshot failed with exit code", exitCode);
                 return;
             }
             picker.snapshotPath = snapshotOutput.text.trim();
@@ -184,8 +242,13 @@ Item {
             picker.exporting = false;
             if (exitCode === 0)
                 picker.dismiss(false);
-            else
+            else {
+                if (!picker.frozenForCapture) {
+                    picker.open = true;
+                    keyboard.forceActiveFocus();
+                }
                 picker.statusText = "CAPTURE FAILED · ENTER TO RETRY · ESC CANCEL";
+            }
         }
     }
 
@@ -193,7 +256,7 @@ Item {
         id: frozen
         anchors.fill: parent
         source: picker.selectionMode !== "record" && picker.snapshotPath.length > 0 ? "file://" + picker.snapshotPath : ""
-        visible: picker.selectionMode !== "record"
+        visible: picker.selectionMode !== "record" && picker.frozenForCapture
         fillMode: Image.Stretch
         asynchronous: true
         cache: false
@@ -311,7 +374,7 @@ Item {
             spacing: picker.theme.spacing2
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : "FROZEN REGION · " + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
+                text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN REGION · " : "LIVE REGION · ") + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
                 color: picker.theme.roleColor("media")
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
@@ -323,6 +386,29 @@ Item {
                 color: picker.theme.textMuted
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(9)
+            }
+        }
+
+        ShellAction {
+            anchors {
+                right: parent.right
+                rightMargin: picker.theme.spacing2
+                verticalCenter: parent.verticalCenter
+            }
+            visible: picker.selectionMode !== "record"
+            width: 122
+            height: 33
+            runtime: picker.runtime
+            theme: picker.theme
+            motion: picker.motion
+            horizontalCompact: true
+            compact: true
+            icon: "󰹑"
+            title: picker.freezeEnabled ? "FREEZE ON" : "LIVE MODE"
+            shortcut: "Z"
+            onActivated: {
+                capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
+                picker.statusText = "MODE SAVED FOR NEXT SCREENSHOT · " + (picker.freezeEnabled ? "FROZEN" : "LIVE");
             }
         }
     }
@@ -356,6 +442,9 @@ Item {
                 picker.nextMonitor();
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
                 picker.audioMode = picker.audioMode === "none" ? "system" : picker.audioMode === "system" ? "microphone" : "none";
+            } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
+                capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
+                picker.statusText = "MODE SAVED FOR NEXT SCREENSHOT · " + (picker.freezeEnabled ? "FROZEN" : "LIVE");
             } else if (event.key === Qt.Key_F) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
