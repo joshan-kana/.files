@@ -102,6 +102,7 @@ Scope {
             height: body.implicitHeight + auth.theme.spacing5 * 2
             theme: auth.theme
             motion: auth.motion
+            glassAllowed: false
             surfaceLayer: ShellSurface.Pane
             cornerRadius: auth.theme.radiusPanel
             fillColor: auth.theme.expressiveSurface

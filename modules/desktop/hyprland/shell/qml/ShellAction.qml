@@ -19,14 +19,16 @@ Item {
     property bool iconOnly: false
     property bool iconHint: false
     property bool inlineIconHint: false
+    property bool showSwitch: false
     property int horizontalPadding: headerEntry ? theme.spacing4 + theme.spacing2 : compact ? theme.spacing3 : theme.spacing4
 
     signal activated
 
     implicitWidth: iconOnly ? 44 : Math.max(96, content.implicitWidth + horizontalPadding * 2)
     implicitHeight: iconOnly ? 40 : compact ? 40 : 58
-    Accessible.role: Accessible.Button
+    Accessible.role: showSwitch ? Accessible.CheckBox : Accessible.Button
     Accessible.name: title
+    Accessible.checked: showSwitch && active
     opacity: enabled ? 1 : 0.42
 
     ShellSurface {
@@ -91,7 +93,7 @@ Item {
             left: parent.left
             right: parent.right
             leftMargin: root.horizontalPadding
-            rightMargin: root.horizontalPadding
+            rightMargin: root.horizontalPadding + (root.showSwitch ? 50 : 0)
         }
         spacing: root.theme.spacing2
 
@@ -126,6 +128,37 @@ Item {
             theme: root.theme
             emphasized: root.active
             emphasisColor: root.activeColor
+        }
+    }
+
+    Rectangle {
+        visible: root.showSwitch
+        anchors {
+            right: parent.right
+            rightMargin: root.horizontalPadding
+            verticalCenter: parent.verticalCenter
+        }
+        width: 40
+        height: 24
+        radius: 12
+        color: root.active ? root.activeColor : root.theme.controlBase
+        border.width: root.theme.borderThin
+        border.color: root.active ? root.activeColor : root.theme.subtleBorder
+
+        Rectangle {
+            x: root.active ? 19 : 3
+            anchors.verticalCenter: parent.verticalCenter
+            width: 18
+            height: 18
+            radius: 9
+            color: root.active ? root.theme.panelBase : root.theme.textStrong
+
+            Behavior on x {
+                Anim {
+                    motion: root.motion
+                    type: Anim.FastSpatial
+                }
+            }
         }
     }
 
