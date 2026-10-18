@@ -332,7 +332,7 @@ Item {
 
                             Text {
                                 text: deviceRow.modelData.pairing ? "PAIRING" : (deviceRow.modelData.paired ? "PAIRED" : "UNPAIRED")
-                                color: deviceRow.modelData.paired || deviceRow.modelData.pairing ? panel.theme.accent : panel.theme.warning
+                                color: deviceRow.modelData.paired || deviceRow.modelData.pairing ? panel.theme.roleColor("connectivity") : panel.theme.warning
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
@@ -341,7 +341,7 @@ Item {
                             Text {
                                 visible: deviceRow.modelData.trusted
                                 text: "TRUSTED"
-                                color: panel.theme.accent
+                                color: panel.theme.roleColor("connectivity")
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
@@ -358,7 +358,7 @@ Item {
                             width: parent.width
                             horizontalAlignment: Text.AlignRight
                             text: deviceRow.modelData.pairing ? "P  CANCEL" : (!deviceRow.modelData.paired ? "P  PAIR" : (deviceRow.modelData.connected ? "ENTER  DROP" : "ENTER  LINK"))
-                            color: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.theme.warning : panel.theme.accent
+                            color: deviceRow.modelData.pairing || !deviceRow.modelData.paired ? panel.theme.warning : panel.theme.roleColor("connectivity")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(8)
                             font.weight: Font.DemiBold
