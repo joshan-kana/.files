@@ -49,6 +49,8 @@ QtObject {
     // Single event-driven signal for every shell surface that opts into the
     // music-reactive treatment. Theme remains the only visual style owner.
     property bool musicReactiveEnabled: false
+    property bool shellGlassEnabled: false
+    readonly property real glassOpacity: 0.70
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
