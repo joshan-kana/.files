@@ -121,14 +121,17 @@ FocusScope {
                 left: parent.left
                 right: parent.right
             }
-            height: header.height + content.theme.spacing4 * 2
+            // Album information and the visualiser are one media canvas.
+            // Keep its geometry behind both sections rather than stacking
+            // separately coloured, rounded cards.
+            height: spectrumSlot.y + spectrumSlot.height + content.theme.spacing4
             theme: content.theme
             motion: content.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: content.theme.radiusLarge
             luminous: true
             luminousColor: content.theme.roleColor("media")
-            fillColor: content.theme.blend(content.theme.groupBase, content.theme.roleColor("media"), content.theme.dark ? 0.045 : 0.025)
+            fillColor: content.theme.surface
         }
 
         Row {
@@ -226,15 +229,11 @@ FocusScope {
             }
             spacing: 0
 
-            ShellSurface {
+            Item {
+                // Spectrum, curves and lyrics share the same surface as
+                // the album artwork and track details above them.
                 width: parent.width
                 height: content.compactHeight ? 150 : 220
-                theme: content.theme
-                motion: content.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusMedium
-                luminous: true
-                luminousColor: content.theme.accent
                 clip: true
 
                 SpectrumCurve {
