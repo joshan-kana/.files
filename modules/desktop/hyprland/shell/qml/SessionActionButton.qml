@@ -67,6 +67,7 @@ Item {
             motion: button.motion
             selected: button.selected
             cornerRadius: surface.cornerRadius
+            exponent: surface.exponent
             onEntered: button.hovered()
             onActivated: button.activated()
         }
