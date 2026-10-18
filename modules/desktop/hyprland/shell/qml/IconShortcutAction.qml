@@ -23,34 +23,21 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: title + (shortcut.length > 0 ? ", " + shortcut : "")
 
+    // The action and its keycap share one real surface, including hover,
+    // focus, outline, disabled state and changing corner geometry.
     ShellAction {
-        id: action
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        width: 42
-        height: 38
+        anchors.fill: parent
         runtime: control.runtime
         theme: control.theme
         motion: control.motion
         iconOnly: true
+        iconHint: control.shortcut.length > 0
+        shortcut: control.shortcut
         icon: control.icon
         title: control.title
         enabled: control.enabled
         active: control.active
         activeColor: control.activeColor
         onActivated: control.activated()
-    }
-
-    KeyHint {
-        visible: control.shortcut.length > 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: action.bottom
-        anchors.topMargin: 3
-        runtime: control.runtime
-        theme: control.theme
-        shortcut: control.shortcut
-        compact: true
-        emphasized: control.active
-        available: control.enabled
     }
 }
