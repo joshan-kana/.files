@@ -207,7 +207,7 @@ PanelWindow {
                     }
                 }
 
-                Text {
+                MarqueeText {
                     width: parent.width
                     text: popup.notification ? popup.notification.summary : ""
                     textFormat: Text.PlainText
@@ -215,7 +215,6 @@ PanelWindow {
                     font.family: popup.runtime.fontMono
                     font.pixelSize: popup.theme.fontSize(15)
                     font.weight: Font.DemiBold
-                    elide: Text.ElideRight
                 }
 
                 Text {
