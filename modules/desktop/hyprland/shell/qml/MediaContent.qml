@@ -526,7 +526,7 @@ FocusScope {
                         motion: content.motion
                         compact: true
                         horizontalCompact: true
-                        title: content.lyricsVisible ? "LYRICS ON" : "LYRICS OFF"
+                        title: "LYRICS"
                         shortcut: "Y"
                         active: content.lyricsVisible
                         onActivated: content.toggleLyrics()
