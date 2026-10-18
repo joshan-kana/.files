@@ -60,7 +60,9 @@ PanelWindow {
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: popup.theme.blend(popup.theme.groupBase, popup.accentColor, popup.theme.dark ? 0.07 : 0.04)
+        fillColor: popup.theme.groupBase
+        borderColor: popup.theme.subtleBorder
+        borderWidth: popup.theme.borderThin
 
         opacity: popup.osd.visible ? 1 : 0
         scale: popup.osd.visible ? 1 : 0.97
