@@ -83,27 +83,25 @@ Item {
             }
             spacing: tile.theme.spacing2
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: tile.title
                 color: tile.foreground
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(15)
                 font.weight: Font.DemiBold
-                elide: Text.ElideRight
             }
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: tile.detail
                 color: tile.foreground
                 opacity: tile.connected ? 0.76 : 0.75
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(11)
-                elide: Text.ElideRight
             }
 
-            Text {
+            MarqueeText {
                 width: parent.width
                 text: tile.status
                 color: tile.signalColor
@@ -111,7 +109,6 @@ Item {
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(9)
                 font.weight: Font.DemiBold
-                elide: Text.ElideRight
             }
         }
 
