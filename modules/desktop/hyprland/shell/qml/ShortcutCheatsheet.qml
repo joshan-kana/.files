@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import "KeyGlyphs.js" as KeyGlyphs
 
 Item {
     id: window
@@ -164,16 +163,10 @@ Item {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
 
-        scale: window.open ? 1 : theme.panelClosedScale
+        // Opacity-only reveal: scaling a near-full-viewport cheatsheet
+        // creates a noticeable zoom/glide from the centre.
         opacity: window.open ? 1 : 0
 
-        Behavior on scale {
-            NumberAnimation {
-                duration: window.motion.normal
-                easing.type: window.open ? window.motion.enterType : window.motion.exitType
-                easing.bezierCurve: window.open ? window.motion.enterCurve : window.motion.exitCurve
-            }
-        }
         Behavior on opacity {
             NumberAnimation {
                 duration: window.motion.normal
@@ -189,7 +182,7 @@ Item {
             Item {
                 id: header
                 width: parent.width
-                height: Math.max(title.implicitHeight, headerHint.implicitHeight)
+                height: Math.max(title.implicitHeight, helpButton.height)
 
                 Text {
                     id: title
@@ -202,15 +195,22 @@ Item {
                     font.weight: Font.DemiBold
                 }
 
-                Text {
-                    id: headerHint
+                ShellAction {
+                    id: helpButton
+                    width: 36
+                    height: 36
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: KeyGlyphs.display(window.runtime.shortcut("shortcuts.toggle")) + "   ·   ? HELP"
-                    color: window.theme.textMuted
-                    font.family: window.runtime.fontMono
-                    font.pixelSize: window.theme.fontSize(15)
-                    font.letterSpacing: 0.6
+                    runtime: window.runtime
+                    theme: window.theme
+                    motion: window.motion
+                    iconOnly: true
+                    icon: "󰋗"
+                    title: "Help (?)"
+                    onActivated: {
+                        window.helpOpen = true;
+                        keySink.forceActiveFocus();
+                    }
                 }
             }
 
@@ -436,14 +436,6 @@ Item {
                         color: window.theme.textMuted
                         font.family: window.runtime.fontMono
                         font.pixelSize: window.theme.fontSize(12)
-                    }
-
-                    Text {
-                        text: "TOGGLE " + KeyGlyphs.display(window.runtime.shortcut("shortcuts.toggle"))
-                        color: window.theme.accent
-                        font.family: window.runtime.fontMono
-                        font.pixelSize: window.theme.fontSize(12)
-                        font.weight: Font.DemiBold
                     }
                 }
             }
