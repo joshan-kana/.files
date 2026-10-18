@@ -364,7 +364,7 @@ Item {
                 spacing: overview.theme.spacing2
 
                 Text {
-                    text: "SPATIAL OVERVIEW · " + overview.windows.length + " WINDOWS"
+                    text: "SPATIAL OVERVIEW"
                     color: overview.theme.accent
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontPanelEyebrow
@@ -476,7 +476,7 @@ Item {
 
             Text {
                 text: overview.movePending ? "PENDING · WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS") + "   ·   Workspace " + overview.focusedWorkspace
-                color: overview.theme.accent
+                color: overview.theme.roleColor("connectivity")
                 font.family: overview.runtime.fontMono
                 font.pixelSize: overview.theme.fontSubpanelEyebrow
                 font.letterSpacing: 1
