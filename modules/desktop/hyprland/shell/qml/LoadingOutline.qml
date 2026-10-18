@@ -10,7 +10,7 @@ Item {
     required property SquircleSurface surface
     property bool active: false
     property bool motionEnabled: true
-    property color highlightColor: "#7bbcff"
+    required property color highlightColor
     property real lineWidth: 2.8
     property real segmentFraction: 0.12
     property int lapDuration: 1900
