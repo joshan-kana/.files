@@ -231,20 +231,20 @@ PanelWindow {
                     wrapMode: Text.Wrap
                     elide: Text.ElideRight
                 }
+            }
 
-                Item {
-                    width: 1
-                    height: Math.max(0, parent.height - 94)
+            Text {
+                anchors {
+                    left: accent.right
+                    bottom: parent.bottom
+                    leftMargin: popup.theme.spacing4
                 }
-
-                Text {
-                    text: popup.notificationState.captureKind(popup.notification) ? "CLICK  OPEN   //   RMB  DISMISS" : "CLICK  HISTORY   //   RMB  DISMISS"
-                    color: popup.theme.textMuted
-                    opacity: 0.62
-                    font.family: popup.runtime.fontMono
-                    font.pixelSize: popup.theme.fontSize(8)
-                    font.letterSpacing: 0.8
-                }
+                text: popup.notificationState.captureKind(popup.notification) ? "CLICK  OPEN   //   RMB  DISMISS" : "CLICK  HISTORY   //   RMB  DISMISS"
+                color: popup.theme.textMuted
+                opacity: 0.62
+                font.family: popup.runtime.fontMono
+                font.pixelSize: popup.theme.fontSize(8)
+                font.letterSpacing: 0.8
             }
         }
     }
