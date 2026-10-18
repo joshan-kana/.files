@@ -469,14 +469,13 @@ Item {
                             font.letterSpacing: 0.8
                         }
 
-                        Text {
+                        MarqueeText {
                             width: parent.width - 64 - parent.spacing
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.preview
                             color: panel.theme.text
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(12)
-                            elide: Text.ElideRight
                         }
                     }
                 }
