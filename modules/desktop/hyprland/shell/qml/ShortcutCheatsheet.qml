@@ -155,8 +155,8 @@ Item {
     ShellSurface {
         id: card
 
-        width: Math.min(window.width - 120, 1380)
-        height: Math.min(window.height - 120, 820)
+        width: Math.min(window.width - 112, 1850)
+        height: Math.min(window.height - 112, 1170)
         anchors.centerIn: parent
 
         theme: window.theme
@@ -198,7 +198,7 @@ Item {
                     text: "Shortcuts"
                     color: window.theme.textStrong
                     font.family: window.runtime.fontMono
-                    font.pixelSize: window.theme.fontSize(28)
+                    font.pixelSize: window.theme.fontSize(34)
                     font.weight: Font.DemiBold
                 }
 
@@ -209,7 +209,7 @@ Item {
                     text: KeyGlyphs.display(window.runtime.shortcut("shortcuts.toggle")) + "   ·   ? HELP"
                     color: window.theme.textMuted
                     font.family: window.runtime.fontMono
-                    font.pixelSize: window.theme.fontSize(10)
+                    font.pixelSize: window.theme.fontSize(15)
                     font.letterSpacing: 0.6
                 }
             }
@@ -221,7 +221,7 @@ Item {
                 motion: window.motion
                 surfaceLayer: ShellSurface.Group
 
-                height: 42
+                height: 52
                 anchors {
                     top: header.bottom
                     right: parent.right
@@ -291,9 +291,9 @@ Item {
 
                     width: parent.width
                     // Three columns on wide displays, without truncating labels.
-                    columns: width >= 1110 ? 3 : (width >= 760 ? 2 : 1)
-                    columnSpacing: window.theme.spacing4
-                    rowSpacing: window.theme.spacing4
+                    columns: width >= 1200 ? 3 : (width >= 780 ? 2 : 1)
+                    columnSpacing: window.theme.spacing5
+                    rowSpacing: window.theme.spacing5
 
                     Repeater {
                         model: window.sections
@@ -309,7 +309,7 @@ Item {
                                 text: shortcutSection.modelData.title
                                 color: window.theme.accent
                                 font.family: window.runtime.fontMono
-                                font.pixelSize: window.theme.fontSize(12)
+                                font.pixelSize: window.theme.fontSize(15)
                                 font.weight: Font.DemiBold
                                 font.letterSpacing: 1.6
                             }
@@ -327,8 +327,8 @@ Item {
 
                                     ShellSurface {
                                         id: bindingKey
-                                        width: 112
-                                        height: 34
+                                        width: 135
+                                        height: 43
                                         anchors.verticalCenter: parent.verticalCenter
                                         theme: window.theme
                                         motion: window.motion
@@ -340,7 +340,7 @@ Item {
                                             shortcut: shortcutBinding.modelData.key
                                             fontFamily: window.runtime.fontMono
                                             textColor: window.theme.textStrong
-                                            fontSize: window.theme.fontSize(16)
+                                            fontSize: window.theme.fontSize(18)
                                         }
                                     }
 
@@ -351,9 +351,9 @@ Item {
                                         text: shortcutBinding.modelData.description
                                         color: window.theme.textStrong
                                         font.family: window.runtime.fontMono
-                                        font.pixelSize: window.theme.fontSize(15)
+                                        font.pixelSize: window.theme.fontSize(17)
                                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                                        maximumLineCount: 2
+                                        maximumLineCount: 3
                                         elide: Text.ElideRight
                                     }
                                 }
