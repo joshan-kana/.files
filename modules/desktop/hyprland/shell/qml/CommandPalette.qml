@@ -204,6 +204,8 @@ Item {
 
     property int fileRequestId: 0
     property int pendingFileRequestId: 0
+    property int pendingPreviewRequestId: 0
+    property bool pendingFileOpenWith: false
 
     Socket {
         id: indexSocket
@@ -249,12 +251,80 @@ Item {
                     fileSearchDebounce.restart();
                 return;
             }
+            if (open && actionMode && response.id === pendingPreviewRequestId) {
+                actionEntries = previewActions(response.info);
+                results.currentIndex = 0;
+                return;
+            }
             if (!open || response.id !== pendingFileRequestId || queuedFileQuery !== search.text.trim() || searchScope !== "unified" || parameterTarget)
                 return;
             localResults = Array.isArray(response.items) ? response.items : [];
         } catch (error) {
             console.warn("palette: unexpected index response", error);
         }
+    }
+
+    function previewActions(info: var): var {
+        const actions = [
+            {
+                kind: "paletteAction",
+                action: "back",
+                name: "Back to File Actions",
+                genericName: "Return to contextual operations",
+                icon: "go-previous",
+                key: "↵ BACK"
+            }
+        ];
+        if (!info) {
+            actions.push({
+                kind: "paletteInfo",
+                name: "Preview Unavailable",
+                genericName: "File not indexed, missing or inaccessible",
+                icon: "dialog-warning",
+                key: ""
+            });
+            return actions;
+        }
+        actions.push({
+            kind: "paletteInfo",
+            name: info.type,
+            genericName: info.modified + (info.size === null ? "" : " · " + info.size + " bytes"),
+            icon: "document-properties",
+            key: ""
+        });
+        if (info.excerpt)
+            actions.push({
+                kind: "paletteInfo",
+                name: "Text Preview",
+                genericName: info.excerpt,
+                icon: "text-x-generic",
+                key: ""
+            });
+        return actions;
+    }
+
+    function requestFilePreview(entry: var): void {
+        actionTarget = entry;
+        actionMode = true;
+        actionEntries = [
+            {
+                kind: "paletteInfo",
+                name: "Loading Preview…",
+                genericName: entry.path,
+                icon: "document-properties",
+                key: ""
+            }
+        ];
+        results.currentIndex = 0;
+        if (!indexSocket.connected) {
+            actionEntries = previewActions(null);
+            return;
+        }
+        pendingPreviewRequestId = ++fileRequestId;
+        indexSocket.write(JSON.stringify({
+            id: pendingPreviewRequestId,
+            inspect: entry.path
+        }) + "\n");
     }
 
     function queueFileSearch(): void {
@@ -291,6 +361,16 @@ Item {
         onLoadedChanged: {
             if (loaded)
                 palette.unicodeEntries = SymbolLibrary.parseUnicode(text());
+        }
+    }
+
+    Process {
+        id: fileOpenWithProcess
+        onExited: (exitCode, exitStatus) => {
+            palette.pendingFileOpenWith = false;
+            palette.copyFeedback = exitCode === 0 ? "OPENED" : "OPEN FAILED";
+            if (exitCode === 0)
+                palette.hide();
         }
     }
 
@@ -439,6 +519,10 @@ Item {
         const rawQuery = search.text.trim();
         const query = rawQuery.toLowerCase();
         if (parameterTarget) {
+            if (parameterTarget.parameterMode === "openWith") {
+                const apps = indexedApplications;
+                return (rawQuery ? apps.filter(app => score(app, query) < 10000).sort((a, b) => score(a, query) - score(b, query)) : apps).slice(0, 100);
+            }
             if (parameterTarget.parameterMode === "confirm")
                 return [
                     {
@@ -625,7 +709,7 @@ Item {
     }
 
     function optionsFor(entry: var): var {
-        if (!entry || entry.kind === "unavailable")
+        if (!entry || entry.kind === "unavailable" || entry.kind === "paletteInfo")
             return [];
         let options = [
             {
@@ -681,6 +765,22 @@ Item {
                 key: ""
             });
         if (entry.kind === "file") {
+            options.push({
+                kind: "paletteAction",
+                action: "openWith",
+                name: "Open With…",
+                genericName: "Choose a desktop application",
+                icon: "application-x-executable",
+                key: ""
+            });
+            options.push({
+                kind: "paletteAction",
+                action: "preview",
+                name: "Preview File Details",
+                genericName: "Inspect metadata and supported small text files",
+                icon: "document-properties",
+                key: ""
+            });
             options.push({
                 kind: "paletteAction",
                 action: "reveal",
@@ -757,6 +857,7 @@ Item {
             copyFeedback = "NO AVAILABLE ACTIONS";
             return;
         }
+        pendingPreviewRequestId = 0;
         actionTarget = entry;
         actionEntries = options;
         actionMode = true;
@@ -863,12 +964,27 @@ Item {
             search.forceActiveFocus();
             return;
         }
+        if (option.action === "preview") {
+            requestFilePreview(target);
+            return;
+        }
+        if (option.action === "back") {
+            actionTarget = target;
+            actionEntries = optionsFor(target);
+            actionMode = true;
+            results.currentIndex = 0;
+            return;
+        }
         if (option.action === "copyName" || option.action === "copyUrl" || option.action === "copyPath") {
             copyText(option.action === "copyUrl" ? target.url : option.action === "copyPath" ? target.path : target.name, keepOpen);
             return;
         }
         if (option.action === "move") {
             beginParameter(target, "move");
+            return;
+        }
+        if (option.action === "openWith") {
+            beginParameter(target, "openWith");
             return;
         }
         if (option.action === "reveal") {
@@ -895,6 +1011,18 @@ Item {
     }
 
     function launchCurrent(keepOpen: bool): void {
+        if (parameterTarget && parameterTarget.parameterMode === "openWith") {
+            if (pendingFileOpenWith || results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
+                return;
+            const selected = resultModel.values[results.currentIndex];
+            const desktopId = selected && selected.desktopEntry ? selected.desktopEntry.id : "";
+            if (!desktopId || !runtime.paletteSearch)
+                return;
+            pendingFileOpenWith = true;
+            copyFeedback = "OPENING";
+            fileOpenWithProcess.exec([runtime.paletteSearch, "launch", desktopId, parameterTarget.path]);
+            return;
+        }
         if (parameterTarget && parameterTarget.parameterMode === "confirm") {
             const commandId = parameterTarget.commandId;
             if (!keepOpen)
@@ -931,6 +1059,8 @@ Item {
         if (results.currentIndex < 0 || results.currentIndex >= displayedModel.values.length)
             return;
         const entry = displayedModel.values[results.currentIndex];
+        if (entry.kind === "paletteInfo")
+            return;
         if (actionMode) {
             executeAction(entry, keepOpen);
             return;
@@ -1156,7 +1286,7 @@ Item {
                     Text {
                         anchors.fill: parent
                         visible: search.text.length === 0
-                        text: palette.parameterTarget ? (palette.parameterTarget.parameterMode === "confirm" ? "Press Enter again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
+                        text: palette.parameterTarget ? (palette.parameterTarget.parameterMode === "openWith" ? "Find an application…" : palette.parameterTarget.parameterMode === "confirm" ? "Press Enter again to confirm" : palette.parameterTarget.parameterMode === "move" ? "Workspace number (1–10)…" : palette.parameterTarget.parameterMode === "percent" ? "Percentage (0–100)…" : "Website search terms…") : palette.searchScope === "emoji" ? "Search emoji names…" : palette.searchScope === "apps" ? "Search applications…" : palette.searchScope === "actions" ? "Search desktop actions…" : "Apps, commands, windows, Quicklinks, 15 km to miles…"
                         color: theme.textMuted
                         font: search.font
                         verticalAlignment: Text.AlignVCenter
