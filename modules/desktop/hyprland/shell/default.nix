@@ -215,7 +215,10 @@ let
 
   paletteSearch = pkgs.writeShellApplication {
     name = "linux-desktop-palette-search";
-    runtimeInputs = [ palettePython ];
+    runtimeInputs = [
+      palettePython
+      pkgs.glib
+    ];
     text = ''
       exec ${lib.getExe palettePython} ${./scripts/palette-search.py} "$@"
     '';
@@ -1150,6 +1153,7 @@ in
           sessionCommand = lib.getExe sessionCommand;
           themeSet = lib.getExe themeSet;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
+          paletteSearch = lib.getExe paletteSearch;
           wallpaperLibrary = lib.getExe wallpaperLibrary;
           recordingToggle = lib.getExe recordingToggle;
           recordingLibrary = lib.getExe recordingLibrary;
