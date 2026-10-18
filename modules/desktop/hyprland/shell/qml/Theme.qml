@@ -14,6 +14,30 @@ QtObject {
     readonly property color warning: runtime.warning
     readonly property color positive: runtime.positive
     readonly property color accent: runtime.accent
+    readonly property color accentSecondary: runtime.accentSecondary
+    readonly property color accentTertiary: runtime.accentTertiary
+    readonly property color accentWarm: runtime.accentWarm
+
+    // Stylix owns the palette. Components select a semantic role, not a
+    // favourite colour; surface fills remain quiet regardless of the role.
+    function roleColor(role: string): color {
+        switch (role) {
+        case "media":
+            return accentSecondary;
+        case "connectivity":
+            return accentTertiary;
+        case "warmth":
+            return accentWarm;
+        case "positive":
+            return positive;
+        case "warning":
+            return warning;
+        case "critical":
+            return critical;
+        default:
+            return accent;
+        }
+    }
 
     // Single event-driven signal for every shell surface that opts into the
     // music-reactive treatment. Theme remains the only visual style owner.
