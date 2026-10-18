@@ -24,7 +24,7 @@ Item {
         width: chord.implicitWidth + (hint.compact ? Math.max(8, hint.theme.keycapInset * 2 - 4) : hint.theme.keycapInset * 2)
         radius: Math.min(9, height / 3)
         anchors.verticalCenter: parent.verticalCenter
-        color: hint.emphasized ? hint.theme.selectionFill : hint.theme.controlBase
+        color: hint.theme.controlBase
         border.width: hint.emphasized ? hint.theme.borderFocus : hint.theme.borderThin
         border.color: hint.emphasized ? hint.emphasisColor : hint.theme.subtleBorder
 
