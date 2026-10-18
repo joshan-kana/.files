@@ -462,7 +462,7 @@ Item {
                             width: 64
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.kind
-                            color: item.modelData.kind !== "TEXT" ? panel.theme.warning : panel.theme.accent
+                            color: item.modelData.kind !== "TEXT" ? panel.theme.accentWarm : panel.theme.accentSecondary
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
