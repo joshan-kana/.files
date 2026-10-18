@@ -30,6 +30,11 @@ Item {
     }
 
     function dismissOrReset(): void {
+        if (helpOpen) {
+            helpOpen = false;
+            search.forceActiveFocus();
+            return;
+        }
         // Dismissal never changes the selected search scope. When reopened,
         // the last selected category is still active.
         hide();
@@ -37,6 +42,7 @@ Item {
 
     property bool open: false
     property bool closing: false
+    property bool helpOpen: false
     property bool copyOnSuccessClose: false
     property string copyFeedback: ""
     property var unicodeEntries: []
@@ -99,6 +105,13 @@ Item {
         context: Qt.ApplicationShortcut
         enabled: palette.open
         onActivated: palette.hide()
+    }
+
+    Shortcut {
+        sequence: "?"
+        context: Qt.ApplicationShortcut
+        enabled: palette.open && !search.activeFocus
+        onActivated: palette.helpOpen = !palette.helpOpen
     }
 
     Shortcut {
@@ -281,6 +294,7 @@ Item {
         // animation must finish before visible changes to false.
         closing = motion.enabled;
         open = false;
+        helpOpen = false;
         setLauncherSubmap(false);
         if (closing)
             closeTimer.restart();
@@ -407,12 +421,33 @@ Item {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.7
                 }
-                Text {
-                    text: "What do you want to do?"
-                    color: theme.textStrong
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(24)
-                    font.weight: Font.DemiBold
+                Row {
+                    width: parent.width
+                    spacing: theme.spacing2
+
+                    Text {
+                        width: parent.width - helpButton.width - parent.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "What do you want to do?"
+                        color: theme.textStrong
+                        font.family: runtime.fontMono
+                        font.pixelSize: theme.fontSize(24)
+                        font.weight: Font.DemiBold
+                    }
+
+                    ShellAction {
+                        id: helpButton
+                        width: 36
+                        height: 36
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: palette.runtime
+                        theme: palette.theme
+                        motion: palette.motion
+                        iconOnly: true
+                        icon: "󰋗"
+                        title: "Help (?)"
+                        onActivated: palette.helpOpen = true
+                    }
                 }
 
                 Row {
@@ -506,7 +541,7 @@ Item {
 
                     anchors {
                         left: prompt.right
-                        right: shortcutHint.left
+                        right: parent.right
                         verticalCenter: parent.verticalCenter
                         leftMargin: theme.spacing3
                         rightMargin: theme.spacing3
@@ -552,21 +587,6 @@ Item {
                             event.accepted = true;
                         }
                     }
-                }
-
-                KeyChord {
-                    id: shortcutHint
-
-                    anchors {
-                        right: parent.right
-                        rightMargin: theme.spacing4
-                        verticalCenter: parent.verticalCenter
-                    }
-
-                    shortcut: runtime.shortcut("launcher.toggle")
-                    fontFamily: runtime.fontMono
-                    fontSize: theme.fontSize(11)
-                    textColor: theme.textMuted
                 }
             }
 
@@ -779,6 +799,46 @@ Item {
                     font.letterSpacing: 0.7
                 }
             }
+        }
+
+        WidgetHelp {
+            anchors.fill: parent
+            runtime: palette.runtime
+            theme: palette.theme
+            motion: palette.motion
+            open: palette.helpOpen
+            title: "Command palette controls"
+            bindings: [
+                {
+                    key: "Alt+1–4",
+                    action: "Choose search mode"
+                },
+                {
+                    key: "Tab",
+                    action: "Switch search and results"
+                },
+                {
+                    key: "J / K",
+                    action: "Move through results"
+                },
+                {
+                    key: "U / D",
+                    action: "Half-page through results"
+                },
+                {
+                    key: "Enter",
+                    action: "Run selected result"
+                },
+                {
+                    key: "Shift+Enter",
+                    action: "Run without closing"
+                },
+                {
+                    key: "Esc",
+                    action: "Close help or palette"
+                }
+            ]
+            onDismissed: palette.dismissOrReset()
         }
     }
 }
