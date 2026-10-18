@@ -198,13 +198,16 @@ Scope {
                 }
 
                 ShellSurface {
+                    id: credentialSurface
                     width: parent.width
                     height: 46
                     theme: auth.theme
                     motion: auth.motion
                     surfaceLayer: ShellSurface.Control
                     cornerRadius: auth.theme.radiusMedium
-                    outlined: credential.activeFocus
+                    outlined: credential.activeFocus || auth.submitting
+                    borderColor: credential.activeFocus || auth.submitting ? auth.theme.accent : auth.theme.subtleBorder
+
                     TextInput {
                         id: credential
                         anchors {
@@ -232,7 +235,17 @@ Scope {
                             }
                         }
                     }
+
+                    LoadingOutline {
+                        anchors.fill: parent
+                        surface: credentialSurface
+                        active: auth.submitting
+                        motionEnabled: auth.motion.enabled
+                        highlightColor: auth.theme.warning
+                        lineWidth: 2
+                    }
                 }
+
                 Text {
                     width: parent.width
                     visible: !!auth.flow && (auth.flow.failed || auth.flow.supplementaryMessage.length > 0)
