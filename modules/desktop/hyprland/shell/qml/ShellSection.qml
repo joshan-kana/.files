@@ -15,9 +15,12 @@ Column {
 
     Row {
         width: parent.width
+        height: Math.max(titleText.implicitHeight, detailText.implicitHeight)
         spacing: root.theme.spacing2
 
         ShellText {
+            id: titleText
+            anchors.verticalCenter: parent.verticalCenter
             runtime: root.runtime
             theme: root.theme
             text: root.title
@@ -33,6 +36,7 @@ Column {
 
         ShellText {
             id: detailText
+            anchors.verticalCenter: parent.verticalCenter
             visible: root.detail.length > 0
             runtime: root.runtime
             theme: root.theme
