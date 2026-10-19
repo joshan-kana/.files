@@ -121,7 +121,7 @@ assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
       command = lib.mkForce (
         toString (
           darwinJob "gc" 0 [
-            "${config.nix.package}/bin/nix-collect-garbage"
+            (lib.getExe' config.nix.package "nix-collect-garbage")
             "--delete-older-than"
             "${toString retentionDays}d"
           ]
