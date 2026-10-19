@@ -839,17 +839,20 @@ FocusScope {
                 height: root.theme.spacing1
             }
 
-            Grid {
+            Flow {
                 id: visualModeStrip
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 3
-                columnSpacing: root.theme.spacing2
-                rowSpacing: root.theme.spacing2
-                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+                spacing: root.theme.spacing2
+                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
+
+                function cellWidth(index: int): real {
+                    const itemsInRow = Math.min(columns, 7 - Math.floor(index / columns) * columns);
+                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(0)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -863,7 +866,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(1)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -877,7 +880,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(2)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -891,7 +894,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(3)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -905,7 +908,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(4)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -918,7 +921,7 @@ FocusScope {
                     onActivated: root.barToggleRequested()
                 }
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(5)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -932,7 +935,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth
+                    width: visualModeStrip.cellWidth(6)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
