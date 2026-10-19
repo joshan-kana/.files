@@ -169,7 +169,7 @@ Item {
 
         Item {
             id: playbackZone
-            width: 44
+            width: 54
             height: parent.height
             anchors.right: parent.right
 
