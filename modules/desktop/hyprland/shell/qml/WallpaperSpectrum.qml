@@ -24,12 +24,16 @@ Variants {
         focusable: false
         exclusionMode: ExclusionMode.Ignore
         color: "transparent"
+        implicitWidth: Math.max(1, screen ? screen.width * 0.88 : 1)
+        implicitHeight: Math.max(1, screen ? Math.min(screen.height * 0.38, 560) : 1)
 
         anchors {
-            top: true
             bottom: true
             left: true
-            right: true
+        }
+        margins {
+            bottom: screen ? Math.max(50, screen.height * 0.065) : 0
+            left: screen ? (screen.width - implicitWidth) / 2 : 0
         }
 
         WlrLayershell.namespace: "linux-desktop-wallpaper-spectrum"
@@ -45,13 +49,7 @@ Variants {
         }
 
         Item {
-            width: parent.width * 0.88
-            height: Math.min(parent.height * 0.38, 560)
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                bottom: parent.bottom
-                bottomMargin: Math.max(50, parent.height * 0.065)
-            }
+            anchors.fill: parent
 
             SpectrumScale {
                 id: frequencies
