@@ -558,6 +558,14 @@ local bindings = {
 	},
 }
 
+bindings[#bindings + 1] = {
+	mods = "hyper",
+	key = "0",
+	cmd = "space --focus last",
+	section = "DISPLAYS & SPACES",
+	desc = "Focus last space",
+}
+
 -- Space navigation: focus 1-9 and move window to space 1-9.
 for i = 1, 9 do
 	local key = tostring(i)
