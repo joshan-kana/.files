@@ -56,16 +56,15 @@ jobs:
         id: configurations
         shell: bash
         run: |
-          nixos="$(
-            nix eval --json .#nixosConfigurations --apply '
-              configs: builtins.mapAttrs (_: cfg: cfg.pkgs.stdenv.hostPlatform.system) configs
-            '
-          )"
-          darwin="$(
-            nix eval --json .#darwinConfigurations --apply '
-              configs: builtins.mapAttrs (_: cfg: cfg.pkgs.stdenv.hostPlatform.system) configs
-            '
-          )"
+          summarize='
+            configs: builtins.mapAttrs (_: cfg: {
+              system = cfg.pkgs.stdenv.hostPlatform.system;
+              substituters = cfg.pkgs.lib.unique cfg.config.nix.settings.substituters;
+              trustedPublicKeys = cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys;
+            }) configs
+          '
+          nixos="$(nix eval --json .#nixosConfigurations --apply "$summarize")"
+          darwin="$(nix eval --json .#darwinConfigurations --apply "$summarize")"
 
           matrix="$(
             jq -cn --argjson nixos "$nixos" --argjson darwin "$darwin" '
@@ -73,22 +72,26 @@ jobs:
                 include: (
                   [ $nixos | to_entries[] | {
                     profile: .key,
-                    system: .value,
+                    system: .value.system,
                     kind: "nixos",
+                    substituters: .value.substituters,
+                    trustedPublicKeys: .value.trustedPublicKeys,
                     runner: (
-                      if .value == "x86_64-linux" then "ubuntu-24.04"
-                      elif .value == "aarch64-linux" then "ubuntu-24.04-arm"
-                      else error("unsupported NixOS system: " + .value)
+                      if .value.system == "x86_64-linux" then "ubuntu-24.04"
+                      elif .value.system == "aarch64-linux" then "ubuntu-24.04-arm"
+                      else error("unsupported NixOS system: " + .value.system)
                       end
                     )
                   } ]
                   + [ $darwin | to_entries[] | {
                     profile: .key,
-                    system: .value,
+                    system: .value.system,
                     kind: "darwin",
+                    substituters: .value.substituters,
+                    trustedPublicKeys: .value.trustedPublicKeys,
                     runner: (
-                      if .value == "aarch64-darwin" then "macos-26"
-                      else error("unsupported Darwin system: " + .value)
+                      if .value.system == "aarch64-darwin" then "macos-26"
+                      else error("unsupported Darwin system: " + .value.system)
                       end
                     )
                   } ]
@@ -112,7 +115,6 @@ jobs:
 
     env:
       ATTIC_ENDPOINT: http://nixos-server:8080
-      ATTIC_PUBLIC_KEY: ${{ vars.ATTIC_PUBLIC_KEY }}
       ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
@@ -120,8 +122,6 @@ jobs:
         accept-flake-config = true
         experimental-features = nix-command flakes
         build-dir = /nix/build
-        extra-substituters = https://install.determinate.systems https://nix-community.cachix.org https://nixos-raspberrypi.cachix.org
-        extra-trusted-public-keys = cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI=
 
     steps:
       - name: Checkout
@@ -144,17 +144,33 @@ jobs:
           oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      - name: Configure fleet binary caches
+        shell: bash
+        env:
+          FLEET_SUBSTITUTERS: ${{ toJSON(matrix.substituters) }}
+          FLEET_PUBLIC_KEYS: ${{ toJSON(matrix.trustedPublicKeys) }}
+        run: |
+          # GitHub runners reach the private HTTP cache through its tailnet endpoint.
+          substituters="$(
+            jq -r --arg endpoint "$ATTIC_ENDPOINT" '
+              map(if startswith("http://") then
+                sub("^http://[^/]+"; $endpoint)
+              else . end) | join(" ")
+            ' <<<"$FLEET_SUBSTITUTERS"
+          )"
+          public_keys="$(jq -r 'join(" ")' <<<"$FLEET_PUBLIC_KEYS")"
+          {
+            echo 'NIX_CONFIG<<EOF'
+            printf '%s\n' "$NIX_CONFIG"
+            echo "extra-substituters = $substituters"
+            echo "extra-trusted-public-keys = $public_keys"
+            echo EOF
+          } >> "$GITHUB_ENV"
+
       - name: Enable Attic
         shell: bash
         run: |
           nix run nixpkgs#attic-client -- login ci "$ATTIC_ENDPOINT" "$ATTIC_TOKEN"
-          {
-            echo 'NIX_CONFIG<<EOF'
-            printf '%s\n' "$NIX_CONFIG"
-            echo "extra-substituters = $ATTIC_ENDPOINT/dotfiles"
-            echo "extra-trusted-public-keys = $ATTIC_PUBLIC_KEY"
-            echo EOF
-          } >> "$GITHUB_ENV"
 
       - name: Build host closure
         shell: bash
