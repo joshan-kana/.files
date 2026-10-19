@@ -334,7 +334,6 @@
             ./overlays/bottles.nix
             ./overlays/comin.nix
             ./overlays/gh-dash.nix
-            ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
