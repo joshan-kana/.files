@@ -155,7 +155,7 @@ assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
   services.zfs.autoScrub.interval = linuxSchedule 15;
 
   services.snapper = {
-    cleanupInterval = "1h";
+    cleanupInterval = "${toString cleanupIntervalDays}d";
     persistentTimer = true;
   };
 
