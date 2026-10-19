@@ -33,6 +33,10 @@ ShellRoot {
     AppearancePreferences {
         id: appearance
         runtime: runtime
+        expansionGlassExposed: expansionState.hasCurrent || expansionHost.closing
+        modalGlassExposed: modalHost.contentVisible
+        notificationGlassExposed: notifications.popupVisible || notificationPopup.closing
+        osdGlassExposed: osd.visible || osdPopup.closing
     }
 
     RuntimeConfig {
