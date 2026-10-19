@@ -152,12 +152,13 @@ assert timeParts != null && startHour * 60 + startMinute + 10 < 1440;
     ];
   };
 
-  # These settings do not enable ZFS or Snapper on their own.
   services.zfs.autoScrub.interval = linuxSchedule 15;
+
   services.snapper = {
     cleanupInterval = "1h";
     persistentTimer = true;
   };
+
   services.journald.settings.Journal = {
     SystemMaxUse = "1G";
     SystemKeepFree = config.nix.settings.min-free;
