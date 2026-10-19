@@ -13,12 +13,12 @@ nix develop
 Common commands:
 
 ```sh
-nix fmt              # apply repository formatting/fixes
-nix flake check      # run repository validation
-nix run .#theme-warm  # prebuild and cache all theme variants
-docs                 # build the generated manual
-docs-serve           # live-preview the generated manual
-nf                    # browse evaluated Nix options
+nix fmt | fmt               # apply repository formatting/fixes
+nix flake check | chk       # run repository validation
+nix run .#theme-warm        # prebuild and cache all theme variants
+docs                        # build the generated manual
+docs-serve                  # live-preview the generated manual
+nf                          # browse evaluated Nix options
 ```
 
 Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour belongs under `modules/`; host-specific differences stay with the same semantic scope under `hosts/<host>/`.
