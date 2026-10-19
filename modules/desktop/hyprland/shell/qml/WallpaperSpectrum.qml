@@ -57,16 +57,6 @@ Variants {
                 highHz: visuals.spectrum.highHz
             }
 
-            // Real FFT-derived values only. The soft curve adds depth without
-            // a second analyser, simulated notes or an always-running scene.
-            SpectrumCurve {
-                anchors.fill: parent
-                spectrum: visuals.spectrum
-                theme: visuals.theme
-                frequencyScale: frequencies
-                opacity: 0.65
-            }
-
             SpectrumBars {
                 anchors.fill: parent
                 spectrum: visuals.spectrum
