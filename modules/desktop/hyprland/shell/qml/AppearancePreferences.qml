@@ -30,6 +30,19 @@ QtObject {
     readonly property string mediaVisualizerMode: saved.mediaVisualizerMode === "curve" ? "curve" : "bars"
     readonly property bool mediaLyricsVisible: saved.mediaLyricsVisible
 
+    // Preloaded panels retain their Wayland layers while closed, but an
+    // invisible surface must not force compositor blur of the live wallpaper.
+    property bool expansionGlassExposed: false
+    property bool modalGlassExposed: false
+    property bool notificationGlassExposed: false
+    property bool osdGlassExposed: false
+
+    onBarVisibleChanged: applyGlassRule("linux-desktop-shell-glass", "^linux-desktop-bar$", barVisible)
+    onExpansionGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-expansion", "^linux-desktop-expansion$", expansionGlassExposed)
+    onModalGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-modal", "^linux-desktop-modal$", modalGlassExposed)
+    onNotificationGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed)
+    onOsdGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed)
+
     function toggleWallpaperSpectrum(): void {
         saved.wallpaperSpectrumEnabled = !saved.wallpaperSpectrumEnabled;
         saved.setValue("wallpaperSpectrumEnabled", saved.wallpaperSpectrumEnabled);
@@ -90,13 +103,21 @@ QtObject {
         applyWindowTransparency();
     }
 
-    function applyShellGlass(): void {
+    function applyGlassRule(name: string, namespace: string, exposed: bool): void {
         if (runtime.hyprctl.length === 0)
             return;
-        // Reuse one named compositor rule across reloads and toggles. The
-        // alpha threshold keeps transparent parts of large viewports sharp.
-        const enabled = shellGlassEnabled ? "true" : "false";
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.layer_rule({name = \"linux-desktop-shell-glass\", match = {namespace = \"^linux-desktop-(bar|expansion|modal|notification-popup|osd)$\"}, blur = true, ignore_alpha = 0.08, enabled = " + enabled + "})"]);
+        const enabled = shellGlassEnabled && exposed ? "true" : "false";
+        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.layer_rule({name = \"" + name + "\", match = {namespace = \"" + namespace + "\"}, blur = true, ignore_alpha = 0.08, enabled = " + enabled + "})"]);
+    }
+
+    function applyShellGlass(): void {
+        // Only visible layers need backdrop blur. Preloaded modal and hub
+        // surfaces keep their fast first-open path without idle blur passes.
+        applyGlassRule("linux-desktop-shell-glass", "^linux-desktop-bar$", barVisible);
+        applyGlassRule("linux-desktop-shell-glass-expansion", "^linux-desktop-expansion$", expansionGlassExposed);
+        applyGlassRule("linux-desktop-shell-glass-modal", "^linux-desktop-modal$", modalGlassExposed);
+        applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed);
+        applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed);
     }
 
     function toggleShellGlass(): void {
