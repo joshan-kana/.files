@@ -355,8 +355,8 @@ fallback_scopes="$({ export NIX_OPTIONS_FZF_DEFAULT_HOST=o; run_nf --scopes; })"
 assert_contains "$fallback_scopes" "$hm_scope" "environment host alias fallback"
 run_nf o --scopes >/dev/null
 
-stable_stylix_origin="$(run_nf s --scope "$hm_scope" --definitions stylix.enable)"
-assert_contains "$stable_stylix_origin" "home-manager-stable/nixos/common.nix [Home Manager integration bridge]" "stable Home Manager integration origin"
+server_stylix_origin="$(run_nf s --scope "$hm_scope" --definitions stylix.enable)"
+assert_contains "$server_stylix_origin" "home-manager/nixos/common.nix [Home Manager integration bridge]" "server Home Manager integration origin"
 run_nf o --scopes >/dev/null
 
 refresh_all_stderr="$test_cache/refresh-all.stderr"

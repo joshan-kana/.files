@@ -31,7 +31,10 @@ in
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ service.port ];
 
+  users.groups.ntfy-sh = lib.mkIf config.services.ntfy-sh.enable { };
   users.users.ntfy-sh = lib.mkIf config.services.ntfy-sh.enable {
+    isSystemUser = true;
+    group = "ntfy-sh";
     extraGroups = [ server.storage.appData.group.name ];
   };
 

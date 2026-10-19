@@ -16,21 +16,21 @@ let
   bbctlSecret = "${server.secretsDir}/beeper-bbctl-secret.json";
 
   inherit (pkgs.stdenv.hostPlatform) system;
-  unstablePkgs = import inputs.nixpkgs {
+  bridgePkgs = import inputs.nixpkgs {
     inherit system;
-    # Current cached mautrix packages still depend on deprecated libolm.
+    # Keep the deprecated libolm exception isolated to the bridges.
     config.permittedInsecurePackages = [ "olm-3.2.16" ];
   };
   mautrixPkgs = inputs.mautrix-packages.packages.${system};
 
-  bridgeManager = unstablePkgs.beeper-bridge-manager;
+  bridgeManager = bridgePkgs.beeper-bridge-manager;
 
   bridges = {
-    whatsapp = "${unstablePkgs.mautrix-whatsapp}/bin/mautrix-whatsapp";
-    signal = "${unstablePkgs.mautrix-signal}/bin/mautrix-signal";
-    discord = "${unstablePkgs.mautrix-discord}/bin/mautrix-discord";
-    facebook = "${unstablePkgs.mautrix-meta}/bin/mautrix-meta";
-    instagram = "${unstablePkgs.mautrix-meta}/bin/mautrix-instagram";
+    whatsapp = "${bridgePkgs.mautrix-whatsapp}/bin/mautrix-whatsapp";
+    signal = "${bridgePkgs.mautrix-signal}/bin/mautrix-signal";
+    discord = "${bridgePkgs.mautrix-discord}/bin/mautrix-discord";
+    facebook = "${bridgePkgs.mautrix-meta}/bin/mautrix-meta";
+    instagram = "${bridgePkgs.mautrix-meta}/bin/mautrix-instagram";
     telegram = "${mautrixPkgs.mautrix-telegram}/bin/mautrix-telegram";
   };
 

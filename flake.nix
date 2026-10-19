@@ -5,9 +5,6 @@
     # Nixpkgs: package collections and system modules.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # Stable Nixpkgs for configurations requiring predictable releases.
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
-
     # Hermes Agent: packaged agent and service integration.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
@@ -26,11 +23,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    stylix-stable = {
-      url = "github:nix-community/stylix/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs-stable";
-    };
-
     # nix-darwin: declarative macOS system configuration.
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin";
@@ -47,11 +39,6 @@
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    home-manager-stable = {
-      url = "github:nix-community/home-manager/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
     # Spicetify-nix: a nix flake for the spicetify-cli (theming Spotify)
@@ -114,12 +101,9 @@
     {
       self,
       nixpkgs,
-      nixpkgs-stable,
       nix-darwin,
       home-manager,
-      home-manager-stable,
       stylix,
-      stylix-stable,
       treefmt-nix,
       pre-commit-hooks,
       ...
@@ -283,9 +267,6 @@
         {
           system,
           hostModule,
-          nixpkgsInput ? nixpkgs,
-          homeManagerInput ? home-manager,
-          stylixInput ? stylix,
           moduleRegistryInput ? moduleRegistry,
           configurationOutputName ? configurationName,
           configurationFlakeSubdirectory ? null,
@@ -310,7 +291,7 @@
             if isDarwin then
               nix-darwin.lib.darwinSystem
             else if isLinux then
-              nixpkgsInput.lib.nixosSystem
+              nixpkgs.lib.nixosSystem
             else
               throw "Unsupported host system: ${system}";
         in
@@ -329,8 +310,8 @@
           };
           modules = [
             ./modules/options
-            stylixInput.${nativeModules}.stylix
-            homeManagerInput.${nativeModules}.home-manager
+            stylix.${nativeModules}.stylix
+            home-manager.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
             ./overlays/gh-dash.nix
@@ -377,9 +358,6 @@
         };
 
         nixos-server = {
-          nixpkgsInput = nixpkgs-stable;
-          homeManagerInput = home-manager-stable;
-          stylixInput = stylix-stable;
           system = "x86_64-linux";
           hostModule = ./hosts/nixos-server;
         };

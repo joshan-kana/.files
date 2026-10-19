@@ -277,15 +277,13 @@
             mutableSettings = true;
 
             # Web UI only on the dedicated LAN DNS service IP.
-            # Port is intentionally omitted because the module default is 3000.
-            host = adguard.ip;
-
             extraArgs = [
               "--work-dir ${adguard.workDir}"
               "--config ${adguard.configFile}"
             ];
 
             settings = {
+              http.address = "${adguard.ip}:3000";
               dns = {
                 # DNS only on the dedicated service IP and localhost, not 192.168.1.3.
                 bind_hosts = [
