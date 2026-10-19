@@ -107,7 +107,9 @@ QtObject {
         if (runtime.hyprctl.length === 0)
             return;
         const enabled = shellGlassEnabled && exposed ? "true" : "false";
-        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.layer_rule({name = \"" + name + "\", match = {namespace = \"" + namespace + "\"}, blur = true, ignore_alpha = 0.08, enabled = " + enabled + "})"]);
+        // Sample application windows as well as bottom/background layers.
+        // X-ray would drop intervening windows from the glass backdrop.
+        Quickshell.execDetached([runtime.hyprctl, "eval", "hl.layer_rule({name = \"" + name + "\", match = {namespace = \"" + namespace + "\"}, blur = true, xray = false, ignore_alpha = 0.08, enabled = " + enabled + "})"]);
     }
 
     function applyShellGlass(): void {
