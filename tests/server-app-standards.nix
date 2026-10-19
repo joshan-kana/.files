@@ -21,6 +21,9 @@ assert lib.elem tailscaleInterface cfg.networking.firewall.trustedInterfaces;
 assert lib.attrByPath [ "allowedTCPPorts" ] [ ] tailscaleFirewall == [ ];
 assert lib.attrByPath [ "allowedUDPPorts" ] [ ] tailscaleFirewall == [ ];
 assert builtins.all hasRequiredPathAssertion requiredSecretUnits;
+assert builtins.all (
+  name: lib.elem "docker.service" cfg.systemd.services."docker-${name}".requires
+) (builtins.attrNames cfg.virtualisation.oci-containers.containers);
 assert lib.elem "d ${cfg.dotfiles.server.secretsDir} 0700 root root - -" cfg.systemd.tmpfiles.rules;
 assert lib.elem "Z ${cfg.dotfiles.server.secretsDir} ~0700 root root - -"
   cfg.systemd.tmpfiles.rules;
