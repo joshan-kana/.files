@@ -7,7 +7,7 @@ Configuration is organised by **semantic ownership**: code lives with the applic
 ## Development
 
 ```sh
-nix develop
+nix develop -c $SHELL
 ```
 
 Common commands:
