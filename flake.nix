@@ -336,7 +336,6 @@
             ./overlays/gh-dash.nix
             ./overlays/libreoffice.nix
             ./overlays/nixos-options-doc.nix
-            ./overlays/nvtop.nix
             ./overlays/tuicr.nix
             ./overlays/webhook.nix
             ./overlays/zed.nix
