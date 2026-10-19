@@ -1,3 +1,7 @@
+# Restore the scripting addition after Dock starts or restarts.
+yabai -m signal --add event=dock_did_restart action="sudo -n yabai --load-sa"
+sudo -n yabai --load-sa
+
 # -----------------------------
 # Layout
 # -----------------------------
