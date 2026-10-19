@@ -169,13 +169,13 @@ Item {
 
         Item {
             id: playbackZone
-            width: 86
+            width: 44
             height: parent.height
             anchors.right: parent.right
 
             ShellSurface {
                 id: state
-                width: 76
+                width: 34
                 height: 34
                 anchors.centerIn: parent
 
@@ -188,27 +188,13 @@ Item {
                 hovered: playbackHitArea.containsMouse
                 lightIntensity: 0.8
 
-                Row {
+                Text {
                     anchors.centerIn: parent
-                    spacing: island.theme.spacing1
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: island.media.playing ? "Ⅱ" : "▶"
-                        color: island.media.playing ? island.theme.accent : island.theme.textMuted
-                        font.family: island.runtime.fontMono
-                        font.pixelSize: island.theme.fontSize(11)
-                        font.weight: Font.Bold
-                    }
-
-                    KeyHint {
-                        anchors.verticalCenter: parent.verticalCenter
-                        runtime: island.runtime
-                        theme: island.theme
-                        shortcut: "SPACE"
-                        compact: true
-                        emphasized: island.media.playing
-                    }
+                    text: island.media.playing ? "Ⅱ" : "▶"
+                    color: island.media.playing ? island.theme.accent : island.theme.textMuted
+                    font.family: island.runtime.fontMono
+                    font.pixelSize: island.theme.fontSize(11)
+                    font.weight: Font.Bold
                 }
             }
 
