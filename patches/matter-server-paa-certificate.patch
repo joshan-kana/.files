@@ -1,0 +1,10 @@
+diff --git a/matter_server/server/helpers/paa_certificates.py b/matter_server/server/helpers/paa_certificates.py
+--- a/matter_server/server/helpers/paa_certificates.py
++++ b/matter_server/server/helpers/paa_certificates.py
+@@ -76 +76,5 @@
+-        cert = x509.load_pem_x509_certificate(pem_certificate.encode())
++        try:
++            cert = x509.load_pem_x509_certificate(pem_certificate.encode())
++        except ValueError as err:
++            LOGGER.warning("Skipping malformed PAA certificate '%s': %s", subject, err)
++            return False

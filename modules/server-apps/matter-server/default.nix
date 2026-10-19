@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   inherit (config.dotfiles.server.storage) appData;
@@ -12,6 +17,11 @@ in
 
   services.matter-server = {
     enable = true;
+    package = pkgs.python-matter-server.overridePythonAttrs (old: {
+      patches = (old.patches or [ ]) ++ [
+        ../../../patches/matter-server-paa-certificate.patch
+      ];
+    });
     extraArgs.vendorid = 65521; # 0xFFF1, used by the existing Matter fabric.
   };
 
