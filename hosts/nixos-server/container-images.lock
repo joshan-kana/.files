@@ -8,7 +8,7 @@
     "source": "docker.io/n8nio/n8n:latest"
   },
   "onedev": {
-    "digest": "sha256:8fc141dda2188eecf02ba22de0a202f4b4772bc99bac519292f6890ad6d4bda4",
+    "digest": "sha256:bd6762b583433957277fa5ac24d5ab0f483fc723c49bd157af73ddc2317763d7",
     "source": "1dev/server:latest"
   }
 }
