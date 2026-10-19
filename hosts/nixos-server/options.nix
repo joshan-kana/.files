@@ -60,12 +60,6 @@ in
             description = "Fixed numeric ID for the bulk server data group.";
           };
         };
-
-        scrubInterval = mkOption {
-          type = types.str;
-          default = "weekly";
-          description = "Systemd calendar interval for ZFS pool scrubs.";
-        };
       };
 
       snapshots.intervalMinutes = mkOption {

@@ -527,7 +527,6 @@
         autoScrub = {
           enable = true;
           pools = [ storage.dataRoot.poolName ];
-          interval = storage.dataRoot.scrubInterval;
         };
         trim.enable = false;
       };
@@ -555,8 +554,6 @@
 
       services.snapper = {
         inherit snapshotInterval;
-        cleanupInterval = "1h";
-        persistentTimer = true;
         configs.apps = {
           SUBVOLUME = storage.appData.root;
           FSTYPE = "btrfs";
