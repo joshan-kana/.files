@@ -186,16 +186,11 @@ PanelWindow {
     }
     readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
     readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
-    // Keep the existing compact hub layout unchanged inside a fullscreen
-    // transparent backing. Its animation, contents and input region retain
-    // their original dimensions and screen coordinates; only the Wayland
-    // viewport grows to allow future effects outside the compact hub.
+    // Keep the layer as small as the hub's compositor-safe viewport.
+    // A fullscreen transparent backing needlessly multiplies blur work
+    // when Frosted Glass is enabled, especially on high-DPI displays.
     readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, 960) : 1
     readonly property real viewportHeight: screen ? Math.max(1, screen.height - (theme.barHeight + theme.spacing1) - theme.spacing4) : 1
-    readonly property real viewportLeft: screen ? (screen.width - viewportWidth) / 2 : 0
-    readonly property real viewportTop: theme.barHeight + theme.spacing1
-    readonly property real backingWidth: screen ? screen.width : 1
-    readonly property real backingHeight: screen ? screen.height : 1
     // Match the bar's measured source when it lies inside our compositor-safe
     // viewport. Off-viewport islands start at the nearest visible edge, rather
     // than forcing a new full-width Wayland surface or compositor relayout.
@@ -221,8 +216,8 @@ PanelWindow {
     color: "transparent"
     focusable: expansionState.hasCurrent && !themeTerminalActive
     exclusionMode: ExclusionMode.Ignore
-    implicitWidth: Math.max(1, backingWidth)
-    implicitHeight: Math.max(1, backingHeight)
+    implicitWidth: Math.max(1, viewportWidth)
+    implicitHeight: Math.max(1, viewportHeight)
 
     anchors {
         top: true
@@ -230,8 +225,8 @@ PanelWindow {
     }
 
     margins {
-        top: 0
-        left: 0
+        top: theme.barHeight + theme.spacing1
+        left: screen ? (screen.width - viewportWidth) / 2 : 0
     }
 
     WlrLayershell.namespace: "linux-desktop-expansion"
@@ -244,8 +239,8 @@ PanelWindow {
         popup: host
         exposed: host.expansionState.hasCurrent || host.closing
         interactiveItem: shellSurface
-        fullWidth: Math.max(1, host.backingWidth)
-        fullHeight: Math.max(1, host.backingHeight)
+        fullWidth: Math.max(1, host.viewportWidth)
+        fullHeight: Math.max(1, host.viewportHeight)
     }
     mask: surfaceLifecycle.inputRegion
 
@@ -371,8 +366,8 @@ PanelWindow {
 
         // The centre moves independently of width so the two morph curves do
         // not repeatedly restart each other as the target's width changes.
-        x: host.viewportLeft + Math.max(0, Math.min(host.viewportWidth - width, host.animatedSurfaceCenter - width / 2))
-        y: host.viewportTop
+        x: Math.max(0, Math.min(host.viewportWidth - width, host.animatedSurfaceCenter - width / 2))
+        y: 0
         width: Math.min(host.viewportWidth, host.targetWidth)
         height: Math.min(host.viewportHeight, host.targetHeight)
         clip: true
