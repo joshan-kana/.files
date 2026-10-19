@@ -8,9 +8,9 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  cleanupIntervalDays = 7;
+  cleanupIntervalDays = 2;
   cleanupStartTime = "03:00";
-  retentionDays = 7;
+  retentionDays = 5;
 
   timeParts = builtins.match "([01][0-9]|2[0-3]):([0-5][0-9])" cleanupStartTime;
   startHour = lib.toInt (lib.removePrefix "0" (builtins.elemAt timeParts 0));
