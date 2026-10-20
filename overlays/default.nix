@@ -40,6 +40,7 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./libreoffice
+    ./linux-desktop-spectrum
     ./notion
     ./open-webui
     ./open-webui-desktop
@@ -47,6 +48,7 @@ _: {
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./squirreldisk
     ./seerr
