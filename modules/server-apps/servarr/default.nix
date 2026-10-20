@@ -70,6 +70,7 @@ in
   };
 
   users.users = {
+    ${config.services.configarr.user}.extraGroups = [ appData.group.name ];
     ${config.services.sonarr.user}.extraGroups = sharedGroups;
     ${config.services.radarr.user}.extraGroups = sharedGroups;
     ${config.services.bazarr.user}.extraGroups = sharedGroups;
@@ -77,9 +78,6 @@ in
   };
 
   systemd = {
-    # Opt-in reconciliation after reviewing the live diff. Do not silently
-    # change application-owned state at activation or on the daily timer.
-    timers.configarr.wantedBy = lib.mkForce [ ];
     services =
       lib.genAttrs
         [
@@ -112,9 +110,10 @@ in
               };
         })
       // {
+        prowlarr.serviceConfig.StateDirectoryMode = "0700";
         configarr = {
           environment = {
-            DRY_RUN = "true";
+            DRY_RUN = "false";
             STOP_ON_ERROR = "true";
             TELEMETRY_ENABLED = "false";
             CONFIGARR_ENFORCE_CONFIG_VALIDATION = "true";
@@ -144,6 +143,14 @@ in
         };
       };
 
+    # Prowlarr uses DynamicUser; tmpfiles must not reset its active StateDirectory
+    # ownership to root after a system switch.
+    tmpfiles.settings."10-prowlarr"."${appData.root}/prowlarr".d = {
+      user = lib.mkForce "-";
+      group = lib.mkForce "-";
+      mode = lib.mkForce "-";
+    };
+
     tmpfiles.rules = [
       "d ${mediaRoot} 2770 root ${dataRoot.group.name} - -"
       "d ${mediaRoot}/library 2770 root ${dataRoot.group.name} - -"
@@ -152,7 +159,6 @@ in
       "d ${downloads}/incomplete 2770 root ${dataRoot.group.name} - -"
       "d ${mediaRoot}/transcode 2770 root ${dataRoot.group.name} - -"
       "d ${appData.root}/sonarr 0700 ${config.services.sonarr.user} ${config.services.sonarr.group} - -"
-      "d ${appData.root}/prowlarr 0700 root root - -"
     ];
   };
 

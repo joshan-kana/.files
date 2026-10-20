@@ -6,8 +6,20 @@ sonarr:
   main:
     base_url: http://127.0.0.1:8989
     api_key: !env SONARR_API_KEY
-    # The existing Ultra-HD profile is retained unchanged; Configarr normalizes
-    # its quality groups differently, so do not reconcile that profile yet.
+    quality_profiles:
+      - name: Ultra-HD
+        upgrade:
+          allowed: false
+          until_quality: HDTV-2160p
+          until_score: 1
+        min_format_score: 0
+        qualities:
+          - name: Bluray-2160p
+          - name: WEB 2160p
+            qualities:
+              - WEBDL-2160p
+              - WEBRip-2160p
+          - name: HDTV-2160p
     download_clients:
       data:
         - name: Transmission
@@ -38,6 +50,22 @@ radarr:
         assign_scores_to:
           - name: Ultra-HD
             score: 1000
+    quality_profiles:
+      - name: Ultra-HD
+        language: Original
+        upgrade:
+          allowed: true
+          until_quality: Remux-2160p
+          until_score: 1000
+        min_format_score: 0
+        qualities:
+          - name: Remux-2160p
+          - name: Bluray-2160p
+          - name: WEB 2160p
+            qualities:
+              - WEBDL-2160p
+              - WEBRip-2160p
+          - name: HDTV-2160p
     download_clients:
       data:
         - name: Transmission
