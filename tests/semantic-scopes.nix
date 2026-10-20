@@ -224,6 +224,42 @@ let
         };
       };
 
+  invalidEditEvaluation = lib.evalModules {
+    modules = [
+      ({ lib, ... }: {
+        options.environment.variables = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          default = { };
+        };
+      })
+      (semantic.rootModule (_: {
+        app = _: {
+          existing = _: {
+            environment.variables.SEMANTIC_VALID_EDIT = "yes";
+          };
+        };
+        theme = _: {
+          scopeEdits.app.missing.config.environment.variables.SEMANTIC_INVALID_EDIT = "bad";
+        };
+      }))
+    ];
+  };
+  invalidEdit = builtins.tryEval (
+    builtins.deepSeq invalidEditEvaluation.config.environment.variables true
+  );
+
+  missingHostTarget = lib.evalModules {
+    specialArgs.moduleRegistry.orchard = _: { };
+    modules = [
+      (semantic.rootModule (_: {
+        theme = _: {
+          scopeEdits.orchard.missingOnHost.config.environment.variables.IGNORED = "yes";
+        };
+      }))
+    ];
+  };
+  ignoredHostEdit = builtins.tryEval (builtins.deepSeq missingHostTarget.config true);
+
   evaluated = inputs.nixpkgs.lib.nixosSystem {
     inherit system;
     specialArgs = {
@@ -276,6 +312,49 @@ let
         environment.systemPackages = [ pkgs.coreutils ];
       })
       (semantic.systemModule "edited" editedScope)
+      (semantic.rootModule (_: {
+        widgets = _: {
+          example = _: {
+            environment.variables.SEMANTIC_SCOPE_EDIT_MERGE = lib.mkDefault "app";
+            home = _: {
+              home.sessionVariables.SEMANTIC_SCOPE_EDIT_ORIGINAL = "app";
+            };
+          };
+          disabled = _: {
+            enable = false;
+            environment.variables.SEMANTIC_SCOPE_EDIT_DISABLED_TARGET = "bad";
+          };
+          group = _: {
+            item = _: {
+              environment.variables.SEMANTIC_SCOPE_EDIT_NESTED_ORIGINAL = "app";
+            };
+          };
+        };
+        visualSource = _: {
+          scopeEdits.widgets = {
+            example = {
+              config.environment.variables.SEMANTIC_SCOPE_EDIT_MERGE = lib.mkForce "theme";
+              home = _: {
+                home.sessionVariables.SEMANTIC_SCOPE_EDIT_HOME = "theme";
+              };
+            };
+            disabled.config.environment.variables.SEMANTIC_SCOPE_EDIT_DISABLED_TARGET = "bad";
+            group.item.environment.variables.SEMANTIC_SCOPE_EDIT_NESTED = "theme";
+          };
+        };
+        extraSource = _: {
+          scopeEdits.widgets.example.environment.variables.SEMANTIC_SCOPE_EDIT_SECOND = "second";
+        };
+        inactiveSource = _: {
+          enable = false;
+          scopeEdits.widgets.example = {
+            config.environment.variables.SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE = "bad";
+            home = _: {
+              home.sessionVariables.SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE = "bad";
+            };
+          };
+        };
+      }))
       (semantic.rootModule (_: {
         editedOption = editedOptionScope;
       }))
@@ -647,6 +726,17 @@ assert !cfg.dotfiles.resolvedScopes.extended.hostOnlyDisabled.enable;
 assert cfg.dotfiles.resolvedScopes.extended.hostOnlyEnabled.enable;
 assert hm.home.sessionVariables.SEMANTIC_EXTEND_HOME == "yes";
 assert !editUnknown.success;
+assert !invalidEdit.success;
+assert ignoredHostEdit.success;
+assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_MERGE == "theme";
+assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_SECOND == "second";
+assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_NESTED_ORIGINAL == "app";
+assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_NESTED == "theme";
+assert !(cfg.environment.variables ? SEMANTIC_SCOPE_EDIT_DISABLED_TARGET);
+assert !(cfg.environment.variables ? SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE);
+assert hm.home.sessionVariables.SEMANTIC_SCOPE_EDIT_ORIGINAL == "app";
+assert hm.home.sessionVariables.SEMANTIC_SCOPE_EDIT_HOME == "theme";
+assert !(hm.home.sessionVariables ? SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE);
 assert scopeOptionEvaluation.config.semanticScopeOptionResult.value == "host:default";
 assert !(scopeOptionEvaluation.options ? required);
 assert !(scopeOptionEvaluation.config ? required);

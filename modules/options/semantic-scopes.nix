@@ -138,16 +138,34 @@ let
     in
     (tree.scopeOptions or { }) // nonEmptyChildren;
 
+  nixdScopeEditsForTree =
+    tree:
+    builtins.mapAttrs (_: nixdScopeEditsForTree) (semanticChildren tree)
+    // {
+      config = mkOption {
+        type = types.raw;
+        description = "Native system option definitions contributed to this semantic scope.";
+      };
+      home = mkOption {
+        type = types.raw;
+        description = "Home Manager module definitions contributed to this semantic scope.";
+      };
+    };
+
   nixdHostOptions =
-    _configurations: host:
+    configurations: host:
     let
       resolved = host.config.dotfiles.resolvedScopes;
+      available = if configurations == { } then resolved else scopeTree configurations;
       # nixd drops the outer `name = editScope ...` binding when completing the edit attrset.
       editOptions = lib.foldl' lib.recursiveUpdate { } (
         lib.mapAttrsToList (_: nixdEditOptionsForTree) (semanticChildren resolved)
       );
+      scopeEditOptions = {
+        scopeEdits = builtins.mapAttrs (_: nixdScopeEditsForTree) (semanticChildren available);
+      };
     in
-    lib.recursiveUpdate (lib.recursiveUpdate host.options (nixdOptionsForTree resolved)) editOptions;
+    lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate host.options (nixdOptionsForTree resolved)) editOptions) scopeEditOptions;
 in
 {
   inherit
