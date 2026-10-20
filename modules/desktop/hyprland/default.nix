@@ -383,7 +383,7 @@ in
             # Favourite apps
             (modBind "ALT + 1" (exec terminal))
             (modBind "ALT + 2" (exec "spotify"))
-            (modBind "ALT + 3" (exec "brave"))
+            (modBind "ALT + 3" (exec config.dotfiles.defaults.browser))
             (modBind "ALT + 4" (exec "floorp"))
             (modBind "ALT + 5" (exec "thunderbird"))
             (modBind "ALT + 6" (exec "code"))
