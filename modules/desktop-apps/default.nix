@@ -68,7 +68,6 @@ in
     home = _: {
       programs.zen-browser.enable = true;
     };
-  };
 
   firefox = _: {
     home = _: {
@@ -278,6 +277,7 @@ in
         };
       }
     );
+
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (

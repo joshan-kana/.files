@@ -261,8 +261,6 @@ let
   };
 in
 {
-  environment.systemPackages = [ themeSet ];
-
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
@@ -1642,6 +1640,7 @@ in
       services.awww.enable = true;
 
       home.packages = [
+        themeSet
         windowEffectsToggle
         launcher
         paletteSearch
