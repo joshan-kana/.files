@@ -687,13 +687,13 @@ in
 
   tmux = _: {
     home = _: {
-      programs.tmux.enable = true;
+      programs.tmux = { };
     };
   };
 
   zellij = _: {
     home = _: {
-      programs.zellij.enable = true;
+      programs.zellij = { };
     };
   };
 
@@ -708,19 +708,19 @@ in
 
   ripgrep = _: {
     home = _: {
-      programs.ripgrep.enable = true;
+      programs.ripgrep = { };
     };
   };
 
   lf = _: {
     home = _: {
-      programs.lf.enable = true;
+      programs.lf = { };
     };
   };
 
   bat = _: {
     home = _: {
-      programs.bat.enable = true;
+      programs.bat = { };
     };
   };
 
@@ -739,7 +739,7 @@ in
 
       home = _: {
         home.shellAliases = aliases;
-        programs.eza.enable = true;
+        programs.eza = { };
       };
     };
 
@@ -747,7 +747,7 @@ in
     environment.systemPackages = [ pkgs.htop ];
 
     home = _: {
-      programs.htop.enable = true;
+      programs.htop = { };
     };
   };
 
@@ -927,7 +927,7 @@ in
 
   codex = _: {
     home = _: {
-      programs.codex.enable = true;
+      programs.codex = { };
     };
   };
 
