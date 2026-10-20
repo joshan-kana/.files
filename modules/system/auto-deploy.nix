@@ -70,14 +70,19 @@ in
     // lib.optionalAttrs isDarwin {
       launchd.daemons.comin-event-listener.serviceConfig = {
         ProgramArguments = [
-          "${lib.getExe pkgs.ntfy-sh}"
-          "subscribe"
-          topic
-          "${lib.getExe config.services.comin.package} fetch"
+          "/bin/sh"
+          "-c"
+          ''
+            /bin/wait4path /nix/store && exec ${lib.getExe pkgs.ntfy-sh} subscribe \
+              ${lib.escapeShellArg topic} \
+              ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
+          ''
         ];
         RunAtLoad = true;
         KeepAlive = true;
         ThrottleInterval = 5;
+        StandardOutPath = "/var/log/comin-event-listener.log";
+        StandardErrorPath = "/var/log/comin-event-listener.log";
       };
     };
 }
