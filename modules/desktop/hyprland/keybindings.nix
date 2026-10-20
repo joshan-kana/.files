@@ -70,48 +70,23 @@ let
     }
   ) 9;
 
-  workspaceKeys = [
-    {
-      key = "1";
-      workspace = "1";
-    }
-    {
-      key = "2";
-      workspace = "2";
-    }
-    {
-      key = "3";
-      workspace = "3";
-    }
-    {
-      key = "4";
-      workspace = "4";
-    }
-    {
-      key = "5";
-      workspace = "5";
-    }
-    {
-      key = "6";
-      workspace = "6";
-    }
-    {
-      key = "7";
-      workspace = "7";
-    }
-    {
-      key = "8";
-      workspace = "8";
-    }
-    {
-      key = "9";
-      workspace = "9";
-    }
-    {
-      key = "0";
-      workspace = "10";
-    }
-  ];
+  workspaceKeys =
+    builtins.genList (
+      index:
+      let
+        number = toString (index + 1);
+      in
+      {
+        key = number;
+        workspace = number;
+      }
+    ) 9
+    ++ [
+      {
+        key = "0";
+        workspace = "10";
+      }
+    ];
 
   focusWorkspace =
     entry:
