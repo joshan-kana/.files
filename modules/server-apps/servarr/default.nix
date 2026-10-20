@@ -40,12 +40,7 @@ rec {
     ];
 
     configarr = { scopeConfig, ... }: {
-      assertions = [
-        {
-          assertion = scopeConfig.settings ? main;
-          message = "sonarr Configarr settings must define the main instance";
-        }
-      ];
+      systemd.services.configarr.after = lib.optional (scopeConfig.settings != { }) "sonarr.service";
       scopeOptions.settings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = {
@@ -138,12 +133,7 @@ rec {
     ];
 
     configarr = { scopeConfig, ... }: {
-      assertions = [
-        {
-          assertion = scopeConfig.settings ? main;
-          message = "radarr Configarr settings must define the main instance";
-        }
-      ];
+      systemd.services.configarr.after = lib.optional (scopeConfig.settings != { }) "radarr.service";
       scopeOptions.settings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = {
@@ -240,12 +230,7 @@ rec {
     ];
 
     configarr = { scopeConfig, ... }: {
-      assertions = [
-        {
-          assertion = scopeConfig.settings ? main;
-          message = "prowlarr Configarr settings must define the main instance";
-        }
-      ];
+      systemd.services.configarr.after = lib.optional (scopeConfig.settings != { }) "prowlarr.service";
       scopeOptions.settings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = {
@@ -419,11 +404,6 @@ rec {
           CONFIGARR_ENFORCE_CONFIG_VALIDATION = "true";
         };
         unitConfig.AssertPathExists = "${server.secretsDir}/configarr.env";
-        after = [
-          "sonarr.service"
-          "radarr.service"
-          "prowlarr.service"
-        ];
       };
     };
 
