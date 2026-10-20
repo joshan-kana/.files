@@ -389,18 +389,16 @@ in
     label = "→";
   })
   (mk {
-    keys = "backslash";
+    keys = "E";
     action = exec "linux-desktop-local-scratchpad move";
     section = "WORKSPACES";
     description = "Park or restore window in this workspace's scratchpad";
-    label = "\\";
   })
   (mk {
-    keys = "SHIFT + backslash";
+    keys = "SHIFT + E";
     action = exec "linux-desktop-local-scratchpad toggle";
     section = "WORKSPACES";
     description = "Open or leave this workspace's scratchpad";
-    label = "|";
   })
   (mk {
     keys = "X";
@@ -574,8 +572,8 @@ in
     description = "Session menu";
     label = "CTRL + ALT + DELETE";
   })
-  (mk {
-    keys = "SHIFT + E";
+  (mkMeh {
+    keys = "C";
     action = exec "edit-config";
     section = "SYSTEM";
     description = "Edit desktop configuration";
