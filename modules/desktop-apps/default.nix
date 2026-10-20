@@ -68,6 +68,7 @@ in
     home = _: {
       programs.zen-browser.enable = true;
     };
+  };
 
   firefox = _: {
     home = _: {
