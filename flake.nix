@@ -143,9 +143,6 @@
 
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
-      gitPathspecExcludeArgs = lib.concatMapStringsSep " " (
-        dir: lib.escapeShellArg ":(exclude)${dir}**"
-      ) repoToolExcludedDirs;
 
       treefmtFor =
         system:
@@ -265,7 +262,7 @@
             staged-whitespace = {
               enable = true;
               name = "Staged whitespace";
-              entry = "${lib.getExe pkgs.git} diff --check --cached -- . ${gitPathspecExcludeArgs}";
+              entry = "${lib.getExe pkgs.git} diff --cached --check";
               pass_filenames = false;
               always_run = true;
             };
