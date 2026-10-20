@@ -178,8 +178,10 @@
           projectRootFile = "flake.nix";
 
           programs = {
-            clang-format.enable = true;
-            prettier.enable = true;
+            clang-format = {
+              enable = true;
+              includes = [ "modules/desktop/hyprland/shell/spectrum/*" ];
+            };
             deadnix.enable = true;
             csharpier.enable = true;
             biome = {
@@ -188,7 +190,10 @@
             };
             nixfmt.enable = true;
             prettier.enable = true;
-            qmlformat.enable = true;
+            qmlformat = {
+              enable = true;
+              includes = [ "modules/desktop/hyprland/shell/qml/*.qml" ];
+            };
             shfmt.enable = true;
             stylua.enable = true;
             taplo.enable = true;
@@ -233,19 +238,16 @@
               statix.priority = 1;
               nixfmt.priority = 2;
               clang-format.priority = 1;
-              prettier = {
-                includes = [ "*.js" ];
-                priority = 1;
-              };
+              prettier.priority = 1;
               quick-lint-js = {
                 command = lib.getExe pkgs.quick-lint-js;
-                includes = [ "*.js" ];
+                includes = [ "modules/desktop/hyprland/shell/qml/*.js" ];
                 priority = 2;
               };
 
               qml-lint = {
                 command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
-                includes = [ "*.qml" ];
+                includes = [ "modules/desktop/hyprland/shell/qml/*.qml" ];
                 options =
                   lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                     "--max-warnings"
@@ -320,12 +322,12 @@
                 command = lib.getExe' pkgs.cppcheck "cppcheck";
                 priority = 2;
                 includes = [
-                  "*.c"
-                  "*.cc"
-                  "*.cpp"
-                  "*.h"
-                  "*.hh"
-                  "*.hpp"
+                  "modules/desktop/hyprland/shell/spectrum/*.c"
+                  "modules/desktop/hyprland/shell/spectrum/*.cc"
+                  "modules/desktop/hyprland/shell/spectrum/*.cpp"
+                  "modules/desktop/hyprland/shell/spectrum/*.h"
+                  "modules/desktop/hyprland/shell/spectrum/*.hh"
+                  "modules/desktop/hyprland/shell/spectrum/*.hpp"
                 ];
                 options = [
                   "--enable=warning,style,performance,portability"
