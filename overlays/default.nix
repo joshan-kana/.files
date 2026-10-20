@@ -23,7 +23,6 @@
     ./open-webui
     ./prusaslicer
     ./qmk-toolbox
-    ./raspberry-pi-imager
     ./reaper
     ./vial
     ./determinate-nix
