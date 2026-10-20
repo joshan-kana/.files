@@ -56,21 +56,20 @@ in
 
 }
 // {
-  builders =
-    _:
-    lib.optionalAttrs isLinux {
-      nix = {
-        distributedBuilds = true;
-        buildMachines = [
-          {
-            hostName = "mac.home";
-            protocol = "ssh-ng";
-            sshUser = config.dotfiles.users.primary.name;
-            sshKey = nixBuilderSecret;
-            publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUltSDMwckd3cm82d0V2UTltQkhoZ1k3TExtbTdjam9ibXcrSUJ2NjdRanEK";
-            system = "aarch64-darwin";
-            maxJobs = 12;
-          }
+  builders = _: {
+    nix = {
+      distributedBuilds = true;
+      buildMachines =
+        lib.optional isLinux {
+          hostName = "mac.home";
+          protocol = "ssh-ng";
+          sshUser = config.dotfiles.users.primary.name;
+          sshKey = nixBuilderSecret;
+          publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUltSDMwckd3cm82d0V2UTltQkhoZ1k3TExtbTdjam9ibXcrSUJ2NjdRanEK";
+          system = "aarch64-darwin";
+          maxJobs = 12;
+        }
+        ++ [
           {
             hostName = "mac.home:32223";
             protocol = "ssh-ng";
@@ -81,8 +80,9 @@ in
             maxJobs = 12;
           }
         ];
-      };
     };
+  };
+
 }
 // {
   home = _: {

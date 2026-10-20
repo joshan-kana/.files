@@ -7,13 +7,21 @@
 
 {
   inherit (moduleRegistry)
-    nix
     theme
     networking
     backups
     ;
 
   dotfiles.users.primary.homeRoot = "/Users";
+
+  nix = editScope moduleRegistry.nix {
+    builders = { inherited, ... }: {
+      # OrbStack runs on this Mac, so use its local SSH port.
+      nix.buildMachines = map (
+        builder: builder // { hostName = "127.0.0.1:32223"; }
+      ) inherited.nix.buildMachines;
+    };
+  };
 
   system =
     extendScope
