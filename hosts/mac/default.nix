@@ -269,16 +269,12 @@
       homebrew.casks = [ "krita" ];
     };
 
-    microsoftAutoUpdate = _: {
-      homebrew.casks = [ "microsoft-auto-update" ];
-    };
-
-    microsoftOffice = _: {
-      homebrew.casks = [ "microsoft-office" ];
-    };
-
-    microsoftTeams = _: {
-      homebrew.casks = [ "microsoft-teams" ];
+    microsoftOfficeSuite = _: {
+      homebrew.casks = [
+        "microsoft-auto-update"
+        "microsoft-office"
+        "microsoft-teams"
+      ];
     };
 
     nativeAccess = _: {
