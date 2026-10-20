@@ -1,12 +1,10 @@
 {
   config,
-  pkgs,
   ...
 }:
 
 {
   services.webhook = {
-    package = pkgs.webhook;
     ip = "127.0.0.1";
     extraArgs = [
       "-max-body-size"

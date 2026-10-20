@@ -36,7 +36,6 @@ in
   eww = _: {
     home = _: {
       programs.eww = {
-        package = pkgs.eww;
         yuckConfig = builtins.readFile ./eww/eww.yuck;
         scssConfig = builtins.readFile ./eww/eww.scss;
       };
@@ -55,7 +54,6 @@ in
   rofi = _: {
     home = _: {
       programs.rofi = {
-        package = pkgs.rofi;
         settings.terminal = terminal;
         plugins = with pkgs; [ rofi-calc ];
       };
