@@ -61,63 +61,15 @@
           };
         };
 
-        gstreamerRuntime = _: {
-          homebrew.casks = [ "gstreamer-runtime" ];
-        };
-
-        gzRendering8 = _: {
-          homebrew = {
-            brews = [ "osrf/simulation/gz-rendering8" ];
-            taps = [
-              "osrf/simulation"
-            ];
-          };
-        };
-
-        moltenVk = _: {
-          homebrew.brews = [ "molten-vk" ];
-        };
-
-        qt5 = _: {
-          homebrew.brews = [ "qt@5" ];
-        };
-
-        speexdsp = _: {
-          homebrew.brews = [ "speexdsp" ];
-        };
-
-        vulkanLoader = _: {
-          homebrew.brews = [ "vulkan-loader" ];
-        };
-
-        zlib = _: {
-          homebrew.brews = [ "zlib" ];
-        };
       };
 
   cli = extendScope moduleRegistry.cli {
-    automake = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.automake ];
-    };
-
     bitwardenCli = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.bitwarden-cli ];
     };
 
-    ccache = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.ccache ];
-    };
-
     esptool = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.esptool ];
-    };
-
-    fio = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.fio ];
-    };
-
-    glslang = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.glslang ];
     };
 
     macShell = _: {
@@ -160,10 +112,6 @@
       environment.systemPackages = [ pkgs.mediainfo ];
     };
 
-    ninja = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.ninja ];
-    };
-
     nixd = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.nixd ];
     };
@@ -180,21 +128,8 @@
       environment.systemPackages = [ pkgs.tio ];
     };
 
-    uv = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.uv ];
-    };
-
     blockGooseCli = _: {
       homebrew.brews = [ "block-goose-cli" ];
-    };
-
-    cocoaWay = _: {
-      homebrew = {
-        brews = [ "j-x-z/tap/cocoa-way" ];
-        taps = [
-          "j-x-z/tap"
-        ];
-      };
     };
 
     crush = _: {
@@ -217,34 +152,6 @@
 
     piCodingAgent = _: {
       homebrew.brews = [ "pi-coding-agent" ];
-    };
-
-    qmk = _: {
-      homebrew = {
-        brews = [ "qmk/qmk/qmk" ];
-        taps = [
-          "qmk/qmk"
-          "osx-cross/arm"
-          "osx-cross/avr"
-        ];
-      };
-    };
-
-    rust = _: {
-      homebrew.brews = [ "rust" ];
-    };
-
-    sessionwiki = _: {
-      homebrew = {
-        brews = [ "youdie006/tap/sessionwiki" ];
-        taps = [
-          "youdie006/tap"
-        ];
-      };
-    };
-
-    waypipeDarwin = _: {
-      homebrew.brews = [ "j-x-z/tap/waypipe-darwin" ];
     };
   };
 
@@ -280,9 +187,6 @@
       homebrew.casks = [ "logi-options+" ];
     };
 
-    xquartz = _: {
-      homebrew.casks = [ "xquartz" ];
-    };
   };
 
   desktopApps = extendScope moduleRegistry.desktopApps {
@@ -420,10 +324,6 @@
 
     qmkToolbox = { pkgs, ... }: {
       environment.systemPackages = [ pkgs.qmk-toolbox-mac ];
-    };
-
-    raspberryPiImager = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.raspberry-pi-imager-mac ];
     };
 
     reaper = { pkgs, ... }: {
