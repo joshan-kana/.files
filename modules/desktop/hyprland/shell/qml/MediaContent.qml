@@ -421,12 +421,69 @@ FocusScope {
                 }
             }
 
-            MediaTransport {
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                runtime: content.runtime
-                theme: content.theme
-                motion: content.motion
-                media: content.media
+                spacing: content.theme.spacing2
+
+                ShellAction {
+                    width: 58
+                    height: 46
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    iconOnly: true
+                    iconHint: true
+                    activeColor: content.theme.roleColor("media")
+                    icon: "󰒝"
+                    title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
+                    shortcut: "S"
+                    active: content.media.shuffled
+                    enabled: content.media.shuffleAvailable
+                    onActivated: content.media.toggleShuffle()
+                }
+
+                ShellAction {
+                    width: 58
+                    height: 46
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    iconOnly: true
+                    iconHint: true
+                    activeColor: content.theme.roleColor("media")
+                    icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
+                    title: "REPEAT " + content.media.repeatLabel
+                    shortcut: "R"
+                    active: content.media.repeatState !== 0
+                    enabled: content.media.repeatAvailable
+                    onActivated: content.media.toggleRepeat()
+                }
+
+                MediaTransport {
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    media: content.media
+                }
+
+                ShellAction {
+                    width: 148
+                    height: 46
+                    runtime: content.runtime
+                    theme: content.theme
+                    motion: content.motion
+                    compact: true
+                    horizontalCompact: true
+                    activeColor: content.theme.roleColor("media")
+                    icon: "󰎄"
+                    title: content.media.available ? "PLAYER " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
+                    shortcut: "P"
+                    active: content.media.playerCount > 1
+                    enabled: content.media.playerCount > 1
+                    onActivated: content.media.cyclePlayer()
+                }
             }
         }
 
@@ -439,60 +496,6 @@ FocusScope {
             }
             height: implicitHeight
             spacing: content.theme.spacing2
-
-            // Separate playback modes from presentation/navigation, so
-            // competing mnemonics never form one dense, unreadable strip.
-            Row {
-                spacing: content.theme.spacing2
-
-                ShellAction {
-                    width: 142
-                    height: 42
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰒝"
-                    title: content.media.shuffled ? "SHUFFLE ON" : "SHUFFLE OFF"
-                    shortcut: "S"
-                    active: content.media.shuffled
-                    enabled: content.media.shuffleAvailable
-                    onActivated: content.media.toggleShuffle()
-                }
-
-                ShellAction {
-                    width: 140
-                    height: 42
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: content.media.repeatState === 1 ? "󰑘" : "󰑖"
-                    title: "REPEAT " + content.media.repeatLabel
-                    shortcut: "R"
-                    active: content.media.repeatState !== 0
-                    enabled: content.media.repeatAvailable
-                    onActivated: content.media.toggleRepeat()
-                }
-
-                ShellAction {
-                    width: 148
-                    height: 42
-                    runtime: content.runtime
-                    theme: content.theme
-                    motion: content.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰎄"
-                    title: content.media.available ? "PLAYER " + (content.media.selectedPlayerIndex + 1) + "/" + content.media.playerCount : "NO PLAYER"
-                    shortcut: "P"
-                    active: content.media.playerCount > 1
-                    enabled: content.media.playerCount > 1
-                    onActivated: content.media.cyclePlayer()
-                }
-            }
 
             Item {
                 width: parent.width
