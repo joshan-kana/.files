@@ -188,9 +188,10 @@ in
 
               blur = {
                 enabled = true;
-                size = 8;
-                passes = 2;
+                size = 15;
+                passes = 3;
                 special = true;
+                new_optimizations = true;
               };
 
               shadow = {
