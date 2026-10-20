@@ -414,7 +414,7 @@ Variants {
                         height: 38
                         verticalAlignment: Text.AlignVCenter
                         text: bar.notificationState.count > 99 ? "99+" : String(bar.notificationState.count)
-                        color: bars.theme.roleColor("media")
+                        color: bars.theme.warning
                         font.family: bars.runtime.fontMono
                         font.pixelSize: bars.theme.fontSize(11)
                         font.weight: Font.DemiBold
