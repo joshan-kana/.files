@@ -5,6 +5,12 @@
     # Nixpkgs: package collections and system modules.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # Declarative Sonarr, Radarr, and Prowlarr application configuration.
+    configarr = {
+      url = "github:raydak-labs/configarr/v1.35.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Hermes Agent: packaged agent and service integration.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
@@ -314,6 +320,7 @@
             home-manager.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
+            ./overlays/configarr.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/tuicr.nix

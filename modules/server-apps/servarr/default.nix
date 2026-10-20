@@ -18,6 +18,14 @@ let
 in
 {
   services = {
+    configarr = {
+      enable = true;
+      package = pkgs.configarr;
+      config = builtins.readFile ./configarr.yml;
+      dataDir = "${appData.root}/configarr";
+      environmentFile = "${server.secretsDir}/configarr.env";
+    };
+
     sonarr = {
       enable = true;
       dataDir = "${appData.root}/sonarr";
@@ -69,6 +77,9 @@ in
   };
 
   systemd = {
+    # Opt-in reconciliation after reviewing the live diff. Do not silently
+    # change application-owned state at activation or on the daily timer.
+    timers.configarr.wantedBy = lib.mkForce [ ];
     services =
       lib.genAttrs
         [
@@ -101,6 +112,20 @@ in
               };
         })
       // {
+        configarr = {
+          environment = {
+            DRY_RUN = "true";
+            STOP_ON_ERROR = "true";
+            TELEMETRY_ENABLED = "false";
+            CONFIGARR_ENFORCE_CONFIG_VALIDATION = "true";
+          };
+          unitConfig.AssertPathExists = "${server.secretsDir}/configarr.env";
+          after = [
+            "sonarr.service"
+            "radarr.service"
+            "prowlarr.service"
+          ];
+        };
         transmission-credentials = {
           description = "Initialize Transmission RPC credentials";
           serviceConfig.Type = "oneshot";
