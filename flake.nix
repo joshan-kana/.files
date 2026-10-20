@@ -141,11 +141,13 @@
         "docs/infrastructure-docs/"
       ];
 
+      gitAttributesText =
+        "# Generated from flake.nix repoToolExcludedDirs.\n"
+        + lib.concatMapStringsSep "\n" (dir: "${dir}** -whitespace") repoToolExcludedDirs
+        + "\n";
+
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
-      gitPathspecExcludeArgs = lib.concatMapStringsSep " " (
-        dir: lib.escapeShellArg ":(exclude)${dir}**"
-      ) repoToolExcludedDirs;
 
       treefmtFor =
         system:
@@ -265,7 +267,7 @@
             staged-whitespace = {
               enable = true;
               name = "Staged whitespace";
-              entry = "${lib.getExe pkgs.git} diff --check --cached -- . ${gitPathspecExcludeArgs}";
+              entry = "${lib.getExe pkgs.git} diff --cached --check";
               pass_filenames = false;
               always_run = true;
             };
@@ -541,6 +543,11 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          git-attributes =
+            assert lib.assertMsg (
+              builtins.readFile ./.gitattributes == gitAttributesText
+            ) "Stale .gitattributes; run nix run .#update-git-attributes";
+            pkgs.emptyFile;
           server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
           semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
           semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
@@ -743,6 +750,19 @@
             type = "app";
             program = lib.getExe systemUpdate;
             meta.description = "Update Nix inputs and container locks, then check the flake";
+          };
+          update-git-attributes = {
+            type = "app";
+            program = lib.getExe (
+              pkgs.writeShellApplication {
+                name = "update-git-attributes";
+                runtimeInputs = [ pkgs.git ];
+                text = ''
+                  cp ${pkgs.writeText "gitattributes" gitAttributesText} "$(git rev-parse --show-toplevel)/.gitattributes"
+                '';
+              }
+            );
+            meta.description = "Regenerate .gitattributes from repository tool exclusions";
           };
           update-container-lock = {
             type = "app";
