@@ -167,6 +167,35 @@ let
     '';
   };
 
+  windowEffectsToggle = pkgs.writeShellApplication {
+    name = "linux-desktop-window-effects-toggle";
+    runtimeInputs = [ pkgs.quickshell ];
+    text = ''
+      # The shell owns and persists this preference; never update Hyprland
+      # independently of the saved state. Target its Shell ID rather than the
+      # default Quickshell config, which does not exist on these hosts.
+      instance=""
+      candidate=""
+      while IFS= read -r line; do
+        case "$line" in
+          "Instance "*:)
+            candidate="''${line#Instance }"
+            candidate="''${candidate%:}"
+            ;;
+          "  Shell ID: linux-desktop")
+            instance="$candidate"
+            break
+            ;;
+        esac
+      done < <(quickshell list --all)
+      if [ -z "$instance" ]; then
+        printf 'Linux desktop shell is not running.\n' >&2
+        exit 1
+      fi
+      quickshell ipc --id "$instance" call desktop toggleWindowEffects
+    '';
+  };
+
   resourceProbe = pkgs.writeShellApplication {
     name = "linux-desktop-resource-probe";
     text = ''
@@ -1613,6 +1642,7 @@ in
       services.awww.enable = true;
 
       home.packages = [
+        windowEffectsToggle
         launcher
         paletteSearch
         developmentLauncher

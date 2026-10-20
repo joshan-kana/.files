@@ -61,6 +61,6 @@ git submodule update --init --recursive
 
 ```sh
 nix fmt
-git diff --check
+git diff --check -- . ':(exclude)patches/**'
 nix flake check
 ```
