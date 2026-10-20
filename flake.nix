@@ -5,6 +5,16 @@
     # Nixpkgs: package collections and system modules.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # Declarative Sonarr, Radarr, and Prowlarr application configuration.
+    # Use the upstream flake and its own dependency lock.
+    configarr.url = "github:raydak-labs/configarr";
+
+    # TRaSH custom-format definitions, pinned by flake.lock.
+    trash-guides = {
+      url = "github:TRaSH-Guides/Guides";
+      flake = false;
+    };
+
     # Hermes Agent: packaged agent and service integration.
     hermes-agent = {
       url = "github:NousResearch/hermes-agent";
@@ -314,6 +324,7 @@
             home-manager.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
+            ./overlays/configarr.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/tuicr.nix
