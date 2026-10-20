@@ -27,18 +27,22 @@ in
     };
 
   brave = _: {
-    environment.systemPackages = [ pkgs.brave ];
+    home = _: {
+      home.packages = [ pkgs.brave ];
+    };
   };
 
   bitwarden = _: {
-    environment.systemPackages = [ pkgs.bitwarden-desktop ];
+    home = _: {
+      home.packages = [ pkgs.bitwarden-desktop ];
+    };
   };
 
   warp =
     _:
     (
       lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.warp-terminal ];
+        home = _: { home.packages = [ pkgs.warp-terminal ]; };
       }
       // lib.optionalAttrs isDarwin {
         homebrew.casks = [ "warp" ];
@@ -58,16 +62,17 @@ in
   chromium =
     _:
     lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.chromium ];
+      home = _: { home.packages = [ pkgs.chromium ]; };
       programs.chromium.initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
     };
 
   zen = _: {
-    environment.systemPackages = [ pkgs.zen-browser-beta ];
+    home = _: {
+      home.packages = [ pkgs.zen-browser-beta ];
+    };
   };
 
   firefox = _: {
-    environment.systemPackages = lib.optionals isDarwin [ pkgs.firefox-bin ];
     home = _: {
       programs.firefox =
         lib.optionalAttrs isDarwin {
@@ -113,38 +118,40 @@ in
     };
   };
 
-  thunderbird =
-    _:
-    lib.optionalAttrs isDarwin {
-      environment.systemPackages = [ pkgs.thunderbird-bin ];
-    }
-    // lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.thunderbird ];
+  thunderbird = _: {
+    home = _: {
+      home.packages = [ (if isDarwin then pkgs.thunderbird-bin else pkgs.thunderbird) ];
     };
+  };
 
   obsidian = _: {
-    environment.systemPackages = [ pkgs.obsidian ];
+    home = _: {
+      home.packages = [ pkgs.obsidian ];
+    };
   };
 
   gimp =
     _:
     {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.gimp ];
-      };
+      home =
+        _:
+        lib.optionalAttrs isLinux {
+          home.packages = [ pkgs.gimp ];
+        };
     }
     // lib.optionalAttrs isDarwin {
       homebrew.casks = [ "gimp" ];
     };
 
   githubDesktop = _: {
-    config = lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.github-desktop ];
-    };
+    home =
+      _:
+      lib.optionalAttrs isLinux {
+        home.packages = [ pkgs.github-desktop ];
+      };
   };
 
   vscode = _: {
-    environment.systemPackages = [ pkgs.vscode ];
     home = _: {
       programs.vscode.profiles.default.userSettings = lib.optionalAttrs isLinux {
         "window.titleBarStyle" = "custom";
@@ -154,14 +161,16 @@ in
   };
 
   pycharm = _: {
-    environment.systemPackages = [ pkgs.jetbrains.pycharm ];
+    home = _: {
+      home.packages = [ pkgs.jetbrains.pycharm ];
+    };
   };
 
   libreoffice =
     _:
     (
       lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.libreoffice ];
+        home = _: { home.packages = [ pkgs.libreoffice ]; };
       }
       // lib.optionalAttrs isDarwin {
         homebrew.casks = [ "libreoffice" ];
@@ -176,7 +185,9 @@ in
   };
 
   moonlight = _: {
-    environment.systemPackages = [ pkgs.moonlight-qt ];
+    home = _: {
+      home.packages = [ pkgs.moonlight-qt ];
+    };
   };
 
   jellyfin =
@@ -192,7 +203,6 @@ in
       };
     in
     {
-      environment.systemPackages = [ pkgs.jellyfin-mpv-shim ] ++ lib.optionals isDarwin [ pkgs.mpv ];
       home =
         {
           config,
@@ -200,7 +210,10 @@ in
           pkgs,
           ...
         }:
-        lib.optionalAttrs isLinux {
+        {
+          home.packages = [ pkgs.jellyfin-mpv-shim ];
+        }
+        // lib.optionalAttrs isLinux {
           services.jellyfin-mpv-shim = {
             enable = true;
             inherit settings;
@@ -234,7 +247,7 @@ in
     _:
     (
       lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.vlc ];
+        home = _: { home.packages = [ pkgs.vlc ]; };
       }
       // lib.optionalAttrs isDarwin {
         homebrew.casks = [ "vlc" ];
@@ -268,7 +281,7 @@ in
         ];
       }
       // lib.optionalAttrs isDarwin {
-        environment.systemPackages = [ pkgs.ollama ];
+        home = _: { home.packages = [ pkgs.ollama ]; };
         launchd.user.agents.ollama.serviceConfig = {
           ProgramArguments = [
             (lib.getExe pkgs.ollama)
@@ -295,24 +308,30 @@ in
     };
 
   discord = _: {
-    environment.systemPackages = [ pkgs.discord ];
+    home = _: {
+      home.packages = [ pkgs.discord ];
+    };
   };
 
   dropbox =
     _:
     {
-      config = lib.optionalAttrs isLinux {
-        environment.systemPackages = [ pkgs.dropbox ];
-      };
+      home =
+        _:
+        lib.optionalAttrs isLinux {
+          home.packages = [ pkgs.dropbox ];
+        };
     }
     // lib.optionalAttrs isDarwin {
       homebrew.casks = [ "dropbox" ];
     };
 
   onlyoffice = _: {
-    config = lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.onlyoffice-desktopeditors ];
-    };
+    home =
+      _:
+      lib.optionalAttrs isLinux {
+        home.packages = [ pkgs.onlyoffice-desktopeditors ];
+      };
   };
 
   twingate = _: {
@@ -323,15 +342,15 @@ in
 }
 // lib.optionalAttrs isLinux {
   filelight = _: {
-    environment.systemPackages = [ pkgs.kdePackages.filelight ];
+    home = _: { home.packages = [ pkgs.kdePackages.filelight ]; };
   };
   gparted = _: {
-    environment.systemPackages = [ pkgs.gparted ];
+    home = _: { home.packages = [ pkgs.gparted ]; };
   };
   nautilus = _: {
-    environment.systemPackages = [ pkgs.nautilus ];
+    home = _: { home.packages = [ pkgs.nautilus ]; };
   };
   waypipe = _: {
-    environment.systemPackages = [ pkgs.waypipe ];
+    home = _: { home.packages = [ pkgs.waypipe ]; };
   };
 }

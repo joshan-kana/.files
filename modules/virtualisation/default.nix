@@ -33,21 +33,21 @@ lib.optionalAttrs isLinux {
     Quickemu tooling for disposable desktop virtual machines.
   */
   quickemu = _: {
-    environment.systemPackages = [ pkgs.quickemu ];
+    home = _: { home.packages = [ pkgs.quickemu ]; };
   };
 
   /**
     Distrobox tooling for user-managed development containers.
   */
   distrobox = _: {
-    environment.systemPackages = [ pkgs.distrobox ];
+    home = _: { home.packages = [ pkgs.distrobox ]; };
   };
 
   /**
     Bottles application support.
   */
   bottles = _: {
-    environment.systemPackages = [ pkgs.bottles ];
+    home = _: { home.packages = [ pkgs.bottles ]; };
   };
 
   /**

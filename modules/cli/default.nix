@@ -119,25 +119,11 @@ in
     home.sessionVariables = sessionVariables;
   };
 
-  # The Darwin system module has no environment.sessionVariables option.
-  # Home Manager still receives the same shared values on both systems.
-  config = lib.optionalAttrs isLinux {
-    environment.sessionVariables = sessionVariables;
-  };
-
-  shellAliases =
-    _:
-    let
-      aliases = {
-        sudo = "sudo ";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
-      home = _: {
-        home.shellAliases = aliases;
-      };
+  shellAliases = _: {
+    home = _: {
+      home.shellAliases.sudo = "sudo ";
     };
+  };
 
   systemCommands =
     _:
@@ -152,25 +138,6 @@ in
       // lib.optionalAttrs isLinux {
         rebuild = action: ''nh os ${action} --hostname "$FLK_PROFILE" $NIXOS_REBUILD_FLAGS'';
       };
-      aliases = {
-        syscd = commands.cd;
-        scd = commands.cd;
-        sysfu = commands.systemUpdate;
-        sfu = commands.systemUpdate;
-        sysbld = commands.rebuild "build";
-        sbld = commands.rebuild "build";
-        sysup = commands.rebuild "switch";
-        sup = commands.rebuild "switch";
-        edit = "edit-config";
-        sedit = "edit-config";
-        sysedit = "edit-config";
-      }
-      // lib.optionalAttrs isLinux {
-        sysboot = commands.rebuild "boot";
-        sboot = commands.rebuild "boot";
-        systest = commands.rebuild "test";
-        stest = commands.rebuild "test";
-      };
       editConfig = pkgs.writeShellApplication {
         name = "edit-config";
         text = ''
@@ -183,22 +150,33 @@ in
       };
     in
     {
-      environment.shellAliases = aliases;
-      environment.systemPackages = [ editConfig ];
-
       home = _: {
         home.packages = [ editConfig ];
-        home.shellAliases = aliases;
+        home.shellAliases = {
+          syscd = commands.cd;
+          scd = commands.cd;
+          sysfu = commands.systemUpdate;
+          sfu = commands.systemUpdate;
+          sysbld = commands.rebuild "build";
+          sbld = commands.rebuild "build";
+          sysup = commands.rebuild "switch";
+          sup = commands.rebuild "switch";
+          edit = "edit-config";
+          sedit = "edit-config";
+          sysedit = "edit-config";
+        }
+        // lib.optionalAttrs isLinux {
+          sysboot = commands.rebuild "boot";
+          sboot = commands.rebuild "boot";
+          systest = commands.rebuild "test";
+          stest = commands.rebuild "test";
+        };
       };
 
       vm =
         { pkgs, ... }:
         lib.optionalAttrs isLinux (
           let
-            aliases = {
-              sysvm = "build-vm";
-              svm = "build-vm";
-            };
             buildVm = pkgs.writeShellApplication {
               name = "build-vm";
               text = ''
@@ -208,11 +186,11 @@ in
             };
           in
           {
-            environment.shellAliases = aliases;
-            environment.systemPackages = [ buildVm ];
-
             home = _: {
-              home.shellAliases = aliases;
+              home.shellAliases = {
+                sysvm = "build-vm";
+                svm = "build-vm";
+              };
               home.packages = [ buildVm ];
             };
           }
@@ -220,24 +198,20 @@ in
     };
 
   nh = args: {
-    home = args: {
-      inherit ((nhConfig args)) programs;
-    };
+    # The rebuild helper must also be available to system administrators.
     config = lib.optionalAttrs isLinux {
       programs = lib.recursiveUpdate (nhConfig args).programs {
         nh.enable = true;
       };
     };
+    home = args: {
+      inherit ((nhConfig args)) programs;
+    };
   };
 
   direnv =
-    args:
+    _args:
     let
-      aliases = {
-        da = "direnv allow";
-        db = "direnv block";
-        dr = "direnv reload";
-      };
       zshAliases.dt = "direnv_hook_toggle";
       hook = ''
         _direnv_hook() {
@@ -281,19 +255,12 @@ in
       '';
     in
     {
-      environment.shellAliases = aliases;
-      config = lib.optionalAttrs isLinux {
-        programs = lib.recursiveUpdate (direnvConfig args).programs {
-          direnv.enable = true;
-          zsh = {
-            shellAliases = zshAliases;
-            interactiveShellInit = hook;
-          };
-        };
-      };
-
       home = args: {
-        home.shellAliases = aliases;
+        home.shellAliases = {
+          da = "direnv allow";
+          db = "direnv block";
+          dr = "direnv reload";
+        };
         programs = (direnvConfig args).programs // {
           zsh = {
             shellAliases = zshAliases;
@@ -306,9 +273,6 @@ in
   clipboard =
     { lib, pkgs, ... }:
     let
-      aliases = {
-        cpd = "copy-path";
-      };
       copyPath = pkgs.writeShellApplication {
         name = "copy-path";
         runtimeInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.wl-clipboard ];
@@ -327,31 +291,19 @@ in
       };
     in
     {
-      environment.systemPackages = [ copyPath ];
-      environment.shellAliases = aliases;
-
       home = _: {
         home.packages = [ copyPath ];
-        home.shellAliases = aliases;
+        home.shellAliases.cpd = "copy-path";
       };
     };
 
   ollama =
     _:
-    lib.optionalAttrs isLinux (
-      let
-        aliases = {
-          ollama = "docker exec -it ollama ollama";
-        };
-      in
-      {
-        environment.shellAliases = aliases;
-
-        home = _: {
-          home.shellAliases = aliases;
-        };
-      }
-    );
+    lib.optionalAttrs isLinux {
+      home = _: {
+        home.shellAliases.ollama = "docker exec -it ollama ollama";
+      };
+    };
 
   jujutsu =
     _:
@@ -423,33 +375,24 @@ in
           exec tuicr pr "$url"
         '';
       };
-      aliases = {
-        j = "jj";
-        jpl = "jj git fetch && jj rebase -d 'trunk()'";
-        js = "jj st";
-        jd = "jj diff";
-        jl = "jj log";
-        jpr = "jj-pr-view";
-        jr = "jj-review";
-        jtr = "jj-tuicr-review";
-      };
     in
     {
-      environment.systemPackages = [
-        pkgs.jujutsu
-        prView
-        review
-        tuicrReview
-      ];
-      environment.shellAliases = aliases;
-
       home = _: {
         home.packages = [
           prView
           review
           tuicrReview
         ];
-        home.shellAliases = aliases;
+        home.shellAliases = {
+          j = "jj";
+          jpl = "jj git fetch && jj rebase -d 'trunk()'";
+          js = "jj st";
+          jd = "jj diff";
+          jl = "jj log";
+          jpr = "jj-pr-view";
+          jr = "jj-review";
+          jtr = "jj-tuicr-review";
+        };
         programs.jujutsu = {
           enable = true;
           settings.user = gitSettings.user;
@@ -483,40 +426,35 @@ in
           exec git stash push -m "$message"
         '';
       };
-      aliases = {
-        gs = "git status";
-        gf = "git fetch --prune";
-        gl = "git log";
-        gb = "git branch -avv";
-        gw = "git switch";
-        gou = "git checkout";
-        gd = "git diff";
-        ga = "git add";
-        grt = "git restore";
-        gc = "git commit";
-        gca = "git commit -a";
-        gst = "git-stash-editor";
-        gpl = "git pull";
-        gph = "git push";
-      };
     in
     {
-      environment.systemPackages = [ stash ];
-      environment.shellAliases = aliases;
       home = _: {
         home.packages = [ stash ];
-        home.shellAliases = aliases;
+        home.shellAliases = {
+          gs = "git status";
+          gf = "git fetch --prune";
+          gl = "git log";
+          gb = "git branch -avv";
+          gw = "git switch";
+          gou = "git checkout";
+          gd = "git diff";
+          ga = "git add";
+          grt = "git restore";
+          gc = "git commit";
+          gca = "git commit -a";
+          gst = "git-stash-editor";
+          gpl = "git pull";
+          gph = "git push";
+        };
         programs.git = {
           settings = gitSettings;
           signing.format = gitSigningFormat;
         };
       };
 
+      # Git remains available for system recovery even without Home Manager.
       config = lib.optionalAttrs isLinux {
         programs.git.enable = true;
-        programs.git.config = gitSettings // {
-          gpg.format = gitSigningFormat;
-        };
       };
 
       delta = _: {
@@ -531,165 +469,125 @@ in
         };
       };
 
-      tuicr =
-        _:
-        let
-          aliases = {
-            tre = "tuicr -r origin/HEAD..HEAD -w";
-          };
-        in
-        {
-          environment.shellAliases = aliases;
-          home = _: {
-            home.packages = [ pkgs.tuicr ];
-            home.shellAliases = aliases;
-            programs.git.settings.alias.review = "!tuicr -w";
-            xdg.configFile."tuicr/config.toml".source = tuicrConfig;
-          };
+      tuicr = _: {
+        home = _: {
+          home.packages = [ pkgs.tuicr ];
+          home.shellAliases.tre = "tuicr -r origin/HEAD..HEAD -w";
+          programs.git.settings.alias.review = "!tuicr -w";
+          xdg.configFile."tuicr/config.toml".source = tuicrConfig;
         };
+      };
 
-      lazygit =
-        args:
-        {
-          home = args: {
-            inherit (lazygitConfig args) programs;
-          };
-        }
-        // lib.optionalAttrs isLinux {
+      lazygit = _args: {
+        home = args: {
           inherit (lazygitConfig args) programs;
         };
+      };
     };
 
-  zsh =
-    args:
-    let
-      aliases = {
+  zsh = args: {
+    config = lib.optionalAttrs isLinux {
+      programs.zsh = (zshConfig args).programs.zsh // {
+        enable = true;
+        enableBashCompletion = true;
+      };
+      users.defaultUserShell = pkgs.zsh;
+    };
+
+    home = args: {
+      home.shellAliases = {
         bk = "cd ..";
         sz = "du -sh";
       };
-    in
-    {
-      environment.shellAliases = aliases;
-      config = lib.optionalAttrs isLinux {
-        programs.zsh = (zshConfig args).programs.zsh // {
-          enable = true;
-          enableBashCompletion = true;
-        };
-        users.defaultUserShell = pkgs.zsh;
-      };
+      programs.zsh = (zshConfig args).programs.zsh // {
+        autosuggestion.enable = true;
+        syntaxHighlighting.enable = true;
+        plugins = [
+          {
+            name = "zsh-fzf-tab";
+            file = "share/fzf-tab/fzf-tab.plugin.zsh";
+            src = pkgs.zsh-fzf-tab;
+          }
+        ];
+        initContent = ''
+          bindkey "^[[1;5D" backward-word
+          bindkey "^[[1;5C" forward-word
+          bindkey "^H" backward-kill-word
+          bindkey "^[[3;3~" kill-word
 
-      home = args: {
-        home.shellAliases = aliases;
-        programs.zsh = (zshConfig args).programs.zsh // {
-          autosuggestion.enable = true;
-          syntaxHighlighting.enable = true;
-          plugins = [
-            {
-              name = "zsh-fzf-tab";
-              file = "share/fzf-tab/fzf-tab.plugin.zsh";
-              src = pkgs.zsh-fzf-tab;
-            }
-          ];
-          initContent = ''
-            bindkey "^[[1;5D" backward-word
-            bindkey "^[[1;5C" forward-word
-            bindkey "^H" backward-kill-word
-            bindkey "^[[3;3~" kill-word
+          autoload -U edit-command-line
+          zle -N edit-command-line
+          bindkey '^xe' edit-command-line
+          bindkey '^x^e' edit-command-line
 
-            autoload -U edit-command-line
-            zle -N edit-command-line
-            bindkey '^xe' edit-command-line
-            bindkey '^x^e' edit-command-line
-
-            bindkey -v '^?' backward-delete-char
-          '';
-        };
+          bindkey -v '^?' backward-delete-char
+        '';
       };
     };
+  };
 
   yazi = _: {
-    config = lib.optionalAttrs isLinux {
-      programs.yazi.enable = true;
-    };
-
     home = _: {
       programs.yazi.shellWrapperName = "y";
     };
   };
 
-  gh =
-    _:
-    let
-      aliases = {
-        dh = "gh dash";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
-      environment.systemPackages = [
-        pkgs.gh
+  gh = _: {
+    home = _: {
+      home.shellAliases.dh = "gh dash";
+      home.packages = [ pkgs.gh-dash ];
+      programs.gh.extensions = [
         pkgs.gh-dash
+        pkgs.gh-stack
       ];
-      home = _: {
-        home.shellAliases = aliases;
-        programs.gh.extensions = [
-          pkgs.gh-dash
-          pkgs.gh-stack
-        ];
-        xdg.configFile."gh-dash/config.yml" = {
-          source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
-            defaults = {
-              view = "issues";
-              layout = {
-                issues = {
-                  repo.hidden = true;
-                  creator.hidden = true;
-                  reactions.hidden = true;
-                  comments.hidden = true;
-                  updatedAt.hidden = true;
-                  createdAt.hidden = true;
-                };
-                projects = {
-                  enabled = true;
-                  fields = [
-                    {
-                      name = "Status";
-                      width = 12;
-                    }
-                    {
-                      name = "Priority";
-                      width = 10;
-                    }
-                    {
-                      name = "Area";
-                      width = 14;
-                    }
-                    {
-                      name = "Kind";
-                      width = 12;
-                    }
-                  ];
-                };
+      xdg.configFile."gh-dash/config.yml" = {
+        source = (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+          defaults = {
+            view = "issues";
+            layout = {
+              issues = {
+                repo.hidden = true;
+                creator.hidden = true;
+                reactions.hidden = true;
+                comments.hidden = true;
+                updatedAt.hidden = true;
+                createdAt.hidden = true;
+              };
+              projects = {
+                enabled = true;
+                fields = [
+                  {
+                    name = "Status";
+                    width = 12;
+                  }
+                  {
+                    name = "Priority";
+                    width = 10;
+                  }
+                  {
+                    name = "Area";
+                    width = 14;
+                  }
+                  {
+                    name = "Kind";
+                    width = 12;
+                  }
+                ];
               };
             };
-            include = [ "stylix.yml" ];
-            pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
-            repoPaths = {
-              "joshan-kana/.files" = repoPath;
-            };
-            theme.ui.table.compact = true;
           };
+          include = [ "stylix.yml" ];
+          pager.diff = ''sh -c 'pager="$(git config --get pager.diff || git config --get core.pager)"; [ -n "$pager" ] || exec cat; exec sh -c "$pager"' '';
+          repoPaths = {
+            "joshan-kana/.files" = repoPath;
+          };
+          theme.ui.table.compact = true;
         };
       };
     };
+  };
 
-  starship = args: {
-    config = lib.optionalAttrs isLinux {
-      programs = lib.recursiveUpdate (starshipConfig args).programs {
-        starship.enable = true;
-      };
-    };
-
+  starship = _args: {
     home = args: {
       programs.starship = (starshipConfig args).programs.starship // {
         enableZshIntegration = true;
@@ -736,28 +634,18 @@ in
     };
   };
 
-  eza =
-    _:
-    let
-      aliases = {
+  eza = _: {
+    home = _: {
+      home.shellAliases = {
         l = "eza -a";
         ll = "eza -lah";
         ls = "eza";
       };
-    in
-    {
-      environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.eza ];
-
-      home = _: {
-        home.shellAliases = aliases;
-        programs.eza = { };
-      };
+      programs.eza = { };
     };
+  };
 
   htop = _: {
-    environment.systemPackages = [ pkgs.htop ];
-
     home = _: {
       programs.htop = { };
     };
@@ -769,61 +657,41 @@ in
     };
   };
 
-  neovim =
-    args:
-    let
-      aliases = {
-        v = "nvim";
+  neovim = _args: {
+    home = args: {
+      home.shellAliases.v = "nvim";
+      programs.neovim = (neovimConfig args).programs.neovim // {
+        extraConfig = ''
+          autocmd BufRead * autocmd FileType <buffer> ++once
+          \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
+        '';
       };
-    in
-    {
-      config = lib.optionalAttrs isLinux {
-        programs = lib.recursiveUpdate (neovimConfig args).programs {
-          neovim.enable = true;
-        };
-      };
-      environment.shellAliases = aliases;
+    };
+  };
 
-      home = args: {
-        home.shellAliases = aliases;
-        programs.neovim = (neovimConfig args).programs.neovim // {
-          extraConfig = ''
-            autocmd BufRead * autocmd FileType <buffer> ++once
-            \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
-          '';
+  mpv = _: {
+    home = _: {
+      home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
+      programs.mpv = {
+        scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
+        config = {
+          demuxer-max-bytes = "3GiB";
+          demuxer-max-back-bytes = "256MiB";
         };
       };
     };
-
-  mpv =
-    _:
-    let
-      aliases = {
-        p = "mpv --audio-pitch-correction=no --loop=yes";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.mpv ];
-
-      home = _: {
-        home.shellAliases = aliases;
-        programs.mpv = {
-          scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
-          config = {
-            demuxer-max-bytes = "3GiB";
-            demuxer-max-back-bytes = "256MiB";
-          };
-        };
-      };
-    };
+  };
 
   vim = _: {
-    environment.systemPackages = [ pkgs.vim ];
+    home = _: {
+      home.packages = [ pkgs.vim ];
+    };
   };
 
   wget = _: {
-    environment.systemPackages = [ pkgs.wget ];
+    home = _: {
+      home.packages = [ pkgs.wget ];
+    };
   };
 
   lshw =
@@ -832,41 +700,29 @@ in
       environment.systemPackages = [ pkgs.lshw ];
     };
 
-  fastfetch =
-    _:
-    let
-      aliases = {
-        neofetch = "fastfetch";
-      };
-    in
-    {
-      environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.fastfetch ];
-
-      home = _: {
-        home.packages = [ pkgs.fastfetch ];
-        home.shellAliases = aliases;
-      };
+  fastfetch = _: {
+    home = _: {
+      home.packages = [ pkgs.fastfetch ];
+      home.shellAliases.neofetch = "fastfetch";
     };
+  };
 
   tree = _: {
-    environment.systemPackages = [ pkgs.tree ];
-
     home = _: {
       home.packages = [ pkgs.tree ];
     };
   };
 
   glow = _: {
-    environment.systemPackages = [ pkgs.glow ];
-
     home = _: {
       home.packages = [ pkgs.glow ];
     };
   };
 
   stow = _: {
-    environment.systemPackages = [ pkgs.stow ];
+    home = _: {
+      home.packages = [ pkgs.stow ];
+    };
   };
 
   systemdManagerTui =
@@ -876,11 +732,15 @@ in
     };
 
   youtubeTui = _: {
-    environment.systemPackages = [ pkgs.youtube-tui ];
+    home = _: {
+      home.packages = [ pkgs.youtube-tui ];
+    };
   };
 
   ytDlp = _: {
-    environment.systemPackages = [ pkgs.yt-dlp ];
+    home = _: {
+      home.packages = [ pkgs.yt-dlp ];
+    };
   };
 
   killall =
@@ -896,31 +756,45 @@ in
     };
 
   trashCli = _: {
-    environment.systemPackages = [ pkgs.trash-cli ];
+    home = _: {
+      home.packages = [ pkgs.trash-cli ];
+    };
   };
 
   gnumake = _: {
-    environment.systemPackages = [ pkgs.gnumake ];
+    home = _: {
+      home.packages = [ pkgs.gnumake ];
+    };
   };
 
   devbox = _: {
-    environment.systemPackages = [ pkgs.devbox ];
+    home = _: {
+      home.packages = [ pkgs.devbox ];
+    };
   };
 
   has = _: {
-    environment.systemPackages = [ pkgs.has ];
+    home = _: {
+      home.packages = [ pkgs.has ];
+    };
   };
 
   nvd = _: {
-    environment.systemPackages = [ pkgs.nvd ];
+    home = _: {
+      home.packages = [ pkgs.nvd ];
+    };
   };
 
   nixTree = _: {
-    environment.systemPackages = [ pkgs.nix-tree ];
+    home = _: {
+      home.packages = [ pkgs.nix-tree ];
+    };
   };
 
   python3 = _: {
-    environment.systemPackages = [ pkgs.python3 ];
+    home = _: {
+      home.packages = [ pkgs.python3 ];
+    };
   };
 
   ncmpcpp = _: {
@@ -950,8 +824,6 @@ in
   };
 
   dust = _: {
-    environment.systemPackages = [ pkgs.dust ];
-
     home = _: {
       home.packages = [ pkgs.dust ];
     };
@@ -988,30 +860,23 @@ in
     };
   };
 
-  spotifyPlayer =
-    _:
-    let
-      aliases = {
-        sp = "spotify_player";
-      };
-    in
-    {
-      home = _: {
-        programs.spotify-player = {
-          enable = true;
-          settings = {
-            client_id_command = {
-              command = "cat";
-              args = [
-                "${dotfiles.secretsDir}/spotify-client-id"
-              ];
-            };
-
-            login_redirect_uri = "http://127.0.0.1:8989/login";
+  spotifyPlayer = _: {
+    home = _: {
+      programs.spotify-player = {
+        enable = true;
+        settings = {
+          client_id_command = {
+            command = "cat";
+            args = [
+              "${dotfiles.secretsDir}/spotify-client-id"
+            ];
           };
+
+          login_redirect_uri = "http://127.0.0.1:8989/login";
         };
-        home.shellAliases = aliases;
       };
+      home.shellAliases.sp = "spotify_player";
     };
+  };
 
 }

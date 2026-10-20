@@ -19,10 +19,12 @@ lib.optionalAttrs isLinux {
   };
   services.pulseaudio.enable = false;
 
-  environment.systemPackages = with pkgs; [
-    qjackctl
-    pavucontrol
-  ];
+  home = _: {
+    home.packages = with pkgs; [
+      qjackctl
+      pavucontrol
+    ];
+  };
 
   easyeffects = _: {
     home = _: {

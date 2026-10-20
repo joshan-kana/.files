@@ -40,8 +40,8 @@ in
     repositorySubdir = configurationFlakeSubdirectory;
   };
 
-  environment.shellAliases = {
-    cw = "comin watch";
+  home = _: {
+    home.shellAliases.cw = "comin watch";
   };
 
   webhook =

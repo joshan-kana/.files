@@ -42,11 +42,11 @@
 
   cli = extendScope moduleRegistry.cli {
     nvtop = _: {
-      environment.systemPackages = [ pkgs.nvtopPackages.full ];
+      home = _: { home.packages = [ pkgs.nvtopPackages.full ]; };
     };
 
     intelGpuTools = _: {
-      environment.systemPackages = [ pkgs.intel-gpu-tools ];
+      home = _: { home.packages = [ pkgs.intel-gpu-tools ]; };
     };
   };
 
