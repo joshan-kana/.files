@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   pkgs,
   lib,
   system,
@@ -45,13 +44,13 @@ in
 {
   nixpkgs.config.allowUnfree = true;
   nix = {
-    package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-cli;
+    package = pkgs.determinate-nix-cli;
     inherit settings;
   };
 }
 // lib.optionalAttrs isLinux {
   environment.systemPackages = [
-    inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.nix-manual-manpages-only
+    pkgs.determinate-nix-manpages
   ];
 
 }

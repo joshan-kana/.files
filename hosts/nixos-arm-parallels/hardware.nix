@@ -3,7 +3,6 @@
 # to /etc/nixos/configuration.nix instead.
 {
   lib,
-  pkgs,
   ...
 }:
 
@@ -51,14 +50,6 @@
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
   hardware.parallels = {
     enable = true;
-    package = pkgs.prl-tools.overrideAttrs (
-      _finalAttrs: previousAttrs: {
-        version = "27.0.0-58628";
-        src = previousAttrs.src.overrideAttrs {
-          outputHash = "sha256-WH3Ivc+ahWzlAbBpjlh37yUtSCIb27TqvxJmrR1Rq+8=";
-        };
-      }
-    );
   };
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "prl-tools" ];
 

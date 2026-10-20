@@ -913,7 +913,7 @@ in
 
   ncmpcpp = _: {
     home = _: {
-      programs.ncmpcpp.package = pkgs.ncmpcpp.override { visualizerSupport = true; };
+      programs.ncmpcpp = { };
     };
   };
 

@@ -1,5 +1,4 @@
 {
-  inputs,
   lib,
   pkgs,
   system,
@@ -46,7 +45,7 @@ in
   };
 
   zen = _: {
-    environment.systemPackages = [ inputs.zen-browser.packages.${system}.beta ];
+    environment.systemPackages = [ pkgs.zen-browser-beta ];
   };
 
   firefox = _: {
