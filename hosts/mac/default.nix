@@ -26,6 +26,11 @@
   system =
     extendScope
       (editScope moduleRegistry.system {
+        identity = _: {
+          # DHCP host records must not shadow the roaming mac.home failover alias.
+          networking.hostName = "joshans-macbook-pro";
+        };
+
         autoDeploy = _: {
           # OrbStack occupies port 4243 on this Mac.
           services.comin.exporter = {
