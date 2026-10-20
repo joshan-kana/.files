@@ -114,6 +114,7 @@ in
         exec = command: ''hl.dsp.exec_cmd("${command}")'';
         keybindings = import ./keybindings.nix {
           inherit terminal;
+          browser = config.dotfiles.defaults.browser;
         };
         globalKeybindings = lib.filter (binding: binding.submap == null) keybindings;
         launcherKeybindings = lib.filter (binding: binding.submap == "launcher") keybindings;
