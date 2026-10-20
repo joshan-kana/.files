@@ -42,12 +42,14 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./libreoffice
+    ./linux-desktop-spectrum
     ./notion
     ./open-webui-desktop
     ./open-webui-computer
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./squirreldisk
     ./spicetify
