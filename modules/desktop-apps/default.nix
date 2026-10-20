@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   system,
@@ -9,6 +10,21 @@ let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
 in
 {
+  home =
+    _:
+    lib.optionalAttrs isLinux {
+      xdg.mimeApps = {
+        enable = true;
+        defaultApplications = lib.genAttrs [
+          "text/html"
+          "application/xhtml+xml"
+          "x-scheme-handler/http"
+          "x-scheme-handler/https"
+        ] (_: "${config.dotfiles.defaults.browser}.desktop");
+      };
+      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
+    };
+
   brave = _: {
     environment.systemPackages = [ pkgs.brave ];
   };

@@ -187,6 +187,12 @@ in
       description = "Default editor executable used by command-line tools.";
     };
 
+    defaults.browser = mkOption {
+      type = types.str;
+      default = "zen-beta";
+      description = "Default browser executable used by desktop integrations.";
+    };
+
     services.ollama.url = mkOption {
       type = types.str;
       default = "http://localhost:11434/v1";
