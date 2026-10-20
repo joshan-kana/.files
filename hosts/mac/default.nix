@@ -26,6 +26,11 @@
   system =
     extendScope
       (editScope moduleRegistry.system {
+        identity = _: {
+          # DHCP registers this LAN target, leaving mac.home to the failover record.
+          networking.hostName = "joshans-macbook-pro";
+        };
+
         autoDeploy = _: {
           # OrbStack occupies port 4243 on this Mac.
           services.comin.exporter = {
