@@ -68,7 +68,6 @@ in
     home = _: {
       home.packages = [ pkgs.zen-browser-beta ];
     };
-  };
 
   firefox = _: {
     home = _: {
@@ -281,6 +280,7 @@ in
         };
       }
     );
+
   spotify =
     { lib, options, ... }:
     (lib.optionalAttrs isLinux (
