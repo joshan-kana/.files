@@ -144,6 +144,12 @@ in
     environment.systemPackages = [ pkgs.moonlight-qt ];
   };
 
+  jellyfin = _: {
+    environment.systemPackages = [
+      (if isDarwin then pkgs.jellyfin-desktop else pkgs.jellyfin-mpv-shim)
+    ];
+  };
+
   vlc =
     _:
     (
