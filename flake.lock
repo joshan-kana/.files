@@ -173,7 +173,6 @@
       },
       "original": {
         "owner": "raydak-labs",
-        "ref": "v1.35.0",
         "repo": "configarr",
         "type": "github"
       }
@@ -1001,6 +1000,7 @@
         "pre-commit-hooks": "pre-commit-hooks",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix",
+        "trash-guides": "trash-guides",
         "treefmt-nix": "treefmt-nix_2",
         "zen-browser": "zen-browser"
       }
@@ -1211,6 +1211,22 @@
       "original": {
         "owner": "tinted-theming",
         "repo": "base16-zed",
+        "type": "github"
+      }
+    },
+    "trash-guides": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792294411,
+        "narHash": "sha256-ZM1n0XJCig3b3GTdd7y3ZTXZhebkiAS9IHs7KicYjT8=",
+        "owner": "TRaSH-Guides",
+        "repo": "Guides",
+        "rev": "529bd9c29eb41f38e36c14c41a137f4d5d824c99",
+        "type": "github"
+      },
+      "original": {
+        "owner": "TRaSH-Guides",
+        "repo": "Guides",
         "type": "github"
       }
     },

@@ -7,8 +7,14 @@
 
     # Declarative Sonarr, Radarr, and Prowlarr application configuration.
     configarr = {
-      url = "github:raydak-labs/configarr/v1.35.0";
+      url = "github:raydak-labs/configarr";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # TRaSH custom-format definitions, pinned by flake.lock.
+    trash-guides = {
+      url = "github:TRaSH-Guides/Guides";
+      flake = false;
     };
 
     # Hermes Agent: packaged agent and service integration.
