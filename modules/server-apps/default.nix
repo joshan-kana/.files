@@ -80,6 +80,11 @@ _: {
   paperless = import ./paperless;
 
   /**
+    Native media discovery and download services.
+  */
+  servarr = import ./servarr;
+
+  /**
     PostgreSQL database infrastructure shared by server applications.
   */
   postgresql = import ./postgresql;
