@@ -28,6 +28,7 @@ _: {
     ./iterm2
     ./jellyfin-mpv-shim
     ./linear
+    ./linux-desktop-spectrum
     ./notion
     ./open-webui
     ./open-webui-mac
@@ -35,6 +36,7 @@ _: {
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./seerr
     ./vial
