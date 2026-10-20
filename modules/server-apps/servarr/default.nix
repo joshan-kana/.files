@@ -11,10 +11,9 @@ let
   inherit (server.storage) appData dataRoot;
   mediaRoot = "${dataRoot.path}/media";
   transmissionCredentials = "${server.secretsDir}/transmission.json";
-in
-{
-  sonarr = _: {
-    services.configarr.settings.sonarr = {
+
+  sonarr = {
+    configarr = {
       main = {
         base_url = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}";
         api_key."!env" = "SONARR_API_KEY";
@@ -79,35 +78,36 @@ in
         };
       };
     };
-
-    services.sonarr = {
-      enable = true;
-      dataDir = "${appData.root}/sonarr";
-      settings.server.bindaddress = "*";
-    };
-
-    users.users.${config.services.sonarr.user}.extraGroups = [
-      appData.group.name
-      dataRoot.group.name
-    ];
-
-    systemd = {
+    scope = _: {
       services.sonarr = {
-        unitConfig.RequiresMountsFor = [ "${dataRoot.path}/media" ];
-        serviceConfig.UMask = lib.mkForce "0002";
+        enable = true;
+        dataDir = "${appData.root}/sonarr";
+        settings.server.bindaddress = "*";
       };
-      tmpfiles.rules = [
-        "d ${appData.root}/sonarr 0700 ${config.services.sonarr.user} ${config.services.sonarr.group} - -"
+
+      users.users.${config.services.sonarr.user}.extraGroups = [
+        appData.group.name
+        dataRoot.group.name
+      ];
+
+      systemd = {
+        services.sonarr = {
+          unitConfig.RequiresMountsFor = [ "${dataRoot.path}/media" ];
+          serviceConfig.UMask = lib.mkForce "0002";
+        };
+        tmpfiles.rules = [
+          "d ${appData.root}/sonarr 0700 ${config.services.sonarr.user} ${config.services.sonarr.group} - -"
+        ];
+      };
+
+      networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
+        config.services.sonarr.settings.server.port
       ];
     };
-
-    networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
-      config.services.sonarr.settings.server.port
-    ];
   };
 
-  radarr = _: {
-    services.configarr.settings.radarr = {
+  radarr = {
+    configarr = {
       main = {
         base_url = "http://127.0.0.1:${toString config.services.radarr.settings.server.port}";
         api_key."!env" = "RADARR_API_KEY";
@@ -174,30 +174,31 @@ in
         };
       };
     };
+    scope = _: {
+      services.radarr = {
+        enable = true;
+        dataDir = "${appData.root}/radarr";
+        settings.server.bindaddress = "*";
+      };
 
-    services.radarr = {
-      enable = true;
-      dataDir = "${appData.root}/radarr";
-      settings.server.bindaddress = "*";
+      users.users.${config.services.radarr.user}.extraGroups = [
+        appData.group.name
+        dataRoot.group.name
+      ];
+
+      systemd.services.radarr = {
+        unitConfig.RequiresMountsFor = [ "${dataRoot.path}/media" ];
+        serviceConfig.UMask = lib.mkForce "0002";
+      };
+
+      networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
+        config.services.radarr.settings.server.port
+      ];
     };
-
-    users.users.${config.services.radarr.user}.extraGroups = [
-      appData.group.name
-      dataRoot.group.name
-    ];
-
-    systemd.services.radarr = {
-      unitConfig.RequiresMountsFor = [ "${dataRoot.path}/media" ];
-      serviceConfig.UMask = lib.mkForce "0002";
-    };
-
-    networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
-      config.services.radarr.settings.server.port
-    ];
   };
 
-  prowlarr = _: {
-    services.configarr.settings.prowlarr = {
+  prowlarr = {
+    configarr = {
       main = {
         base_url = "http://127.0.0.1:${toString config.services.prowlarr.settings.server.port}";
         api_key."!env" = "PROWLARR_API_KEY";
@@ -254,29 +255,37 @@ in
         };
       };
     };
-
-    services.prowlarr = {
-      enable = true;
-      dataDir = "${appData.root}/prowlarr";
-      settings.server.bindaddress = "*";
-    };
-
-    systemd = {
+    scope = _: {
       services.prowlarr = {
-        serviceConfig.StateDirectoryMode = "0700";
+        enable = true;
+        dataDir = "${appData.root}/prowlarr";
+        settings.server.bindaddress = "*";
       };
-      # Prowlarr's DynamicUser owns this directory; tmpfiles must not reset it.
-      tmpfiles.settings."10-prowlarr"."${appData.root}/prowlarr".d = {
-        user = lib.mkForce "-";
-        group = lib.mkForce "-";
-        mode = lib.mkForce "-";
-      };
-    };
 
-    networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
-      config.services.prowlarr.settings.server.port
-    ];
+      systemd = {
+        services.prowlarr = {
+          serviceConfig.StateDirectoryMode = "0700";
+        };
+        # Prowlarr's DynamicUser owns this directory; tmpfiles must not reset it.
+        tmpfiles.settings."10-prowlarr"."${appData.root}/prowlarr".d = {
+          user = lib.mkForce "-";
+          group = lib.mkForce "-";
+          mode = lib.mkForce "-";
+        };
+      };
+
+      networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
+        config.services.prowlarr.settings.server.port
+      ];
+    };
   };
+in
+{
+  sonarr = sonarr.scope;
+
+  radarr = radarr.scope;
+
+  prowlarr = prowlarr.scope;
 
   transmission = _: {
     services.transmission = {
@@ -363,8 +372,11 @@ in
   configarr =
     _:
     let
-      settings = config.services.configarr.settings // {
+      settings = {
         trashRevision = inputs."trash-guides".rev;
+        sonarr = sonarr.configarr;
+        radarr = radarr.configarr;
+        prowlarr = prowlarr.configarr;
       };
       configarrFile = (pkgs.formats.yaml { tags = true; }).generate "configarr.yml" settings;
     in
