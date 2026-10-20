@@ -16,4 +16,4 @@ The isolated test harness is in `tests/technitium-roaming`. Use the repository's
 
 For live tests, confirm Technitium loads `RoamingDns` without errors and query the ordinary LAN resolver and the remote 4via6 resolver for both A and AAAA while the target device is at home and away. Check `mac.home` from `nixos-server` over SSH and via AdGuard from a LAN client. Repeat after DHCP renewal. Do not delete the DHCP-generated A record, change the Mac hostname, or turn off DHCP DNS updates.
 
-Rollback by reverting the server configuration and deploying the previous Nix generation. Remove the `RoamingDns` app directory only after the previous configuration no longer installs it, then restart Technitium; preserve all other apps and zone data.
+On shutdown, the service removes only this Nix-managed app's DLL, dependency manifest, and configuration. A restart reinstalls them. Rolling back the Nix service therefore removes the extension while preserving every other Technitium app, lease, and zone.

@@ -335,6 +335,14 @@
                   ${pkgs.coreutils}/bin/install -Dm644 ${roamingDnsSettings} \
                     ${technitium.stateDir}/apps/RoamingDns/dnsApp.config
                 '';
+                # Remove only Nix-owned app files on shutdown, including rollback.
+                postStop = lib.mkAfter ''
+                  ${pkgs.coreutils}/bin/rm -f \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.dll \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.deps.json \
+                    ${technitium.stateDir}/apps/RoamingDns/dnsApp.config
+                  ${pkgs.coreutils}/bin/rmdir ${technitium.stateDir}/apps/RoamingDns 2>/dev/null || true
+                '';
                 after = [ "network-online.target" ];
                 wants = [ "network-online.target" ];
 
