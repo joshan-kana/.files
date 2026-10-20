@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }:
@@ -15,14 +14,7 @@ let
   bridgeDataRoot = "${dataRoot}/bbctl/prod";
   bbctlSecret = "${server.secretsDir}/beeper-bbctl-secret.json";
 
-  inherit (pkgs.stdenv.hostPlatform) system;
-  bridgePkgs = import inputs.nixpkgs {
-    inherit system;
-    # Keep the deprecated libolm exception isolated to the bridges.
-    config.permittedInsecurePackages = [ "olm-3.2.16" ];
-  };
-  mautrixPkgs = inputs.mautrix-packages.packages.${system};
-
+  bridgePkgs = pkgs.matrix-bridge-packages;
   bridgeManager = bridgePkgs.beeper-bridge-manager;
 
   bridges = {
@@ -31,7 +23,7 @@ let
     discord = "${bridgePkgs.mautrix-discord}/bin/mautrix-discord";
     facebook = "${bridgePkgs.mautrix-meta}/bin/mautrix-meta";
     instagram = "${bridgePkgs.mautrix-meta}/bin/mautrix-instagram";
-    telegram = "${mautrixPkgs.mautrix-telegram}/bin/mautrix-telegram";
+    telegram = "${bridgePkgs.mautrix-telegram}/bin/mautrix-telegram";
   };
 
   bbctlCredentialRunner = pkgs.writeShellScript "bbctl-credential-runner" ''

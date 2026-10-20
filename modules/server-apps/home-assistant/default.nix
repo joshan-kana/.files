@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -14,7 +13,7 @@ in
 {
   services.home-assistant = {
     enable = true;
-    package = inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.home-assistant;
+    package = pkgs.home-assistant;
     inherit configDir;
     config = null;
 

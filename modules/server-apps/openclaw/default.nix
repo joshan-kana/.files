@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -17,7 +16,7 @@ let
   openclawStateDir = "${server.storage.appData.root}/openclaw";
   openclawConfigFile = "${openclawStateDir}/openclaw.json";
 
-  openclawPackage = inputs.nix-openclaw.packages.${pkgs.stdenv.hostPlatform.system}.openclaw-gateway;
+  openclawPackage = pkgs.openclaw-gateway;
 
   githubSecret = "${server.secretsDir}/github-self-hosted-agents.env";
   primaryHome = "${primary.homeRoot}/${primary.name}";

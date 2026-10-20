@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -15,20 +14,7 @@ let
   primaryHome = "${primary.homeRoot}/${primary.name}";
   mappedHome = "/run/hermes-home";
 
-  # The upstream module reads package.hermesVenv while rendering config.yaml,
-  # so expose the equivalent environment from the cached llm-agents package.
-  llmAgentsPkgs = inputs.llm-agents.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-  hermesPackageBase = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.hermes-agent;
-  hermesPython = llmAgentsPkgs.python3.withPackages (_: hermesPackageBase.dependencies);
-  hermesVenv = pkgs.writeShellScriptBin "python3" ''
-    export PYTHONPATH=${hermesPackageBase}/${llmAgentsPkgs.python3.sitePackages}''${PYTHONPATH:+:$PYTHONPATH}
-    exec ${hermesPython}/bin/python3 "$@"
-  '';
-  hermesPackage = hermesPackageBase.overrideAttrs (old: {
-    passthru = (old.passthru or { }) // {
-      inherit hermesVenv;
-    };
-  });
+  hermesPackage = pkgs.hermes-agent;
 
   hermesGh = pkgs.writeShellApplication {
     name = "gh";
