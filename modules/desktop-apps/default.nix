@@ -68,6 +68,7 @@ in
     home = _: {
       home.packages = [ pkgs.zen-browser-beta ];
     };
+  };
 
   firefox = _: {
     home = _: {
