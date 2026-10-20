@@ -389,6 +389,20 @@ in
     label = "→";
   })
   (mk {
+    keys = "backslash";
+    action = exec "linux-desktop-local-scratchpad move";
+    section = "WORKSPACES";
+    description = "Park or restore window in this workspace's scratchpad";
+    label = "\\";
+  })
+  (mk {
+    keys = "SHIFT + backslash";
+    action = exec "linux-desktop-local-scratchpad toggle";
+    section = "WORKSPACES";
+    description = "Open or leave this workspace's scratchpad";
+    label = "|";
+  })
+  (mk {
     keys = "X";
     action = dispatcher ''hl.dsp.workspace.toggle_special("magic")'';
     section = "WORKSPACES";
