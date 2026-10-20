@@ -261,6 +261,12 @@ let
   };
 in
 {
+  environment.systemPackages = [
+    themeSet
+    windowEffectsToggle
+    paletteSearch
+  ];
+
   scopeOptions.animationsEnabled = lib.mkOption {
     type = lib.types.bool;
     default = true;
