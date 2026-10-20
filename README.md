@@ -23,8 +23,6 @@ nf                          # browse evaluated Nix options
 
 Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour belongs under `modules/`; host-specific differences stay with the same semantic scope under `hosts/<host>/`.
 
-Use Home Manager for personal applications, shell aliases, shell initialization, and user session variables. Prefer native `programs.*` modules and `home.packages` for programs without native modules. Keep system services, hardware, system/session bootstrap settings, and administration or recovery under NixOS/nix-darwin. Avoid duplicate user/system definitions unless the responsibilities differ.
-
 ## Documentation
 
 `docs` builds reference pages from evaluated Nix together with operational runbooks. Generated reference pages are build artifacts and are not committed.
