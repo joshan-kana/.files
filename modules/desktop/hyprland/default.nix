@@ -8,55 +8,34 @@
 let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
+  localScratchpad = pkgs.writeShellApplication {
+    name = "linux-desktop-local-scratchpad";
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.libnotify
+    ];
+    text = builtins.readFile ./local-scratchpad.sh;
+  };
 in
 {
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
-  eww = _: {
-    home = _: {
-      programs.eww = {
-        yuckConfig = builtins.readFile ./eww/eww.yuck;
-        scssConfig = builtins.readFile ./eww/eww.scss;
+  systemd.user.services = {
+    xdg-desktop-portal-hyprland = {
+      overrideStrategy = "asDropin";
+      serviceConfig.RestartSec = 3;
+    };
+    xdg-desktop-portal-gtk = {
+      overrideStrategy = "asDropin";
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = 3;
       };
     };
   };
 
-  wofi = _: {
-    home = _: {
-      programs.wofi.settings = {
-        allow_images = true;
-        matching = "fuzzy";
-      };
-    };
-  };
-
-  rofi = _: {
-    home = _: {
-      programs.rofi = {
-        settings.terminal = terminal;
-        plugins = with pkgs; [ rofi-calc ];
-      };
-    };
-  };
-
-  tofi = _: {
-    home = { config, ... }: {
-      home.packages = [ pkgs.tofi ];
-      home.file.".config/tofi/config".text = ''
-        font = ${config.stylix.fonts.monospace.name}
-        font-size = 18
-        background-color = #${config.lib.stylix.colors.base00}
-        text-color = #${config.lib.stylix.colors.base07}
-        selection-color = #${config.lib.stylix.colors.base0A}
-        width = 45%
-        height = 35%
-        border-width = 5
-        border-color = #${config.lib.stylix.colors.base03}
-        corner-radius = 20
-      '';
-    };
-  };
+  shell = import ./shell;
 
   lock = _: {
     security.pam.services.linux-desktop = { };
@@ -69,20 +48,6 @@ in
   };
 
   home = _: {
-    home.packages = with pkgs; [
-      wl-clipboard
-      brightnessctl
-      polkit_gnome
-      awww
-      networkmanagerapplet
-      playerctl
-      grimblast
-      nwg-panel
-      nwg-dock-hyprland
-      nwg-displays
-      wlr-randr
-    ];
-
     # disable hyprpaper target to prevent crash loops
     stylix.targets.hyprland.hyprpaper.enable = false;
 
