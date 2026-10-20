@@ -796,7 +796,13 @@ in
 
       home = _: {
         home.shellAliases = aliases;
-        programs.mpv.scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
+        programs.mpv = {
+          scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
+          config = {
+            demuxer-max-bytes = "3GiB";
+            demuxer-max-back-bytes = "256MiB";
+          };
+        };
       };
     };
 

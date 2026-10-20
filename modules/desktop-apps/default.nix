@@ -148,8 +148,12 @@ in
     _:
     lib.optionalAttrs isLinux {
       environment.systemPackages = [ pkgs.jellyfin-mpv-shim ];
-      home = _: {
-        services.jellyfin-mpv-shim.enable = true;
+      home = { config, ... }: {
+        services.jellyfin-mpv-shim = {
+          enable = true;
+          settings.network_buffer = "default";
+        };
+        xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
       };
     }
     // lib.optionalAttrs isDarwin {
@@ -170,6 +174,8 @@ in
           ...
         }:
         {
+          home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
+            config.xdg.configFile."mpv/mpv.conf".source;
           home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
             lib.hm.generators.mkImpureConfigMerger {
               inherit pkgs;
@@ -179,7 +185,7 @@ in
               path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
               staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" {
                 hwdec = "auto";
-                network_buffer = "huge";
+                network_buffer = "default";
                 segment_commercial = "ask";
                 segment_preview = "ask";
                 segment_recap = "ask";
