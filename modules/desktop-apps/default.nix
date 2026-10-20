@@ -89,7 +89,6 @@ in
     home = _: {
       programs.zen-browser.enable = true;
     };
-  };
 
   firefox =
     _:
@@ -372,6 +371,7 @@ in
         };
       }
     );
+
   spotify =
     _:
     lib.optionalAttrs (isLinux && isx86_64) {
