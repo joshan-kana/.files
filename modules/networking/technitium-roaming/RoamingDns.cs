@@ -16,10 +16,10 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
         public static readonly Snapshot Empty = new(false, [], []);
     }
 
-    private sealed class Device(string name, string tailscaleHost, int port)
+    private sealed class Device(string name, string fallbackHost, int port)
     {
         public string Name { get; } = name;
-        public string TailscaleHost { get; } = tailscaleHost;
+        public string FallbackHost { get; } = fallbackHost;
         public int Port { get; } = port;
         public volatile Snapshot Status = Snapshot.Empty;
     }
@@ -35,7 +35,7 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
     private uint _ttl;
 
     public string Description =>
-        "LAN-first DNS for DHCP-managed roaming hosts with Tailscale fallback.";
+        "LAN-first DNS for DHCP-managed roaming hosts with alternate-network fallback.";
     public byte Preference => 60; // After DNS64 (30) and Split Horizon (40).
 
     public Task InitializeAsync(IDnsServer dnsServer, string? config)
@@ -59,11 +59,12 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
         foreach (var entry in root.GetProperty("devices").EnumerateArray())
         {
             var name = entry.GetProperty("name").GetString()!.TrimEnd('.');
-            var target = entry.GetProperty("tailscaleHost").GetString()!.TrimEnd('.');
+            var target = entry.GetProperty("fallbackHost").GetString()!.TrimEnd('.');
             var port = entry.GetProperty("port").GetInt32();
             if (
                 !name.EndsWith(".home", StringComparison.OrdinalIgnoreCase)
-                || !target.EndsWith(".ts.net", StringComparison.OrdinalIgnoreCase)
+                || !target.Contains('.', StringComparison.Ordinal)
+                || name.Equals(target, StringComparison.OrdinalIgnoreCase)
                 || port is < 1 or > 65535
             )
                 throw new FormatException("Invalid roaming device");
@@ -122,8 +123,8 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
 
     private async Task UpdateAsync(Device device, CancellationToken stopping)
     {
-        var v4 = ResolveAsync(device.TailscaleHost, DnsResourceRecordType.A, stopping);
-        var v6 = ResolveAsync(device.TailscaleHost, DnsResourceRecordType.AAAA, stopping);
+        var v4 = ResolveAsync(device.FallbackHost, DnsResourceRecordType.A, stopping);
+        var v6 = ResolveAsync(device.FallbackHost, DnsResourceRecordType.AAAA, stopping);
         var lan = await ResolveAsync(device.Name, DnsResourceRecordType.A, stopping);
         var healthy = false;
         foreach (var address in lan)
@@ -178,8 +179,8 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
         var addresses = question.Type == DnsResourceRecordType.A ? status.V4 : status.V6;
         if (addresses.Length == 0)
         {
-            // Tailscale DNS may only publish A. Return NODATA for AAAA so clients
-            // can connect using the non-overlapping 100.x Tailscale address.
+            // The alternate DNS target may only publish A. Return NODATA for AAAA so clients
+            // can connect using the non-overlapping alternate address.
             if (question.Type == DnsResourceRecordType.AAAA && status.V4.Length > 0)
                 return Task.FromResult<DnsDatagram?>(
                     Rewrite(response, [], DnsResponseCode.NoError)

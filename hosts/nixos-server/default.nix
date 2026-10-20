@@ -208,7 +208,7 @@
                 devices = [
                   {
                     name = "mac.home";
-                    tailscaleHost = "joshans-macbook-pro.tailba46a0.ts.net";
+                    fallbackHost = "joshans-macbook-pro.tailba46a0.ts.net";
                     port = 22;
                   }
                 ];

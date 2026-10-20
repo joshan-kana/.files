@@ -249,8 +249,6 @@
                   ".github/workflows/*.yaml"
                 ];
               };
-            }
-            // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
               csharp-lint = {
                 command = lib.getExe (
                   pkgs.writeShellApplication {
@@ -258,29 +256,31 @@
                     runtimeInputs = [
                       pkgs.dotnet-sdk_10
                       pkgs.coreutils
+                      pkgs.findutils
                     ];
                     text = ''
                       scratch="$(mktemp -d)"
                       trap 'rm -rf "$scratch"' EXIT
-                      mkdir -p "$scratch/modules/networking/technitium-roaming" "$scratch/tests/technitium-roaming"
-                      cp modules/networking/technitium-roaming/*.cs* "$scratch/modules/networking/technitium-roaming/"
-                      cp tests/technitium-roaming/*.cs* "$scratch/tests/technitium-roaming/"
-                      export DOTNET_CLI_HOME="$scratch"
+                      while IFS= read -r -d "" source; do
+                        mkdir -p "$scratch/$(dirname "$source")"
+                        cp "$source" "$scratch/$source"
+                      done < <(find . -type f \
+                        \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' \
+                           -o -name '*.targets' -o -name '.editorconfig' \) \
+                        -not -path './.git/*' -not -path '*/bin/*' -not -path '*/obj/*' -print0)
+                      export DOTNET_CLI_HOME="$scratch/.dotnet"
                       export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
                       export DOTNET_NOLOGO=1
-                      cd "$scratch"
-                      dotnet build tests/technitium-roaming/Tests.csproj -c Release \
-                        -p:TechnitiumLibDir=${pkgs.technitium-dns-server}/lib/technitium-dns-server \
-                        -p:AnalysisMode=Recommended -p:EnforceCodeStyleInBuild=true \
-                        -p:TreatWarningsAsErrors=true -p:NuGetAudit=false -v:q
+                      while IFS= read -r -d "" project; do
+                        dotnet format analyzers "$project" \
+                          --verify-no-changes --severity warn --verbosity quiet
+                      done < <(find "$scratch" -type f -name '*.csproj' -print0)
                     '';
                   }
                 );
                 includes = [
-                  "modules/networking/technitium-roaming/*.cs"
-                  "modules/networking/technitium-roaming/*.csproj"
-                  "tests/technitium-roaming/*.cs"
-                  "tests/technitium-roaming/*.csproj"
+                  "*.cs"
+                  "*.csproj"
                 ];
                 priority = 2;
               };
@@ -300,7 +300,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|lua|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
