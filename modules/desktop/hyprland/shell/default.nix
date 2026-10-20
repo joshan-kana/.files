@@ -1072,33 +1072,11 @@ in
         '';
       };
 
-      spectrumAnalyzer = pkgs.stdenv.mkDerivation {
-        pname = "linux-desktop-spectrum";
-        version = "0.1.0";
-        src = ./spectrum;
-
-        nativeBuildInputs = [ pkgs.pkg-config ];
-        buildInputs = [ pkgs.pipewire ];
-
-        buildPhase = ''
-          runHook preBuild
-
-          $CXX             -std=c++20             -O3             -DNDEBUG             -Wall             -Wextra             main.cpp             -o linux-desktop-spectrum             $(pkg-config --cflags --libs libpipewire-0.3)             -pthread
-
-          runHook postBuild
-        '';
-
-        installPhase = ''
-          runHook preInstall
-          install -Dm755 linux-desktop-spectrum "$out/bin/linux-desktop-spectrum"
-          runHook postInstall
-        '';
-
-        meta.mainProgram = "linux-desktop-spectrum";
-      };
+      spectrumAnalyzer = pkgs.linux-desktop-spectrum;
 
       keybindings = import ../keybindings.nix {
         terminal = osConfig.dotfiles.defaults.terminal;
+        browser = osConfig.dotfiles.defaults.browser;
       };
       mainModifierLabel = config.wayland.windowManager.hyprland.settings.mainMod._var;
       mehModifierLabel = config.wayland.windowManager.hyprland.settings.mehMod._var;

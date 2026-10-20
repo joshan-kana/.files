@@ -1,5 +1,6 @@
 {
   terminal,
+  browser,
 }:
 
 let
@@ -126,9 +127,9 @@ in
   })
   (mkMeh {
     keys = "3";
-    action = app "brave";
+    action = app browser;
     section = "APPS";
-    description = "Brave";
+    description = "Browser";
   })
   (mkMeh {
     keys = "4";
