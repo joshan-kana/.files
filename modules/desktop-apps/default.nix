@@ -146,26 +146,18 @@ in
 
   jellyfin =
     _:
-    lib.optionalAttrs isLinux {
-      environment.systemPackages = [ pkgs.jellyfin-mpv-shim ];
-      home = { config, ... }: {
-        services.jellyfin-mpv-shim = {
-          enable = true;
-          settings.network_buffer = "default";
-        };
-        xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+    let
+      settings = {
+        hwdec = "auto";
+        network_buffer = "default";
+        segment_commercial = "ask";
+        segment_preview = "ask";
+        segment_recap = "ask";
+        theme = "superdark";
       };
-    }
-    // lib.optionalAttrs isDarwin {
-      environment.systemPackages = [
-        pkgs.jellyfin-mpv-shim
-        pkgs.mpv
-      ];
-      launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
-        ProgramArguments = [ (lib.getExe pkgs.jellyfin-mpv-shim) ];
-        EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
-        RunAtLoad = true;
-      };
+    in
+    {
+      environment.systemPackages = [ pkgs.jellyfin-mpv-shim ] ++ lib.optionals isDarwin [ pkgs.mpv ];
       home =
         {
           config,
@@ -173,7 +165,14 @@ in
           pkgs,
           ...
         }:
-        {
+        lib.optionalAttrs isLinux {
+          services.jellyfin-mpv-shim = {
+            enable = true;
+            inherit settings;
+          };
+          xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+        }
+        // lib.optionalAttrs isDarwin {
           home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
             config.xdg.configFile."mpv/mpv.conf".source;
           home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
@@ -183,17 +182,17 @@ in
               empty = "{}";
               jqOperation = "$dynamic * $static";
               path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
-              staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" {
-                hwdec = "auto";
-                network_buffer = "default";
-                segment_commercial = "ask";
-                segment_preview = "ask";
-                segment_recap = "ask";
-                theme = "superdark";
-              };
+              staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" settings;
             }
           );
         };
+    }
+    // lib.optionalAttrs isDarwin {
+      launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
+        ProgramArguments = [ (lib.getExe pkgs.jellyfin-mpv-shim) ];
+        EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
+        RunAtLoad = true;
+      };
     };
 
   vlc =
