@@ -304,18 +304,16 @@ in
 
           # Inset the special workspace while preserving its existing
           # tiling and window-toggle workflow, including moved windows.
-          workspace_rule = [
-            {
-              workspace = "special:magic";
-              gaps_in = 12;
-              gaps_out = {
-                top = 180;
-                right = 430;
-                bottom = 180;
-                left = 430;
-              };
-            }
-          ];
+          workspace_rule = map (workspace: {
+            inherit workspace;
+            gaps_in = 12;
+            gaps_out = {
+              top = 180;
+              right = 430;
+              bottom = 180;
+              left = 430;
+            };
+          }) ([ "special:magic" ] ++ map (number: "special:local-${toString number}") (lib.range 1 10));
 
           window_rule = [
             {
