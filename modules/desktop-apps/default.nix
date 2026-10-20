@@ -153,7 +153,15 @@ in
       };
     }
     // lib.optionalAttrs isDarwin {
-      environment.systemPackages = [ pkgs.jellyfin-desktop ];
+      environment.systemPackages = [
+        pkgs.jellyfin-mpv-shim
+        pkgs.mpv
+      ];
+      launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
+        ProgramArguments = [ (lib.getExe pkgs.jellyfin-mpv-shim) ];
+        EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
+        RunAtLoad = true;
+      };
     };
 
   vlc =
