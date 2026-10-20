@@ -131,14 +131,12 @@ in
       commands = {
         cd = "cd $DOTFILES";
         systemUpdate = "nix run ${repoPath}#system-update --";
-        rebuild =
-          action:
-          if isDarwin then
-            ''nh darwin ${action} --hostname "$FLK_PROFILE"''
-          else if isLinux then
-            ''nh os ${action} --hostname "$FLK_PROFILE" $NIXOS_REBUILD_FLAGS''
-          else
-            null;
+      }
+      // lib.optionalAttrs isDarwin {
+        rebuild = action: ''nh darwin ${action} --hostname "$FLK_PROFILE"'';
+      }
+      // lib.optionalAttrs isLinux {
+        rebuild = action: ''nh os ${action} --hostname "$FLK_PROFILE" $NIXOS_REBUILD_FLAGS'';
       };
       aliases = {
         syscd = commands.cd;
