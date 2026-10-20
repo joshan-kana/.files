@@ -48,6 +48,10 @@ let
     inherit value;
   };
 
+  # Launch graphical apps through the user manager, not the compositor's
+  # environment (which remains stale across a NixOS theme switch).
+  app = command: exec "systemd-run --user --quiet --collect -- ${command}";
+
   dispatcher = value: {
     type = "dispatcher";
     inherit value;
@@ -110,51 +114,49 @@ in
   (mkMeh {
     keys = "1";
     id = "terminal.open";
-    # Match desktop-entry launches: the user manager does not inherit stale
-    # Home Manager session-variable guards from the running compositor.
-    action = exec "systemd-run --user --quiet --collect -- ${terminal}";
+    action = app terminal;
     section = "APPS";
     description = "Terminal";
   })
   (mkMeh {
     keys = "2";
-    action = exec "spotify";
+    action = app "spotify";
     section = "APPS";
     description = "Spotify";
   })
   (mkMeh {
     keys = "3";
-    action = exec "brave";
+    action = app "brave";
     section = "APPS";
     description = "Brave";
   })
   (mkMeh {
     keys = "4";
-    action = exec "floorp";
+    action = app "floorp";
     section = "APPS";
     description = "Floorp";
   })
   (mkMeh {
     keys = "5";
-    action = exec "thunderbird";
+    action = app "thunderbird";
     section = "APPS";
     description = "Thunderbird";
   })
   (mkMeh {
     keys = "6";
-    action = exec "code";
+    action = app "code";
     section = "APPS";
     description = "Visual Studio Code";
   })
   (mkMeh {
     keys = "7";
-    action = exec "obsidian --disable-gpu";
+    action = app "obsidian --disable-gpu";
     section = "APPS";
     description = "Obsidian";
   })
   (mkMeh {
     keys = "E";
-    action = exec "nautilus";
+    action = app "nautilus";
     section = "APPS";
     description = "Files";
   })
@@ -167,7 +169,7 @@ in
   })
   (mkMeh {
     keys = "V";
-    action = exec "[float] easyeffects";
+    action = exec "[float] systemd-run --user --quiet --collect -- easyeffects";
     section = "AUDIO & MEDIA";
     description = "Audio effects";
   })
@@ -551,7 +553,7 @@ in
   })
   (mkMeh {
     keys = "C";
-    action = exec "edit-config";
+    action = app "edit-config";
     section = "SYSTEM";
     description = "Edit desktop configuration";
   })
