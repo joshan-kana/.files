@@ -18,7 +18,6 @@ in
   services.comin = {
     enable = true;
     hostname = configurationOutputName;
-    repositorySubdir = lib.mkIf (configurationFlakeSubdirectory != null) configurationFlakeSubdirectory;
     allowForcePush = true;
 
     remotes = [
@@ -36,6 +35,9 @@ in
         poller.period = 300;
       }
     ];
+  }
+  // lib.optionalAttrs (configurationFlakeSubdirectory != null) {
+    repositorySubdir = configurationFlakeSubdirectory;
   };
 
   environment.shellAliases = {

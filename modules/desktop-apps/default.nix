@@ -113,9 +113,14 @@ in
     };
   };
 
-  thunderbird = _: {
-    environment.systemPackages = [ (if isDarwin then pkgs.thunderbird-bin else pkgs.thunderbird) ];
-  };
+  thunderbird =
+    _:
+    lib.optionalAttrs isDarwin {
+      environment.systemPackages = [ pkgs.thunderbird-bin ];
+    }
+    // lib.optionalAttrs isLinux {
+      environment.systemPackages = [ pkgs.thunderbird ];
+    };
 
   obsidian = _: {
     environment.systemPackages = [ pkgs.obsidian ];

@@ -42,8 +42,9 @@ in
     }:
 
     let
-      resticWrapperCommands =
-        if isLinux then resticWrapperCommandsFor osConfig.services.restic.backups else [ ];
+      resticWrapperCommands = lib.optionals isLinux (
+        resticWrapperCommandsFor osConfig.services.restic.backups
+      );
     in
     {
       # Register Restic wrapper completions after Home Manager initializes Zsh completion.
