@@ -12,7 +12,7 @@ namespace RoamingDns.Tests;
 static class Test
 {
     internal const string Name = "mac.home";
-    internal const string Tail = "mac.tailtest.ts.net";
+    internal const string Alternate = "mac.alternate.test";
 
     internal static DnsDatagram Answer(string name, DnsResourceRecordType type, string address)
     {
@@ -120,7 +120,7 @@ public class FakeDns : DispatchProxy
             throw new NotSupportedException(targetMethod?.Name);
         var question = (DnsQuestionRecord)args![0]!;
         if (
-            question.Name.Equals(Test.Tail, StringComparison.OrdinalIgnoreCase)
+            question.Name.Equals(Test.Alternate, StringComparison.OrdinalIgnoreCase)
             && question.Type == DnsResourceRecordType.AAAA
         )
             return Task.FromResult(
@@ -133,8 +133,9 @@ public class FakeDns : DispatchProxy
         var address = question.Name.ToLowerInvariant() switch
         {
             Test.Name when question.Type == DnsResourceRecordType.A => LanIp,
-            Test.Tail when question.Type == DnsResourceRecordType.A => "100.88.1.2",
-            Test.Tail when question.Type == DnsResourceRecordType.AAAA => "fd7a:115c:a1e0::123",
+            Test.Alternate when question.Type == DnsResourceRecordType.A => "100.88.1.2",
+            Test.Alternate when question.Type == DnsResourceRecordType.AAAA =>
+                "fd7a:115c:a1e0::123",
             _ => throw new InvalidOperationException("Unexpected fake DNS question"),
         };
         return Task.FromResult(Test.Answer(question.Name, question.Type, address));
@@ -164,7 +165,7 @@ public static class Program
                     new
                     {
                         name = Test.Name,
-                        tailscaleHost = Test.Tail,
+                        fallbackHost = Test.Alternate,
                         port,
                     },
                 },
@@ -215,10 +216,13 @@ public static class Program
         await Task.Delay(5500);
         var awayA = await Test.Process(app, Test.Name, DnsResourceRecordType.A, fake.LanIp);
         var awayAAAA = await Test.Process(app, Test.Name, DnsResourceRecordType.AAAA, mapped);
-        Test.Check(Test.Address(awayA) == "100.88.1.2", "LAN disconnect switches to Tailscale A");
+        Test.Check(
+            Test.Address(awayA) == "100.88.1.2",
+            "LAN disconnect switches to alternate endpoint A"
+        );
         Test.Check(
             awayAAAA.RCODE == DnsResponseCode.NoError && awayAAAA.Answer.Count == 0,
-            "Missing Tailscale AAAA becomes NODATA, not a failing lookup"
+            "Missing alternate endpoint AAAA becomes NODATA, not a failing lookup"
         );
 
         fake.HasLease = false;
@@ -233,7 +237,7 @@ public static class Program
             recovered is not null
                 && Test.Address(recovered) == "100.88.1.2"
                 && recovered.RCODE == DnsResponseCode.NoError,
-            "Expired DHCP lease still resolves to Tailscale instead of NXDOMAIN"
+            "Expired DHCP lease still resolves to alternate endpoint instead of NXDOMAIN"
         );
 
         var resumed = new TcpListener(IPAddress.Parse("127.0.0.2"), port);
