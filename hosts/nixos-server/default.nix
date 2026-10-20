@@ -172,6 +172,7 @@
           {
             config,
             lib,
+            pkgs,
             ...
           }:
 
@@ -195,6 +196,24 @@
               confDir = "${server.storage.appData.root}/adguard/conf";
               configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
             };
+
+            roamingDns = pkgs.callPackage ../../modules/networking/technitium-roaming/package.nix { };
+            roamingDnsSettings = pkgs.writeText "technitium-roaming-dns.json" (
+              builtins.toJSON {
+                lanSubnet = server.lan.subnet;
+                remoteDnsSource = server.lan.serverIp;
+                pollSeconds = 10;
+                timeoutMs = 1500;
+                answerTtl = 10;
+                devices = [
+                  {
+                    name = "mac.home";
+                    tailscaleHost = "joshans-macbook-pro.tailba46a0.ts.net";
+                    port = 22;
+                  }
+                ];
+              }
+            );
 
             technitium = {
               user = "technitium";
@@ -307,6 +326,15 @@
               };
 
               technitium-dns-server = {
+                # Keep the core DHCP/DNS state mutable; install only our extension.
+                preStart = lib.mkAfter ''
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDns}/RoamingDns.dll \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.dll
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDns}/RoamingDns.deps.json \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.deps.json
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDnsSettings} \
+                    ${technitium.stateDir}/apps/RoamingDns/dnsApp.config
+                '';
                 after = [ "network-online.target" ];
                 wants = [ "network-online.target" ];
 

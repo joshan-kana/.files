@@ -192,6 +192,8 @@
                 "*.md"
                 "*.nix"
                 "*.py"
+                "*.cs"
+                "*.csproj"
               ];
             };
             statix = {
