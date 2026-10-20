@@ -18,15 +18,15 @@ _:
           };
 
           patches = (old.patches or [ ]) ++ [
-            ../patches/quickshell/networkmanager-restart.patch
-            ../patches/quickshell/bluez-late-start.patch
-            ../patches/quickshell/wifi-security-live-ap.patch
+            ../../patches/quickshell/networkmanager-restart.patch
+            ../../patches/quickshell/bluez-late-start.patch
+            ../../patches/quickshell/wifi-security-live-ap.patch
           ];
 
           # The pinned release generates incomplete QML type metadata. Repair the
           # declarations used by qmllint without changing Quickshell runtime code.
           postInstall = (old.postInstall or "") + ''
-            patch -d "$out/lib/qt-6/qml" -p1 < ${../patches/quickshell/qmltypes.patch}
+            patch -d "$out/lib/qt-6/qml" -p1 < ${../../patches/quickshell/qmltypes.patch}
           '';
         });
       }
