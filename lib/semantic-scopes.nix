@@ -43,6 +43,7 @@ let
     "options"
     "scopeOptions"
     "__scopeOptionOverrides"
+    "scopeEdits"
   ];
 
   reservedChildNames = moduleKeys ++ [
@@ -125,7 +126,7 @@ let
       lib.attrByPath (path ++ suffix) null hostConfig.dotfiles.scopes;
 
   scopeConfig =
-    context: projectHomeBranches: parentEnabled: parentChildEnabled: path: scopeModule: args:
+    context: projectHomeBranches: parentEnabled: parentChildEnabled: path: scopeModule: args: edits:
     let
       scope = validateScope path (callScope scopeModule args);
       contextScope = scopeForContext context projectHomeBranches path scope args;
@@ -141,6 +142,66 @@ let
         moduleKeys ++ [ "enable" ] ++ lib.optional homeBranch "home"
       );
       children = lib.filterAttrs (_: value: lib.isFunction value) candidates;
+      activeEdits =
+        if path == [ ] then
+          lib.mapAttrsToList (
+            source: child:
+            let
+              childScope = callScope child args;
+              configured = scopeOverride context [ source ] [ "enable" ] args;
+              sourceEnabled =
+                enabled && (if configured != null then configured else childScope.enable or childEnabled);
+            in
+            {
+              node = childScope.scopeEdits or { };
+              inherit sourceEnabled;
+            }
+          ) children
+        else
+          edits;
+      allowedEditTargets =
+        (builtins.attrNames children)
+        ++ (
+          if path == [ ] then
+            builtins.attrNames (args.moduleRegistry or { })
+          else
+            builtins.attrNames (args.options or { })
+        )
+        ++ [
+          "config"
+          "home"
+        ];
+      invalidEdits = lib.unique (
+        lib.concatMap (
+          edit:
+          builtins.filter (name: !(builtins.elem name allowedEditTargets)) (builtins.attrNames edit.node)
+        ) activeEdits
+      );
+      checkedEdits =
+        if invalidEdits == [ ] then
+          activeEdits
+        else
+          throw "Unknown semantic scope edit target(s) at ${
+            if path == [ ] then "<root>" else lib.concatStringsSep "." path
+          }: ${lib.concatStringsSep ", " invalidEdits}";
+      editConfigs = map (
+        edit:
+        let
+          native = builtins.removeAttrs edit.node (
+            moduleKeys
+            ++ [ "home" ]
+            ++ builtins.attrNames children
+            ++ lib.optionals (path == [ ]) (builtins.attrNames (args.moduleRegistry or { }))
+          );
+        in
+        lib.mkIf edit.sourceEnabled (
+          lib.mkMerge [
+            (edit.node.config or { })
+            native
+          ]
+        )
+      ) checkedEdits;
+      editHomes = builtins.filter (edit: builtins.hasAttr "home" edit.node) checkedEdits;
       directConfig =
         if context == "home" && projectHomeBranches then
           builtins.removeAttrs contextScope ([ "enable" ] ++ moduleKeys)
@@ -175,19 +236,29 @@ let
         lib.optionalAttrs
           (
             context == "system"
-            && homeBranch
+            && (homeBranch || editHomes != [ ])
             && builtins.hasAttr "home-manager" args.options
             && builtins.hasAttr "sharedModules" args.options.home-manager
           )
           {
             # This is already the selected Home Manager branch, so do not project again.
-            home-manager.sharedModules = [
-              (mkScopeModule "home" false enabled path scope.home)
-            ];
+            home-manager.sharedModules =
+              lib.optional homeBranch (mkScopeModule "home" false enabled path scope.home)
+              ++ map (
+                edit: mkScopeModule "home" false (enabled && edit.sourceEnabled) path edit.node.home
+              ) editHomes;
           };
       childConfigs = lib.mapAttrsToList (
         childName: child:
-        scopeConfig context projectHomeBranches enabled childEnabled (path ++ [ childName ]) child args
+        scopeConfig context projectHomeBranches enabled childEnabled (path ++ [ childName ]) child args (
+          lib.concatMap (
+            edit:
+            lib.optional (builtins.hasAttr childName edit.node) {
+              node = edit.node.${childName};
+              inherit (edit) sourceEnabled;
+            }
+          ) checkedEdits
+        )
       ) children;
       stateConfig =
         lib.optionalAttrs (path != [ ] && lib.hasAttrByPath [ "dotfiles" "resolvedScopes" ] args.options)
@@ -202,12 +273,15 @@ let
       [
         stateConfig
         (lib.mkIf enabled (
-          lib.mkMerge [
-            (contextScope.config or { })
-            nativeEnable
-            directConfig
-            homeConfig
-          ]
+          lib.mkMerge (
+            [
+              (contextScope.config or { })
+              nativeEnable
+              directConfig
+              homeConfig
+            ]
+            ++ editConfigs
+          )
         ))
       ]
       ++ childConfigs
@@ -314,7 +388,7 @@ let
           imports = contextScope.imports or [ ];
           options = contextScope.options or { };
           disabledModules = contextScope.disabledModules or [ ];
-          config = scopeConfig context projectHomeBranches parentEnabled true path scopeModule args;
+          config = scopeConfig context projectHomeBranches parentEnabled true path scopeModule args [ ];
         }
         // lib.optionalAttrs (scope ? _file) { inherit (scope) _file; };
     in

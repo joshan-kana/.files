@@ -79,6 +79,17 @@ let
 in
 assert hosts != [ ];
 assert privateHostOptions.app.token.type.name == "str";
+assert builtins.hasAttr "root" privateHostOptions.scopeEdits;
+assert builtins.hasAttr "app" privateHostOptions.scopeEdits.root;
+assert builtins.hasAttr "cava" hostOptions.scopeEdits.cli;
+assert builtins.hasAttr "delta" hostOptions.scopeEdits.cli.git;
+assert hostOptions.scopeEdits.cli.cava.home.type.name == "raw";
+assert hostOptions.scopeEdits.cli.cava.config.type.name == "raw";
+assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames hostOptions.scopeEdits);
+assert sameNames (builtins.attrNames rootChildren) (
+  builtins.attrNames serverHostOptions.scopeEdits
+);
+assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames nixosHostOptions.scopeEdits);
 assert rootChildren != { };
 assert sameNames (builtins.attrNames rootChildren) (builtins.attrNames rootOptions);
 assert sameNames (builtins.attrNames (
