@@ -1,2 +1,4 @@
-# Preserve upstream patch context verbatim.
+# Generated from flake.nix repoToolExcludedDirs.
+.direnv/** -whitespace
 patches/** -whitespace
+docs/infrastructure-docs/** -whitespace
