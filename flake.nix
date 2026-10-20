@@ -172,6 +172,7 @@
 
           programs = {
             deadnix.enable = true;
+            csharpier.enable = true;
             nixfmt.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
@@ -186,14 +187,12 @@
               includes = [
                 ".envrc"
                 "scripts/**"
-                "tests/**"
+                "tests/**/*.sh"
               ];
               excludes = [
                 "*.md"
                 "*.nix"
                 "*.py"
-                "*.cs"
-                "*.csproj"
               ];
             };
             statix = {
@@ -249,6 +248,41 @@
                   ".github/workflows/*.yml"
                   ".github/workflows/*.yaml"
                 ];
+              };
+            }
+            // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+              csharp-lint = {
+                command = lib.getExe (
+                  pkgs.writeShellApplication {
+                    name = "csharp-lint";
+                    runtimeInputs = [
+                      pkgs.dotnet-sdk_10
+                      pkgs.coreutils
+                    ];
+                    text = ''
+                      scratch="$(mktemp -d)"
+                      trap 'rm -rf "$scratch"' EXIT
+                      mkdir -p "$scratch/modules/networking/technitium-roaming" "$scratch/tests/technitium-roaming"
+                      cp modules/networking/technitium-roaming/*.cs* "$scratch/modules/networking/technitium-roaming/"
+                      cp tests/technitium-roaming/*.cs* "$scratch/tests/technitium-roaming/"
+                      export DOTNET_CLI_HOME="$scratch"
+                      export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+                      export DOTNET_NOLOGO=1
+                      cd "$scratch"
+                      dotnet build tests/technitium-roaming/Tests.csproj -c Release \
+                        -p:TechnitiumLibDir=${pkgs.technitium-dns-server}/lib/technitium-dns-server \
+                        -p:AnalysisMode=Recommended -p:EnforceCodeStyleInBuild=true \
+                        -p:TreatWarningsAsErrors=true -p:NuGetAudit=false -v:q
+                    '';
+                  }
+                );
+                includes = [
+                  "modules/networking/technitium-roaming/*.cs"
+                  "modules/networking/technitium-roaming/*.csproj"
+                  "tests/technitium-roaming/*.cs"
+                  "tests/technitium-roaming/*.csproj"
+                ];
+                priority = 2;
               };
             };
           };
