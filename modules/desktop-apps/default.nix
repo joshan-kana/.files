@@ -162,6 +162,32 @@ in
         EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
         RunAtLoad = true;
       };
+      home =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        {
+          home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+            lib.hm.generators.mkImpureConfigMerger {
+              inherit pkgs;
+              format = "json";
+              empty = "{}";
+              jqOperation = "$dynamic * $static";
+              path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
+              staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" {
+                hwdec = "auto";
+                network_buffer = "huge";
+                segment_commercial = "ask";
+                segment_preview = "ask";
+                segment_recap = "ask";
+                theme = "superdark";
+              };
+            }
+          );
+        };
     };
 
   vlc =
