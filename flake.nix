@@ -143,9 +143,7 @@
         import nixpkgs {
           inherit system;
           # Lint the same Quickshell version that hosts actually deploy.
-          overlays =
-            lib.optionals (lib.systems.elaborate system).isLinux
-              (import ./overlays/quickshell.nix { }).nixpkgs.overlays;
+          overlays = (import ./overlays/quickshell.nix { }).nixpkgs.overlays;
         };
 
       repoToolExcludedDirs = [
