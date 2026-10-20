@@ -322,9 +322,7 @@
             ./modules/options
             stylix.${nativeModules}.stylix
             home-manager.${nativeModules}.home-manager
-          ]
-          ++ import ./overlays
-          ++ [
+            ./overlays
             (semantic.rootModule (
               lib.setFunctionArgs (args: (host args) // { _file = toString hostFile; }) (lib.functionArgs host)
             ))
