@@ -184,7 +184,6 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [ editConfig ];
 
       home = _: {
         home.packages = [ editConfig ];
@@ -209,7 +208,6 @@ in
           in
           {
             environment.shellAliases = aliases;
-            environment.systemPackages = [ buildVm ];
 
             home = _: {
               home.shellAliases = aliases;
@@ -220,13 +218,14 @@ in
     };
 
   nh = args: {
-    home = args: {
-      inherit ((nhConfig args)) programs;
-    };
+    # The rebuild helper must also be available to system administrators.
     config = lib.optionalAttrs isLinux {
       programs = lib.recursiveUpdate (nhConfig args).programs {
         nh.enable = true;
       };
+    };
+    home = args: {
+      inherit ((nhConfig args)) programs;
     };
   };
 
@@ -282,16 +281,6 @@ in
     in
     {
       environment.shellAliases = aliases;
-      config = lib.optionalAttrs isLinux {
-        programs = lib.recursiveUpdate (direnvConfig args).programs {
-          direnv.enable = true;
-          zsh = {
-            shellAliases = zshAliases;
-            interactiveShellInit = hook;
-          };
-        };
-      };
-
       home = args: {
         home.shellAliases = aliases;
         programs = (direnvConfig args).programs // {
@@ -327,7 +316,6 @@ in
       };
     in
     {
-      environment.systemPackages = [ copyPath ];
       environment.shellAliases = aliases;
 
       home = _: {
@@ -435,12 +423,6 @@ in
       };
     in
     {
-      environment.systemPackages = [
-        pkgs.jujutsu
-        prView
-        review
-        tuicrReview
-      ];
       environment.shellAliases = aliases;
 
       home = _: {
@@ -501,7 +483,6 @@ in
       };
     in
     {
-      environment.systemPackages = [ stash ];
       environment.shellAliases = aliases;
       home = _: {
         home.packages = [ stash ];
@@ -512,11 +493,9 @@ in
         };
       };
 
+      # Git remains available for system recovery even without Home Manager.
       config = lib.optionalAttrs isLinux {
         programs.git.enable = true;
-        programs.git.config = gitSettings // {
-          gpg.format = gitSigningFormat;
-        };
       };
 
       delta = _: {
@@ -548,16 +527,11 @@ in
           };
         };
 
-      lazygit =
-        args:
-        {
-          home = args: {
-            inherit (lazygitConfig args) programs;
-          };
-        }
-        // lib.optionalAttrs isLinux {
+      lazygit = args: {
+        home = args: {
           inherit (lazygitConfig args) programs;
         };
+      };
     };
 
   zsh =
@@ -608,10 +582,6 @@ in
     };
 
   yazi = _: {
-    config = lib.optionalAttrs isLinux {
-      programs.yazi.enable = true;
-    };
-
     home = _: {
       programs.yazi.shellWrapperName = "y";
     };
@@ -626,12 +596,9 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [
-        pkgs.gh
-        pkgs.gh-dash
-      ];
       home = _: {
         home.shellAliases = aliases;
+        home.packages = [ pkgs.gh-dash ];
         programs.gh.extensions = [
           pkgs.gh-dash
           pkgs.gh-stack
@@ -684,12 +651,6 @@ in
     };
 
   starship = args: {
-    config = lib.optionalAttrs isLinux {
-      programs = lib.recursiveUpdate (starshipConfig args).programs {
-        starship.enable = true;
-      };
-    };
-
     home = args: {
       programs.starship = (starshipConfig args).programs.starship // {
         enableZshIntegration = true;
@@ -747,7 +708,6 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.eza ];
 
       home = _: {
         home.shellAliases = aliases;
@@ -756,8 +716,6 @@ in
     };
 
   htop = _: {
-    environment.systemPackages = [ pkgs.htop ];
-
     home = _: {
       programs.htop = { };
     };
@@ -777,11 +735,6 @@ in
       };
     in
     {
-      config = lib.optionalAttrs isLinux {
-        programs = lib.recursiveUpdate (neovimConfig args).programs {
-          neovim.enable = true;
-        };
-      };
       environment.shellAliases = aliases;
 
       home = args: {
@@ -804,7 +757,6 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.mpv ];
 
       home = _: {
         home.shellAliases = aliases;
@@ -819,11 +771,15 @@ in
     };
 
   vim = _: {
-    environment.systemPackages = [ pkgs.vim ];
+    home = _: {
+      home.packages = [ pkgs.vim ];
+    };
   };
 
   wget = _: {
-    environment.systemPackages = [ pkgs.wget ];
+    home = _: {
+      home.packages = [ pkgs.wget ];
+    };
   };
 
   lshw =
@@ -841,7 +797,6 @@ in
     in
     {
       environment.shellAliases = aliases;
-      environment.systemPackages = [ pkgs.fastfetch ];
 
       home = _: {
         home.packages = [ pkgs.fastfetch ];
@@ -850,23 +805,21 @@ in
     };
 
   tree = _: {
-    environment.systemPackages = [ pkgs.tree ];
-
     home = _: {
       home.packages = [ pkgs.tree ];
     };
   };
 
   glow = _: {
-    environment.systemPackages = [ pkgs.glow ];
-
     home = _: {
       home.packages = [ pkgs.glow ];
     };
   };
 
   stow = _: {
-    environment.systemPackages = [ pkgs.stow ];
+    home = _: {
+      home.packages = [ pkgs.stow ];
+    };
   };
 
   systemdManagerTui =
@@ -876,11 +829,15 @@ in
     };
 
   youtubeTui = _: {
-    environment.systemPackages = [ pkgs.youtube-tui ];
+    home = _: {
+      home.packages = [ pkgs.youtube-tui ];
+    };
   };
 
   ytDlp = _: {
-    environment.systemPackages = [ pkgs.yt-dlp ];
+    home = _: {
+      home.packages = [ pkgs.yt-dlp ];
+    };
   };
 
   killall =
@@ -896,31 +853,45 @@ in
     };
 
   trashCli = _: {
-    environment.systemPackages = [ pkgs.trash-cli ];
+    home = _: {
+      home.packages = [ pkgs.trash-cli ];
+    };
   };
 
   gnumake = _: {
-    environment.systemPackages = [ pkgs.gnumake ];
+    home = _: {
+      home.packages = [ pkgs.gnumake ];
+    };
   };
 
   devbox = _: {
-    environment.systemPackages = [ pkgs.devbox ];
+    home = _: {
+      home.packages = [ pkgs.devbox ];
+    };
   };
 
   has = _: {
-    environment.systemPackages = [ pkgs.has ];
+    home = _: {
+      home.packages = [ pkgs.has ];
+    };
   };
 
   nvd = _: {
-    environment.systemPackages = [ pkgs.nvd ];
+    home = _: {
+      home.packages = [ pkgs.nvd ];
+    };
   };
 
   nixTree = _: {
-    environment.systemPackages = [ pkgs.nix-tree ];
+    home = _: {
+      home.packages = [ pkgs.nix-tree ];
+    };
   };
 
   python3 = _: {
-    environment.systemPackages = [ pkgs.python3 ];
+    home = _: {
+      home.packages = [ pkgs.python3 ];
+    };
   };
 
   ncmpcpp = _: {
@@ -950,8 +921,6 @@ in
   };
 
   dust = _: {
-    environment.systemPackages = [ pkgs.dust ];
-
     home = _: {
       home.packages = [ pkgs.dust ];
     };
