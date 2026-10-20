@@ -125,6 +125,20 @@ in
     environment.sessionVariables = sessionVariables;
   };
 
+  shellAliases =
+    _:
+    let
+      aliases = {
+        sudo = "sudo ";
+      };
+    in
+    {
+      environment.shellAliases = aliases;
+      home = _: {
+        home.shellAliases = aliases;
+      };
+    };
+
   systemCommands =
     _:
     let
