@@ -11,7 +11,8 @@ let
   inherit (server.storage) appData dataRoot;
   mediaRoot = "${dataRoot.path}/media";
   transmissionCredentials = "${server.secretsDir}/transmission.json";
-
+in
+{
   sonarr = _: {
     services.sonarr = {
       dataDir = "${appData.root}/sonarr";
@@ -102,7 +103,6 @@ let
         };
       };
     };
-
   };
 
   radarr = _: {
@@ -192,7 +192,6 @@ let
         };
       };
     };
-
   };
 
   prowlarr = _: {
@@ -274,12 +273,7 @@ let
         };
       };
     };
-
   };
-
-in
-{
-  inherit sonarr radarr prowlarr;
 
   transmission = _: {
     services.transmission = {
