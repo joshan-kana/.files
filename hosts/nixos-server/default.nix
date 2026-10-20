@@ -2,6 +2,7 @@
   editScope,
   extendScope,
   inputs,
+  lib,
   moduleRegistry,
   ...
 }:
@@ -10,6 +11,13 @@
   inherit (moduleRegistry)
     theme
     ;
+
+  # The Configarr module exposes a YAML string, so Arr scopes merge Nix data here.
+  options.services.configarr.settings = lib.mkOption {
+    type = lib.types.attrsOf lib.types.anything;
+    default = { };
+    description = "App-owned Configarr settings assembled into YAML.";
+  };
 
   imports = [
     inputs.hermes-agent.nixosModules.default

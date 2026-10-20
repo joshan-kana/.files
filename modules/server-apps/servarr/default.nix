@@ -371,7 +371,7 @@ in
     {
       services.configarr = {
         enable = true;
-        package = pkgs.configarr;
+        package = inputs.configarr.packages.${pkgs.stdenv.hostPlatform.system}.default;
         config = builtins.readFile configarrFile;
         dataDir = "${appData.root}/configarr";
         environmentFile = "${server.secretsDir}/configarr.env";

@@ -4,14 +4,6 @@ let
   inherit (lib) mkOption types;
 in
 {
-  # Configarr's native module accepts only a YAML string. App-owned child
-  # scopes contribute mergeable Nix settings before they are rendered to YAML.
-  options.services.configarr.settings = mkOption {
-    type = types.attrsOf types.anything;
-    default = { };
-    description = "Per-application Configarr settings assembled by the Configarr scope.";
-  };
-
   options.dotfiles.server = {
     secretsDir = mkOption {
       type = types.str;

@@ -6,10 +6,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # Declarative Sonarr, Radarr, and Prowlarr application configuration.
-    configarr = {
-      url = "github:raydak-labs/configarr";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Use the upstream flake and its own dependency lock.
+    configarr.url = "github:raydak-labs/configarr";
 
     # TRaSH custom-format definitions, pinned by flake.lock.
     trash-guides = {
@@ -326,7 +324,6 @@
             home-manager.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
-            ./overlays/configarr.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/tuicr.nix
