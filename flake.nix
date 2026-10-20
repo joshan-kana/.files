@@ -324,6 +324,7 @@
             home-manager.${nativeModules}.home-manager
             ./overlays/bottles.nix
             ./overlays/comin.nix
+            ./overlays/configarr.nix
             ./overlays/gh-dash.nix
             ./overlays/nixos-options-doc.nix
             ./overlays/tuicr.nix

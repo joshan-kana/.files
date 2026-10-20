@@ -14,6 +14,7 @@
   imports = [
     inputs.hermes-agent.nixosModules.default
     inputs.configarr.nixosModules.default
+    ../../modules/server-apps/configarr
     inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix
     ./hardware.nix

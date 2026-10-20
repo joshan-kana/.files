@@ -36,72 +36,73 @@ let
     networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
       config.services.sonarr.settings.server.port
     ];
-  };
 
-  sonarrConfigArr = {
-    main = {
-      base_url = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}";
-      api_key."!env" = "SONARR_API_KEY";
-      custom_formats = [
-        {
-          trash_ids = [ "505d871304820ba7106b693be6fe4a9e" ]; # HDR
-          assign_scores_to = [
-            {
-              name = "Ultra-HD";
-              score = 500;
-            }
-          ];
-        }
-        {
-          trash_ids = [ "7c3a61a9c6cb04f52f1544be6d44a026" ]; # DV Boost
-          assign_scores_to = [
-            {
-              name = "Ultra-HD";
-              score = 1000;
-            }
-          ];
-        }
-      ];
-      quality_profiles = [
-        {
-          name = "Ultra-HD";
-          upgrade = {
-            allowed = true;
-            until_quality = "Bluray-2160p";
-            until_score = 1000;
-          };
-          min_format_score = 0;
-          qualities = [
-            { name = "Bluray-2160p"; }
-            {
-              name = "WEB 2160p";
-              qualities = [
-                "WEBDL-2160p"
-                "WEBRip-2160p"
-              ];
-            }
-            { name = "HDTV-2160p"; }
-          ];
-        }
-      ];
-      download_clients = {
-        data = [
+    services.configarr.settings.sonarr = {
+      main = {
+        base_url = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}";
+        api_key."!env" = "SONARR_API_KEY";
+        custom_formats = [
           {
-            name = "Transmission";
-            type = "transmission";
-            enable = true;
-            fields = {
-              host = "localhost";
-              port = config.services.transmission.settings.rpc-port;
-              username = "media";
-              password."!env" = "TRANSMISSION_RPC_PASSWORD";
-              tv_category = "sonarr";
-            };
+            trash_ids = [ "505d871304820ba7106b693be6fe4a9e" ]; # HDR
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 500;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "7c3a61a9c6cb04f52f1544be6d44a026" ]; # DV Boost
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 1000;
+              }
+            ];
           }
         ];
-        delete_unmanaged.enabled = false;
+        quality_profiles = [
+          {
+            name = "Ultra-HD";
+            upgrade = {
+              allowed = true;
+              until_quality = "Bluray-2160p";
+              until_score = 1000;
+            };
+            min_format_score = 0;
+            qualities = [
+              { name = "Bluray-2160p"; }
+              {
+                name = "WEB 2160p";
+                qualities = [
+                  "WEBDL-2160p"
+                  "WEBRip-2160p"
+                ];
+              }
+              { name = "HDTV-2160p"; }
+            ];
+          }
+        ];
+        download_clients = {
+          data = [
+            {
+              name = "Transmission";
+              type = "transmission";
+              enable = true;
+              fields = {
+                host = "localhost";
+                port = config.services.transmission.settings.rpc-port;
+                username = "media";
+                password."!env" = "TRANSMISSION_RPC_PASSWORD";
+                tv_category = "sonarr";
+              };
+            }
+          ];
+          delete_unmanaged.enabled = false;
+        };
       };
     };
+
   };
 
   radarr = _: {
@@ -123,74 +124,75 @@ let
     networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
       config.services.radarr.settings.server.port
     ];
-  };
 
-  radarrConfigArr = {
-    main = {
-      base_url = "http://127.0.0.1:${toString config.services.radarr.settings.server.port}";
-      api_key."!env" = "RADARR_API_KEY";
-      custom_formats = [
-        {
-          trash_ids = [ "493b6d1dbec3c3364c59d7607f7e3405" ]; # HDR
-          assign_scores_to = [
-            {
-              name = "Ultra-HD";
-              score = 500;
-            }
-          ];
-        }
-        {
-          trash_ids = [ "b337d6812e06c200ec9a2d3cfa9d20a7" ]; # DV Boost
-          assign_scores_to = [
-            {
-              name = "Ultra-HD";
-              score = 1000;
-            }
-          ];
-        }
-      ];
-      quality_profiles = [
-        {
-          name = "Ultra-HD";
-          language = "Original";
-          upgrade = {
-            allowed = true;
-            until_quality = "Remux-2160p";
-            until_score = 1000;
-          };
-          min_format_score = 0;
-          qualities = [
-            { name = "Remux-2160p"; }
-            { name = "Bluray-2160p"; }
-            {
-              name = "WEB 2160p";
-              qualities = [
-                "WEBDL-2160p"
-                "WEBRip-2160p"
-              ];
-            }
-            { name = "HDTV-2160p"; }
-          ];
-        }
-      ];
-      download_clients = {
-        data = [
+    services.configarr.settings.radarr = {
+      main = {
+        base_url = "http://127.0.0.1:${toString config.services.radarr.settings.server.port}";
+        api_key."!env" = "RADARR_API_KEY";
+        custom_formats = [
           {
-            name = "Transmission";
-            type = "transmission";
-            enable = true;
-            fields = {
-              host = "localhost";
-              port = config.services.transmission.settings.rpc-port;
-              username = "media";
-              password."!env" = "TRANSMISSION_RPC_PASSWORD";
-              movie_category = "radarr";
-            };
+            trash_ids = [ "493b6d1dbec3c3364c59d7607f7e3405" ]; # HDR
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 500;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "b337d6812e06c200ec9a2d3cfa9d20a7" ]; # DV Boost
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 1000;
+              }
+            ];
           }
         ];
-        delete_unmanaged.enabled = false;
+        quality_profiles = [
+          {
+            name = "Ultra-HD";
+            language = "Original";
+            upgrade = {
+              allowed = true;
+              until_quality = "Remux-2160p";
+              until_score = 1000;
+            };
+            min_format_score = 0;
+            qualities = [
+              { name = "Remux-2160p"; }
+              { name = "Bluray-2160p"; }
+              {
+                name = "WEB 2160p";
+                qualities = [
+                  "WEBDL-2160p"
+                  "WEBRip-2160p"
+                ];
+              }
+              { name = "HDTV-2160p"; }
+            ];
+          }
+        ];
+        download_clients = {
+          data = [
+            {
+              name = "Transmission";
+              type = "transmission";
+              enable = true;
+              fields = {
+                host = "localhost";
+                port = config.services.transmission.settings.rpc-port;
+                username = "media";
+                password."!env" = "TRANSMISSION_RPC_PASSWORD";
+                movie_category = "radarr";
+              };
+            }
+          ];
+          delete_unmanaged.enabled = false;
+        };
       };
     };
+
   };
 
   prowlarr = _: {
@@ -214,65 +216,67 @@ let
     networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
       config.services.prowlarr.settings.server.port
     ];
-  };
 
-  prowlarrConfigArr = {
-    main = {
-      base_url = "http://127.0.0.1:${toString config.services.prowlarr.settings.server.port}";
-      api_key."!env" = "PROWLARR_API_KEY";
-      indexers = {
-        data = [
-          {
-            name = "Knaben";
-            definition = "Knaben";
-            enable = true;
-          }
-          {
-            name = "LimeTorrents";
-            definition = "limetorrents";
-            enable = true;
-          }
-          {
-            name = "Nyaa.si";
-            definition = "nyaasi";
-            enable = true;
-          }
-          {
-            name = "YTS";
-            definition = "yts";
-            enable = true;
-          }
-        ];
-        delete_unmanaged.enabled = false;
-      };
-      applications = {
-        data = [
-          {
-            name = "Sonarr";
-            type = "Sonarr";
-            sync_level = "fullSync";
-            fields = {
-              prowlarrUrl = "http://localhost:${toString config.services.prowlarr.settings.server.port}";
-              baseUrl = "http://localhost:${toString config.services.sonarr.settings.server.port}";
-              apiKey."!env" = "SONARR_API_KEY";
-            };
-          }
-          {
-            name = "Radarr";
-            type = "Radarr";
-            sync_level = "fullSync";
-            fields = {
-              prowlarrUrl = "http://localhost:${toString config.services.prowlarr.settings.server.port}";
-              baseUrl = "http://localhost:${toString config.services.radarr.settings.server.port}";
-              apiKey."!env" = "RADARR_API_KEY";
-            };
-          }
-        ];
-        delete_unmanaged.enabled = false;
-        sync_indexers = false;
+    services.configarr.settings.prowlarr = {
+      main = {
+        base_url = "http://127.0.0.1:${toString config.services.prowlarr.settings.server.port}";
+        api_key."!env" = "PROWLARR_API_KEY";
+        indexers = {
+          data = [
+            {
+              name = "Knaben";
+              definition = "Knaben";
+              enable = true;
+            }
+            {
+              name = "LimeTorrents";
+              definition = "limetorrents";
+              enable = true;
+            }
+            {
+              name = "Nyaa.si";
+              definition = "nyaasi";
+              enable = true;
+            }
+            {
+              name = "YTS";
+              definition = "yts";
+              enable = true;
+            }
+          ];
+          delete_unmanaged.enabled = false;
+        };
+        applications = {
+          data = [
+            {
+              name = "Sonarr";
+              type = "Sonarr";
+              sync_level = "fullSync";
+              fields = {
+                prowlarrUrl = "http://localhost:${toString config.services.prowlarr.settings.server.port}";
+                baseUrl = "http://localhost:${toString config.services.sonarr.settings.server.port}";
+                apiKey."!env" = "SONARR_API_KEY";
+              };
+            }
+            {
+              name = "Radarr";
+              type = "Radarr";
+              sync_level = "fullSync";
+              fields = {
+                prowlarrUrl = "http://localhost:${toString config.services.prowlarr.settings.server.port}";
+                baseUrl = "http://localhost:${toString config.services.radarr.settings.server.port}";
+                apiKey."!env" = "RADARR_API_KEY";
+              };
+            }
+          ];
+          delete_unmanaged.enabled = false;
+          sync_indexers = false;
+        };
       };
     };
+
   };
+
 in
 {
   inherit sonarr radarr prowlarr;
@@ -357,42 +361,32 @@ in
     ];
   };
 
-  configarr =
-    _:
-    let
-      settings = {
-        trashRevision = inputs."trash-guides".rev;
-        sonarr = sonarrConfigArr;
-        radarr = radarrConfigArr;
-        prowlarr = prowlarrConfigArr;
-      };
-      configarrFile = (pkgs.formats.yaml { tags = true; }).generate "configarr.yml" settings;
-    in
-    {
-      services.configarr = {
-        package = inputs.configarr.packages.${pkgs.stdenv.hostPlatform.system}.default;
-        config = builtins.readFile configarrFile;
-        dataDir = "${appData.root}/configarr";
-        environmentFile = "${server.secretsDir}/configarr.env";
-      };
+  configarr = _: {
+    services.configarr.settings.trashRevision = inputs."trash-guides".rev;
 
-      users.users.${config.services.configarr.user}.extraGroups = [ appData.group.name ];
-
-      systemd.services.configarr = {
-        environment = {
-          DRY_RUN = "false";
-          STOP_ON_ERROR = "true";
-          TELEMETRY_ENABLED = "false";
-          CONFIGARR_ENFORCE_CONFIG_VALIDATION = "true";
-        };
-        unitConfig.AssertPathExists = "${server.secretsDir}/configarr.env";
-        after = [
-          "sonarr.service"
-          "radarr.service"
-          "prowlarr.service"
-        ];
-      };
+    services.configarr = {
+      package = pkgs.configarr;
+      dataDir = "${appData.root}/configarr";
+      environmentFile = "${server.secretsDir}/configarr.env";
     };
+
+    users.users.${config.services.configarr.user}.extraGroups = [ appData.group.name ];
+
+    systemd.services.configarr = {
+      environment = {
+        DRY_RUN = "false";
+        STOP_ON_ERROR = "true";
+        TELEMETRY_ENABLED = "false";
+        CONFIGARR_ENFORCE_CONFIG_VALIDATION = "true";
+      };
+      unitConfig.AssertPathExists = "${server.secretsDir}/configarr.env";
+      after = [
+        "sonarr.service"
+        "radarr.service"
+        "prowlarr.service"
+      ];
+    };
+  };
 
   systemd.tmpfiles.rules = [
     "d ${mediaRoot} 2770 root ${dataRoot.group.name} - -"
