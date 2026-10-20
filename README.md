@@ -23,7 +23,7 @@ nf                          # browse evaluated Nix options
 
 Use native NixOS/Home Manager options inside semantic scopes. Shared behaviour belongs under `modules/`; host-specific differences stay with the same semantic scope under `hosts/<host>/`.
 
-Install user-facing programs through Home Manager by default, using native `programs.*` modules when available and `home.packages` otherwise. Reserve system-level installations for services, login/session integration, and administration or recovery. Avoid redundant user/system package installation unless the responsibilities differ.
+Use Home Manager for personal applications, shell aliases, shell initialization, and user session variables. Prefer native `programs.*` modules and `home.packages` for programs without native modules. Keep system services, hardware, system/session bootstrap settings, and administration or recovery under NixOS/nix-darwin. Avoid duplicate user/system definitions unless the responsibilities differ.
 
 ## Documentation
 
