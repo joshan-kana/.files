@@ -110,7 +110,9 @@ in
   (mkMeh {
     keys = "1";
     id = "terminal.open";
-    action = exec terminal;
+    # Match desktop-entry launches: the user manager does not inherit stale
+    # Home Manager session-variable guards from the running compositor.
+    action = exec "systemd-run --user --quiet --collect -- ${terminal}";
     section = "APPS";
     description = "Terminal";
   })
