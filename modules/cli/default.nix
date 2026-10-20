@@ -523,7 +523,7 @@ in
         _:
         let
           aliases = {
-            tre = "tuicr -r main..HEAD -w";
+            tre = "tuicr -r origin/HEAD..HEAD -w";
           };
         in
         {
