@@ -19,20 +19,6 @@ in
   programs.hyprland.xwayland.enable = xwaylandEnabled;
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
-  environment.systemPackages = with pkgs; [
-    wl-clipboard
-    brightnessctl
-    polkit_gnome
-    awww
-    networkmanagerapplet
-    playerctl
-    grimblast
-    nwg-panel
-    nwg-dock-hyprland
-    nwg-displays
-    wlr-randr
-  ];
-
   eww = _: {
     home = _: {
       programs.eww = {
@@ -61,9 +47,8 @@ in
   };
 
   tofi = _: {
-    environment.systemPackages = [ pkgs.tofi ];
-
     home = { config, ... }: {
+      home.packages = [ pkgs.tofi ];
       home.file.".config/tofi/config".text = ''
         font = ${config.stylix.fonts.monospace.name}
         font-size = 18
@@ -176,6 +161,20 @@ in
   };
 
   home = _: {
+    home.packages = with pkgs; [
+      wl-clipboard
+      brightnessctl
+      polkit_gnome
+      awww
+      networkmanagerapplet
+      playerctl
+      grimblast
+      nwg-panel
+      nwg-dock-hyprland
+      nwg-displays
+      wlr-randr
+    ];
+
     # disable hyprpaper target to prevent crash loops
     stylix.targets.hyprland.hyprpaper.enable = false;
 

@@ -39,6 +39,7 @@ in
       '';
     in
     {
+      home.packages = [ pkgs.hammerspoon ];
       home.file =
         lib.listToAttrs (
           map (name: {
@@ -58,5 +59,4 @@ in
           };
         };
     };
-  environment.systemPackages = [ pkgs.hammerspoon ];
 }

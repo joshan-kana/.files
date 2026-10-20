@@ -65,11 +65,11 @@
 
   cli = extendScope moduleRegistry.cli {
     bitwardenCli = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.bitwarden-cli ];
+      home = _: { home.packages = [ pkgs.bitwarden-cli ]; };
     };
 
     esptool = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.esptool ];
+      home = _: { home.packages = [ pkgs.esptool ]; };
     };
 
     macShell = _: {
@@ -105,27 +105,27 @@
     };
 
     mas = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.mas ];
+      home = _: { home.packages = [ pkgs.mas ]; };
     };
 
     mediainfo = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.mediainfo ];
+      home = _: { home.packages = [ pkgs.mediainfo ]; };
     };
 
     nixd = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.nixd ];
+      home = _: { home.packages = [ pkgs.nixd ]; };
     };
 
     sevenzip = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs._7zz ];
+      home = _: { home.packages = [ pkgs._7zz ]; };
     };
 
     spicetify = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.spicetify-cli ];
+      home = _: { home.packages = [ pkgs.spicetify-cli ]; };
     };
 
     tio = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.tio ];
+      home = _: { home.packages = [ pkgs.tio ]; };
     };
 
     blockGooseCli = _: {
@@ -194,43 +194,43 @@
 
   desktopApps = extendScope moduleRegistry.desktopApps {
     arc = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.arc-mac ];
+      home = _: { home.packages = [ pkgs.arc-mac ]; };
     };
 
     arduinoIde = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.arduino-ide-mac ];
+      home = _: { home.packages = [ pkgs.arduino-ide-mac ]; };
     };
 
     bambuStudio = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.bambu-studio ];
+      home = _: { home.packages = [ pkgs.bambu-studio ]; };
     };
 
     coolRetroTerm = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.cool-retro-term ];
+      home = _: { home.packages = [ pkgs.cool-retro-term ]; };
     };
 
     cryptomator = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.cryptomator-mac ];
+      home = _: { home.packages = [ pkgs.cryptomator-mac ]; };
     };
 
     dolphinEmulator = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.dolphin-emu ];
+      home = _: { home.packages = [ pkgs.dolphin-emu ]; };
     };
 
     ghostty = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.ghostty-bin ];
+      home = _: { home.packages = [ pkgs.ghostty-bin ]; };
     };
 
     heroic = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.heroic-mac ];
+      home = _: { home.packages = [ pkgs.heroic-mac ]; };
     };
 
     inkscape = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.inkscape ];
+      home = _: { home.packages = [ pkgs.inkscape ]; };
     };
 
     linear = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.linear-mac ];
+      home = _: { home.packages = [ pkgs.linear-mac ]; };
     };
 
     cardinal = _: {
@@ -238,7 +238,7 @@
     };
 
     chatgpt = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.chatgpt-mac ];
+      home = _: { home.packages = [ pkgs.chatgpt-mac ]; };
     };
 
     codexApp = _: {
@@ -254,7 +254,7 @@
     };
 
     iterm2 = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.iterm2-mac ];
+      home = _: { home.packages = [ pkgs.iterm2-mac ]; };
     };
 
     izotopeProductPortal = _: {
@@ -286,7 +286,7 @@
     };
 
     openWebui = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.open-webui-mac ];
+      home = _: { home.packages = [ pkgs.open-webui-mac ]; };
     };
 
     openclaw = _: {
@@ -310,38 +310,38 @@
     };
 
     notion = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.notion-mac ];
+      home = _: { home.packages = [ pkgs.notion-mac ]; };
     };
 
     prusaSlicer = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.prusa-slicer ];
+      home = _: { home.packages = [ pkgs.prusa-slicer ]; };
     };
 
     qbittorrent = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.qbittorrent ];
+      home = _: { home.packages = [ pkgs.qbittorrent ]; };
     };
 
     qmkToolbox = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.qmk-toolbox-mac ];
+      home = _: { home.packages = [ pkgs.qmk-toolbox-mac ]; };
     };
 
     reaper = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.reaper-mac ];
+      home = _: { home.packages = [ pkgs.reaper-mac ]; };
     };
 
     vial = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.vial-mac ];
+      home = _: { home.packages = [ pkgs.vial-mac ]; };
     };
 
     zed = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.zed-editor ];
+      home = _: { home.packages = [ pkgs.zed-editor ]; };
     };
   };
 
   virtualisation = extendScope moduleRegistry.virtualisation {
     orbStack = { pkgs, ... }: {
-      environment.systemPackages = [ pkgs.orbstack ];
       home = _: {
+        home.packages = [ pkgs.orbstack ];
         home.shellAliases.o = "orb";
         programs.zsh.profileExtra = ''
           if [[ -f "$HOME/.orbstack/shell/init.zsh" ]]; then
