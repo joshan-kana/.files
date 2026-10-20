@@ -337,8 +337,8 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("nm-applet --indicator")
-                  hl.exec_cmd("dropbox")
+                  hl.exec_cmd("systemd-run --user --quiet --collect -- nm-applet --indicator")
+                  hl.exec_cmd("systemd-run --user --quiet --collect -- dropbox")
                 end
               '')
             ];
