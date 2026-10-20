@@ -6,12 +6,23 @@ sonarr:
   main:
     base_url: http://127.0.0.1:8989
     api_key: !env SONARR_API_KEY
+    custom_formats:
+      - trash_ids:
+          - 505d871304820ba7106b693be6fe4a9e # HDR
+        assign_scores_to:
+          - name: Ultra-HD
+            score: 500
+      - trash_ids:
+          - 7c3a61a9c6cb04f52f1544be6d44a026 # DV Boost
+        assign_scores_to:
+          - name: Ultra-HD
+            score: 1000
     quality_profiles:
       - name: Ultra-HD
         upgrade:
-          allowed: false
-          until_quality: HDTV-2160p
-          until_score: 1
+          allowed: true
+          until_quality: Bluray-2160p
+          until_score: 1000
         min_format_score: 0
         qualities:
           - name: Bluray-2160p
