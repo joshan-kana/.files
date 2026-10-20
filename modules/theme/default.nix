@@ -128,12 +128,11 @@ in
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     {
       stylix.targets.qt.platform = "kde";
-      gtk = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+      gtk = lib.mkIf isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
         iconTheme = activeAssets.icons;
       };
