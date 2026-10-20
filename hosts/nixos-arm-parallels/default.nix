@@ -25,7 +25,9 @@
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
-  dotfiles.defaults.terminal = "alacritty";
+  dotfiles = {
+    defaults.terminal = "alacritty";
+  };
 
   hardware = import ./hardware.nix;
 
