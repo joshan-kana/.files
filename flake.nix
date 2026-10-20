@@ -326,6 +326,7 @@
             ./overlays/hammerspoon.nix
             ./overlays/heroic.nix
             ./overlays/iterm2.nix
+            ./overlays/jellyfin-mpv-shim.nix
             ./overlays/linear.nix
             ./overlays/notion.nix
             ./overlays/open-webui.nix

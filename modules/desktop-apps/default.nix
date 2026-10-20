@@ -144,6 +144,57 @@ in
     environment.systemPackages = [ pkgs.moonlight-qt ];
   };
 
+  jellyfin =
+    _:
+    let
+      settings = {
+        hwdec = "auto";
+        network_buffer = "default";
+        segment_commercial = "ask";
+        segment_preview = "ask";
+        segment_recap = "ask";
+        theme = "superdark";
+      };
+    in
+    {
+      environment.systemPackages = [ pkgs.jellyfin-mpv-shim ] ++ lib.optionals isDarwin [ pkgs.mpv ];
+      home =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        lib.optionalAttrs isLinux {
+          services.jellyfin-mpv-shim = {
+            enable = true;
+            inherit settings;
+          };
+          xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+        }
+        // lib.optionalAttrs isDarwin {
+          home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
+            config.xdg.configFile."mpv/mpv.conf".source;
+          home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+            lib.hm.generators.mkImpureConfigMerger {
+              inherit pkgs;
+              format = "json";
+              empty = "{}";
+              jqOperation = "$dynamic * $static";
+              path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
+              staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" settings;
+            }
+          );
+        };
+    }
+    // lib.optionalAttrs isDarwin {
+      launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
+        ProgramArguments = [ (lib.getExe pkgs.jellyfin-mpv-shim) ];
+        EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
+        RunAtLoad = true;
+      };
+    };
+
   vlc =
     _:
     (
