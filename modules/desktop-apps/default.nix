@@ -68,25 +68,20 @@ in
 
   firefox = _: {
     environment.systemPackages = lib.optionals isDarwin [ pkgs.firefox-bin ];
-    home =
-      _:
-      {
-        programs.firefox.package = if isDarwin then pkgs.firefox-bin else pkgs.firefox;
-        programs.firefox.configPath =
-          if isDarwin then
-            "Library/Application Support/Firefox"
-          else if isLinux then
-            ".mozilla/firefox"
-          else
-            null;
-      }
-      // lib.optionalAttrs isLinux {
-        programs.firefox.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
-          true;
-        programs.firefox.profiles.themed.userChrome = ''
-          .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
-        '';
-      };
+    home = _: {
+      programs.firefox =
+        lib.optionalAttrs isDarwin {
+          package = pkgs.firefox-bin;
+          configPath = "Library/Application Support/Firefox";
+        }
+        // lib.optionalAttrs isLinux {
+          configPath = ".mozilla/firefox";
+          profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+          profiles.themed.userChrome = ''
+            .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+          '';
+        };
+    };
   };
 
   floorp = _: {
