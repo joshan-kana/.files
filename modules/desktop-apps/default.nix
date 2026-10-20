@@ -10,19 +10,19 @@ let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
 in
 {
-  home =
+  brave =
     _:
-    lib.optionalAttrs isLinux {
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications = lib.genAttrs [
-          "text/html"
-          "application/xhtml+xml"
-          "x-scheme-handler/http"
-          "x-scheme-handler/https"
-        ] (_: "${config.dotfiles.defaults.browser}.desktop");
-      };
-      home.sessionVariables.BROWSER = config.dotfiles.defaults.browser;
+    let
+      braveWithSystemTheme = pkgs.brave.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          cat > "$out/opt/brave.com/brave/initial_preferences" <<'EOF'
+          ${builtins.toJSON { extensions.theme.system_theme = chromiumSystemTheme; }}
+          EOF
+        '';
+      });
+    in
+    {
+      environment.systemPackages = [ (if isLinux then braveWithSystemTheme else pkgs.brave) ];
     };
 
   brave = _: {
