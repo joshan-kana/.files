@@ -169,6 +169,22 @@
         system:
         let
           pkgs = pkgsFor system;
+          markdownOptions = [
+            "--disable"
+            "MD013,MD057"
+            "--extend-enable"
+            "MD060"
+            "--config"
+            "MD060.style = \"aligned\""
+          ];
+          javascriptIncludes = [
+            "*.cjs"
+            "*.js"
+            "*.jsx"
+            "*.mjs"
+            "*.ts"
+            "*.tsx"
+          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
@@ -178,10 +194,7 @@
           projectRootFile = "flake.nix";
 
           programs = {
-            clang-format = {
-              enable = true;
-              includes = [ "modules/desktop/hyprland/shell/spectrum/*" ];
-            };
+            clang-format.enable = true;
             deadnix.enable = true;
             csharpier.enable = true;
             biome = {
@@ -190,10 +203,7 @@
             };
             nixfmt.enable = true;
             prettier.enable = true;
-            qmlformat = {
-              enable = true;
-              includes = [ "modules/desktop/hyprland/shell/qml/*.qml" ];
-            };
+            qmlformat.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
             taplo.enable = true;
@@ -241,13 +251,13 @@
               prettier.priority = 1;
               quick-lint-js = {
                 command = lib.getExe pkgs.quick-lint-js;
-                includes = [ "modules/desktop/hyprland/shell/qml/*.js" ];
+                includes = javascriptIncludes;
                 priority = 2;
               };
 
               qml-lint = {
                 command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
-                includes = [ "modules/desktop/hyprland/shell/qml/*.qml" ];
+                includes = [ "*.qml" ];
                 options =
                   lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                     "--max-warnings"
@@ -322,12 +332,12 @@
                 command = lib.getExe' pkgs.cppcheck "cppcheck";
                 priority = 2;
                 includes = [
-                  "modules/desktop/hyprland/shell/spectrum/*.c"
-                  "modules/desktop/hyprland/shell/spectrum/*.cc"
-                  "modules/desktop/hyprland/shell/spectrum/*.cpp"
-                  "modules/desktop/hyprland/shell/spectrum/*.h"
-                  "modules/desktop/hyprland/shell/spectrum/*.hh"
-                  "modules/desktop/hyprland/shell/spectrum/*.hpp"
+                  "*.c"
+                  "*.cc"
+                  "*.cpp"
+                  "*.h"
+                  "*.hh"
+                  "*.hpp"
                 ];
                 options = [
                   "--enable=warning,style,performance,portability"
@@ -417,7 +427,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(c|cc|cpp|h|hh|hpp|js|cs|csproj|lock|lua|md|nix|py|qml|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(c|cc|cjs|cpp|h|hh|hpp|js|cs|csproj|jsx|lock|lua|md|mjs|nix|py|qml|sh|ts|tsx|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
