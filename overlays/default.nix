@@ -3,6 +3,7 @@
 {
   imports = [
     ./bottles
+    ./brave
     ./comin
     ./configarr
     ./gh-dash

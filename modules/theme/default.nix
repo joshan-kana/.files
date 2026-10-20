@@ -132,6 +132,16 @@ in
     }:
     {
       stylix.targets.qt.platform = "kde";
+      dconf.settings = lib.optionalAttrs isLinux {
+        "org/gnome/desktop/interface".color-scheme = lib.mkForce (
+          if activeTheme.polarity == "light" then
+            "prefer-light"
+          else if activeTheme.polarity == "dark" then
+            "prefer-dark"
+          else
+            "default"
+        );
+      };
       gtk = lib.mkIf isLinux {
         gtk4.theme = lib.mkDefault config.gtk.theme;
         iconTheme = activeAssets.icons;

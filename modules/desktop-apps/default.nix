@@ -8,6 +8,7 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
+  chromiumSystemTheme = 2; # 0 = Classic, 1 = GTK, 2 = Qt
 in
 {
   home =
@@ -54,11 +55,12 @@ in
       homebrew.casks = [ "mullvad-vpn" ];
     };
 
-  chromium = _: {
-    config = lib.optionalAttrs isLinux {
+  chromium =
+    _:
+    lib.optionalAttrs isLinux {
       environment.systemPackages = [ pkgs.chromium ];
+      programs.chromium.initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
     };
-  };
 
   zen = _: {
     environment.systemPackages = [ pkgs.zen-browser-beta ];
@@ -66,22 +68,37 @@ in
 
   firefox = _: {
     environment.systemPackages = lib.optionals isDarwin [ pkgs.firefox-bin ];
-    home = _: {
-      programs.firefox.package = if isDarwin then pkgs.firefox-bin else pkgs.firefox;
-      programs.firefox.configPath =
-        if isDarwin then
-          "Library/Application Support/Firefox"
-        else if isLinux then
-          ".mozilla/firefox"
-        else
-          null;
-    };
+    home =
+      _:
+      {
+        programs.firefox.package = if isDarwin then pkgs.firefox-bin else pkgs.firefox;
+        programs.firefox.configPath =
+          if isDarwin then
+            "Library/Application Support/Firefox"
+          else if isLinux then
+            ".mozilla/firefox"
+          else
+            null;
+      }
+      // lib.optionalAttrs isLinux {
+        programs.firefox.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
+          true;
+        programs.firefox.profiles.themed.userChrome = ''
+          .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+        '';
+      };
   };
 
   floorp = _: {
-    home = _: {
-      programs.floorp = { };
-    };
+    home =
+      _:
+      lib.optionalAttrs isLinux {
+        programs.floorp.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
+          true;
+        programs.floorp.profiles.themed.userChrome = ''
+          .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+        '';
+      };
   };
 
   kitty = _: {
@@ -129,7 +146,10 @@ in
   vscode = _: {
     environment.systemPackages = [ pkgs.vscode ];
     home = _: {
-      programs.vscode = { };
+      programs.vscode.profiles.default.userSettings = lib.optionalAttrs isLinux {
+        "window.titleBarStyle" = "custom";
+        "window.controlsStyle" = "hidden";
+      };
     };
   };
 
