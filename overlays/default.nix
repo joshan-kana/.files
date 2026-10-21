@@ -33,6 +33,7 @@
     ./matrix-bridges
     ./ncmpcpp
     ./openclaw
+    ./python-matter-server
     ./openai-tunnel-client
     ./parallels-tools
     ./zen-browser
