@@ -212,7 +212,10 @@ private:
 
     for (std::size_t i = 0; i < kBandCount; ++i) {
       const float value = normalize(envelopes_[i]);
-      publishedBands_[i].store(value, std::memory_order_relaxed);
+      // Preserve quiet bins without a binary gate, but reduce the apparent
+      // energy of distant frequencies in the visual spectrum. Aggregate
+      // loudness meters keep their original scale.
+      publishedBands_[i].store(value * value, std::memory_order_relaxed);
 
       if (centers_[i] < 60.0F) {
         subLevel += value;
