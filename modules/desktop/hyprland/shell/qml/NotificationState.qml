@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
-import Qt.labs.settings
+import QtCore
 
 QtObject {
     id: root
@@ -13,7 +13,7 @@ QtObject {
 
     property Settings preferences: Settings {
         id: settings
-        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/notifications.ini"
         category: "Notifications"
         property bool silent: false
     }
