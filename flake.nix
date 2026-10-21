@@ -250,39 +250,17 @@
                 ];
               };
               csharp-lint = {
-                command = lib.getExe (
-                  pkgs.writeShellApplication {
-                    name = "csharp-lint";
-                    runtimeInputs = [
-                      pkgs.dotnet-sdk_10
-                      pkgs.coreutils
-                      pkgs.findutils
-                    ];
-                    text = ''
-                      scratch="$(mktemp -d)"
-                      trap 'rm -rf "$scratch"' EXIT
-                      while IFS= read -r -d "" source; do
-                        mkdir -p "$scratch/$(dirname "$source")"
-                        cp "$source" "$scratch/$source"
-                      done < <(find . -type f \
-                        \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' \
-                           -o -name '*.targets' -o -name '.editorconfig' \) \
-                        -not -path './.git/*' -not -path '*/bin/*' -not -path '*/obj/*' -print0)
-                      export DOTNET_CLI_HOME="$scratch/.dotnet"
-                      export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-                      export DOTNET_NOLOGO=1
-                      while IFS= read -r -d "" project; do
-                        dotnet format analyzers "$project" \
-                          --verify-no-changes --severity warn --verbosity quiet
-                      done < <(find "$scratch" -type f -name '*.csproj' -print0)
-                    '';
-                  }
-                );
-                includes = [
-                  "*.cs"
-                  "*.csproj"
+                command = lib.getExe pkgs.dotnet-sdk_10;
+                options = [
+                  "format"
+                  "analyzers"
+                  "--verify-no-changes"
+                  "--severity"
+                  "warn"
                 ];
-                priority = 2;
+                includes = [ "*.csproj" ];
+                # dotnet format accepts one project at a time.
+                no-positional-arg-support = true;
               };
             };
           };
