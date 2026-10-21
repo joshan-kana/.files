@@ -451,6 +451,20 @@ in
 
     users.users.${config.services.configarr.user}.extraGroups = [ appData.group.name ];
 
+    # Keep the daily timer, but also apply changed settings when NixOS switches.
+    systemd.services.configarr-apply = {
+      description = "Apply Configarr settings on deployment";
+      wantedBy = [ "multi-user.target" ];
+      restartTriggers = [
+        (pkgs.writeText "configarr-applied-settings.yml" config.services.configarr.config)
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.systemd}/bin/systemctl start --wait configarr.service";
+      };
+    };
+
     systemd.services.configarr = {
       environment = {
         DRY_RUN = "false";
