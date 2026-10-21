@@ -1,0 +1,89 @@
+name: Gerrit review
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Gerrit repository name
+        required: true
+        type: string
+      change_ref:
+        description: Exact Gerrit patch-set ref (refs/changes/...)
+        required: true
+        type: string
+      commit:
+        description: Expected 40-character commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Join tailnet
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Fetch exact Gerrit patch set
+        env:
+          GERRIT_PROJECT: ${{ inputs.project }}
+          GERRIT_REF: ${{ inputs.change_ref }}
+          GERRIT_COMMIT: ${{ inputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$GERRIT_PROJECT" == "$GITHUB_REPOSITORY" ]]
+          [[ "$GERRIT_REF" =~ ^refs/changes/[0-9]+/[0-9]+/[0-9]+$ ]]
+          [[ "$GERRIT_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+
+          source_dir="$RUNNER_TEMP/gerrit-source"
+          git init -q "$source_dir"
+          git -C "$source_dir" fetch --no-tags --depth=1 \
+            "http://nixos-server.home:8787/$GERRIT_PROJECT" "$GERRIT_REF"
+
+          actual_commit="$(git -C "$source_dir" rev-parse 'FETCH_HEAD^{commit}')"
+          [[ "$actual_commit" == "$GERRIT_COMMIT" ]]
+
+          git -C "$source_dir" checkout -q --detach FETCH_HEAD
+          git -C "$source_dir" -c url.https://github.com/.insteadOf=git@github.com: \
+            submodule update --init --recursive
+          tar -czf "$RUNNER_TEMP/gerrit-source.tar.gz" -C "$source_dir" .
+
+      - name: Transfer source to isolated validation runner
+        uses: actions/upload-artifact@v7
+        with:
+          name: gerrit-source.tar.gz
+          path: ${{ runner.temp }}/gerrit-source.tar.gz
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+  check:
+    needs: fetch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Download source
+        uses: actions/download-artifact@v8
+        with:
+          name: gerrit-source.tar.gz
+
+      - name: Extract source
+        run: |
+          mkdir source
+          tar -xzf gerrit-source.tar.gz -C source
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Validate Nix flake
+        working-directory: source
+        run: nix flake check --no-build --no-update-lock-file
