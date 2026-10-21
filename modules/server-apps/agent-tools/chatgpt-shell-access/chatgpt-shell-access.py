@@ -15,6 +15,7 @@ MAX_OUTPUT_BYTES = 512 * 1024
 OUTPUT_HEAD_BYTES = 64 * 1024
 OUTPUT_TAIL_BYTES = MAX_OUTPUT_BYTES - OUTPUT_HEAD_BYTES
 MAX_JOBS = 64
+JOB_RETENTION_SECONDS = 30 * 60
 WAIT_SECONDS = 10.0
 MAX_WAIT_SECONDS = 30.0
 CANCEL_GRACE_SECONDS = 2.0
@@ -111,7 +112,6 @@ class Job:
     host: Host
     output: OutputBuffer = field(default_factory=OutputBuffer)
     started_at: float = field(default_factory=time.monotonic)
-    started_event: asyncio.Event = field(default_factory=asyncio.Event)
     process: asyncio.subprocess.Process | None = None
     task: asyncio.Task[None] | None = None
     target_pid: int | None = None
@@ -178,11 +178,9 @@ async def _read_output(job: Job, marker: str) -> None:
                 job.target_pid = int(line[len(marker_bytes) :].strip())
             except ValueError:
                 job.output.append(line)
-            job.started_event.set()
             break
         job.output.append(line)
     else:
-        job.started_event.set()
         return
 
     while chunk := await job.process.stdout.read(64 * 1024):
@@ -220,16 +218,21 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         writer = asyncio.create_task(_write_stdin(job.process, stdin))
         job.exit_code = await job.process.wait()
         await writer
-        await reader
+        try:
+            await asyncio.wait_for(asyncio.shield(reader), timeout=1)
+        except TimeoutError:
+            # Detached children may keep stdout open after the shell exits.
+            pipe = job.process._transport.get_pipe_transport(1)
+            if pipe is not None:
+                pipe.close()
+            await reader
     except Exception as exc:
         job.error = str(exc)
     finally:
         job.completed_at = time.monotonic()
-        job.started_event.set()
 
 
-def _payload(job: Job) -> dict[str, object]:
-    output, truncated, omitted = job.output.drain()
+def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
     end = job.completed_at or time.monotonic()
     if job.completed_at is None:
         status = "running"
@@ -241,17 +244,18 @@ def _payload(job: Job) -> dict[str, object]:
         status = "completed"
     payload: dict[str, object] = {
         "status": status,
+        "success": job.completed_at is not None and not job.cancel_requested and job.error is None and job.exit_code == 0,
         "host": job.host,
         "duration_ms": round((end - job.started_at) * 1000),
-        "output": output,
-        "output_truncated": truncated,
     }
-    if omitted:
-        payload["omitted_bytes"] = omitted
+    if include_output:
+        output, truncated, omitted = job.output.drain()
+        payload.update(output=output, output_truncated=truncated)
+        if omitted:
+            payload["omitted_bytes"] = omitted
     if job.target_pid is not None:
         payload["pid"] = job.target_pid
-    if job.completed_at is None:
-        payload["request_id"] = job.request_id
+    payload["request_id"] = job.request_id
     if job.exit_code is not None:
         payload["exit_code"] = job.exit_code
     if job.error is not None:
@@ -260,34 +264,41 @@ def _payload(job: Job) -> dict[str, object]:
 
 
 async def _result(job: Job, wait_seconds: float) -> dict[str, object]:
-    await job.started_event.wait()
     if job.task is not None and not job.task.done() and wait_seconds:
         try:
             await asyncio.wait_for(asyncio.shield(job.task), timeout=wait_seconds)
         except TimeoutError:
             pass
+    return _payload(job)
 
-    payload = _payload(job)
-    if job.completed_at is not None:
-        jobs.pop(job.request_id, None)
-    return payload
+
+def _prune_jobs() -> None:
+    now = time.monotonic()
+    for request_id, job in list(jobs.items()):
+        if job.completed_at is not None and now - job.completed_at >= JOB_RETENTION_SECONDS:
+            jobs.pop(request_id)
 
 
 async def _signal_target(job: Job, sig: str) -> None:
-    if job.target_pid is None:
-        return
-
-    script = f"""
-kill_tree() {{
-  parent="$1"
-  children=$(pgrep -P "$parent" 2>/dev/null || true)
-  kill -s {sig} "$parent" 2>/dev/null || true
-  for child in $children; do
-    kill_tree "$child"
+    if job.host == LOCAL_HOST:
+        if job.process is None:
+            return
+        # Signal from the configured user, not the unprivileged MCP service.
+        script = f"kill -s {sig} -- -{job.process.pid} 2>/dev/null || true"
+    elif job.target_pid is not None:
+        script = f"""
+descendants() {{
+  for child in $(pgrep -P "$1" 2>/dev/null); do
+    printf '%s\n' "$child"
+    descendants "$child"
   done
 }}
-kill_tree {job.target_pid}
+children=$(descendants {job.target_pid})
+kill -s {sig} {job.target_pid} $children 2>/dev/null || true
 """
+    else:
+        return
+
     try:
         process = await asyncio.create_subprocess_exec(
             *_build_argv(job.host, script),
@@ -310,10 +321,19 @@ async def shell_exec(
     wait_seconds: float = WAIT_SECONDS,
     stdin: str | None = None,
 ) -> dict[str, object]:
-    """Run a non-interactive command; pass command data through stdin. Long jobs stay tracked."""
+    """Run a command on an allowed host as the configured user.
+
+    Use cwd (an absolute path) instead of prepending cd; default is the user's home.
+    Pass multiline input via stdin, not shell interpolation. wait_seconds (0-30)
+    bounds the wait for both startup and completion; 0 returns immediately.
+    A running result has a request_id for shell_result or shell_cancel.
+    Check success or exit_code, not status='completed', for command success.
+    Stdout and stderr are combined; output is bounded and drained per result.
+    """
     cwd = _validate_cwd(cwd)
     wait_seconds = _validate_wait_seconds(wait_seconds)
 
+    _prune_jobs()
     if len(jobs) >= MAX_JOBS:
         finished = next((job for job in jobs.values() if job.completed_at is not None), None)
         if finished is None:
@@ -332,7 +352,12 @@ async def shell_result(
     request_id: str,
     wait_seconds: float = WAIT_SECONDS,
 ) -> dict[str, object]:
-    """Return new output and current state for a tracked background command."""
+    """Wait up to wait_seconds (0-30) and return new output for a tracked job.
+
+    Completed jobs remain available for a short period; each read drains their
+    buffered output. Use shell_jobs to recover an unknown request_id.
+    """
+    _prune_jobs()
     job = jobs.get(request_id)
     if job is None:
         raise ValueError("unknown or expired request_id")
@@ -340,15 +365,30 @@ async def shell_result(
 
 
 @mcp.tool()
+async def shell_jobs() -> list[dict[str, object]]:
+    """List running and recent commands with request IDs for recovery.
+
+    Jobs expire 30 minutes after completion (or sooner under capacity pressure).
+    Listing does not consume their buffered output.
+    """
+    _prune_jobs()
+    return [_payload(job, include_output=False) for job in jobs.values()]
+
+
+@mcp.tool()
 async def shell_cancel(request_id: str) -> dict[str, object]:
-    """Cancel a tracked command and its target process tree."""
+    """Stop a tracked command and its descendants; return the final result."""
+    _prune_jobs()
     job = jobs.get(request_id)
     if job is None:
         raise ValueError("unknown or expired request_id")
     if job.completed_at is not None:
-        payload = _payload(job)
-        jobs.pop(request_id, None)
-        return payload
+        return _payload(job)
+
+    if job.process is not None and job.process.returncode is not None:
+        if job.task is not None:
+            await job.task
+        return _payload(job)
 
     job.cancel_requested = True
     await _signal_target(job, "TERM")
@@ -361,13 +401,11 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
     if job.task is not None and not job.task.done() and job.process is not None:
         try:
             os.killpg(job.process.pid, signal.SIGKILL)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
             pass
         await job.task
 
-    payload = _payload(job)
-    jobs.pop(request_id, None)
-    return payload
+    return _payload(job)
 
 
 if __name__ == "__main__":

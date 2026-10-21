@@ -556,6 +556,20 @@
           darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          shell-access =
+            pkgs.runCommand "shell-access-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  python3
+                  bash
+                  procps
+                ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
+                touch "$out"
+              '';
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }
