@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import Qt.labs.settings
+import QtCore
 import "Calculator.js" as Calculator
 import "SymbolLibrary.js" as SymbolLibrary
 import "PaletteUtilities.js" as PaletteUtilities
@@ -38,7 +38,7 @@ Item {
 
     Settings {
         id: launcherPreferences
-        fileName: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/palette.ini"
+        location: "file://" + (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/linux-desktop/palette.ini"
         category: "Launcher"
         property string favourites: "[]"
         property string recent: "[]"

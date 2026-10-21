@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import Qt.labs.settings
+import QtCore
 
 QtObject {
     id: root
@@ -10,7 +10,7 @@ QtObject {
     // reboot independently of the Nix-generated runtime defaults.
     property Settings preferences: Settings {
         id: preferences
-        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Motion"
         property bool animationsEnabled: root.runtime.animationsEnabled
     }
@@ -64,6 +64,8 @@ QtObject {
 
     function toggle(): void {
         preferences.animationsEnabled = !preferences.animationsEnabled;
+        preferences.setValue("animationsEnabled", preferences.animationsEnabled);
+        preferences.sync();
         syncCompositorMotion();
         syncWallpaperMotion();
     }
