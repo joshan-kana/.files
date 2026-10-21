@@ -168,35 +168,48 @@ in
               }
             ];
           }
+          {
+            trash_ids = [ "418f50b10f1907201b6cfdf881f467b7" ]; # Anime Dual Audio
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 2250;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "1bef6c151fa35093015b0bfef18279e5" ]; # 2160p
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 100;
+              }
+            ];
+          }
         ];
         quality_profiles = [
           {
             name = "Ultra-HD";
             upgrade = {
               allowed = true;
-              until_quality = "Bluray-2160p";
-              until_score = 1000;
+              until_quality = "HD and UHD";
+              until_score = 10000;
             };
-            min_format_score = -2250;
+            min_format_score = -250;
             qualities = [
-              { name = "Bluray-2160p"; }
               {
-                name = "WEB 2160p";
+                name = "HD and UHD";
                 qualities = [
+                  "Bluray-2160p"
                   "WEBDL-2160p"
                   "WEBRip-2160p"
-                ];
-              }
-              { name = "HDTV-2160p"; }
-              { name = "Bluray-1080p"; }
-              {
-                name = "WEB 1080p";
-                qualities = [
+                  "HDTV-2160p"
+                  "Bluray-1080p"
                   "WEBDL-1080p"
                   "WEBRip-1080p"
+                  "HDTV-1080p"
                 ];
               }
-              { name = "HDTV-1080p"; }
             ];
           }
         ];
@@ -282,6 +295,24 @@ in
               }
             ];
           }
+          {
+            trash_ids = [ "4a3b087eea2ce012fcc1ce319259a3be" ]; # Anime Dual Audio
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 2250;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "fb392fb0d61a010ae38e49ceaa24a1ef" ]; # 2160p
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = 100;
+              }
+            ];
+          }
         ];
         quality_profiles = [
           {
@@ -289,29 +320,24 @@ in
             language = "Any";
             upgrade = {
               allowed = true;
-              until_quality = "Bluray-2160p";
-              until_score = 1000;
+              until_quality = "HD and UHD";
+              until_score = 10000;
             };
-            min_format_score = -2250;
+            min_format_score = -250;
             qualities = [
-              { name = "Bluray-2160p"; }
               {
-                name = "WEB 2160p";
+                name = "HD and UHD";
                 qualities = [
+                  "Bluray-2160p"
                   "WEBDL-2160p"
                   "WEBRip-2160p"
-                ];
-              }
-              { name = "HDTV-2160p"; }
-              { name = "Bluray-1080p"; }
-              {
-                name = "WEB 1080p";
-                qualities = [
+                  "HDTV-2160p"
+                  "Bluray-1080p"
                   "WEBDL-1080p"
                   "WEBRip-1080p"
+                  "HDTV-1080p"
                 ];
               }
-              { name = "HDTV-1080p"; }
             ];
           }
         ];
