@@ -3,6 +3,7 @@
 import asyncio
 import importlib.util
 import os
+import signal
 import sys
 import time
 import types
@@ -107,6 +108,35 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         shell.jobs[started["request_id"]].completed_at -= shell.JOB_RETENTION_SECONDS + 1
         self.assertEqual(await shell.shell_jobs(), [])
 
+    async def test_detached_child_does_not_hold_completed_job(self):
+        started = time.monotonic()
+        result = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=3)
+        try:
+            self.assertTrue(result["success"])
+            self.assertLess(time.monotonic() - started, 3)
+            self.assertEqual(result["status"], "completed")
+            self.assertIn("child=", result["output"])
+        finally:
+            if "child=" in result["output"]:
+                os.kill(int(result["output"].split("child=")[1].splitlines()[0]), signal.SIGTERM)
+
+    async def test_cancel_after_shell_exits_does_not_change_success(self):
+        started = await shell.shell_exec("local", "sleep 5 & echo child=$!", wait_seconds=0)
+        job = shell.jobs[started["request_id"]]
+
+        async def wait_for_exit():
+            while job.exit_code is None:
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(wait_for_exit(), timeout=2)
+        result = await shell.shell_cancel(started["request_id"])
+        try:
+            self.assertEqual(result["status"], "completed")
+            self.assertTrue(result["success"])
+        finally:
+            if "child=" in result["output"]:
+                os.kill(int(result["output"].split("child=")[1].splitlines()[0]), signal.SIGTERM)
+
     async def test_cancel_running_tree(self):
         started = await shell.shell_exec("local", "sleep 60; printf unsafe-continuation", wait_seconds=0)
         job = shell.jobs[started["request_id"]]
@@ -121,22 +151,6 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["success"])
         self.assertNotEqual(result.get("exit_code"), 0)
         self.assertNotIn("unsafe-continuation", result["output"])
-
-    async def test_cancel_background_child_after_parent_exit(self):
-        result = await shell.shell_exec("local", "sleep 30 & printf 'child=%s\n' \"$!\"", wait_seconds=0)
-        job = shell.jobs[result["request_id"]]
-
-        async def wait_for_shell():
-            while job.process is None or job.process.returncode is None:
-                await asyncio.sleep(0.01)
-
-        await asyncio.wait_for(wait_for_shell(), timeout=2)
-        self.assertFalse(job.task.done())
-        start = time.monotonic()
-        cancelled = await shell.shell_cancel(result["request_id"])
-        self.assertLess(time.monotonic() - start, 1.5)
-        self.assertEqual(cancelled["status"], "cancelled")
-        self.assertFalse(cancelled["success"])
 
     def test_output_buffer_bounds(self):
         output = shell.OutputBuffer()

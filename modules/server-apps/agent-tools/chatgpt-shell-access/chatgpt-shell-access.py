@@ -218,7 +218,14 @@ async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> No
         writer = asyncio.create_task(_write_stdin(job.process, stdin))
         job.exit_code = await job.process.wait()
         await writer
-        await reader
+        try:
+            await asyncio.wait_for(asyncio.shield(reader), timeout=1)
+        except TimeoutError:
+            # Detached children may keep stdout open after the shell exits.
+            pipe = job.process._transport.get_pipe_transport(1)
+            if pipe is not None:
+                pipe.close()
+            await reader
     except Exception as exc:
         job.error = str(exc)
     finally:
@@ -378,6 +385,11 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
     if job.completed_at is not None:
         return _payload(job)
 
+    if job.process is not None and job.process.returncode is not None:
+        if job.task is not None:
+            await job.task
+        return _payload(job)
+
     job.cancel_requested = True
     await _signal_target(job, "TERM")
     if job.task is not None and not job.task.done():
@@ -389,7 +401,7 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
     if job.task is not None and not job.task.done() and job.process is not None:
         try:
             os.killpg(job.process.pid, signal.SIGKILL)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
             pass
         await job.task
 
