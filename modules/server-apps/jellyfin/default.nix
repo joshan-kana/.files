@@ -17,7 +17,10 @@ in
 
   users.users.${config.services.jellyfin.user}.extraGroups = [ dataRoot.group.name ];
 
-  networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ port ];
+  networking.firewall.interfaces = {
+    ${server.lan.interface}.allowedTCPPorts = [ port ];
+    docker0.allowedTCPPorts = [ port ];
+  };
 
   systemd = {
     services.jellyfin.unitConfig.RequiresMountsFor = [ mediaRoot ];
