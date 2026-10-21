@@ -179,6 +179,14 @@
           programs = {
             deadnix.enable = true;
             csharpier.enable = true;
+            gofmt.enable = true;
+            biome = {
+              enable = true;
+              settings.formatter = {
+                indentStyle = "space";
+                indentWidth = 2;
+              };
+            };
             nixfmt.enable = true;
             prettier.enable = true;
             shfmt.enable = true;
@@ -229,6 +237,10 @@
             excludes = treefmtExcludes;
 
             formatter = {
+              biome.includes = [
+                "*.js"
+                "*.css"
+              ];
               statix.priority = 1;
               nixfmt.priority = 2;
 
@@ -287,7 +299,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|css|go|html?|js|json|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -519,6 +531,7 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+          home-dashboard = (pkgsFor system).callPackage ./modules/server-apps/home-dashboard/package.nix { };
         }
         // updatePackagesFor system
       );
@@ -609,6 +622,7 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          home-dashboard = self.packages.${system}.home-dashboard;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
