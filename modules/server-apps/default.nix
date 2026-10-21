@@ -85,6 +85,11 @@ _: {
   servarr = import ./servarr;
 
   /**
+    Personal Jellyfin viewing history, recommendations and watchlists.
+  */
+  streamystats = import ./streamystats;
+
+  /**
     PostgreSQL database infrastructure shared by server applications.
   */
   postgresql = import ./postgresql;

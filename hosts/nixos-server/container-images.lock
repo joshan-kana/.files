@@ -10,5 +10,9 @@
   "onedev": {
     "digest": "sha256:bd6762b583433957277fa5ac24d5ab0f483fc723c49bd157af73ddc2317763d7",
     "source": "1dev/server:latest"
+  },
+  "streamystats": {
+    "digest": "sha256:9bc68f6301cc2ae749da950121d6efcbaa63335d458dad1d5967265af8e49382",
+    "source": "ghcr.io/fredrikburmester/streamystats-aio:latest"
   }
 }

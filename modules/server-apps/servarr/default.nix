@@ -13,6 +13,40 @@ let
   transmissionCredentials = "${server.secretsDir}/transmission.json";
 in
 {
+  seerr = _: {
+    services.seerr = {
+      enable = true;
+      stateRevision = 1;
+      configDir = "${appData.root}/seerr";
+    };
+
+    users = {
+      groups.seerr = { };
+      users.seerr = {
+        isSystemUser = true;
+        group = "seerr";
+        extraGroups = [ appData.group.name ];
+      };
+    };
+
+    systemd = {
+      services.seerr.serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        StateDirectory = lib.mkForce "";
+        User = "seerr";
+        Group = "seerr";
+        ReadWritePaths = [ config.services.seerr.configDir ];
+      };
+      tmpfiles.rules = [
+        "d ${config.services.seerr.configDir} 0700 seerr seerr - -"
+      ];
+    };
+
+    networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [
+      config.services.seerr.port
+    ];
+  };
+
   sonarr = _: {
     services.sonarr = {
       dataDir = "${appData.root}/sonarr";
