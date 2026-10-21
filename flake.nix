@@ -573,6 +573,7 @@
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
           darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+          tailscale-home-dns = pkgs.callPackage ./overlays/tailscale-home-dns/package.nix { };
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           shell-access =
