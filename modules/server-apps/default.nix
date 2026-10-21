@@ -10,6 +10,11 @@ _: {
   attic = import ./attic;
 
   /**
+    Gerrit code review service.
+  */
+  gerrit = import ./gerrit;
+
+  /**
     Gitea Git hosting service.
   */
   gitea = import ./gitea;
