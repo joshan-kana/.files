@@ -8,7 +8,6 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  chromiumSystemTheme = 2; # 0 = Classic, 1 = GTK, 2 = Qt
 in
 {
   home =
@@ -63,7 +62,6 @@ in
     _:
     lib.optionalAttrs isLinux {
       home = _: { home.packages = [ pkgs.chromium ]; };
-      programs.chromium.initialPrefs.extensions.theme.system_theme = chromiumSystemTheme;
     };
 
   zen = _: {
@@ -81,10 +79,6 @@ in
         }
         // lib.optionalAttrs isLinux {
           configPath = ".mozilla/firefox";
-          profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" = true;
-          profiles.themed.userChrome = ''
-            .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
-          '';
         };
     };
   };
@@ -93,11 +87,7 @@ in
     home =
       _:
       lib.optionalAttrs isLinux {
-        programs.floorp.profiles.themed.settings."toolkit.legacyUserProfileCustomizations.stylesheets" =
-          true;
-        programs.floorp.profiles.themed.userChrome = ''
-          .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
-        '';
+        programs.floorp = { };
       };
   };
 
@@ -153,10 +143,7 @@ in
 
   vscode = _: {
     home = _: {
-      programs.vscode.profiles.default.userSettings = lib.optionalAttrs isLinux {
-        "window.titleBarStyle" = "custom";
-        "window.controlsStyle" = "hidden";
-      };
+      programs.vscode.profiles.default.userSettings = { };
     };
   };
 

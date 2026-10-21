@@ -178,12 +178,6 @@ in
       HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
     };
 
-    # GTK applications keep their client headerbars, but the compositor owns
-    # window decoration controls.
-    gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
-    gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
-    dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
-
     wayland.windowManager.hyprland =
       let
         lua = lib.generators.mkLuaInline;
