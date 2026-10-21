@@ -19,6 +19,9 @@ let
       lib.attrNames
       (map (name: "restic-${name}"))
     ];
+  resticWrapperCommands = lib.optionals isLinux (
+    resticWrapperCommandsFor config.services.restic.backups
+  );
 in
 {
   environment.systemPackages = with pkgs; [
@@ -33,28 +36,15 @@ in
     ];
   };
 
-  home =
-    {
-      config,
-      lib,
-      osConfig,
-      ...
-    }:
-
-    let
-      resticWrapperCommands = lib.optionals isLinux (
-        resticWrapperCommandsFor osConfig.services.restic.backups
-      );
-    in
-    {
-      # Register Restic wrapper completions after Home Manager initializes Zsh completion.
-      programs.zsh.initContent = lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ]) (
-        lib.mkAfter ''
-          autoload -Uz _restic
-          compdef _restic ${lib.escapeShellArgs resticWrapperCommands}
-        ''
-      );
-    };
+  home = { config, ... }: {
+    # Register Restic wrapper completions after Home Manager initializes Zsh completion.
+    programs.zsh.initContent = lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ]) (
+      lib.mkAfter ''
+        autoload -Uz _restic
+        compdef _restic ${lib.escapeShellArgs resticWrapperCommands}
+      ''
+    );
+  };
 
   secrets =
     {

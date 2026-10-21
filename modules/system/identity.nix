@@ -35,15 +35,10 @@ in
   users.users.${primary.name}.home = "${primary.homeRoot}/${primary.name}";
 }
 // {
-  home =
-    { lib, osConfig, ... }:
-    let
-      inherit (osConfig.dotfiles.users) primary;
-    in
-    {
-      home.username = primary.name;
-      home.homeDirectory = lib.mkForce "${primary.homeRoot}/${primary.name}";
-      programs.home-manager.enable = true;
-      home.packages = [ ];
-    };
+  home = _: {
+    home.username = primary.name;
+    home.homeDirectory = lib.mkForce "${primary.homeRoot}/${primary.name}";
+    programs.home-manager.enable = true;
+    home.packages = [ ];
+  };
 }
