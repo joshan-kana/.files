@@ -180,6 +180,7 @@
           programs = {
             deadnix.enable = true;
             csharpier.enable = true;
+            gofmt.enable = true;
             biome = {
               enable = true;
               formatCommand = "lint";
@@ -597,6 +598,7 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+          home-dashboard = (pkgsFor system).callPackage ./modules/server-apps/home-dashboard/package.nix { };
         }
         // updatePackagesFor system
       );
@@ -714,6 +716,7 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          home-dashboard = self.packages.${system}.home-dashboard;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
