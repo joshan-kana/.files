@@ -8,7 +8,7 @@ The DNS answer TTL is bounded to 10 seconds to make transitions responsive. A DN
 
 ## Ownership
 
-The `networking.dns` scope on `nixos-server` builds this app against its selected Technitium package and installs the assembly and configuration immediately before Technitium starts. The app's device list is defined there. The normal Technitium DHCP scope, leases, DNS zone, other apps, and remote-network routes remain application-managed. Adding a roaming host requires only its canonical `.home` name, stable fallback DNS name, and health-check port.
+The global package overlay builds this app against the selected Technitium package; the `networking.dns` scope on `nixos-server` consumes it and installs the assembly and configuration immediately before Technitium starts. The app's device list is defined there. The normal Technitium DHCP scope, leases, DNS zone, other apps, and remote-network routes remain application-managed. Adding a roaming host requires only its canonical `.home` name, stable fallback DNS name, and health-check port.
 
 ## Verification
 

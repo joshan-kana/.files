@@ -197,7 +197,7 @@
               configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
             };
 
-            roamingDns = pkgs.callPackage ../../modules/networking/technitium-roaming/package.nix { };
+            roamingDns = pkgs.technitium-roaming-dns;
             roamingDnsSettings = pkgs.writeText "technitium-roaming-dns.json" (
               builtins.toJSON {
                 lanSubnet = server.lan.subnet;
