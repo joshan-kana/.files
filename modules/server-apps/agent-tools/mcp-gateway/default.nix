@@ -1,13 +1,11 @@
 {
   config,
-  inputs,
   pkgs,
   ...
 }:
 
 let
   inherit (config.dotfiles) server;
-  agentgateway = import ./agentgateway.nix { inherit inputs pkgs; };
   settings = {
     config = {
       adminAddr = "127.0.0.1:15000";
@@ -88,7 +86,7 @@ let
         N8N_AUTHORIZATION = "validation-placeholder";
       }
       ''
-        ${agentgateway}/bin/agentgateway --file ${configFile} --validate-only
+        ${pkgs.agentgateway}/bin/agentgateway --file ${configFile} --validate-only
         cp ${configFile} "$out"
       '';
   start = pkgs.writeShellScript "agentgateway-start" ''
@@ -99,7 +97,7 @@ let
     export GITHUB_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/github-authorization")"
     export YOUTRACK_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/youtrack-authorization")"
     export N8N_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/n8n-authorization")"
-    exec ${agentgateway}/bin/agentgateway --file ${validatedConfig}
+    exec ${pkgs.agentgateway}/bin/agentgateway --file ${validatedConfig}
   '';
 in
 {

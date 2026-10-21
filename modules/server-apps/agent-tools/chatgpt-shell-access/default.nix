@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -67,7 +66,6 @@ let
     util-linux
   ];
 
-  tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
 in
 {
   users.groups.${serviceUser} = { };
@@ -120,9 +118,7 @@ in
     environment = {
       HEALTH_LISTEN_ADDR = "127.0.0.1:18792";
       SSH_AUTH_SOCK = "/run/chatgpt-shell-access/sudo-agent.sock";
-      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${
-        pkgs.callPackage ./mcp-package.nix { python = pkgs.python3; }
-      }/bin/python3 ${./chatgpt-shell-access.py}";
+      MCP_COMMAND = "${pkgs.coreutils}/bin/env -u CONTROL_PLANE_API_KEY -u CONTROL_PLANE_TUNNEL_ID ${pkgs.chatgpt-shell-mcp-python}/bin/python3 ${./chatgpt-shell-access.py}";
       CHATGPT_SHELL_COMMAND_PATH = lib.makeBinPath shellPackages;
       CHATGPT_SHELL_LOCAL_HOST = config.networking.hostName;
       CHATGPT_SHELL_LOCAL_USER = primary.name;
@@ -165,7 +161,7 @@ in
         cat "$CREDENTIALS_DIRECTORY/nixos-arm-parallels-sudo" | \
           ${pkgs.bash}/bin/bash -c \
             'SSH_AUTH_SOCK="$1" exec ${pkgs.openssh}/bin/ssh-add -' _ "$CHATGPT_SHELL_REMOTE_SUDO_AGENT"
-        exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
+        exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
       '';
       Restart = "always";
       RestartSec = "2s";
