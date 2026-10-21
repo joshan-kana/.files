@@ -150,6 +150,24 @@ in
               }
             ];
           }
+          {
+            trash_ids = [ "69aa1e159f97d860440b04cd6d590c4f" ]; # Not English
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = -2000;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "ae575f95ab639ba5d15f663bf019e3e8" ]; # Not Original
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = -250;
+              }
+            ];
+          }
         ];
         quality_profiles = [
           {
@@ -159,7 +177,7 @@ in
               until_quality = "Bluray-2160p";
               until_score = 1000;
             };
-            min_format_score = 0;
+            min_format_score = -2250;
             qualities = [
               { name = "Bluray-2160p"; }
               {
@@ -246,17 +264,35 @@ in
               }
             ];
           }
+          {
+            trash_ids = [ "0dc8aec3bd1c47cd6c40c46ecd27e846" ]; # Not English
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = -2000;
+              }
+            ];
+          }
+          {
+            trash_ids = [ "d6e9318c875905d6cfb5bee961afcea9" ]; # Not Original
+            assign_scores_to = [
+              {
+                name = "Ultra-HD";
+                score = -250;
+              }
+            ];
+          }
         ];
         quality_profiles = [
           {
             name = "Ultra-HD";
-            language = "Original";
+            language = "Any";
             upgrade = {
               allowed = true;
               until_quality = "Bluray-2160p";
               until_score = 1000;
             };
-            min_format_score = 0;
+            min_format_score = -2250;
             qualities = [
               { name = "Bluray-2160p"; }
               {
