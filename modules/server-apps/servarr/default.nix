@@ -11,8 +11,59 @@ let
   inherit (server.storage) appData dataRoot;
   mediaRoot = "${dataRoot.path}/media";
   transmissionCredentials = "${server.secretsDir}/transmission.json";
+  streamystatsStateDir = "${appData.root}/streamystats";
+  streamystatsCredentialsFile = "${server.secretsDir}/streamystats.env";
+  streamystatsPort = 3013;
 in
 {
+  streamystats = _: {
+    virtualisation.oci-containers.containers.streamystats = {
+      image = "ghcr.io/fredrikburmester/streamystats-aio:latest";
+      volumes = [ "${streamystatsStateDir}:/var/lib/postgresql/data" ];
+      ports = [ "${server.lan.serverIp}:${toString streamystatsPort}:3000" ];
+      environment = {
+        POSTGRES_HOST_AUTH_METHOD = "scram-sha-256";
+        POSTGRES_INITDB_ARGS = "--auth-host=scram-sha-256";
+      };
+      environmentFiles = [ streamystatsCredentialsFile ];
+      extraOptions = [ "--stop-timeout=60" ];
+    };
+
+    systemd = {
+      tmpfiles.rules = [
+        "d ${streamystatsStateDir} 0700 root root - -"
+      ];
+
+      services = {
+        streamystats-credentials = {
+          description = "Initialize Streamystats credentials";
+          serviceConfig.Type = "oneshot";
+          script = ''
+            set -eu
+            umask 077
+            install -d -m 0700 '${server.secretsDir}'
+            if [ ! -e '${streamystatsCredentialsFile}' ]; then
+              db_password="$(${pkgs.openssl}/bin/openssl rand -hex 24)"
+              session_secret="$(${pkgs.openssl}/bin/openssl rand -hex 32)"
+              actions_key="$(${pkgs.openssl}/bin/openssl rand -base64 32 | tr -d '\n')"
+              file="$(mktemp '${server.secretsDir}/.streamystats.XXXXXXXX')"
+              trap 'rm -f "$file"' EXIT
+              printf 'POSTGRES_PASSWORD=%s\nSESSION_SECRET=%s\nNEXT_SERVER_ACTIONS_ENCRYPTION_KEY=%s\nDATABASE_URL=postgresql://postgres:%s@localhost:5432/streamystats\n' \
+                "$db_password" "$session_secret" "$actions_key" "$db_password" > "$file"
+              mv -n "$file" '${streamystatsCredentialsFile}'
+            fi
+          '';
+        };
+
+        docker-streamystats = {
+          requires = [ "streamystats-credentials.service" ];
+          after = [ "streamystats-credentials.service" ];
+          unitConfig.RequiresMountsFor = [ streamystatsStateDir ];
+        };
+      };
+    };
+  };
+
   seerr = _: {
     services.seerr = {
       enable = true;
