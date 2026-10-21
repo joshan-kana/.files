@@ -27,6 +27,7 @@
     ./prusaslicer
     ./qmk-toolbox
     ./reaper
+    ./seerr
     ./vial
     ./determinate-nix
     ./hermes-agent
