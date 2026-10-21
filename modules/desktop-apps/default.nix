@@ -197,30 +197,30 @@ in
           pkgs,
           ...
         }:
-        {
-          home.packages = [ pkgs.jellyfin-mpv-shim ];
-        }
-        // lib.optionalAttrs isLinux {
-          services.jellyfin-mpv-shim = {
-            enable = true;
-            inherit settings;
-          };
-          xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
-        }
-        // lib.optionalAttrs isDarwin {
-          home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
-            config.xdg.configFile."mpv/mpv.conf".source;
-          home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
-            lib.hm.generators.mkImpureConfigMerger {
-              inherit pkgs;
-              format = "json";
-              empty = "{}";
-              jqOperation = "$dynamic * $static";
-              path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
-              staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" settings;
-            }
-          );
-        };
+        lib.mkMerge [
+          { home.packages = [ pkgs.jellyfin-mpv-shim ]; }
+          (lib.optionalAttrs isLinux {
+            services.jellyfin-mpv-shim = {
+              enable = true;
+              inherit settings;
+            };
+            xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
+          })
+          (lib.optionalAttrs isDarwin {
+            home.file."Library/Application Support/jellyfin-mpv-shim/mpv.conf".source =
+              config.xdg.configFile."mpv/mpv.conf".source;
+            home.activation.jellyfinMpvShimSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+              lib.hm.generators.mkImpureConfigMerger {
+                inherit pkgs;
+                format = "json";
+                empty = "{}";
+                jqOperation = "$dynamic * $static";
+                path = "${config.home.homeDirectory}/Library/Application Support/jellyfin-mpv-shim/conf.json";
+                staticSettings = (pkgs.formats.json { }).generate "jellyfin-mpv-shim-settings" settings;
+              }
+            );
+          })
+        ];
     }
     // lib.optionalAttrs isDarwin {
       launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
