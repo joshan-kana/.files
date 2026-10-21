@@ -240,12 +240,11 @@ in
             language = "Original";
             upgrade = {
               allowed = true;
-              until_quality = "Remux-2160p";
+              until_quality = "Bluray-2160p";
               until_score = 1000;
             };
             min_format_score = 0;
             qualities = [
-              { name = "Remux-2160p"; }
               { name = "Bluray-2160p"; }
               {
                 name = "WEB 2160p";
