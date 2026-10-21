@@ -14,12 +14,12 @@ let
 in
 {
   home =
-    { config, osConfig, ... }:
+    { config, ... }:
     let
       colors = config.lib.stylix.colors.withHashtag;
       runtime = ''
         return {
-          yabai = ${builtins.toJSON (lib.getExe osConfig.services.yabai.package)},
+          yabai = ${builtins.toJSON (lib.getExe pkgs.yabai)},
           colors = {
             bg = ${builtins.toJSON colors.base00},
             bgAlt = ${builtins.toJSON colors.base01},
