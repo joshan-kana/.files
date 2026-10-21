@@ -122,6 +122,22 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(result.get("exit_code"), 0)
         self.assertNotIn("unsafe-continuation", result["output"])
 
+    async def test_cancel_background_child_after_parent_exit(self):
+        result = await shell.shell_exec("local", "sleep 30 & printf 'child=%s\n' \"$!\"", wait_seconds=0)
+        job = shell.jobs[result["request_id"]]
+
+        async def wait_for_shell():
+            while job.process is None or job.process.returncode is None:
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(wait_for_shell(), timeout=2)
+        self.assertFalse(job.task.done())
+        start = time.monotonic()
+        cancelled = await shell.shell_cancel(result["request_id"])
+        self.assertLess(time.monotonic() - start, 1.5)
+        self.assertEqual(cancelled["status"], "cancelled")
+        self.assertFalse(cancelled["success"])
+
     def test_output_buffer_bounds(self):
         output = shell.OutputBuffer()
         output.append(b"a" * shell.MAX_OUTPUT_BYTES)

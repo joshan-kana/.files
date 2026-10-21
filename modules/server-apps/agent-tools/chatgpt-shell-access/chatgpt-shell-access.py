@@ -273,10 +273,13 @@ def _prune_jobs() -> None:
 
 
 async def _signal_target(job: Job, sig: str) -> None:
-    if job.target_pid is None:
-        return
-
-    script = f"""
+    if job.host == LOCAL_HOST:
+        if job.process is None:
+            return
+        # Signal from the configured user, not the unprivileged MCP service.
+        script = f"kill -s {sig} -- -{job.process.pid} 2>/dev/null || true"
+    elif job.target_pid is not None:
+        script = f"""
 descendants() {{
   for child in $(pgrep -P "$1" 2>/dev/null); do
     printf '%s\n' "$child"
@@ -286,6 +289,9 @@ descendants() {{
 children=$(descendants {job.target_pid})
 kill -s {sig} {job.target_pid} $children 2>/dev/null || true
 """
+    else:
+        return
+
     try:
         process = await asyncio.create_subprocess_exec(
             *_build_argv(job.host, script),
