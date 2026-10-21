@@ -48,6 +48,21 @@ in
   };
 
   home = _: {
+    home.packages = with pkgs; [
+      localScratchpad
+      wl-clipboard
+      brightnessctl
+      polkit_gnome
+      awww
+      networkmanagerapplet
+      playerctl
+      grimblast
+      nwg-panel
+      nwg-dock-hyprland
+      nwg-displays
+      wlr-randr
+    ];
+
     # disable hyprpaper target to prevent crash loops
     stylix.targets.hyprland.hyprpaper.enable = false;
 
