@@ -267,7 +267,6 @@ in
                 ];
               }
               { name = "HDTV-2160p"; }
-              { name = "Remux-1080p"; }
               { name = "Bluray-1080p"; }
               {
                 name = "WEB 1080p";
