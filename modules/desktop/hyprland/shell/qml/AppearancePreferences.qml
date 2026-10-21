@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import Qt.labs.settings
+import QtCore
 
 // One persistent owner for user-selected visual modes. These are preferences,
 // not session activity; the running view reads them rather than holding copies.
@@ -11,7 +11,7 @@ QtObject {
 
     property Settings settings: Settings {
         id: saved
-        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Appearance"
         property bool wallpaperSpectrumEnabled: false
         property bool musicReactiveEnabled: false
