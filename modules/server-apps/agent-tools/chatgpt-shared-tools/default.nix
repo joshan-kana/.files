@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -11,14 +10,13 @@ let
   gatewayEnabled = config.dotfiles.resolvedScopes.serverApps.agentTools.mcpGateway.enable;
 
   tunnelSecret = "${server.secretsDir}/chatgpt-shared-tools.env";
-  tunnelClient = import ../openai-tunnel-client.nix { inherit inputs pkgs; };
   start = pkgs.writeShellScript "chatgpt-shared-tools-start" ''
     set -euo pipefail
     : "''${MCPGATEWAY_BEARER_TOKEN:?MCPGATEWAY_BEARER_TOKEN is not set}"
     export MCPGATEWAY_AUTH="Bearer $MCPGATEWAY_BEARER_TOKEN"
     export MCP_EXTRA_HEADERS="Authorization: env:MCPGATEWAY_AUTH"
     export MCP_DISCOVERY_EXTRA_HEADERS="Authorization: env:MCPGATEWAY_AUTH"
-    exec ${tunnelClient}/bin/tunnel-client run --log.level=info --log.format=struct-text
+    exec ${pkgs.openai-tunnel-client}/bin/tunnel-client run --log.level=info --log.format=struct-text
   '';
 
 in

@@ -11,8 +11,10 @@
     ./tuicr
     ./webhook
     ./arc
+    ./agentgateway
     ./arduino-ide
     ./chatgpt
+    ./chatgpt-shell-mcp
     ./bambu-studio
     ./cryptomator
     ./hammerspoon
@@ -31,6 +33,7 @@
     ./matrix-bridges
     ./ncmpcpp
     ./openclaw
+    ./openai-tunnel-client
     ./parallels-tools
     ./zen-browser
   ];

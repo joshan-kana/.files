@@ -1,4 +1,8 @@
-{ inputs, pkgs }:
+{
+  inputs,
+  stdenvNoCC,
+  lib,
+}:
 
 let
   binary =
@@ -6,10 +10,10 @@ let
       "aarch64-linux" = inputs.agentgateway-linux-arm64;
       "x86_64-linux" = inputs.agentgateway-linux-amd64;
     }
-    .${pkgs.stdenv.hostPlatform.system}
-      or (throw "Unsupported AgentGateway platform: ${pkgs.stdenv.hostPlatform.system}");
+    .${stdenvNoCC.hostPlatform.system}
+      or (throw "Unsupported AgentGateway platform: ${stdenvNoCC.hostPlatform.system}");
 in
-pkgs.stdenvNoCC.mkDerivation {
+stdenvNoCC.mkDerivation {
   name = "agentgateway";
 
   src = binary;
@@ -24,7 +28,7 @@ pkgs.stdenvNoCC.mkDerivation {
   meta = {
     description = "Agent connectivity for any agent, framework, or environment";
     homepage = "https://agentgateway.dev";
-    license = pkgs.lib.licenses.asl20;
+    license = lib.licenses.asl20;
     mainProgram = "agentgateway";
     platforms = [
       "aarch64-linux"
