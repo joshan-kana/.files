@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Qt.labs.settings
+import QtCore
 
 Item {
     id: picker
@@ -27,7 +27,7 @@ Item {
     property bool liveExportPending: false
     property Settings capturePreferences: Settings {
         id: capturePreferences
-        fileName: Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Capture"
         property bool freezeEnabled: true
     }
