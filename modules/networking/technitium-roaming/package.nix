@@ -16,7 +16,8 @@ stdenvNoCC.mkDerivation {
     export DOTNET_CLI_HOME="$TMPDIR"
     dotnet build RoamingDns.csproj -c Release \
       -p:TechnitiumLibDir=${technitium-dns-server}/lib/technitium-dns-server \
-      -p:NuGetAudit=false -p:RestoreIgnoreFailedSources=true
+      -p:NuGetAudit=false -p:RestoreIgnoreFailedSources=true \
+      -p:AnalysisMode=Recommended -p:TreatWarningsAsErrors=true
   '';
   installPhase = ''
     mkdir -p "$out"

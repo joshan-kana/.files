@@ -20,12 +20,3 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
-
-# Roslyn diagnostics checked for all C# projects.
-[*.cs]
-indent_style = space
-indent_size = 4
-dotnet_diagnostic.CA1050.severity = warning
-dotnet_diagnostic.CA1051.severity = warning
-dotnet_diagnostic.CA1725.severity = warning
-dotnet_diagnostic.CA2201.severity = warning

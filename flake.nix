@@ -589,6 +589,7 @@
                 python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
                 touch "$out"
               '';
+          roaming-dns-build = pkgs.callPackage ./modules/networking/technitium-roaming/package.nix { };
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }
