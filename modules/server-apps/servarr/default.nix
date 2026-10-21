@@ -452,6 +452,7 @@ in
       downloadDirPermissions = "2770";
       settings = {
         download-dir = "${mediaRoot}/downloads/complete";
+        download-queue-size = 10;
         incomplete-dir = "${mediaRoot}/downloads/incomplete";
         rpc-bind-address = "0.0.0.0";
         rpc-authentication-required = true;
