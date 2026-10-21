@@ -87,9 +87,13 @@ in
         User = "seerr";
         Group = "seerr";
         ReadWritePaths = [ config.services.seerr.configDir ];
+        BindPaths = [
+          "${config.services.seerr.configDir}/next-cache:${config.services.seerr.package}/share/.next/cache"
+        ];
       };
       tmpfiles.rules = [
         "d ${config.services.seerr.configDir} 0700 seerr seerr - -"
+        "d ${config.services.seerr.configDir}/next-cache 0700 seerr seerr - -"
       ];
     };
 
