@@ -11,6 +11,7 @@
     ./gtksourceview
     ./nixos-options-doc
     ./tuicr
+    ./technitium-roaming
     ./webhook
     ./arc
     ./agentgateway

@@ -18,3 +18,9 @@ rclone.conf
 
 # direnv
 .direnv/
+
+# Local .NET build outputs for roaming DNS projects.
+/overlays/technitium-roaming/bin/
+/overlays/technitium-roaming/obj/
+/tests/technitium-roaming/bin/
+/tests/technitium-roaming/obj/

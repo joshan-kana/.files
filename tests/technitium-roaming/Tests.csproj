@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../modules/networking/technitium-roaming/RoamingDns.csproj" />
+    <ProjectReference Include="../../overlays/technitium-roaming/RoamingDns.csproj" />
     <Reference Include="DnsServerCore.ApplicationCommon">
       <HintPath>$(TechnitiumLibDir)/DnsServerCore.ApplicationCommon.dll</HintPath>
     </Reference>
