@@ -170,6 +170,15 @@ in
                 ];
               }
               { name = "HDTV-2160p"; }
+              { name = "Bluray-1080p"; }
+              {
+                name = "WEB 1080p";
+                qualities = [
+                  "WEBDL-1080p"
+                  "WEBRip-1080p"
+                ];
+              }
+              { name = "HDTV-1080p"; }
             ];
           }
         ];
@@ -258,6 +267,15 @@ in
                 ];
               }
               { name = "HDTV-2160p"; }
+              { name = "Bluray-1080p"; }
+              {
+                name = "WEB 1080p";
+                qualities = [
+                  "WEBDL-1080p"
+                  "WEBRip-1080p"
+                ];
+              }
+              { name = "HDTV-1080p"; }
             ];
           }
         ];
