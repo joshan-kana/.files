@@ -6,13 +6,14 @@ import Qt.labs.settings
 
 Item {
     id: picker
-    // Pre-constructed content hosted by the single permanent modal layer.
+    // Hosted by a dedicated full-display capture layer.
     property var screen: captureScreen
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
     property var captureScreen: null
     property bool open: false
+    property bool surfaceReady: true
     property bool pending: false
     property bool exporting: false
     property bool copying: true
@@ -61,7 +62,7 @@ Item {
     }
     signal snapshotReady
 
-    visible: open
+    visible: open && surfaceReady
     anchors.fill: parent
 
     function clamp(value: real, minimum: real, maximum: real): real {
@@ -100,7 +101,7 @@ Item {
     }
 
     function initialiseRect(): void {
-        if (!open || !initialiseSelection || width <= 0 || height <= 0)
+        if (!open || !surfaceReady || !initialiseSelection || width <= 0 || height <= 0)
             return;
         // Recalculate when Wayland replaces its provisional 500px geometry.
         // Freeze the user's rectangle only after their first interaction.
@@ -110,6 +111,11 @@ Item {
         endY = height * 0.75;
     }
 
+    onSurfaceReadyChanged: {
+        if (surfaceReady && open)
+            keyboard.forceActiveFocus();
+        initialiseRect();
+    }
     onWidthChanged: initialiseRect()
     onHeightChanged: initialiseRect()
 
