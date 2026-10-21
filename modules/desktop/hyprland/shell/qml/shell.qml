@@ -287,7 +287,40 @@ ShellRoot {
         overviewPanel: overviewPanel
         audioMixerPanel: audioMixerPanel
         cheatsheet: cheatsheet
-        screenshotPicker: screenshotPicker
+    }
+
+    // Capture needs a full display, unlike the compact persistent modal. Map
+    // its own correctly sized layer only for selection, never resize the modal.
+    PanelWindow {
+        id: captureHost
+        readonly property bool open: screenshotPicker.open
+        property bool geometryStable: false
+        function checkGeometry(): void {
+            geometryStable = width >= implicitWidth - 1 && height >= implicitHeight - 1;
+        }
+        onWidthChanged: checkGeometry()
+        onHeightChanged: checkGeometry()
+        onScreenChanged: checkGeometry()
+        Component.onCompleted: checkGeometry()
+        screen: screenshotPicker.captureScreen || screens.focusedScreen || Quickshell.screens[0]
+        visible: open
+        implicitWidth: screen ? screen.width : 2560
+        implicitHeight: screen ? screen.height : 1440
+        color: "transparent"
+        focusable: open
+        exclusionMode: ExclusionMode.Ignore
+        anchors {
+            top: true
+            left: true
+        }
+        WlrLayershell.namespace: "linux-desktop-capture"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: focusable ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+        PopupFocusGrab {
+            popup: captureHost
+            onDismissed: screenshotPicker.dismiss(true)
+        }
     }
 
     // A single-pixel noninteractive Top layer triggers compositor dimming
@@ -339,7 +372,8 @@ ShellRoot {
 
     ScreenshotPicker {
         id: screenshotPicker
-        parent: modalHost.contentItem
+        parent: captureHost.contentItem
+        surfaceReady: captureHost.geometryStable
         runtime: runtime
         theme: theme
         motion: motion
@@ -774,7 +808,10 @@ ShellRoot {
         notificationPopup: notificationPopup
         motion: motion
         onFrozenCaptureRequested: copy => screenshotPicker.begin(copy, screens.focusedScreen, "image")
-        onRecordingSelectionRequested: screenshotPicker.begin(false, screens.focusedScreen, "record")
+        onRecordingSelectionRequested: {
+            actions.hideTransient("");
+            screenshotPicker.begin(false, screens.focusedScreen, "record");
+        }
         onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
         onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
     }
