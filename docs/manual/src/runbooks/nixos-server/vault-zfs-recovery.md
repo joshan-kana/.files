@@ -60,6 +60,49 @@ systemctl list-timers --all | grep -E 'sanoid|zfs-scrub|snapper'
 
 Do not rerun the creation script as a recovery mechanism for an existing pool.
 
+## Incomplete media downloads
+
+`vault/data` is snapshotted by Sanoid. Transmission's incomplete torrent files live on
+`vault/downloads-incomplete`, a sibling dataset mounted at
+`/srv/vault/media/downloads/incomplete`. That dataset is intentionally absent from
+Sanoid's snapshot targets. Completed downloads remain on `vault/data` beside the
+Sonarr/Radarr library, preserving hardlinked imports.
+
+The dataset is created once, outside NixOS activation. For an existing server,
+prepare it **before switching to the NixOS generation containing its filesystem
+mount**. Pause downloading, preserve the original incomplete data, and copy it
+onto the new dataset before restarting Transmission:
+
+```sh
+sudo systemctl stop transmission.service
+sudo systemctl stop sanoid.timer
+sudo mv /srv/vault/media/downloads/incomplete /srv/vault/media/downloads/incomplete-before-zfs
+sudo install -d -m 2770 -o transmission -g server-data /srv/vault/media/downloads/incomplete
+sudo zfs create -o mountpoint=legacy vault/downloads-incomplete
+sudo mount -t zfs vault/downloads-incomplete /srv/vault/media/downloads/incomplete
+sudo rsync -aHEX --sparse /srv/vault/media/downloads/incomplete-before-zfs/ /srv/vault/media/downloads/incomplete/
+sudo chown transmission:server-data /srv/vault/media/downloads/incomplete
+sudo chmod 2770 /srv/vault/media/downloads/incomplete
+```
+
+Confirm the mount is actually backed by `vault/downloads-incomplete`, then switch
+the NixOS configuration and start the services:
+
+```sh
+findmnt /srv/vault/media/downloads/incomplete
+sudo systemctl start transmission.service sanoid.timer
+zfs list -r vault
+zfs list -t snapshot -r vault
+```
+
+Confirm existing incomplete torrents resume and completed imports retain hardlinks.
+Keep the `incomplete-before-zfs` directory until all resumed torrents are verified;
+remove it only after verifying the data has been copied successfully. Its blocks
+may continue to be referenced by earlier snapshots until normal retention prunes
+them. Because incomplete and completed files now occupy different datasets,
+Transmission must copy, rather than rename, a file on completion. This adds I/O
+but leaves completed torrents and the media library on the same filesystem.
+
 ## Routine health checks
 
 ```sh
