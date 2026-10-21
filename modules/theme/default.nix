@@ -147,6 +147,16 @@ in
       };
     };
   scopeEdits = {
+    desktop = lib.optionalAttrs isLinux {
+      hyprland = {
+        home = _: {
+          # Preserve GTK client headerbars while hiding toolkit window buttons.
+          gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
+          gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
+          dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
+        };
+      };
+    };
     cli = {
       bat = {
         home =
@@ -346,23 +356,52 @@ in
       };
     };
     desktopApps = {
-      vscode = {
-        home = _: {
-          stylix.targets.vscode.enable = false;
+      chromium = {
+        config = lib.optionalAttrs isLinux {
+          programs.chromium.initialPrefs.extensions.theme.system_theme = 2; # Qt
         };
+      };
+      vscode = {
+        home =
+          _:
+          {
+            stylix.targets.vscode.enable = false;
+          }
+          // lib.optionalAttrs isLinux {
+            programs.vscode.profiles.default.userSettings = {
+              "window.titleBarStyle" = "custom";
+              "window.controlsStyle" = "hidden";
+            };
+          };
       };
       firefox = {
         home = _: {
           stylix.targets.firefox.profileNames = [ "themed" ];
           stylix.targets.firefox.colorTheme.enable = true;
-          programs.firefox.profiles.themed.extensions.force = true;
+          programs.firefox.profiles.themed = {
+            extensions.force = true;
+          }
+          // lib.optionalAttrs isLinux {
+            settings."toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+            userChrome = ''
+              .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+            '';
+          };
         };
       };
       floorp = {
         home = _: {
           stylix.targets.floorp.profileNames = [ "themed" ];
           stylix.targets.floorp.colorTheme.enable = true;
-          programs.floorp.profiles.themed.extensions.force = true;
+          programs.floorp.profiles.themed = {
+            extensions.force = true;
+          }
+          // lib.optionalAttrs isLinux {
+            settings."toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+            userChrome = ''
+              .titlebar-buttonbox-container, .titlebar-buttonbox { display: none !important; }
+            '';
+          };
         };
       };
     };
