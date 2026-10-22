@@ -322,3 +322,62 @@ func TestHomeControlActionAllowlist(t *testing.T) {
 		t.Fatal("rejected commands reached Home Assistant")
 	}
 }
+
+func TestDeviceRegistryAndExpandedControlActions(t *testing.T) {
+	previous := upstreams["homeassistant"]
+	defer func() { upstreams["homeassistant"] = previous }()
+	calls := []string{}
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/template" {
+			var request struct {
+				Template string `json:"template"`
+			}
+			json.NewDecoder(r.Body).Decode(&request)
+			if strings.Contains(request.Template, "ns.items") {
+				w.Write([]byte(`[{"entity_id":"light.bambu_chamber","id":"physical-printer","name":"Bambu P2S","room":"Study","model":"P2S"},{"entity_id":"sensor.bambu_temperature","id":"physical-printer","name":"Bambu P2S","room":"Study","model":"P2S"},{"entity_id":"script.untrusted","id":"hidden","name":"Hidden"}]`))
+			}
+			return
+		}
+		calls = append(calls, r.URL.Path)
+		w.Write([]byte(`[]`))
+	}))
+	defer backend.Close()
+	upstreams["homeassistant"] = backend.URL
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"home": true})
+	alice.Credentials["homeassistant"] = s.encrypt("personal-token")
+	bobby := addUser(s, "bobby", false, map[string]bool{"media": true})
+	status(t, req(s, "GET", "/api/ha/devices", nil, s.token(bobby), ""), 403)
+	out := req(s, "GET", "/api/ha/devices", nil, s.token(alice), "")
+	status(t, out, 200)
+	var registry map[string]struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Room string `json:"room"`
+	}
+	if err := json.Unmarshal(out.Body.Bytes(), &registry); err != nil {
+		t.Fatal(err)
+	}
+	if len(registry) != 2 || registry["light.bambu_chamber"].ID != registry["sensor.bambu_temperature"].ID || registry["light.bambu_chamber"].Name != "Bambu P2S" {
+		t.Fatalf("device grouping failed: %+v", registry)
+	}
+	for _, input := range []map[string]any{
+		{"entity": "button.bambu_resume", "action": "press"},
+		{"entity": "select.bambu_mode", "action": "select_option", "option": "silent"},
+		{"entity": "number.bambu_speed", "action": "set_value", "value": 55.5},
+		{"entity": "media_player.lounge", "action": "media_play_pause"},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, s.token(alice), "http://example.test"), 200)
+	}
+	for _, input := range []map[string]any{
+		{"entity": "button.bambu_resume", "action": "delete"},
+		{"entity": "select.bambu_mode", "action": "select_option", "option": ""},
+		{"entity": "number.bambu_speed", "action": "set_value", "value": 999999},
+		{"entity": "media_player.lounge", "action": "format_disk"},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, s.token(alice), "http://example.test"), 400)
+	}
+	if len(calls) != 4 {
+		t.Fatalf("disallowed action reached upstream: %+v", calls)
+	}
+}
