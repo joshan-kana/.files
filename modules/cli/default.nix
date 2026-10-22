@@ -697,7 +697,11 @@ in
             demuxer-max-bytes = "3GiB";
             demuxer-max-back-bytes = "256MiB";
             target-colorspace-hint = "yes";
-            input-commands = [ "load-input-conf ${./mpv/hdr-bindings.conf}" ];
+            input-commands-append = [
+              ''keybind Ctrl+! "apply-profile hdr-standard ; show-text \"HDR: Standard\""''
+              ''keybind Ctrl+@ "apply-profile hdr-expanded ; show-text \"HDR: Expanded\""''
+              ''keybind Ctrl+SHARP "apply-profile sdr-to-hdr ; show-text \"HDR: SDR to HDR\""''
+            ];
           };
           profiles = {
             hdr-standard = standard;
