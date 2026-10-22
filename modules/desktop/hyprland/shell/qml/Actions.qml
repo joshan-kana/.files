@@ -14,7 +14,7 @@ QtObject {
     required property ShortcutCheatsheet cheatsheet
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
-    required property AudioMixerPanel audioMixerPanel
+    property bool mixerDetailOpen: false
     required property OverviewPanel overviewPanel
     required property MediaState mediaState
     required property SystemState systemState
@@ -48,8 +48,6 @@ QtObject {
             launcher.hide();
         if (except !== "clipboard" && clipboardPanel.open)
             clipboardPanel.hide();
-        if (except !== "audio" && audioMixerPanel.open)
-            audioMixerPanel.hide();
         if (except !== "overview" && overviewPanel.open)
             overviewPanel.hide();
         // All hub tabs use one expansion surface. Switching between them must
@@ -83,9 +81,9 @@ QtObject {
     }
 
     function toggleAudioMixer(): void {
-        if (!audioMixerPanel.open)
-            hideTransient("audio");
-        audioMixerPanel.toggle();
+        // Match Now Playing: both the global shortcut and the Controls action
+        // navigate the single hub surface, never a second fullscreen modal.
+        showSystem(null, null, mixerDetailOpen ? "" : "mixer");
     }
 
     function lockSession(): void {
