@@ -707,7 +707,7 @@ in
             hdr-standard = standard;
             hdr-expanded = expanded;
             sdr-to-hdr = expanded // {
-              target-trc = "pq";
+              target-trc = "hlg";
               target-prim = "bt.2020";
             };
           };
