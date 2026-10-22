@@ -17,7 +17,6 @@ import (
 	"io"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,10 +32,10 @@ import (
 //go:embed static/*
 var assets embed.FS
 
-var pages = []string{"overview", "home", "media", "infrastructure", "apps"}
+var pages = []string{"overview", "home", "media", "apps"}
 var credentialPages = map[string]string{"homeassistant": "home", "sonarr": "media", "radarr": "media"}
 var upstreams = map[string]string{"homeassistant": "http://127.0.0.1:8123", "sonarr": "http://127.0.0.1:8989", "radarr": "http://127.0.0.1:7878"}
-var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean)\.[a-z0-9_]+$`)
+var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor)\.[a-z0-9_]+$`)
 
 type User struct {
 	Name        string            `json:"name"`
@@ -50,6 +49,9 @@ type User struct {
 	Pages       map[string]bool   `json:"pages"`
 	Credentials map[string]string `json:"credentials"`
 	Version     int               `json:"version"`
+	Favorites   []string          `json:"favorites,omitempty"`
+	Rooms       map[string]string `json:"rooms,omitempty"`
+	Hand        string            `json:"hand,omitempty"`
 }
 type Database struct {
 	Users map[string]*User `json:"users"`
@@ -243,6 +245,11 @@ func (s *Server) session(r *http.Request) *User {
 	for k, v := range u.Pages {
 		copy.Pages[k] = v
 	}
+	copy.Favorites = append([]string(nil), u.Favorites...)
+	copy.Rooms = map[string]string{}
+	for k, v := range u.Rooms {
+		copy.Rooms[k] = v
+	}
 	copy.Credentials = map[string]string{}
 	for k, v := range u.Credentials {
 		copy.Credentials[k] = v
@@ -310,7 +317,7 @@ func (s *Server) me(u *User) any {
 			creds[k] = u.Credentials[k] != ""
 		}
 	}
-	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents)}
+	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents), "favorites": append([]string{}, u.Favorites...), "rooms": u.Rooms, "hand": appearance(u.Hand, []string{"right", "left"})}
 }
 func csrf(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
@@ -420,39 +427,11 @@ func (s *Server) handler() http.Handler {
 		}
 		entries := []map[string]string{}
 		for _, a := range catalog {
-			if allowed(u, a.Page) {
+			if allowed(u, "apps") || allowed(u, a.Page) {
 				entries = append(entries, map[string]string{"id": a.ID, "name": a.Name, "category": a.Category, "url": a.URL, "page": a.Page})
 			}
 		}
 		jsonResponse(w, 200, entries)
-	})
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
-		u := s.session(r)
-		if !hasPage(u, "infrastructure") {
-			failure(w, 403, "Access denied")
-			return
-		}
-		type entry struct {
-			Name   string `json:"name"`
-			Online bool   `json:"online"`
-			Delay  int64  `json:"delayMs"`
-		}
-		results := make([]entry, len(healthTargets))
-		var wg sync.WaitGroup
-		for i, target := range healthTargets {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				start := time.Now()
-				conn, err := net.DialTimeout("tcp", target.Address, 900*time.Millisecond)
-				if err == nil {
-					conn.Close()
-				}
-				results[i] = entry{target.Name, err == nil, time.Since(start).Milliseconds()}
-			}()
-		}
-		wg.Wait()
-		jsonResponse(w, 200, results)
 	})
 	mux.HandleFunc("GET /api/ha/entities", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
@@ -482,6 +461,77 @@ func (s *Server) handler() http.Handler {
 		}
 		jsonResponse(w, 200, results)
 	})
+	mux.HandleFunc("GET /api/ha/areas", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if !hasPage(u, "home") {
+			failure(w, 403, "Access denied")
+			return
+		}
+		// Home Assistant resolves the actual area registry, including device-derived areas.
+		// When a template is unavailable, rooms remain manually assignable per account.
+		template := `{% set ns = namespace(areas={}) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor'] %}{% set area = area_name(e.entity_id) %}{% if area %}{% set _ = ns.areas.update({e.entity_id: area}) %}{% endif %}{% endfor %}{{ ns.areas | tojson }}`
+		body, _ := json.Marshal(map[string]string{"template": template})
+		result, err := s.request(u, "homeassistant", "POST", "/api/template", body)
+		if err != nil {
+			jsonResponse(w, 200, map[string]string{})
+			return
+		}
+		rooms := map[string]string{}
+		if json.Unmarshal(result, &rooms) != nil {
+			jsonResponse(w, 200, map[string]string{})
+			return
+		}
+		filtered := map[string]string{}
+		for id, room := range rooms {
+			if entityPattern.MatchString(id) && len(room) <= 60 {
+				filtered[id] = room
+			}
+		}
+		jsonResponse(w, 200, filtered)
+	})
+	mux.HandleFunc("PUT /api/profile/home", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if !hasPage(u, "home") {
+			failure(w, 403, "Access denied")
+			return
+		}
+		var in struct {
+			Favorites []string          `json:"favorites"`
+			Rooms     map[string]string `json:"rooms"`
+			Hand      string            `json:"hand"`
+		}
+		if bodyJSON(r, &in) != nil || len(in.Favorites) > 128 || len(in.Rooms) > 256 || (in.Hand != "right" && in.Hand != "left") {
+			failure(w, 400, "Invalid home preferences")
+			return
+		}
+		for _, id := range in.Favorites {
+			if !entityPattern.MatchString(id) {
+				failure(w, 400, "Invalid favorite")
+				return
+			}
+		}
+		for id, room := range in.Rooms {
+			if !entityPattern.MatchString(id) || len(room) > 48 || strings.TrimSpace(room) == "" {
+				failure(w, 400, "Invalid room")
+				return
+			}
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		target := s.data.Users[u.Name]
+		if target == nil || !target.Enabled {
+			failure(w, 401, "Account unavailable")
+			return
+		}
+		oldFavorites, oldRooms, oldHand := target.Favorites, target.Rooms, target.Hand
+		target.Favorites, target.Rooms, target.Hand = in.Favorites, in.Rooms, in.Hand
+		if err := s.save(); err != nil {
+			target.Favorites, target.Rooms, target.Hand = oldFavorites, oldRooms, oldHand
+			failure(w, 500, "Could not save preferences")
+			return
+		}
+		jsonResponse(w, 200, map[string]bool{"ok": true})
+	})
 	mux.HandleFunc("POST /api/ha/action", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
 		if !hasPage(u, "home") {
@@ -489,9 +539,11 @@ func (s *Server) handler() http.Handler {
 			return
 		}
 		var in struct {
-			Entity     string `json:"entity"`
-			Action     string `json:"action"`
-			Brightness int    `json:"brightness"`
+			Entity      string  `json:"entity"`
+			Action      string  `json:"action"`
+			Brightness  int     `json:"brightness"`
+			Percentage  int     `json:"percentage"`
+			Temperature float64 `json:"temperature"`
 		}
 		if bodyJSON(r, &in) != nil || !entityPattern.MatchString(in.Entity) {
 			failure(w, 400, "Invalid entity")
@@ -499,14 +551,38 @@ func (s *Server) handler() http.Handler {
 		}
 		domain := strings.Split(in.Entity, ".")[0]
 		action := in.Action
-		if action != "toggle" && action != "turn_on" && action != "turn_off" && !(domain == "light" && action == "brightness" && in.Brightness >= 1 && in.Brightness <= 100) {
+		payload := map[string]any{"entity_id": in.Entity}
+		switch domain {
+		case "light", "switch", "fan", "input_boolean":
+			if action == "brightness" && domain == "light" && in.Brightness >= 1 && in.Brightness <= 100 {
+				action = "turn_on"
+				payload["brightness_pct"] = in.Brightness
+			} else if action == "percentage" && domain == "fan" && in.Percentage >= 0 && in.Percentage <= 100 {
+				action = "set_percentage"
+				payload["percentage"] = in.Percentage
+			} else if action != "toggle" && action != "turn_on" && action != "turn_off" {
+				failure(w, 400, "Action not supported")
+				return
+			}
+		case "cover":
+			if action != "open_cover" && action != "close_cover" && action != "stop_cover" {
+				failure(w, 400, "Action not supported")
+				return
+			}
+		case "climate":
+			if action != "set_temperature" || in.Temperature < 10 || in.Temperature > 35 {
+				failure(w, 400, "Action not supported")
+				return
+			}
+			payload["temperature"] = in.Temperature
+		case "scene":
+			if action != "turn_on" {
+				failure(w, 400, "Action not supported")
+				return
+			}
+		default:
 			failure(w, 400, "Action not supported")
 			return
-		}
-		payload := map[string]any{"entity_id": in.Entity}
-		if action == "brightness" {
-			action = "turn_on"
-			payload["brightness_pct"] = in.Brightness
 		}
 		b, _ := json.Marshal(payload)
 		_, err := s.request(u, "homeassistant", "POST", "/api/services/"+domain+"/"+action, b)
@@ -854,19 +930,22 @@ var catalog = []catalogItem{
 	{"prowlarr", "Prowlarr", "Media", "media", "http://nixos-server.home:9696"},
 	{"bazarr", "Bazarr", "Media", "media", "http://nixos-server.home:6767"},
 	{"transmission", "Transmission", "Media", "media", "http://nixos-server.home:9091"},
+	{"seerr", "Seerr", "Media", "media", "http://nixos-server.home:5055"},
+	{"streamystats", "Streamystats", "Media", "media", "http://nixos-server.home:3013"},
 	{"immich", "Immich", "Photos", "apps", "http://nixos-server.home:2283"},
 	{"paperless", "Paperless", "Documents", "apps", "http://nixos-server.home:28981"},
-	{"n8n", "n8n", "Automations", "apps", "http://n8n.home:5678"},
+	{"n8n", "n8n", "Automation", "apps", "http://n8n.home:5678"},
 	{"openwebui", "Open WebUI", "AI", "apps", "http://nixos-server.home:8081"},
-	{"openclaw", "OpenClaw", "AI", "apps", "https://openclaw.home:18789"},
+	{"computer", "Computer", "AI", "apps", "http://nixos-server.home:8000"},
+	{"openclaw", "OpenClaw", "AI", "apps", "https://nixos-server.home:18789"},
 	{"gitea", "Gitea", "Development", "apps", "http://nixos-server.home:3000"},
-	{"adguard", "AdGuard Home", "Networking", "infrastructure", "http://adguard.home:3000"},
-	{"technitium", "Technitium DNS", "Networking", "infrastructure", "http://nixos-server.home:5380"},
+	{"gerrit", "Gerrit", "Development", "apps", "http://nixos-server.home:8787"},
+	{"onedev", "OneDev", "Development", "apps", "http://nixos-server.home:6610"},
+	{"agentmail", "Agent Mail", "Development", "apps", "http://nixos-server.home:8765/mail/"},
+	{"adguard", "AdGuard Home", "Networking", "apps", "http://dns.home:3000"},
+	{"technitium", "Technitium DNS", "Networking", "apps", "http://nixos-server.home:5380"},
+	{"ntfy", "ntfy", "Automation", "apps", "http://nixos-server.home:2586"},
 }
-
-type healthTarget struct{ Name, Address string }
-
-var healthTargets = []healthTarget{{"Home Assistant", "127.0.0.1:8123"}, {"Jellyfin", "127.0.0.1:8096"}, {"Sonarr", "127.0.0.1:8989"}, {"Radarr", "127.0.0.1:7878"}, {"Prowlarr", "127.0.0.1:9696"}, {"Immich", "nixos-server.home:2283"}, {"n8n", "nixos-server.home:5678"}, {"Open WebUI", "nixos-server.home:8081"}, {"Paperless", "nixos-server.home:28981"}}
 
 // resetPassword is for a server administrator running as the service owner.
 // Stop the service before invoking it, so its in-memory database cannot overwrite the change.
