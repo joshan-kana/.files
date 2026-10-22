@@ -3185,113 +3185,115 @@ svg {
   }
 }
 
-/* Smart Home control board: shape and hierarchy follow each device's purpose. */
-.home-grid.control-board,
-.home-grid {
+/* Compact, capability-driven Home controls. Row spans are sized from content. */
+.home-grid.compact-board {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 13px;
-  padding-bottom: 125px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-auto-flow: dense;
+  grid-auto-rows: 6px;
+  gap: 10px;
+  align-items: start;
+  padding: 0 0 120px;
 }
-.control-card {
-  position: relative;
-  grid-column: span 3;
-  min-width: 0;
-  min-height: 0;
-  border-radius: 21px;
-  padding: 0;
+.home-grid.compact-board .control-card {
+  grid-column: span 1;
+  grid-row: span 1;
   display: flex;
   flex-direction: column;
+  align-self: start;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 15px;
+  background: var(--panel);
   overflow: hidden;
   isolation: isolate;
-  background: var(--panel);
-  border: 1px solid var(--edge);
   transition:
-    border-color 0.16s ease,
-    transform 0.16s ease;
+    border-color 0.14s ease,
+    background 0.14s ease;
 }
-.control-card.card-wide {
-  grid-column: span 6;
+.home-grid.compact-board .control-card--fan,
+.home-grid.compact-board .control-card--light,
+.home-grid.compact-board .control-card--appliance {
+  grid-column: span 2;
 }
-.control-card:hover {
-  border-color: color-mix(in srgb, var(--tone) 48%, var(--edge));
+.home-grid.compact-board .control-card:hover {
+  border-color: color-mix(in srgb, var(--tone) 53%, var(--edge));
 }
-.control-card.is-on {
-  border-color: color-mix(in srgb, var(--tone) 29%, var(--edge));
-  background: var(--panel);
+.home-grid.compact-board .control-card.is-on {
+  background: color-mix(in srgb, var(--tone) 5%, var(--panel));
+  border-color: color-mix(in srgb, var(--tone) 30%, var(--edge));
 }
-.control-card-header {
+.control-card .control-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 10px 11px 5px;
   min-width: 0;
-  padding: 18px 18px 0;
 }
 .control-card .tile-open {
   display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 9px;
   flex: 1;
   min-width: 0;
   min-height: 0;
   height: auto;
   padding: 0;
-  align-items: center;
-  flex-direction: row;
-  gap: 12px;
+  margin: 0;
   text-align: left;
-  background: transparent;
-  border: 0;
 }
 .control-card .tile-icon {
-  flex: none;
   display: grid;
   place-items: center;
-  width: 43px;
-  height: 43px;
-  font-size: 22px;
-  border-radius: 14px;
+  flex: none;
+  width: 33px;
+  height: 33px;
+  border-radius: 10px;
   margin: 0;
-  background: color-mix(in srgb, var(--tone) 16%, var(--pane));
+  font-size: 17px;
   color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 13%, var(--pane));
 }
 .control-card-title {
   display: flex;
   flex-direction: column;
-  gap: 3px;
   min-width: 0;
+  gap: 2px;
 }
 .control-card-title small {
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 550;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 9px;
+  line-height: 1.2;
   white-space: nowrap;
-  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .control-card-title strong {
-  display: block;
-  line-height: 1.3;
-  letter-spacing: -0.25px;
-  font-size: 14px;
-  overflow-wrap: anywhere;
   color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: -0.15px;
+  overflow-wrap: anywhere;
 }
 .control-card .tile-power,
 .control-card .tile-detail {
   position: relative;
   inset: auto;
-  top: auto;
-  right: auto;
-  left: auto;
   flex: none;
-  width: 43px;
-  height: 43px;
-  border-radius: 13px;
-  background: var(--pane2);
-  color: var(--muted);
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  min-width: 33px;
   border: 1px solid var(--edge);
-  font-size: 18px;
+  border-radius: 10px;
+  color: var(--muted);
+  background: var(--pane2);
+  font-size: 17px;
 }
 .control-card .tile-power.is-on {
   background: var(--tone);
@@ -3299,551 +3301,507 @@ svg {
   border-color: var(--tone);
 }
 .control-card .tile-power:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
 }
-.control-card-content {
+.control-card .control-card-content {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  flex: 1;
-  justify-content: center;
-  padding: 19px 19px 15px;
+  justify-content: normal;
+  flex: none;
   min-width: 0;
-}
-.control-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  padding: 7px 11px 10px;
   gap: 8px;
-  min-height: 45px;
-  padding: 9px 19px 12px;
-  border-top: 1px solid color-mix(in srgb, var(--edge) 58%, transparent);
-  font-size: 10px;
-  color: var(--muted);
 }
-.control-card-footer button {
-  border: 0;
-  background: transparent;
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  color: var(--tone);
-  font-size: 11px;
-  padding: 6px 0;
-  font-weight: 650;
-  white-space: nowrap;
-}
-.control-card-footer button svg {
-  font-size: 11px;
-}
-.control-card--light {
-  background:
-    radial-gradient(
-      ellipse at 85% 95%,
-      color-mix(in srgb, var(--tone-light) 11%, transparent),
-      transparent 68%
-    ),
-    var(--panel);
-}
-.control-card--light .control-card-content {
-  gap: 18px;
-}
-.card-light-summary {
+.control-card--fan .card-fan-status {
   display: flex;
   align-items: center;
-  gap: 13px;
-  min-width: 0;
-}
-.card-light-glow {
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  border-radius: 19px;
-  border: 1px solid color-mix(in srgb, var(--lamp-color) 36%, var(--edge));
-  color: var(--muted);
-  background: color-mix(in srgb, var(--lamp-color) 8%, var(--pane));
-  font-size: 27px;
-}
-.card-light-glow.lit {
-  color: var(--lamp-color);
-  background: color-mix(in srgb, var(--lamp-color) 26%, var(--pane));
-  box-shadow: 0 0 28px color-mix(in srgb, var(--lamp-color) 15%, transparent);
-}
-.card-light-summary > div:nth-child(2) {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.card-light-summary strong {
-  font-size: 19px;
-  letter-spacing: -0.6px;
-}
-.card-light-summary small {
-  color: var(--muted);
-  font-size: 12px;
-}
-.card-color-button {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid var(--edge);
-  background: var(--pane);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-.card-color-button input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-.card-color-button span {
-  width: 27px;
-  height: 27px;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px #fff3;
-}
-.card-light-range {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-.card-light-range > span {
-  display: flex;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 650;
-}
-.card-light-range output {
-  font-size: 12px;
-  color: var(--tone-light);
-  font-variant-numeric: tabular-nums;
-}
-.card-light-range input {
-  width: 100%;
-  height: 28px;
-  accent-color: var(--lamp-color);
-  cursor: pointer;
-}
-.control-card--fan {
-  background:
-    radial-gradient(
-      ellipse at 100% 0%,
-      color-mix(in srgb, var(--tone-climate) 13%, transparent),
-      transparent 65%
-    ),
-    var(--panel);
-}
-.card-fan-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 10px;
+  font-size: 12px;
 }
 .card-fan-status span {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
+  color: var(--tone-climate);
   font-size: 12px;
+  font-weight: 700;
+}
+.card-fan-status small {
   color: var(--muted);
-}
-.card-fan-status span svg {
-  color: var(--tone-climate);
-}
-.card-fan-status strong {
-  font-size: 26px;
-  letter-spacing: -1px;
-  color: var(--tone-climate);
-  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-fan-speeds {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 .card-fan-speeds .fan-speed {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-direction: row;
-  min-width: 0;
-  min-height: 55px;
-  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
   background: var(--pane);
   color: var(--text);
-  font-size: 21px;
+  font-size: 16px;
   font-weight: 750;
 }
-.card-fan-speeds .fan-speed span {
-  font-size: 10px;
-  color: var(--muted);
-  font-weight: 500;
-}
 .card-fan-speeds .fan-speed.active {
-  background: color-mix(in srgb, var(--tone-climate) 17%, var(--pane));
   border-color: var(--tone-climate);
+  background: color-mix(in srgb, var(--tone-climate) 20%, var(--pane));
   color: var(--tone-climate);
 }
-.card-fan-speeds .fan-speed.active span {
-  color: var(--tone-climate);
-}
-.card-oscillation {
+.card-fan-extras {
   display: flex;
   align-items: center;
-  align-self: flex-start;
   gap: 7px;
-  padding: 7px 0;
-  border: 0;
-  background: transparent;
+}
+.card-fan-extras select {
+  appearance: auto;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 30px;
+  padding: 4px 8px;
+  background: var(--pane);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
   color: var(--muted);
   font-size: 11px;
 }
-.card-oscillation.active {
+.card-fan-extras .card-oscillation {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--pane);
+  border: 1px solid var(--edge);
+  color: var(--muted);
+  font-size: 15px;
+}
+.card-fan-extras .card-oscillation.active {
+  background: color-mix(in srgb, var(--tone-climate) 20%, var(--pane));
   color: var(--tone-climate);
+  border-color: var(--tone-climate);
 }
-.control-card--cover .control-card-content {
-  gap: 17px;
-}
-.card-cover-state {
+.control-card--light .card-light-summary {
   display: flex;
   align-items: center;
   gap: 9px;
+  min-width: 0;
+}
+.card-light-glow {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 33px;
+  height: 33px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--lamp-color) 8%, var(--pane));
+  color: var(--muted);
+  font-size: 20px;
+  border: 1px solid var(--edge);
+}
+.card-light-glow.lit {
+  background: color-mix(in srgb, var(--lamp-color) 22%, var(--pane));
+  color: var(--lamp-color);
+  border-color: color-mix(in srgb, var(--lamp-color) 42%, var(--edge));
+}
+.card-light-summary > strong {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+.card-color-button {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+}
+.card-color-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.card-color-button span {
+  display: block;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.card-light-range {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.card-light-range span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.card-light-range output {
+  color: var(--tone-light);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.card-light-range input {
+  display: block;
+  min-height: 23px;
+  height: 23px;
+  width: 100%;
+  accent-color: var(--lamp-color, var(--tone-light));
+  cursor: pointer;
+}
+.card-temp-range input {
+  accent-color: var(--tone-light);
+}
+.control-card--cover .card-cover-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: var(--tone-cover);
-  font-size: 14px;
   text-transform: capitalize;
 }
 .card-cover-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 5px;
 }
 .card-cover-actions button {
-  padding: 11px 6px;
-  min-height: 48px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--tone-cover) 11%, var(--pane));
-  border: 1px solid color-mix(in srgb, var(--tone-cover) 24%, var(--edge));
+  height: 36px;
+  min-height: 36px;
+  padding: 4px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--tone-cover) 22%, var(--edge));
+  background: color-mix(in srgb, var(--tone-cover) 9%, var(--pane));
   color: var(--text);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 10px;
 }
 .card-cover-actions button:disabled {
-  opacity: 0.4;
-}
-.card-climate-reading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.card-climate-reading span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.card-climate-reading strong {
-  font-size: 30px;
-  color: var(--tone-climate);
-}
-.card-temperature-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.card-temperature-actions button {
-  width: 45px;
-  height: 45px;
-  border: 1px solid var(--edge);
-  background: var(--pane2);
-  color: var(--text);
-  border-radius: 13px;
-  font-size: 23px;
-}
-.card-temperature-actions span {
-  font-size: 12px;
-  color: var(--muted);
-}
-.control-card--appliance {
-  background: linear-gradient(
-    132deg,
-    color-mix(in srgb, var(--tone-mixed) 10%, var(--panel)),
-    var(--panel) 60%
-  );
+  opacity: 0.35;
 }
 .card-complex-main {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 9px;
 }
 .card-complex-main > span {
-  width: 47px;
-  height: 47px;
-  border-radius: 14px;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--tone-mixed) 18%, var(--pane));
+  width: 29px;
+  height: 29px;
+  flex: none;
+  border-radius: 9px;
   color: var(--tone-mixed);
-  font-size: 23px;
+  background: color-mix(in srgb, var(--tone-mixed) 16%, var(--pane));
+  font-size: 17px;
 }
 .card-complex-main > div {
   display: flex;
+  gap: 3px;
   flex-direction: column;
-  gap: 5px;
 }
 .card-complex-main strong {
-  font-size: 16px;
+  font-size: 12px;
+  color: var(--text);
 }
 .card-complex-main small {
+  font-size: 10px;
   color: var(--muted);
-  font-size: 12px;
 }
 .card-complex-controls {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 .card-complex-controls > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  border: 1px solid var(--edge);
-  border-radius: 12px;
-  padding: 7px 8px 7px 12px;
+  gap: 4px;
+  min-width: 0;
   background: var(--pane);
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  padding: 5px 6px;
 }
 .card-complex-controls > div > span {
-  font-size: 11px;
-  color: var(--text);
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--muted);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .control-card .card-complex-controls .tile-power {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 27px;
+  height: 27px;
+  min-width: 27px;
+  border-radius: 7px;
+  font-size: 13px;
 }
 .card-reading-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.card-reading {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 7px;
-  padding: 12px;
-  background: var(--pane);
-  border-radius: 13px;
-  border: 1px solid var(--edge);
-}
-.card-reading small {
-  font-size: 10px;
-  line-height: 1.4;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.card-reading strong {
-  font-size: 14px;
-  color: var(--text);
-  overflow-wrap: anywhere;
+  gap: 6px;
 }
 .control-card--sensor .card-reading-row {
   grid-template-columns: 1fr;
 }
+.card-reading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  min-width: 0;
+  border: 1px solid var(--edge);
+  background: var(--pane);
+  border-radius: 9px;
+}
+.card-reading small {
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-reading strong {
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
 .control-card--sensor .card-reading {
-  background: color-mix(in srgb, var(--tone-sensor) 8%, var(--pane));
-  border-color: color-mix(in srgb, var(--tone-sensor) 19%, var(--edge));
+  background: color-mix(in srgb, var(--tone-sensor) 9%, var(--pane));
 }
 .control-card--sensor .card-reading strong {
-  font-size: 24px;
-  letter-spacing: -0.6px;
+  font-size: 18px;
   color: var(--tone-sensor);
 }
-.control-card--switch .card-switch-status {
+.card-caption {
+  font-size: 9px;
+  color: var(--muted);
+  padding: 0 11px 8px;
+  text-align: right;
+}
+.card-switch-status {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 18px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--tone-power) 9%, var(--pane));
-  color: var(--muted);
-  font-size: 14px;
+  gap: 7px;
+  font-size: 12px;
   font-weight: 650;
+  color: var(--muted);
 }
 .control-card--switch.is-on .card-switch-status {
-  background: color-mix(in srgb, var(--tone-power) 20%, var(--pane));
   color: var(--tone-power);
 }
-.control-card--media .card-media-state {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  font-size: 14px;
-  color: var(--tone-media);
-}
 .card-media-play {
-  padding: 11px 13px;
-  border-radius: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
   border: 1px solid var(--edge);
-  color: var(--text);
+  border-radius: 9px;
   background: var(--pane);
+  color: var(--tone-media);
+  padding: 8px;
+  font-size: 11px;
 }
-@media (min-width: 1500px) {
-  .home-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
-  .control-card.card-compact {
-    grid-column: span 3;
-  }
+.card-climate-reading,
+.card-temperature-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
 }
-@media (min-width: 900px) and (max-width: 1330px) {
-  .home-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
-  .control-card.card-compact {
-    grid-column: span 4;
-  }
-  .control-card.card-wide {
-    grid-column: span 6;
-  }
+.card-climate-reading span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.card-climate-reading strong {
+  font-size: 17px;
+  color: var(--tone-climate);
+}
+.card-temperature-actions button {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 9px;
+  border: 1px solid var(--edge);
+  background: var(--pane);
+  color: var(--text);
+  font-size: 17px;
+}
+.card-temperature-actions span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.control-card
+  :is(
+    .tile-open,
+    .tile-power,
+    .tile-detail,
+    button,
+    input,
+    select
+  ):focus-visible {
+  outline: 2px solid var(--tone-cool);
+  outline-offset: 2px;
+}
+.room-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.room-pill svg,
+.room-choice-list svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.home-section-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.home-section-title strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.home-section-title strong svg {
+  width: 17px;
+  height: 17px;
+  color: var(--tone-cool);
+}
+.home-section-title .unavailable-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  background: var(--pane);
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+.home-section-title .unavailable-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+.home-section-title .unavailable-toggle[aria-pressed="true"] {
+  color: var(--tone-cool);
+  border-color: var(--tone-cool);
 }
 @media (max-width: 899px) {
-  .home-grid {
+  .home-grid.compact-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 11px;
-    padding-bottom: 155px;
+    gap: 8px;
+    padding-bottom: 145px;
   }
-  .control-card.card-wide {
+  .home-grid.compact-board .control-card--fan,
+  .home-grid.compact-board .control-card--light,
+  .home-grid.compact-board .control-card--appliance {
     grid-column: span 2;
   }
-  .control-card.card-compact {
-    grid-column: span 1;
+  .home-grid.compact-board .control-card {
+    border-radius: 13px;
   }
-  .control-card {
-    border-radius: 19px;
+  .control-card .control-card-header {
+    padding: 9px 9px 4px;
+    gap: 6px;
   }
-  .control-card-header {
-    padding: 15px 14px 0;
+  .control-card .control-card-content {
+    padding: 6px 9px 9px;
     gap: 7px;
   }
-  .control-card .tile-open {
-    gap: 8px;
-  }
   .control-card .tile-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
-    font-size: 19px;
+    width: 29px;
+    height: 29px;
+    border-radius: 9px;
+    font-size: 15px;
   }
   .control-card-title strong {
-    font-size: 12px;
-  }
-  .control-card-title small {
-    font-size: 10px;
+    font-size: 11px;
   }
   .control-card .tile-power,
   .control-card .tile-detail {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    border-radius: 11px;
-  }
-  .control-card-content {
-    padding: 14px 14px 12px;
-    gap: 12px;
-  }
-  .control-card-footer {
-    padding: 8px 14px 10px;
+    width: 29px;
+    height: 29px;
+    min-width: 29px;
+    border-radius: 9px;
+    font-size: 15px;
   }
   .control-card--sensor .card-reading strong {
-    font-size: 18px;
+    font-size: 15px;
   }
-  .control-card--light .card-light-summary strong {
-    font-size: 16px;
-  }
-  .card-fan-speeds .fan-speed {
-    min-height: 58px;
+  .control-card--cover .card-cover-actions button {
+    font-size: 9px;
   }
 }
-@media (max-width: 399px) {
-  .control-card.card-compact {
-    grid-column: span 1;
+@media (min-width: 900px) and (max-width: 1150px) {
+  .home-grid.compact-board {
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
   }
-  .control-card--switch .card-switch-status {
-    padding: 10px;
-    font-size: 11px;
-  }
-  .control-card--sensor .card-reading {
-    padding: 9px;
-  }
-  .control-card-header {
-    flex-wrap: wrap;
-  }
-  .control-card-title strong {
-    font-size: 11px;
-  }
-  .control-card .tile-open {
-    min-width: 60%;
-  }
-  .control-card-footer span {
-    display: none;
-  }
-  .card-complex-main strong {
-    font-size: 14px;
-  }
-}
-:root[data-hand="left"] .control-card .tile-power,
-:root[data-hand="left"] .control-card .tile-detail {
-  right: auto;
-  left: auto;
 }
 
-.card-fan-presets {
-  display: flex;
-  gap: 7px;
-  overflow-x: auto;
-  padding: 2px 0 6px;
-  scrollbar-width: thin;
-  scroll-snap-type: x proximity;
+/* CSS multicolumn layout naturally packs variable-height controls without gaps or overlaps. */
+.home-grid.compact-board {
+  display: block;
+  columns: 5 200px;
+  column-gap: 10px;
+  padding-bottom: 120px;
 }
-.card-fan-presets .fan-preset {
-  flex: none;
-  min-height: 36px;
-  padding: 7px 11px;
-  border-radius: 100px;
-  background: var(--pane);
-  border: 1px solid var(--edge);
-  color: var(--muted);
-  font-size: 11px;
-  scroll-snap-align: start;
+.home-grid.compact-board .control-card,
+.home-grid.compact-board
+  :is(.control-card--fan, .control-card--light, .control-card--appliance) {
+  display: inline-flex;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  margin: 0 0 10px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  grid-column: auto;
+  grid-row: auto;
+  vertical-align: top;
 }
-.card-fan-presets .fan-preset.active {
-  border-color: var(--tone-climate);
-  background: color-mix(in srgb, var(--tone-climate) 18%, var(--pane));
-  color: var(--tone-climate);
+.home-grid.compact-board > .empty {
+  display: block;
+  break-inside: avoid;
 }
-.card-temp-range input {
-  accent-color: var(--tone-light);
+@media (max-width: 899px) {
+  .home-grid.compact-board {
+    columns: 2;
+    column-gap: 8px;
+    padding-bottom: 145px;
+  }
+  .home-grid.compact-board .control-card {
+    margin-bottom: 8px;
+  }
 }

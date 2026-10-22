@@ -9,6 +9,11 @@ const navItems = [
 ];
 const icons = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  bed: '<path d="M3 12V6m18 6V6M3 15h18v4M5 15v4m14-4v4M4 12h16v3H4z"/><path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M5 11h14"/>',
+  sofa: '<path d="M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M4 12a2 2 0 0 0-2 2v5h20v-5a2 2 0 0 0-2-2"/><path d="M5 19v2m14-2v2"/>',
+  chair:
+    '<path d="M7 3h10v8H7zM5 13h14v3H5zM12 16v4m-5 1h10m-7-1-2 1m6-1 2 1"/>',
+  walk: '<circle cx="13" cy="4" r="2"/><path d="m7 21 4-7 2-4 4 3m-9-3 5-2 3 4m-2 2 4 7"/>',
   home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-8h6v8"/>',
   play: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
   server:
@@ -37,6 +42,9 @@ const icons = {
     '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   doc: '<path d="M6 2h9l4 4v16H6zM14 2v5h5M9 12h7m-7 4h7"/>',
   activity: '<path d="M2 12h4l3-8 5 16 3-8h5"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off":
+    '<path d="m3 3 18 18M10 5.2a12 12 0 0 1 2-.2c6 0 10 7 10 7a16 16 0 0 1-4.1 4.6M6 7C3.4 9.2 2 12 2 12s4 7 10 7a10 10 0 0 0 3.2-.6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   logout:
@@ -45,6 +53,22 @@ const icons = {
   check: '<path d="m4 12 5 5L20 6"/>',
   x: '<path d="M5 5 19 19M19 5 5 19"/>',
 };
+// Resolve the icon configured on each Home Assistant area. Unknown MDI icons
+// fall back to Home, rather than creating a second area configuration.
+const mdiIcons = {
+  "mdi:bed-king": "bed",
+  "mdi:bed": "bed",
+  "mdi:sofa": "sofa",
+  "mdi:chair-rolling": "chair",
+  "mdi:server-network": "server",
+  "mdi:audio-video": "play",
+  "mdi:walk": "walk",
+  "mdi:balcony": "sun",
+  "mdi:home": "home",
+};
+function roomSymbol(room) {
+  return svg(mdiIcons[state.roomIcons[room]] || "home");
+}
 function svg(name) {
   return (
     '<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" aria-hidden="true">' +
@@ -69,6 +93,8 @@ const state = {
   entities: null,
   health: null,
   areas: {},
+  roomIcons: {},
+  areaIconsLoaded: false,
   deviceRegistry: {},
   deviceRegistryLoaded: false,
   showReadings: false,
@@ -279,7 +305,7 @@ function shell() {
     esc(state.me.name) +
     '">' +
     esc(state.me.name.slice(0, 2).toUpperCase()) +
-    '</button></div></header><div class="keyboard-hintbar"><span><kbd>1</kbd>–<kbd>4</kbd> Pages</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> Navigate</span><span><kbd>↵</kbd> Open</span><span><kbd>t</kbd> Toggle</span><span><kbd>/</kbd> Search</span><button data-open="help"><kbd>?</kbd> All shortcuts</button></div><div id="page-content">' +
+    '</button></div></header><div class="keyboard-hintbar"><span><kbd>1</kbd>–<kbd>4</kbd> Pages</span><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>/<kbd>hjkl</kbd> Move</span><span><kbd>↵</kbd> Controls</span><span><kbd>e</kbd> Details</span><span><kbd>t</kbd> Power</span><span><kbd>/</kbd> Search</span><button data-open="help"><kbd>?</kbd> All shortcuts</button></div><div id="page-content">' +
     content() +
     "</div></main>" +
     '<nav class="bottomnav" aria-label="Primary navigation">' +
@@ -347,8 +373,13 @@ function auth() {
 function helpSheet() {
   const shortcuts = [
     ["1 / 2 / 3 / 4", "Overview / Home / Media / Apps"],
-    ["h / j / k / l", "Move between tiles"],
-    ["Enter", "Open selected device or application"],
+    ["Arrows / h j k l", "Move between cards or controls"],
+    ["Enter / Tab", "Use a card’s controls / next control"],
+    ["e / Shift Enter", "More device details"],
+    ["Esc", "Return to card or close panel"],
+    ["[ / ]", "Previous / next room"],
+    ["u", "Show or hide unavailable entities"],
+    ["f", "Favourite selected device"],
     ["t", "Toggle selected device’s primary control"],
     ["/", "Search devices, apps or pages"],
     ["⌘ K / Ctrl K", "Open command palette"],
@@ -505,13 +536,17 @@ function controllable(e) {
     "scene",
   ].includes(e.entity_id.split(".")[0]);
 }
+function hiddenHomeEntities() {
+  const current = state.entities || [];
+  return current.filter(isUnavailable).length;
+}
 function homeDevices() {
   const groups = new Map();
   for (const e of state.entities || []) {
     const reg = state.deviceRegistry[e.entity_id];
     // Orphaned, unavailable template buttons are not physical devices.
     // Their real fan (or other device) remains accessible via its own registry entry.
-    if (!reg && domainOf(e) === "button" && e.state === "unavailable") continue;
+    if (!state.me?.show_unavailable && isUnavailable(e)) continue;
     const id = reg?.id || "entity:" + e.entity_id;
     if (!groups.has(id))
       groups.set(id, {
@@ -546,6 +581,9 @@ function homeDevices() {
       return d;
     })
     .filter((d) => d.controls.length || d.readings.length);
+}
+function isUnavailable(e) {
+  return e.state === "unavailable" || e.state === "unknown";
 }
 function domainOf(e) {
   return e.entity_id.split(".")[0];
@@ -684,40 +722,35 @@ function cardPower(e) {
   return `<button class="tile-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" aria-label="Turn ${esc(label(e))} ${active ? "off" : "on"}" aria-pressed="${active}" ${unavailable ? "disabled" : ""}>${svg("power")}</button>`;
 }
 function inlineFan(e) {
-  const attrs = fanAttributes(e);
-  const current = Number(attrs.percentage ?? 0);
+  const attrs = fanAttributes(e),
+    current = Number(attrs.percentage ?? 0);
   const supports = Number(attrs.supported_features || 0);
   const levels = supports & 1 ? fanLevels(e) : [];
   const modes =
     supports & 8 && Array.isArray(attrs.preset_modes)
-      ? attrs.preset_modes.filter((mode) => typeof mode === "string")
+      ? attrs.preset_modes.filter((m) => typeof m === "string")
       : [];
-  return `<div class="card-fan-status"><span>${svg("wind")} ${e.state === "on" ? "Running · " + esc(attrs.preset_mode || "normal") : "Off"}</span><strong>${e.state === "on" ? Math.round(current) + "%" : "Standby"}</strong></div>
-    <div class="card-fan-speeds" role="group" aria-label="${esc(label(e))} speeds">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${esc(e.entity_id)}" aria-label="Speed ${i + 1}" aria-pressed="${Math.abs(n - current) <= 2}">${i + 1}<span>${n}%</span></button>`).join("")}</div>
-    ${modes.length ? `<div class="card-fan-presets" role="group" aria-label="Fan mode">${modes.map((mode) => `<button class="fan-preset ${attrs.preset_mode === mode ? "active" : ""}" data-ha-preset="${esc(mode)}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${attrs.preset_mode === mode}">${esc(mode)}</button>`).join("")}</div>` : ""}
-    ${supports & 2 ? `<button class="card-oscillation ${attrs.oscillating ? "active" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")} ${attrs.oscillating ? "Oscillating" : "Oscillation off"}</button>` : ""}`;
+  return `<div class="card-fan-status"><span>${svg("wind")} ${e.state === "on" ? Math.round(current) + "%" : "Off"}</span><small>${esc(attrs.preset_mode || "")}</small></div>
+    <div class="card-fan-speeds" role="group" aria-label="Fan speed">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${Math.abs(n - current) <= 2}" aria-label="Speed ${i + 1}, ${n}%">${i + 1}</button>`).join("")}</div>
+    <div class="card-fan-extras">${modes.length ? `<select data-ha-preset-select="${esc(e.entity_id)}" aria-label="Fan mode">${modes.map((m) => `<option value="${esc(m)}" ${m === attrs.preset_mode ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>` : ""}${supports & 2 ? `<button class="card-oscillation ${attrs.oscillating ? "active" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${esc(e.entity_id)}" aria-label="Toggle fan oscillation" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")}</button>` : ""}</div>`;
 }
 function inlineLight(e) {
-  const attrs = e.attributes || {};
-  const modes = attrs.supported_color_modes || [];
-  const dimmable = modes.some((mode) => mode !== "onoff");
-  const rgb = modes.some((mode) =>
-    ["rgb", "rgbw", "rgbww", "hs", "xy"].includes(mode),
+  const attrs = e.attributes || {},
+    modes = attrs.supported_color_modes || [];
+  const dimmable = modes.some((m) => m !== "onoff");
+  const rgb = modes.some((m) =>
+    ["rgb", "rgbw", "rgbww", "hs", "xy"].includes(m),
   );
-  const temp = modes.includes("color_temp");
   const value = Math.round(
     (Number(attrs.brightness ?? (e.state === "on" ? 255 : 0)) / 255) * 100,
   );
   const colour = lightColor(e);
   const min = Math.max(1500, Number(attrs.min_color_temp_kelvin || 2000));
   const max = Math.min(10000, Number(attrs.max_color_temp_kelvin || 6500));
-  const kelvin = Math.max(
-    min,
-    Math.min(max, Number(attrs.color_temp_kelvin || 4000)),
-  );
-  return `<div class="card-light-summary"><span class="card-light-glow ${e.state === "on" ? "lit" : ""}" style="--lamp-color:${esc(colour)}">${svg("bulb")}</span><div><strong>${e.state === "on" ? "Light on" : "Light off"}</strong><small>${rgb ? "Colour · " : ""}${dimmable ? value + "% brightness" : "On / off"}</small></div>${rgb ? `<label class="card-color-button" title="Choose light colour"><input type="color" aria-label="Colour for ${esc(label(e))}" data-ha-color="${esc(e.entity_id)}" value="${esc(colour)}"><span style="background:${esc(colour)}"></span></label>` : ""}</div>
-  ${dimmable ? `<label class="card-light-range"><span>Brightness <output>${value}%</output></span><input type="range" min="1" max="100" value="${value}" style="--lamp-color:${esc(colour)}" data-control="brightness" data-entity-id="${esc(e.entity_id)}" aria-label="Brightness for ${esc(label(e))}"></label>` : ""}
-  ${temp && min < max ? `<label class="card-light-range card-temp-range"><span>White temperature <output>${kelvin} K</output></span><input type="range" min="${min}" max="${max}" step="50" value="${kelvin}" data-control="color_temp" data-entity-id="${esc(e.entity_id)}" aria-label="White temperature for ${esc(label(e))}"></label>` : ""}`;
+  const temp = modes.includes("color_temp") && min < max;
+  return `<div class="card-light-summary"><span class="card-light-glow ${e.state === "on" ? "lit" : ""}" style="--lamp-color:${esc(colour)}">${svg("bulb")}</span><strong>${e.state === "on" ? value + "%" : "Off"}</strong>${rgb ? `<label class="card-color-button" title="Choose light colour"><input type="color" data-ha-color="${esc(e.entity_id)}" value="${esc(colour)}" aria-label="Light colour"><span style="background:${esc(colour)}"></span></label>` : ""}</div>
+    ${dimmable ? `<label class="card-light-range"><span>Brightness <output>${value}%</output></span><input type="range" min="1" max="100" value="${value}" style="--lamp-color:${esc(colour)}" data-control="brightness" data-entity-id="${esc(e.entity_id)}" aria-label="Brightness"></label>` : ""}
+    ${temp ? `<label class="card-light-range card-temp-range"><span>Warm <output>${Number(attrs.color_temp_kelvin || 4000)} K</output></span><input type="range" min="${min}" max="${max}" step="50" value="${Number(attrs.color_temp_kelvin || 4000)}" data-control="color_temp" data-entity-id="${esc(e.entity_id)}" aria-label="White temperature"></label>` : ""}`;
 }
 function inlineCover(e) {
   const disabled = ["unknown", "unavailable"].includes(e.state);
@@ -775,8 +808,8 @@ function inlineComplex(d) {
     ${d.readings.length ? `<div class="card-reading-row">${inlineReadings(d)}</div>` : ""}`;
 }
 function homeTile(d) {
-  const main = d.primary;
-  const kind = d.kind;
+  const main = d.primary,
+    kind = d.kind;
   const power = ["light", "fan", "switch", "input_boolean"].includes(
     domainOf(main),
   )
@@ -798,7 +831,6 @@ function homeTile(d) {
               : kind === "power"
                 ? "switch"
                 : "other";
-  const wide = ["fan", "light", "appliance", "cover"].includes(style);
   let controls = "";
   if (style === "fan")
     controls =
@@ -809,17 +841,22 @@ function homeTile(d) {
   else if (style === "sensor")
     controls = `<div class="card-reading-row">${inlineReadings(d, 2)}</div>`;
   else if (style === "switch")
-    controls = `<div class="card-switch-status">${svg("power")} ${main.state === "on" ? "Powered on" : "Powered off"}</div>`;
+    controls = `<div class="card-switch-status">${svg("power")} ${main.state === "on" ? "On" : "Off"}</div>`;
   else if (style === "media")
-    controls = `<div class="card-media-state">${svg("play")} ${esc(deviceState(main))}</div><button class="card-media-play" data-ha-action="media_play_pause" data-ha-entity="${esc(main.entity_id)}" ${["unknown", "unavailable"].includes(main.state) ? "disabled" : ""}>Play / pause</button>`;
+    controls = `<button class="card-media-play" data-ha-action="media_play_pause" data-ha-entity="${esc(main.entity_id)}" ${isUnavailable(main) ? "disabled" : ""}>${svg("play")} ${esc(deviceState(main))} · Play / pause</button>`;
   else
     controls = `<div class="card-reading-row">${inlineReadings(d, 2) || esc(deviceSummaryLine(d))}</div>`;
-  const disabled = ["unknown", "unavailable"].includes(main.state);
-  return `<article class="home-tile control-card control-card--${style} tone-${kind} ${wide ? "card-wide" : "card-compact"} ${main.state === "on" ? "is-on" : ""}">
-    <header class="control-card-header"><button class="tile-open" data-device="${esc(d.id)}" aria-label="Open details for ${esc(d.name)}"><span class="tile-icon">${svg(domainIcon(domainOf(main)))}</span><span class="control-card-title"><small>${esc(d.room)}${d.favourite ? " · ✦" : ""}</small><strong>${esc(d.name)}</strong></span></button>
-    ${style === "appliance" || style === "sensor" || style === "cover" || style === "media" || style === "other" || !power ? `<button class="tile-detail" data-device="${esc(d.id)}" aria-label="Details for ${esc(d.name)}">${svg("chevron")}</button>` : cardPower(power)}</header>
+  const last =
+    style === "appliance"
+      ? d.controls.length + " controls"
+      : style === "sensor"
+        ? "Readings"
+        : "";
+  return `<article class="home-tile control-card control-card--${style} tone-${kind} ${main.state === "on" ? "is-on" : ""}" data-card-id="${esc(d.id)}">
+    <header class="control-card-header"><button class="tile-open" data-device="${esc(d.id)}" aria-label="${esc(d.name)} controls" aria-description="Press Enter to access quick controls, E for details"><span class="tile-icon">${svg(domainIcon(main.entity_id.split(".")[0]))}</span><span class="control-card-title"><small>${esc(d.room)}</small><strong>${esc(d.name)}</strong></span></button>
+    ${power ? cardPower(power) : `<button class="tile-detail" data-device="${esc(d.id)}" aria-label="More details for ${esc(d.name)}">${svg("chevron")}</button>`}</header>
     <div class="control-card-content">${controls}</div>
-    <footer class="control-card-footer"><span>${style === "sensor" ? "Sensor" : style === "appliance" ? "Device overview" : style === "fan" ? "Speed & airflow" : style === "light" ? "Lighting" : style === "cover" ? "Shades & blinds" : style === "switch" ? "Power" : "Device"}</span><button data-device="${esc(d.id)}" aria-label="More options for ${esc(d.name)}">More controls ${svg("arrow")}</button></footer>
+    ${last ? `<div class="card-caption">${esc(last)}</div>` : ""}
   </article>`;
 }
 function roomPills() {
@@ -827,7 +864,7 @@ function roomPills() {
   return rooms
     .map(
       (room) =>
-        `<button class="room-pill ${room === state.room ? "selected" : ""}" data-room="${esc(room)}" aria-pressed="${room === state.room}">${room === "Favorites" ? svg("spark") : ""}${esc(room)}</button>`,
+        `<button class="room-pill ${room === state.room ? "selected" : ""}" data-room="${esc(room)}" aria-pressed="${room === state.room}">${room === "Favorites" ? svg("spark") : room === "All" || room === "Sensors" || room === "Unassigned" ? "" : roomSymbol(room)}${esc(room)}</button>`,
     )
     .join("");
 }
@@ -845,8 +882,8 @@ function home() {
           : `
   <div class="home-status"><span class="status-dot"></span>${active} active devices <span class="status-sep">·</span> ${all.length} devices <span class="status-sep">·</span> ${homeRooms().length} rooms</div>
   <div class="home-toolbar"><label class="home-find">${svg("search")}<input id="home-search" placeholder="Find a device, control, or room" value="${esc(state.homeSearch)}" autocomplete="off" aria-label="Find a device"></label><button class="home-room-button" data-open="rooms" aria-label="Choose room">${svg("sliders")}</button></div>
-  <div class="room-pills" aria-label="Filter by room">${roomPills()}</div><div class="home-section-title"><strong>${esc(state.room === "All" ? "Your devices" : state.room)}</strong><span id="home-count">${homeItems().length} devices</span></div>
-  <div class="home-grid" id="home-grid">${homeItems().map(homeTile).join("") || empty("No matching devices", "search")}</div>
+  <div class="room-pills" aria-label="Filter by room">${roomPills()}</div><div class="home-section-title"><strong>${state.room === "All" ? "" : roomSymbol(state.room)}${esc(state.room === "All" ? "Your devices" : state.room)}</strong><span id="home-count">${homeItems().length} devices</span><button class="unavailable-toggle" data-unavailable="true" aria-pressed="${Boolean(state.me.show_unavailable)}" title="${state.me.show_unavailable ? "Hide" : "Show"} unavailable entities">${svg(state.me.show_unavailable ? "eye-off" : "eye")} ${state.me.show_unavailable ? "Hide unavailable" : "Show unavailable"}${!state.me.show_unavailable && hiddenHomeEntities() ? " · " + hiddenHomeEntities() : ""}</button></div>
+  <div class="home-grid compact-board" id="home-grid">${homeItems().map(homeTile).join("") || empty("No matching devices", "search")}</div>
   <div class="home-thumb-dock"><button data-room="Favorites" aria-label="Favourites">${svg("spark")}<span>Favourites</span></button><button data-open="rooms" aria-label="Rooms">${svg("sliders")}<span>Rooms</span></button></div>`
   }`;
 }
@@ -1045,13 +1082,14 @@ function deviceSheet() {
     </section></div>`;
 }
 function roomsSheet() {
-  return `<div class="overlay" data-dismiss="true"><section class="sheet rooms-sheet" role="dialog" aria-label="Choose room"><div class="sheet-grip"></div><div class="between"><h2>Choose a room</h2><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div><div class="room-choice-list">${["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"].map((room) => `<button data-room="${esc(room)}">${room === state.room ? svg("check") : svg("home")} ${esc(room)}</button>`).join("")}</div></section></div>`;
+  return `<div class="overlay" data-dismiss="true"><section class="sheet rooms-sheet" role="dialog" aria-label="Choose room"><div class="sheet-grip"></div><div class="between"><h2>Choose a room</h2><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div><div class="room-choice-list">${["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"].map((room) => `<button data-room="${esc(room)}">${room === state.room ? svg("check") : room === "All" || room === "Favorites" || room === "Unassigned" || room === "Sensors" ? svg("home") : roomSymbol(room)} ${esc(room)}</button>`).join("")}</div></section></div>`;
 }
 async function saveHomePrefs() {
   await api("/api/profile/home", "PUT", {
     favorites: state.me.favorites || [],
     rooms: state.me.rooms || {},
     hand: state.me.hand || "right",
+    show_unavailable: Boolean(state.me.show_unavailable),
   });
 }
 function mediaQueue() {
@@ -1464,6 +1502,23 @@ async function refreshPage(page) {
     (page === "home" || page === "overview") &&
     has("home") &&
     state.me.credentials.homeassistant &&
+    !state.areaIconsLoaded
+  ) {
+    state.areaIconsLoaded = true;
+    jobs.push(
+      api("/api/ha/room-icons")
+        .then((icons) => {
+          state.roomIcons = icons || {};
+        })
+        .catch(() => {
+          state.areaIconsLoaded = false;
+        }),
+    );
+  }
+  if (
+    (page === "home" || page === "overview") &&
+    has("home") &&
+    state.me.credentials.homeassistant &&
     !state.deviceRegistryLoaded
   ) {
     state.deviceRegistryLoaded = true;
@@ -1531,9 +1586,41 @@ async function init() {
     auth();
   }
 }
+async function toggleHomeFavorite(id) {
+  const previous = [...(state.me.favorites || [])];
+  const group = homeDevices().find((d) =>
+    d.entities.some((e) => e.entity_id === id),
+  );
+  if (!group) return;
+  const ids = new Set(group.entities.map((e) => e.entity_id));
+  state.me.favorites = group.favourite
+    ? previous.filter((entity) => !ids.has(entity))
+    : [...previous, id];
+  render();
+  try {
+    await saveHomePrefs();
+  } catch (err) {
+    state.me.favorites = previous;
+    render();
+    toast(err.message, true);
+  }
+}
 document.addEventListener("click", async (e) => {
   const target = e.target.closest("button,[data-dismiss],a[data-page]");
   if (!target) return;
+  if (target.dataset.unavailable) {
+    const previous = Boolean(state.me.show_unavailable);
+    state.me.show_unavailable = !previous;
+    render();
+    try {
+      await saveHomePrefs();
+    } catch (err) {
+      state.me.show_unavailable = previous;
+      render();
+      toast(err.message, true);
+    }
+    return;
+  }
   if (target.dataset.mediaFilter) {
     state.mediaFilter = target.dataset.mediaFilter;
     render();
@@ -1572,22 +1659,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.favorite) {
-    const previous = [...(state.me.favorites || [])];
-    const group = homeDevices().find((d) =>
-      d.entities.some((e) => e.entity_id === target.dataset.favorite),
-    );
-    const ids = new Set((group?.entities || []).map((e) => e.entity_id));
-    state.me.favorites = group?.favourite
-      ? previous.filter((id) => !ids.has(id))
-      : [...previous, target.dataset.favorite];
-    render();
-    try {
-      await saveHomePrefs();
-    } catch (err) {
-      state.me.favorites = previous;
-      render();
-      toast(err.message, true);
-    }
+    await toggleHomeFavorite(target.dataset.favorite);
     return;
   }
   if (target.dataset.saveRoom) {
@@ -2097,6 +2169,23 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.dataset.haPresetSelect) {
+    const field = e.target;
+    field.disabled = true;
+    try {
+      await api("/api/ha/action", "POST", {
+        entity: field.dataset.haPresetSelect,
+        action: "preset_mode",
+        preset_mode: field.value,
+      });
+      refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      field.disabled = false;
+    }
+    return;
+  }
   if (e.target.dataset.haColor || e.target.dataset.haEffect) {
     const field = e.target;
     field.disabled = true;
@@ -2184,41 +2273,73 @@ function keyboardTiles() {
     return [...document.querySelectorAll(".media-shortcut")];
   return [...document.querySelectorAll(".metric")];
 }
+function focusWithinCard(card) {
+  return [
+    ...card.querySelectorAll(
+      "button:not([disabled]),input:not([disabled]),select:not([disabled])",
+    ),
+  ].filter(
+    (item) =>
+      !item.matches(".tile-open,.tile-detail,.tile-power") &&
+      item.getClientRects().length,
+  );
+}
+function spatialFocus(items, current, key) {
+  if (!items.length) return null;
+  if (!current || !items.includes(current)) return items[0];
+  const rect = current.getBoundingClientRect(),
+    x = rect.x + rect.width / 2,
+    y = rect.y + rect.height / 2;
+  const horizontal = ["h", "l", "arrowleft", "arrowright"].includes(key);
+  const sign = ["h", "k", "arrowleft", "arrowup"].includes(key) ? -1 : 1;
+  return (
+    items
+      .filter((item) => item !== current)
+      .map((item) => {
+        const box = item.getBoundingClientRect(),
+          dx = box.x + box.width / 2 - x,
+          dy = box.y + box.height / 2 - y;
+        const forward = sign * (horizontal ? dx : dy);
+        const sideways = Math.abs(horizontal ? dy : dx);
+        return { item, forward, score: forward + sideways * 1.7 };
+      })
+      .filter((v) => v.forward > 8)
+      .sort((a, b) => a.score - b.score)[0]?.item || null
+  );
+}
 function keyboardNavigate(key) {
   const tiles = keyboardTiles();
   if (!tiles.length) return false;
-  const current = tiles.includes(document.activeElement)
-    ? document.activeElement
-    : null;
-  if (!current) {
-    tiles[0].focus();
-    state.keyboardMode = true;
-    state.keyboardTarget = tiles[0].dataset.device || tiles[0].href || "";
+  const active = document.activeElement;
+  const card = active?.closest(".control-card");
+  const inControl = card && active !== card.querySelector(".tile-open");
+  if (inControl) {
+    const controls = focusWithinCard(card);
+    const next = spatialFocus(controls, active, key);
+    if (next) {
+      next.focus();
+      return true;
+    }
+    // When a card edge is reached, arrow navigation returns to card selection.
+    card.querySelector(".tile-open")?.focus();
     return true;
   }
-  const origin = current.getBoundingClientRect();
-  const x = origin.left + origin.width / 2,
-    y = origin.top + origin.height / 2;
-  const horizontal = key === "h" || key === "l",
-    sign = key === "h" || key === "k" ? -1 : 1;
-  const candidates = tiles
-    .filter((tile) => tile !== current)
-    .map((tile) => {
-      const bounds = tile.getBoundingClientRect();
-      const dx = bounds.left + bounds.width / 2 - x,
-        dy = bounds.top + bounds.height / 2 - y;
-      const forward = horizontal ? sign * dx : sign * dy;
-      const offset = Math.abs(horizontal ? dy : dx);
-      return { tile, forward, score: forward + offset * 2 };
-    })
-    .filter((entry) => entry.forward > 12)
-    .sort((a, b) => a.score - b.score);
-  const next = candidates[0]?.tile;
+  const next = spatialFocus(tiles, active, key);
   if (!next) return true;
-  next.focus({ preventScroll: false });
+  next.focus();
   state.keyboardMode = true;
   state.keyboardTarget = next.dataset.device || next.href || "";
   return true;
+}
+function currentCard() {
+  return document.activeElement?.closest(".control-card");
+}
+function roomCycle(delta) {
+  const rooms = ["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"];
+  const index = rooms.indexOf(state.room);
+  state.room = rooms[(index + delta + rooms.length) % rooms.length];
+  state.keyboardTarget = "";
+  render();
 }
 function commandSearch() {
   state.quick = false;
@@ -2250,8 +2371,14 @@ document.addEventListener("keydown", (e) => {
       state.help = false;
       render();
     } else if (desktopKeyboard()) {
-      document.activeElement?.blur?.();
-      state.keyboardTarget = "";
+      const card = currentCard();
+      if (card && document.activeElement !== card.querySelector(".tile-open")) {
+        e.preventDefault();
+        card.querySelector(".tile-open")?.focus();
+      } else {
+        document.activeElement?.blur?.();
+        state.keyboardTarget = "";
+      }
     }
     return;
   }
@@ -2269,30 +2396,28 @@ document.addEventListener("keydown", (e) => {
     render();
     return;
   }
+  const direction = {
+    h: "h",
+    j: "j",
+    k: "k",
+    l: "l",
+    arrowleft: "h",
+    arrowdown: "j",
+    arrowup: "k",
+    arrowright: "l",
+  }[key];
   if (document.querySelector(".overlay")) {
-    if (state.device && ["h", "j", "k", "l"].includes(key)) {
+    if (state.device && direction) {
       const items = [
         ...document.querySelectorAll(
           ".device-sheet button:not([disabled]),.device-sheet select:not([disabled]),.device-sheet input:not([disabled])",
         ),
       ];
-      const ix = items.indexOf(document.activeElement);
-      const change = ["h", "k"].includes(key) ? -1 : 1;
-      const next = Math.max(
-        0,
-        Math.min(items.length - 1, ix < 0 ? 0 : ix + change),
-      );
-      items[next]?.focus();
-      e.preventDefault();
-    }
-    if (
-      key === "enter" &&
-      document.activeElement?.matches(
-        ".device-sheet button:not([disabled]),.shortcut-sheet button",
-      )
-    ) {
-      e.preventDefault();
-      document.activeElement.click();
+      const next = spatialFocus(items, document.activeElement, key);
+      if (next) {
+        e.preventDefault();
+        next.focus();
+      }
     }
     return;
   }
@@ -2305,8 +2430,8 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
-  if (["h", "j", "k", "l"].includes(key)) {
-    if (keyboardNavigate(key)) e.preventDefault();
+  if (direction) {
+    if (keyboardNavigate(direction)) e.preventDefault();
     return;
   }
   if (key === "/") {
@@ -2322,29 +2447,72 @@ document.addEventListener("keydown", (e) => {
     else commandSearch();
     return;
   }
-  if (
-    key === "enter" &&
-    state.keyboardMode &&
-    document.activeElement?.matches(
-      ".home-tile .tile-open, .app-card, .metric, .media-shortcut",
-    )
-  ) {
-    e.preventDefault();
-    document.activeElement.click();
-    return;
-  }
   if (key === "r") {
     e.preventDefault();
     refreshPage(state.page);
     return;
   }
-  if (key === "t" && state.page === "home") {
-    const tile = document.activeElement?.closest(".home-tile");
-    const power = tile?.querySelector(".tile-power:not(:disabled)");
-    if (power) {
+  if (state.page === "home") {
+    if (key === "[" || key === "]") {
       e.preventDefault();
-      power.click();
+      roomCycle(key === "[" ? -1 : 1);
+      return;
     }
+    if (key === "u") {
+      e.preventDefault();
+      document.querySelector("[data-unavailable]")?.click();
+      return;
+    }
+    const card = currentCard(),
+      id = card?.querySelector(".tile-open")?.dataset.device;
+    if (card && key === "f") {
+      e.preventDefault();
+      const item = homeDevices().find((d) => d.id === id);
+      if (item) toggleHomeFavorite(item.key);
+      return;
+    }
+    if (card && (key === "e" || (key === "enter" && e.shiftKey))) {
+      e.preventDefault();
+      card.querySelector(".tile-open")?.click();
+      return;
+    }
+    if (
+      card &&
+      (key === "t" ||
+        (key === " " &&
+          document.activeElement === card.querySelector(".tile-open")))
+    ) {
+      const power = card.querySelector(".tile-power:not([disabled])");
+      if (power) {
+        e.preventDefault();
+        power.click();
+      }
+      return;
+    }
+    if (
+      card &&
+      key === "enter" &&
+      document.activeElement === card.querySelector(".tile-open")
+    ) {
+      e.preventDefault();
+      const control = focusWithinCard(card)[0];
+      if (control) control.focus();
+      else card.querySelector(".tile-detail")?.click();
+      return;
+    }
+    if (card && key === "enter" && document.activeElement?.matches("button")) {
+      e.preventDefault();
+      document.activeElement.click();
+      return;
+    }
+  }
+  if (
+    key === "enter" &&
+    state.keyboardMode &&
+    document.activeElement?.matches(".app-card,.metric,.media-shortcut")
+  ) {
+    e.preventDefault();
+    document.activeElement.click();
   }
 });
 window.addEventListener("hashchange", () => {
