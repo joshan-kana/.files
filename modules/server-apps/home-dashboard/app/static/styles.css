@@ -2783,3 +2783,404 @@ svg {
     font-size: 11px;
   }
 }
+
+/* Capability-driven controls */
+.feature-control {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.capability-panel {
+  --control-tone: var(--tone, var(--mint));
+  display: grid;
+  gap: 15px;
+}
+.control-block {
+  min-width: 0;
+  border: 1px solid var(--edge);
+  background: var(--pane);
+  border-radius: 15px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.control-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.control-heading strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.control-heading span,
+.control-heading output {
+  color: var(--muted);
+  font-size: 12px;
+}
+.fan-speeds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.fan-speed {
+  min-height: 73px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+}
+.fan-speed strong {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+}
+.fan-speed small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.fan-speed.active {
+  border-color: var(--tone-climate);
+  background: color-mix(in srgb, var(--tone-climate) 15%, var(--panel));
+}
+.fan-speed.active strong,
+.fan-speed.active small {
+  color: var(--tone-climate);
+}
+.fan-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.fan-preset {
+  min-height: 43px;
+  padding: 8px;
+  border: 1px solid var(--edge);
+  border-radius: 11px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.fan-preset.active {
+  background: color-mix(in srgb, var(--tone-climate) 14%, var(--panel));
+  color: var(--tone-climate);
+  border-color: var(--tone-climate);
+  font-weight: 700;
+}
+.control-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 9px 15px;
+  border: 1px solid var(--edge);
+  border-radius: 13px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.control-switch svg {
+  width: 18px;
+  height: 18px;
+}
+.control-switch.on {
+  background: color-mix(in srgb, var(--control-tone) 13%, var(--panel));
+  color: var(--control-tone);
+  border-color: var(--control-tone);
+}
+.light-hero {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background: var(--pane);
+}
+.light-hero > div:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.light-hero strong {
+  font-size: 15px;
+}
+.light-hero small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.light-hero .control-switch {
+  width: 48px;
+  min-width: 48px;
+  padding: 8px;
+  font-size: 18px;
+}
+.light-preview {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 66px;
+  height: 66px;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--lamp-color) 40%, var(--edge));
+  background: color-mix(in srgb, var(--lamp-color) 7%, var(--panel));
+  color: var(--muted);
+  font-size: 33px;
+}
+.light-preview.glowing {
+  color: var(--lamp-color);
+  background: color-mix(in srgb, var(--lamp-color) 20%, var(--pane));
+  box-shadow: 0 0 28px color-mix(in srgb, var(--lamp-color) 25%, transparent);
+}
+.light-brightness input,
+.light-temperature input {
+  width: 100%;
+  height: 36px;
+  accent-color: var(--lamp-color, var(--tone-light));
+  cursor: pointer;
+}
+.light-temperature input {
+  accent-color: var(--tone-light);
+}
+.light-colour .colour-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.colour-picker input[type="color"] {
+  height: 46px;
+  width: 68px;
+  padding: 3px;
+  cursor: pointer;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.colour-picker .colour-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--edge);
+}
+.colour-picker > span:last-child {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.light-colour select,
+.capability-panel select {
+  width: 100%;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--input);
+  color: var(--text);
+  padding: 13px;
+  min-height: 46px;
+}
+.temperature-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}
+.light-temperature input {
+  background: linear-gradient(90deg, #ffac66, #ffe0af, #f1f7ff, #b0d5ff);
+  border-radius: 10px;
+}
+/* Desktop Haven: contextual keyboard navigation and visible focus. */
+.nav-shortcut {
+  margin-left: auto;
+  padding: 3px 7px;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--input);
+  font-size: 11px;
+  font-weight: 500;
+}
+.keyboard-hintbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 6px 0 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.keyboard-hintbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.keyboard-hintbar button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.keyboard-hintbar button:hover {
+  color: var(--mint);
+}
+.keyboard-hintbar kbd,
+.shortcut-row kbd {
+  display: inline-block;
+  border: 1px solid var(--edge);
+  background: var(--pane);
+  border-radius: 6px;
+  padding: 3px 6px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: inherit;
+}
+.desktop-help {
+  font-weight: 750;
+  font-size: 17px;
+}
+.shortcut-list {
+  display: grid;
+  gap: 0;
+  margin-top: 20px;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--edge);
+}
+.shortcut-row span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+.shortcut-row kbd {
+  white-space: nowrap;
+  color: var(--tone-cool);
+}
+.home-tile:focus-within,
+.app-card:focus-visible,
+.media-shortcut:focus-visible,
+.metric:focus-visible {
+  outline: 2px solid var(--tone-cool);
+  outline-offset: 3px;
+}
+.home-tile .tile-open:focus-visible {
+  outline: 0;
+}
+.device-sheet button:focus-visible,
+.device-sheet input:focus-visible,
+.device-sheet select:focus-visible,
+.sidebar button:focus-visible,
+.media-tab:focus-visible {
+  outline: 2px solid var(--tone-cool);
+  outline-offset: 2px;
+}
+@media (max-width: 1150px) {
+  .keyboard-hintbar {
+    gap: 9px;
+    font-size: 10px;
+  }
+}
+@media (max-width: 899px), (pointer: coarse) {
+  .keyboard-hintbar,
+  .nav-shortcut,
+  .desktop-help {
+    display: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .fan-speed {
+    min-height: 67px;
+  }
+  .fan-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .control-block {
+    padding: 13px;
+  }
+  .light-preview {
+    width: 57px;
+    height: 57px;
+  }
+}
+
+.fan-hero {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 13px;
+  border: 1px solid var(--edge);
+  border-radius: 17px;
+  background: var(--pane);
+}
+.fan-gauge {
+  --fan-percent: 0%;
+  flex: none;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(
+    var(--tone-climate) var(--fan-percent),
+    var(--edge) var(--fan-percent)
+  );
+}
+.fan-gauge > span {
+  display: grid;
+  place-items: center;
+  width: 53px;
+  height: 53px;
+  border-radius: 50%;
+  background: var(--pane);
+  color: var(--tone-climate);
+  font-size: 26px;
+}
+.fan-state {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.fan-state strong {
+  font-size: 15px;
+}
+.fan-state small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.fan-hero > .control-switch {
+  height: 46px;
+  width: 48px;
+  min-width: 48px;
+  padding: 9px;
+  font-size: 19px;
+}
+@media (max-width: 640px) {
+  .fan-gauge {
+    width: 59px;
+    height: 59px;
+  }
+  .fan-gauge > span {
+    width: 47px;
+    height: 47px;
+  }
+}
