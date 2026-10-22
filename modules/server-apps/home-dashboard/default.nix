@@ -54,21 +54,32 @@ in
 
   systemd.tmpfiles.rules = [
     "d ${stateDir} 0700 home-dashboard home-dashboard - -"
-    "A+ ${appData.root} - - - - u:home-dashboard:--x"
+    "a+ ${appData.root} - - - - u:home-dashboard:--x"
+  ];
+
+  systemd.services.nginx.serviceConfig.LoadCredential = [
+    "home-dashboard.crt:${certDir}/nixos-server.home.crt"
+    "home-dashboard.key:${certDir}/nixos-server.home.key"
   ];
 
   services.nginx = {
     enable = true;
     virtualHosts."nixos-server.home" = {
+      onlySSL = true;
       listen = [
         {
-          addr = server.lan.serverIp;
+          addr = "0.0.0.0";
+          port = listenPort;
+          ssl = true;
+        }
+        {
+          addr = "[::]";
           port = listenPort;
           ssl = true;
         }
       ];
-      sslCertificate = "${certDir}/nixos-server.home.crt";
-      sslCertificateKey = "${certDir}/nixos-server.home.key";
+      sslCertificate = "/run/credentials/nginx.service/home-dashboard.crt";
+      sslCertificateKey = "/run/credentials/nginx.service/home-dashboard.key";
       locations."/".proxyPass = "http://127.0.0.1:8777";
       extraConfig = ''
         add_header X-Content-Type-Options nosniff always;
