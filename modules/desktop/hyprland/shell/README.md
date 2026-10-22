@@ -74,6 +74,12 @@ The local palette preferences file stores favourite identities and, when enabled
 
 System-control commands call the existing shell state/action owners. `volume 35` sets audio volume to 35%, and `brightness 40` targets supported hardware brightness. Selecting **Set Volume** or **Set Brightness** exposes an inline percentage input. Workspace moves use the existing compositor dispatcher.
 
+## Night Light and output support
+
+Night Light uses the session-scoped `linux-desktop-night-light` user service and Hyprsunset, with manual temperature changes persisted across sessions. The Controls state indicates backend availability and whether that service is active, not whether the display hardware actually applied the colour transform.
+
+Hyprsunset sends a colour transformation matrix (CTM) to Hyprland. A display driver must support the relevant DRM/KMS colour properties for a visible result. The Parallels `virtio_gpu` virtual output does not expose `CTM`, `GAMMA_LUT` or `DEGAMMA_LUT` properties, so enabling Night Light there can report an active service without warming the virtual display. Screenshots and recordings omit hardware CTM effects by design. Validate the visible colour change on a physical output with supported colour controls; do not add a competing screen-shader fallback solely for VM screenshots.
+
 ## Extension contract and ownership
 
 A palette result is a small descriptor, not a process:
