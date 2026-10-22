@@ -24,6 +24,7 @@ Item {
     property string statusText: ""
     readonly property bool freezeEnabled: capturePreferences.freezeEnabled
     property bool frozenForCapture: true
+    property bool modeSnapshotPending: false
     property bool liveExportPending: false
     property Settings capturePreferences: Settings {
         id: capturePreferences
@@ -63,6 +64,8 @@ Item {
     signal snapshotReady
 
     visible: open && surfaceReady
+    // Stay keyboard-active throughout the transparent screencopy pass.
+    opacity: modeSnapshotPending ? 0 : 1
     anchors.fill: parent
 
     function clamp(value: real, minimum: real, maximum: real): real {
@@ -100,6 +103,57 @@ Item {
         }
     }
 
+    function toggleFreeze(): void {
+        if (selectionMode === "record" || exporting)
+            return;
+        capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
+        capturePreferences.setValue("freezeEnabled", capturePreferences.freezeEnabled);
+        capturePreferences.sync();
+        initialiseSelection = false;
+        if (!capturePreferences.freezeEnabled) {
+            modeSnapshotDelay.stop();
+            modeRevealDelay.stop();
+            modeSnapshotPending = false;
+            pending = false;
+            frozenForCapture = false;
+            const oldPath = snapshotPath;
+            snapshotPath = "";
+            if (oldPath.length > 0)
+                Quickshell.execDetached([runtime.frozenCapture, "clear", oldPath]);
+            statusText = "LIVE REGION · CURRENT DESKTOP";
+            keyboard.forceActiveFocus();
+        } else if (open && captureScreen) {
+            // Hide the overlay before sampling, then restore the same region.
+            modeSnapshotPending = true;
+            pending = true;
+            frozenForCapture = true;
+            statusText = "FREEZING CURRENT DESKTOP…";
+            modeSnapshotDelay.restart();
+        }
+    }
+
+    Timer {
+        id: modeSnapshotDelay
+        interval: 180
+        repeat: false
+        onTriggered: {
+            if (picker.pending && picker.frozenForCapture && picker.captureScreen) {
+                snapshotProcess.exec([picker.runtime.frozenCapture, "snapshot", picker.captureScreen.name]);
+                modeRevealDelay.restart();
+            }
+        }
+    }
+
+    // grim copies the frame first and can spend much longer encoding a 4K
+    // PNG. Restore the live region UI after screencopy has started; replace
+    // its backdrop when the decoded frozen frame actually becomes ready.
+    Timer {
+        id: modeRevealDelay
+        interval: 175
+        repeat: false
+        onTriggered: picker.modeSnapshotPending = false
+    }
+
     function initialiseRect(): void {
         if (!open || !surfaceReady || !initialiseSelection || width <= 0 || height <= 0)
             return;
@@ -131,6 +185,7 @@ Item {
         if (!pending)
             return;
         pending = false;
+        modeSnapshotPending = false;
         snapshotReady();
         open = true;
         keyboard.forceActiveFocus();
@@ -140,6 +195,8 @@ Item {
     function dismiss(clearFile: bool): void {
         if (exporting)
             return;
+        modeSnapshotDelay.stop();
+        modeRevealDelay.stop();
         const oldPath = snapshotPath;
         open = false;
         pending = false;
@@ -147,12 +204,13 @@ Item {
         snapshotPath = "";
         statusText = "";
         liveExportPending = false;
+        modeSnapshotPending = false;
         if (clearFile && oldPath.length > 0)
             Quickshell.execDetached([runtime.frozenCapture, "clear", oldPath]);
     }
 
     function capture(): void {
-        if (!open || exporting || selectionWidth < 5 || selectionHeight < 5)
+        if (!open || exporting || pending || selectionWidth < 5 || selectionHeight < 5)
             return;
         const pixelRect = selectedPixels;
         if (selectionMode === "record") {
@@ -227,7 +285,15 @@ Item {
         stdout: snapshotOutput
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
+                const wasModeSwitch = picker.modeSnapshotPending;
                 picker.pending = false;
+                if (wasModeSwitch) {
+                    picker.frozenForCapture = false;
+                    picker.modeSnapshotPending = false;
+                    picker.open = true;
+                    picker.statusText = "FREEZE FAILED · LIVE REGION AVAILABLE";
+                    keyboard.forceActiveFocus();
+                }
                 if (picker.liveExportPending) {
                     picker.liveExportPending = false;
                     picker.exporting = false;
@@ -238,7 +304,19 @@ Item {
                 console.warn("Screenshot snapshot failed with exit code", exitCode);
                 return;
             }
+            if (!picker.pending && !picker.liveExportPending) {
+                const stale = snapshotOutput.text.trim();
+                if (stale.length > 0)
+                    Quickshell.execDetached([picker.runtime.frozenCapture, "clear", stale]);
+                return;
+            }
             picker.snapshotPath = snapshotOutput.text.trim();
+            if (picker.modeSnapshotPending) {
+                // Image loading must resume after the transparent capture pass;
+                // leaving the entire picker invisible can suspend the decode.
+                picker.modeSnapshotPending = false;
+                keyboard.forceActiveFocus();
+            }
         }
     }
 
@@ -321,7 +399,7 @@ Item {
         height: picker.selectionHeight
         radius: 5
         color: Qt.rgba(picker.theme.accentSecondary.r, picker.theme.accentSecondary.g, picker.theme.accentSecondary.b, 0.035)
-        border.color: picker.theme.roleColor("media")
+        border.color: picker.theme.roleColor("capture")
         border.width: 2
         z: 2
         visible: picker.open
@@ -388,7 +466,7 @@ Item {
             MarqueeText {
                 width: parent.width
                 text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN REGION · " : "LIVE REGION · ") + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
-                color: picker.theme.roleColor("media")
+                color: picker.theme.roleColor("capture")
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
                 font.weight: Font.DemiBold
@@ -396,7 +474,7 @@ Item {
 
             MarqueeText {
                 width: parent.width
-                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "") + "ENTER CONFIRM · ESC CANCEL"
+                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "Z FREEZE/LIVE · ") + "ENTER CONFIRM · ESC CANCEL"
                 color: picker.theme.textMuted
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(9)
@@ -418,11 +496,10 @@ Item {
             horizontalCompact: true
             compact: true
             icon: "󰹑"
-            title: picker.freezeEnabled ? "FREEZE ON" : "LIVE MODE"
+            title: picker.frozenForCapture ? "FROZEN" : "LIVE"
             shortcut: "Z"
             onActivated: {
-                capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
-                picker.statusText = "MODE SAVED FOR NEXT SCREENSHOT · " + (picker.freezeEnabled ? "FROZEN" : "LIVE");
+                picker.toggleFreeze();
             }
         }
     }
@@ -457,8 +534,7 @@ Item {
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
                 picker.audioMode = picker.audioMode === "none" ? "system" : picker.audioMode === "system" ? "microphone" : "none";
             } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
-                capturePreferences.freezeEnabled = !capturePreferences.freezeEnabled;
-                picker.statusText = "MODE SAVED FOR NEXT SCREENSHOT · " + (picker.freezeEnabled ? "FROZEN" : "LIVE");
+                picker.toggleFreeze();
             } else if (event.key === Qt.Key_F) {
                 picker.initialiseSelection = false;
                 picker.startX = 0;
