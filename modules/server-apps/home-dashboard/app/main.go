@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,7 +36,7 @@ var assets embed.FS
 var pages = []string{"overview", "home", "media", "apps"}
 var credentialPages = map[string]string{"homeassistant": "home", "sonarr": "media", "radarr": "media"}
 var upstreams = map[string]string{"homeassistant": "http://127.0.0.1:8123", "sonarr": "http://127.0.0.1:8989", "radarr": "http://127.0.0.1:7878"}
-var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor)\.[a-z0-9_]+$`)
+var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor|button|number|select|media_player)\.[a-z0-9_]+$`)
 
 type User struct {
 	Name        string            `json:"name"`
@@ -469,22 +470,59 @@ func (s *Server) handler() http.Handler {
 		}
 		// Home Assistant resolves the actual area registry, including device-derived areas.
 		// When a template is unavailable, rooms remain manually assignable per account.
-		template := `{% set ns = namespace(areas={}) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor'] %}{% set area = area_name(e.entity_id) %}{% if area %}{% set _ = ns.areas.update({e.entity_id: area}) %}{% endif %}{% endfor %}{{ ns.areas | tojson }}`
+		template := `{% set ns = namespace(items=[]) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor','button','number','select','media_player'] %}{% set room = area_name(e.entity_id) %}{% if room %}{% set ns.items = ns.items + [{'entity_id': e.entity_id, 'room': room}] %}{% endif %}{% endfor %}{{ ns.items | tojson }}`
 		body, _ := json.Marshal(map[string]string{"template": template})
 		result, err := s.request(u, "homeassistant", "POST", "/api/template", body)
 		if err != nil {
 			jsonResponse(w, 200, map[string]string{})
 			return
 		}
-		rooms := map[string]string{}
+		var rooms []struct {
+			EntityID string `json:"entity_id"`
+			Room     string `json:"room"`
+		}
 		if json.Unmarshal(result, &rooms) != nil {
 			jsonResponse(w, 200, map[string]string{})
 			return
 		}
 		filtered := map[string]string{}
-		for id, room := range rooms {
-			if entityPattern.MatchString(id) && len(room) <= 60 {
-				filtered[id] = room
+		for _, entry := range rooms {
+			if entityPattern.MatchString(entry.EntityID) && len(entry.Room) <= 60 {
+				filtered[entry.EntityID] = entry.Room
+			}
+		}
+		jsonResponse(w, 200, filtered)
+	})
+	mux.HandleFunc("GET /api/ha/devices", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if !hasPage(u, "home") {
+			failure(w, 403, "Access denied")
+			return
+		}
+		// Resolve Home Assistant's actual entity-to-device relationships. The result
+		// contains only display metadata and never exposes the upstream token.
+		const template = `{% set ns = namespace(items=[]) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor','button','number','select','media_player'] %}{% set id = device_id(e.entity_id) %}{% if id %}{% set name = device_name(id) or id %}{% set room = area_name(e.entity_id) or '' %}{% set model = device_attr(id, 'model') or '' %}{% set ns.items = ns.items + [{'entity_id': e.entity_id, 'id': id, 'name': name, 'room': room, 'model': model}] %}{% endif %}{% endfor %}{{ ns.items | tojson }}`
+		body, _ := json.Marshal(map[string]string{"template": template})
+		result, err := s.request(u, "homeassistant", "POST", "/api/template", body)
+		if err != nil {
+			failure(w, 502, "Home Assistant device registry unavailable")
+			return
+		}
+		var raw []struct {
+			EntityID string `json:"entity_id"`
+			ID       string `json:"id"`
+			Name     string `json:"name"`
+			Room     string `json:"room"`
+			Model    string `json:"model"`
+		}
+		if json.Unmarshal(result, &raw) != nil {
+			failure(w, 502, "Invalid device registry response")
+			return
+		}
+		filtered := make(map[string]any)
+		for _, device := range raw {
+			if entityPattern.MatchString(device.EntityID) && len(device.ID) <= 128 && len(device.Name) <= 128 && len(device.Room) <= 80 && len(device.Model) <= 128 {
+				filtered[device.EntityID] = map[string]string{"id": device.ID, "name": device.Name, "room": device.Room, "model": device.Model}
 			}
 		}
 		jsonResponse(w, 200, filtered)
@@ -544,6 +582,8 @@ func (s *Server) handler() http.Handler {
 			Brightness  int     `json:"brightness"`
 			Percentage  int     `json:"percentage"`
 			Temperature float64 `json:"temperature"`
+			Option      string  `json:"option"`
+			Value       float64 `json:"value"`
 		}
 		if bodyJSON(r, &in) != nil || !entityPattern.MatchString(in.Entity) {
 			failure(w, 400, "Invalid entity")
@@ -580,6 +620,28 @@ func (s *Server) handler() http.Handler {
 				failure(w, 400, "Action not supported")
 				return
 			}
+		case "button":
+			if action != "press" {
+				failure(w, 400, "Action not supported")
+				return
+			}
+		case "select":
+			if action != "select_option" || len(in.Option) == 0 || len(in.Option) > 128 {
+				failure(w, 400, "Invalid option")
+				return
+			}
+			payload["option"] = in.Option
+		case "number":
+			if action != "set_value" || in.Value < -10000 || in.Value > 10000 || math.IsNaN(in.Value) || math.IsInf(in.Value, 0) {
+				failure(w, 400, "Invalid value")
+				return
+			}
+			payload["value"] = in.Value
+		case "media_player":
+			if action != "media_play_pause" && action != "media_stop" && action != "volume_up" && action != "volume_down" {
+				failure(w, 400, "Action not supported")
+				return
+			}
 		default:
 			failure(w, 400, "Action not supported")
 			return
@@ -603,7 +665,7 @@ func (s *Server) handler() http.Handler {
 			failure(w, 404, "Not found")
 			return
 		}
-		b, err := s.fetch(u, service, "/api/v3/queue?page=1&pageSize=25&includeUnknownSeriesItems=true")
+		b, err := s.fetch(u, service, "/api/v3/queue?page=1&pageSize=50&includeUnknownSeriesItems=true")
 		if err != nil {
 			failure(w, 502, err.Error())
 			return
