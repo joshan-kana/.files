@@ -88,6 +88,8 @@ const state = {
   help: false,
   keyboardMode: false,
   keyboardTarget: "",
+  fanFeedback: {},
+  fanSequence: 0,
 };
 const themes = [
   ["carbon", "Carbon", "Deep charcoal"],
@@ -744,9 +746,41 @@ function fanLevels(e) {
     Math.round(((index + 1) * 100) / count),
   );
 }
+function fanAttributes(e) {
+  const pending = state.fanFeedback[e.entity_id];
+  if (!pending) return e.attributes || {};
+  return {
+    ...(e.attributes || {}),
+    ...Object.fromEntries(
+      Object.entries(pending).map(([field, update]) => [field, update.value]),
+    ),
+  };
+}
+function reconcileFanFeedback(entities) {
+  const current = new Map(entities.map((entity) => [entity.entity_id, entity]));
+  for (const [entity, fields] of Object.entries(state.fanFeedback)) {
+    const reported = current.get(entity)?.attributes;
+    for (const [field, update] of Object.entries(fields)) {
+      const match =
+        reported &&
+        (field === "percentage"
+          ? Math.abs(Number(reported[field]) - update.value) <= 2
+          : reported[field] === update.value);
+      if (
+        match ||
+        (update.acknowledged && Date.now() - update.startedAt > 7000)
+      ) {
+        delete fields[field];
+        if (!match && update.acknowledged && state.device)
+          toast("Home Assistant has not confirmed that fan setting", true);
+      }
+    }
+    if (!Object.keys(fields).length) delete state.fanFeedback[entity];
+  }
+}
 function fanPanel(e) {
   const id = esc(e.entity_id),
-    attrs = e.attributes || {};
+    attrs = fanAttributes(e);
   const current = Number(attrs.percentage || 0),
     levels = fanLevels(e);
   const modes = Array.isArray(attrs.preset_modes)
@@ -766,7 +800,7 @@ function fanPanel(e) {
       ? `<div class="control-block"><div class="control-heading"><strong>Horizontal oscillation</strong><span>${attrs.oscillating ? "On" : "Off"}</span></div><button class="control-switch ${attrs.oscillating ? "on" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${id}" aria-label="Toggle horizontal oscillation" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")} ${attrs.oscillating ? "Oscillating" : "Start oscillation"}</button></div>`
       : "";
   const on = e.state === "on";
-  return `<div class="capability-panel tone-climate"><div class="fan-hero">
+  return `<div class="capability-panel tone-climate" data-fan-entity="${id}"><div class="fan-hero">
     <div class="fan-gauge" style="--fan-percent:${on ? current : 0}%"><span>${svg("wind")}</span></div>
     <div class="fan-state"><strong>${on ? "Fan running" : "Fan off"}</strong><small>${on ? Math.round(current) + "% · " + esc(attrs.preset_mode || "normal") : "Ready to start"}</small></div>
     <button class="control-switch ${on ? "on" : ""}" data-entity="${id}" aria-label="Turn fan ${on ? "off" : "on"}" aria-pressed="${on}">${svg("power")}</button>
@@ -1264,6 +1298,7 @@ async function refreshPage(page) {
     jobs.push(
       api("/api/ha/entities")
         .then((v) => {
+          reconcileFanFeedback(v);
           state.entities = v;
           state.haError = "";
         })
@@ -1331,7 +1366,12 @@ async function refreshPage(page) {
   const editing = document.activeElement?.matches(
     "#home-search, .device-sheet input",
   );
-  if (state.page === page && !editing) render();
+  if (state.page === page && !editing) {
+    const previousScroll = document.querySelector(".device-sheet")?.scrollTop;
+    render();
+    const sheet = document.querySelector(".device-sheet");
+    if (sheet && previousScroll != null) sheet.scrollTop = previousScroll;
+  }
 }
 async function init() {
   try {
@@ -1471,14 +1511,71 @@ document.addEventListener("click", async (e) => {
             action: "oscillate",
             oscillating: target.dataset.haOscillate === "true",
           };
-    target.disabled = true;
+    const field =
+      body.action === "percentage"
+        ? "percentage"
+        : body.action === "preset_mode"
+          ? "preset_mode"
+          : "oscillating";
+    const value = body[field];
+    const sequence = ++state.fanSequence;
+    if (!state.fanFeedback[entity]) state.fanFeedback[entity] = {};
+    const pending = state.fanFeedback[entity];
+    const previous = pending[field];
+    pending[field] = {
+      value,
+      sequence,
+      startedAt: Date.now(),
+      acknowledged: false,
+    };
+    // Give immediate feedback, not the result of an eventually consistent HA read.
+    const focusKey = target.dataset.haPercentage
+      ? "haPercentage"
+      : target.dataset.haPreset
+        ? "haPreset"
+        : "haOscillate";
+    const focusValue = target.dataset[focusKey];
+    const scroll = document.querySelector(".device-sheet")?.scrollTop;
+    render();
+    const sheet = document.querySelector(".device-sheet");
+    if (sheet && scroll != null) sheet.scrollTop = scroll;
+    [...(sheet?.querySelectorAll("button") || [])]
+      .find(
+        (button) =>
+          button.dataset[focusKey] === focusValue &&
+          button.dataset.haEntity === entity,
+      )
+      ?.focus({ preventScroll: true });
     try {
       await api("/api/ha/action", "POST", body);
-      toast("Fan updated");
-      await refreshPage("home");
+      if (state.fanFeedback[entity]?.[field]?.sequence !== sequence) return;
+      state.fanFeedback[entity][field].acknowledged = true;
+      // Reads may initially report the old speed; the pending selection survives them.
+      refreshPage("home");
+      for (const delay of [1200, 3500, 7200]) {
+        setTimeout(() => {
+          if (
+            state.me &&
+            state.page === "home" &&
+            state.fanFeedback[entity]?.[field]?.sequence === sequence
+          )
+            refreshPage("home");
+        }, delay);
+      }
     } catch (err) {
-      toast(err.message, true);
-      target.disabled = false;
+      if (state.fanFeedback[entity]?.[field]?.sequence === sequence) {
+        if (previous?.acknowledged && Date.now() - previous.startedAt < 7000)
+          state.fanFeedback[entity][field] = previous;
+        else delete state.fanFeedback[entity][field];
+        if (!Object.keys(state.fanFeedback[entity]).length)
+          delete state.fanFeedback[entity];
+        const scroll = document.querySelector(".device-sheet")?.scrollTop;
+        render();
+        const sheet = document.querySelector(".device-sheet");
+        if (sheet && scroll != null) sheet.scrollTop = scroll;
+        toast(err.message, true);
+        refreshPage("home");
+      }
     }
     return;
   }
@@ -1582,6 +1679,7 @@ document.addEventListener("click", async (e) => {
       await api("/api/logout", "POST");
       state.me = null;
       state.quick = false;
+      state.fanFeedback = {};
       auth();
     } catch (err) {
       toast(err.message, true);
