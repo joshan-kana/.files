@@ -166,3 +166,56 @@ func TestReverseProxyOriginAndCookie(t *testing.T) {
 		t.Fatal("reverse-proxied session cookie must be Secure")
 	}
 }
+
+func TestAppearanceIsPerUserAndPersistent(t *testing.T) {
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"overview": true})
+	bobby := addUser(s, "bobby", false, map[string]bool{"overview": true})
+	aliceCookie := s.token(alice)
+	before := req(s, "GET", "/api/session", nil, aliceCookie, "")
+	status(t, before, 200)
+	if !strings.Contains(before.Body.String(), `"theme":"carbon"`) || !strings.Contains(before.Body.String(), `"accent":"mint"`) {
+		t.Fatal("older accounts must default to Carbon with mint accents")
+	}
+	status(t, req(s, "PUT", "/api/profile/appearance", map[string]string{"theme": "midnight", "accent": "violet"}, aliceCookie, "http://example.test"), 200)
+	status(t, req(s, "PUT", "/api/profile/appearance", map[string]string{"theme": "invalid", "accent": "mint"}, aliceCookie, "http://example.test"), 400)
+	status(t, req(s, "PUT", "/api/profile/appearance", map[string]string{"theme": "forest", "accent": "cyan"}, s.token(bobby), "http://example.test"), 200)
+	status(t, req(s, "PUT", "/api/profile/appearance", map[string]string{"theme": "carbon", "accent": "mint"}, "", "http://example.test"), 401)
+	if s.data.Users["alice"].Theme != "midnight" || s.data.Users["alice"].Accent != "violet" || s.data.Users["bobby"].Theme != "forest" {
+		t.Fatal("appearance was not isolated or validated")
+	}
+	reloaded, err := newServer(s.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.data.Users["alice"].Theme != "midnight" || reloaded.data.Users["bobby"].Accent != "cyan" {
+		t.Fatal("appearance was not saved")
+	}
+	status(t, req(reloaded, "GET", "/api/session", nil, aliceCookie, ""), 200)
+}
+
+func TestLocalRecoveryKeepsAccountAndRevokesOldSession(t *testing.T) {
+	srv := testServer(t)
+	member := addUser(srv, "person", false, map[string]bool{"home": true})
+	cookie := srv.token(member)
+	if err := srv.save(); err != nil {
+		t.Fatal(err)
+	}
+	if err := resetPassword(srv.dir, "absent", strings.NewReader("long-new-secret-value\n")); err == nil {
+		t.Fatal("missing member must fail")
+	}
+	if err := resetPassword(srv.dir, "person", strings.NewReader("short\n")); err == nil {
+		t.Fatal("short new secret must fail")
+	}
+	if err := resetPassword(srv.dir, "person", strings.NewReader("long-new-secret-value\n")); err != nil {
+		t.Fatal(err)
+	}
+	latest, err := newServer(srv.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verifyPassword(latest.data.Users["person"], "long-new-secret-value") {
+		t.Fatal("replacement secret not accepted")
+	}
+	status(t, req(latest, "GET", "/api/session", nil, cookie, ""), 401)
+}
