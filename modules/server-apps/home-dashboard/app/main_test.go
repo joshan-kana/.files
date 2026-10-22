@@ -381,3 +381,66 @@ func TestDeviceRegistryAndExpandedControlActions(t *testing.T) {
 		t.Fatalf("disallowed action reached upstream: %+v", calls)
 	}
 }
+
+func TestFanAndLightCapabilityActions(t *testing.T) {
+	previous := upstreams["homeassistant"]
+	defer func() { upstreams["homeassistant"] = previous }()
+	type call struct {
+		Path string
+		Body map[string]any
+	}
+	calls := []call{}
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		calls = append(calls, call{r.URL.Path, body})
+		w.Write([]byte(`[]`))
+	}))
+	defer backend.Close()
+	upstreams["homeassistant"] = backend.URL
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"home": true})
+	alice.Credentials["homeassistant"] = s.encrypt("token")
+	member := s.token(alice)
+	for _, input := range []map[string]any{
+		{"entity": "fan.bedroom", "action": "percentage", "percentage": 67},
+		{"entity": "fan.bedroom", "action": "preset_mode", "preset_mode": "Natural 2"},
+		{"entity": "fan.bedroom", "action": "oscillate", "oscillating": true},
+		{"entity": "light.wled", "action": "brightness", "brightness": 55},
+		{"entity": "light.wled", "action": "color", "color": "#27abfe"},
+		{"entity": "light.wled", "action": "color_temp", "kelvin": 3200},
+		{"entity": "light.wled", "action": "effect", "effect": "Rainbow"},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, member, "http://example.test"), 200)
+	}
+	if len(calls) != 7 {
+		t.Fatalf("expected 7 upstream actions, got %d", len(calls))
+	}
+	expected := []string{"/api/services/fan/set_percentage", "/api/services/fan/set_preset_mode", "/api/services/fan/oscillate", "/api/services/light/turn_on", "/api/services/light/turn_on", "/api/services/light/turn_on", "/api/services/light/turn_on"}
+	for i, path := range expected {
+		if calls[i].Path != path {
+			t.Fatalf("request %d path %q expected %q", i, calls[i].Path, path)
+		}
+	}
+	rgb, ok := calls[4].Body["rgb_color"].([]any)
+	if !ok || len(rgb) != 3 || rgb[0] != float64(39) || rgb[1] != float64(171) || rgb[2] != float64(254) {
+		t.Fatalf("invalid light RGB payload: %#v", calls[4].Body["rgb_color"])
+	}
+	if calls[5].Body["color_temp_kelvin"] != float64(3200) || calls[2].Body["oscillating"] != true {
+		t.Fatal("colour temperature or oscillation missing")
+	}
+	for _, input := range []map[string]any{
+		{"entity": "fan.bedroom", "action": "oscillate"},
+		{"entity": "fan.bedroom", "action": "preset_mode", "preset_mode": ""},
+		{"entity": "light.wled", "action": "color", "color": "javascript:evil"},
+		{"entity": "light.wled", "action": "color_temp", "kelvin": 11000},
+		{"entity": "light.wled", "action": "effect", "effect": ""},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, member, "http://example.test"), 400)
+	}
+	if len(calls) != 7 {
+		t.Fatal("invalid actions reached upstream")
+	}
+}
