@@ -956,6 +956,8 @@ FocusScope {
                     label: "Night Light"
                     valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
                     toggleShortcut: "T"
+                    decrementShortcut: "-"
+                    incrementShortcut: "+"
                     roleAccent: root.theme.roleColor("warmth")
                     active: root.nightLight.active
                     canToggle: root.nightLight.supported && !root.nightLight.busy
