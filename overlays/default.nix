@@ -33,6 +33,7 @@
     ./hermes-agent
     ./matrix-bridges
     ./ncmpcpp
+    ./mpv
     ./openclaw
     ./openai-tunnel-client
     ./parallels-tools
