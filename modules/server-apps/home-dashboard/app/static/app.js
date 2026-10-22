@@ -69,6 +69,10 @@ const state = {
   entities: null,
   health: null,
   areas: {},
+  deviceRegistry: {},
+  deviceRegistryLoaded: false,
+  showReadings: false,
+  mediaFilter: "All",
   room: "All",
   homeSearch: "",
   device: null,
@@ -408,7 +412,9 @@ function queueSummary(max = 5) {
 }
 function overview() {
   const devices = state.entities || [];
-  const active = devices.filter((e) => e.state === "on").length;
+  const active = homeDevices().filter((d) =>
+    d.controls.some((e) => e.state === "on"),
+  ).length;
   return (
     '<div class="welcome"><div class="eyebrow">YOUR PRIVATE SPACE</div><h1>Good to have you home.</h1><p>Everything you use, without the noise.</p></div>' +
     '<div class="overview-metrics">' +
@@ -441,8 +447,8 @@ function overview() {
       ? '<div class="section-bar"><h2>Home controls</h2>' +
         linkPage("home", "Open Smart Home") +
         '</div><div class="home-grid preview-grid">' +
-        (state.entities || [])
-          .filter(controllable)
+        homeDevices()
+          .filter((d) => d.controls.length)
           .slice(0, 4)
           .map(homeTile)
           .join("") +
@@ -461,43 +467,122 @@ function controllable(e) {
     "scene",
   ].includes(e.entity_id.split(".")[0]);
 }
-function homeRoom(e) {
+function homeDevices() {
+  const groups = new Map();
+  for (const e of state.entities || []) {
+    const reg = state.deviceRegistry[e.entity_id];
+    const id = reg?.id || "entity:" + e.entity_id;
+    if (!groups.has(id))
+      groups.set(id, {
+        id,
+        name: reg?.name || label(e),
+        model: reg?.model || "",
+        area: reg?.room || state.areas[e.entity_id] || "",
+        entities: [],
+      });
+    groups.get(id).entities.push(e);
+  }
+  return [...groups.values()]
+    .map((d) => {
+      d.entities.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
+      d.controls = d.entities.filter((e) => isActionable(e));
+      d.readings = d.entities.filter((e) =>
+        ["sensor", "binary_sensor"].includes(domainOf(e)),
+      );
+      d.primary =
+        [...d.controls].sort((a, b) => priority(a) - priority(b))[0] ||
+        d.readings[0] ||
+        d.entities[0];
+      d.key = d.primary.entity_id;
+      d.favourite = d.entities.some((e) =>
+        (state.me.favorites || []).includes(e.entity_id),
+      );
+      d.room =
+        d.entities.map((e) => state.me.rooms?.[e.entity_id]).find(Boolean) ||
+        d.area ||
+        "Unassigned";
+      d.kind = deviceKind(d);
+      return d;
+    })
+    .filter((d) => d.controls.length || d.readings.length);
+}
+function domainOf(e) {
+  return e.entity_id.split(".")[0];
+}
+function isActionable(e) {
+  return [
+    "light",
+    "switch",
+    "fan",
+    "input_boolean",
+    "cover",
+    "climate",
+    "scene",
+    "button",
+    "number",
+    "select",
+    "media_player",
+  ].includes(domainOf(e));
+}
+function priority(e) {
   return (
-    state.me.rooms?.[e.entity_id] || state.areas[e.entity_id] || "Unassigned"
+    {
+      light: 0,
+      fan: 1,
+      climate: 2,
+      switch: 3,
+      cover: 4,
+      media_player: 5,
+      input_boolean: 6,
+      scene: 7,
+      select: 8,
+      number: 9,
+      button: 10,
+    }[domainOf(e)] ?? 99
   );
+}
+function deviceKind(d) {
+  const types = new Set(d.controls.map(domainOf));
+  if (types.size > 2) return "mixed";
+  if (types.has("light")) return "light";
+  if (types.has("fan") || types.has("climate")) return "climate";
+  if (types.has("media_player")) return "media";
+  if (types.has("cover")) return "cover";
+  if (types.has("switch") || types.has("input_boolean")) return "power";
+  if (types.size) return "other";
+  return "sensor";
+}
+function homeRoom(d) {
+  return d.room;
 }
 function homeRooms() {
   return [
     ...new Set(
-      (state.entities || []).map(homeRoom).filter((r) => r !== "Unassigned"),
+      homeDevices()
+        .map((d) => d.room)
+        .filter((r) => r !== "Unassigned"),
     ),
   ].sort((a, b) => a.localeCompare(b));
 }
 function homeItems() {
-  let items = (state.entities || []).filter(
-    (e) => state.room === "Sensors" || controllable(e),
-  );
-  if (state.room === "Favorites")
-    items = items.filter((e) =>
-      (state.me.favorites || []).includes(e.entity_id),
-    );
+  let items = homeDevices();
+  if (state.room === "Favorites") items = items.filter((d) => d.favourite);
   else if (state.room === "Sensors")
-    items = items.filter((e) => !controllable(e));
-  else if (state.room !== "All")
-    items = items.filter((e) => homeRoom(e) === state.room);
+    items = items.filter((d) => !d.controls.length);
+  else if (state.room === "All")
+    items = items.filter((d) => d.controls.length || d.area !== "");
+  else items = items.filter((d) => d.room === state.room);
   if (state.homeSearch.trim()) {
-    const q = state.homeSearch.toLocaleLowerCase().trim();
-    items = items.filter((e) =>
-      [label(e), e.entity_id, homeRoom(e)].some((x) =>
-        x.toLocaleLowerCase().includes(q),
+    const q = state.homeSearch.trim().toLowerCase();
+    items = items.filter((d) =>
+      [d.name, d.room, d.model, ...d.entities.map(label)].some((v) =>
+        v.toLowerCase().includes(q),
       ),
     );
   }
   return items.sort(
     (a, b) =>
-      Number((state.me.favorites || []).includes(b.entity_id)) -
-        Number((state.me.favorites || []).includes(a.entity_id)) ||
-      label(a).localeCompare(label(b)),
+      Number(b.favourite) - Number(a.favourite) || a.name.localeCompare(b.name),
   );
 }
 function domainIcon(domain) {
@@ -511,19 +596,22 @@ function domainIcon(domain) {
       scene: "spark",
       sensor: "activity",
       binary_sensor: "shield",
+      button: "power",
+      select: "sliders",
+      number: "sliders",
+      media_player: "play",
     }[domain] || "apps"
   );
 }
 function deviceState(e) {
   if (e.state === "unavailable" || e.state === "unknown") return "Unavailable";
-  const domain = e.entity_id.split(".")[0];
+  const domain = domainOf(e);
   if (domain === "climate")
     return e.attributes?.current_temperature != null
       ? `${e.attributes.current_temperature}° · ${e.state}`
       : e.state;
   if (domain === "sensor")
     return `${e.state}${e.attributes?.unit_of_measurement || ""}`;
-  if (domain === "cover") return e.state;
   if (domain === "scene") return "Run scene";
   if (e.state === "on")
     return domain === "light" && e.attributes?.brightness
@@ -532,20 +620,32 @@ function deviceState(e) {
   if (e.state === "off") return "Off";
   return e.state;
 }
-function homeTile(e) {
-  const domain = e.entity_id.split(".")[0];
-  const active = e.state === "on";
-  const disabled = e.state === "unavailable" || e.state === "unknown";
-  const canToggle = ["light", "switch", "fan", "input_boolean"].includes(
-    domain,
-  );
-  return `<article class="home-tile ${active ? "is-on" : ""} ${disabled ? "is-unavailable" : ""}">
-    <button class="tile-open" data-device="${esc(e.entity_id)}" aria-label="Details for ${esc(label(e))}">
-      <span class="tile-icon">${svg(domainIcon(domain))}</span>
-      <span class="tile-room">${esc(homeRoom(e))}</span>
-      <strong>${esc(label(e))}</strong><small>${esc(deviceState(e))}</small>
+function deviceSummaryLine(d) {
+  const primary = d.primary;
+  if (d.controls.length === 1 && !d.readings.length)
+    return deviceState(primary);
+  const parts = [];
+  if (d.controls.length) parts.push(`${d.controls.length} controls`);
+  if (d.readings.length) parts.push(`${d.readings.length} readings`);
+  return parts.join(" · ") || deviceState(primary);
+}
+function homeTile(d) {
+  const primary = d.primary;
+  const primaryDomain = domainOf(primary);
+  const quick = ["light", "switch", "fan", "input_boolean"].includes(
+    primaryDomain,
+  )
+    ? primary
+    : null;
+  const on = primary.state === "on";
+  const unavailable = ["unavailable", "unknown"].includes(primary.state);
+  const icon = d.kind === "mixed" ? "apps" : domainIcon(primaryDomain);
+  return `<article class="home-tile device-group tone-${d.kind} ${on ? "is-on" : ""}">
+    <button class="tile-open" data-device="${esc(d.id)}" aria-label="Open ${esc(d.name)}, ${d.entities.length} entities">
+      <span class="tile-icon">${svg(icon)}</span><span class="tile-room">${esc(d.room)} ${d.favourite ? "✦" : ""}</span>
+      <strong>${esc(d.name)}</strong><small>${esc(deviceSummaryLine(d))}</small>
     </button>
-    ${canToggle ? `<button class="tile-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" aria-label="Turn ${esc(label(e))} ${active ? "off" : "on"}" aria-pressed="${active}" ${disabled ? "disabled" : ""}>${svg("power")}</button>` : `<button class="tile-detail" data-device="${esc(e.entity_id)}" aria-label="Open ${esc(label(e))}">${svg("chevron")}</button>`}
+    ${quick ? `<button class="tile-power ${on ? "is-on" : ""}" data-entity="${esc(quick.entity_id)}" aria-label="Turn ${esc(label(quick))} ${on ? "off" : "on"}" aria-pressed="${on}" ${unavailable ? "disabled" : ""}>${svg("power")}</button>` : `<button class="tile-detail" data-device="${esc(d.id)}" aria-label="Open device">${svg("chevron")}</button>`}
   </article>`;
 }
 function roomPills() {
@@ -558,91 +658,109 @@ function roomPills() {
     .join("");
 }
 function home() {
-  const controls = (state.entities || []).filter(controllable);
-  const active = controls.filter((e) => e.state === "on").length;
-  return `<div class="home-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>Smart Home</h1><p>Tap to control. Open a tile for more.</p></div>
-    <button class="home-refresh" data-refresh="true" aria-label="Refresh devices">${svg("activity")}</button></div>
-    ${
-      !state.me.credentials.homeassistant
-        ? `<section class="panel">${empty("Connect Home Assistant in Settings to control your space.", "lock")}${linkPage("settings", "Connect")}</section>`
-        : state.haError
-          ? `<section class="panel">${empty(state.haError, "activity")}</section>`
-          : state.entities === null
-            ? '<div class="loadingline"></div>'
-            : `
-    <div class="home-status"><span class="status-dot"></span>${active} active <span class="status-sep">·</span> ${controls.length} controls <span class="status-sep">·</span> ${homeRooms().length} rooms</div>
-    <div class="home-toolbar"><label class="home-find">${svg("search")}<input id="home-search" placeholder="Find a device or room" value="${esc(state.homeSearch)}" autocomplete="off" aria-label="Find a device or room"></label><button class="home-room-button" data-open="rooms" aria-label="Choose a room">${svg("sliders")}</button></div>
-    <div class="room-pills" aria-label="Filter by room">${roomPills()}</div>
-    <div class="home-section-title"><strong>${esc(state.room === "All" ? "All controls" : state.room)}</strong><span id="home-count">${homeItems().length} devices</span></div>
-    <div class="home-grid" id="home-grid">${homeItems().map(homeTile).join("") || empty("Nothing here yet. Choose another room or search.", "search")}</div>
-    <div class="home-thumb-dock"><button data-room="Favorites" aria-label="Show favourite devices">${svg("spark")}<span>Favourites</span></button><button data-open="rooms" aria-label="Select room">${svg("sliders")}<span>Rooms</span></button></div>`
-    }`;
+  const all = homeDevices(),
+    active = all.filter((d) => d.controls.some((e) => e.state === "on")).length;
+  return `<div class="home-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>Smart Home</h1><p>One tile per device. Every control within reach.</p></div><button class="home-refresh" data-refresh="true" aria-label="Refresh devices">${svg("activity")}</button></div>
+  ${
+    !state.me.credentials.homeassistant
+      ? `<section class="panel">${empty("Connect Home Assistant in Settings to control your home.", "lock")}${linkPage("settings", "Connect")}</section>`
+      : state.haError
+        ? `<section class="panel">${empty(state.haError, "activity")}</section>`
+        : state.entities === null
+          ? '<div class="loadingline"></div>'
+          : `
+  <div class="home-status"><span class="status-dot"></span>${active} active devices <span class="status-sep">·</span> ${all.length} devices <span class="status-sep">·</span> ${homeRooms().length} rooms</div>
+  <div class="home-toolbar"><label class="home-find">${svg("search")}<input id="home-search" placeholder="Find a device, control, or room" value="${esc(state.homeSearch)}" autocomplete="off" aria-label="Find a device"></label><button class="home-room-button" data-open="rooms" aria-label="Choose room">${svg("sliders")}</button></div>
+  <div class="room-pills" aria-label="Filter by room">${roomPills()}</div><div class="home-section-title"><strong>${esc(state.room === "All" ? "Your devices" : state.room)}</strong><span id="home-count">${homeItems().length} devices</span></div>
+  <div class="home-grid" id="home-grid">${homeItems().map(homeTile).join("") || empty("No matching devices", "search")}</div>
+  <div class="home-thumb-dock"><button data-room="Favorites" aria-label="Favourites">${svg("spark")}<span>Favourites</span></button><button data-open="rooms" aria-label="Rooms">${svg("sliders")}<span>Rooms</span></button></div>`
+  }`;
 }
-function deviceSheet() {
-  const e = (state.entities || []).find(
-    (item) => item.entity_id === state.device,
-  );
-  if (!e) return "";
-  const domain = e.entity_id.split(".")[0];
-  const active = e.state === "on";
-  const favourite = (state.me.favorites || []).includes(e.entity_id);
-  const disabled = ["unavailable", "unknown"].includes(e.state);
-  const brightness = Math.round(
-    (Number(e.attributes?.brightness || (active ? 255 : 128)) / 255) * 100,
-  );
-  const percent = Number(e.attributes?.percentage ?? 0);
-  const current = Number(
-    e.attributes?.temperature ?? e.attributes?.target_temp ?? 22,
-  );
-  const actions = ["light", "switch", "fan", "input_boolean"].includes(domain)
-    ? `<div class="detail-main-actions"><button class="detail-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" ${disabled ? "disabled" : ""}>${svg("power")}${active ? "Turn off" : "Turn on"}</button></div>`
-    : domain === "cover"
-      ? `<div class="detail-main-actions"><button data-ha-action="open_cover" data-ha-entity="${esc(e.entity_id)}">Open</button><button data-ha-action="stop_cover" data-ha-entity="${esc(e.entity_id)}">Stop</button><button data-ha-action="close_cover" data-ha-entity="${esc(e.entity_id)}">Close</button></div>`
-      : domain === "scene"
-        ? `<div class="detail-main-actions"><button data-ha-action="turn_on" data-ha-entity="${esc(e.entity_id)}">${svg("spark")} Activate scene</button></div>`
-        : "";
-  const brightnessControl =
+function controlRow(e) {
+  const domain = domainOf(e),
+    disabled = ["unknown", "unavailable"].includes(e.state),
+    id = esc(e.entity_id);
+  const title = `<span class="control-label"><strong>${esc(label(e))}</strong><small>${esc(deviceState(e))}</small></span>`;
+  let action = "";
+  if (["light", "switch", "fan", "input_boolean"].includes(domain)) {
+    action = `<button class="control-toggle ${e.state === "on" ? "on" : ""}" data-entity="${id}" aria-label="Toggle ${esc(label(e))}" ${disabled ? "disabled" : ""}>${svg("power")}</button>`;
+  } else if (domain === "cover") {
+    action = `<div class="control-actions">${["open_cover", "stop_cover", "close_cover"].map((a) => `<button data-ha-action="${a}" data-ha-entity="${id}">${a.split("_")[0]}</button>`).join("")}</div>`;
+  } else if (domain === "scene" || domain === "button") {
+    action = `<button class="control-action" data-ha-action="${domain === "scene" ? "turn_on" : "press"}" data-ha-entity="${id}" ${domain === "button" ? 'data-confirm="true"' : ""} ${disabled ? "disabled" : ""}>${domain === "scene" ? "Activate" : "Press"}</button>`;
+  } else if (domain === "select") {
+    const options = Array.isArray(e.attributes?.options)
+      ? e.attributes.options.filter((v) => typeof v === "string")
+      : [];
+    action = `<select data-ha-select="${id}" aria-label="${esc(label(e))}" ${disabled ? "disabled" : ""}>${options.map((v) => `<option value="${esc(v)}" ${v === e.state ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>`;
+  } else if (domain === "number") {
+    const min = Number(e.attributes?.min ?? 0),
+      max = Number(e.attributes?.max ?? 100),
+      step = Number(e.attributes?.step ?? 1);
+    if (Number.isFinite(min) && Number.isFinite(max) && min < max)
+      action = `<input class="number-control" type="number" data-ha-number="${id}" aria-label="${esc(label(e))}" min="${min}" max="${max}" step="${step > 0 ? step : 1}" value="${esc(e.state)}" ${disabled ? "disabled" : ""}>`;
+  } else if (domain === "media_player") {
+    action = `<button class="control-action" data-ha-action="media_play_pause" data-ha-entity="${id}" ${disabled ? "disabled" : ""}>Play / Pause</button>`;
+  } else if (domain === "climate") {
+    action = `<form class="control-temp" data-ha-climate="${id}"><input type="number" min="10" max="35" step=".5" value="${Number(e.attributes?.temperature) || 22}" aria-label="Target temperature" ${disabled ? "disabled" : ""}><button type="submit" ${disabled ? "disabled" : ""}>Set</button></form>`;
+  }
+  let extra = "";
+  if (
     domain === "light" &&
     !disabled &&
-    (e.attributes?.supported_color_modes || []).some((mode) => mode !== "onoff")
-      ? `<label class="detail-range"><span>Brightness <output id="range-output">${brightness}%</output></span><input type="range" min="1" max="100" value="${brightness}" data-control="brightness" data-entity-id="${esc(e.entity_id)}"></label>`
-      : "";
-  const fanControl =
-    domain === "fan" && !disabled
-      ? `<label class="detail-range"><span>Fan speed <output id="range-output">${percent}%</output></span><input type="range" min="0" max="100" step="5" value="${percent}" data-control="percentage" data-entity-id="${esc(e.entity_id)}"></label>`
-      : "";
-  const climateControl =
-    domain === "climate" && !disabled
-      ? `<form id="climate-form" data-entity-id="${esc(e.entity_id)}"><label class="field">Target temperature (°C)<input class="input" type="number" name="temperature" min="10" max="35" step="0.5" value="${Number.isFinite(current) ? current : 22}" required></label><button type="submit" class="btn primary">Set temperature</button></form>`
-      : "";
-  const attrs = Object.entries(e.attributes || {})
-    .filter(
-      ([key, val]) =>
-        [
-          "current_temperature",
-          "humidity",
-          "battery_level",
-          "percentage",
-          "unit_of_measurement",
-          "device_class",
-          "hvac_action",
-        ].includes(key) && ["string", "number", "boolean"].includes(typeof val),
-    )
-    .slice(0, 6)
-    .map(
-      ([key, val]) =>
-        `<div class="detail-attribute"><span>${esc(key.replaceAll("_", " "))}</span><strong>${esc(val)}</strong></div>`,
-    )
-    .join("");
-  return `<div class="overlay" data-dismiss="true"><section class="sheet device-sheet" role="dialog" aria-label="${esc(label(e))}"><div class="sheet-grip"></div><div class="between"><div class="eyebrow">${esc(homeRoom(e))} · ${esc(domain)}</div><button class="icon-btn" data-close="true" aria-label="Close details">${svg("x")}</button></div>
-    <div class="detail-head"><span class="detail-hero-icon">${svg(domainIcon(domain))}</span><div><h2>${esc(label(e))}</h2><p>${esc(deviceState(e))}</p></div></div>
-    <div class="detail-tools"><button data-favorite="${esc(e.entity_id)}" aria-pressed="${favourite}">${svg("spark")} ${favourite ? "Favourited" : "Add to favourites"}</button><label>Room <input id="room-name" list="home-room-names" value="${esc(homeRoom(e) === "Unassigned" ? "" : homeRoom(e))}" maxlength="48" placeholder="Assign room"></label><datalist id="home-room-names">${homeRooms()
-      .map((room) => `<option value="${esc(room)}"></option>`)
+    (e.attributes?.supported_color_modes || []).some((v) => v !== "onoff")
+  ) {
+    const n = Math.round((Number(e.attributes?.brightness || 0) / 255) * 100);
+    extra = `<label class="inline-control-range"><span>Brightness <output>${n}%</output></span><input type="range" min="1" max="100" value="${n}" data-control="brightness" data-entity-id="${id}"></label>`;
+  } else if (
+    domain === "fan" &&
+    !disabled &&
+    e.attributes?.percentage != null
+  ) {
+    const n = Number(e.attributes.percentage);
+    extra = `<label class="inline-control-range"><span>Speed <output>${n}%</output></span><input type="range" min="0" max="100" step="5" value="${n}" data-control="percentage" data-entity-id="${id}"></label>`;
+  }
+  return `<div class="device-control"><div class="device-control-main"><span class="control-symbol">${svg(domainIcon(domain))}</span>${title}${action}</div>${extra}</div>`;
+}
+function deviceSheet() {
+  const d = homeDevices().find((item) => item.id === state.device);
+  if (!d) return "";
+  const primary = d.primary;
+  const favourites = d.favourite;
+  const readings = d.readings;
+  const detailed = d.controls.slice().sort((a, b) => priority(a) - priority(b));
+  const alerts = d.entities.filter(
+    (e) => e.state === "unavailable" || e.state === "unknown",
+  ).length;
+  const extra = d.entities.filter(
+    (e) =>
+      !isActionable(e) && !["sensor", "binary_sensor"].includes(domainOf(e)),
+  ).length;
+  return `<div class="overlay" data-dismiss="true"><section class="sheet device-sheet group-sheet tone-${d.kind}" role="dialog" aria-label="${esc(d.name)}"><div class="sheet-grip"></div>
+    <div class="between"><div class="eyebrow">${esc(d.room)} · ${d.entities.length} entities</div><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div>
+    <div class="detail-head"><span class="detail-hero-icon">${svg(d.kind === "mixed" ? "apps" : domainIcon(domainOf(primary)))}</span><div><h2>${esc(d.name)}</h2><p>${esc(d.model || deviceSummaryLine(d))}</p></div></div>
+    <div class="detail-tools"><button data-favorite="${esc(d.key)}" aria-pressed="${favourites}">${svg("spark")} ${favourites ? "Favourited" : "Favourite"}</button><label>Room <input id="room-name" list="home-room-names" value="${esc(d.room === "Unassigned" ? "" : d.room)}" maxlength="48" placeholder="Assign room"></label><datalist id="home-room-names">${homeRooms()
+      .map((r) => `<option value="${esc(r)}"></option>`)
       .join(
         "",
-      )}</datalist><button data-save-room="${esc(e.entity_id)}" aria-label="Save room">${svg("check")}</button></div>
-    ${brightnessControl}${fanControl}${climateControl}${attrs ? `<div class="detail-attributes">${attrs}</div>` : ""}
-    ${actions}</section></div>`;
+      )}</datalist><button data-save-room="${esc(d.key)}" aria-label="Save room">${svg("check")}</button></div>
+    ${alerts ? `<div class="device-alert">${alerts} entities currently unavailable</div>` : ""}
+    ${detailed.length ? `<div class="device-section-title">Controls <span>${detailed.length}</span></div><div class="controls-stack">${detailed.map(controlRow).join("")}</div>` : ""}
+    ${
+      readings.length
+        ? `<div class="device-section-title">Readings <span>${readings.length}</span></div><div class="readings-grid">${readings
+            .slice(0, state.showReadings ? 100 : 6)
+            .map(
+              (e) =>
+                `<div class="reading"><small>${esc(label(e))}</small><strong>${esc(deviceState(e))}</strong></div>`,
+            )
+            .join(
+              "",
+            )}</div>${readings.length > 6 ? `<button class="show-readings" data-expand-readings="true">${state.showReadings ? "Show fewer" : "Show all " + readings.length + " readings"}</button>` : ""}`
+        : ""
+    }
+    ${extra ? `<p class="device-meta-note">${extra} informational or maintenance entities are available in Home Assistant.</p>` : ""}
+    </section></div>`;
 }
 function roomsSheet() {
   return `<div class="overlay" data-dismiss="true"><section class="sheet rooms-sheet" role="dialog" aria-label="Choose room"><div class="sheet-grip"></div><div class="between"><h2>Choose a room</h2><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div><div class="room-choice-list">${["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"].map((room) => `<button data-room="${esc(room)}">${room === state.room ? svg("check") : svg("home")} ${esc(room)}</button>`).join("")}</div></section></div>`;
@@ -654,70 +772,88 @@ async function saveHomePrefs() {
     hand: state.me.hand || "right",
   });
 }
-function media() {
-  const cards = ["sonarr", "radarr"]
-    .map((name) => {
-      const connected = state.me.credentials[name],
-        data = state.arr[name];
-      return (
-        '<section class="panel">' +
-        section(
-          name === "sonarr" ? "Television · Sonarr" : "Movies · Radarr",
-          connected
-            ? data
-              ? (data.totalRecords || 0) + " items queued"
-              : "Loading queue…"
-            : "Not connected",
-          '<span class="chip ' +
-            (connected ? "good" : "warn") +
-            '">' +
-            (connected ? "Connected" : "Needs token") +
-            "</span>",
-        ) +
-        '<div class="queue-list">' +
-        (!connected
-          ? empty("Connect your " + name + " API key in Settings.", "lock")
-          : data
-            ? (data.records || []).length
-              ? data.records
-                  .map(
-                    (r) =>
-                      '<div class="table-row"><div style="min-width:0"><div class="table-title">' +
-                      esc(r.title || "Media item") +
-                      '</div><div class="table-sub">' +
-                      esc(r.status || "Queued") +
-                      (r.timeleft ? " · " + esc(r.timeleft) : "") +
-                      "</div>" +
-                      (r.size > 0
-                        ? '<div class="meter"><div class="meter-fill" style="width:' +
-                          Math.min(
-                            100,
-                            Math.max(0, (1 - r.sizeleft / r.size) * 100),
-                          ).toFixed(0) +
-                          '%"></div></div>'
-                        : "") +
-                      "</div></div>",
-                  )
-                  .join("")
-              : empty("Your queue is clear.", "check")
-            : state.arrError
-              ? empty(state.arrError, "activity")
-              : '<div class="loadingline"></div>') +
-        "</div></section>"
-      );
-    })
-    .join("");
-  return (
-    pageHead(
-      "Media centre",
-      "Keep an eye on what you are watching and what is downloading.",
-      linkPage("settings", "Manage connections"),
-    ) +
-    '<div class="grid cols-2">' +
-    cards +
-    '</div><div class="section-bar"><h2>Media applications</h2></div>' +
-    serviceCards(state.catalog.filter((a) => a.page === "media"))
+function mediaQueue() {
+  return ["sonarr", "radarr"].flatMap((service) =>
+    (state.arr[service]?.records || []).map((item) => ({ ...item, service })),
   );
+}
+function mediaNeedsAttention(item) {
+  const status = String(item.status || "").toLowerCase();
+  return (
+    Boolean(item.errorMessage) || /warning|failed|error|stalled/.test(status)
+  );
+}
+function mediaStatus(item) {
+  const status = String(item.status || "queued");
+  if (mediaNeedsAttention(item)) return "Needs attention";
+  if (/download/i.test(status)) return "Downloading";
+  if (/queue/i.test(status)) return "Queued";
+  if (/import/i.test(status)) return "Importing";
+  return status.replace(/([A-Z])/g, " $1").trim();
+}
+function mediaProgress(item) {
+  const size = Number(item.size),
+    left = Number(item.sizeleft);
+  return Number.isFinite(size) && size > 0 && Number.isFinite(left)
+    ? Math.min(100, Math.max(0, Math.round((1 - left / size) * 100)))
+    : null;
+}
+function mediaItems() {
+  return mediaQueue().filter(
+    (r) =>
+      state.mediaFilter === "All" ||
+      (state.mediaFilter === "Television" && r.service === "sonarr") ||
+      (state.mediaFilter === "Movies" && r.service === "radarr") ||
+      (state.mediaFilter === "Attention" && mediaNeedsAttention(r)),
+  );
+}
+function mediaShortcut(id, title, detail, iconName, tone) {
+  const app = state.catalog.find((a) => a.id === id);
+  if (!app) return "";
+  return `<a class="media-shortcut tone-${tone}" href="${esc(app.url)}" target="_blank" rel="noopener noreferrer"><span class="media-shortcut-icon">${svg(iconName)}</span><span><strong>${esc(title)}</strong><small>${esc(detail)}</small></span>${svg("external")}</a>`;
+}
+function mediaRow(item) {
+  const progress = mediaProgress(item),
+    issue = mediaNeedsAttention(item);
+  const tv = item.service === "sonarr";
+  return `<article class="media-queue-row ${issue ? "needs-attention" : ""}">
+    <span class="media-poster tone-${tv ? "media" : "warm"}">${svg(tv ? "play" : "image")}</span>
+    <div class="media-queue-main"><div class="media-row-header"><span class="media-type">${tv ? "SERIES · SONARR" : "MOVIE · RADARR"}</span><span class="media-status ${issue ? "warn" : ""}">${svg(issue ? "activity" : "download")}${mediaStatus(item)}</span></div>
+      <strong>${esc(item.title || "Untitled download")}</strong><div class="media-row-meta">${item.timeleft ? `About ${esc(item.timeleft)} remaining` : "Status from your download queue"}${progress !== null ? ` · ${progress}%` : ""}</div>
+      ${progress !== null ? `<div class="media-progress"><span style="width:${progress}%"></span></div>` : ""}
+      ${item.errorMessage ? `<p class="media-error">${esc(item.errorMessage)}</p>` : ""}</div>
+  </article>`;
+}
+function media() {
+  const connected = ["sonarr", "radarr"].filter(
+    (key) => state.me.credentials[key],
+  );
+  const full = mediaQueue();
+  const attention = full.filter(mediaNeedsAttention).length;
+  const total = ["sonarr", "radarr"].reduce(
+    (n, key) => n + (state.arr[key]?.totalRecords || 0),
+    0,
+  );
+  const downloading = full.filter(
+    (r) => /download/i.test(r.status || "") && !mediaNeedsAttention(r),
+  ).length;
+  return `<div class="media-heading"><div class="eyebrow">ENTERTAINMENT</div><h1>Media <span>hub.</span></h1><p>Your requests, downloads and library in one quieter place.</p></div>
+    <div class="media-spotlight"><div><span class="media-spotlight-label">IN THE PIPELINE</span><strong>${total || full.length}</strong><p>${total === 1 ? "item" : "items"} currently queued</p></div><div class="media-spotlight-metrics"><div><strong>${downloading}</strong><span>Downloading</span></div><div><strong>${attention}</strong><span>Need attention</span></div></div></div>
+    <div class="media-launchers">${mediaShortcut("jellyfin", "Watch", "Open your library", "play", "media")}${mediaShortcut("seerr", "Discover", "Find something new", "search", "warm")}${mediaShortcut("sonarr", "Television", "Manage series", "play", "cool")}${mediaShortcut("radarr", "Movies", "Manage films", "image", "rose")}</div>
+    <section class="media-activity"><div class="media-activity-head"><div><div class="eyebrow">DOWNLOAD ACTIVITY</div><h2>What’s moving</h2></div><button class="home-refresh" data-refresh="true" aria-label="Refresh downloads">${svg("activity")}</button></div>
+      <div class="media-tabs" aria-label="Filter downloads">${["All", "Television", "Movies", "Attention"].map((kind) => `<button class="media-tab ${state.mediaFilter === kind ? "active" : ""}" data-media-filter="${kind}" aria-pressed="${state.mediaFilter === kind}">${esc(kind)}${kind === "Attention" && attention ? `<span>${attention}</span>` : ""}</button>`).join("")}</div>
+      ${connected.length ? (mediaItems().length ? `<div class="media-feed">${mediaItems().map(mediaRow).join("")}</div>` : `<div class="media-empty"><span>${svg(state.mediaFilter === "Attention" ? "check" : "download")}</span><strong>${state.mediaFilter === "Attention" ? "Nothing needs attention" : "Nothing in this queue"}</strong><p>${state.mediaFilter === "Attention" ? "No reported download errors right now." : "Your media activity will appear here when downloads begin."}</p></div>`) : `<div class="media-empty"><span>${svg("lock")}</span><strong>Connect your media managers</strong><p>Add your personal Sonarr and Radarr keys in Settings to see live downloads.</p>${linkPage("settings", "Connect services")}</div>`}
+      ${state.arrError ? `<p class="media-error">${esc(state.arrError)}</p>` : ""}
+    </section>
+    <div class="section-bar"><h2>More media tools</h2>${linkPage("apps", "All applications")}</div>
+    <div class="media-more">${state.catalog
+      .filter(
+        (a) =>
+          a.page === "media" &&
+          !["jellyfin", "seerr", "sonarr", "radarr"].includes(a.id),
+      )
+      .map((a) => mediaShortcut(a.id, a.name, a.category, logoFor(a), "subtle"))
+      .join("")}</div>`;
 }
 function logoFor(a) {
   return (
@@ -747,6 +883,20 @@ function logoFor(a) {
     }[a.id] || "apps"
   );
 }
+function appTone(category) {
+  return (
+    {
+      "Smart home": "light",
+      Media: "media",
+      Photos: "rose",
+      Documents: "cool",
+      Automation: "warm",
+      AI: "mixed",
+      Development: "cool",
+      Networking: "power",
+    }[category] || "other"
+  );
+}
 function serviceRow(a) {
   let host;
   try {
@@ -754,7 +904,7 @@ function serviceRow(a) {
   } catch {
     host = "";
   }
-  return `<a class="service-card app-card" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(a.name)}">
+  return `<a class="service-card app-card tone-${appTone(a.category)}" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(a.name)}">
     <span class="app-symbol">${svg(logoFor(a))}</span><span class="app-info"><strong>${esc(a.name)}</strong><small>${esc(a.category)}</small><span class="app-host">${esc(host)}</span></span><span class="app-link">${svg("external")}</span></a>`;
 }
 function serviceCards(items) {
@@ -1009,6 +1159,24 @@ async function refreshPage(page) {
         }),
     );
   }
+  if (
+    (page === "home" || page === "overview") &&
+    has("home") &&
+    state.me.credentials.homeassistant &&
+    !state.deviceRegistryLoaded
+  ) {
+    state.deviceRegistryLoaded = true;
+    jobs.push(
+      api("/api/ha/devices")
+        .then((v) => {
+          state.deviceRegistry = v || {};
+        })
+        .catch(() => {
+          state.deviceRegistry = {};
+          state.deviceRegistryLoaded = false;
+        }),
+    );
+  }
   if ((page === "media" || page === "overview") && has("media"))
     for (const service of ["sonarr", "radarr"])
       if (state.me.credentials[service])
@@ -1060,6 +1228,11 @@ async function init() {
 document.addEventListener("click", async (e) => {
   const target = e.target.closest("button,[data-dismiss],a[data-page]");
   if (!target) return;
+  if (target.dataset.mediaFilter) {
+    state.mediaFilter = target.dataset.mediaFilter;
+    render();
+    return;
+  }
   if (target.dataset.room) {
     state.room = target.dataset.room;
     state.roomPicker = false;
@@ -1080,6 +1253,7 @@ document.addEventListener("click", async (e) => {
   }
   if (target.dataset.device) {
     state.device = target.dataset.device;
+    state.showReadings = false;
     state.roomPicker = false;
     state.quick = false;
     render();
@@ -1087,8 +1261,12 @@ document.addEventListener("click", async (e) => {
   }
   if (target.dataset.favorite) {
     const previous = [...(state.me.favorites || [])];
-    state.me.favorites = previous.includes(target.dataset.favorite)
-      ? previous.filter((id) => id !== target.dataset.favorite)
+    const group = homeDevices().find((d) =>
+      d.entities.some((e) => e.entity_id === target.dataset.favorite),
+    );
+    const ids = new Set((group?.entities || []).map((e) => e.entity_id));
+    state.me.favorites = group?.favourite
+      ? previous.filter((id) => !ids.has(id))
       : [...previous, target.dataset.favorite];
     render();
     try {
@@ -1129,7 +1307,13 @@ document.addEventListener("click", async (e) => {
     }
     return;
   }
+  if (target.dataset.expandReadings) {
+    state.showReadings = !state.showReadings;
+    render();
+    return;
+  }
   if (target.dataset.haAction) {
+    if (target.dataset.confirm && !confirm("Run this device action?")) return;
     target.disabled = true;
     try {
       await api("/api/ha/action", "POST", {
@@ -1358,6 +1542,8 @@ document.addEventListener("submit", async (e) => {
       state.entities = null;
       state.areas = {};
       state.areasLoaded = false;
+      state.deviceRegistry = {};
+      state.deviceRegistryLoaded = false;
       state.arr = {};
       render();
     } catch (err) {
@@ -1456,21 +1642,22 @@ document.addEventListener("input", (e) => {
     if (count) count.textContent = `${homeItems().length} devices`;
   }
   if (e.target.dataset.control) {
-    const output = document.getElementById("range-output");
+    const output = e.target.closest("label")?.querySelector("output");
     if (output) output.textContent = `${e.target.value}%`;
   }
 });
 document.addEventListener("submit", async (e) => {
-  if (e.target.id !== "climate-form") return;
+  if (!e.target.matches(".control-temp") && e.target.id !== "climate-form")
+    return;
   e.preventDefault();
   const form = e.target;
   const btn = form.querySelector("button");
   btn.disabled = true;
   try {
     await api("/api/ha/action", "POST", {
-      entity: form.dataset.entityId,
+      entity: form.dataset.haClimate || form.dataset.entityId,
       action: "set_temperature",
-      temperature: Number(new FormData(form).get("temperature")),
+      temperature: Number(form.querySelector("input")?.value),
     });
     toast("Temperature updated");
     refreshPage("home");
@@ -1481,6 +1668,34 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.dataset.haSelect || e.target.dataset.haNumber) {
+    const node = e.target;
+    node.disabled = true;
+    try {
+      const isSelect = Boolean(node.dataset.haSelect);
+      await api(
+        "/api/ha/action",
+        "POST",
+        isSelect
+          ? {
+              entity: node.dataset.haSelect,
+              action: "select_option",
+              option: node.value,
+            }
+          : {
+              entity: node.dataset.haNumber,
+              action: "set_value",
+              value: Number(node.value),
+            },
+      );
+      toast("Control updated");
+      refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+      node.disabled = false;
+    }
+    return;
+  }
   if (!e.target.dataset.control) return;
   const input = e.target;
   input.disabled = true;
