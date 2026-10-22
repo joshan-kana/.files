@@ -24,7 +24,8 @@ Item {
         width: chord.implicitWidth + (hint.compact ? Math.max(8, hint.theme.keycapInset * 2 - 4) : hint.theme.keycapInset * 2)
         radius: Math.min(9, height / 3)
         anchors.verticalCenter: parent.verticalCenter
-        color: hint.theme.controlBase
+        // White/light key glyphs also need a dark cap on light themes.
+        color: hint.theme.dark ? hint.theme.controlBase : hint.theme.textStrong
         border.width: hint.emphasized ? hint.theme.borderFocus : hint.theme.borderThin
         border.color: hint.emphasized ? hint.emphasisColor : hint.theme.subtleBorder
 
@@ -35,7 +36,7 @@ Item {
             fontFamily: hint.runtime.fontMono
             fontSize: hint.compact ? hint.theme.fontSize(9) : hint.theme.fontKeyHint
             modifierScale: 1
-            textColor: hint.emphasized ? hint.emphasisColor : hint.theme.textStrong
+            textColor: hint.theme.dark ? hint.theme.textStrong : hint.theme.background
         }
     }
 

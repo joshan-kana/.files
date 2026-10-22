@@ -505,6 +505,18 @@ FocusScope {
         keyboardFocus.forceActiveFocus();
     }
 
+    function selectedMixerStream(): var {
+        return mixerOpen && mixerView.panel ? mixerView.panel.selectedStream() : null;
+    }
+    function adjustMixerStream(delta: real): void {
+        if (mixerOpen && mixerView.panel)
+            mixerView.panel.adjustSelected(delta);
+    }
+    function toggleMixerMute(): void {
+        if (mixerOpen && mixerView.panel)
+            mixerView.panel.toggleSelectedMute();
+    }
+
     function moveAudioSelection(direction: int): void {
         selectedAudioIndex = (selectedAudioIndex + direction + quickAudioTargets.length) % quickAudioTargets.length;
     }
@@ -799,7 +811,7 @@ FocusScope {
                     icon: "󰍛"
                     title: "Resources"
                     shortcut: "G"
-                    activeColor: root.theme.roleColor("positive")
+                    activeColor: root.theme.roleColor("resources")
                     onActivated: root.openResources()
                 }
 
@@ -934,63 +946,26 @@ FocusScope {
                     onActivated: root.motion.toggle()
                 }
 
-                QuickSettingChip {
+                AdjustableSetting {
                     width: visualModeStrip.cellWidth(6)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
                     icon: root.nightLight.active ? "󰖔" : "󰖙"
-                    title: root.nightLight.supported ? "Night " + root.nightLight.temperature + "K" : "Night unavailable"
-                    shortcut: "T"
+                    label: "Night Light"
+                    valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
+                    toggleShortcut: "T"
+                    decrementShortcut: "SHIFT+T"
+                    incrementShortcut: "ALT+T"
+                    roleAccent: root.theme.roleColor("warmth")
                     active: root.nightLight.active
-                    activeColor: root.theme.roleColor("warmth")
-                    enabled: root.nightLight.supported && !root.nightLight.busy
-                    onActivated: root.nightLight.toggle()
-                }
-            }
-
-            Row {
-                width: parent.width
-                spacing: root.theme.spacing2
-                visible: root.nightLight.supported
-                height: visible ? 36 : 0
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(130, parent.width - warmerButton.width - coolerButton.width - parent.spacing * 2)
-                    text: root.nightLight.error.length > 0 ? root.nightLight.error : "NIGHT LIGHT  ·  " + root.nightLight.temperature + "K"
-                    color: root.nightLight.error.length > 0 ? root.theme.readableRoleColor("warning") : root.theme.readableRoleColor("warmth")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(10)
-                    elide: Text.ElideRight
-                }
-                ShellAction {
-                    id: warmerButton
-                    width: 91
-                    height: 36
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "−"
-                    shortcut: "SHIFT+T"
-                    enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
-                    onActivated: root.nightLight.warmer()
-                }
-                ShellAction {
-                    id: coolerButton
-                    width: 91
-                    height: 36
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    compact: true
-                    horizontalCompact: true
-                    title: "+"
-                    shortcut: "ALT+T"
-                    enabled: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
-                    onActivated: root.nightLight.cooler()
+                    canToggle: root.nightLight.supported && !root.nightLight.busy
+                    canDecrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
+                    canIncrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
+                    onToggleRequested: root.nightLight.toggle()
+                    onDecreaseRequested: root.nightLight.warmer()
+                    onIncreaseRequested: root.nightLight.cooler()
                 }
             }
 
@@ -1002,8 +977,8 @@ FocusScope {
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
                 luminous: true
-                luminousColor: root.theme.accent
-                fillColor: root.theme.blend(root.theme.groupBase, root.theme.accent, root.theme.dark ? 0.07 : 0.035)
+                luminousColor: root.theme.roleColor("audio")
+                fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("audio"), root.theme.dark ? 0.07 : 0.035)
 
                 Column {
                     id: audioStack
@@ -1098,7 +1073,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 204 : 0
+                    height: root.media.available ? 250 : 0
                     visible: root.media.available
                     theme: root.theme
                     motion: root.motion
@@ -1173,7 +1148,7 @@ FocusScope {
                             }
 
                             Column {
-                                width: Math.max(1, parent.width - 60 - (root.media.available ? mediaInlineTransport.width + mediaQuickExtras.width : 0) - parent.spacing * (root.media.available ? 3 : 1) - root.theme.spacing2)
+                                width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: root.theme.spacing1
 
@@ -1203,7 +1178,13 @@ FocusScope {
                                     font.pixelSize: root.theme.fontSize(10)
                                 }
                             }
+                        }
 
+                        Row {
+                            width: parent.width
+                            height: 38
+                            spacing: root.theme.spacing3
+                            visible: root.media.available
                             MediaTransport {
                                 id: mediaInlineTransport
                                 anchors.verticalCenter: parent.verticalCenter
