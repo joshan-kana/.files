@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -442,5 +443,87 @@ func TestFanAndLightCapabilityActions(t *testing.T) {
 	}
 	if len(calls) != 7 {
 		t.Fatal("invalid actions reached upstream")
+	}
+}
+
+func TestHomeAreaIconsViaAuthenticatedRegistry(t *testing.T) {
+	previous := upstreams["homeassistant"]
+	defer func() { upstreams["homeassistant"] = previous }()
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/websocket" {
+			t.Errorf("unexpected API %s", r.URL.Path)
+			return
+		}
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer conn.Close()
+		conn.WriteJSON(map[string]any{"type": "auth_required"})
+		var msg map[string]any
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Error(err)
+			return
+		}
+		if msg["type"] != "auth" || msg["access_token"] != "personal-key" {
+			t.Error("invalid upstream auth")
+			return
+		}
+		conn.WriteJSON(map[string]any{"type": "auth_ok"})
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Error(err)
+			return
+		}
+		if msg["type"] != "config/area_registry/list" {
+			t.Error("wrong area registry command")
+		}
+		conn.WriteJSON(map[string]any{"id": 1, "type": "result", "success": true, "result": []any{
+			map[string]any{"name": "Bedroom", "icon": "mdi:bed-king"},
+			map[string]any{"name": "Study", "icon": "mdi:chair-rolling"},
+			map[string]any{"name": "No Icon", "icon": nil},
+		}})
+	}))
+	defer backend.Close()
+	upstreams["homeassistant"] = backend.URL
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"home": true})
+	alice.Credentials["homeassistant"] = s.encrypt("personal-key")
+	bob := addUser(s, "bob", false, map[string]bool{"media": true})
+	status(t, req(s, "GET", "/api/ha/room-icons", nil, s.token(bob), ""), 403)
+	out := req(s, "GET", "/api/ha/room-icons", nil, s.token(alice), "")
+	status(t, out, 200)
+	var icons map[string]string
+	if err := json.Unmarshal(out.Body.Bytes(), &icons); err != nil {
+		t.Fatal(err)
+	}
+	if len(icons) != 2 || icons["Bedroom"] != "mdi:bed-king" || icons["Study"] != "mdi:chair-rolling" {
+		t.Fatalf("icons not from HA registry: %+v", icons)
+	}
+	if strings.Contains(out.Body.String(), "personal-key") {
+		t.Fatal("upstream token leaked")
+	}
+}
+
+func TestUnavailableVisibilityPreferencePerAccount(t *testing.T) {
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"home": true})
+	bob := addUser(s, "bob", false, map[string]bool{"home": true})
+	payload := map[string]any{"favorites": []string{}, "rooms": map[string]string{}, "hand": "right", "show_unavailable": true}
+	status(t, req(s, "PUT", "/api/profile/home", payload, s.token(alice), "http://example.test"), 200)
+	if !alice.ShowUnavailable || bob.ShowUnavailable {
+		t.Fatal("per-account visibility preference failed")
+	}
+	reloaded, err := newServer(s.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reloaded.data.Users["alice"].ShowUnavailable || reloaded.data.Users["bob"].ShowUnavailable {
+		t.Fatal("visibility setting not persisted")
+	}
+	payload["show_unavailable"] = false
+	status(t, req(s, "PUT", "/api/profile/home", payload, s.token(alice), "http://example.test"), 200)
+	if alice.ShowUnavailable {
+		t.Fatal("cannot hide unavailable entities again")
 	}
 }

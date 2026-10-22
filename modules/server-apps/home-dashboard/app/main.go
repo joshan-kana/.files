@@ -28,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 //go:embed static/*
@@ -41,20 +43,21 @@ var hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor|button|number|select|media_player)\.[a-z0-9_]+$`)
 
 type User struct {
-	Name        string            `json:"name"`
-	Salt        string            `json:"salt"`
-	Password    string            `json:"password"`
-	Iterations  int               `json:"iterations"`
-	Admin       bool              `json:"admin"`
-	Theme       string            `json:"theme,omitempty"`
-	Accent      string            `json:"accent,omitempty"`
-	Enabled     bool              `json:"enabled"`
-	Pages       map[string]bool   `json:"pages"`
-	Credentials map[string]string `json:"credentials"`
-	Version     int               `json:"version"`
-	Favorites   []string          `json:"favorites,omitempty"`
-	Rooms       map[string]string `json:"rooms,omitempty"`
-	Hand        string            `json:"hand,omitempty"`
+	Name            string            `json:"name"`
+	Salt            string            `json:"salt"`
+	Password        string            `json:"password"`
+	Iterations      int               `json:"iterations"`
+	Admin           bool              `json:"admin"`
+	Theme           string            `json:"theme,omitempty"`
+	Accent          string            `json:"accent,omitempty"`
+	Enabled         bool              `json:"enabled"`
+	Pages           map[string]bool   `json:"pages"`
+	Credentials     map[string]string `json:"credentials"`
+	Version         int               `json:"version"`
+	Favorites       []string          `json:"favorites,omitempty"`
+	Rooms           map[string]string `json:"rooms,omitempty"`
+	Hand            string            `json:"hand,omitempty"`
+	ShowUnavailable bool              `json:"show_unavailable,omitempty"`
 }
 type Database struct {
 	Users map[string]*User `json:"users"`
@@ -529,6 +532,19 @@ func (s *Server) handler() http.Handler {
 		}
 		jsonResponse(w, 200, filtered)
 	})
+	mux.HandleFunc("GET /api/ha/room-icons", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if !hasPage(u, "home") {
+			failure(w, 403, "Access denied")
+			return
+		}
+		icons, err := s.homeAreaIcons(u)
+		if err != nil {
+			failure(w, 502, "Home Assistant area icons unavailable")
+			return
+		}
+		jsonResponse(w, 200, icons)
+	})
 	mux.HandleFunc("PUT /api/profile/home", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
 		if !hasPage(u, "home") {
@@ -536,9 +552,10 @@ func (s *Server) handler() http.Handler {
 			return
 		}
 		var in struct {
-			Favorites []string          `json:"favorites"`
-			Rooms     map[string]string `json:"rooms"`
-			Hand      string            `json:"hand"`
+			Favorites       []string          `json:"favorites"`
+			Rooms           map[string]string `json:"rooms"`
+			Hand            string            `json:"hand"`
+			ShowUnavailable bool              `json:"show_unavailable"`
 		}
 		if bodyJSON(r, &in) != nil || len(in.Favorites) > 128 || len(in.Rooms) > 256 || (in.Hand != "right" && in.Hand != "left") {
 			failure(w, 400, "Invalid home preferences")
@@ -563,10 +580,10 @@ func (s *Server) handler() http.Handler {
 			failure(w, 401, "Account unavailable")
 			return
 		}
-		oldFavorites, oldRooms, oldHand := target.Favorites, target.Rooms, target.Hand
-		target.Favorites, target.Rooms, target.Hand = in.Favorites, in.Rooms, in.Hand
+		oldFavorites, oldRooms, oldHand, oldHidden := target.Favorites, target.Rooms, target.Hand, target.ShowUnavailable
+		target.Favorites, target.Rooms, target.Hand, target.ShowUnavailable = in.Favorites, in.Rooms, in.Hand, in.ShowUnavailable
 		if err := s.save(); err != nil {
-			target.Favorites, target.Rooms, target.Hand = oldFavorites, oldRooms, oldHand
+			target.Favorites, target.Rooms, target.Hand, target.ShowUnavailable = oldFavorites, oldRooms, oldHand, oldHidden
 			failure(w, 500, "Could not save preferences")
 			return
 		}
@@ -966,6 +983,72 @@ func validPages(p map[string]bool) bool {
 func (s *Server) fetch(u *User, service, path string) ([]byte, error) {
 	return s.request(u, service, "GET", path, nil)
 }
+
+// Home Assistant exposes area icons through its authenticated area registry,
+// not the read-only template API. Fetch them server-side without revealing tokens.
+func (s *Server) homeAreaIcons(u *User) (map[string]string, error) {
+	secret, err := s.decrypt(u.Credentials["homeassistant"])
+	if err != nil || secret == "" {
+		return nil, errors.New("Home Assistant not connected")
+	}
+	endpoint, err := url.Parse(upstreams["homeassistant"])
+	if err != nil {
+		return nil, err
+	}
+	if endpoint.Scheme == "http" {
+		endpoint.Scheme = "ws"
+	} else if endpoint.Scheme == "https" {
+		endpoint.Scheme = "wss"
+	} else {
+		return nil, errors.New("invalid Home Assistant endpoint")
+	}
+	endpoint.Path = "/api/websocket"
+	endpoint.RawQuery = ""
+	conn, _, err := (&websocket.Dialer{HandshakeTimeout: 4 * time.Second}).Dial(endpoint.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	conn.SetReadLimit(1024 * 1024)
+	if err = conn.SetReadDeadline(time.Now().Add(6 * time.Second)); err != nil {
+		return nil, err
+	}
+	var msg struct {
+		Type    string          `json:"type"`
+		Success bool            `json:"success"`
+		Result  json.RawMessage `json:"result"`
+	}
+	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "auth_required" {
+		return nil, errors.New("invalid Home Assistant authentication handshake")
+	}
+	if err = conn.WriteJSON(map[string]string{"type": "auth", "access_token": secret}); err != nil {
+		return nil, err
+	}
+	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "auth_ok" {
+		return nil, errors.New("Home Assistant authentication failed")
+	}
+	if err = conn.WriteJSON(map[string]any{"id": 1, "type": "config/area_registry/list"}); err != nil {
+		return nil, err
+	}
+	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "result" || !msg.Success {
+		return nil, errors.New("Home Assistant area registry failed")
+	}
+	var areas []struct {
+		Name string `json:"name"`
+		Icon string `json:"icon"`
+	}
+	if err = json.Unmarshal(msg.Result, &areas); err != nil {
+		return nil, err
+	}
+	result := map[string]string{}
+	for _, area := range areas {
+		if len(area.Name) > 0 && len(area.Name) <= 80 && len(area.Icon) > 4 && len(area.Icon) <= 80 && strings.HasPrefix(area.Icon, "mdi:") {
+			result[area.Name] = area.Icon
+		}
+	}
+	return result, nil
+}
+
 func (s *Server) request(u *User, service, verb, path string, body []byte) ([]byte, error) {
 	endpoint, ok := upstreams[service]
 	if !ok {
