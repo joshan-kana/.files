@@ -44,6 +44,8 @@ type User struct {
 	Password    string            `json:"password"`
 	Iterations  int               `json:"iterations"`
 	Admin       bool              `json:"admin"`
+	Theme       string            `json:"theme,omitempty"`
+	Accent      string            `json:"accent,omitempty"`
 	Enabled     bool              `json:"enabled"`
 	Pages       map[string]bool   `json:"pages"`
 	Credentials map[string]string `json:"credentials"`
@@ -286,6 +288,17 @@ func method(w http.ResponseWriter, r *http.Request, want string) bool {
 	}
 	return true
 }
+
+var availableThemes = []string{"carbon", "midnight", "forest", "plum"}
+var availableAccents = []string{"mint", "cyan", "violet", "amber", "coral"}
+
+func appearance(value string, options []string) string {
+	if slices.Contains(options, value) {
+		return value
+	}
+	return options[0]
+}
+
 func (s *Server) me(u *User) any {
 	enabled := map[string]bool{}
 	for _, p := range pages {
@@ -297,7 +310,7 @@ func (s *Server) me(u *User) any {
 			creds[k] = u.Credentials[k] != ""
 		}
 	}
-	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds}
+	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents)}
 }
 func csrf(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
@@ -373,7 +386,7 @@ func (s *Server) handler() http.Handler {
 			return
 		}
 		s.mu.Lock()
-		u := s.data.Users[in.Username]
+		u := s.data.Users[strings.TrimSpace(in.Username)]
 		var copy *User
 		if u != nil {
 			v := *u
@@ -586,6 +599,36 @@ func (s *Server) handler() http.Handler {
 			return
 		}
 		jsonResponse(w, 200, map[string]bool{"connected": target.Credentials[service] != ""})
+	})
+	mux.HandleFunc("PUT /api/profile/appearance", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if u == nil {
+			failure(w, 401, "Not signed in")
+			return
+		}
+		var in struct {
+			Theme  string `json:"theme"`
+			Accent string `json:"accent"`
+		}
+		if bodyJSON(r, &in) != nil || !slices.Contains(availableThemes, in.Theme) || !slices.Contains(availableAccents, in.Accent) {
+			failure(w, 400, "Invalid appearance")
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		target := s.data.Users[u.Name]
+		if target == nil || !target.Enabled {
+			failure(w, 401, "Account unavailable")
+			return
+		}
+		previousTheme, previousAccent := target.Theme, target.Accent
+		target.Theme, target.Accent = in.Theme, in.Accent
+		if err := s.save(); err != nil {
+			target.Theme, target.Accent = previousTheme, previousAccent
+			failure(w, 500, "Could not save appearance")
+			return
+		}
+		jsonResponse(w, 200, map[string]string{"theme": target.Theme, "accent": target.Accent})
 	})
 	mux.HandleFunc("POST /api/profile/password", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
@@ -825,10 +868,51 @@ type healthTarget struct{ Name, Address string }
 
 var healthTargets = []healthTarget{{"Home Assistant", "127.0.0.1:8123"}, {"Jellyfin", "127.0.0.1:8096"}, {"Sonarr", "127.0.0.1:8989"}, {"Radarr", "127.0.0.1:7878"}, {"Prowlarr", "127.0.0.1:9696"}, {"Immich", "nixos-server.home:2283"}, {"n8n", "nixos-server.home:5678"}, {"Open WebUI", "nixos-server.home:8081"}, {"Paperless", "nixos-server.home:28981"}}
 
+// resetPassword is for a server administrator running as the service owner.
+// Stop the service before invoking it, so its in-memory database cannot overwrite the change.
+func resetPassword(dir, username string, input io.Reader) error {
+	raw, err := io.ReadAll(io.LimitReader(input, 4097))
+	if err != nil {
+		return err
+	}
+	if len(raw) > 4096 {
+		return errors.New("password too long")
+	}
+	password := strings.TrimRight(string(raw), "\r\n")
+	if len(password) < 12 {
+		return errors.New("password must contain at least 12 characters")
+	}
+	s, err := newServer(dir)
+	if err != nil {
+		return err
+	}
+	u := s.data.Users[username]
+	if u == nil {
+		return errors.New("account not found")
+	}
+	previous := *u
+	setPassword(u, password)
+	if err = s.save(); err != nil {
+		*u = previous
+		return err
+	}
+	return nil
+}
+
 func main() {
 	dir := os.Getenv("DASHBOARD_DATA_DIR")
 	if dir == "" {
 		dir = "./.dashboard-data"
+	}
+	if len(os.Args) > 1 {
+		if len(os.Args) != 3 || os.Args[1] != "reset-password" {
+			log.Fatal("usage: home-dashboard reset-password <username> (new password from stdin)")
+		}
+		if err := resetPassword(dir, os.Args[2], os.Stdin); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Password updated. Restart home-dashboard to load the updated account.")
+		return
 	}
 	s, err := newServer(dir)
 	if err != nil {
