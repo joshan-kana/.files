@@ -79,7 +79,7 @@ func TestPermissionsAndSessionRevocation(t *testing.T) {
 	guestCookie := s.token(user)
 	adminCookie := s.token(admin)
 	status(t, req(s, "GET", "/api/ha/entities", nil, guestCookie, ""), 403)
-	status(t, req(s, "GET", "/api/health", nil, guestCookie, ""), 403)
+	status(t, req(s, "GET", "/api/ha/areas", nil, guestCookie, ""), 403)
 	status(t, req(s, "GET", "/api/users", nil, guestCookie, ""), 403)
 	status(t, req(s, "POST", "/api/ha/action", map[string]any{"entity": "light.room", "action": "toggle"}, guestCookie, "http://example.test"), 403)
 	status(t, req(s, "GET", "/api/catalog", nil, guestCookie, ""), 200)
@@ -218,4 +218,107 @@ func TestLocalRecoveryKeepsAccountAndRevokesOldSession(t *testing.T) {
 		t.Fatal("replacement secret not accepted")
 	}
 	status(t, req(latest, "GET", "/api/session", nil, cookie, ""), 401)
+}
+
+func TestCompleteWebAppCatalogAndRemovedInfrastructure(t *testing.T) {
+	s := testServer(t)
+	user := addUser(s, "member", false, map[string]bool{"apps": true})
+	response := req(s, "GET", "/api/catalog", nil, s.token(user), "")
+	status(t, response, 200)
+	var items []catalogItem
+	if err := json.Unmarshal(response.Body.Bytes(), &items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) < 20 {
+		t.Fatalf("expected deployed web interfaces, got %d", len(items))
+	}
+	names := map[string]bool{}
+	for _, item := range items {
+		names[item.ID] = true
+	}
+	for _, name := range []string{"seerr", "streamystats", "gerrit", "onedev", "agentmail", "adguard", "technitium", "ntfy", "computer"} {
+		if !names[name] {
+			t.Fatalf("missing %s from launcher", name)
+		}
+	}
+	status(t, req(s, "GET", "/api/health", nil, s.token(user), ""), 404)
+	member := addUser(s, "media", false, map[string]bool{"media": true})
+	mediaList := req(s, "GET", "/api/catalog", nil, s.token(member), "")
+	status(t, mediaList, 200)
+	if strings.Contains(mediaList.Body.String(), "Technitium") {
+		t.Fatal("apps permission should be needed for network console")
+	}
+	if !strings.Contains(mediaList.Body.String(), "Seerr") {
+		t.Fatal("media permission must retain media launchers")
+	}
+}
+
+func TestHomePreferencesIsolatedAndPersistent(t *testing.T) {
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"home": true})
+	bob := addUser(s, "bobby", false, map[string]bool{"home": true})
+	cookie := s.token(alice)
+	preferences := map[string]any{"favorites": []string{"light.room"}, "rooms": map[string]string{"light.room": "Study"}, "hand": "left"}
+	status(t, req(s, "PUT", "/api/profile/home", preferences, cookie, "http://example.test"), 200)
+	status(t, req(s, "PUT", "/api/profile/home", map[string]any{"favorites": []string{"sensor.invalid name"}, "rooms": map[string]string{}, "hand": "right"}, cookie, "http://example.test"), 400)
+	status(t, req(s, "PUT", "/api/profile/home", preferences, cookie, "https://evil.example"), 403)
+	status(t, req(s, "PUT", "/api/profile/home", preferences, s.token(bob), "http://example.test"), 200)
+	if alice.Hand != "left" || len(alice.Favorites) != 1 || alice.Rooms["light.room"] != "Study" {
+		t.Fatal("preferences not saved")
+	}
+	reloaded, err := newServer(s.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.data.Users["alice"].Hand != "left" || reloaded.data.Users["alice"].Rooms["light.room"] != "Study" {
+		t.Fatal("preferences not persisted")
+	}
+	status(t, req(reloaded, "GET", "/api/session", nil, cookie, ""), 200)
+}
+
+func TestHomeControlActionAllowlist(t *testing.T) {
+	previous := upstreams["homeassistant"]
+	defer func() { upstreams["homeassistant"] = previous }()
+	type action struct {
+		Path string
+		Data map[string]any
+	}
+	calls := []action{}
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]any
+		json.NewDecoder(r.Body).Decode(&payload)
+		calls = append(calls, action{r.URL.Path, payload})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("[]"))
+	}))
+	defer backend.Close()
+	upstreams["homeassistant"] = backend.URL
+	s := testServer(t)
+	user := addUser(s, "alice", false, map[string]bool{"home": true})
+	user.Credentials["homeassistant"] = s.encrypt("demo-key")
+	c := s.token(user)
+	for _, input := range []map[string]any{
+		{"entity": "light.study", "action": "brightness", "brightness": 74},
+		{"entity": "fan.study", "action": "percentage", "percentage": 50},
+		{"entity": "climate.office", "action": "set_temperature", "temperature": 22.5},
+		{"entity": "cover.blind", "action": "open_cover"},
+		{"entity": "scene.relax", "action": "turn_on"},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, c, "http://example.test"), 200)
+	}
+	if len(calls) != 5 || calls[0].Data["brightness_pct"] != float64(74) || calls[1].Data["percentage"] != float64(50) || calls[2].Data["temperature"] != float64(22.5) || calls[3].Path != "/api/services/cover/open_cover" {
+		t.Fatalf("incorrect upstream calls: %+v", calls)
+	}
+	for _, input := range []map[string]any{
+		{"entity": "sensor.temperature", "action": "turn_on"},
+		{"entity": "climate.office", "action": "set_temperature", "temperature": 999},
+		{"entity": "light.study", "action": "brightness", "brightness": 101},
+		{"entity": "cover.blind", "action": "toggle"},
+		{"entity": "scene.relax", "action": "turn_off"},
+	} {
+		status(t, req(s, "POST", "/api/ha/action", input, c, "http://example.test"), 400)
+	}
+	if len(calls) != 5 {
+		t.Fatal("rejected commands reached Home Assistant")
+	}
 }

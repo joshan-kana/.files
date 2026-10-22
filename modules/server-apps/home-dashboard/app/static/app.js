@@ -3,7 +3,6 @@ const navItems = [
   ["overview", "Overview", "grid"],
   ["home", "Smart Home", "home"],
   ["media", "Media", "play"],
-  ["infrastructure", "Infrastructure", "server"],
   ["apps", "Applications", "apps"],
   ["settings", "Settings", "settings"],
   ["admin", "Users & Access", "users"],
@@ -69,10 +68,17 @@ const state = {
   catalog: [],
   entities: null,
   health: null,
+  areas: {},
+  room: "All",
+  homeSearch: "",
+  device: null,
+  roomPicker: false,
+  appCategory: "All",
   arr: {},
   users: null,
   quick: false,
   search: "",
+  areasLoaded: false,
   error: "",
   busy: false,
 };
@@ -92,6 +98,7 @@ const accents = [
 function applyAppearance() {
   document.documentElement.dataset.theme = state.me?.theme || "carbon";
   document.documentElement.dataset.accent = state.me?.accent || "mint";
+  document.documentElement.dataset.hand = state.me?.hand || "right";
 }
 function appearancePicker() {
   const theme = state.me.theme || "carbon";
@@ -268,7 +275,9 @@ function shell() {
     '<button data-open="quick">' +
     svg("sliders") +
     "<span>More</span></button></nav></div>" +
-    (state.quick ? quickSheet() : "");
+    (state.quick ? quickSheet() : "") +
+    (state.device ? deviceSheet() : "") +
+    (state.roomPicker ? roomsSheet() : "");
 }
 function render() {
   if (!state.me) {
@@ -316,11 +325,6 @@ function quickSheet() {
     "</div>" +
     '<div class="section-bar"><h2>Appearance</h2></div>' +
     appearancePicker() +
-    (has("home")
-      ? '<div class="section-bar"><h2>Lights & controls</h2></div><div class="device-list">' +
-        deviceSummary(4) +
-        "</div>"
-      : "") +
     '<div class="section-bar"><h2>Account</h2></div><div class="grid cols-2"><button class="btn" data-page="settings">' +
     svg("settings") +
     ' Settings</button><button class="btn danger" data-logout="true">' +
@@ -332,7 +336,6 @@ function quickTiles(all = false) {
   const options = [
     ["home", "Lighting", "bulb"],
     ["media", "Downloads", "download"],
-    ["infrastructure", "System health", "activity"],
     ["apps", "Applications", "apps"],
   ];
   if (all) options.push(["settings", "Connections", "lock"]);
@@ -360,57 +363,6 @@ function entitiesBy(domain) {
 }
 function label(e) {
   return String(e.attributes?.friendly_name || e.entity_id.replace(/_/g, " "));
-}
-function device(e) {
-  const on = e.state === "on",
-    domain = e.entity_id.split(".")[0],
-    interactive = e.state !== "unavailable" && e.state !== "unknown";
-  const brightness = Number(e.attributes?.brightness || 0),
-    dim = domain === "light" && on && brightness > 0;
-  return (
-    '<div class="device" style="flex-wrap:wrap"><div class="device-icon ' +
-    (on ? "on" : "") +
-    '">' +
-    svg(domain === "light" ? "bulb" : domain === "fan" ? "wind" : "power") +
-    '</div><div class="device-text"><div class="device-name">' +
-    esc(label(e)) +
-    '</div><div class="device-state">' +
-    esc(e.state === "on" ? "On" : e.state === "off" ? "Off" : e.state) +
-    '</div></div><button aria-label="Toggle ' +
-    esc(label(e)) +
-    '" class="toggle ' +
-    (on ? "on" : "") +
-    '" data-entity="' +
-    esc(e.entity_id) +
-    '" ' +
-    (interactive ? "" : "disabled") +
-    "></button>" +
-    (dim
-      ? '<label class="device-slider"><span>Brightness</span><input aria-label="Brightness for ' +
-        esc(label(e)) +
-        '" type="range" min="1" max="100" value="' +
-        Math.round((brightness / 255) * 100) +
-        '" data-brightness="' +
-        esc(e.entity_id) +
-        '"></label>'
-      : "") +
-    "</div>"
-  );
-}
-function deviceSummary(max = 4) {
-  if (!has("home")) return empty("Smart home access is not enabled.", "lock");
-  if (!state.me.credentials.homeassistant)
-    return empty(
-      "Connect Home Assistant in Settings to see your devices.",
-      "bulb",
-    );
-  if (state.entities === null)
-    return '<div class="loadingline"></div><div class="loadingline"></div>';
-  if (state.haError) return empty(state.haError, "activity");
-  const items = state.entities.slice(0, max);
-  return items.length
-    ? items.map(device).join("")
-    : empty("No supported light, switch, or fan entities found.", "bulb");
 }
 function queues() {
   return ["sonarr", "radarr"].flatMap((service) =>
@@ -454,154 +406,253 @@ function queueSummary(max = 5) {
       ? empty(state.arrError, "activity")
       : empty("Nothing in the download queue right now.", "check");
 }
-function stat(title, value, sub, iconName) {
-  return (
-    '<div class="panel stat"><div class="stat-top">' +
-    esc(title) +
-    svg(iconName) +
-    "</div><strong>" +
-    esc(value) +
-    "</strong><small>" +
-    esc(sub) +
-    "</small></div>"
-  );
-}
 function overview() {
-  const devices = state.entities || [],
-    on = devices.filter((e) => e.state === "on").length,
-    queue = queues().length,
-    health = (state.health || []).filter((h) => h.online).length;
-  const first = state.me.name.charAt(0).toUpperCase() + state.me.name.slice(1);
+  const devices = state.entities || [];
+  const active = devices.filter((e) => e.state === "on").length;
   return (
-    pageHead(
-      "Home, at a glance",
-      "The essentials across your home and infrastructure.",
-    ) +
-    '<section class="panel hero"><div><div class="eyebrow">YOUR SPACE, IN SYNC</div><h2>Welcome home, ' +
-    esc(first) +
-    '.</h2><p>A quieter way to keep everything connected. Your services, your home, and the things that matter, all together.</p><div style="margin-top:20px"><span class="chip good"><span class="dot"></span>Private workspace</span></div></div><div class="hero-art">' +
-    svg("home") +
-    "</div></section>" +
-    '<div class="stats">' +
-    stat(
-      "Smart devices",
-      state.entities ? state.entities.length : "—",
-      on + " currently on",
-      "bulb",
-    ) +
-    stat("Media queue", queue, "active downloads shown", "download") +
-    stat(
-      "Service health",
-      state.health ? health + "/" + state.health.length : "—",
-      "services reachable",
-      "server",
-    ) +
-    stat(
-      "Your access",
-      Object.values(state.me.pages).filter(Boolean).length +
-        (state.me.admin ? "+" : ""),
-      "enabled pages",
-      "shield",
-    ) +
+    '<div class="welcome"><div class="eyebrow">YOUR PRIVATE SPACE</div><h1>Good to have you home.</h1><p>Everything you use, without the noise.</p></div>' +
+    '<div class="overview-metrics">' +
+    '<button class="metric" data-page="home"><span>' +
+    svg("bulb") +
+    " Smart Home</span><strong>" +
+    (state.entities ? active + " active" : "Devices") +
+    "</strong><small>Control your space " +
+    svg("arrow") +
+    "</small></button>" +
+    '<button class="metric" data-page="media"><span>' +
+    svg("play") +
+    " Downloads</span><strong>" +
+    queues().length +
+    " in queue</strong><small>Sonarr & Radarr " +
+    svg("arrow") +
+    "</small></button>" +
+    '<button class="metric" data-page="apps"><span>' +
+    svg("apps") +
+    " Applications</span><strong>" +
+    state.catalog.length +
+    " available</strong><small>Open any service " +
+    svg("arrow") +
+    "</small></button></div>" +
+    '<div class="section-bar"><h2>Your services</h2>' +
+    linkPage("apps", "See all") +
     "</div>" +
-    '<div class="grid cols-2"><section class="panel">' +
-    section(
-      "Quick access",
-      "Jump straight to what matters",
-      linkPage("settings", "Customise"),
-    ) +
-    '<div class="quick-grid">' +
-    quickTiles() +
-    '</div></section><section class="panel">' +
-    section(
-      "Your smart home",
-      "Real-time controls from Home Assistant",
-      linkPage("home", "All devices"),
-    ) +
-    '<div class="device-list">' +
-    deviceSummary(3) +
-    '</div></section><section class="panel">' +
-    section(
-      "Media activity",
-      "Sonarr and Radarr download queues",
-      linkPage("media", "See queue"),
-    ) +
-    '<div class="queue-list">' +
-    queueSummary(4) +
-    '</div></section><section class="panel">' +
-    section(
-      "Infrastructure pulse",
-      "Current connectivity of key services",
-      linkPage("infrastructure", "System health"),
-    ) +
-    (state.health
-      ? '<div class="service-list">' +
-        state.health
-          .slice(0, 5)
-          .map(
-            (h) =>
-              '<div class="between table-row"><div class="row"><span class="dot" style="color:' +
-              (h.online ? "var(--mint)" : "var(--red)") +
-              '"></span><span class="table-title">' +
-              esc(h.name) +
-              '</span></div><span class="chip ' +
-              (h.online ? "good" : "bad") +
-              '">' +
-              (h.online ? "Online" : "Offline") +
-              "</span></div>",
-          )
+    serviceCards(state.catalog.slice(0, 6)) +
+    (has("home")
+      ? '<div class="section-bar"><h2>Home controls</h2>' +
+        linkPage("home", "Open Smart Home") +
+        '</div><div class="home-grid preview-grid">' +
+        (state.entities || [])
+          .filter(controllable)
+          .slice(0, 4)
+          .map(homeTile)
           .join("") +
         "</div>"
-      : empty("Open Infrastructure for live status.", "activity")) +
-    "</section></div>"
+      : "")
   );
 }
-function home() {
-  const grouped = [
-    ["Lights", "light", "bulb"],
-    ["Switches", "switch", "power"],
-    ["Fans", "fan", "wind"],
-    ["Other controls", "input_boolean", "sliders"],
-  ];
-  let markup = "";
-  for (const g of grouped) {
-    const items = entitiesBy(g[1]);
-    if (!items.length) continue;
-    markup +=
-      '<section class="panel"><div class="between">' +
-      section(g[0], items.length + " connected entities") +
-      '<span class="chip">' +
-      svg(g[2]) +
-      items.filter((e) => e.state === "on").length +
-      ' active</span></div><div class="device-list">' +
-      items.map(device).join("") +
-      "</div></section>";
-  }
+function controllable(e) {
+  return [
+    "light",
+    "switch",
+    "fan",
+    "input_boolean",
+    "cover",
+    "climate",
+    "scene",
+  ].includes(e.entity_id.split(".")[0]);
+}
+function homeRoom(e) {
   return (
-    pageHead(
-      "Smart Home",
-      "One beautiful place to control your home.",
-      linkPage("settings", "Manage connection"),
-    ) +
-    (!state.me.credentials.homeassistant
-      ? '<section class="panel">' +
-        empty(
-          "Connect your personal Home Assistant access token under Settings.",
-          "lock",
-        ) +
-        "</section>"
-      : state.haError
-        ? '<section class="panel">' +
-          empty(state.haError, "activity") +
-          "</section>"
-        : state.entities === null
-          ? '<section class="panel"><div class="loadingline"></div></section>'
-          : markup
-            ? '<div class="grid cols-2">' + markup + "</div>"
-            : '<section class="panel">' +
-              empty("No light, fan, or switch entities available.", "bulb") +
-              "</section>")
+    state.me.rooms?.[e.entity_id] || state.areas[e.entity_id] || "Unassigned"
   );
+}
+function homeRooms() {
+  return [
+    ...new Set(
+      (state.entities || []).map(homeRoom).filter((r) => r !== "Unassigned"),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+}
+function homeItems() {
+  let items = (state.entities || []).filter(
+    (e) => state.room === "Sensors" || controllable(e),
+  );
+  if (state.room === "Favorites")
+    items = items.filter((e) =>
+      (state.me.favorites || []).includes(e.entity_id),
+    );
+  else if (state.room === "Sensors")
+    items = items.filter((e) => !controllable(e));
+  else if (state.room !== "All")
+    items = items.filter((e) => homeRoom(e) === state.room);
+  if (state.homeSearch.trim()) {
+    const q = state.homeSearch.toLocaleLowerCase().trim();
+    items = items.filter((e) =>
+      [label(e), e.entity_id, homeRoom(e)].some((x) =>
+        x.toLocaleLowerCase().includes(q),
+      ),
+    );
+  }
+  return items.sort(
+    (a, b) =>
+      Number((state.me.favorites || []).includes(b.entity_id)) -
+        Number((state.me.favorites || []).includes(a.entity_id)) ||
+      label(a).localeCompare(label(b)),
+  );
+}
+function domainIcon(domain) {
+  return (
+    {
+      light: "bulb",
+      switch: "power",
+      fan: "wind",
+      climate: "sun",
+      cover: "sliders",
+      scene: "spark",
+      sensor: "activity",
+      binary_sensor: "shield",
+    }[domain] || "apps"
+  );
+}
+function deviceState(e) {
+  if (e.state === "unavailable" || e.state === "unknown") return "Unavailable";
+  const domain = e.entity_id.split(".")[0];
+  if (domain === "climate")
+    return e.attributes?.current_temperature != null
+      ? `${e.attributes.current_temperature}° · ${e.state}`
+      : e.state;
+  if (domain === "sensor")
+    return `${e.state}${e.attributes?.unit_of_measurement || ""}`;
+  if (domain === "cover") return e.state;
+  if (domain === "scene") return "Run scene";
+  if (e.state === "on")
+    return domain === "light" && e.attributes?.brightness
+      ? `${Math.round((e.attributes.brightness / 255) * 100)}% brightness`
+      : "On";
+  if (e.state === "off") return "Off";
+  return e.state;
+}
+function homeTile(e) {
+  const domain = e.entity_id.split(".")[0];
+  const active = e.state === "on";
+  const disabled = e.state === "unavailable" || e.state === "unknown";
+  const canToggle = ["light", "switch", "fan", "input_boolean"].includes(
+    domain,
+  );
+  return `<article class="home-tile ${active ? "is-on" : ""} ${disabled ? "is-unavailable" : ""}">
+    <button class="tile-open" data-device="${esc(e.entity_id)}" aria-label="Details for ${esc(label(e))}">
+      <span class="tile-icon">${svg(domainIcon(domain))}</span>
+      <span class="tile-room">${esc(homeRoom(e))}</span>
+      <strong>${esc(label(e))}</strong><small>${esc(deviceState(e))}</small>
+    </button>
+    ${canToggle ? `<button class="tile-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" aria-label="Turn ${esc(label(e))} ${active ? "off" : "on"}" aria-pressed="${active}" ${disabled ? "disabled" : ""}>${svg("power")}</button>` : `<button class="tile-detail" data-device="${esc(e.entity_id)}" aria-label="Open ${esc(label(e))}">${svg("chevron")}</button>`}
+  </article>`;
+}
+function roomPills() {
+  const rooms = ["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"];
+  return rooms
+    .map(
+      (room) =>
+        `<button class="room-pill ${room === state.room ? "selected" : ""}" data-room="${esc(room)}" aria-pressed="${room === state.room}">${room === "Favorites" ? svg("spark") : ""}${esc(room)}</button>`,
+    )
+    .join("");
+}
+function home() {
+  const controls = (state.entities || []).filter(controllable);
+  const active = controls.filter((e) => e.state === "on").length;
+  return `<div class="home-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>Smart Home</h1><p>Tap to control. Open a tile for more.</p></div>
+    <button class="home-refresh" data-refresh="true" aria-label="Refresh devices">${svg("activity")}</button></div>
+    ${
+      !state.me.credentials.homeassistant
+        ? `<section class="panel">${empty("Connect Home Assistant in Settings to control your space.", "lock")}${linkPage("settings", "Connect")}</section>`
+        : state.haError
+          ? `<section class="panel">${empty(state.haError, "activity")}</section>`
+          : state.entities === null
+            ? '<div class="loadingline"></div>'
+            : `
+    <div class="home-status"><span class="status-dot"></span>${active} active <span class="status-sep">·</span> ${controls.length} controls <span class="status-sep">·</span> ${homeRooms().length} rooms</div>
+    <div class="home-toolbar"><label class="home-find">${svg("search")}<input id="home-search" placeholder="Find a device or room" value="${esc(state.homeSearch)}" autocomplete="off" aria-label="Find a device or room"></label><button class="home-room-button" data-open="rooms" aria-label="Choose a room">${svg("sliders")}</button></div>
+    <div class="room-pills" aria-label="Filter by room">${roomPills()}</div>
+    <div class="home-section-title"><strong>${esc(state.room === "All" ? "All controls" : state.room)}</strong><span id="home-count">${homeItems().length} devices</span></div>
+    <div class="home-grid" id="home-grid">${homeItems().map(homeTile).join("") || empty("Nothing here yet. Choose another room or search.", "search")}</div>
+    <div class="home-thumb-dock"><button data-room="Favorites" aria-label="Show favourite devices">${svg("spark")}<span>Favourites</span></button><button data-open="rooms" aria-label="Select room">${svg("sliders")}<span>Rooms</span></button></div>`
+    }`;
+}
+function deviceSheet() {
+  const e = (state.entities || []).find(
+    (item) => item.entity_id === state.device,
+  );
+  if (!e) return "";
+  const domain = e.entity_id.split(".")[0];
+  const active = e.state === "on";
+  const favourite = (state.me.favorites || []).includes(e.entity_id);
+  const disabled = ["unavailable", "unknown"].includes(e.state);
+  const brightness = Math.round(
+    (Number(e.attributes?.brightness || (active ? 255 : 128)) / 255) * 100,
+  );
+  const percent = Number(e.attributes?.percentage ?? 0);
+  const current = Number(
+    e.attributes?.temperature ?? e.attributes?.target_temp ?? 22,
+  );
+  const actions = ["light", "switch", "fan", "input_boolean"].includes(domain)
+    ? `<div class="detail-main-actions"><button class="detail-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" ${disabled ? "disabled" : ""}>${svg("power")}${active ? "Turn off" : "Turn on"}</button></div>`
+    : domain === "cover"
+      ? `<div class="detail-main-actions"><button data-ha-action="open_cover" data-ha-entity="${esc(e.entity_id)}">Open</button><button data-ha-action="stop_cover" data-ha-entity="${esc(e.entity_id)}">Stop</button><button data-ha-action="close_cover" data-ha-entity="${esc(e.entity_id)}">Close</button></div>`
+      : domain === "scene"
+        ? `<div class="detail-main-actions"><button data-ha-action="turn_on" data-ha-entity="${esc(e.entity_id)}">${svg("spark")} Activate scene</button></div>`
+        : "";
+  const brightnessControl =
+    domain === "light" &&
+    !disabled &&
+    (e.attributes?.supported_color_modes || []).some((mode) => mode !== "onoff")
+      ? `<label class="detail-range"><span>Brightness <output id="range-output">${brightness}%</output></span><input type="range" min="1" max="100" value="${brightness}" data-control="brightness" data-entity-id="${esc(e.entity_id)}"></label>`
+      : "";
+  const fanControl =
+    domain === "fan" && !disabled
+      ? `<label class="detail-range"><span>Fan speed <output id="range-output">${percent}%</output></span><input type="range" min="0" max="100" step="5" value="${percent}" data-control="percentage" data-entity-id="${esc(e.entity_id)}"></label>`
+      : "";
+  const climateControl =
+    domain === "climate" && !disabled
+      ? `<form id="climate-form" data-entity-id="${esc(e.entity_id)}"><label class="field">Target temperature (°C)<input class="input" type="number" name="temperature" min="10" max="35" step="0.5" value="${Number.isFinite(current) ? current : 22}" required></label><button type="submit" class="btn primary">Set temperature</button></form>`
+      : "";
+  const attrs = Object.entries(e.attributes || {})
+    .filter(
+      ([key, val]) =>
+        [
+          "current_temperature",
+          "humidity",
+          "battery_level",
+          "percentage",
+          "unit_of_measurement",
+          "device_class",
+          "hvac_action",
+        ].includes(key) && ["string", "number", "boolean"].includes(typeof val),
+    )
+    .slice(0, 6)
+    .map(
+      ([key, val]) =>
+        `<div class="detail-attribute"><span>${esc(key.replaceAll("_", " "))}</span><strong>${esc(val)}</strong></div>`,
+    )
+    .join("");
+  return `<div class="overlay" data-dismiss="true"><section class="sheet device-sheet" role="dialog" aria-label="${esc(label(e))}"><div class="sheet-grip"></div><div class="between"><div class="eyebrow">${esc(homeRoom(e))} · ${esc(domain)}</div><button class="icon-btn" data-close="true" aria-label="Close details">${svg("x")}</button></div>
+    <div class="detail-head"><span class="detail-hero-icon">${svg(domainIcon(domain))}</span><div><h2>${esc(label(e))}</h2><p>${esc(deviceState(e))}</p></div></div>
+    <div class="detail-tools"><button data-favorite="${esc(e.entity_id)}" aria-pressed="${favourite}">${svg("spark")} ${favourite ? "Favourited" : "Add to favourites"}</button><label>Room <input id="room-name" list="home-room-names" value="${esc(homeRoom(e) === "Unassigned" ? "" : homeRoom(e))}" maxlength="48" placeholder="Assign room"></label><datalist id="home-room-names">${homeRooms()
+      .map((room) => `<option value="${esc(room)}"></option>`)
+      .join(
+        "",
+      )}</datalist><button data-save-room="${esc(e.entity_id)}" aria-label="Save room">${svg("check")}</button></div>
+    ${brightnessControl}${fanControl}${climateControl}${attrs ? `<div class="detail-attributes">${attrs}</div>` : ""}
+    ${actions}</section></div>`;
+}
+function roomsSheet() {
+  return `<div class="overlay" data-dismiss="true"><section class="sheet rooms-sheet" role="dialog" aria-label="Choose room"><div class="sheet-grip"></div><div class="between"><h2>Choose a room</h2><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div><div class="room-choice-list">${["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"].map((room) => `<button data-room="${esc(room)}">${room === state.room ? svg("check") : svg("home")} ${esc(room)}</button>`).join("")}</div></section></div>`;
+}
+async function saveHomePrefs() {
+  await api("/api/profile/home", "PUT", {
+    favorites: state.me.favorites || [],
+    rooms: state.me.rooms || {},
+    hand: state.me.hand || "right",
+  });
 }
 function media() {
   const cards = ["sonarr", "radarr"]
@@ -668,51 +719,6 @@ function media() {
     serviceCards(state.catalog.filter((a) => a.page === "media"))
   );
 }
-function infrastructure() {
-  const items = state.health || [];
-  const list = items
-    .map(
-      (e) =>
-        '<div class="table-row"><div class="row"><span class="dot" style="color:' +
-        (e.online ? "var(--mint)" : "var(--red)") +
-        '"></span><div><div class="table-title">' +
-        esc(e.name) +
-        '</div><div class="table-sub">' +
-        (e.online
-          ? "Reachable · " + e.delayMs + " ms"
-          : "Not reachable from the server") +
-        '</div></div></div><span class="chip ' +
-        (e.online ? "good" : "bad") +
-        '">' +
-        (e.online ? "Online" : "Unavailable") +
-        "</span></div>",
-    )
-    .join("");
-  return (
-    pageHead(
-      "Infrastructure",
-      "Visibility across the services that keep everything running.",
-      '<button class="btn" data-refresh="true">' +
-        svg("activity") +
-        " Refresh</button>",
-    ) +
-    '<div class="grid cols-2"><section class="panel">' +
-    section("Service availability", "Private checks run on your server") +
-    (state.health
-      ? '<div class="service-list">' + list + "</div>"
-      : '<div class="loadingline"></div>') +
-    '</section><section class="panel">' +
-    section("Operations", "Open specialist admin interfaces when needed") +
-    '<div class="service-list">' +
-    state.catalog
-      .filter((a) => a.page === "infrastructure")
-      .map(serviceRow)
-      .join("") +
-    '</div><div class="bottom-spacer"></div><div class="chip">' +
-    svg("shield") +
-    " Internal network only</div></section></div>"
-  );
-}
 function logoFor(a) {
   return (
     {
@@ -721,6 +727,13 @@ function logoFor(a) {
       sonarr: "play",
       radarr: "play",
       prowlarr: "search",
+      seerr: "play",
+      streamystats: "activity",
+      gerrit: "server",
+      onedev: "server",
+      agentmail: "doc",
+      ntfy: "activity",
+      computer: "server",
       bazarr: "doc",
       transmission: "download",
       immich: "image",
@@ -735,46 +748,42 @@ function logoFor(a) {
   );
 }
 function serviceRow(a) {
-  return (
-    '<a class="service-card" href="' +
-    esc(a.url) +
-    '" target="_blank" rel="noopener noreferrer"><div class="service-icon">' +
-    svg(logoFor(a)) +
-    '</div><div style="min-width:0"><div class="service-name">' +
-    esc(a.name) +
-    '</div><div class="service-sub">' +
-    esc(a.category) +
-    '</div></div><div class="arrow">' +
-    svg("external") +
-    "</div></a>"
-  );
+  let host;
+  try {
+    host = new URL(a.url).host;
+  } catch {
+    host = "";
+  }
+  return `<a class="service-card app-card" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(a.name)}">
+    <span class="app-symbol">${svg(logoFor(a))}</span><span class="app-info"><strong>${esc(a.name)}</strong><small>${esc(a.category)}</small><span class="app-host">${esc(host)}</span></span><span class="app-link">${svg("external")}</span></a>`;
 }
 function serviceCards(items) {
-  return (
-    '<div class="grid cols-3">' +
-    (items.length
-      ? items.map(serviceRow).join("")
-      : empty("No services available for this section.")) +
-    "</div>"
+  return `<div class="apps-grid">${items.length ? items.map(serviceRow).join("") : empty("No applications match this filter.", "search")}</div>`;
+}
+function appCategories() {
+  return ["All", ...new Set(state.catalog.map((a) => a.category))];
+}
+function appMatches() {
+  return state.catalog.filter(
+    (a) =>
+      (state.appCategory === "All" || a.category === state.appCategory) &&
+      (!state.search ||
+        [a.name, a.category, a.url].some((part) =>
+          part.toLowerCase().includes(state.search.toLowerCase()),
+        )),
   );
 }
 function applications() {
-  const matching = state.catalog.filter(
-    (a) =>
-      !state.search ||
-      [a.name, a.category].some((x) =>
-        x.toLowerCase().includes(state.search.toLowerCase()),
-      ),
-  );
-  return (
-    pageHead(
-      "Applications",
-      "Your home services, all in one place.",
-      '<input class="input search-input" id="app-search" placeholder="Filter services…" value="' +
-        esc(state.search) +
-        '" aria-label="Filter services">',
-    ) + serviceCards(matching)
-  );
+  return `<div class="apps-heading"><div class="eyebrow">YOUR SERVER</div><h1>Applications<span class="app-total">${state.catalog.length}</span></h1><p>All your deployed web interfaces, in one place.</p></div>
+    <div class="apps-find">${svg("search")}<input id="app-search" placeholder="Find a service…" value="${esc(state.search)}" aria-label="Search applications" autocomplete="off"></div>
+    <div class="app-categories">${appCategories()
+      .map(
+        (category) =>
+          `<button data-app-category="${esc(category)}" class="room-pill ${state.appCategory === category ? "selected" : ""}" aria-pressed="${state.appCategory === category}">${esc(category)}</button>`,
+      )
+      .join("")}</div>
+    <div class="home-section-title"><strong>${esc(state.appCategory === "All" ? "All services" : state.appCategory)}</strong><span id="apps-count">${appMatches().length} apps</span></div>
+    <div id="apps-results">${serviceCards(appMatches())}</div>`;
 }
 function settings() {
   const relevant = Object.keys(state.me.credentials || {});
@@ -807,6 +816,11 @@ function settings() {
     '<section class="panel" style="margin-bottom:16px">' +
     section("Appearance", "Choose a theme and accent for your account") +
     appearancePicker() +
+    '<div class="appearance-label">One-handed controls</div><div class="hand-options"><button data-hand="right" aria-pressed="' +
+    ((state.me.hand || "right") === "right") +
+    '">Right hand</button><button data-hand="left" aria-pressed="' +
+    (state.me.hand === "left") +
+    '">Left hand</button></div>' +
     "</section>" +
     '<section class="panel" style="margin-bottom:16px">' +
     section("Password", "Change your own sign-in password") +
@@ -849,9 +863,7 @@ function permsForm(name, pages, unique) {
   return (
     '<div class="permission-grid">' +
     navItems
-      .filter((n) =>
-        ["overview", "home", "media", "infrastructure", "apps"].includes(n[0]),
-      )
+      .filter((n) => ["overview", "home", "media", "apps"].includes(n[0]))
       .map(
         (n) =>
           '<label class="permission"><input type="checkbox" data-perm="' +
@@ -944,7 +956,6 @@ function content() {
       overview,
       home,
       media,
-      infrastructure,
       apps: applications,
       settings,
       admin,
@@ -953,6 +964,8 @@ function content() {
 }
 function move(page) {
   state.quick = false;
+  state.device = null;
+  state.roomPicker = false;
   if (page !== "settings" && page !== "admin" && !has(page)) return;
   if (page === "admin" && !state.me.admin) return;
   state.page = page;
@@ -979,6 +992,23 @@ async function refreshPage(page) {
           state.entities = [];
         }),
     );
+  if (
+    (page === "home" || page === "overview") &&
+    has("home") &&
+    state.me.credentials.homeassistant &&
+    !state.areasLoaded
+  ) {
+    state.areasLoaded = true;
+    jobs.push(
+      api("/api/ha/areas")
+        .then((v) => {
+          state.areas = v || {};
+        })
+        .catch(() => {
+          state.areas = {};
+        }),
+    );
+  }
   if ((page === "media" || page === "overview") && has("media"))
     for (const service of ["sonarr", "radarr"])
       if (state.me.credentials[service])
@@ -993,15 +1023,6 @@ async function refreshPage(page) {
               state.arr[service] = { records: [] };
             }),
         );
-  if (
-    (page === "infrastructure" || page === "overview") &&
-    has("infrastructure")
-  )
-    jobs.push(
-      api("/api/health").then((v) => {
-        state.health = v;
-      }),
-    );
   if (page === "admin" && state.me.admin)
     jobs.push(
       api("/api/users").then((v) => {
@@ -1009,7 +1030,10 @@ async function refreshPage(page) {
       }),
     );
   await Promise.allSettled(jobs);
-  if (state.page === page) render();
+  const editing = document.activeElement?.matches(
+    "#home-search, .device-sheet input",
+  );
+  if (state.page === page && !editing) render();
 }
 async function init() {
   try {
@@ -1036,6 +1060,90 @@ async function init() {
 document.addEventListener("click", async (e) => {
   const target = e.target.closest("button,[data-dismiss],a[data-page]");
   if (!target) return;
+  if (target.dataset.room) {
+    state.room = target.dataset.room;
+    state.roomPicker = false;
+    render();
+    return;
+  }
+  if (target.dataset.appCategory) {
+    state.appCategory = target.dataset.appCategory;
+    render();
+    return;
+  }
+  if (target.dataset.open === "rooms") {
+    state.device = null;
+    state.quick = false;
+    state.roomPicker = true;
+    render();
+    return;
+  }
+  if (target.dataset.device) {
+    state.device = target.dataset.device;
+    state.roomPicker = false;
+    state.quick = false;
+    render();
+    return;
+  }
+  if (target.dataset.favorite) {
+    const previous = [...(state.me.favorites || [])];
+    state.me.favorites = previous.includes(target.dataset.favorite)
+      ? previous.filter((id) => id !== target.dataset.favorite)
+      : [...previous, target.dataset.favorite];
+    render();
+    try {
+      await saveHomePrefs();
+    } catch (err) {
+      state.me.favorites = previous;
+      render();
+      toast(err.message, true);
+    }
+    return;
+  }
+  if (target.dataset.saveRoom) {
+    const name = document.getElementById("room-name")?.value.trim() || "";
+    const previous = { ...(state.me.rooms || {}) };
+    state.me.rooms = { ...previous };
+    if (name) state.me.rooms[target.dataset.saveRoom] = name;
+    else delete state.me.rooms[target.dataset.saveRoom];
+    render();
+    try {
+      await saveHomePrefs();
+    } catch (err) {
+      state.me.rooms = previous;
+      render();
+      toast(err.message, true);
+    }
+    return;
+  }
+  if (target.dataset.hand) {
+    const previous = state.me.hand || "right";
+    state.me.hand = target.dataset.hand;
+    render();
+    try {
+      await saveHomePrefs();
+    } catch (err) {
+      state.me.hand = previous;
+      render();
+      toast(err.message, true);
+    }
+    return;
+  }
+  if (target.dataset.haAction) {
+    target.disabled = true;
+    try {
+      await api("/api/ha/action", "POST", {
+        entity: target.dataset.haEntity,
+        action: target.dataset.haAction,
+      });
+      toast("Action sent");
+      refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+      target.disabled = false;
+    }
+    return;
+  }
   if (target.dataset.theme || target.dataset.accent) {
     const previous = { theme: state.me.theme, accent: state.me.accent };
     state.me.theme = target.dataset.theme || state.me.theme || "carbon";
@@ -1060,11 +1168,15 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.open === "quick") {
+    state.device = null;
+    state.roomPicker = false;
     state.quick = true;
     render();
     return;
   }
   if (target.dataset.open === "search") {
+    state.device = null;
+    state.roomPicker = false;
     state.quick = false;
     render();
     root.insertAdjacentHTML("beforeend", searchSheet());
@@ -1074,6 +1186,8 @@ document.addEventListener("click", async (e) => {
   }
   if (target.dataset.close || (target.dataset.dismiss && e.target === target)) {
     state.quick = false;
+    state.roomPicker = false;
+    state.device = null;
     render();
     return;
   }
@@ -1081,7 +1195,11 @@ document.addEventListener("click", async (e) => {
     const entity = target.dataset.entity;
     target.disabled = true;
     try {
-      await api("/api/ha/action", "POST", { entity, action: "toggle" });
+      const existing = state.entities.find((d) => d.entity_id === entity);
+      await api("/api/ha/action", "POST", {
+        entity,
+        action: existing?.state === "on" ? "turn_off" : "turn_on",
+      });
       const v = state.entities.find((d) => d.entity_id === entity);
       if (v) v.state = v.state === "on" ? "off" : "on";
       render();
@@ -1238,6 +1356,8 @@ document.addEventListener("submit", async (e) => {
       state.me.credentials[service] = true;
       toast("Connection saved");
       state.entities = null;
+      state.areas = {};
+      state.areasLoaded = false;
       state.arr = {};
       render();
     } catch (err) {
@@ -1316,43 +1436,79 @@ function renderResults(q) {
       ? empty("Nothing matched your search.", "search")
       : "");
 }
-document.addEventListener("change", async (e) => {
-  if (!e.target.dataset.brightness) return;
-  const entity = e.target.dataset.brightness;
-  try {
-    await api("/api/ha/action", "POST", {
-      entity,
-      action: "brightness",
-      brightness: Number(e.target.value),
-    });
-    toast("Brightness updated");
-  } catch (err) {
-    toast(err.message, true);
-  }
-});
 document.addEventListener("input", (e) => {
   if (e.target.id === "command-input") renderResults(e.target.value);
   if (e.target.id === "app-search") {
     state.search = e.target.value;
-    const container = document.querySelector("#page-content .grid");
-    if (container)
-      container.innerHTML = state.catalog
-        .filter(
-          (a) =>
-            !state.search ||
-            [a.name, a.category].some((s) =>
-              s.toLowerCase().includes(state.search.toLowerCase()),
-            ),
-        )
-        .map(serviceRow)
-        .join("");
+    const node = document.getElementById("apps-results");
+    if (node) node.innerHTML = serviceCards(appMatches());
+    const count = document.getElementById("apps-count");
+    if (count) count.textContent = `${appMatches().length} apps`;
+  }
+  if (e.target.id === "home-search") {
+    state.homeSearch = e.target.value;
+    const node = document.getElementById("home-grid");
+    if (node)
+      node.innerHTML =
+        homeItems().map(homeTile).join("") ||
+        empty("No matching devices", "search");
+    const count = document.getElementById("home-count");
+    if (count) count.textContent = `${homeItems().length} devices`;
+  }
+  if (e.target.dataset.control) {
+    const output = document.getElementById("range-output");
+    if (output) output.textContent = `${e.target.value}%`;
   }
 });
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "climate-form") return;
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector("button");
+  btn.disabled = true;
+  try {
+    await api("/api/ha/action", "POST", {
+      entity: form.dataset.entityId,
+      action: "set_temperature",
+      temperature: Number(new FormData(form).get("temperature")),
+    });
+    toast("Temperature updated");
+    refreshPage("home");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+document.addEventListener("change", async (e) => {
+  if (!e.target.dataset.control) return;
+  const input = e.target;
+  input.disabled = true;
+  const action = input.dataset.control;
+  try {
+    await api("/api/ha/action", "POST", {
+      entity: input.dataset.entityId,
+      action,
+      [action === "brightness" ? "brightness" : "percentage"]: Number(
+        input.value,
+      ),
+    });
+    toast("Setting updated");
+    refreshPage("home");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    input.disabled = false;
+  }
+});
+
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
     e.preventDefault();
     if (state.me) {
       state.quick = false;
+      state.device = null;
+      state.roomPicker = false;
       render();
       root.insertAdjacentHTML("beforeend", searchSheet());
       document.getElementById("command-input")?.focus();
@@ -1362,6 +1518,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.me) {
     if (document.querySelector(".overlay")) {
       state.quick = false;
+      state.roomPicker = false;
+      state.device = null;
       render();
     }
   }
@@ -1377,7 +1535,7 @@ setInterval(() => {
   if (
     !document.hidden &&
     state.me &&
-    ["overview", "home", "media", "infrastructure"].includes(state.page)
+    ["overview", "home", "media"].includes(state.page)
   )
     refreshPage(state.page);
 }, 20000);
