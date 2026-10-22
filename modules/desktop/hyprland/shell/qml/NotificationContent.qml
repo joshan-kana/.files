@@ -73,7 +73,7 @@ FocusScope {
         const card = groupItem.memberAt(selectedMemberIndex);
         if (!card)
             return;
-        const top = groupItem.y + card.y;
+        const top = card.mapToItem(list.contentItem, 0, 0).y;
         const bottom = top + card.height;
         if (bottom > list.contentY + list.height)
             list.contentY = Math.min(Math.max(0, list.contentHeight - list.height), bottom - list.height);
@@ -96,6 +96,19 @@ FocusScope {
     function selectGroup(delta: int): void {
         selectedIndex = Math.max(0, Math.min(groups.length - 1, selectedIndex + delta));
         selectedMemberIndex = 0;
+    }
+
+    function navigate(delta: int): void {
+        const group = selectedGroup();
+        if (group && expandedGroupKey === group.key) {
+            const nextMember = selectedMemberIndex + delta;
+            if (nextMember >= 0 && nextMember < group.notifications.length) {
+                selectedMemberIndex = nextMember;
+                Qt.callLater(ensureSelectedVisible);
+                return;
+            }
+        }
+        selectGroup(delta);
     }
 
     function toggleExpanded(): void {
@@ -231,11 +244,11 @@ FocusScope {
                     model: [
                         {
                             shortcut: "J/K",
-                            label: "Apps"
+                            label: "Navigate"
                         },
                         {
                             shortcut: "H/L",
-                            label: "Items"
+                            label: "Groups"
                         },
                         {
                             shortcut: "E",
@@ -279,7 +292,7 @@ FocusScope {
                     text: center.notificationState.silent ? "󰂛" : "󰂜"
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: center.theme.fontSize(36)
-                    color: center.theme.accent
+                    color: center.theme.roleColor("notifications")
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -383,7 +396,7 @@ FocusScope {
 
                             Text {
                                 text: groupItem.modelData.name.toUpperCase()
-                                color: center.theme.accent
+                                color: center.theme.roleColor("notifications")
                                 font.family: center.runtime.fontMono
                                 font.pixelSize: center.theme.fontSize(10)
                                 font.weight: Font.DemiBold
@@ -409,7 +422,7 @@ FocusScope {
 
                     Repeater {
                         id: members
-                        model: groupItem.expanded ? groupItem.modelData.notifications : groupItem.modelData.notifications.slice(0, 1)
+                        model: !groupItem || !groupItem.modelData ? [] : groupItem.expanded ? groupItem.modelData.notifications : groupItem.modelData.notifications.slice(0, 1)
 
                         delegate: NotificationCard {
                             id: notificationCard
@@ -421,9 +434,9 @@ FocusScope {
                             runtime: center.runtime
                             theme: center.theme
                             motion: center.motion
-                            groupCount: groupItem.expanded ? 1 : groupItem.modelData.notifications.length
-                            selected: center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
-                            expanded: groupItem.expanded && selected
+                            groupCount: !groupItem || !groupItem.modelData ? 1 : groupItem.expanded ? 1 : groupItem.modelData.notifications.length
+                            selected: !!groupItem && center.selectedIndex === groupItem.index && center.selectedMemberIndex === index
+                            expanded: !!groupItem && groupItem.expanded && selected
                             onActivated: {
                                 if (center.notificationState.captureKind(modelData)) {
                                     center.notificationState.invokeDefault(modelData);
@@ -458,15 +471,13 @@ FocusScope {
                     center.closeRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                    center.selectGroup(-1);
+                    center.navigate(-1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                    center.selectGroup(1);
+                    center.navigate(1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                    const group = center.selectedGroup();
-                    if (group && center.expandedGroupKey === group.key)
-                        center.selectedMemberIndex = Math.max(0, Math.min(group.notifications.length - 1, center.selectedMemberIndex + ((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1)));
+                    center.selectGroup((event.key === Qt.Key_Left || event.key === Qt.Key_H) ? -1 : 1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_M && (event.modifiers & Qt.ShiftModifier)) {
                     center.notificationState.markAllRead();
