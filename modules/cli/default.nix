@@ -670,17 +670,49 @@ in
   };
 
   mpv = _: {
-    home = _: {
-      home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
-      programs.mpv = {
-        scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
-        config = {
-          demuxer-max-bytes = "3GiB";
-          demuxer-max-back-bytes = "256MiB";
-          target-colorspace-hint = "yes";
+    home =
+      _:
+      let
+        standard = {
+          inverse-tone-mapping = "no";
+          tone-mapping = "auto";
+          target-peak = "auto";
+          hdr-compute-peak = "auto";
+          gamut-mapping-mode = "auto";
+          target-trc = "auto";
+          target-prim = "auto";
+        };
+        expanded = standard // {
+          inverse-tone-mapping = "yes";
+          tone-mapping = "spline";
+          hdr-compute-peak = "no";
+          gamut-mapping-mode = "perceptual";
+        };
+      in
+      {
+        home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
+        programs.mpv = {
+          scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
+          config = {
+            demuxer-max-bytes = "3GiB";
+            demuxer-max-back-bytes = "256MiB";
+            target-colorspace-hint = "yes";
+            input-commands-append = [
+              ''keybind Ctrl+! "apply-profile hdr-standard ; show-text \"HDR: Standard\""''
+              ''keybind Ctrl+@ "apply-profile hdr-expanded ; show-text \"HDR: Expanded\""''
+              ''keybind Ctrl+SHARP "apply-profile sdr-to-hdr ; show-text \"HDR: SDR to HDR\""''
+            ];
+          };
+          profiles = {
+            hdr-standard = standard;
+            hdr-expanded = expanded;
+            sdr-to-hdr = expanded // {
+              target-trc = "hlg";
+              target-prim = "bt.2020";
+            };
+          };
         };
       };
-    };
   };
 
   vim = _: {
