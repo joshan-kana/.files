@@ -16,7 +16,7 @@ FocusScope {
     signal closeRequested
 
     implicitWidth: 730
-    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + Math.min(5, Math.max(1, streams.length)) * 112 + Math.max(0, Math.min(5, streams.length) - 1) * theme.spacing3 + footer.implicitHeight
+    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + (streams.length > 0 ? 120 : 148) + footer.implicitHeight
     visible: active
     focus: active
 
@@ -67,6 +67,7 @@ FocusScope {
             bottomMargin: mixer.theme.spacing4
         }
         model: mixer.streams.length
+        orientation: ListView.Horizontal
         spacing: mixer.theme.spacing3
         clip: true
         currentIndex: mixer.selectedIndex
@@ -82,14 +83,14 @@ FocusScope {
             readonly property var stream: mixer.streams[index] || null
             readonly property bool chosen: index === mixer.selectedIndex
 
-            width: ListView.view.width
+            width: Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
             height: 112
             theme: mixer.theme
             motion: mixer.motion
             cornerRadius: theme.radiusMedium
             surfaceLayer: ShellSurface.Group
             fillColor: chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
-            borderColor: chosen ? theme.accent : "transparent"
+            borderColor: chosen ? theme.roleColor("audio") : "transparent"
             borderWidth: chosen ? theme.borderFocus : 0
 
             StateLayer {
@@ -134,7 +135,7 @@ FocusScope {
                         id: volumeLabel
                         anchors.verticalCenter: parent.verticalCenter
                         text: streamRow.stream?.audio ? (streamRow.stream?.audio.muted ? "MUTED" : Math.round(streamRow.stream?.audio.volume * 100) + "%") : "—"
-                        color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.accent
+                        color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.roleColor("audio")
                         font.family: mixer.runtime.fontMono
                         font.pixelSize: mixer.theme.fontSize(10)
                         font.weight: Font.DemiBold
