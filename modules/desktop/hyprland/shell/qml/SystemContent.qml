@@ -265,7 +265,7 @@ FocusScope {
                             action: "Wallpaper spectrum / Reactive shell / Bar / Window transparency / Frosted glass"
                         },
                         {
-                            key: "T / SHIFT+T / ALT+T",
+                            key: "T / - (⇧T) / +",
                             action: "Night Light / warmer / cooler"
                         },
                         {
@@ -956,8 +956,6 @@ FocusScope {
                     label: "Night Light"
                     valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
                     toggleShortcut: "T"
-                    decrementShortcut: "SHIFT+T"
-                    incrementShortcut: "ALT+T"
                     roleAccent: root.theme.roleColor("warmth")
                     active: root.nightLight.active
                     canToggle: root.nightLight.supported && !root.nightLight.busy
@@ -1839,13 +1837,17 @@ FocusScope {
                 } else if (event.key === Qt.Key_R) {
                     root.motion.toggle();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_T) {
-                    if ((event.modifiers & Qt.ShiftModifier) !== 0)
+                } else if (event.key === Qt.Key_T && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                    if (event.modifiers & Qt.ShiftModifier)
                         root.nightLight.warmer();
-                    else if ((event.modifiers & Qt.AltModifier) !== 0)
-                        root.nightLight.cooler();
                     else
                         root.nightLight.toggle();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Minus && event.modifiers === Qt.NoModifier) {
+                    root.nightLight.warmer();
+                    event.accepted = true;
+                } else if ((event.key === Qt.Key_Plus || (event.key === Qt.Key_Equal && (event.modifiers & Qt.ShiftModifier))) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                    root.nightLight.cooler();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_F && (event.modifiers & Qt.ShiftModifier)) {
                     root.shellGlassToggleRequested();
