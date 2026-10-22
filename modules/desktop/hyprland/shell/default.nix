@@ -1127,6 +1127,9 @@ in
           accentTertiary = colors.base0C;
           accentWarm = colors.base09;
           accentWorkspace = colors.base08;
+          accentUtility = colors.base0F;
+          accentEnergy = colors.base0A;
+          accentNature = colors.base0B;
         };
 
         fonts.mono = config.stylix.fonts.monospace.name;
