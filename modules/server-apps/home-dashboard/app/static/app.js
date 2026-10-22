@@ -76,6 +76,69 @@ const state = {
   error: "",
   busy: false,
 };
+const themes = [
+  ["carbon", "Carbon", "Deep charcoal"],
+  ["midnight", "Midnight", "Deep navy"],
+  ["forest", "Forest", "Dark green"],
+  ["plum", "Plum", "Warm purple"],
+];
+const accents = [
+  ["mint", "Mint"],
+  ["cyan", "Cyan"],
+  ["violet", "Violet"],
+  ["amber", "Amber"],
+  ["coral", "Coral"],
+];
+function applyAppearance() {
+  document.documentElement.dataset.theme = state.me?.theme || "carbon";
+  document.documentElement.dataset.accent = state.me?.accent || "mint";
+}
+function appearancePicker() {
+  const theme = state.me.theme || "carbon";
+  const accent = state.me.accent || "mint";
+  return (
+    '<div class="appearance-picker"><div class="appearance-label">Theme</div><div class="theme-options">' +
+    themes
+      .map(
+        ([id, label, description]) =>
+          '<button type="button" class="theme-option" data-theme="' +
+          id +
+          '" aria-pressed="' +
+          (theme === id) +
+          '"><span class="theme-preview preview-' +
+          id +
+          '"></span><span><strong>' +
+          label +
+          "</strong><small>" +
+          description +
+          "</small></span>" +
+          (theme === id ? svg("check") : "") +
+          "</button>",
+      )
+      .join("") +
+    '</div><div class="appearance-label">Accent</div><div class="accent-options">' +
+    accents
+      .map(
+        ([id, label]) =>
+          '<button type="button" class="accent-option" data-accent="' +
+          id +
+          '" aria-label="' +
+          label +
+          ' accent" aria-pressed="' +
+          (accent === id) +
+          '"><span class="accent-swatch swatch-' +
+          id +
+          '"></span><span>' +
+          label +
+          "</span>" +
+          (accent === id ? svg("check") : "") +
+          "</button>",
+      )
+      .join("") +
+    "</div></div>"
+  );
+}
+
 function has(page) {
   return Boolean(state.me && (state.me.admin || state.me.pages[page]));
 }
@@ -170,10 +233,11 @@ function shell() {
       n[0] === "settings" || (n[0] === "admin" && state.me.admin) || has(n[0]),
   );
   const main = menu.filter((n) => !["settings", "admin"].includes(n[0]));
+  applyAppearance();
   root.innerHTML =
-    '<div class="shell"><aside class="sidebar"><div class="brand"><div class="mark">' +
+    '<div class="shell"><aside class="sidebar"><button type="button" class="brand" data-page="overview" aria-label="Go to overview"><div class="mark">' +
     svg("home") +
-    '</div><div><div class="brand-name">haven<span style="color:var(--mint)">.</span></div><div class="brand-small">private space</div></div></div><div class="nav-label">WORKSPACE</div>' +
+    '</div><div><div class="brand-name">haven<span style="color:var(--mint)">.</span></div><div class="brand-small">private space</div></div></button><div class="nav-label">WORKSPACE</div>' +
     main.map((n) => navButton(n)).join("") +
     '<div class="nav-grow"></div><div class="nav-label">ACCOUNT</div>' +
     menu
@@ -181,19 +245,19 @@ function shell() {
       .map((n) => navButton(n))
       .join("") +
     '<div class="nav-foot"><div class="nav-note"><span class="online-indicator"></span>Private network</div><div style="font-size:11px;margin-top:9px;color:#69798e">Connected to your home</div></div></aside>' +
-    '<main class="main"><header class="topbar"><div class="breadcrumb">' +
+    '<main class="main"><header class="topbar"><button type="button" class="breadcrumb" data-page="overview" aria-label="Go to overview">' +
     svg("home") +
     ' &nbsp; Haven <span style="opacity:.4">/</span> ' +
     esc(menu.find((n) => n[0] === state.page)?.[1] || "Workspace") +
-    '</div><div class="top-actions"><button class="kbd-search" data-open="search">' +
+    '</button><div class="top-actions"><button class="kbd-search" data-open="search">' +
     svg("search") +
     '<span>Quick search</span><span class="keycap">⌘ K</span></button><button class="icon-btn" data-open="quick" aria-label="Quick settings">' +
     svg("sliders") +
-    '</button><div class="avatar" title="' +
+    '</button><button type="button" class="avatar" data-page="settings" aria-label="Account settings" title="' +
     esc(state.me.name) +
     '">' +
     esc(state.me.name.slice(0, 2).toUpperCase()) +
-    '</div></div></header><div id="page-content">' +
+    '</button></div></header><div id="page-content">' +
     content() +
     "</div></main>" +
     '<nav class="bottomnav" aria-label="Primary navigation">' +
@@ -215,6 +279,7 @@ function render() {
   shell();
 }
 function auth() {
+  applyAppearance();
   root.innerHTML =
     '<div class="auth"><div class="auth-card"><div class="auth-brand"><div class="mark">' +
     svg("home") +
@@ -224,13 +289,13 @@ function auth() {
     (state.ready ? "Sign in to your home" : "Make this space yours") +
     "</h1><p>" +
     (state.ready
-      ? "One place for your home, media, and services. Sign in to continue."
+      ? "Use your Haven username and password. Other service connections are separate."
       : "Create the administrator account. The setup token is stored on the server and is never published to visitors.") +
     '</p><form id="auth-form">' +
     (!state.ready
       ? '<label class="field">Setup token<input class="input" name="token" type="password" required autocomplete="off" placeholder="Read from the server"></label>'
       : "") +
-    '<label class="field">Username<input class="input" name="username" required minlength="3" autocomplete="username" placeholder="Your username"></label><label class="field">Password<input class="input" name="password" required type="password" minlength="' +
+    '<label class="field">Username<input class="input" name="username" required minlength="3" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Your username"></label><label class="field">Password<input class="input" name="password" required type="password" minlength="' +
     (state.ready ? "1" : "12") +
     '" autocomplete="' +
     (state.ready ? "current-password" : "new-password") +
@@ -249,6 +314,8 @@ function quickSheet() {
     '</button></div><p>Your most useful places and controls, always one click away.</p><div class="quick-sheet-list">' +
     quickTiles(true) +
     "</div>" +
+    '<div class="section-bar"><h2>Appearance</h2></div>' +
+    appearancePicker() +
     (has("home")
       ? '<div class="section-bar"><h2>Lights & controls</h2></div><div class="device-list">' +
         deviceSummary(4) +
@@ -738,6 +805,10 @@ function settings() {
     svg("logout") +
     " Sign out</button></div></section>" +
     '<section class="panel" style="margin-bottom:16px">' +
+    section("Appearance", "Choose a theme and accent for your account") +
+    appearancePicker() +
+    "</section>" +
+    '<section class="panel" style="margin-bottom:16px">' +
     section("Password", "Change your own sign-in password") +
     '<form id="change-password" style="margin-top:16px"><label class="field">Current password<input class="input" name="current" type="password" required autocomplete="current-password"></label><label class="field">New password<input class="input" name="password" type="password" minlength="12" required autocomplete="new-password"></label><button class="btn" style="margin-top:14px" type="submit">' +
     svg("lock") +
@@ -945,7 +1016,11 @@ async function init() {
     const result = await api("/api/session");
     state.me = result;
     state.page = location.hash.slice(1) || "overview";
-    state.catalog = await api("/api/catalog");
+    try {
+      state.catalog = await api("/api/catalog");
+    } catch {
+      state.catalog = [];
+    }
     render();
     refreshPage(state.page);
   } catch {
@@ -961,6 +1036,24 @@ async function init() {
 document.addEventListener("click", async (e) => {
   const target = e.target.closest("button,[data-dismiss],a[data-page]");
   if (!target) return;
+  if (target.dataset.theme || target.dataset.accent) {
+    const previous = { theme: state.me.theme, accent: state.me.accent };
+    state.me.theme = target.dataset.theme || state.me.theme || "carbon";
+    state.me.accent = target.dataset.accent || state.me.accent || "mint";
+    applyAppearance();
+    render();
+    try {
+      await api("/api/profile/appearance", "PUT", {
+        theme: state.me.theme,
+        accent: state.me.accent,
+      });
+    } catch (err) {
+      Object.assign(state.me, previous);
+      render();
+      toast(err.message, true);
+    }
+    return;
+  }
   if (target.dataset.page) {
     e.preventDefault();
     move(target.dataset.page);
@@ -1120,10 +1213,17 @@ document.addEventListener("submit", async (e) => {
         b,
       );
       state.ready = true;
-      state.catalog = await api("/api/catalog");
+      try {
+        state.catalog = await api("/api/catalog");
+      } catch {
+        state.catalog = [];
+      }
       move("overview");
     } catch (err) {
-      error.textContent = err.message;
+      error.textContent =
+        err.message === "Invalid credentials"
+          ? "Invalid credentials. Use your Haven password and check your username."
+          : err.message;
     } finally {
       btn.disabled = false;
     }
