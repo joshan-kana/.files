@@ -697,11 +697,9 @@ in
             demuxer-max-bytes = "3GiB";
             demuxer-max-back-bytes = "256MiB";
             target-colorspace-hint = "yes";
-          }
-          // lib.optionalAttrs isDarwin {
             input-commands = [ "load-input-conf ${./mpv/hdr-bindings.conf}" ];
           };
-          profiles = lib.optionalAttrs isDarwin {
+          profiles = {
             hdr-standard = standard;
             hdr-expanded = expanded;
             sdr-to-hdr = expanded // {
