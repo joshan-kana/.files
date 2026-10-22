@@ -285,7 +285,6 @@ ShellRoot {
         clipboardPanel: clipboardPanel
         launcher: launcher
         overviewPanel: overviewPanel
-        audioMixerPanel: audioMixerPanel
         cheatsheet: cheatsheet
     }
 
@@ -384,16 +383,6 @@ ShellRoot {
         id: overviewPanel
         parent: modalHost.contentItem
         screen: screens.focusedScreen
-        runtime: runtime
-        theme: theme
-        motion: motion
-    }
-
-    AudioMixerPanel {
-        id: audioMixerPanel
-        parent: modalHost.contentItem
-        screen: screens.focusedScreen
-        system: system
         runtime: runtime
         theme: theme
         motion: motion
@@ -798,7 +787,7 @@ ShellRoot {
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel
-        audioMixerPanel: audioMixerPanel
+        mixerDetailOpen: !!expansionHost.systemContent && expansionHost.systemContent.mixerOpen
         overviewPanel: overviewPanel
         mediaState: media
         systemState: system
@@ -1166,7 +1155,7 @@ ShellRoot {
         }
 
         function audioMixerOpen(): bool {
-            return audioMixerPanel.open;
+            return !!expansionHost.systemContent && expansionHost.systemContent.mixerOpen;
         }
 
         function audioStreamCount(): int {
@@ -1174,21 +1163,23 @@ ShellRoot {
         }
 
         function selectedAudioStreamVolume(): int {
-            const stream = audioMixerPanel.selectedStream();
+            const stream = expansionHost.systemContent ? expansionHost.systemContent.selectedMixerStream() : null;
             return stream && stream.audio ? Math.round(stream.audio.volume * 100) : -1;
         }
 
         function selectedAudioStreamMuted(): bool {
-            const stream = audioMixerPanel.selectedStream();
+            const stream = expansionHost.systemContent ? expansionHost.systemContent.selectedMixerStream() : null;
             return stream && stream.audio ? stream.audio.muted : false;
         }
 
         function adjustSelectedAudioStream(deltaPercent: int): void {
-            audioMixerPanel.adjustSelected(deltaPercent / 100);
+            if (expansionHost.systemContent)
+                expansionHost.systemContent.adjustMixerStream(deltaPercent / 100);
         }
 
         function toggleSelectedAudioStreamMute(): void {
-            audioMixerPanel.toggleSelectedMute();
+            if (expansionHost.systemContent)
+                expansionHost.systemContent.toggleMixerMute();
         }
 
         function toggleMedia(): void {
