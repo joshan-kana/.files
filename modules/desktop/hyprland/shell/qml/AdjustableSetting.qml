@@ -10,8 +10,6 @@ ShellSurface {
     required property string valueText
     property string icon: ""
     property string toggleShortcut: ""
-    property string decrementShortcut: ""
-    property string incrementShortcut: ""
     property bool active: false
     property bool canToggle: true
     property bool canDecrease: true
@@ -65,7 +63,7 @@ ShellSurface {
             fill: parent
             leftMargin: setting.theme.spacing2
             rightMargin: setting.theme.spacing2
-            topMargin: setting.theme.spacing3 + 3
+            topMargin: setting.theme.spacing2 + 2
             bottomMargin: setting.theme.spacing2
         }
         spacing: setting.theme.spacing1
@@ -101,19 +99,18 @@ ShellSurface {
             spacing: setting.theme.spacing1
             ShellAction {
                 id: decreaseButton
-                width: 30
+                width: 32
                 height: parent.height
                 runtime: setting.runtime
                 theme: setting.theme
                 motion: setting.motion
                 compact: true
-                horizontalCompact: true
-                title: "−"
-                shortcut: setting.decrementShortcut
+                iconOnly: true
+                icon: "−"
+                title: "Decrease temperature"
                 // Keep the hit target active at its limit so the click never
                 // falls through to the tile's toggle handler.
                 opacity: setting.canDecrease ? 1 : 0.42
-                Accessible.description: setting.decrementShortcut
                 onActivated: {
                     if (setting.canDecrease)
                         setting.decreaseRequested();
@@ -145,17 +142,16 @@ ShellSurface {
             }
             ShellAction {
                 id: increaseButton
-                width: 30
+                width: 32
                 height: parent.height
                 runtime: setting.runtime
                 theme: setting.theme
                 motion: setting.motion
                 compact: true
-                horizontalCompact: true
-                title: "+"
-                shortcut: setting.incrementShortcut
+                iconOnly: true
+                icon: "+"
+                title: "Increase temperature"
                 opacity: setting.canIncrease ? 1 : 0.42
-                Accessible.description: setting.incrementShortcut
                 onActivated: {
                     if (setting.canIncrease)
                         setting.increaseRequested();
