@@ -85,6 +85,9 @@ const state = {
   areasLoaded: false,
   error: "",
   busy: false,
+  help: false,
+  keyboardMode: false,
+  keyboardTarget: "",
 };
 const themes = [
   ["carbon", "Carbon", "Deep charcoal"],
@@ -235,7 +238,13 @@ function navButton(n, mini = false) {
     svg(n[2]) +
     "<span>" +
     esc(n[1]) +
-    "</span></button>"
+    "</span>" +
+    (!mini && ["overview", "home", "media", "apps"].includes(n[0])
+      ? '<kbd class="nav-shortcut">' +
+        (["overview", "home", "media", "apps"].indexOf(n[0]) + 1) +
+        "</kbd>"
+      : "") +
+    "</button>"
   );
 }
 function shell() {
@@ -262,13 +271,13 @@ function shell() {
     esc(menu.find((n) => n[0] === state.page)?.[1] || "Workspace") +
     '</button><div class="top-actions"><button class="kbd-search" data-open="search">' +
     svg("search") +
-    '<span>Quick search</span><span class="keycap">⌘ K</span></button><button class="icon-btn" data-open="quick" aria-label="Quick settings">' +
+    '<span>Quick search</span><span class="keycap">/</span></button><button class="icon-btn desktop-help" data-open="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button><button class="icon-btn" data-open="quick" aria-label="Quick settings">' +
     svg("sliders") +
     '</button><button type="button" class="avatar" data-page="settings" aria-label="Account settings" title="' +
     esc(state.me.name) +
     '">' +
     esc(state.me.name.slice(0, 2).toUpperCase()) +
-    '</button></div></header><div id="page-content">' +
+    '</button></div></header><div class="keyboard-hintbar"><span><kbd>1</kbd>–<kbd>4</kbd> Pages</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> Navigate</span><span><kbd>↵</kbd> Open</span><span><kbd>t</kbd> Toggle</span><span><kbd>/</kbd> Search</span><button data-open="help"><kbd>?</kbd> All shortcuts</button></div><div id="page-content">' +
     content() +
     "</div></main>" +
     '<nav class="bottomnav" aria-label="Primary navigation">' +
@@ -281,7 +290,8 @@ function shell() {
     "<span>More</span></button></nav></div>" +
     (state.quick ? quickSheet() : "") +
     (state.device ? deviceSheet() : "") +
-    (state.roomPicker ? roomsSheet() : "");
+    (state.roomPicker ? roomsSheet() : "") +
+    (state.help ? helpSheet() : "");
 }
 function render() {
   if (!state.me) {
@@ -290,6 +300,18 @@ function render() {
   }
   activePage();
   shell();
+  if (
+    state.keyboardMode &&
+    state.keyboardTarget &&
+    !document.querySelector(".overlay")
+  ) {
+    const focus = [
+      ...document.querySelectorAll(".home-tile .tile-open, .app-card"),
+    ].find(
+      (item) => (item.dataset.device || item.href) === state.keyboardTarget,
+    );
+    focus?.focus({ preventScroll: true });
+  }
 }
 function auth() {
   applyAppearance();
@@ -319,6 +341,20 @@ function auth() {
     '</button><div id="auth-error" class="error" role="alert"></div></form><div class="auth-note">' +
     svg("lock") +
     " &nbsp;Private home infrastructure · Individual access controls</div></div></div>";
+}
+function helpSheet() {
+  const shortcuts = [
+    ["1 / 2 / 3 / 4", "Overview / Home / Media / Apps"],
+    ["h / j / k / l", "Move between tiles"],
+    ["Enter", "Open selected device or application"],
+    ["t", "Toggle selected device’s primary control"],
+    ["/", "Search devices, apps or pages"],
+    ["⌘ K / Ctrl K", "Open command palette"],
+    ["r", "Refresh current page"],
+    ["Esc", "Close a panel or clear focus"],
+    ["?", "Show or hide this guide"],
+  ];
+  return `<div class="overlay" data-dismiss="true"><section class="sheet shortcut-sheet" role="dialog" aria-label="Keyboard shortcuts"><div class="between"><div><div class="eyebrow">DESKTOP WORKFLOW</div><h2>Keyboard shortcuts</h2></div><button class="icon-btn" data-close="true" aria-label="Close">${svg("x")}</button></div><p>Keep your hands on the keyboard. Shortcuts are disabled while typing in a field.</p><div class="shortcut-list">${shortcuts.map(([keys, description]) => `<div class="shortcut-row"><kbd>${esc(keys)}</kbd><span>${esc(description)}</span></div>`).join("")}</div></section></div>`;
 }
 function quickSheet() {
   return (
@@ -676,19 +712,112 @@ function home() {
   <div class="home-thumb-dock"><button data-room="Favorites" aria-label="Favourites">${svg("spark")}<span>Favourites</span></button><button data-open="rooms" aria-label="Rooms">${svg("sliders")}<span>Rooms</span></button></div>`
   }`;
 }
+function lightColor(e) {
+  const rgb = e.attributes?.rgb_color;
+  if (
+    Array.isArray(rgb) &&
+    rgb.length === 3 &&
+    rgb.every((value) => Number.isFinite(Number(value)))
+  )
+    return (
+      "#" +
+      rgb
+        .map((c) =>
+          Math.max(0, Math.min(255, Math.round(c)))
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")
+    );
+  const kelvin = Number(e.attributes?.color_temp_kelvin);
+  if (kelvin > 0)
+    return kelvin >= 4200 ? "#b9d7ff" : kelvin >= 3200 ? "#ffe7bc" : "#ffbc74";
+  return "#f4d9aa";
+}
+function fanLevels(e) {
+  const step = Number(e.attributes?.percentage_step);
+  const count =
+    step > 0 && step <= 100
+      ? Math.min(10, Math.max(1, Math.round(100 / step)))
+      : 3;
+  return Array.from({ length: count }, (_, index) =>
+    Math.round(((index + 1) * 100) / count),
+  );
+}
+function fanPanel(e) {
+  const id = esc(e.entity_id),
+    attrs = e.attributes || {};
+  const current = Number(attrs.percentage || 0),
+    levels = fanLevels(e);
+  const modes = Array.isArray(attrs.preset_modes)
+    ? attrs.preset_modes.filter((v) => typeof v === "string")
+    : [];
+  const supports = Number(attrs.supported_features || 0);
+  const speed =
+    supports & 1
+      ? `<div class="control-block"><div class="control-heading"><strong>Fan speed</strong><span>${current > 0 ? Math.round(current) + "%" : "Off"}</span></div><div class="fan-speeds" role="group" aria-label="Fan speed">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${id}" aria-pressed="${Math.abs(n - current) <= 2}"><strong>${i + 1}</strong><small>${n}%</small></button>`).join("")}</div></div>`
+      : "";
+  const presets =
+    supports & 8 && modes.length
+      ? `<div class="control-block"><div class="control-heading"><strong>Mode</strong><span>${esc(attrs.preset_mode || "")}</span></div><div class="fan-presets">${modes.map((mode) => `<button class="fan-preset ${attrs.preset_mode === mode ? "active" : ""}" data-ha-preset="${esc(mode)}" data-ha-entity="${id}" aria-pressed="${attrs.preset_mode === mode}">${esc(mode)}</button>`).join("")}</div></div>`
+      : "";
+  const oscillation =
+    supports & 2
+      ? `<div class="control-block"><div class="control-heading"><strong>Horizontal oscillation</strong><span>${attrs.oscillating ? "On" : "Off"}</span></div><button class="control-switch ${attrs.oscillating ? "on" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${id}" aria-label="Toggle horizontal oscillation" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")} ${attrs.oscillating ? "Oscillating" : "Start oscillation"}</button></div>`
+      : "";
+  const on = e.state === "on";
+  return `<div class="capability-panel tone-climate"><div class="fan-hero">
+    <div class="fan-gauge" style="--fan-percent:${on ? current : 0}%"><span>${svg("wind")}</span></div>
+    <div class="fan-state"><strong>${on ? "Fan running" : "Fan off"}</strong><small>${on ? Math.round(current) + "% · " + esc(attrs.preset_mode || "normal") : "Ready to start"}</small></div>
+    <button class="control-switch ${on ? "on" : ""}" data-entity="${id}" aria-label="Turn fan ${on ? "off" : "on"}" aria-pressed="${on}">${svg("power")}</button>
+  </div>${speed}${presets}${oscillation}</div>`;
+}
+function lightPanel(e) {
+  const id = esc(e.entity_id),
+    attrs = e.attributes || {};
+  const modes = attrs.supported_color_modes || [],
+    active = e.state === "on";
+  const color = lightColor(e);
+  const brightness = Math.round((Number(attrs.brightness ?? 255) / 255) * 100);
+  const dimmable = modes.some((v) => v !== "onoff");
+  const rgb = modes.some((v) =>
+    ["rgb", "rgbw", "rgbww", "hs", "xy"].includes(v),
+  );
+  const temperature = modes.includes("color_temp");
+  const min = Math.max(1500, Number(attrs.min_color_temp_kelvin || 2000));
+  const max = Math.min(10000, Number(attrs.max_color_temp_kelvin || 6500));
+  const current = Math.max(
+    min,
+    Math.min(max, Number(attrs.color_temp_kelvin || 4000)),
+  );
+  const effects = Array.isArray(attrs.effect_list)
+    ? attrs.effect_list.filter((v) => typeof v === "string")
+    : [];
+  return `<div class="capability-panel tone-light">
+    <div class="light-hero"><div class="light-preview ${active ? "glowing" : ""}" style="--lamp-color:${esc(color)}">${svg("bulb")}</div><div><strong>${active ? "Light on" : "Light off"}</strong><small>${rgb ? "Full colour" : temperature ? "Tunable white" : dimmable ? "Dimmable" : "On / Off"}</small></div><button class="control-switch ${active ? "on" : ""}" data-entity="${id}" aria-label="Toggle light" aria-pressed="${active}">${svg("power")}</button></div>
+    ${dimmable ? `<label class="control-block light-brightness"><div class="control-heading"><strong>Brightness</strong><output>${brightness}%</output></div><input type="range" min="1" max="100" value="${brightness}" data-control="brightness" data-entity-id="${id}" style="--lamp-color:${esc(color)}"></label>` : ""}
+    ${rgb ? `<label class="control-block light-colour"><div class="control-heading"><strong>Colour</strong><span>Tap to choose</span></div><div class="colour-picker"><input type="color" value="${esc(color)}" data-ha-color="${id}" aria-label="Choose light colour"><span class="colour-indicator" style="background:${esc(color)}"></span><span>${esc(color.toUpperCase())}</span></div></label>` : ""}
+    ${temperature && min < max ? `<label class="control-block light-temperature"><div class="control-heading"><strong>White temperature</strong><output>${current} K</output></div><input type="range" min="${min}" max="${max}" step="50" value="${current}" data-control="color_temp" data-entity-id="${id}"><div class="temperature-labels"><span>Warm</span><span>Cool</span></div></label>` : ""}
+    ${effects.length ? `<label class="control-block"><div class="control-heading"><strong>Effect</strong><span>${effects.length} options</span></div><select data-ha-effect="${id}" aria-label="Light effect"><option value="">Choose effect</option>${effects.map((v) => `<option value="${esc(v)}" ${attrs.effect === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></label>` : ""}
+  </div>`;
+}
 function controlRow(e) {
   const domain = domainOf(e),
     disabled = ["unknown", "unavailable"].includes(e.state),
     id = esc(e.entity_id);
+  if (domain === "light")
+    return `<div class="device-control feature-control">${lightPanel(e)}</div>`;
+  if (domain === "fan")
+    return `<div class="device-control feature-control">${fanPanel(e)}</div>`;
   const title = `<span class="control-label"><strong>${esc(label(e))}</strong><small>${esc(deviceState(e))}</small></span>`;
   let action = "";
-  if (["light", "switch", "fan", "input_boolean"].includes(domain)) {
+  if (["switch", "input_boolean"].includes(domain))
     action = `<button class="control-toggle ${e.state === "on" ? "on" : ""}" data-entity="${id}" aria-label="Toggle ${esc(label(e))}" ${disabled ? "disabled" : ""}>${svg("power")}</button>`;
-  } else if (domain === "cover") {
+  else if (domain === "cover")
     action = `<div class="control-actions">${["open_cover", "stop_cover", "close_cover"].map((a) => `<button data-ha-action="${a}" data-ha-entity="${id}">${a.split("_")[0]}</button>`).join("")}</div>`;
-  } else if (domain === "scene" || domain === "button") {
+  else if (["scene", "button"].includes(domain))
     action = `<button class="control-action" data-ha-action="${domain === "scene" ? "turn_on" : "press"}" data-ha-entity="${id}" ${domain === "button" ? 'data-confirm="true"' : ""} ${disabled ? "disabled" : ""}>${domain === "scene" ? "Activate" : "Press"}</button>`;
-  } else if (domain === "select") {
+  else if (domain === "select") {
     const options = Array.isArray(e.attributes?.options)
       ? e.attributes.options.filter((v) => typeof v === "string")
       : [];
@@ -699,28 +828,11 @@ function controlRow(e) {
       step = Number(e.attributes?.step ?? 1);
     if (Number.isFinite(min) && Number.isFinite(max) && min < max)
       action = `<input class="number-control" type="number" data-ha-number="${id}" aria-label="${esc(label(e))}" min="${min}" max="${max}" step="${step > 0 ? step : 1}" value="${esc(e.state)}" ${disabled ? "disabled" : ""}>`;
-  } else if (domain === "media_player") {
+  } else if (domain === "media_player")
     action = `<button class="control-action" data-ha-action="media_play_pause" data-ha-entity="${id}" ${disabled ? "disabled" : ""}>Play / Pause</button>`;
-  } else if (domain === "climate") {
+  else if (domain === "climate")
     action = `<form class="control-temp" data-ha-climate="${id}"><input type="number" min="10" max="35" step=".5" value="${Number(e.attributes?.temperature) || 22}" aria-label="Target temperature" ${disabled ? "disabled" : ""}><button type="submit" ${disabled ? "disabled" : ""}>Set</button></form>`;
-  }
-  let extra = "";
-  if (
-    domain === "light" &&
-    !disabled &&
-    (e.attributes?.supported_color_modes || []).some((v) => v !== "onoff")
-  ) {
-    const n = Math.round((Number(e.attributes?.brightness || 0) / 255) * 100);
-    extra = `<label class="inline-control-range"><span>Brightness <output>${n}%</output></span><input type="range" min="1" max="100" value="${n}" data-control="brightness" data-entity-id="${id}"></label>`;
-  } else if (
-    domain === "fan" &&
-    !disabled &&
-    e.attributes?.percentage != null
-  ) {
-    const n = Number(e.attributes.percentage);
-    extra = `<label class="inline-control-range"><span>Speed <output>${n}%</output></span><input type="range" min="0" max="100" step="5" value="${n}" data-control="percentage" data-entity-id="${id}"></label>`;
-  }
-  return `<div class="device-control"><div class="device-control-main"><span class="control-symbol">${svg(domainIcon(domain))}</span>${title}${action}</div>${extra}</div>`;
+  return `<div class="device-control"><div class="device-control-main"><span class="control-symbol">${svg(domainIcon(domain))}</span>${title}${action}</div></div>`;
 }
 function deviceSheet() {
   const d = homeDevices().find((item) => item.id === state.device);
@@ -839,21 +951,37 @@ function media() {
   ).length;
   return `<div class="media-heading"><div class="eyebrow">ENTERTAINMENT</div><h1>Media <span>hub.</span></h1><p>Your requests, downloads and library in one quieter place.</p></div>
     <div class="media-spotlight"><div><span class="media-spotlight-label">IN THE PIPELINE</span><strong>${total || full.length}</strong><p>${total === 1 ? "item" : "items"} currently queued</p></div><div class="media-spotlight-metrics"><div><strong>${downloading}</strong><span>Downloading</span></div><div><strong>${attention}</strong><span>Need attention</span></div></div></div>
-    <div class="media-launchers">${mediaShortcut("jellyfin", "Watch", "Open your library", "play", "media")}${mediaShortcut("seerr", "Discover", "Find something new", "search", "warm")}${mediaShortcut("sonarr", "Television", "Manage series", "play", "cool")}${mediaShortcut("radarr", "Movies", "Manage films", "image", "rose")}</div>
+    <div class="media-launchers">${[
+      ["jellyfin", "Watch", "Open your library", "play", "media"],
+      ["seerr", "Discover", "Find something new", "search", "warm"],
+      ["sonarr", "Television", "Manage series", "play", "cool"],
+      ["radarr", "Movies", "Manage films", "image", "rose"],
+      ...state.catalog
+        .filter(
+          (a) =>
+            a.page === "media" &&
+            !["jellyfin", "seerr", "sonarr", "radarr"].includes(a.id),
+        )
+        .map((a) => [
+          a.id,
+          a.name,
+          a.category,
+          logoFor(a),
+          {
+            bazarr: "rose",
+            transmission: "cool",
+            prowlarr: "warm",
+            streamystats: "media",
+          }[a.id] || "media",
+        ]),
+    ]
+      .map((item) => mediaShortcut(...item))
+      .join("")}</div>
     <section class="media-activity"><div class="media-activity-head"><div><div class="eyebrow">DOWNLOAD ACTIVITY</div><h2>What’s moving</h2></div><button class="home-refresh" data-refresh="true" aria-label="Refresh downloads">${svg("activity")}</button></div>
       <div class="media-tabs" aria-label="Filter downloads">${["All", "Television", "Movies", "Attention"].map((kind) => `<button class="media-tab ${state.mediaFilter === kind ? "active" : ""}" data-media-filter="${kind}" aria-pressed="${state.mediaFilter === kind}">${esc(kind)}${kind === "Attention" && attention ? `<span>${attention}</span>` : ""}</button>`).join("")}</div>
       ${connected.length ? (mediaItems().length ? `<div class="media-feed">${mediaItems().map(mediaRow).join("")}</div>` : `<div class="media-empty"><span>${svg(state.mediaFilter === "Attention" ? "check" : "download")}</span><strong>${state.mediaFilter === "Attention" ? "Nothing needs attention" : "Nothing in this queue"}</strong><p>${state.mediaFilter === "Attention" ? "No reported download errors right now." : "Your media activity will appear here when downloads begin."}</p></div>`) : `<div class="media-empty"><span>${svg("lock")}</span><strong>Connect your media managers</strong><p>Add your personal Sonarr and Radarr keys in Settings to see live downloads.</p>${linkPage("settings", "Connect services")}</div>`}
       ${state.arrError ? `<p class="media-error">${esc(state.arrError)}</p>` : ""}
-    </section>
-    <div class="section-bar"><h2>More media tools</h2>${linkPage("apps", "All applications")}</div>
-    <div class="media-more">${state.catalog
-      .filter(
-        (a) =>
-          a.page === "media" &&
-          !["jellyfin", "seerr", "sonarr", "radarr"].includes(a.id),
-      )
-      .map((a) => mediaShortcut(a.id, a.name, a.category, logoFor(a), "subtle"))
-      .join("")}</div>`;
+    </section>`;
 }
 function logoFor(a) {
   return (
@@ -1116,6 +1244,8 @@ function move(page) {
   state.quick = false;
   state.device = null;
   state.roomPicker = false;
+  state.help = false;
+  state.keyboardTarget = "";
   if (page !== "settings" && page !== "admin" && !has(page)) return;
   if (page === "admin" && !state.me.admin) return;
   state.page = page;
@@ -1257,6 +1387,12 @@ document.addEventListener("click", async (e) => {
     state.roomPicker = false;
     state.quick = false;
     render();
+    if (state.keyboardMode && desktopKeyboard())
+      document
+        .querySelector(
+          ".device-sheet .fan-hero [data-entity], .device-sheet .light-hero [data-entity], .device-sheet .control-toggle, .device-sheet .fan-speed, .device-sheet .device-control button",
+        )
+        ?.focus();
     return;
   }
   if (target.dataset.favorite) {
@@ -1312,6 +1448,40 @@ document.addEventListener("click", async (e) => {
     render();
     return;
   }
+  if (
+    target.dataset.haPercentage ||
+    target.dataset.haPreset ||
+    target.dataset.haOscillate
+  ) {
+    const entity = target.dataset.haEntity;
+    const body = target.dataset.haPercentage
+      ? {
+          entity,
+          action: "percentage",
+          percentage: Number(target.dataset.haPercentage),
+        }
+      : target.dataset.haPreset
+        ? {
+            entity,
+            action: "preset_mode",
+            preset_mode: target.dataset.haPreset,
+          }
+        : {
+            entity,
+            action: "oscillate",
+            oscillating: target.dataset.haOscillate === "true",
+          };
+    target.disabled = true;
+    try {
+      await api("/api/ha/action", "POST", body);
+      toast("Fan updated");
+      await refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+      target.disabled = false;
+    }
+    return;
+  }
   if (target.dataset.haAction) {
     if (target.dataset.confirm && !confirm("Run this device action?")) return;
     target.disabled = true;
@@ -1351,6 +1521,14 @@ document.addEventListener("click", async (e) => {
     move(target.dataset.page);
     return;
   }
+  if (target.dataset.open === "help") {
+    state.quick = false;
+    state.device = null;
+    state.roomPicker = false;
+    state.help = true;
+    render();
+    return;
+  }
   if (target.dataset.open === "quick") {
     state.device = null;
     state.roomPicker = false;
@@ -1372,6 +1550,7 @@ document.addEventListener("click", async (e) => {
     state.quick = false;
     state.roomPicker = false;
     state.device = null;
+    state.help = false;
     render();
     return;
   }
@@ -1643,7 +1822,8 @@ document.addEventListener("input", (e) => {
   }
   if (e.target.dataset.control) {
     const output = e.target.closest("label")?.querySelector("output");
-    if (output) output.textContent = `${e.target.value}%`;
+    if (output)
+      output.textContent = `${e.target.value}${e.target.dataset.control === "color_temp" ? " K" : "%"}`;
   }
 });
 document.addEventListener("submit", async (e) => {
@@ -1668,6 +1848,34 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.dataset.haColor || e.target.dataset.haEffect) {
+    const field = e.target;
+    field.disabled = true;
+    try {
+      await api(
+        "/api/ha/action",
+        "POST",
+        field.dataset.haColor
+          ? {
+              entity: field.dataset.haColor,
+              action: "color",
+              color: field.value,
+            }
+          : {
+              entity: field.dataset.haEffect,
+              action: "effect",
+              effect: field.value,
+            },
+      );
+      toast("Light updated");
+      await refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      field.disabled = false;
+    }
+    return;
+  }
   if (e.target.dataset.haSelect || e.target.dataset.haNumber) {
     const node = e.target;
     node.disabled = true;
@@ -1704,9 +1912,11 @@ document.addEventListener("change", async (e) => {
     await api("/api/ha/action", "POST", {
       entity: input.dataset.entityId,
       action,
-      [action === "brightness" ? "brightness" : "percentage"]: Number(
-        input.value,
-      ),
+      [action === "color_temp"
+        ? "kelvin"
+        : action === "brightness"
+          ? "brightness"
+          : "percentage"]: Number(input.value),
     });
     toast("Setting updated");
     refreshPage("home");
@@ -1717,25 +1927,156 @@ document.addEventListener("change", async (e) => {
   }
 });
 
+function keyboardTiles() {
+  if (state.page === "home")
+    return [...document.querySelectorAll(".home-tile .tile-open")];
+  if (state.page === "apps") return [...document.querySelectorAll(".app-card")];
+  if (state.page === "media")
+    return [...document.querySelectorAll(".media-shortcut")];
+  return [...document.querySelectorAll(".metric")];
+}
+function keyboardNavigate(key) {
+  const tiles = keyboardTiles();
+  if (!tiles.length) return false;
+  const current = tiles.indexOf(document.activeElement);
+  const grid = tiles[0].closest(
+    ".home-grid, .apps-grid, .media-launchers, .overview-metrics",
+  );
+  const columns = grid
+    ? getComputedStyle(grid).gridTemplateColumns.split(" ").length
+    : 1;
+  const delta = { h: -1, l: 1, j: columns, k: -columns }[key];
+  const next =
+    current < 0 ? 0 : Math.max(0, Math.min(tiles.length - 1, current + delta));
+  tiles[next].focus({ preventScroll: false });
+  state.keyboardMode = true;
+  state.keyboardTarget = tiles[next].dataset.device || tiles[next].href || "";
+  return true;
+}
+function commandSearch() {
+  state.quick = false;
+  state.device = null;
+  state.roomPicker = false;
+  state.help = false;
+  render();
+  root.insertAdjacentHTML("beforeend", searchSheet());
+  document.getElementById("command-input")?.focus();
+  renderResults("");
+}
+function desktopKeyboard() {
+  return window.matchMedia("(min-width: 900px) and (pointer: fine)").matches;
+}
 document.addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+  if (!state.me || e.defaultPrevented) return;
+  const key = e.key.toLowerCase();
+  if ((e.metaKey || e.ctrlKey) && key === "k") {
     e.preventDefault();
-    if (state.me) {
-      state.quick = false;
-      state.device = null;
-      state.roomPicker = false;
-      render();
-      root.insertAdjacentHTML("beforeend", searchSheet());
-      document.getElementById("command-input")?.focus();
-      renderResults("");
-    }
+    commandSearch();
+    return;
   }
-  if (e.key === "Escape" && state.me) {
+  if (e.key === "Escape") {
     if (document.querySelector(".overlay")) {
+      e.preventDefault();
       state.quick = false;
       state.roomPicker = false;
       state.device = null;
+      state.help = false;
       render();
+    } else if (desktopKeyboard()) {
+      document.activeElement?.blur?.();
+      state.keyboardTarget = "";
+    }
+    return;
+  }
+  const typing = e.target.matches(
+    'input,textarea,select,[contenteditable="true"]',
+  );
+  if (typing || e.metaKey || e.ctrlKey || e.altKey || !desktopKeyboard())
+    return;
+  if (key === "?") {
+    e.preventDefault();
+    state.help = !state.help;
+    state.device = null;
+    state.quick = false;
+    state.roomPicker = false;
+    render();
+    return;
+  }
+  if (document.querySelector(".overlay")) {
+    if (state.device && ["h", "j", "k", "l"].includes(key)) {
+      const items = [
+        ...document.querySelectorAll(
+          ".device-sheet button:not([disabled]),.device-sheet select:not([disabled]),.device-sheet input:not([disabled])",
+        ),
+      ];
+      const ix = items.indexOf(document.activeElement);
+      const change = ["h", "k"].includes(key) ? -1 : 1;
+      const next = Math.max(
+        0,
+        Math.min(items.length - 1, ix < 0 ? 0 : ix + change),
+      );
+      items[next]?.focus();
+      e.preventDefault();
+    }
+    if (
+      key === "enter" &&
+      document.activeElement?.matches(
+        ".device-sheet button:not([disabled]),.shortcut-sheet button",
+      )
+    ) {
+      e.preventDefault();
+      document.activeElement.click();
+    }
+    return;
+  }
+  const pages = ["overview", "home", "media", "apps"];
+  if (/^[1-4]$/.test(key)) {
+    const page = pages[Number(key) - 1];
+    if (has(page)) {
+      e.preventDefault();
+      move(page);
+    }
+    return;
+  }
+  if (["h", "j", "k", "l"].includes(key)) {
+    if (keyboardNavigate(key)) e.preventDefault();
+    return;
+  }
+  if (key === "/") {
+    e.preventDefault();
+    const field = document.getElementById(
+      state.page === "home"
+        ? "home-search"
+        : state.page === "apps"
+          ? "app-search"
+          : "command-input",
+    );
+    if (field) field.focus();
+    else commandSearch();
+    return;
+  }
+  if (
+    key === "enter" &&
+    state.keyboardMode &&
+    document.activeElement?.matches(
+      ".home-tile .tile-open, .app-card, .metric, .media-shortcut",
+    )
+  ) {
+    e.preventDefault();
+    document.activeElement.click();
+    return;
+  }
+  if (key === "r") {
+    e.preventDefault();
+    refreshPage(state.page);
+    return;
+  }
+  if (key === "t" && state.page === "home") {
+    const tile = document.activeElement?.closest(".home-tile");
+    const power = tile?.querySelector(".tile-power:not(:disabled)");
+    if (power) {
+      e.preventDefault();
+      power.click();
     }
   }
 });

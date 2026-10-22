@@ -36,6 +36,8 @@ var assets embed.FS
 var pages = []string{"overview", "home", "media", "apps"}
 var credentialPages = map[string]string{"homeassistant": "home", "sonarr": "media", "radarr": "media"}
 var upstreams = map[string]string{"homeassistant": "http://127.0.0.1:8123", "sonarr": "http://127.0.0.1:8989", "radarr": "http://127.0.0.1:7878"}
+var hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
 var entityPattern = regexp.MustCompile(`^(light|switch|fan|input_boolean|climate|cover|scene|sensor|binary_sensor|button|number|select|media_player)\.[a-z0-9_]+$`)
 
 type User struct {
@@ -583,7 +585,12 @@ func (s *Server) handler() http.Handler {
 			Percentage  int     `json:"percentage"`
 			Temperature float64 `json:"temperature"`
 			Option      string  `json:"option"`
+			PresetMode  string  `json:"preset_mode"`
+			Oscillating *bool   `json:"oscillating"`
 			Value       float64 `json:"value"`
+			Color       string  `json:"color"`
+			Kelvin      int     `json:"kelvin"`
+			Effect      string  `json:"effect"`
 		}
 		if bodyJSON(r, &in) != nil || !entityPattern.MatchString(in.Entity) {
 			failure(w, 400, "Invalid entity")
@@ -600,6 +607,25 @@ func (s *Server) handler() http.Handler {
 			} else if action == "percentage" && domain == "fan" && in.Percentage >= 0 && in.Percentage <= 100 {
 				action = "set_percentage"
 				payload["percentage"] = in.Percentage
+			} else if domain == "light" && action == "color" && hexColorPattern.MatchString(in.Color) {
+				var red, green, blue uint8
+				if _, err := fmt.Sscanf(in.Color[1:], "%02x%02x%02x", &red, &green, &blue); err != nil {
+					failure(w, 400, "Invalid light colour")
+					return
+				}
+				action = "turn_on"
+				payload["rgb_color"] = []int{int(red), int(green), int(blue)}
+			} else if domain == "light" && action == "color_temp" && in.Kelvin >= 1500 && in.Kelvin <= 10000 {
+				action = "turn_on"
+				payload["color_temp_kelvin"] = in.Kelvin
+			} else if domain == "light" && action == "effect" && len(in.Effect) > 0 && len(in.Effect) <= 128 {
+				action = "turn_on"
+				payload["effect"] = in.Effect
+			} else if domain == "fan" && action == "preset_mode" && len(in.PresetMode) > 0 && len(in.PresetMode) <= 64 {
+				action = "set_preset_mode"
+				payload["preset_mode"] = in.PresetMode
+			} else if domain == "fan" && action == "oscillate" && in.Oscillating != nil {
+				payload["oscillating"] = *in.Oscillating
 			} else if action != "toggle" && action != "turn_on" && action != "turn_off" {
 				failure(w, 400, "Action not supported")
 				return
