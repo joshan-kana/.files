@@ -11,12 +11,11 @@ PanelWindow {
     required property ClipboardPanel clipboardPanel
     required property CommandPalette launcher
     required property OverviewPanel overviewPanel
-    required property AudioMixerPanel audioMixerPanel
     required property ShortcutCheatsheet cheatsheet
 
-    readonly property var activePanel: cheatsheet.open ? cheatsheet : launcher.open ? launcher : clipboardPanel.open ? clipboardPanel : overviewPanel.open ? overviewPanel : audioMixerPanel.open ? audioMixerPanel : null
+    readonly property var activePanel: cheatsheet.open ? cheatsheet : launcher.open ? launcher : clipboardPanel.open ? clipboardPanel : overviewPanel.open ? overviewPanel : null
     readonly property bool open: activePanel !== null
-    readonly property bool transitioning: clipboardPanel.closing || launcher.closing || overviewPanel.closing || audioMixerPanel.closing || cheatsheet.closing
+    readonly property bool transitioning: clipboardPanel.closing || launcher.closing || overviewPanel.closing || cheatsheet.closing
     readonly property bool contentVisible: open || transitioning
     // A separate 1×1 Top-layer trigger dims only ordinary modal panels.
     readonly property bool dimActive: open || transitioning
