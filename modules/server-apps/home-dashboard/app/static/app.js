@@ -509,6 +509,9 @@ function homeDevices() {
   const groups = new Map();
   for (const e of state.entities || []) {
     const reg = state.deviceRegistry[e.entity_id];
+    // Orphaned, unavailable template buttons are not physical devices.
+    // Their real fan (or other device) remains accessible via its own registry entry.
+    if (!reg && domainOf(e) === "button" && e.state === "unavailable") continue;
     const id = reg?.id || "entity:" + e.entity_id;
     if (!groups.has(id))
       groups.set(id, {
@@ -568,8 +571,8 @@ function priority(e) {
       light: 0,
       fan: 1,
       climate: 2,
-      switch: 3,
-      cover: 4,
+      cover: 3,
+      switch: 4,
       media_player: 5,
       input_boolean: 6,
       scene: 7,
@@ -581,11 +584,19 @@ function priority(e) {
 }
 function deviceKind(d) {
   const types = new Set(d.controls.map(domainOf));
-  if (types.size > 2) return "mixed";
+  const count = (domain) =>
+    d.controls.filter((e) => domainOf(e) === domain).length;
+  // Light strips may expose a dozen auxiliary entities, but the light remains
+  // the primary useful control. A printer with multiple fans is an appliance.
+  if (types.has("light") && count("fan") < 2 && count("button") < 3)
+    return "light";
+  if (types.has("fan") && count("fan") === 1 && count("button") < 3)
+    return "climate";
+  if (d.controls.length >= 8 && types.size >= 3) return "mixed";
   if (types.has("light")) return "light";
   if (types.has("fan") || types.has("climate")) return "climate";
-  if (types.has("media_player")) return "media";
   if (types.has("cover")) return "cover";
+  if (types.has("media_player")) return "media";
   if (types.has("switch") || types.has("input_boolean")) return "power";
   if (types.size) return "other";
   return "sensor";
@@ -667,23 +678,148 @@ function deviceSummaryLine(d) {
   if (d.readings.length) parts.push(`${d.readings.length} readings`);
   return parts.join(" · ") || deviceState(primary);
 }
+function cardPower(e) {
+  const active = e.state === "on";
+  const unavailable = ["unknown", "unavailable"].includes(e.state);
+  return `<button class="tile-power ${active ? "is-on" : ""}" data-entity="${esc(e.entity_id)}" aria-label="Turn ${esc(label(e))} ${active ? "off" : "on"}" aria-pressed="${active}" ${unavailable ? "disabled" : ""}>${svg("power")}</button>`;
+}
+function inlineFan(e) {
+  const attrs = fanAttributes(e);
+  const current = Number(attrs.percentage ?? 0);
+  const supports = Number(attrs.supported_features || 0);
+  const levels = supports & 1 ? fanLevels(e) : [];
+  const modes =
+    supports & 8 && Array.isArray(attrs.preset_modes)
+      ? attrs.preset_modes.filter((mode) => typeof mode === "string")
+      : [];
+  return `<div class="card-fan-status"><span>${svg("wind")} ${e.state === "on" ? "Running · " + esc(attrs.preset_mode || "normal") : "Off"}</span><strong>${e.state === "on" ? Math.round(current) + "%" : "Standby"}</strong></div>
+    <div class="card-fan-speeds" role="group" aria-label="${esc(label(e))} speeds">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${esc(e.entity_id)}" aria-label="Speed ${i + 1}" aria-pressed="${Math.abs(n - current) <= 2}">${i + 1}<span>${n}%</span></button>`).join("")}</div>
+    ${modes.length ? `<div class="card-fan-presets" role="group" aria-label="Fan mode">${modes.map((mode) => `<button class="fan-preset ${attrs.preset_mode === mode ? "active" : ""}" data-ha-preset="${esc(mode)}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${attrs.preset_mode === mode}">${esc(mode)}</button>`).join("")}</div>` : ""}
+    ${supports & 2 ? `<button class="card-oscillation ${attrs.oscillating ? "active" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")} ${attrs.oscillating ? "Oscillating" : "Oscillation off"}</button>` : ""}`;
+}
+function inlineLight(e) {
+  const attrs = e.attributes || {};
+  const modes = attrs.supported_color_modes || [];
+  const dimmable = modes.some((mode) => mode !== "onoff");
+  const rgb = modes.some((mode) =>
+    ["rgb", "rgbw", "rgbww", "hs", "xy"].includes(mode),
+  );
+  const temp = modes.includes("color_temp");
+  const value = Math.round(
+    (Number(attrs.brightness ?? (e.state === "on" ? 255 : 0)) / 255) * 100,
+  );
+  const colour = lightColor(e);
+  const min = Math.max(1500, Number(attrs.min_color_temp_kelvin || 2000));
+  const max = Math.min(10000, Number(attrs.max_color_temp_kelvin || 6500));
+  const kelvin = Math.max(
+    min,
+    Math.min(max, Number(attrs.color_temp_kelvin || 4000)),
+  );
+  return `<div class="card-light-summary"><span class="card-light-glow ${e.state === "on" ? "lit" : ""}" style="--lamp-color:${esc(colour)}">${svg("bulb")}</span><div><strong>${e.state === "on" ? "Light on" : "Light off"}</strong><small>${rgb ? "Colour · " : ""}${dimmable ? value + "% brightness" : "On / off"}</small></div>${rgb ? `<label class="card-color-button" title="Choose light colour"><input type="color" aria-label="Colour for ${esc(label(e))}" data-ha-color="${esc(e.entity_id)}" value="${esc(colour)}"><span style="background:${esc(colour)}"></span></label>` : ""}</div>
+  ${dimmable ? `<label class="card-light-range"><span>Brightness <output>${value}%</output></span><input type="range" min="1" max="100" value="${value}" style="--lamp-color:${esc(colour)}" data-control="brightness" data-entity-id="${esc(e.entity_id)}" aria-label="Brightness for ${esc(label(e))}"></label>` : ""}
+  ${temp && min < max ? `<label class="card-light-range card-temp-range"><span>White temperature <output>${kelvin} K</output></span><input type="range" min="${min}" max="${max}" step="50" value="${kelvin}" data-control="color_temp" data-entity-id="${esc(e.entity_id)}" aria-label="White temperature for ${esc(label(e))}"></label>` : ""}`;
+}
+function inlineCover(e) {
+  const disabled = ["unknown", "unavailable"].includes(e.state);
+  return `<div class="card-cover-state">${svg("sliders")} <strong>${esc(deviceState(e))}</strong></div><div class="card-cover-actions">${[
+    ["open_cover", "Open"],
+    ["stop_cover", "Stop"],
+    ["close_cover", "Close"],
+  ]
+    .map(
+      ([action, title]) =>
+        `<button data-ha-action="${action}" data-ha-entity="${esc(e.entity_id)}" ${disabled ? "disabled" : ""}>${esc(title)}</button>`,
+    )
+    .join("")}</div>`;
+}
+function inlineClimate(e) {
+  const target = Number(
+    e.attributes?.temperature ?? e.attributes?.target_temp ?? 22,
+  );
+  const temperature = Number.isFinite(target)
+    ? Math.max(10, Math.min(35, target))
+    : 22;
+  return `<div class="card-climate-reading"><span>${svg("sun")} ${esc(e.attributes?.current_temperature ?? e.state)}° now</span><strong>${temperature}°</strong></div><div class="card-temperature-actions"><button data-ha-temp="${temperature - 0.5}" data-ha-entity="${esc(e.entity_id)}" ${temperature <= 10 ? "disabled" : ""} aria-label="Lower target temperature">−</button><span>Target</span><button data-ha-temp="${temperature + 0.5}" data-ha-entity="${esc(e.entity_id)}" ${temperature >= 35 ? "disabled" : ""} aria-label="Raise target temperature">+</button></div>`;
+}
+function inlineReadings(d, limit = 2) {
+  const readings = [...d.readings]
+    .sort((a, b) => {
+      const rank = (e) =>
+        /temperature|humidity|progress|battery|air quality|power/i.test(
+          label(e),
+        )
+          ? 0
+          : 1;
+      return rank(a) - rank(b);
+    })
+    .filter((e) => !["unknown", "unavailable"].includes(e.state));
+  return readings
+    .slice(0, limit)
+    .map(
+      (e) =>
+        `<div class="card-reading"><small>${esc(label(e))}</small><strong>${esc(deviceState(e))}</strong></div>`,
+    )
+    .join("");
+}
+function inlineComplex(d) {
+  const safe = d.controls
+    .filter(
+      (e) =>
+        ["light", "switch", "fan", "input_boolean"].includes(domainOf(e)) &&
+        !["unknown", "unavailable"].includes(e.state),
+    )
+    .sort((a, b) => priority(a) - priority(b))
+    .slice(0, 2);
+  return `<div class="card-complex-main"><span>${svg("apps")}</span><div><strong>${d.controls.length} controls</strong><small>${d.readings.length} live readings</small></div></div>
+    ${safe.length ? `<div class="card-complex-controls">${safe.map((e) => `<div><span>${esc(label(e))}</span>${cardPower(e)}</div>`).join("")}</div>` : ""}
+    ${d.readings.length ? `<div class="card-reading-row">${inlineReadings(d)}</div>` : ""}`;
+}
 function homeTile(d) {
-  const primary = d.primary;
-  const primaryDomain = domainOf(primary);
-  const quick = ["light", "switch", "fan", "input_boolean"].includes(
-    primaryDomain,
+  const main = d.primary;
+  const kind = d.kind;
+  const power = ["light", "fan", "switch", "input_boolean"].includes(
+    domainOf(main),
   )
-    ? primary
+    ? main
     : null;
-  const on = primary.state === "on";
-  const unavailable = ["unavailable", "unknown"].includes(primary.state);
-  const icon = d.kind === "mixed" ? "apps" : domainIcon(primaryDomain);
-  return `<article class="home-tile device-group tone-${d.kind} ${on ? "is-on" : ""}">
-    <button class="tile-open" data-device="${esc(d.id)}" aria-label="Open ${esc(d.name)}, ${d.entities.length} entities">
-      <span class="tile-icon">${svg(icon)}</span><span class="tile-room">${esc(d.room)} ${d.favourite ? "✦" : ""}</span>
-      <strong>${esc(d.name)}</strong><small>${esc(deviceSummaryLine(d))}</small>
-    </button>
-    ${quick ? `<button class="tile-power ${on ? "is-on" : ""}" data-entity="${esc(quick.entity_id)}" aria-label="Turn ${esc(label(quick))} ${on ? "off" : "on"}" aria-pressed="${on}" ${unavailable ? "disabled" : ""}>${svg("power")}</button>` : `<button class="tile-detail" data-device="${esc(d.id)}" aria-label="Open device">${svg("chevron")}</button>`}
+  const complex = kind === "mixed" || d.controls.length > 6;
+  const style = complex
+    ? "appliance"
+    : kind === "climate"
+      ? "fan"
+      : kind === "light"
+        ? "light"
+        : kind === "cover"
+          ? "cover"
+          : kind === "media"
+            ? "media"
+            : kind === "sensor"
+              ? "sensor"
+              : kind === "power"
+                ? "switch"
+                : "other";
+  const wide = ["fan", "light", "appliance", "cover"].includes(style);
+  let controls = "";
+  if (style === "fan")
+    controls =
+      domainOf(main) === "climate" ? inlineClimate(main) : inlineFan(main);
+  else if (style === "light") controls = inlineLight(main);
+  else if (style === "cover") controls = inlineCover(main);
+  else if (style === "appliance") controls = inlineComplex(d);
+  else if (style === "sensor")
+    controls = `<div class="card-reading-row">${inlineReadings(d, 2)}</div>`;
+  else if (style === "switch")
+    controls = `<div class="card-switch-status">${svg("power")} ${main.state === "on" ? "Powered on" : "Powered off"}</div>`;
+  else if (style === "media")
+    controls = `<div class="card-media-state">${svg("play")} ${esc(deviceState(main))}</div><button class="card-media-play" data-ha-action="media_play_pause" data-ha-entity="${esc(main.entity_id)}" ${["unknown", "unavailable"].includes(main.state) ? "disabled" : ""}>Play / pause</button>`;
+  else
+    controls = `<div class="card-reading-row">${inlineReadings(d, 2) || esc(deviceSummaryLine(d))}</div>`;
+  const disabled = ["unknown", "unavailable"].includes(main.state);
+  return `<article class="home-tile control-card control-card--${style} tone-${kind} ${wide ? "card-wide" : "card-compact"} ${main.state === "on" ? "is-on" : ""}">
+    <header class="control-card-header"><button class="tile-open" data-device="${esc(d.id)}" aria-label="Open details for ${esc(d.name)}"><span class="tile-icon">${svg(domainIcon(domainOf(main)))}</span><span class="control-card-title"><small>${esc(d.room)}${d.favourite ? " · ✦" : ""}</small><strong>${esc(d.name)}</strong></span></button>
+    ${style === "appliance" || style === "sensor" || style === "cover" || style === "media" || style === "other" || !power ? `<button class="tile-detail" data-device="${esc(d.id)}" aria-label="Details for ${esc(d.name)}">${svg("chevron")}</button>` : cardPower(power)}</header>
+    <div class="control-card-content">${controls}</div>
+    <footer class="control-card-footer"><span>${style === "sensor" ? "Sensor" : style === "appliance" ? "Device overview" : style === "fan" ? "Speed & airflow" : style === "light" ? "Lighting" : style === "cover" ? "Shades & blinds" : style === "switch" ? "Power" : "Device"}</span><button data-device="${esc(d.id)}" aria-label="More options for ${esc(d.name)}">More controls ${svg("arrow")}</button></footer>
   </article>`;
 }
 function roomPills() {
@@ -698,7 +834,7 @@ function roomPills() {
 function home() {
   const all = homeDevices(),
     active = all.filter((d) => d.controls.some((e) => e.state === "on")).length;
-  return `<div class="home-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>Smart Home</h1><p>One tile per device. Every control within reach.</p></div><button class="home-refresh" data-refresh="true" aria-label="Refresh devices">${svg("activity")}</button></div>
+  return `<div class="home-heading"><div><div class="eyebrow">YOUR SPACE</div><h1>Smart Home</h1><p>Your favourite controls, right where you need them.</p></div><button class="home-refresh" data-refresh="true" aria-label="Refresh devices">${svg("activity")}</button></div>
   ${
     !state.me.credentials.homeassistant
       ? `<section class="panel">${empty("Connect Home Assistant in Settings to control your home.", "lock")}${linkPage("settings", "Connect")}</section>`
@@ -1364,7 +1500,7 @@ async function refreshPage(page) {
     );
   await Promise.allSettled(jobs);
   const editing = document.activeElement?.matches(
-    "#home-search, .device-sheet input",
+    "#home-search, .device-sheet input, .home-grid input",
   );
   if (state.page === page && !editing) {
     const previousScroll = document.querySelector(".device-sheet")?.scrollTop;
@@ -1576,6 +1712,21 @@ document.addEventListener("click", async (e) => {
         toast(err.message, true);
         refreshPage("home");
       }
+    }
+    return;
+  }
+  if (target.dataset.haTemp) {
+    target.disabled = true;
+    try {
+      await api("/api/ha/action", "POST", {
+        entity: target.dataset.haEntity,
+        action: "set_temperature",
+        temperature: Number(target.dataset.haTemp),
+      });
+      refreshPage("home");
+    } catch (err) {
+      toast(err.message, true);
+      target.disabled = false;
     }
     return;
   }
@@ -2036,19 +2187,37 @@ function keyboardTiles() {
 function keyboardNavigate(key) {
   const tiles = keyboardTiles();
   if (!tiles.length) return false;
-  const current = tiles.indexOf(document.activeElement);
-  const grid = tiles[0].closest(
-    ".home-grid, .apps-grid, .media-launchers, .overview-metrics",
-  );
-  const columns = grid
-    ? getComputedStyle(grid).gridTemplateColumns.split(" ").length
-    : 1;
-  const delta = { h: -1, l: 1, j: columns, k: -columns }[key];
-  const next =
-    current < 0 ? 0 : Math.max(0, Math.min(tiles.length - 1, current + delta));
-  tiles[next].focus({ preventScroll: false });
+  const current = tiles.includes(document.activeElement)
+    ? document.activeElement
+    : null;
+  if (!current) {
+    tiles[0].focus();
+    state.keyboardMode = true;
+    state.keyboardTarget = tiles[0].dataset.device || tiles[0].href || "";
+    return true;
+  }
+  const origin = current.getBoundingClientRect();
+  const x = origin.left + origin.width / 2,
+    y = origin.top + origin.height / 2;
+  const horizontal = key === "h" || key === "l",
+    sign = key === "h" || key === "k" ? -1 : 1;
+  const candidates = tiles
+    .filter((tile) => tile !== current)
+    .map((tile) => {
+      const bounds = tile.getBoundingClientRect();
+      const dx = bounds.left + bounds.width / 2 - x,
+        dy = bounds.top + bounds.height / 2 - y;
+      const forward = horizontal ? sign * dx : sign * dy;
+      const offset = Math.abs(horizontal ? dy : dx);
+      return { tile, forward, score: forward + offset * 2 };
+    })
+    .filter((entry) => entry.forward > 12)
+    .sort((a, b) => a.score - b.score);
+  const next = candidates[0]?.tile;
+  if (!next) return true;
+  next.focus({ preventScroll: false });
   state.keyboardMode = true;
-  state.keyboardTarget = tiles[next].dataset.device || tiles[next].href || "";
+  state.keyboardTarget = next.dataset.device || next.href || "";
   return true;
 }
 function commandSearch() {
