@@ -677,6 +677,7 @@ in
         config = {
           demuxer-max-bytes = "3GiB";
           demuxer-max-back-bytes = "256MiB";
+          target-colorspace-hint = "yes";
         };
       };
     };
