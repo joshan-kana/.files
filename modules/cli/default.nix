@@ -670,17 +670,47 @@ in
   };
 
   mpv = _: {
-    home = _: {
-      home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
-      programs.mpv = {
-        scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
-        config = {
-          demuxer-max-bytes = "3GiB";
-          demuxer-max-back-bytes = "256MiB";
-          target-colorspace-hint = "yes";
+    home =
+      _:
+      let
+        standard = {
+          inverse-tone-mapping = "no";
+          tone-mapping = "auto";
+          target-peak = "auto";
+          hdr-compute-peak = "auto";
+          gamut-mapping-mode = "auto";
+          target-trc = "auto";
+          target-prim = "auto";
+        };
+        expanded = standard // {
+          inverse-tone-mapping = "yes";
+          tone-mapping = "spline";
+          hdr-compute-peak = "no";
+          gamut-mapping-mode = "perceptual";
+        };
+      in
+      {
+        home.shellAliases.p = "mpv --audio-pitch-correction=no --loop=yes";
+        programs.mpv = {
+          scripts = lib.optionals isLinux (with pkgs; [ mpvScripts.mpris ]);
+          config = {
+            demuxer-max-bytes = "3GiB";
+            demuxer-max-back-bytes = "256MiB";
+            target-colorspace-hint = "yes";
+          }
+          // lib.optionalAttrs isDarwin {
+            input-commands = [ "load-input-conf ${./mpv/hdr-bindings.conf}" ];
+          };
+          profiles = lib.optionalAttrs isDarwin {
+            hdr-standard = standard;
+            hdr-expanded = expanded;
+            sdr-to-hdr = expanded // {
+              target-trc = "pq";
+              target-prim = "bt.2020";
+            };
+          };
         };
       };
-    };
   };
 
   vim = _: {
