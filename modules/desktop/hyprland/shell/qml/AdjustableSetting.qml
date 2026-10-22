@@ -10,6 +10,8 @@ ShellSurface {
     required property string valueText
     property string icon: ""
     property string toggleShortcut: ""
+    property string decrementShortcut: ""
+    property string incrementShortcut: ""
     property bool active: false
     property bool canToggle: true
     property bool canDecrease: true
@@ -99,13 +101,16 @@ ShellSurface {
             spacing: setting.theme.spacing1
             ShellAction {
                 id: decreaseButton
-                width: 32
+                width: 66
                 height: parent.height
                 runtime: setting.runtime
                 theme: setting.theme
                 motion: setting.motion
                 compact: true
                 iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                shortcut: setting.decrementShortcut
                 icon: "−"
                 title: "Decrease temperature"
                 // Keep the hit target active at its limit so the click never
@@ -142,13 +147,16 @@ ShellSurface {
             }
             ShellAction {
                 id: increaseButton
-                width: 32
+                width: 66
                 height: parent.height
                 runtime: setting.runtime
                 theme: setting.theme
                 motion: setting.motion
                 compact: true
                 iconOnly: true
+                iconHint: true
+                inlineIconHint: true
+                shortcut: setting.incrementShortcut
                 icon: "+"
                 title: "Increase temperature"
                 opacity: setting.canIncrease ? 1 : 0.42
