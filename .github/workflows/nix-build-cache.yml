@@ -144,6 +144,15 @@ jobs:
           oauth-secret: ${{ env.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      - name: Restore macOS DNS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # The Tailscale action replaces Ethernet DNS; use its peer IP for Attic.
+          sudo networksetup -setdnsservers Ethernet Empty
+          sudo networksetup -setsearchdomains Ethernet Empty
+          echo "ATTIC_ENDPOINT=http://$(tailscale ip -4 nixos-server):8080" >> "$GITHUB_ENV"
+
       - name: Configure fleet binary caches
         shell: bash
         env:
