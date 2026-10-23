@@ -172,6 +172,7 @@
 
           programs = {
             deadnix.enable = true;
+            csharpier.enable = true;
             nixfmt.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
@@ -186,7 +187,7 @@
               includes = [
                 ".envrc"
                 "scripts/**"
-                "tests/**"
+                "tests/**/*.sh"
               ];
               excludes = [
                 "*.md"
@@ -248,6 +249,19 @@
                   ".github/workflows/*.yaml"
                 ];
               };
+              csharp-lint = {
+                command = lib.getExe pkgs.dotnet-sdk_10;
+                options = [
+                  "format"
+                  "analyzers"
+                  "--verify-no-changes"
+                  "--severity"
+                  "warn"
+                ];
+                includes = [ "*.csproj" ];
+                # dotnet format accepts one project at a time.
+                no-positional-arg-support = true;
+              };
             };
           };
         };
@@ -264,7 +278,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(lock|lua|md|nix|py|sh|ya?ml)$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -559,6 +573,7 @@
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
           darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+          tailscale-home-dns = pkgs.callPackage ./overlays/tailscale-home-dns/package.nix { };
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           shell-access =
@@ -575,6 +590,8 @@
                 python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
                 touch "$out"
               '';
+          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
+          roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }

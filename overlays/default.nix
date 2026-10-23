@@ -10,6 +10,8 @@
     ./gh-dash
     ./nixos-options-doc
     ./tuicr
+    ./technitium-roaming
+    ./tailscale-home-dns
     ./webhook
     ./arc
     ./agentgateway

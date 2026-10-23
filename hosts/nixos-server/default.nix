@@ -172,6 +172,7 @@
           {
             config,
             lib,
+            pkgs,
             ...
           }:
 
@@ -181,9 +182,6 @@
             hostDns = "${
               lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
             };";
-            adguardFallbackDns = lib.filter (
-              dnsServer: dnsServer != server.lan.gateway
-            ) server.lan.dns.fallbackServers;
 
             adguard = {
               user = "adguardhome";
@@ -195,6 +193,24 @@
               confDir = "${server.storage.appData.root}/adguard/conf";
               configFile = "${server.storage.appData.root}/adguard/conf/AdGuardHome.yaml";
             };
+
+            roamingDns = pkgs.technitium-roaming-dns;
+            roamingDnsSettings = pkgs.writeText "technitium-roaming-dns.json" (
+              builtins.toJSON {
+                lanSubnet = server.lan.subnet;
+                remoteDnsSource = server.lan.serverIp;
+                pollSeconds = 10;
+                timeoutMs = 1500;
+                answerTtl = 10;
+                devices = [
+                  {
+                    name = "mac.home";
+                    fallbackHost = "joshans-macbook-pro.tailba46a0.ts.net";
+                    port = 22;
+                  }
+                ];
+              }
+            );
 
             technitium = {
               user = "technitium";
@@ -268,8 +284,9 @@
                   ];
                   inherit (adguard) port;
                   upstream_dns = [ technitium.localBackend ];
-                  # Preserve internet DNS when the local backend is unavailable.
-                  fallback_dns = adguardFallbackDns;
+                  # Never forward private .home names to public fallback resolvers:
+                  # an upstream restart can otherwise cache public NXDOMAIN for hours.
+                  fallback_dns = [ ];
                 };
               };
             };
@@ -307,6 +324,23 @@
               };
 
               technitium-dns-server = {
+                # Keep the core DHCP/DNS state mutable; install only our extension.
+                preStart = lib.mkAfter ''
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDns}/RoamingDns.dll \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.dll
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDns}/RoamingDns.deps.json \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.deps.json
+                  ${pkgs.coreutils}/bin/install -Dm644 ${roamingDnsSettings} \
+                    ${technitium.stateDir}/apps/RoamingDns/dnsApp.config
+                '';
+                # Remove only Nix-owned app files on shutdown, including rollback.
+                postStop = lib.mkAfter ''
+                  ${pkgs.coreutils}/bin/rm -f \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.dll \
+                    ${technitium.stateDir}/apps/RoamingDns/RoamingDns.deps.json \
+                    ${technitium.stateDir}/apps/RoamingDns/dnsApp.config
+                  ${pkgs.coreutils}/bin/rmdir ${technitium.stateDir}/apps/RoamingDns 2>/dev/null || true
+                '';
                 after = [ "network-online.target" ];
                 wants = [ "network-online.target" ];
 
