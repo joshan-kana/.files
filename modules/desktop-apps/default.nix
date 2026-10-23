@@ -326,6 +326,12 @@ in
       services.twingate.enable = true;
     };
   };
+
+  beeperMatrixClient = _: {
+    home = _: {
+      home.packages = [ pkgs.beeper ];
+    };
+  };
 }
 // lib.optionalAttrs isLinux {
   filelight = _: {
