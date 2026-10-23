@@ -445,6 +445,7 @@ in
           gst = "git-stash-editor";
           gpl = "git pull";
           gph = "git push";
+          gphf = "git push --force-with-lease";
         };
         programs.git = {
           settings = gitSettings;
