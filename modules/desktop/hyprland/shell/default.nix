@@ -51,15 +51,6 @@ let
     }
   );
 
-  # Give the system's Polkit prompt a stable, human-readable operation name.
-  themeElevation = pkgs.writeShellApplication {
-    name = "linux-desktop-theme-elevation";
-    runtimeInputs = [ pkgs.systemd ];
-    text = ''
-      exec run0 --unit=linux-desktop-theme-activation --description="Activate the selected Linux desktop theme" "$@"
-    '';
-  };
-
   # The chooser is a frontend to the canonical full-system themed output.
   themeSet = pkgs.writeShellApplication {
     name = "theme-set";
@@ -156,7 +147,7 @@ let
           set_phase authorizing
           printf 'Requesting permission to activate %s...\n' "$selected"
           set_phase activating
-          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy ${lib.getExe themeElevation} --no-nom --diff never
+          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy run0 --no-nom --diff never
           printf 'Activated %s.\n' "$selected"
           ;;
         *)
