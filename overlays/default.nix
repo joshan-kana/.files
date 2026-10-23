@@ -26,6 +26,7 @@
     ./notion
     ./open-webui
     ./prusaslicer
+    ./qbittorrent
     ./qmk-toolbox
     ./reaper
     ./seerr
