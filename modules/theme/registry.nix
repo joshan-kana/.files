@@ -85,6 +85,33 @@ let
       };
     };
 
+    cosmic-noir = {
+      # https://github.com/atraxsrc/cosmic-noir-theme
+      label = "Cosmic Noir";
+      assets.icons = {
+        name = "Cosmic-Noir-Orange";
+        package = pkgs.cosmic-noir-icons;
+      };
+      colors = {
+        base00 = "171717";
+        base01 = "222222";
+        base02 = "2a2a2a";
+        base03 = "686c69";
+        base04 = "a6ada6";
+        base05 = "ccd0cf";
+        base06 = "dadedd";
+        base07 = "dadedd";
+        base08 = "f25623";
+        base09 = "f56e0f";
+        base0A = "aeab94";
+        base0B = "88a57d";
+        base0C = "959c95";
+        base0D = "f25623";
+        base0E = "f56e0f";
+        base0F = "f0913a";
+      };
+    };
+
     dracula = {
       label = "Dracula";
       colors = {

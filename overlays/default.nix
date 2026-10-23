@@ -6,6 +6,7 @@
     ./brave
     ./comin
     ./configarr
+    ./cosmic-noir-icons
     ./gh-dash
     ./nixos-options-doc
     ./tuicr

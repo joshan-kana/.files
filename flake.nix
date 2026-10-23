@@ -105,6 +105,11 @@
       url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64";
       flake = false;
     };
+
+    cosmic-noir-icons = {
+      url = "file+https://github.com/atraxsrc/cosmic-icon-themes/releases/latest/download/Cosmic-Noir-Orange.tar.xz";
+      flake = false;
+    };
   };
 
   outputs =
