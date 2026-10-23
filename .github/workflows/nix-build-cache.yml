@@ -148,10 +148,11 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          # The Tailscale action replaces Ethernet DNS; use its peer IP for Attic.
+          # The Tailscale action replaces Ethernet DNS; retain the Attic hostname.
           sudo networksetup -setdnsservers Ethernet Empty
           sudo networksetup -setsearchdomains Ethernet Empty
-          echo "ATTIC_ENDPOINT=http://$(tailscale ip -4 nixos-server):8080" >> "$GITHUB_ENV"
+          echo "$(tailscale ip -4 nixos-server) nixos-server" | sudo tee -a /etc/hosts >/dev/null
+          curl --fail --silent --show-error "$ATTIC_ENDPOINT/dotfiles/nix-cache-info" >/dev/null
 
       - name: Configure fleet binary caches
         shell: bash

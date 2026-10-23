@@ -3,7 +3,17 @@
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
+        # Remove once nixpkgs includes NixOS/nixpkgs@f985be327fad.
+        open-webui = prev.open-webui.overrideAttrs {
+          makeWrapperArgs = [
+            "--set"
+            "FRONTEND_BUILD_DIR"
+            "${prev.open-webui.frontend}/share/open-webui"
+          ];
+        };
+      }
+      // prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         open-webui-mac =
           import ../lib/mac-app.nix
             {
