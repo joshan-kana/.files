@@ -23,10 +23,12 @@
     ./iterm2
     ./jellyfin-mpv-shim
     ./linear
+    ./linux-desktop-spectrum
     ./notion
     ./open-webui
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./seerr
     ./vial
