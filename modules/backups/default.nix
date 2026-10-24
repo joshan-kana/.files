@@ -142,6 +142,7 @@ in
           backupPrepareCommand = unlock;
           inherit passwordFile rcloneConfigFile;
           paths = [ config.dotfiles.secretsDir ];
+          extraBackupArgs = [ "--retry-lock=10m" ];
           timerConfig = {
             OnCalendar = "*:0/15";
             Persistent = true;
@@ -154,13 +155,17 @@ in
           inherit passwordFile rcloneConfigFile;
           paths = [ ];
           pruneOpts = [
+            "--retry-lock 10m"
             "--keep-within 1d"
             "--keep-hourly ${toString retention.hourly}"
             "--keep-daily ${toString retention.daily}"
             "--keep-weekly ${toString retention.weekly}"
             "--keep-monthly ${toString retention.monthly}"
           ];
-          checkOpts = [ "--read-data" ];
+          checkOpts = [
+            "--retry-lock 10m"
+            "--read-data"
+          ];
           createWrapper = false;
           timerConfig = {
             OnCalendar = "daily";
