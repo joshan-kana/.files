@@ -469,7 +469,7 @@ in
 
     systemd.services = {
       transmission = {
-        unitConfig.RequiresMountsFor = [ "${mediaRoot}/downloads/incomplete" ];
+        unitConfig.RequiresMountsFor = [ mediaRoot ];
         requires = [
           "transmission-setup.service"
           "transmission-credentials.service"
