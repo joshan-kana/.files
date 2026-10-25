@@ -522,6 +522,14 @@
 
       services.userborn.enable = true;
 
+      fileSystems."/srv/vault/media/downloads/incomplete" = {
+        device = "${storage.dataRoot.poolName}/downloads-incomplete";
+        fsType = "zfs";
+      };
+
+      systemd.services.transmission.unitConfig.ConditionPathIsMountPoint =
+        "${storage.dataRoot.path}/media/downloads/incomplete";
+
       services.zfs = {
         autoScrub = {
           enable = true;
