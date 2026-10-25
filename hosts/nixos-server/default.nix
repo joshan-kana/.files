@@ -527,6 +527,9 @@
         fsType = "zfs";
       };
 
+      systemd.services.transmission.unitConfig.ConditionPathIsMountPoint =
+        "${storage.dataRoot.path}/media/downloads/incomplete";
+
       services.zfs = {
         autoScrub = {
           enable = true;
