@@ -281,6 +281,7 @@ let
             dataRoot = storage.dataRoot.path;
             dataPool = storage.dataRoot.poolName;
             snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
+            snapshotRetention = config.services.sanoid.templates.vault;
           }
         else
           null;
@@ -578,7 +579,7 @@ let
         | Bulk data root | `${facts.managedStorage.dataRoot}` |
         | ZFS pool | `${facts.managedStorage.dataPool}` |
         | Snapshot interval | ${toString facts.managedStorage.snapshotIntervalMinutes} minutes |
-        | Retention | ${toString facts.retention.hourly} hourly / ${toString facts.retention.daily} daily / ${toString facts.retention.weekly} weekly / ${toString facts.retention.monthly} monthly |
+        | Vault snapshot retention | ${toString facts.managedStorage.snapshotRetention.hourly} hourly / ${toString facts.managedStorage.snapshotRetention.daily} daily / ${toString facts.managedStorage.snapshotRetention.weekly} weekly / ${toString facts.managedStorage.snapshotRetention.monthly} monthly |
       ''
     ) hostNames}
   '';
