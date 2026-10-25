@@ -281,14 +281,7 @@ let
             dataRoot = storage.dataRoot.path;
             dataPool = storage.dataRoot.poolName;
             snapshotIntervalMinutes = storage.snapshots.intervalMinutes;
-            snapshotRetention = {
-              inherit (config.services.sanoid.templates.vault)
-                hourly
-                daily
-                weekly
-                monthly
-                ;
-            };
+            snapshotRetention = config.services.sanoid.templates.vault;
           }
         else
           null;
