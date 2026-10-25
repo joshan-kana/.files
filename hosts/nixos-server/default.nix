@@ -536,12 +536,10 @@
         templates.vault = {
           frequent_period = storage.snapshots.intervalMinutes;
           frequently = 60 / storage.snapshots.intervalMinutes;
-          inherit (retention)
-            hourly
-            daily
-            weekly
-            monthly
-            ;
+          # Short-lived media changes should not consume two days of hourly history.
+          hourly = 12;
+          daily = 7;
+          inherit (retention) weekly monthly;
           autosnap = true;
           autoprune = true;
         };
