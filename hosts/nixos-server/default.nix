@@ -551,6 +551,12 @@
         };
       };
 
+      # Allow Sanoid's ZFS permission operations to finish under I/O contention.
+      systemd.services.sanoid.serviceConfig = {
+        TimeoutStartSec = "5min";
+        TimeoutStopSec = "5min";
+      };
+
       services.snapper = {
         inherit snapshotInterval;
         configs.apps = {
