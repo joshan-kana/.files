@@ -80,10 +80,21 @@ sudo mv /srv/vault/media/downloads/incomplete /srv/vault/media/downloads/incompl
 sudo install -d -m 2770 -o transmission -g server-data /srv/vault/media/downloads/incomplete
 sudo zfs create -o mountpoint=legacy vault/downloads-incomplete
 sudo mount -t zfs vault/downloads-incomplete /srv/vault/media/downloads/incomplete
-sudo rsync -aHEX --sparse /srv/vault/media/downloads/incomplete-before-zfs/ /srv/vault/media/downloads/incomplete/
+sudo cp -a --sparse=always \
+  /srv/vault/media/downloads/incomplete-before-zfs/. \
+  /srv/vault/media/downloads/incomplete/
 sudo chown transmission:server-data /srv/vault/media/downloads/incomplete
 sudo chmod 2770 /srv/vault/media/downloads/incomplete
+sudo rsync -aHEXn --size-only --delete --stats \
+  /srv/vault/media/downloads/incomplete-before-zfs/ \
+  /srv/vault/media/downloads/incomplete/
 ```
+
+Before proceeding, confirm that the dry run reports no missing files or metadata
+differences. The size-only comparison does not verify file contents. Torrent files
+can be sparse: their logical size may greatly exceed allocated space. The sparse
+copy preserves holes without allocating those unwritten portions. Keep
+Transmission stopped until the mount, files, and torrent resume are verified.
 
 Confirm the mount is actually backed by `vault/downloads-incomplete`, then switch
 the NixOS configuration and start the services:
