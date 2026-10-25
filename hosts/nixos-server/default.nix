@@ -481,6 +481,10 @@
       inherit (config.dotfiles.backups) retention;
       inherit (config.dotfiles.users) primary;
       inherit (server) storage;
+      vaultRetention = retention // {
+        hourly = 12;
+        daily = 7;
+      };
       backupRcloneConfig = "/var/lib/backup-credentials/rclone.conf";
       snapshotInterval = "*:0/${toString storage.snapshots.intervalMinutes}";
       resticUnlock = ''
@@ -536,9 +540,12 @@
         templates.vault = {
           frequent_period = storage.snapshots.intervalMinutes;
           frequently = 60 / storage.snapshots.intervalMinutes;
-          hourly = 12;
-          daily = 7;
-          inherit (retention) weekly monthly;
+          inherit (vaultRetention)
+            hourly
+            daily
+            weekly
+            monthly
+            ;
           autosnap = true;
           autoprune = true;
         };
