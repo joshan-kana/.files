@@ -25,6 +25,7 @@
     ./linear
     ./notion
     ./open-webui
+    ./python-matter-server
     ./prusaslicer
     ./qbittorrent
     ./qmk-toolbox
