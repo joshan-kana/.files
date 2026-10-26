@@ -498,7 +498,7 @@ in
     home = args: {
       home.shellAliases = {
         bk = "cd ..";
-        sz = "du -sh";
+        sz = "dust";
       };
       programs.zsh = (zshConfig args).programs.zsh // {
         autosuggestion.enable = true;
