@@ -221,11 +221,13 @@ jobs:
     permissions:
       contents: read
       statuses: write
+      pull-requests: write
 
     steps:
       - name: Complete PR build check
         env:
           GH_TOKEN: ${{ github.token }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         shell: bash
         run: |
           set -euo pipefail
@@ -244,6 +246,23 @@ jobs:
             -f description="$description" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             >/dev/null
+
+          if [[ "$state" == failure && "$GITHUB_ACTOR" == 'github-actions[bot]' && "$TRIGGERING_ACTOR" == 'github-actions[bot]' ]]; then
+            pr_number="$(
+              gh pr list \
+                --repo "$GITHUB_REPOSITORY" \
+                --base main \
+                --head system-update \
+                --state open \
+                --json number \
+                --jq '.[0].number // empty'
+            )"
+            if [[ -n "$pr_number" ]]; then
+              gh pr comment "$pr_number" \
+                --repo "$GITHUB_REPOSITORY" \
+                --body "@${GITHUB_REPOSITORY_OWNER} Nix build cache failed. [View the failed run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+            fi
+          fi
 
           [[ "$state" == success ]]
 
