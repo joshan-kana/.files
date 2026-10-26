@@ -8,6 +8,7 @@
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
+    ./gtksourceview
     ./nixos-options-doc
     ./tuicr
     ./webhook
@@ -27,7 +28,6 @@
     ./open-webui
     ./python-matter-server
     ./prusaslicer
-    ./qbittorrent
     ./qmk-toolbox
     ./reaper
     ./seerr
