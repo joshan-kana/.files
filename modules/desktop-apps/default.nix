@@ -204,6 +204,7 @@ in
               enable = true;
               inherit settings;
             };
+            systemd.user.services.jellyfin-mpv-shim.Install.WantedBy = lib.mkForce [ ];
             xdg.configFile."jellyfin-mpv-shim/mpv.conf".source = config.xdg.configFile."mpv/mpv.conf".source;
           })
           (lib.optionalAttrs isDarwin {
@@ -226,7 +227,7 @@ in
       launchd.user.agents.jellyfin-mpv-shim.serviceConfig = {
         ProgramArguments = [ (lib.getExe pkgs.jellyfin-mpv-shim) ];
         EnvironmentVariables.PATH = "${lib.makeBinPath [ pkgs.mpv ]}:/usr/bin:/bin";
-        RunAtLoad = true;
+        RunAtLoad = false;
       };
     };
 
