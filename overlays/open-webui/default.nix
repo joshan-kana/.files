@@ -24,13 +24,19 @@
         ];
 
         # Remove once nixpkgs includes NixOS/nixpkgs@f985be327fad.
-        open-webui = prev.open-webui.overrideAttrs {
-          makeWrapperArgs = [
-            "--set"
-            "FRONTEND_BUILD_DIR"
-            "${prev.open-webui.frontend}/share/open-webui"
-          ];
-        };
+        open-webui =
+          (prev.open-webui.override {
+            python3Packages = prev.python3Packages // {
+              mcp = prev.python3Packages.mcp_1;
+            };
+          }).overrideAttrs
+            {
+              makeWrapperArgs = [
+                "--set"
+                "FRONTEND_BUILD_DIR"
+                "${prev.open-webui.frontend}/share/open-webui"
+              ];
+            };
       }
       // prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         open-webui-mac =
