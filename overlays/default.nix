@@ -26,6 +26,7 @@
     ./linear
     ./notion
     ./open-webui
+    ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
     ./reaper
