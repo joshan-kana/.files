@@ -294,10 +294,18 @@ in
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
 
-      # Keep image changes and video poster staging on the same eased motion.
+      # Spatially reveal the new wallpaper rather than cross-dissolving both
+      # frames. One policy covers stills, GIFs, and first-frame video posters.
       wallpaperTransitionDuration = "1.05";
       wallpaperTransition = ''
-        transition_args=(--transition-type fade --transition-duration ${wallpaperTransitionDuration} --transition-fps 120 --transition-bezier "0.2,0,0.15,1")
+        transition_args=(
+          --transition-type wave
+          --transition-angle 28
+          --transition-wave "24,10"
+          --transition-duration ${wallpaperTransitionDuration}
+          --transition-fps 120
+          --transition-bezier "0.2,0,0.15,1"
+        )
         if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
           transition_args=(--transition-type none)
         fi
