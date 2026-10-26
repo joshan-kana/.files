@@ -725,10 +725,8 @@ FocusScope {
             Row {
                 width: parent.width
                 height: 36
-                spacing: root.theme.spacing2
 
                 Text {
-                    id: actionsHeading
                     anchors.verticalCenter: parent.verticalCenter
                     text: "QUICK ACTIONS"
                     color: root.theme.readableRoleColor("attention")
@@ -737,27 +735,6 @@ FocusScope {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.1
                 }
-
-                Item {
-                    width: Math.max(1, parent.width - actionsHeading.implicitWidth - recordingsButton.width - parent.spacing * 2)
-                    height: 1
-                }
-
-                ShellAction {
-                    id: recordingsButton
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 152
-                    height: 30
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: "󰕧"
-                    title: "RECORDINGS"
-                    shortcut: "C"
-                    onActivated: root.openRecordings()
-                }
             }
 
             Item {
@@ -765,17 +742,20 @@ FocusScope {
                 height: root.theme.spacing1
             }
 
-            Grid {
+            Flow {
                 id: actionStrip
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 560 || root.theme.textScale >= 1.5 ? 2 : 4
-                columnSpacing: root.theme.spacing2
-                rowSpacing: root.theme.spacing2
-                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+                spacing: root.theme.spacing2
+                readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
+
+                function cellWidth(index: int): real {
+                    const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
+                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                }
 
                 QuickSettingChip {
-                    width: actionStrip.cellWidth
+                    width: actionStrip.cellWidth(0)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -789,7 +769,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: actionStrip.cellWidth
+                    width: actionStrip.cellWidth(1)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -803,7 +783,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: actionStrip.cellWidth
+                    width: actionStrip.cellWidth(2)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -816,7 +796,7 @@ FocusScope {
                 }
 
                 QuickSettingChip {
-                    width: actionStrip.cellWidth
+                    width: actionStrip.cellWidth(3)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -828,6 +808,19 @@ FocusScope {
                     active: root.powerProfile.current === "power-saver"
                     activeColor: root.powerProfile.current === "power-saver" ? root.theme.roleColor("warning") : root.theme.roleColor("warmth")
                     onActivated: root.powerProfile.cycle()
+                }
+
+                QuickSettingChip {
+                    width: actionStrip.cellWidth(4)
+                    height: 78
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰕧"
+                    title: "Recordings"
+                    shortcut: "C"
+                    activeColor: root.theme.roleColor("media")
+                    onActivated: root.openRecordings()
                 }
             }
 
