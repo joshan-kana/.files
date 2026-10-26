@@ -41,5 +41,6 @@
     ./openai-tunnel-client
     ./parallels-tools
     ./zen-browser
+    ./yabai
   ];
 }

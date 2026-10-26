@@ -1,0 +1,26 @@
+diff --git a/src/osax/arm64_payload.m b/src/osax/arm64_payload.m
+index 3b139076a..b0d19ace3 100644
+--- a/src/osax/arm64_payload.m
++++ b/src/osax/arm64_payload.m
+@@ -175,7 +175,7 @@ uint64_t get_set_front_window_offset(NSOperatingSystemVersion os_version) {
+ const char *get_add_space_pattern(NSOperatingSystemVersion os_version) {
+     if (os_version.majorVersion == 26) {
+         if (os_version.minorVersion >= 4) {
+-            return "7F 23 03 D5 E1 03 1E AA 48 89 FC 97 FE 03 01 AA FD 7B 05 A9 FD 43 01 91 F3 03 14 AA F5 03";
++            return "7F 23 03 D5 E1 03 1E AA ?? ?? ?? 97 FE 03 01 AA FD 7B 05 A9 FD 43 01 91 F3 03 14 AA F5 03";
+         }
+         return "7F 23 03 D5 FF C3 01 D1 E1 03 1E AA ?? ?? 00 94 FE 03 01 AA FD 7B 06 A9 FD 83 01 91 F3 03";
+     } else if (os_version.majorVersion == 15) {
+diff --git a/src/osax/common.h b/src/osax/common.h
+index 2fdb8cef6..2941071cb 100644
+--- a/src/osax/common.h
++++ b/src/osax/common.h
+@@ -4,7 +4,7 @@
+ #define SA_SOCKET_PATH_FMT "/tmp/yabai-sa_%s.socket"
+ #define SA_SOCKET_BUFF_LEN 0x1000
+ 
+-#define OSAX_VERSION                "2.1.29"
++#define OSAX_VERSION                "2.1.30"
+ 
+ #define OSAX_ATTRIB_DOCK_SPACES     0x01
+ #define OSAX_ATTRIB_DPPM            0x02
