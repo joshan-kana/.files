@@ -318,7 +318,7 @@ Item {
                 height: parent.height - 56
                 clip: true
                 interactive: false
-                highlightMoveDuration: panel.motion.enabled ? panel.motion.spatialFast : 0
+                highlightMoveDuration: panel.motion.enabled ? panel.motion.spatialSlow : 0
                 model: panel.filteredEntries
                 pathItemCount: Math.min(5, Math.max(3, count))
                 currentIndex: panel.selectedIndex
@@ -341,27 +341,43 @@ Item {
                     // Keep neighbouring cards visible as previews without
                     // letting their edges crowd the full-size selection.
                     startX: -gallery.width * 0.13
-                    startY: gallery.height / 2
+                    startY: gallery.height / 2 + 15
 
                     PathAttribute {
-                        name: "z"
-                        value: 0
+                        name: "depthScale"
+                        value: 0.65
                     }
-                    PathLine {
+                    PathAttribute {
+                        name: "depthOpacity"
+                        value: 0.68
+                    }
+                    PathQuad {
                         x: gallery.width / 2
                         y: gallery.height / 2
+                        controlX: gallery.width * 0.19
+                        controlY: gallery.height / 2 - 18
                     }
                     PathAttribute {
-                        name: "z"
+                        name: "depthScale"
                         value: 1
                     }
-                    PathLine {
+                    PathAttribute {
+                        name: "depthOpacity"
+                        value: 1
+                    }
+                    PathQuad {
                         x: gallery.width * 1.13
-                        y: gallery.height / 2
+                        y: gallery.height / 2 + 15
+                        controlX: gallery.width * 0.81
+                        controlY: gallery.height / 2 - 18
                     }
                     PathAttribute {
-                        name: "z"
-                        value: 0
+                        name: "depthScale"
+                        value: 0.65
+                    }
+                    PathAttribute {
+                        name: "depthOpacity"
+                        value: 0.68
                     }
                 }
 
@@ -423,21 +439,10 @@ Item {
                     width: 360
                     height: 305
                     z: current ? 2 : 1
-                    scale: current ? 1 : PathView.onPath ? 0.58 : 0.5
-                    opacity: PathView.onPath ? (current ? 1 : 0.84) : 0
-
-                    Behavior on scale {
-                        Anim {
-                            motion: panel.motion
-                            type: Anim.DefaultSpatial
-                        }
-                    }
-                    Behavior on opacity {
-                        Anim {
-                            motion: panel.motion
-                            type: Anim.FastEffects
-                        }
-                    }
+                    // PathView interpolates these alongside position; changing the
+                    // selected item must not snap its scale or double-animate.
+                    scale: PathView.onPath ? PathView.depthScale : 0.65
+                    opacity: PathView.onPath ? PathView.depthOpacity : 0
 
                     ShellSurface {
                         anchors.fill: parent

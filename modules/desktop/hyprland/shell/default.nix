@@ -294,6 +294,15 @@ in
       json = pkgs.formats.json { };
       colors = config.lib.stylix.colors.withHashtag;
 
+      # Keep image changes and video poster staging on the same eased motion.
+      wallpaperTransitionDuration = "1.05";
+      wallpaperTransition = ''
+        transition_args=(--transition-type fade --transition-duration ${wallpaperTransitionDuration} --transition-fps 120 --transition-bezier "0.2,0,0.15,1")
+        if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
+          transition_args=(--transition-type none)
+        fi
+      '';
+
       applyWallpaper = pkgs.writeShellApplication {
         name = "linux-desktop-wallpaper-apply";
         runtimeInputs = [
@@ -319,8 +328,7 @@ in
           for _ in {1..25}; do
             if awww query >/dev/null 2>&1; then
               quiet="$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled"
-              transition=fade
-              [ ! -f "$quiet" ] || transition=none
+              ${wallpaperTransition}
               # Resolve overrides before painting. Applying Stylix to all
               # outputs first flashes over the user's selected wallpaper.
               state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
@@ -328,7 +336,7 @@ in
                 while IFS= read -r output; do
                   [ -n "$output" ] || continue
                   if [ ! -f "$state_dir/$output.wall" ]; then
-                    awww img --outputs "$output" --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$wallpaper"
+                    awww img --outputs "$output" "''${transition_args[@]}" "$wallpaper"
                   fi
                 done < <(awww query | sed -n 's/^: \([^:]*\):.*/\1/p')
               fi
@@ -343,12 +351,11 @@ in
                 [ "$output" = all ] || args=(--outputs "$output")
                 case "''${image,,}" in
                   *.mp4|*.webm|*.mkv|*.mov)
+                    still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
+                    awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
                     if [ -f "$quiet" ]; then
                       systemctl --user stop --no-block "linux-desktop-wallpaper-video@$output.service" || true
-                      still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
-                      awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
                     else
-                      awww clear "''${args[@]}" 000000
                       systemctl --user start --no-block "linux-desktop-wallpaper-video@$output.service"
                     fi
                     ;;
@@ -357,7 +364,7 @@ in
                     if [ -f "$quiet" ] && [[ "''${image,,}" = *.gif ]]; then
                       still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
                     fi
-                    awww img "''${args[@]}" --resize "$resize" --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$still"
+                    awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
                     ;;
                 esac
               done
@@ -502,26 +509,26 @@ in
               fi
               exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
               flock -x 9
+              ${wallpaperTransition}
               unit="linux-desktop-wallpaper-video@$output.service"
               args=()
               [ "$output" = all ] || args=(--outputs "$output")
               if [ "$kind" = video ]; then
                 ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$image" | grep -qx video || exit 2
-                if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
-                  still="$("$0" thumbnail "$image")"
-                  awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
-                else
-                  awww clear "''${args[@]}" 000000
-                fi
+                # Reveal the previous poster so the new poster can transition
+                # before the replacement video surface starts playing.
+                systemctl --user stop "$unit" || true
+                # Stage the first video frame instead of exposing black as
+                # the old mpvpaper surface is replaced.
+                still="$("$0" thumbnail "$image")"
+                awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               else
                 systemctl --user stop "$unit" || true
                 still="$image"
                 if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] && [[ "''${image,,}" = *.gif ]]; then
                   still="$("$0" thumbnail "$image")"
                 fi
-                transition=fade
-                [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || transition=none
-                awww img "''${args[@]}" --resize "$resize" --transition-type "$transition" --transition-duration 0.8 --transition-fps 165 "$still"
+                awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               fi
               mkdir -p "$state_dir"
               temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
@@ -529,6 +536,11 @@ in
               printf '%s\n%s\n' "$resize" "$image" > "$temp"
               mv -f "$temp" "$state_file"
               if [ "$kind" = video ]; then
+                if [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
+                  # Let the eased poster transition finish before playing the
+                  # same first frame as video, avoiding an abrupt hard swap.
+                  sleep ${wallpaperTransitionDuration}
+                fi
                 systemctl --user restart "$unit"
               fi
               ;;
