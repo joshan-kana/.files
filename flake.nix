@@ -240,6 +240,13 @@
                   lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                     "--max-warnings"
                     "0"
+                    # Qt 6.12 flags existing scoped ids and Quickshell's opaque
+                    # screen/anchor/model metadata. Keep every other diagnostic
+                    # strict while waiting for upstream type metadata fixes.
+                    "--id-shadows-member"
+                    "disable"
+                    "--missing-property"
+                    "disable"
                   ]
                   ++ [
                     "-I"
