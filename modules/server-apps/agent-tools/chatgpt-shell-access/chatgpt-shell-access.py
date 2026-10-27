@@ -52,6 +52,7 @@ Host = Literal[tuple([LOCAL_HOST, *REMOTE_TARGETS])]
 
 _ALLOWED_ENV = {
     "GH_TOKEN",
+    "HOME",
     "LANG",
     "LANGUAGE",
     "NIX_CONFIG",

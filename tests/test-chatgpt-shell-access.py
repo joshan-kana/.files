@@ -151,6 +151,10 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(result.get("exit_code"), 0)
         self.assertNotIn("unsafe-continuation", result["output"])
 
+    def test_home_directory_is_preserved(self):
+        self.assertIn("HOME", shell._ALLOWED_ENV)
+        self.assertEqual(shell.COMMAND_ENV["HOME"], os.environ["HOME"])
+
     def test_local_command_uses_unprivileged_shell(self):
         command = shell.LOCAL
         self.assertEqual(command[0], "bash")
