@@ -414,7 +414,6 @@ Item {
                         surfaceLayer: ShellSurface.Control
                         cornerRadius: panel.theme.radiusMedium
                         selected: entry.current
-                        outlined: entry.current
                         clip: true
 
                         Image {
@@ -510,6 +509,17 @@ Item {
                             selected: entry.current
                             cornerRadius: panel.theme.radiusMedium
                             onActivated: panel.activateThumbnail(entry.index)
+                        }
+
+                        // Match the Theme Picker's focus outline. The frame
+                        // must sit above the preview image, not behind it.
+                        SquircleSurface {
+                            anchors.fill: parent
+                            visible: entry.current
+                            cornerRadius: panel.theme.radiusMedium
+                            exponent: panel.theme.squircleExponent
+                            borderColor: panel.theme.accent
+                            borderWidth: panel.theme.borderFocus * 2
                         }
                     }
                 }
