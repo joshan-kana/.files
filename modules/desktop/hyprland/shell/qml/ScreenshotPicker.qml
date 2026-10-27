@@ -354,7 +354,7 @@ Item {
         anchors.fill: parent
         visible: picker.open
         z: 1
-        readonly property color scrim: "#10161d"
+        readonly property color scrim: picker.theme.dark ? picker.theme.background : picker.theme.textStrong
         readonly property real dim: 0.48
 
         Rectangle {
@@ -466,7 +466,7 @@ Item {
             MarqueeText {
                 width: parent.width
                 text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN REGION · " : "LIVE REGION · ") + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
-                color: picker.theme.roleColor("capture")
+                color: picker.theme.readableRoleColor("capture")
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(12)
                 font.weight: Font.DemiBold
