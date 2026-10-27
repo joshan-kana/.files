@@ -806,7 +806,7 @@ FocusScope {
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"
-                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.roleColor("warning") : root.theme.roleColor("warmth")
+                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.roleColor("warning") : root.theme.roleColor("positive")
                     onActivated: root.powerProfile.cycle()
                 }
 
@@ -819,7 +819,7 @@ FocusScope {
                     icon: "󰕧"
                     title: "Recordings"
                     shortcut: "C"
-                    activeColor: root.theme.roleColor("media")
+                    activeColor: root.theme.roleColor("capture")
                     onActivated: root.openRecordings()
                 }
             }
@@ -866,7 +866,7 @@ FocusScope {
                     title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
                     shortcut: "SHIFT+G"
                     active: root.wallpaperSpectrumEnabled
-                    activeColor: root.theme.roleColor("media")
+                    activeColor: root.theme.roleColor("workspace")
                     onActivated: root.wallpaperSpectrumToggleRequested()
                 }
 
@@ -880,7 +880,7 @@ FocusScope {
                     title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
                     shortcut: "SHIFT+N"
                     active: root.musicReactiveEnabled
-                    activeColor: root.theme.roleColor("connectivity")
+                    activeColor: root.theme.roleColor("audio")
                     onActivated: root.musicReactiveToggleRequested()
                 }
 
@@ -908,7 +908,7 @@ FocusScope {
                     title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
                     shortcut: "SHIFT+F"
                     active: root.shellGlassEnabled
-                    activeColor: root.theme.roleColor("display")
+                    activeColor: root.theme.roleColor("connectivity")
                     onActivated: root.shellGlassToggleRequested()
                 }
 
@@ -969,9 +969,7 @@ FocusScope {
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
                 cornerRadius: theme.radiusLarge
-                luminous: true
-                luminousColor: root.theme.roleColor("audio")
-                fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("audio"), root.theme.dark ? 0.07 : 0.035)
+                fillColor: root.theme.groupBase
 
                 Column {
                     id: audioStack
