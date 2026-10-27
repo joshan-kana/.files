@@ -55,6 +55,25 @@ Item {
         return groups;
     }
 
+    function sectionRole(section: string): string {
+        switch (section.toLowerCase()) {
+        case "apps":
+            return "connectivity";
+        case "audio & media":
+            return "media";
+        case "launchers":
+            return "resources";
+        case "workspaces":
+            return "workspace";
+        case "utilities":
+            return "capture";
+        case "windows":
+            return "display";
+        default:
+            return "positive";
+        }
+    }
+
     function countBindings(groups: var): int {
         let count = 0;
         for (const group of groups || [])
@@ -182,17 +201,19 @@ Item {
             Item {
                 id: header
                 width: parent.width
-                height: Math.max(title.implicitHeight, helpButton.height)
+                height: 66
 
-                Text {
-                    id: title
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Shortcuts"
-                    color: window.theme.textStrong
-                    font.family: window.runtime.fontMono
-                    font.pixelSize: window.theme.fontSize(34)
-                    font.weight: Font.DemiBold
+                DetailHero {
+                    width: parent.width - helpButton.width - window.theme.spacing3
+                    height: parent.height
+                    runtime: window.runtime
+                    theme: window.theme
+                    motion: window.motion
+                    quiet: true
+                    glyph: "󰌌"
+                    glyphFont: "Symbols Nerd Font"
+                    glyphColor: window.theme.roleColor("workspace")
+                    title: "Shortcuts"
                 }
 
                 ShellAction {
@@ -214,12 +235,12 @@ Item {
                 }
             }
 
-            ShellSurface {
+            SearchFieldSurface {
                 id: searchBox
 
                 theme: window.theme
                 motion: window.motion
-                surfaceLayer: ShellSurface.Group
+                fieldFocused: search.activeFocus
 
                 height: 52
                 anchors {
@@ -228,10 +249,6 @@ Item {
                     left: parent.left
                     topMargin: theme.spacing3
                 }
-
-                outlined: search.activeFocus
-                borderColor: search.activeFocus ? theme.accent : theme.subtleBorder
-                cornerRadius: theme.radiusSmall
 
                 Text {
                     anchors {
@@ -256,7 +273,7 @@ Item {
                     }
                     verticalAlignment: TextInput.AlignVCenter
                     clip: true
-                    color: window.theme.text
+                    color: window.theme.textStrong
                     selectionColor: window.theme.accent
                     selectedTextColor: window.theme.background
                     font.family: window.runtime.fontMono
@@ -307,7 +324,7 @@ Item {
 
                             Text {
                                 text: shortcutSection.modelData.title
-                                color: window.theme.accent
+                                color: window.theme.readableRoleColor(window.sectionRole(shortcutSection.modelData.title))
                                 font.family: window.runtime.fontMono
                                 font.pixelSize: window.theme.fontSize(15)
                                 font.weight: Font.DemiBold
@@ -410,17 +427,44 @@ Item {
                 }
                 height: Math.max(navigationHint.implicitHeight, footerMeta.implicitHeight)
 
-                Text {
+                KeyHintStrip {
                     id: navigationHint
-                    anchors {
-                        left: parent.left
-                        verticalCenter: parent.verticalCenter
-                    }
-                    text: search.activeFocus ? "TYPE  FILTER   ESC/TAB  NAV   PGUP/PGDN  PAGE" : "J/K  SCROLL   U/D  HALF PAGE   /  SEARCH   ESC  CLOSE"
-                    color: window.theme.textMuted
-                    font.family: window.runtime.fontMono
-                    font.pixelSize: window.theme.fontSize(10)
-                    font.letterSpacing: 0.4
+                    width: Math.max(0, parent.width - footerMeta.implicitWidth - window.theme.spacing4)
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    runtime: window.runtime
+                    theme: window.theme
+                    hints: search.activeFocus ? [
+                        {
+                            shortcut: "TAB",
+                            label: "Navigate"
+                        },
+                        {
+                            shortcut: "PGUP/PGDN",
+                            label: "Page"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back"
+                        }
+                    ] : [
+                        {
+                            shortcut: "J/K",
+                            label: "Scroll"
+                        },
+                        {
+                            shortcut: "U/D",
+                            label: "Half page"
+                        },
+                        {
+                            shortcut: "/",
+                            label: "Search"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Close"
+                        }
+                    ]
                 }
 
                 Row {
