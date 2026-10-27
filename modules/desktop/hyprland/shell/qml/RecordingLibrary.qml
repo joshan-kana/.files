@@ -411,7 +411,7 @@ Item {
             visible: library.statusText.length > 0
             width: parent.width
             text: library.statusText
-            color: library.statusError ? library.theme.warning : library.theme.roleColor("capture")
+            color: library.deletePending.length > 0 ? library.theme.readableRoleColor("warning") : library.statusError ? library.theme.readableRoleColor("critical") : library.theme.readableRoleColor("capture")
             font.family: library.runtime.fontMono
             font.pixelSize: library.theme.fontSize(10)
             horizontalAlignment: Text.AlignHCenter

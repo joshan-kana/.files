@@ -461,7 +461,7 @@ Item {
                             width: 64
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.kind
-                            color: item.modelData.kind !== "TEXT" ? panel.theme.roleColor("capture") : panel.theme.roleColor("clipboard")
+                            color: panel.theme.readableRoleColor(item.modelData.kind !== "TEXT" ? "capture" : "clipboard")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
@@ -610,7 +610,7 @@ Item {
                         runtime: panel.runtime
                         theme: panel.theme
                         text: panel.copyFeedback.length > 0 ? panel.copyFeedback : "ENTER COPY · J/K NAVIGATE"
-                        color: panel.copyFeedback === "COPY FAILED" ? panel.theme.warning : panel.theme.textMuted
+                        color: panel.copyFeedback === "COPY FAILED" ? panel.theme.readableRoleColor("critical") : panel.theme.textMuted
                         font.pixelSize: panel.theme.fontSize(10)
                         elide: Text.ElideRight
                     }
@@ -631,7 +631,7 @@ Item {
                 anchors.centerIn: list
                 visible: panel.queryProcess.running
                 text: "Loading history…"
-                color: panel.theme.roleColor("clipboard")
+                color: panel.theme.readableRoleColor("clipboard")
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1
