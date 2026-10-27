@@ -54,6 +54,8 @@ QtObject {
             return accentUtility;
         case "weather":
             return accentWarm;
+        case "precipitation":
+            return accentTertiary;
         case "positive":
             return positive;
         case "warning":
