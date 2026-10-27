@@ -232,18 +232,18 @@ Item {
             theme: panel.theme
             motion: panel.motion
             glyph: "▧"
+            glyphColor: panel.theme.roleColor("wallpaper")
             eyebrow: "Appearance / wallpapers"
             title: "Wallpaper library"
             detail: panel.outputLabel + " · " + (panel.busy ? "Applying wallpaper…" : panel.resizeMode.toUpperCase() + " · Image / video")
         }
 
-        ShellSurface {
+        SearchFieldSurface {
             width: parent.width
             height: 39
             theme: panel.theme
             motion: panel.motion
-            surfaceLayer: ShellSurface.Control
-            cornerRadius: theme.radiusMedium
+            fieldFocused: searchField.activeFocus
 
             TextInput {
                 id: searchField
@@ -256,7 +256,7 @@ Item {
                 text: panel.searchText
                 onTextChanged: panel.searchText = text
                 color: panel.theme.textStrong
-                selectionColor: panel.theme.roleColor("wallpaper")
+                selectionColor: panel.theme.accent
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(12)
                 focus: false
