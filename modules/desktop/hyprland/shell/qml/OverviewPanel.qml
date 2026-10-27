@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Layouts
 import Quickshell.Hyprland
 
 Item {
@@ -20,6 +21,8 @@ Item {
     property int selectedIndex: 0
     property string selectedAddress: ""
     property bool moveMode: false
+    property bool showAllWorkspaces: true
+    property int browsedWorkspace: 1
     property bool movePending: false
     property int destinationWorkspace: 1
     property int pendingWorkspace: 0
@@ -33,14 +36,16 @@ Item {
     readonly property bool chosenFloating: !!(chosenWindow && (chosenWindow.lastIpcObject || {}).floating)
     readonly property bool chosenPinned: !!(chosenWindow && (chosenWindow.lastIpcObject || {}).pinned)
 
-    readonly property var windows: Hyprland.toplevels.values.filter(toplevel => {
+    readonly property var allWindows: Hyprland.toplevels.values.filter(toplevel => {
         if (!toplevel || !toplevel.workspace || toplevel.workspace.id <= 0)
             return false;
         // Some compositor helper surfaces are exposed as toplevels without an app identity.
         const info = toplevel.lastIpcObject || {};
         return Boolean(info.class || (toplevel.wayland && toplevel.wayland.appId));
     }).sort((left, right) => left.workspace.id - right.workspace.id || left.title.localeCompare(right.title))
+    readonly property var windows: showAllWorkspaces ? allWindows : allWindows.filter(toplevel => toplevel.workspace && toplevel.workspace.id === browsedWorkspace)
     readonly property int focusedWorkspace: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
+    readonly property string scopeLabel: showAllWorkspaces ? "All workspaces" : "Workspace " + browsedWorkspace
 
     visible: open || closing
     anchors.fill: parent
@@ -198,10 +203,11 @@ Item {
 
     function hoverDestination(item: var, x: real, y: real): int {
         const point = workspaceRow.mapFromItem(item, x, y);
-        if (point.x < 0 || point.x > workspaceRow.width || point.y < 0 || point.y > workspaceRow.height)
+        const tabsStart = allWorkspacesAction.width + workspaceRow.spacing;
+        if (point.x < tabsStart || point.x > workspaceRow.width || point.y < 0 || point.y > workspaceRow.height)
             return 0;
-        const section = workspaceRow.width / 10;
-        const index = Math.max(0, Math.min(9, Math.floor(point.x / Math.max(1, section))));
+        const section = (workspaceRow.width - tabsStart) / 10;
+        const index = Math.max(0, Math.min(9, Math.floor((point.x - tabsStart) / Math.max(1, section))));
         return index + 1;
     }
 
@@ -260,6 +266,8 @@ Item {
         closeTimer.stop();
         open = true;
         closing = false;
+        showAllWorkspaces = true;
+        browsedWorkspace = Math.max(1, Math.min(10, focusedWorkspace));
         chooseIndex(Math.max(0, windows.findIndex(toplevel => toplevel.activated)));
         cancelMove();
         Hyprland.refreshToplevels();
@@ -287,12 +295,27 @@ Item {
     function focusWorkspace(id: int): void {
         if (id < 1 || id > 10)
             return;
-        // Workspace browsing is internal to Overview; only explicit activation,
-        // Escape or the canonical global toggle dismisses the surface.
-        Hyprland.dispatch('hl.dsp.focus({ workspace = "' + id + '" })');
-        const next = windows.findIndex(toplevel => toplevel.workspace && toplevel.workspace.id === id);
-        if (next >= 0)
-            chooseIndex(next);
+        // Browse without switching the compositor workspace underneath this
+        // layer. Only activating a window or an empty workspace changes focus.
+        browsedWorkspace = id;
+        showAllWorkspaces = false;
+        chooseIndex(0);
+        keyboard.forceActiveFocus();
+    }
+    function browseAllWorkspaces(): void {
+        if (moveMode)
+            return;
+        showAllWorkspaces = true;
+        chooseIndex(Math.max(0, windows.findIndex(toplevel => toplevel.activated)));
+        keyboard.forceActiveFocus();
+    }
+    function activateSelection(): void {
+        if (chosenWindow) {
+            activateWindow(selectedIndex);
+        } else if (!showAllWorkspaces) {
+            hide();
+            Hyprland.dispatch('hl.dsp.focus({ workspace = "' + browsedWorkspace + '" })');
+        }
     }
     function activateWindow(index: int): void {
         const toplevel = windows[index];
@@ -329,12 +352,13 @@ Item {
     ShellSurface {
         id: card
         anchors.centerIn: parent
-        width: Math.min(overview.width - 100, 980)
-        height: Math.min(overview.height - 120, Math.max(398, 294 + Math.min(4, Math.ceil(overview.windows.length / (width < 720 ? 2 : 3))) * 204))
+        width: Math.min(overview.width - 64, 1460)
+        height: Math.min(overview.height - 64, overview.windows.length === 0 ? 500 : 330 + Math.min(3, Math.ceil(overview.windows.length / (overview.windows.length <= 4 ? 2 : 3))) * 350)
         theme: overview.theme
         motion: overview.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
+        clip: true
         scale: overview.open ? 1 : theme.panelClosedScale
         opacity: overview.open ? 1 : 0
 
@@ -352,117 +376,78 @@ Item {
             }
         }
 
-        Column {
+        ColumnLayout {
             anchors {
                 fill: parent
-                margins: overview.theme.spacing5
+                margins: overview.theme.spacing4
             }
-            spacing: overview.theme.spacing4
+            spacing: overview.theme.spacing3
 
-            Column {
-                width: parent.width
-                spacing: overview.theme.spacing2
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: overview.theme.spacing3
 
-                Text {
-                    text: "SPATIAL OVERVIEW"
-                    color: overview.theme.accent
-                    font.family: overview.runtime.fontMono
-                    font.pixelSize: overview.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                }
-                Text {
-                    text: overview.moveMode ? "Move window" : "Your workspaces"
-                    color: overview.theme.textStrong
-                    font.family: overview.runtime.fontMono
-                    font.pixelSize: overview.theme.fontPanelTitle
-                    font.weight: Font.DemiBold
-                }
-            }
-
-            Row {
-                width: parent.width
-                Text {
-                    text: overview.statusText.length > 0 ? overview.statusText : "Windows · Workspace " + overview.focusedWorkspace
-                    color: overview.theme.textStrong
-                    font.family: overview.runtime.fontMono
-                    font.pixelSize: overview.theme.fontSize(12)
-                    font.weight: Font.DemiBold
-                }
-                Item {
-                    width: Math.max(0, parent.width - parent.children[0].implicitWidth - shortcutHints.implicitWidth)
-                    height: 1
-                }
-                Row {
-                    id: shortcutHints
-                    spacing: overview.theme.spacing2
-                    Repeater {
-                        model: overview.moveMode ? [
-                            {
-                                shortcut: "H/L",
-                                label: "Target"
-                            },
-                            {
-                                shortcut: "1–0",
-                                label: "Choose"
-                            },
-                            {
-                                shortcut: "ENTER",
-                                label: "Move"
-                            },
-                            {
-                                shortcut: "ESC",
-                                label: "Cancel"
-                            }
-                        ] : [
-                            {
-                                shortcut: "H/J/K/L",
-                                label: "Navigate"
-                            },
-                            {
-                                shortcut: "M",
-                                label: "Move"
-                            },
-                            {
-                                shortcut: "F",
-                                label: "Float"
-                            },
-                            {
-                                shortcut: "P",
-                                label: "Pin"
-                            },
-                            {
-                                shortcut: "ENTER",
-                                label: "Focus"
-                            }
-                        ]
-                        delegate: KeyHint {
-                            required property var modelData
-                            shortcut: modelData.shortcut
-                            label: modelData.label
-                            runtime: overview.runtime
-                            theme: overview.theme
-                        }
+                Column {
+                    spacing: overview.theme.spacing1
+                    Text {
+                        text: "SPATIAL OVERVIEW"
+                        color: overview.theme.accent
+                        font.family: overview.runtime.fontMono
+                        font.pixelSize: overview.theme.fontPanelEyebrow
+                        font.weight: Font.DemiBold
                     }
+                    Text {
+                        text: overview.moveMode ? "Move window" : "Your workspaces"
+                        color: overview.theme.textStrong
+                        font.family: overview.runtime.fontMono
+                        font.pixelSize: overview.theme.fontPanelTitle
+                        font.weight: Font.DemiBold
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Text {
+                    text: overview.statusText.length > 0 ? overview.statusText : overview.scopeLabel.toUpperCase() + " · " + overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS")
+                    color: overview.theme.textMuted
+                    font.family: overview.runtime.fontMono
+                    font.pixelSize: overview.theme.fontSize(11)
                 }
             }
 
             Row {
                 id: workspaceRow
-                width: parent.width
+                Layout.fillWidth: true
                 spacing: overview.theme.spacing2
 
+                ShellAction {
+                    id: allWorkspacesAction
+                    width: 110
+                    height: 44
+                    runtime: overview.runtime
+                    theme: overview.theme
+                    motion: overview.motion
+                    compact: true
+                    title: "ALL"
+                    shortcut: "A"
+                    active: overview.showAllWorkspaces && !overview.moveMode
+                    enabled: !overview.moveMode && !overview.movePending
+                    onActivated: overview.browseAllWorkspaces()
+                }
                 Repeater {
                     model: 10
                     delegate: ShellAction {
                         required property int index
-                        width: (workspaceRow.width - workspaceRow.spacing * 9) / 10
-                        height: 45
+                        width: Math.max(1, (workspaceRow.width - 110 - workspaceRow.spacing * 10) / 10)
+                        height: 44
                         runtime: overview.runtime
                         theme: overview.theme
                         motion: overview.motion
                         compact: true
                         title: index === 9 ? "0" : String(index + 1)
-                        active: overview.moveMode ? overview.destinationWorkspace === index + 1 : overview.focusedWorkspace === index + 1
+                        active: overview.moveMode ? overview.destinationWorkspace === index + 1 : overview.showAllWorkspaces ? overview.focusedWorkspace === index + 1 : overview.browsedWorkspace === index + 1
                         enabled: !overview.movePending
                         onActivated: {
                             if (overview.moveMode)
@@ -474,22 +459,73 @@ Item {
                 }
             }
 
-            Text {
-                text: overview.movePending ? "PENDING · WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.windows.length + (overview.windows.length === 1 ? " WINDOW" : " WINDOWS") + "   ·   Workspace " + overview.focusedWorkspace
-                color: overview.theme.roleColor("connectivity")
-                font.family: overview.runtime.fontMono
-                font.pixelSize: overview.theme.fontSubpanelEyebrow
-                font.letterSpacing: 1
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: overview.theme.spacing3
+                Text {
+                    Layout.fillWidth: true
+                    text: overview.movePending ? "WAITING FOR COMPOSITOR" : overview.moveMode ? "MOVE TARGET · " + (overview.moveTarget ? overview.moveTarget.title : "WINDOW") : overview.showAllWorkspaces ? "ALL DESKTOP WINDOWS" : "WORKSPACE " + overview.browsedWorkspace
+                    color: overview.theme.accent
+                    font.family: overview.runtime.fontMono
+                    font.pixelSize: overview.theme.fontSubpanelEyebrow
+                    font.letterSpacing: 0.6
+                }
+                KeyHintStrip {
+                    Layout.preferredWidth: Math.min(650, Math.max(200, card.width * 0.56))
+                    runtime: overview.runtime
+                    theme: overview.theme
+                    hints: overview.moveMode ? [
+                        {
+                            shortcut: "1–0",
+                            label: "Destination"
+                        },
+                        {
+                            shortcut: "H/L",
+                            label: "Target"
+                        },
+                        {
+                            shortcut: "ENTER",
+                            label: "Move"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Cancel"
+                        }
+                    ] : [
+                        {
+                            shortcut: "1–0",
+                            label: "Workspace"
+                        },
+                        {
+                            shortcut: "H/J/K/L",
+                            label: "Navigate"
+                        },
+                        {
+                            shortcut: "M",
+                            label: "Move"
+                        },
+                        {
+                            shortcut: "ENTER",
+                            label: "Open"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Close"
+                        }
+                    ]
+                }
             }
 
             GridView {
                 id: windowsGrid
-                width: parent.width
-                height: Math.max(90, parent.height - 215)
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumHeight: 120
                 clip: true
                 model: overview.windows
-                cellWidth: Math.floor(width / (width < 720 ? 2 : 3))
-                cellHeight: 204
+                readonly property int columns: width < 850 ? 2 : Math.min(4, Math.max(2, Math.ceil(Math.sqrt(Math.max(1, overview.windows.length)))))
+                cellWidth: Math.max(1, Math.floor(width / columns))
+                cellHeight: Math.min(360, Math.max(205, Math.floor(cellWidth * 0.65)))
                 currentIndex: overview.selectedIndex
                 boundsBehavior: Flickable.StopAtBounds
                 displaced: Transition {
@@ -532,36 +568,37 @@ Item {
                             overview.executeMove(destination);
                     }
                 }
-                onCurrentIndexChanged: positionViewAtIndex(currentIndex, GridView.Contain)
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0 && count > 0)
+                        positionViewAtIndex(currentIndex, GridView.Contain);
+                }
 
                 Text {
                     anchors.centerIn: parent
                     visible: overview.windows.length === 0
-                    text: "No open application windows"
+                    text: overview.showAllWorkspaces ? "No open application windows" : "Workspace " + overview.browsedWorkspace + " is empty · ENTER to switch"
                     color: overview.theme.textMuted
                     font.family: overview.runtime.fontMono
                     font.pixelSize: overview.theme.fontSize(13)
                 }
             }
-            Row {
-                width: parent.width
-                spacing: overview.theme.spacing3
-                height: 39
 
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 43
+                spacing: overview.theme.spacing3
                 Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - 304)
-                    text: overview.chosenWindow ? (overview.chosenWindow.lastIpcObject.class || "WINDOW") + " · " + (overview.chosenFloating ? "FLOATING" : "TILED") + (overview.chosenPinned ? " · PINNED" : "") : "NO WINDOW SELECTED"
+                    Layout.fillWidth: true
+                    text: overview.chosenWindow ? (overview.chosenWindow.lastIpcObject.class || "WINDOW") + " · WS " + overview.chosenWindow.workspace.id + " · " + (overview.chosenFloating ? "FLOATING" : "TILED") + (overview.chosenPinned ? " · PINNED" : "") : overview.scopeLabel
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     color: overview.theme.textMuted
                     font.family: overview.runtime.fontMono
-                    font.pixelSize: overview.theme.fontSize(10)
+                    font.pixelSize: overview.theme.fontSize(11)
                 }
-
                 ShellAction {
-                    width: 137
-                    height: 36
+                    width: 126
+                    height: 40
                     runtime: overview.runtime
                     theme: overview.theme
                     motion: overview.motion
@@ -575,8 +612,8 @@ Item {
                     onActivated: overview.toggleWindowState("float")
                 }
                 ShellAction {
-                    width: 137
-                    height: 36
+                    width: 126
+                    height: 40
                     runtime: overview.runtime
                     theme: overview.theme
                     motion: overview.motion
@@ -613,7 +650,7 @@ Item {
                 if (overview.moveMode)
                     overview.executeMove(overview.destinationWorkspace);
                 else
-                    overview.activateWindow(overview.selectedIndex);
+                    overview.activateSelection();
             } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = event.key - Qt.Key_0;
@@ -624,6 +661,8 @@ Item {
                     overview.destinationWorkspace = 10;
                 else
                     overview.focusWorkspace(10);
+            } else if (event.key === Qt.Key_A && !overview.moveMode) {
+                overview.browseAllWorkspaces();
             } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 1);
@@ -638,12 +677,12 @@ Item {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.min(10, overview.destinationWorkspace + 3);
                 else
-                    overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + 3)));
+                    overview.chooseIndex(Math.max(0, Math.min(overview.windows.length - 1, overview.selectedIndex + windowsGrid.columns)));
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
                 if (overview.moveMode)
                     overview.destinationWorkspace = Math.max(1, overview.destinationWorkspace - 3);
                 else
-                    overview.chooseIndex(Math.max(0, overview.selectedIndex - 3));
+                    overview.chooseIndex(Math.max(0, overview.selectedIndex - windowsGrid.columns));
             } else {
                 return;
             }
