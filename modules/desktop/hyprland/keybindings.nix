@@ -345,13 +345,13 @@ in
   (mk {
     keys = "B";
     action = dispatcher ''hl.dsp.window.move({ monitor = "+1", follow = false })'';
-    section = "DISPLAYS";
+    section = "DISPLAY";
     description = "Move window to next display";
   })
   (mk {
     keys = "V";
     action = dispatcher ''hl.dsp.focus({ monitor = "+1" })'';
-    section = "DISPLAYS";
+    section = "DISPLAY";
     description = "Focus next display";
   })
   (mk {
