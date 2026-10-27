@@ -430,22 +430,22 @@ in
           if [ "$action" = thumbnail ]; then
             image="$output"
             [ -f "$image" ] && [[ "$image" = /* ]] || exit 2
-            case "''${image,,}" in
-              *.gif|*.mp4|*.webm|*.mkv|*.mov)
-                cache="''${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
-                mkdir -p "$cache"
-                key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
-                thumb="$cache/$key.png"
-                if [ ! -s "$thumb" ]; then
-                  tmp="$(mktemp "$cache/.thumb.XXXXXXXX.png")"
-                  trap 'rm -f "$tmp"' EXIT
-                  ffmpeg -nostdin -v error -i "$image" -frames:v 1 -vf 'scale=380:250:force_original_aspect_ratio=decrease' -update 1 -y "$tmp"
-                  mv -f "$tmp" "$thumb"
-                fi
-                printf '%s\n' "$thumb"
-                ;;
-              *) printf '%s\n' "$image" ;;
-            esac
+            # Grid cards share the video poster cache. Even stills can be
+            # multi-megabyte 4K images; decode once instead of keeping full
+            # resolution textures alive for every visible thumbnail.
+            cache="''${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
+            mkdir -p "$cache"
+            key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
+            thumb="$cache/$key.png"
+            exec 8>"$cache/$key.lock"
+            flock 8
+            if [ ! -s "$thumb" ]; then
+              tmp="$(mktemp "$cache/.thumb.XXXXXXXX.png")"
+              trap 'rm -f "$tmp"' EXIT
+              ffmpeg -nostdin -v error -i "$image" -frames:v 1 -vf 'scale=380:250:force_original_aspect_ratio=decrease' -update 1 -y "$tmp"
+              mv -f "$tmp" "$thumb"
+            fi
+            printf '%s\n' "$thumb"
             exit 0
           fi
 
