@@ -30,6 +30,8 @@ QtObject {
     readonly property string description: conditionFor(weatherCode)
 
     function symbolFor(code: int, daylight: bool): string {
+        if (code < 0)
+            return "󰖐";
         if (code === 0)
             return daylight ? "󰖙" : "󰖔";
         if (code <= 2)
@@ -50,6 +52,8 @@ QtObject {
     }
 
     function conditionFor(code: int): string {
+        if (code < 0)
+            return "Weather unavailable";
         if (code === 0)
             return "Clear sky";
         if (code <= 2)
