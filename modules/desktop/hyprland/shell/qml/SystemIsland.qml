@@ -69,7 +69,7 @@ Item {
                 motion: island.motion
                 compact: true
                 value: island.system.volume
-                accentColor: island.system.muted ? island.theme.warning : island.theme.roleColor("media")
+                accentColor: island.system.muted ? island.theme.warning : island.theme.roleColor("audio")
                 compactIconSize: 20
                 compactIcon: island.system.muted ? "󰖁" : island.system.volumePercent < 35 ? "󰕿" : "󰕾"
             }
@@ -117,7 +117,7 @@ Item {
                 motion: island.motion
                 compact: true
                 value: island.system.batteryPercent / 100
-                accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.accent
+                accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.roleColor("power")
                 compactIconSize: 18
                 compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
             }

@@ -784,6 +784,7 @@ ShellRoot {
         expansionState: expansionState
         themePanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.themeOpen
         sessionPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.sessionOpen
+        resourcesPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.resourcesOpen
         cheatsheet: cheatsheet
         launcher: launcher
         clipboardPanel: clipboardPanel

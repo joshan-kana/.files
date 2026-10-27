@@ -24,6 +24,7 @@ Item {
     readonly property var entries: [
         {
             id: "lock",
+            accentRole: "connectivity",
             label: "Lock",
             icon: "󰌾",
             description: "Secure the current Wayland session",
@@ -31,6 +32,7 @@ Item {
         },
         {
             id: "suspend",
+            accentRole: "media",
             label: "Suspend",
             icon: "󰤄",
             description: "Suspend the machine until resumed",
@@ -38,6 +40,7 @@ Item {
         },
         {
             id: "logout",
+            accentRole: "capture",
             label: "Log out",
             icon: "󰍃",
             description: "Exit the current Hyprland session",
@@ -45,6 +48,7 @@ Item {
         },
         {
             id: "reboot",
+            accentRole: "resources",
             label: "Reboot",
             icon: "󰜉",
             description: "Restart the machine",
@@ -52,6 +56,7 @@ Item {
         },
         {
             id: "poweroff",
+            accentRole: "attention",
             label: "Power off",
             icon: "󰐥",
             description: "Shut the machine down",
@@ -192,7 +197,7 @@ Item {
         theme: panel.theme
         motion: panel.motion
         glyph: panel.armedAction.length > 0 ? "!" : "⏻"
-        glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.accent
+        glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.roleColor("resources")
         eyebrow: "Device / secure session"
         title: "Power & session"
         detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
@@ -228,6 +233,7 @@ Item {
                         motion: panel.motion
                         icon: modelData.icon
                         label: modelData.label
+                        accentColor: panel.theme.roleColor(modelData.accentRole)
                         selected: panel.selectedIndex === actionIndex
                         armed: panel.armedAction === modelData.id
 
