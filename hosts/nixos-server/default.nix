@@ -181,9 +181,6 @@
             hostDns = "${
               lib.concatStringsSep ";" ([ server.lan.dns.serviceIp ] ++ server.lan.dns.fallbackServers)
             };";
-            adguardFallbackDns = lib.filter (
-              dnsServer: dnsServer != server.lan.gateway
-            ) server.lan.dns.fallbackServers;
 
             adguard = {
               user = "adguardhome";
@@ -268,8 +265,10 @@
                   ];
                   inherit (adguard) port;
                   upstream_dns = [ technitium.localBackend ];
-                  # Preserve internet DNS when the local backend is unavailable.
-                  fallback_dns = adguardFallbackDns;
+                  # Public fallback resolvers cannot answer private records and may
+                  # return cacheable NXDOMAIN during backend outages. Without a
+                  # fallback, uncached queries fail until Technitium recovers.
+                  fallback_dns = [ ];
                 };
               };
             };
@@ -279,6 +278,18 @@
             services.technitium-dns-server = {
               enable = true;
               openFirewall = false;
+              roamingDns = {
+                enable = true;
+                lanSubnet = server.lan.subnet;
+                remoteDnsSource = server.lan.serverIp;
+                devices = [
+                  {
+                    name = "mac.home";
+                    fallbackHost = "joshans-macbook-pro.tailba46a0.ts.net";
+                    port = 22;
+                  }
+                ];
+              };
             };
 
             systemd.services = {
