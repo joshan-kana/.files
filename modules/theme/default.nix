@@ -10,7 +10,7 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
   syntaxTheme =
     { config, pkgs }:
     let
@@ -372,6 +372,56 @@ in
               "window.titleBarStyle" = "custom";
               "window.controlsStyle" = "hidden";
             };
+          };
+      };
+      zen = {
+        home =
+          {
+            config,
+            lib,
+            pkgs,
+            ...
+          }:
+          lib.optionalAttrs isDarwin {
+            home.activation.zenBrowserFonts = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+              profiles_dir=${lib.escapeShellArg "${config.home.homeDirectory}/Library/Application Support/Zen/Profiles"}
+              if [ -d "$profiles_dir" ]; then
+                for profile in "$profiles_dir"/*; do
+                  [ -f "$profile/prefs.js" ] || continue
+                  user_js="$profile/user.js"
+                  if [ -L "$user_js" ] || { [ -e "$user_js" ] && [ ! -f "$user_js" ]; }; then
+                    echo "zen-browser: skipping non-regular user.js in $profile"
+                    continue
+                  fi
+
+                  tmp=$(${lib.getExe' pkgs.coreutils "mktemp"} "$profile/.user.js.XXXXXXXX")
+                  if [ -f "$user_js" ]; then
+                    if ! ${lib.getExe' pkgs.gawk "awk"} '
+                      $0 == "// BEGIN Stylix font preferences" { inside = 1; next }
+                      $0 == "// END Stylix font preferences" { inside = 0; next }
+                      !inside { print }
+                      END { if (inside) exit 1 }
+                    ' "$user_js" > "$tmp"; then
+                      echo "zen-browser: malformed managed font block in $user_js" >&2
+                      ${lib.getExe' pkgs.coreutils "rm"} "$tmp"
+                      continue
+                    fi
+                  fi
+                  cat >> "$tmp" <<'EOF'
+              // BEGIN Stylix font preferences
+              user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
+              user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
+              user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
+              // END Stylix font preferences
+              EOF
+                  if [ ! -f "$user_js" ] || ! ${lib.getExe' pkgs.diffutils "cmp"} -s "$user_js" "$tmp"; then
+                    ${lib.getExe' pkgs.coreutils "mv"} "$tmp" "$user_js"
+                  else
+                    ${lib.getExe' pkgs.coreutils "rm"} "$tmp"
+                  fi
+                done
+              fi
+            '';
           };
       };
       firefox = {
