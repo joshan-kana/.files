@@ -160,9 +160,12 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
     def test_remote_agent_forwarding_is_explicit(self):
         self.argv.stop()
         try:
-            with patch.dict(shell.REMOTE_TARGETS, {
-                "remote": shell.RemoteTarget("joshan@example", "key", "/bin/bash", True),
-            }):
+            with patch.dict(
+                shell.REMOTE_TARGETS,
+                {
+                    "remote": shell.RemoteTarget("joshan@example", "key", "/bin/bash", True),
+                },
+            ):
                 argv = shell._build_argv("remote", "id -u")
         finally:
             self.argv.start()

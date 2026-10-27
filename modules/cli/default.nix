@@ -116,11 +116,7 @@ let
 in
 {
   home = _: {
-    home.sessionVariables =
-      sessionVariables
-      // lib.optionalAttrs isLinux {
-        NH_ELEVATION_STRATEGY = "${pkgs.systemd}/bin/run0";
-      };
+    home.sessionVariables = sessionVariables;
   };
 
   systemCommands =
@@ -150,6 +146,9 @@ in
     {
       home = _: {
         home.packages = [ editConfig ];
+        home.sessionVariables = lib.optionalAttrs isLinux {
+          NH_ELEVATION_STRATEGY = "${pkgs.systemd}/bin/run0";
+        };
         home.shellAliases = {
           syscd = commands.cd;
           scd = commands.cd;
@@ -164,6 +163,7 @@ in
           sysedit = "edit-config";
         }
         // lib.optionalAttrs isLinux {
+          run0 = "run0 ";
           sysboot = commands.rebuild "boot";
           sboot = commands.rebuild "boot";
           systest = commands.rebuild "test";
