@@ -774,7 +774,7 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    icon: "󰅶"
+                    icon: root.system.idleInhibited ? "󰅶" : "󰒲"
                     title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
                     shortcut: "I"
                     active: root.system.idleInhibited
@@ -801,7 +801,7 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    icon: root.system.batteryAvailable ? (root.system.batteryPercent <= 20 ? "󰁺" : "󰁹") : "󰐥"
+                    icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
                     title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying

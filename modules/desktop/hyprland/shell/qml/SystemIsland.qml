@@ -119,7 +119,7 @@ Item {
                 value: island.system.batteryPercent / 100
                 accentColor: island.powerProfile.current === "power-saver" || island.system.batteryPercent <= 20 ? island.theme.warning : island.theme.roleColor("power")
                 compactIconSize: 18
-                compactIcon: island.system.batteryPercent <= 20 ? "󰁺" : island.system.batteryPercent < 65 ? "󰁾" : "󰁹"
+                compactIcon: island.system.batteryLevelIcon
             }
             Text {
                 visible: !island.compact
