@@ -15,57 +15,98 @@ ShellSurface {
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: selected ? theme.blend(theme.layer2, theme.roleColor("workspace"), theme.dark ? 0.075 : 0.045) : theme.layer2
-    borderColor: selected ? Qt.rgba(theme.roleColor("workspace").r, theme.roleColor("workspace").g, theme.roleColor("workspace").b, 0.72) : theme.subtleBorder
+    fillColor: selected ? theme.blend(theme.layer2, theme.accent, theme.dark ? 0.075 : 0.045) : theme.layer2
+    borderColor: selected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.72) : theme.subtleBorder
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
-    Column {
+    Item {
+        id: preview
         anchors {
             fill: parent
-            margins: tile.theme.spacing3
+            margins: tile.theme.spacing2
         }
-        spacing: tile.theme.spacing2
+        clip: true
 
-        Row {
-            width: parent.width
-            spacing: tile.theme.spacing2
-            Image {
-                width: 22
-                height: 22
-                source: Quickshell.iconPath(tile.toplevel && tile.toplevel.lastIpcObject ? tile.toplevel.lastIpcObject.class || "" : "", "application-x-executable")
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-            }
-            MarqueeText {
-                width: Math.max(1, parent.width - 30)
-                text: tile.toplevel ? (tile.toplevel.title || tile.toplevel.lastIpcObject.class || "Window") : "Window"
-                textFormat: Text.PlainText
-                font.family: tile.runtime.fontMono
-                font.pixelSize: tile.theme.fontSize(11)
-                color: tile.theme.textStrong
-            }
+        // Keep native compositor screencopy as the window preview source.
+        // Only exposed tiles request frames; no screenshot cache or daemon.
+        ScreencopyView {
+            anchors.fill: parent
+            captureSource: tile.active && tile.toplevel && tile.toplevel.wayland ? tile.toplevel.wayland : null
+            constraintSize: Qt.size(Math.max(1, width), Math.max(1, height))
+            live: tile.active
+            paintCursor: false
         }
 
-        Item {
-            width: parent.width
-            height: Math.max(1, parent.height - 30)
-            clip: true
+        Text {
+            anchors.centerIn: parent
+            visible: !tile.toplevel || !tile.toplevel.wayland
+            text: "PREVIEW UNAVAILABLE"
+            color: tile.theme.textMuted
+            font.family: tile.runtime.fontMono
+            font.pixelSize: tile.theme.fontSize(10)
+        }
 
-            ScreencopyView {
-                anchors.fill: parent
-                captureSource: tile.active && tile.toplevel && tile.toplevel.wayland ? tile.toplevel.wayland : null
-                constraintSize: Qt.size(Math.max(1, width), Math.max(1, height))
-                live: tile.active
-                paintCursor: false
+        ShellSurface {
+            anchors {
+                right: parent.right
+                top: parent.top
+                margins: tile.theme.spacing2
             }
-
+            width: 52
+            height: 30
+            theme: tile.theme
+            motion: tile.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: theme.radiusSmall
+            fillColor: theme.paneBase
+            visible: !!tile.toplevel && !!tile.toplevel.workspace
             Text {
                 anchors.centerIn: parent
-                visible: !tile.toplevel || !tile.toplevel.wayland
-                text: "PREVIEW UNAVAILABLE"
-                color: tile.theme.textMuted
+                text: "WS " + (tile.toplevel && tile.toplevel.workspace ? tile.toplevel.workspace.id : "")
+                color: tile.theme.textStrong
                 font.family: tile.runtime.fontMono
                 font.pixelSize: tile.theme.fontSize(10)
+                font.weight: Font.DemiBold
+            }
+        }
+
+        ShellSurface {
+            anchors {
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+            }
+            height: 42
+            theme: tile.theme
+            motion: tile.motion
+            surfaceLayer: ShellSurface.Group
+            cornerRadius: theme.radiusSmall
+            fillColor: theme.paneBase
+
+            Row {
+                anchors {
+                    fill: parent
+                    leftMargin: tile.theme.spacing3
+                    rightMargin: tile.theme.spacing3
+                }
+                spacing: tile.theme.spacing2
+                Image {
+                    width: 24
+                    height: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: Quickshell.iconPath(tile.toplevel && tile.toplevel.lastIpcObject ? tile.toplevel.lastIpcObject.class || "" : "", "application-x-executable")
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                }
+                MarqueeText {
+                    width: Math.max(1, parent.width - 24 - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: tile.toplevel ? (tile.toplevel.title || tile.toplevel.lastIpcObject.class || "Window") : "Window"
+                    textFormat: Text.PlainText
+                    font.family: tile.runtime.fontMono
+                    font.pixelSize: tile.theme.fontSize(12)
+                    color: tile.theme.textStrong
+                }
             }
         }
     }
