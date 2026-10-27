@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  lib,
+  pkgs,
+  system,
+  ...
+}:
 
 let
   verify = pkgs.writeScriptBin "run0-ssh-agent-verify" ''
@@ -77,7 +82,7 @@ let
     printf '%s\n' "$1" | ${pkgs.socat}/bin/socat - UNIX-CONNECT:/run/run0-ssh-agent-auth.sock
   '';
 in
-{
+lib.optionalAttrs (lib.systems.elaborate system).isLinux {
   security.polkit.extraConfig = ''
     polkit.addRule(function(action, subject) {
       if (action.id !== "org.freedesktop.systemd1.manage-units" ||
