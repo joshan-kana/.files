@@ -4,17 +4,19 @@ let
   verify = pkgs.writeScriptBin "run0-ssh-agent-verify" ''
     #!${pkgs.python3}/bin/python3
     import os
+    import pwd
     import stat
     import subprocess
     import sys
 
     def authorised():
         try:
-            request = sys.stdin.buffer.readline(128).decode("ascii").strip().split()
-            if len(request) != 2:
+            request = sys.stdin.buffer.readline(32).decode("ascii").strip()
+            if not request.isdecimal():
                 return False
-            pid, uid = map(int, request)
-            if pid <= 1 or uid <= 0:
+            pid = int(request)
+            uid = pwd.getpwnam("joshan").pw_uid
+            if pid <= 1:
                 return False
 
             # Keep /proc bound to the original process across PID reuse.
@@ -53,10 +55,10 @@ let
     print("ALLOW" if authorised() else "DENY", flush=True)
   '';
   request = pkgs.writeShellScriptBin "run0-ssh-agent-request" ''
-    if [[ ! "$1" =~ ^[0-9]+$ || ! "$2" =~ ^[0-9]+$ ]]; then
+    if [[ ! "$1" =~ ^[0-9]+$ ]]; then
       exit 1
     fi
-    printf '%s %s\n' "$1" "$2" | ${pkgs.socat}/bin/socat - UNIX-CONNECT:/run/run0-ssh-agent-auth.sock
+    printf '%s\n' "$1" | ${pkgs.socat}/bin/socat - UNIX-CONNECT:/run/run0-ssh-agent-auth.sock
   '';
 in
 {
@@ -65,12 +67,12 @@ in
       if (action.id !== "org.freedesktop.systemd1.manage-units" ||
           subject.user !== "joshan" || !subject.isInGroup("wheel"))
         return;
-      var unit = action.lookup("unit");
-      var verb = action.lookup("verb");
-      if (verb !== "start" || typeof unit !== "string" || unit.indexOf("run-") !== 0 || unit.slice(-8) !== ".service")
+      // StartTransientUnit does not consistently provide unit/verb details.
+      // SSH signature verification is required for every matched operation.
+      if (typeof subject.pid !== "number" || subject.pid <= 1)
         return;
       try {
-        if (polkit.spawn(["${request}/bin/run0-ssh-agent-request", String(subject.pid), String(subject.uid)]).trim() === "ALLOW")
+        if (polkit.spawn(["${request}/bin/run0-ssh-agent-request", String(subject.pid)]).trim() === "ALLOW")
           return polkit.Result.YES;
       } catch (e) {
         polkit.log("run0 SSH-agent verification unavailable: " + e);
@@ -97,7 +99,8 @@ in
       NoNewPrivileges = true;
       ProtectSystem = "strict";
       ProtectHome = "read-only";
-      PrivateTmp = true;
+      # SSH forwarding may put its socket below /tmp.
+      PrivateTmp = false;
       RestrictAddressFamilies = "AF_UNIX";
     };
   };
