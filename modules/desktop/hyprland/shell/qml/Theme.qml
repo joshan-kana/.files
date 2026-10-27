@@ -43,8 +43,9 @@ QtObject {
         case "audio":
             return accentUtility;
         case "resources":
-        case "power":
             return accentEnergy;
+        case "power":
+            return accent;
         case "notifications":
         case "calendar":
         case "wallpaper":
@@ -62,6 +63,14 @@ QtObject {
         default:
             return accent;
         }
+    }
+
+    function audioLevelColor(muted: bool): color {
+        return muted ? warning : roleColor("audio");
+    }
+
+    function powerProfileColor(profile: string): color {
+        return profile === "power-saver" ? warning : roleColor("power");
     }
 
     // Shared spectrum colour ramp, expressed only in Stylix Base16 tokens.
