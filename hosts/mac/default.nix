@@ -6,17 +6,11 @@
 }:
 
 {
-  inherit (moduleRegistry) networking backups;
-
-  theme = editScope moduleRegistry.theme {
-    home = { config, ... }: {
-      home.file."Library/Application Support/Zen/Profiles/cffu5zel.Default (release)-1/user.js".text = ''
-        user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
-        user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
-        user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
-      '';
-    };
-  };
+  inherit (moduleRegistry)
+    theme
+    networking
+    backups
+    ;
 
   dotfiles.users.primary.homeRoot = "/Users";
 
