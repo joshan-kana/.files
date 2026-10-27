@@ -184,7 +184,7 @@ FocusScope {
 
                 Text {
                     text: content.media.available ? "Now playing" : "Media"
-                    color: content.theme.roleColor("media")
+                    color: content.theme.readableRoleColor("media")
                     font.family: content.runtime.fontMono
                     font.pixelSize: content.theme.fontSize(12)
                     font.weight: Font.Medium

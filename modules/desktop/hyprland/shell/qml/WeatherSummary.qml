@@ -40,7 +40,7 @@ ShellSurface {
         Text {
             width: parent.width
             text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
-            color: summary.theme.roleColor("weather")
+            color: summary.theme.readableRoleColor("weather")
             opacity: 0.89
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontPanelEyebrow

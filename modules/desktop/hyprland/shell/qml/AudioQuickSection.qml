@@ -69,7 +69,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: 82
             text: (quick.selectedAudioIndex === quick.baseIndex ? "▸ " : "") + (quick.microphone ? "Input" : "Output")
-            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.accent : quick.theme.textStrong
+            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.audioLevelColor(quick.muted) : quick.theme.textStrong
             font.family: quick.runtime.fontMono
             font.pixelSize: quick.theme.fontSize(12)
             font.weight: Font.DemiBold
@@ -186,7 +186,7 @@ Column {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: (quick.selectedAudioIndex === quick.baseIndex ? "▸ " : "") + (quick.microphone ? "Input" : "Output") + "  " + (quick.muted ? "MUTED" : quick.percent + "%")
-            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.accent : quick.theme.textStrong
+            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.audioLevelColor(quick.muted) : quick.theme.textStrong
             font.family: quick.runtime.fontMono
             font.pixelSize: quick.theme.fontSize(11)
             font.weight: Font.DemiBold
@@ -366,7 +366,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: (quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "▸ " : "") + (streamRow.stream ? quick.system.streamDisplayName(streamRow.stream) : "")
                 elide: Text.ElideRight
-                color: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? quick.theme.accent : quick.theme.textMuted
+                color: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? quick.theme.audioLevelColor(!!streamRow.stream?.audio?.muted) : quick.theme.textMuted
                 font.family: quick.runtime.fontMono
                 font.pixelSize: quick.theme.fontSize(9)
                 MouseArea {

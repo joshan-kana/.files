@@ -342,7 +342,7 @@ Item {
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: coreTile.hasSample ? Math.round(coreTile.usage * 100) + "%" : "··"
-                                    color: coreTile.usage >= 0.8 ? panel.theme.warning : panel.theme.textStrong
+                                    color: coreTile.usage >= 0.8 ? panel.theme.readableRoleColor("warning") : panel.theme.textStrong
                                     font.family: panel.runtime.fontMono
                                     font.pixelSize: panel.theme.fontSize(coreGrid.rowCount <= 2 ? 10 : 9)
                                     font.weight: Font.DemiBold

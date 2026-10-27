@@ -603,7 +603,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
                         text: networkRow.modelData.stateChanging ? ConnectionState.toString(networkRow.modelData.state).toUpperCase() : (networkRow.modelData.connected ? "ENTER // DROP" : "ENTER // JOIN")
-                        color: networkRow.modelData.stateChanging ? panel.theme.warning : panel.theme.accent
+                        color: networkRow.modelData.stateChanging ? panel.theme.warning : panel.theme.readableRoleColor("connectivity")
                         font.family: panel.runtime.fontMono
                         font.pixelSize: panel.theme.fontSize(8)
                         font.weight: Font.DemiBold
@@ -680,7 +680,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 76
                         text: profileRow.modelData.label
-                        color: profileRow.modelData.connected ? panel.theme.positive : panel.theme.accent
+                        color: profileRow.modelData.connected ? panel.theme.positive : panel.theme.readableRoleColor("connectivity")
                         font.family: panel.runtime.fontMono
                         font.pixelSize: panel.theme.fontSize(9)
                         font.weight: Font.DemiBold
@@ -774,7 +774,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: panel.detailPending ? "READING NETWORKMANAGER…" : panel.detailError ? "CONNECTION DETAILS UNAVAILABLE" : "NO ACTIVE INTERFACE"
-                color: panel.detailError ? panel.theme.warning : panel.theme.textMuted
+                color: panel.detailError ? panel.theme.readableRoleColor("critical") : panel.theme.textMuted
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(10)
             }
@@ -961,7 +961,7 @@ Item {
             visible: panel.statusText.length > 0
             text: panel.statusText
             horizontalAlignment: Text.AlignHCenter
-            color: panel.statusError ? panel.theme.critical : panel.theme.accent
+            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "connectivity")
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold

@@ -64,7 +64,7 @@ FocusScope {
 
                 Text {
                     text: "WEATHER / " + (panel.weather.city || "YOUR LOCATION").toUpperCase()
-                    color: panel.theme.roleColor("weather")
+                    color: panel.theme.readableRoleColor("weather")
                     font.family: panel.runtime.fontMono
                     font.pixelSize: panel.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold

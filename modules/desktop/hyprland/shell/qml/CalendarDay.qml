@@ -24,7 +24,7 @@ ShellSurface {
     Text {
         anchors.centerIn: parent
         text: cell.header ? cell.heading : String(cell.day)
-        color: cell.dayState === 1 ? cell.theme.background : (cell.picked ? cell.theme.roleColor("calendar") : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
+        color: cell.dayState === 1 ? cell.theme.background : (cell.picked ? cell.theme.readableRoleColor("calendar") : (cell.dayState === -1 ? cell.theme.textMuted : cell.theme.textStrong))
         opacity: cell.dayState === -1 ? 0.48 : 1
         font.family: cell.theme.runtime.fontMono
         font.pixelSize: cell.theme.fontSize(cell.header ? 10 : cell.width < 36 ? 11 : 14)
