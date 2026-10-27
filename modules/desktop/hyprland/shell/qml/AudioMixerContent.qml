@@ -51,6 +51,7 @@ FocusScope {
         theme: mixer.theme
         motion: mixer.motion
         glyph: "♫"
+        glyphColor: mixer.theme.roleColor("audio")
         eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active source" : " active sources")
         title: "Application mixer"
         detail: "Live per-channel signal, volume and mute"
