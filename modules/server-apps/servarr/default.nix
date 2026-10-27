@@ -31,7 +31,7 @@ in
 
     systemd = {
       tmpfiles.rules = [
-        "d ${streamystatsStateDir} 0700 root root - -"
+        "d ${streamystatsStateDir} 0700 999 999 - -"
       ];
 
       services = {
