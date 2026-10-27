@@ -116,13 +116,13 @@ QtObject {
                 property string warning: "#ffd24a"
                 property string positive: "#3de5f0"
                 property string accent: "#33a8ff"
-                property string accentSecondary: "#c792ea"
-                property string accentTertiary: "#3de5f0"
-                property string accentWarm: "#ffb454"
-                property string accentWorkspace: "#ff7a5c"
-                property string accentUtility: "#de9b8a"
+                property string accentSecondary: "#c79cff"
+                property string accentTertiary: "#bde6ff"
+                property string accentWarm: "#ff3366"
+                property string accentWorkspace: "#33a8ff"
+                property string accentUtility: "#c9664a"
                 property string accentEnergy: "#ffd24a"
-                property string accentNature: "#3ecf93"
+                property string accentNature: "#3de5f0"
             }
 
             property JsonObject fonts: JsonObject {
