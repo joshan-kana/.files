@@ -64,6 +64,15 @@ QtObject {
         }
     }
 
+    // Shared spectrum colour ramp, expressed only in Stylix Base16 tokens.
+    // Bass is warm, mids move through green, and treble ends in violet.
+    function spectrumColor(position: real): color {
+        const stops = [accentWarm, accentEnergy, accentNature, accentTertiary, accentSecondary];
+        const scaled = Math.max(0, Math.min(1, position)) * (stops.length - 1);
+        const index = Math.min(stops.length - 2, Math.floor(scaled));
+        return blend(stops[index], stops[index + 1], scaled - index);
+    }
+
     // Single event-driven signal for every shell surface that opts into the
     // music-reactive treatment. Theme remains the only visual style owner.
     property bool musicReactiveEnabled: false

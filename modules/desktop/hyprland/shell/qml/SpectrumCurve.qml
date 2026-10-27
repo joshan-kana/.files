@@ -8,6 +8,7 @@ Item {
     required property SpectrumState spectrum
     required property Theme theme
     required property SpectrumScale frequencyScale
+    readonly property color curveColor: theme.spectrumColor(0.68)
 
     readonly property var geometry: {
         const values = spectrum.bands || [];
@@ -58,11 +59,11 @@ Item {
                 y2: root.height
                 GradientStop {
                     position: 0
-                    color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.28)
+                    color: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.28)
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.02)
+                    color: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.02)
                 }
             }
             PathSvg {
@@ -71,7 +72,7 @@ Item {
         }
         ShapePath {
             fillColor: "transparent"
-            strokeColor: Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.92)
+            strokeColor: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.92)
             strokeWidth: 2.2
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
