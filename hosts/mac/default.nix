@@ -8,12 +8,9 @@
 {
   inherit (moduleRegistry)
     theme
+    networking
     backups
     ;
-
-  networking = extendScope moduleRegistry.networking {
-    tailscaleHomeDns = import ../../modules/networking/tailscale-home-dns;
-  };
 
   dotfiles.users.primary.homeRoot = "/Users";
 
