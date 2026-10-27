@@ -580,6 +580,13 @@ in
     description = "Theme picker";
   })
   (mk {
+    keys = "SHIFT + Y";
+    id = "colour.pick";
+    action = global "linux-desktop:colour-pick";
+    section = "UTILITIES";
+    description = "Pick colour to clipboard";
+  })
+  (mk {
     keys = "SHIFT + M";
     id = "animations.toggle";
     action = global "linux-desktop:animations";
