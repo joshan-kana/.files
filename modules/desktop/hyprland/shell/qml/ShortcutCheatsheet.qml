@@ -214,6 +214,7 @@ Item {
                     glyphFont: "Symbols Nerd Font"
                     glyphColor: window.theme.roleColor("workspace")
                     title: "Shortcuts"
+                    detail: window.filteredBindingCount + " of " + window.runtime.keybindings.length + " bindings"
                 }
 
                 ShellAction {
@@ -425,11 +426,11 @@ Item {
                     bottom: parent.bottom
                     left: parent.left
                 }
-                height: Math.max(navigationHint.implicitHeight, footerMeta.implicitHeight)
+                height: navigationHint.implicitHeight
 
                 KeyHintStrip {
                     id: navigationHint
-                    width: Math.max(0, parent.width - footerMeta.implicitWidth - window.theme.spacing4)
+                    width: parent.width
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     runtime: window.runtime
@@ -465,22 +466,6 @@ Item {
                             label: "Close"
                         }
                     ]
-                }
-
-                Row {
-                    id: footerMeta
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                    }
-                    spacing: window.theme.spacing3
-
-                    Text {
-                        text: window.filteredBindingCount + " / " + window.runtime.keybindings.length + " bindings"
-                        color: window.theme.textMuted
-                        font.family: window.runtime.fontMono
-                        font.pixelSize: window.theme.fontSize(12)
-                    }
                 }
             }
 
