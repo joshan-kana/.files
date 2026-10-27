@@ -324,7 +324,7 @@ FocusScope {
                 if (item.hasMenu)
                     trayMenu.openFor(item);
             }
-        } else if (requestedView.length === 0) {
+        } else if (requestedView === "controls" || requestedView.length === 0) {
             trayMenu.closeMenu();
             wallpaperPanel.closeView();
             networkPanel.closeView();
