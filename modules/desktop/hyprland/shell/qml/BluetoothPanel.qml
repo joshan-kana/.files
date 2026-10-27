@@ -332,7 +332,7 @@ Item {
 
                             Text {
                                 text: deviceRow.modelData.pairing ? "PAIRING" : (deviceRow.modelData.paired ? "PAIRED" : "UNPAIRED")
-                                color: deviceRow.modelData.paired || deviceRow.modelData.pairing ? panel.theme.roleColor("connectivity") : panel.theme.warning
+                                color: panel.theme.readableRoleColor(deviceRow.modelData.paired || deviceRow.modelData.pairing ? "connectivity" : "warning")
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(8)
                                 font.weight: Font.DemiBold
@@ -397,7 +397,7 @@ Item {
 
                 Text {
                     text: "BLUETOOTH UNAVAILABLE"
-                    color: panel.theme.warning
+                    color: panel.theme.readableRoleColor("warning")
                     font.family: panel.runtime.fontMono
                     font.pixelSize: panel.theme.fontSize(11)
                     font.weight: Font.DemiBold
@@ -428,7 +428,7 @@ Item {
             width: parent.width
             text: "Bluetooth is off · press B to enable"
             horizontalAlignment: Text.AlignHCenter
-            color: panel.theme.warning
+            color: panel.theme.readableRoleColor("warning")
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(10)
             font.letterSpacing: 0.8
@@ -462,7 +462,7 @@ Item {
             visible: panel.statusText.length > 0
             text: panel.statusText
             horizontalAlignment: Text.AlignRight
-            color: panel.statusError ? panel.theme.critical : (panel.forgetAddress.length > 0 ? panel.theme.warning : panel.theme.accent)
+            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : (panel.forgetAddress.length > 0 ? "warning" : "connectivity"))
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(8)
             font.weight: Font.DemiBold
