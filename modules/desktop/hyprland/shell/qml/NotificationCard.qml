@@ -69,8 +69,8 @@ SquircleSurface {
     implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
     cornerRadius: theme.radiusMedium
     exponent: theme.squircleExponent
-    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.accent, theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
-    borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.accent : theme.outline
+    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.roleColor("notifications"), theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
+    borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.roleColor("notifications") : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
     MouseArea {

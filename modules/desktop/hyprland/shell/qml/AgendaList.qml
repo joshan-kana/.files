@@ -33,9 +33,9 @@ Column {
         motion: panel.motion
         surfaceLayer: ShellSurface.Group
         cornerRadius: panel.featured ? panel.theme.radiusLarge : panel.theme.radiusMedium
-        fillColor: panel.featured ? panel.theme.blend(panel.theme.groupBase, panel.theme.accent, panel.theme.dark ? 0.055 : 0.035) : panel.theme.expressiveSurface
+        fillColor: panel.featured ? panel.theme.blend(panel.theme.groupBase, panel.theme.roleColor("calendar"), panel.theme.dark ? 0.055 : 0.035) : panel.theme.expressiveSurface
         luminous: panel.featured
-        luminousColor: panel.theme.accent
+        luminousColor: panel.theme.roleColor("calendar")
         clip: true
 
         Row {
@@ -51,7 +51,7 @@ Column {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "AGENDA · NEXT 7 DAYS"
-                color: panel.theme.accent
+                color: panel.theme.roleColor("calendar")
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontPanelEyebrow
                 font.weight: Font.DemiBold
@@ -125,7 +125,7 @@ Column {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (eventRow.modelData.dateKind ? eventRow.modelData.dateKind + " " : "") + (eventRow.modelData.date === panel.startDate ? "TODAY" : eventRow.modelData.date.slice(5)) + (eventRow.modelData.time ? " · " + eventRow.modelData.time : "")
-                                color: panel.theme.accent
+                                color: panel.theme.roleColor("calendar")
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(10)
                             }

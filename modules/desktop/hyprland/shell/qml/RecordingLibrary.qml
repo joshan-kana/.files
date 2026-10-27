@@ -212,7 +212,7 @@ Item {
         theme: library.theme
         motion: library.motion
         glyph: "󰕧"
-        glyphColor: library.theme.roleColor("media")
+        glyphColor: library.theme.roleColor("capture")
         eyebrow: "Capture / Local library"
         title: "Recordings"
         detail: library.entries.length + (library.entries.length === 1 ? " clip" : " clips") + " · ~/Videos/Screencasts"
@@ -268,8 +268,8 @@ Item {
                     cornerRadius: library.theme.radiusMedium
                     selected: false
                     outlined: index === library.selectedIndex
-                    fillColor: index === library.selectedIndex ? library.theme.blend(library.theme.controlBase, library.theme.roleColor("media"), library.theme.dark ? 0.075 : 0.045) : library.theme.controlBase
-                    borderColor: index === library.selectedIndex ? library.theme.roleColor("media") : library.theme.subtleBorder
+                    fillColor: index === library.selectedIndex ? library.theme.blend(library.theme.controlBase, library.theme.roleColor("capture"), library.theme.dark ? 0.075 : 0.045) : library.theme.controlBase
+                    borderColor: index === library.selectedIndex ? library.theme.roleColor("capture") : library.theme.subtleBorder
                     StateLayer {
                         theme: library.theme
                         motion: library.motion
@@ -348,7 +348,7 @@ Item {
                         anchors.centerIn: parent
                         visible: library.previewPath.length === 0
                         text: library.selectedEntry ? "󰕧" : "󰋼"
-                        color: library.theme.roleColor("media")
+                        color: library.theme.roleColor("capture")
                         font.family: library.runtime.fontMono
                         font.pixelSize: library.theme.fontSize(38)
                     }
@@ -410,7 +410,7 @@ Item {
             visible: library.statusText.length > 0
             width: parent.width
             text: library.statusText
-            color: library.statusError ? library.theme.warning : library.theme.accent
+            color: library.statusError ? library.theme.warning : library.theme.roleColor("capture")
             font.family: library.runtime.fontMono
             font.pixelSize: library.theme.fontSize(10)
             horizontalAlignment: Text.AlignHCenter
