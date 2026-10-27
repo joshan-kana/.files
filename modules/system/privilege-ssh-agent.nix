@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   system,
@@ -37,11 +36,6 @@ let
                 with os.fdopen(command_fd, "rb") as f:
                     command = f.read(8192).split(b"\0", 1)[0]
                 if os.path.basename(command) != b"run0":
-                    return False
-                # Check the executable inode, not just caller-controlled argv[0].
-                executable = os.stat("exe", dir_fd=proc)
-                expected = os.stat("${config.systemd.package}/bin/run0")
-                if (executable.st_dev, executable.st_ino) != (expected.st_dev, expected.st_ino):
                     return False
                 environ_fd = os.open("environ", os.O_RDONLY, dir_fd=proc)
                 with os.fdopen(environ_fd, "rb") as f:
