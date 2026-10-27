@@ -64,7 +64,7 @@ FocusScope {
 
                 Text {
                     text: "WEATHER / " + (panel.weather.city || "YOUR LOCATION").toUpperCase()
-                    color: panel.theme.accent
+                    color: panel.theme.roleColor("weather")
                     font.family: panel.runtime.fontMono
                     font.pixelSize: panel.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -93,7 +93,7 @@ FocusScope {
                 Text {
                     anchors.centerIn: parent
                     text: "󰑐"
-                    color: panel.theme.accent
+                    color: panel.theme.roleColor("weather")
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: panel.theme.fontSize(20)
                     opacity: panel.weather.loading ? 0.4 : 1
@@ -125,7 +125,7 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: panel.weather.icon
-                    color: panel.theme.accent
+                    color: panel.theme.roleColor("weather")
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: panel.theme.fontSize(75)
                 }

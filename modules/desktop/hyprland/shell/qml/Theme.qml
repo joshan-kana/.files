@@ -39,13 +39,20 @@ QtObject {
         case "warmth":
             return accentWarm;
         case "capture":
+            return accentWarm;
         case "audio":
             return accentUtility;
         case "resources":
         case "power":
             return accentEnergy;
         case "notifications":
+        case "calendar":
+        case "wallpaper":
             return accentNature;
+        case "clipboard":
+            return accentUtility;
+        case "weather":
+            return accentWarm;
         case "positive":
             return positive;
         case "warning":
