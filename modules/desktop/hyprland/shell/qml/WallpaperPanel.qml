@@ -565,7 +565,7 @@ Item {
                         spacing: panel.theme.spacing2
                         Text {
                             text: "CURRENT · STYLIX"
-                            color: panel.theme.roleColor("wallpaper")
+                            color: panel.theme.readableRoleColor("wallpaper")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold

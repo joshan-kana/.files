@@ -126,7 +126,7 @@ SquircleSurface {
                 id: appName
                 anchors.verticalCenter: parent.verticalCenter
                 text: (card.notification && card.notification.appName || "SYSTEM").toUpperCase()
-                color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.critical : card.read ? card.theme.textMuted : card.theme.roleColor("notifications")
+                color: card.notification && card.notification.urgency === NotificationUrgency.Critical ? card.theme.readableRoleColor("critical") : card.read ? card.theme.textMuted : card.theme.readableRoleColor("notifications")
                 font.family: card.runtime.fontMono
                 font.pixelSize: card.theme.fontSize(9)
                 font.weight: Font.DemiBold
