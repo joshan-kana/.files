@@ -14,15 +14,15 @@ let
     import subprocess
     import sys
 
-    def authorised():
+    def authorisation():
         try:
             request = sys.stdin.buffer.readline(32).decode("ascii").strip()
             if not request.isdecimal():
-                return False
+                return "NOT_RUN0"
             pid = int(request)
             uid = pwd.getpwnam("joshan").pw_uid
             if pid <= 1:
-                return False
+                return "NOT_RUN0"
 
             # Keep /proc bound to the original process across PID reuse.
             proc = os.open(f"/proc/{pid}", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
@@ -31,12 +31,15 @@ let
                 with os.fdopen(status_fd, "rb") as f:
                     ids = next(line for line in f if line.startswith(b"Uid:"))
                 if any(int(n) != uid for n in ids.split()[1:5]):
-                    return False
+                    return "NOT_RUN0"
                 command_fd = os.open("cmdline", os.O_RDONLY, dir_fd=proc)
                 with os.fdopen(command_fd, "rb") as f:
                     command = f.read(8192).split(b"\0", 1)[0]
                 if os.path.basename(command) != b"run0":
-                    return False
+                    return "NOT_RUN0"
+                cgroup_fd = os.open("cgroup", os.O_RDONLY, dir_fd=proc)
+                with os.fdopen(cgroup_fd, "rb") as f:
+                    gateway = b"0::/system.slice/chatgpt-shell-access.service" in f.read(8192).splitlines()
                 environ_fd = os.open("environ", os.O_RDONLY, dir_fd=proc)
                 with os.fdopen(environ_fd, "rb") as f:
                     values = f.read(1024 * 1024).split(b"\0")
@@ -46,15 +49,18 @@ let
             sockets = [item[len(b"SSH_AUTH_SOCK="):] for item in values
                        if item.startswith(b"SSH_AUTH_SOCK=")]
             if len(sockets) != 1:
-                return False
+                return "DENY"
             agent = os.fsdecode(sockets[0])
             if not agent.startswith("/") or not stat.S_ISSOCK(os.stat(agent).st_mode):
-                return False
+                return "DENY"
             if os.stat(agent).st_uid != uid:
-                return False
+                return "DENY"
             # Check the normal administrator and restricted shell gateway keys.
             # Each test requires a new SSH signature, not a listed identity.
             for file in ("/etc/elevation-authorized-key", "/etc/chatgpt-shell-sudo-authorized-key"):
+                # A server-resident gateway agent is not an admin key for SSH logins.
+                if file.endswith("/chatgpt-shell-sudo-authorized-key") and not gateway:
+                    continue
                 try:
                     key_file = os.stat(file)
                     if key_file.st_uid != 0 or key_file.st_mode & 0o022:
@@ -70,14 +76,14 @@ let
                                 timeout=4, check=False,
                             )
                             if result.returncode == 0:
-                                return True
+                                return "ALLOW"
                 except (OSError, subprocess.TimeoutExpired):
                     continue
-            return False
+            return "DENY"
         except (OSError, ValueError, StopIteration, subprocess.TimeoutExpired, UnicodeError):
-            return False
+            return "DENY"
 
-    print("ALLOW" if authorised() else "DENY", flush=True)
+    print(authorisation(), flush=True)
   '';
   request = pkgs.writeShellScriptBin "run0-ssh-agent-request" ''
     if [[ ! "$1" =~ ^[0-9]+$ ]]; then
@@ -97,10 +103,15 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
       if (typeof subject.pid !== "number" || subject.pid <= 1)
         return;
       try {
-        if (polkit.spawn(["${request}/bin/run0-ssh-agent-request", String(subject.pid)]).trim() === "ALLOW")
+        var result = polkit.spawn(["${request}/bin/run0-ssh-agent-request", String(subject.pid)]).trim();
+        if (result === "ALLOW")
           return polkit.Result.YES;
+        if (result === "DENY" && !subject.local)
+          return polkit.Result.NO;
       } catch (e) {
         polkit.log("run0 SSH-agent verification unavailable: " + e);
+        if (!subject.local)
+          return polkit.Result.NO;
       }
     });
   '';
