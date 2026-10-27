@@ -136,7 +136,7 @@ FocusScope {
                         id: volumeLabel
                         anchors.verticalCenter: parent.verticalCenter
                         text: streamRow.stream?.audio ? (streamRow.stream?.audio.muted ? "MUTED" : Math.round(streamRow.stream?.audio.volume * 100) + "%") : "—"
-                        color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.roleColor("audio")
+                        color: mixer.theme.audioLevelColor(!!streamRow.stream?.audio?.muted)
                         font.family: mixer.runtime.fontMono
                         font.pixelSize: mixer.theme.fontSize(10)
                         font.weight: Font.DemiBold
@@ -195,7 +195,7 @@ FocusScope {
                         motion: mixer.motion
                         enabled: !!streamRow.stream?.audio
                         value: streamRow.stream?.audio ? streamRow.stream?.audio.volume : 0
-                        accentColor: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.roleColor("audio")
+                        accentColor: mixer.theme.audioLevelColor(!!streamRow.stream?.audio?.muted)
                         trackHeight: 11
                         handleSize: 19
                         onValueRequested: value => {
