@@ -37,6 +37,7 @@ Item {
             theme: panel.theme
             motion: panel.motion
             glyph: "◴"
+            glyphColor: panel.theme.roleColor("resources")
             eyebrow: "Performance / live"
             title: "Resources"
             detail: "CPU · Memory · GPU · Temperature · Network · Disk · Last " + panel.resourceState.historyLength * 2 + "s"

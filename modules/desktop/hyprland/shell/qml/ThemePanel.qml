@@ -268,6 +268,7 @@ Item {
         theme: panel.theme
         motion: panel.motion
         glyph: "◈"
+        glyphColor: panel.theme.roleColor("display")
         eyebrow: "Appearance / system themes"
         title: "Theme gallery"
         detail: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
