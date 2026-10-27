@@ -1578,13 +1578,13 @@ FocusScope {
                         wallpaperPanel.invoke("moveSelection", 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        wallpaperPanel.invoke("moveSelection", -3);
+                        wallpaperPanel.invoke("moveGrid", 0, -1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        wallpaperPanel.invoke("moveSelection", 3);
+                        wallpaperPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                        wallpaperPanel.invoke("moveSelection", event.key === Qt.Key_U ? -6 : 6);
+                        wallpaperPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
                         wallpaperPanel.invoke("cycleOutput");
