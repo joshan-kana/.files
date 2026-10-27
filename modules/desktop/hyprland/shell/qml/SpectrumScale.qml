@@ -17,6 +17,22 @@ QtObject {
         return Math.max(0, Math.min(1, warped));
     }
 
+    // Invert the display warp when evenly spaced visual columns need to
+    // sample the analyser's logarithmic (unwarped) frequency bands.
+    function toNormalized(position: real): real {
+        const target = Math.max(0, Math.min(1, position));
+        let lower = 0;
+        let upper = 1;
+        for (let step = 0; step < 15; step++) {
+            const middle = (lower + upper) / 2;
+            if (fromNormalized(middle) < target)
+                lower = middle;
+            else
+                upper = middle;
+        }
+        return (lower + upper) / 2;
+    }
+
     function fromFrequency(frequency: real): real {
         const low = Math.max(1, lowHz);
         const high = Math.max(low + 1, highHz);
