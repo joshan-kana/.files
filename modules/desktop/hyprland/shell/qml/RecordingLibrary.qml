@@ -212,6 +212,7 @@ Item {
         theme: library.theme
         motion: library.motion
         glyph: "󰕧"
+        glyphFont: "Symbols Nerd Font"
         glyphColor: library.theme.roleColor("capture")
         eyebrow: "Capture / Local library"
         title: "Recordings"
