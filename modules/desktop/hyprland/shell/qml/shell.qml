@@ -789,6 +789,7 @@ ShellRoot {
         launcher: launcher
         clipboardPanel: clipboardPanel
         mixerDetailOpen: !!expansionHost.systemContent && expansionHost.systemContent.mixerOpen
+        systemDetailOpen: expansionHost.detailVisible
         overviewPanel: overviewPanel
         mediaState: media
         systemState: system
