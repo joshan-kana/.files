@@ -59,14 +59,18 @@ let
                     key_file = os.stat(file)
                     if key_file.st_uid != 0 or key_file.st_mode & 0o022:
                         continue
-                    result = subprocess.run(
-                        ["${pkgs.openssh}/bin/ssh-add", "-T", file],
-                        env={"SSH_AUTH_SOCK": agent}, stdin=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                        timeout=4, check=False,
-                    )
-                    if result.returncode == 0:
-                        return True
+                    with open(file, "rb") as keys:
+                        for key in keys:
+                            if len(key) > 4096 or len(key.split()) < 2:
+                                continue
+                            result = subprocess.run(
+                                ["${pkgs.openssh}/bin/ssh-add", "-T", "/dev/stdin"],
+                                env={"SSH_AUTH_SOCK": agent}, input=key,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                timeout=4, check=False,
+                            )
+                            if result.returncode == 0:
+                                return True
                 except (OSError, subprocess.TimeoutExpired):
                     continue
             return False
