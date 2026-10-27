@@ -256,7 +256,7 @@ Item {
                 text: panel.searchText
                 onTextChanged: panel.searchText = text
                 color: panel.theme.textStrong
-                selectionColor: panel.theme.accent
+                selectionColor: panel.theme.roleColor("wallpaper")
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(12)
                 focus: false
@@ -495,7 +495,7 @@ Item {
                                     id: stateLabel
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: entry.applied ? "ACTIVE" : entry.current ? "SELECTED" : ""
-                                    color: entry.applied ? panel.theme.positive : panel.theme.accent
+                                    color: entry.applied ? panel.theme.positive : panel.theme.roleColor("wallpaper")
                                     font.family: panel.runtime.fontMono
                                     font.pixelSize: panel.theme.fontSize(9)
                                 }
@@ -518,7 +518,7 @@ Item {
                             visible: entry.current
                             cornerRadius: panel.theme.radiusMedium
                             exponent: panel.theme.squircleExponent
-                            borderColor: panel.theme.accent
+                            borderColor: panel.theme.roleColor("wallpaper")
                             borderWidth: panel.theme.borderFocus * 2
                         }
                     }
@@ -565,7 +565,7 @@ Item {
                         spacing: panel.theme.spacing2
                         Text {
                             text: "CURRENT · STYLIX"
-                            color: panel.theme.accent
+                            color: panel.theme.roleColor("wallpaper")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontPanelEyebrow
                             font.weight: Font.DemiBold

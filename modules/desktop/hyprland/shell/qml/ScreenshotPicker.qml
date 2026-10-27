@@ -398,7 +398,7 @@ Item {
         width: picker.selectionWidth
         height: picker.selectionHeight
         radius: 5
-        color: Qt.rgba(picker.theme.accentSecondary.r, picker.theme.accentSecondary.g, picker.theme.accentSecondary.b, 0.035)
+        color: Qt.rgba(picker.theme.roleColor("capture").r, picker.theme.roleColor("capture").g, picker.theme.roleColor("capture").b, 0.035)
         border.color: picker.theme.roleColor("capture")
         border.width: 2
         z: 2

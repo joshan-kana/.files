@@ -12,7 +12,7 @@ ShellSurface {
     luminous: true
     luminousColor: theme.textStrong
     lightIntensity: 1.35
-    fillColor: theme.blend(theme.groupBase, theme.accent, theme.dark ? 0.15 : 0.08)
+    fillColor: theme.blend(theme.groupBase, theme.roleColor("weather"), theme.dark ? 0.15 : 0.08)
     cornerRadius: theme.radiusLarge
     clip: true
 
@@ -26,7 +26,7 @@ ShellSurface {
         text: summary.weather.icon
         font.family: "Symbols Nerd Font"
         font.pixelSize: summary.theme.fontSize(124)
-        color: summary.theme.accent
+        color: summary.theme.roleColor("weather")
         opacity: 0.19
     }
 
@@ -40,7 +40,7 @@ ShellSurface {
         Text {
             width: parent.width
             text: (summary.weather.city || "YOUR LOCATION").toUpperCase() + " · WEATHER"
-            color: summary.theme.accent
+            color: summary.theme.roleColor("weather")
             opacity: 0.89
             font.family: summary.theme.runtime.fontMono
             font.pixelSize: summary.theme.fontPanelEyebrow

@@ -12,6 +12,7 @@ Item {
     property string label: ""
     property bool selected: false
     property bool armed: false
+    property color accentColor: theme.roleColor("resources")
 
     signal activated
     signal hovered
@@ -33,8 +34,8 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.blend(button.theme.controlBase, button.theme.accent, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
-        borderColor: button.armed ? button.theme.warning : button.selected ? button.theme.accent : "transparent"
+        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
+        borderColor: button.armed ? button.theme.warning : button.selected ? button.accentColor : "transparent"
         borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
 
         Behavior on cornerRadius {
@@ -55,7 +56,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: button.icon
-            color: button.armed ? button.theme.warning : button.selected ? button.theme.accent : button.theme.textStrong
+            color: button.armed ? button.theme.warning : button.selected ? button.accentColor : button.theme.textStrong
             font.family: "Symbols Nerd Font"
             font.pixelSize: button.theme.fontSize(43)
             font.weight: Font.Normal
@@ -80,7 +81,7 @@ Item {
             horizontalCenter: parent.horizontalCenter
         }
         text: button.armed ? "CONFIRM " + button.label.toUpperCase() : button.label
-        color: button.armed ? button.theme.warning : button.selected ? button.theme.accent : button.theme.textStrong
+        color: button.armed ? button.theme.warning : button.selected ? button.accentColor : button.theme.textStrong
         font.family: button.runtime.fontMono
         font.pixelSize: button.theme.fontSize(11)
         font.weight: button.selected ? Font.DemiBold : Font.Medium

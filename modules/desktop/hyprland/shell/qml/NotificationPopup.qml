@@ -17,12 +17,12 @@ PanelWindow {
     readonly property var notification: notificationState.latest
     readonly property color urgencyColor: {
         if (!notification)
-            return theme.roleColor("connectivity");
+            return theme.roleColor("notifications");
         if (notification.urgency === NotificationUrgency.Critical)
             return theme.critical;
         if (notification.urgency === NotificationUrgency.Low)
             return theme.textMuted;
-        return theme.roleColor("connectivity");
+        return theme.roleColor("notifications");
     }
 
     visible: true
