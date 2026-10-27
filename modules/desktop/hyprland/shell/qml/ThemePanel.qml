@@ -110,7 +110,9 @@ Item {
     property Timer operationPoll: Timer {
         interval: 900
         repeat: true
-        running: panel.open || panel.operationRunning
+        // Opening the gallery requests one snapshot. Only an ongoing theme
+        // operation needs subsequent status checks while systemd owns it.
+        running: panel.operationRunning
         onTriggered: panel.refreshOperation()
     }
     function refreshOperation(): void {
