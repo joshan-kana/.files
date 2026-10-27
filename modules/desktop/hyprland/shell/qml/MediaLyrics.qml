@@ -35,7 +35,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: "LOCAL · SYNCHRONISED LYRICS"
-            color: root.theme.accent
+            color: root.theme.readableRoleColor("media")
             font.family: root.runtime.fontMono
             font.pixelSize: root.theme.fontSize(9)
             font.weight: Font.DemiBold

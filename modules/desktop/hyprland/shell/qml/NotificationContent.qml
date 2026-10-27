@@ -391,7 +391,7 @@ FocusScope {
 
                             Text {
                                 text: groupItem.modelData.name.toUpperCase()
-                                color: center.theme.roleColor("notifications")
+                                color: center.theme.readableRoleColor("notifications")
                                 font.family: center.runtime.fontMono
                                 font.pixelSize: center.theme.fontSize(10)
                                 font.weight: Font.DemiBold
