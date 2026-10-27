@@ -190,11 +190,10 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: island.media.playing ? "Ⅱ" : "▶"
-                    color: island.media.playing ? island.theme.accent : island.theme.textMuted
-                    font.family: island.runtime.fontMono
-                    font.pixelSize: island.theme.fontSize(11)
-                    font.weight: Font.Bold
+                    text: island.media.playing ? "󰏤" : "󰐊"
+                    color: island.media.playing ? island.theme.roleColor("media") : island.theme.textMuted
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: island.theme.fontSize(17)
                 }
             }
 
@@ -203,6 +202,8 @@ Item {
             MouseArea {
                 id: playbackHitArea
                 anchors.fill: parent
+                Accessible.role: Accessible.Button
+                Accessible.name: island.media.playing ? "Pause playback" : "Resume playback"
                 enabled: island.media.canTogglePlaying
                 hoverEnabled: true
                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -212,6 +213,8 @@ Item {
 
         MouseArea {
             id: mainHitArea
+            Accessible.role: Accessible.Button
+            Accessible.name: "Open Now Playing"
             anchors {
                 left: parent.left
                 right: playbackZone.left
