@@ -568,9 +568,14 @@ local bindings = {
 bindings[#bindings + 1] = {
 	mods = "hyper",
 	key = "0",
-	cmd = "space --focus last",
+	fn = function()
+		local display = yabai_utils.json("query --displays --display")
+		if display and #display.spaces > 0 then
+			yabai_utils.ok("space --focus " .. display.spaces[#display.spaces])
+		end
+	end,
 	section = "DISPLAYS & SPACES",
-	desc = "Focus last space",
+	desc = "Focus last space on current display",
 }
 
 -- Space navigation: focus 1-9 and move window to space 1-9.
