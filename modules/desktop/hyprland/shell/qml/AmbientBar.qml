@@ -239,8 +239,8 @@ Variants {
                         height: 34
                         exponent: bars.theme.squircleExponent
                         cornerRadius: 16
-                        fillColor: bars.theme.roleColor("workspace")
-                        lightColor: bars.theme.accentWorkspace
+                        fillColor: bars.theme.accent
+                        lightColor: bars.theme.accent
                         lightStrength: 0.035
                         visible: bar.visibleWorkspaceIds.length > 0
                     }
