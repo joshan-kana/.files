@@ -309,7 +309,8 @@ Item {
     readonly property var networks: system.wifiNetworks || []
     readonly property bool passwordPrompt: pendingNetwork !== null
 
-    implicitHeight: header.height + panel.theme.spacing3 * 2 + (detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : 188) + footer.implicitHeight + panel.theme.spacing4
+    readonly property real bodyHeight: detailView ? Math.min(448, Math.max(252, detailPending ? 448 : detailRows.length * 60 + 16)) : savedView ? Math.min(430, Math.max(185, savedProfiles.length * 76)) : system.wifiAvailable && system.wifiEnabled ? Math.min(430, Math.max(185, networks.length * 96)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
+    implicitHeight: header.height + panel.theme.spacing4 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
     function selectedNetwork(): var {
@@ -886,51 +887,21 @@ Item {
             }
         }
 
-        ShellSurface {
+        ConnectivityUnavailableCard {
+            id: emptyState
             anchors {
                 top: parent.top
                 left: parent.left
                 right: parent.right
             }
-            height: 160
             visible: !panel.detailView && !panel.savedView && !panel.system.wifiAvailable && !panel.passwordPrompt
+            runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            surfaceLayer: ShellSurface.Group
-            cornerRadius: panel.theme.radiusLarge
-
-            Column {
-                width: parent.width - panel.theme.spacing5 * 2
-                anchors.centerIn: parent
-                spacing: panel.theme.spacing3
-
-                Text {
-                    text: panel.system.networkConnected ? "WIRED CONNECTION" : "NO ACTIVE CONNECTION"
-                    color: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(11)
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    width: parent.width
-                    text: panel.system.networkName
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(20)
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    width: parent.width
-                    text: "No Wi-Fi adapter is available on this host."
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(10)
-                    wrapMode: Text.WordWrap
-                }
-            }
+            statusText: panel.system.networkConnected ? "WIRED CONNECTION" : "NO ACTIVE CONNECTION"
+            statusColor: panel.theme.readableRoleColor(panel.system.networkConnected ? "positive" : "warning")
+            heading: panel.system.networkName
+            description: "No Wi-Fi adapter is available on this host."
         }
 
         Text {
