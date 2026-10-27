@@ -184,8 +184,8 @@ Item {
                 selected: false
                 cornerRadius: theme.radiusSmall
                 outlined: entryDelegate.index === view.selectedIndex
-                fillColor: entryDelegate.index === view.selectedIndex ? view.theme.blend(view.theme.controlBase, view.theme.roleColor("connectivity"), view.theme.dark ? 0.08 : 0.05) : view.theme.controlBase
-                borderColor: entryDelegate.index === view.selectedIndex ? Qt.rgba(view.theme.accentTertiary.r, view.theme.accentTertiary.g, view.theme.accentTertiary.b, 0.64) : "transparent"
+                fillColor: entryDelegate.index === view.selectedIndex ? view.theme.blend(view.theme.controlBase, view.theme.accent, view.theme.dark ? 0.08 : 0.05) : view.theme.controlBase
+                borderColor: entryDelegate.index === view.selectedIndex ? Qt.rgba(view.theme.accent.r, view.theme.accent.g, view.theme.accent.b, 0.64) : "transparent"
                 opacity: entryDelegate.modelData.enabled ? 1 : 0.42
 
                 Row {
