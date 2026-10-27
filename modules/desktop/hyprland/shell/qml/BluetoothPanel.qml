@@ -228,6 +228,7 @@ Item {
         theme: panel.theme
         motion: panel.motion
         glyph: panel.system.bluetoothEnabled ? "󰂯" : "󰂲"
+        glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.bluetoothEnabled ? panel.theme.positive : panel.theme.textMuted
         eyebrow: "Connectivity / Bluetooth"
         title: "Bluetooth"
