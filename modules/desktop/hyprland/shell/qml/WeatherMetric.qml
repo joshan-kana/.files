@@ -19,7 +19,7 @@ ShellSurface {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: metric.icon
-            color: metric.theme.accent
+            color: metric.theme.roleColor("weather")
             font.family: "Symbols Nerd Font"
             font.pixelSize: metric.theme.fontSize(24)
         }

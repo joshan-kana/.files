@@ -267,7 +267,7 @@ Item {
             width: parent.width
             visible: panel.statusText.length > 0
             text: panel.statusText
-            color: panel.statusError ? panel.theme.critical : panel.theme.warning
+            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "warning")
             horizontalAlignment: Text.AlignHCenter
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(11)
