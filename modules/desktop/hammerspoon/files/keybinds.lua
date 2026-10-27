@@ -71,12 +71,19 @@ local bindings = {
 		desc = "Window switcher (prev)",
 	},
 
-	-- App switching (meh = ctrl+alt+shift)
+	-- App switching (meh = ctrl+alt+shift). Meh+Space toggles new-window mode.
+	{
+		mods = "meh",
+		key = "space",
+		fn = app_switcher.toggleMode,
+		section = "APPS",
+		desc = "Toggle app switch / new window on this Space",
+	},
 	{
 		mods = "meh",
 		key = "a",
 		fn = function()
-			app_switcher.focus("Arc")
+			app_switcher.open("Arc")
 		end,
 		section = "APPS",
 		desc = "Arc",
@@ -85,7 +92,7 @@ local bindings = {
 		mods = "meh",
 		key = "b",
 		fn = function()
-			app_switcher.focus("Beeper Desktop")
+			app_switcher.open("Beeper Desktop")
 		end,
 		section = "APPS",
 		desc = "Beeper",
@@ -94,7 +101,7 @@ local bindings = {
 		mods = "meh",
 		key = "s",
 		fn = function()
-			app_switcher.focus("Spotify")
+			app_switcher.open("Spotify")
 		end,
 		section = "APPS",
 		desc = "Spotify",
@@ -103,7 +110,7 @@ local bindings = {
 		mods = "meh",
 		key = "d",
 		fn = function()
-			app_switcher.focus("Obsidian")
+			app_switcher.open("Obsidian")
 		end,
 		section = "APPS",
 		desc = "Obsidian",
@@ -112,7 +119,7 @@ local bindings = {
 		mods = "meh",
 		key = "f",
 		fn = function()
-			app_switcher.focus("iTerm")
+			app_switcher.open("iTerm")
 		end,
 		section = "APPS",
 		desc = "iTerm",
@@ -121,7 +128,7 @@ local bindings = {
 		mods = "meh",
 		key = "g",
 		fn = function()
-			app_switcher.focus("Visual Studio Code")
+			app_switcher.open("Visual Studio Code")
 		end,
 		section = "APPS",
 		desc = "Visual Studio Code",
@@ -130,7 +137,7 @@ local bindings = {
 		mods = "meh",
 		key = "h",
 		fn = function()
-			app_switcher.focus("Parallels Desktop")
+			app_switcher.open("Parallels Desktop")
 		end,
 		section = "APPS",
 		desc = "Parallels Desktop",
@@ -139,7 +146,7 @@ local bindings = {
 		mods = "meh",
 		key = "j",
 		fn = function()
-			app_switcher.focus("Warp")
+			app_switcher.open("Warp")
 		end,
 		section = "APPS",
 		desc = "Warp",
@@ -148,7 +155,7 @@ local bindings = {
 		mods = "meh",
 		key = "k",
 		fn = function()
-			app_switcher.focus("Keymapp")
+			app_switcher.open("Keymapp")
 		end,
 		section = "APPS",
 		desc = "Keymapp",
@@ -157,7 +164,7 @@ local bindings = {
 		mods = "meh",
 		key = "l",
 		fn = function()
-			app_switcher.focus("Finder")
+			app_switcher.open("Finder")
 		end,
 		section = "APPS",
 		desc = "Finder",
@@ -166,7 +173,7 @@ local bindings = {
 		mods = "meh",
 		key = "y",
 		fn = function()
-			app_switcher.focus("Autodesk Fusion")
+			app_switcher.open("Autodesk Fusion")
 		end,
 		section = "APPS",
 		desc = "Autodesk Fusion",
@@ -175,7 +182,7 @@ local bindings = {
 		mods = "meh",
 		key = "u",
 		fn = function()
-			app_switcher.focus("BambuStudio")
+			app_switcher.open("BambuStudio")
 		end,
 		section = "APPS",
 		desc = "BambuStudio",
@@ -184,7 +191,7 @@ local bindings = {
 		mods = "meh",
 		key = "i",
 		fn = function()
-			app_switcher.focus("Arduino IDE")
+			app_switcher.open("Arduino IDE")
 		end,
 		section = "APPS",
 		desc = "Arduino IDE",
@@ -193,7 +200,7 @@ local bindings = {
 		mods = "meh",
 		key = ".",
 		fn = function()
-			app_switcher.focus("Ableton Live 12 Suite")
+			app_switcher.open("Ableton Live 12 Suite")
 		end,
 		section = "APPS",
 		desc = "Ableton Live 12 Suite",
@@ -202,7 +209,7 @@ local bindings = {
 		mods = "meh",
 		key = "/",
 		fn = function()
-			app_switcher.focus("XO")
+			app_switcher.open("XO")
 		end,
 		section = "APPS",
 		desc = "XO",
