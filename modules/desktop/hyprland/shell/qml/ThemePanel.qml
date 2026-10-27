@@ -665,7 +665,7 @@ Item {
             width: parent.width
             visible: panel.statusText.length > 0
             text: panel.statusText
-            color: panel.statusError ? panel.theme.critical : panel.theme.positive
+            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "positive")
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             font.family: panel.runtime.fontMono

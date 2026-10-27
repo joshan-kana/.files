@@ -25,7 +25,7 @@ ShellSurface {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: dayCard.index === 0 ? "TODAY" : Qt.formatDate(new Date(dayCard.day.date + "T12:00:00"), "ddd").toUpperCase()
-            color: dayCard.active ? dayCard.theme.roleColor("weather") : dayCard.theme.textStrong
+            color: dayCard.active ? dayCard.theme.readableRoleColor("weather") : dayCard.theme.textStrong
             font.family: dayCard.theme.runtime.fontMono
             font.pixelSize: dayCard.theme.fontSize(12)
             font.weight: Font.DemiBold
@@ -51,7 +51,7 @@ ShellSurface {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Math.round(dayCard.day.rain ?? 0) + "% rain"
-            color: dayCard.theme.roleColor("connectivity")
+            color: dayCard.theme.readableRoleColor("precipitation")
             font.family: dayCard.theme.runtime.fontMono
             font.pixelSize: dayCard.theme.fontSize(11)
             font.weight: Font.DemiBold

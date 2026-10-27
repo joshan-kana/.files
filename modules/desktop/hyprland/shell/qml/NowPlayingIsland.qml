@@ -103,7 +103,7 @@ Item {
                 anchors.centerIn: parent
                 visible: island.media.artUrl.length === 0
                 text: "♫"
-                color: island.theme.accent
+                color: island.theme.roleColor("media")
                 font.family: island.runtime.fontMono
                 font.pixelSize: island.theme.fontSize(19)
             }

@@ -214,7 +214,7 @@ FocusScope {
 
                 Text {
                     text: Qt.formatDate(clock.date, "dddd · d MMMM yyyy").toUpperCase()
-                    color: calendar.theme.roleColor("calendar")
+                    color: calendar.theme.readableRoleColor("calendar")
                     font.family: calendar.runtime.fontMono
                     font.pixelSize: calendar.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -471,7 +471,7 @@ FocusScope {
                     font.family: calendar.runtime.fontMono
                     font.pixelSize: calendar.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
-                    color: calendar.theme.roleColor("calendar")
+                    color: calendar.theme.readableRoleColor("calendar")
                 }
                 Item {
                     width: Math.max(0, parent.width - parent.children[0].implicitWidth - enabledLabel.implicitWidth - parent.spacing * 2)
