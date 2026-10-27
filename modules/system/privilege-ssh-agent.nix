@@ -42,13 +42,24 @@ let
                 return False
             if os.stat(agent).st_uid != uid:
                 return False
-            # ssh-add -T checks a real, fresh SSH signature for the allowlisted key.
-            return subprocess.run(
-                ["${pkgs.openssh}/bin/ssh-add", "-T", "/etc/elevation-authorized-key"],
-                env={"SSH_AUTH_SOCK": agent}, stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                timeout=6, check=False,
-            ).returncode == 0
+            # Check the normal administrator and restricted shell gateway keys.
+            # Each test requires a new SSH signature, not a listed identity.
+            for file in ("/etc/elevation-authorized-key", "/etc/chatgpt-shell-sudo-authorized-key"):
+                try:
+                    key_file = os.stat(file)
+                    if key_file.st_uid != 0 or key_file.st_mode & 0o022:
+                        continue
+                    result = subprocess.run(
+                        ["${pkgs.openssh}/bin/ssh-add", "-T", file],
+                        env={"SSH_AUTH_SOCK": agent}, stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        timeout=4, check=False,
+                    )
+                    if result.returncode == 0:
+                        return True
+                except (OSError, subprocess.TimeoutExpired):
+                    continue
+            return False
         except (OSError, ValueError, StopIteration, subprocess.TimeoutExpired, UnicodeError):
             return False
 
