@@ -30,6 +30,7 @@ QtObject {
     readonly property int count: history.length
     property var readNotifications: []
     readonly property int unreadCount: history.filter(notification => !readNotifications.includes(notification)).length
+    readonly property bool hasCriticalUnread: history.some(notification => notification.urgency === NotificationUrgency.Critical && !readNotifications.includes(notification))
 
     // Dismissed notifications must not remain alive through stale read references.
     onHistoryChanged: {
