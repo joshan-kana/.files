@@ -15,7 +15,7 @@ ShellSurface {
     implicitHeight: 134
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: active ? theme.selectionFill : theme.layer2
+    fillColor: active ? theme.blend(theme.controlBase, theme.roleColor("weather"), theme.dark ? 0.16 : 0.09) : theme.layer2
     outlined: active
 
     Column {
@@ -25,7 +25,7 @@ ShellSurface {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: dayCard.index === 0 ? "TODAY" : Qt.formatDate(new Date(dayCard.day.date + "T12:00:00"), "ddd").toUpperCase()
-            color: dayCard.active ? dayCard.theme.accent : dayCard.theme.textStrong
+            color: dayCard.active ? dayCard.theme.roleColor("weather") : dayCard.theme.textStrong
             font.family: dayCard.theme.runtime.fontMono
             font.pixelSize: dayCard.theme.fontSize(12)
             font.weight: Font.DemiBold
@@ -34,7 +34,7 @@ ShellSurface {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: dayCard.weather.symbolFor(dayCard.day.code, true)
-            color: dayCard.theme.accent
+            color: dayCard.theme.roleColor("weather")
             font.family: "Symbols Nerd Font"
             font.pixelSize: dayCard.theme.fontSize(30)
         }
@@ -51,7 +51,7 @@ ShellSurface {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Math.round(dayCard.day.rain ?? 0) + "% rain"
-            color: dayCard.theme.accent
+            color: dayCard.theme.roleColor("connectivity")
             font.family: dayCard.theme.runtime.fontMono
             font.pixelSize: dayCard.theme.fontSize(11)
             font.weight: Font.DemiBold

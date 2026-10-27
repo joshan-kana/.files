@@ -15,8 +15,8 @@ ShellSurface {
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: selected ? theme.blend(theme.layer2, theme.accent, theme.dark ? 0.075 : 0.045) : theme.layer2
-    borderColor: selected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.72) : theme.subtleBorder
+    fillColor: selected ? theme.blend(theme.layer2, theme.roleColor("workspace"), theme.dark ? 0.075 : 0.045) : theme.layer2
+    borderColor: selected ? Qt.rgba(theme.roleColor("workspace").r, theme.roleColor("workspace").g, theme.roleColor("workspace").b, 0.72) : theme.subtleBorder
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
     Column {

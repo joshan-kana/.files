@@ -23,6 +23,7 @@ Item {
     property var commands: []
     // Alt+1–4 are launcher-local scopes; physical global keys stay in the keymap.
     property string searchScope: "unified"
+    readonly property color scopeAccent: theme.roleColor(searchScope === "unified" ? "warmth" : searchScope === "apps" ? "connectivity" : searchScope === "actions" ? "positive" : "audio")
     signal commandTriggered(string commandId)
     signal argumentCommandTriggered(string commandId, string argument)
 
@@ -481,6 +482,9 @@ Item {
                 return;
             if (values.length === 0) {
                 results.currentIndex = -1;
+                results.positionViewAtBeginning();
+                if (results.activeFocus)
+                    search.forceActiveFocus();
                 return;
             }
             const retained = palette.selectionIdentity && !palette.actionMode ? values.findIndex(item => palette.identity(item) === palette.selectionIdentity) : -1;
@@ -702,10 +706,12 @@ Item {
         actionMode = false;
         parameterTarget = null;
         queueFileSearch();
-        if (resultModel.values.length === 0)
+        if (resultModel.values.length === 0) {
             results.currentIndex = -1;
-        else if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length)
+            results.positionViewAtBeginning();
+        } else if (results.currentIndex < 0 || results.currentIndex >= resultModel.values.length) {
             results.currentIndex = 0;
+        }
         search.forceActiveFocus();
     }
 
@@ -1212,7 +1218,7 @@ Item {
 
                 Text {
                     text: palette.actionMode ? "COMMAND PALETTE · ACTIONS" : palette.parameterTarget ? "COMMAND PALETTE · ARGUMENT" : "COMMAND PALETTE · SEARCH / CALCULATE"
-                    color: theme.accent
+                    color: palette.scopeAccent
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
@@ -1286,6 +1292,7 @@ Item {
                             horizontalCompact: true
                             title: modelData.title
                             shortcut: modelData.shortcut
+                            activeColor: palette.scopeAccent
                             active: palette.searchScope === modelData.scope
                             onActivated: palette.chooseScope(modelData.scope)
                         }
@@ -1307,7 +1314,7 @@ Item {
                 exponent: theme.squircleExponent
                 cornerRadius: theme.radiusMedium
                 fillColor: theme.expressiveSurfaceStrong
-                borderColor: search.activeFocus ? theme.accent : theme.outline
+                borderColor: search.activeFocus ? palette.scopeAccent : theme.outline
                 borderWidth: search.activeFocus ? theme.borderFocus : theme.borderThin
 
                 Behavior on borderColor {
@@ -1328,7 +1335,7 @@ Item {
                     }
 
                     text: ">"
-                    color: theme.accent
+                    color: palette.scopeAccent
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(20)
                     font.weight: Font.Bold
@@ -1346,7 +1353,7 @@ Item {
                     }
 
                     color: theme.textStrong
-                    selectionColor: theme.accent
+                    selectionColor: palette.scopeAccent
                     selectedTextColor: theme.background
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(18)
@@ -1374,7 +1381,8 @@ Item {
                             palette.openActions();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Tab) {
-                            results.forceActiveFocus();
+                            if (displayedModel.values.length > 0)
+                                results.forceActiveFocus();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Escape) {
                             palette.dismissOrReset();
@@ -1448,8 +1456,8 @@ Item {
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: theme.blend(theme.layer2, theme.accent, theme.dark ? 0.07 : 0.045)
-                    borderColor: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, theme.dark ? 0.53 : 0.62)
+                    fillColor: theme.blend(theme.layer2, palette.scopeAccent, theme.dark ? 0.07 : 0.045)
+                    borderColor: Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, theme.dark ? 0.53 : 0.62)
                     borderWidth: theme.borderThin
                 }
 
@@ -1476,14 +1484,14 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusSmall
-                            fillColor: result.ListView.isCurrentItem ? theme.blend(theme.controlBase, theme.accent, 0.18) : theme.controlBase
-                            borderColor: result.ListView.isCurrentItem ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.55) : theme.subtleBorder
+                            fillColor: result.ListView.isCurrentItem ? theme.blend(theme.controlBase, palette.scopeAccent, 0.18) : theme.controlBase
+                            borderColor: result.ListView.isCurrentItem ? Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, 0.55) : theme.subtleBorder
                             borderWidth: theme.borderThin
 
                             Text {
                                 anchors.centerIn: parent
                                 text: result.index + 1
-                                color: result.ListView.isCurrentItem ? theme.accent : theme.textMuted
+                                color: result.ListView.isCurrentItem ? palette.scopeAccent : theme.textMuted
                                 font.family: runtime.fontMono
                                 font.pixelSize: theme.fontSize(11)
                                 font.weight: Font.Bold
@@ -1552,7 +1560,7 @@ Item {
                                 shortcut: result.modelData.key.length > 0 ? result.modelData.key : (result.ListView.isCurrentItem ? "↵ RUN" : "")
                                 fontFamily: runtime.fontMono
                                 fontSize: theme.fontSize(11)
-                                textColor: result.ListView.isCurrentItem ? theme.accent : theme.textMuted
+                                textColor: result.ListView.isCurrentItem ? palette.scopeAccent : theme.textMuted
                             }
                         }
                     }

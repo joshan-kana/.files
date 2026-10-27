@@ -53,7 +53,7 @@ Item {
                     id: tile
                     required property int index
                     readonly property bool cpu: index === 0
-                    readonly property color gaugeColor: cpu ? panel.theme.accent : panel.theme.roleColor("media")
+                    readonly property color gaugeColor: cpu ? panel.theme.roleColor("resources") : panel.theme.roleColor("connectivity")
                     readonly property real percentage: cpu ? panel.resourceState.cpuPercent : panel.resourceState.memoryPercent
                     readonly property string detailText: cpu ? "Processor activity" : panel.resourceState.kibString(panel.resourceState.memoryUsed) + " / " + panel.resourceState.kibString(panel.resourceState.memoryTotal)
                     width: (panel.width - panel.theme.spacing3) * (cpu ? 0.57 : 0.43)
@@ -292,7 +292,7 @@ Item {
                             label: index === 0 ? "CPU" : index === 1 ? "MEMORY" : "NETWORK · RX+TX"
                             values: index === 0 ? panel.resourceState.cpuHistory : index === 1 ? panel.resourceState.memoryHistory : panel.resourceState.networkHistory
                             maximum: index === 2 ? Math.max(131072, ...values) : 1
-                            graphColor: index === 0 ? panel.theme.accent : index === 1 ? panel.theme.positive : panel.theme.warning
+                            graphColor: index === 0 ? panel.theme.roleColor("resources") : index === 1 ? panel.theme.roleColor("connectivity") : panel.theme.roleColor("positive")
                             currentText: index === 0 ? Math.round(panel.resourceState.cpuPercent * 100) + "%" : index === 1 ? Math.round(panel.resourceState.memoryPercent * 100) + "%" : panel.resourceState.speedString(panel.resourceState.networkDownload + panel.resourceState.networkUpload)
                             sampleLimit: panel.resourceState.historyLength
                         }
@@ -320,7 +320,7 @@ Item {
                             motion: panel.motion
                             surfaceLayer: ShellSurface.Control
                             cornerRadius: panel.theme.radiusSmall
-                            fillColor: panel.theme.blend(panel.theme.controlBase, usage >= 0.8 ? panel.theme.warning : panel.theme.accent, 0.06 + usage * 0.30)
+                            fillColor: panel.theme.blend(panel.theme.controlBase, usage >= 0.8 ? panel.theme.warning : panel.theme.roleColor("resources"), 0.06 + usage * 0.30)
                             Row {
                                 anchors {
                                     fill: parent
@@ -354,7 +354,7 @@ Item {
                                 }
                                 width: Math.min(parent.width, Math.max(0, parent.width * coreTile.usage))
                                 height: 3
-                                color: coreTile.usage >= 0.8 ? panel.theme.warning : panel.theme.accent
+                                color: coreTile.usage >= 0.8 ? panel.theme.warning : panel.theme.roleColor("resources")
                                 radius: 1.5
                             }
                         }
