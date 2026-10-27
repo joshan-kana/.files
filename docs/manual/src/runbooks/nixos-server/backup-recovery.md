@@ -16,7 +16,7 @@ Run that block in the shell before using snippets that reference those variables
 
 | Problem | First move |
 | --- | --- |
-| NixOS change broke the server | `sudo nixos-rebuild switch --rollback` |
+| NixOS change broke the server | `run0 nixos-rebuild switch --rollback` |
 | One app is broken | Inspect local Snapper snapshots first |
 | Secret is missing or damaged | Inspect `restic-secrets` snapshots |
 | Local app data is gone | Inspect `restic-apps` snapshots |
@@ -26,9 +26,9 @@ Run that block in the shell before using snippets that reference those variables
 Before restoring mutable data, stop the service that writes to it and inspect the recovery source. When the machine still works, restore into a temporary directory before replacing live state.
 
 ```sh
-sudo restic-secrets snapshots
-sudo restic-apps snapshots
-sudo snapper -c apps list
+run0 restic-secrets snapshots
+run0 restic-apps snapshots
+run0 snapper -c apps list
 systemctl --failed --no-pager
 ```
 
@@ -50,8 +50,10 @@ NixOS configuration is Git/Nix state, not application-data backup state.
 For the immediately previous system generation:
 
 ```sh
-sudo nixos-rebuild switch --rollback
+run0 nixos-rebuild switch --rollback
 ```
+
+If Polkit itself is broken and `run0` cannot authorize the rollback, use a root recovery console or the installer environment to activate a known-good generation. A remote user session without a working elevation path is not a recovery mechanism.
 
 For a specific older repository revision, check out or inspect that revision in a separate worktree, build it, and switch only after reviewing the resulting system change.
 
@@ -65,11 +67,11 @@ Restore one secret into a temporary directory first:
 secret="$SERVER_SECRETS_DIR/n8n.env"
 restore_dir="$(mktemp -d)"
 
-sudo restic-secrets restore latest \
+run0 restic-secrets restore latest \
   --target "$restore_dir" \
   --include "$secret"
 
-sudo ls -l "$restore_dir$secret"
+run0 ls -l "$restore_dir$secret"
 ```
 
 After inspection, stop the consuming service and install the recovered file with the ownership and mode expected by that service.
@@ -77,8 +79,8 @@ After inspection, stop the consuming service and install the recovered file with
 After total machine loss, restore the backup bootstrap credentials first, then restore the secrets repository before application state:
 
 ```sh
-sudo restic-secrets restore latest --target /
-sudo restic-apps restore latest --target / --include "$APP_DATA_ROOT"
+run0 restic-secrets restore latest --target /
+run0 restic-apps restore latest --target / --include "$APP_DATA_ROOT"
 ```
 
 For a bare-metal replacement, use the [`nixos-server` installation guide](install.md), which covers the bootstrap sequence before the installed system exists.
@@ -88,13 +90,13 @@ For a bare-metal replacement, use the [`nixos-server` installation guide](instal
 List snapshots:
 
 ```sh
-sudo restic-apps snapshots
+run0 restic-apps snapshots
 ```
 
 Restore all application data:
 
 ```sh
-sudo restic-apps restore latest \
+run0 restic-apps restore latest \
   --target / \
   --include "$APP_DATA_ROOT"
 ```
@@ -102,7 +104,7 @@ sudo restic-apps restore latest \
 Restore one application, using n8n as the example:
 
 ```sh
-sudo restic-apps restore latest \
+run0 restic-apps restore latest \
   --target / \
   --include "$APP_DATA_ROOT/n8n"
 ```
@@ -116,23 +118,23 @@ Use Snapper when the local application-data filesystem is intact and a recent lo
 List snapshots and preview a range:
 
 ```sh
-sudo snapper -c apps list
-sudo snapper -c apps status <old>..<new>
+run0 snapper -c apps list
+run0 snapper -c apps status <old>..<new>
 ```
 
 Restore a single application only after stopping it:
 
 ```sh
-sudo systemctl stop docker-n8n.service
-sudo snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT/n8n"
-sudo systemctl start docker-n8n.service
+run0 systemctl stop docker-n8n.service
+run0 snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT/n8n"
+run0 systemctl start docker-n8n.service
 ```
 
 A whole-tree undo is substantially more destructive because unrelated applications are returned to the same point in time. Use it only when that is explicitly intended:
 
 ```sh
-sudo snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT"
-sudo nixos-rebuild switch --flake "$DOTFILES_REPO#nixos-server"
+run0 snapper -c apps undochange <old>..<new> "$APP_DATA_ROOT"
+run0 nixos-rebuild switch --flake "$DOTFILES_REPO#nixos-server"
 ```
 
 ## PostgreSQL-backed applications
@@ -142,7 +144,7 @@ Paperless and Immich require compatible database state in addition to their file
 Stop writers and the automatic Paperless database backup before replacing database state:
 
 ```sh
-sudo systemctl stop \
+run0 systemctl stop \
   paperless-web.service \
   paperless-consumer.service \
   paperless-scheduler.service \
@@ -157,7 +159,7 @@ Restore the relevant logical dumps into a temporary directory:
 snapshot=<snapshot-id>
 restore_dir="$(mktemp -d)"
 
-sudo restic-apps restore "$snapshot" \
+run0 restic-apps restore "$snapshot" \
   --target "$restore_dir" \
   --include "$PAPERLESS_BACKUP_ROOT/paperless.sql.gz" \
   --include "$IMMICH_BACKUP_ROOT"
@@ -171,21 +173,21 @@ Restore Paperless:
 restore_dir=<temporary-restore-directory>
 paperless_dump="$restore_dir$PAPERLESS_BACKUP_ROOT/paperless.sql.gz"
 
-sudo gzip -t "$paperless_dump"
-sudo -u postgres dropdb --if-exists --force paperless
-sudo gzip -cd "$paperless_dump" | \
-  sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres
+run0 gzip -t "$paperless_dump"
+run0 -u postgres dropdb --if-exists --force paperless
+run0 --pipe gzip -cd "$paperless_dump" | \
+  run0 --pipe -u postgres psql -v ON_ERROR_STOP=1 -d postgres
 ```
 
 Restore Immich from a complete dump selected from `$IMMICH_BACKUP_ROOT`. The dump expects an empty `immich` database:
 
 ```sh
 immich_dump=<path-to-complete-immich-sql.gz>
-sudo gzip -t "$immich_dump"
-sudo -u postgres dropdb --if-exists --force immich
-sudo -u postgres createdb --owner=immich immich
-sudo gzip -cd "$immich_dump" | \
-  sudo -u postgres psql -v ON_ERROR_STOP=1 -d immich
+run0 gzip -t "$immich_dump"
+run0 -u postgres dropdb --if-exists --force immich
+run0 -u postgres createdb --owner=immich immich
+run0 --pipe gzip -cd "$immich_dump" | \
+  run0 --pipe -u postgres psql -v ON_ERROR_STOP=1 -d immich
 ```
 
 Start the applications again and verify their state before allowing normal backup timers to continue.

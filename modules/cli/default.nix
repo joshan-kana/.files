@@ -116,13 +116,11 @@ let
 in
 {
   home = _: {
-    home.sessionVariables = sessionVariables;
-  };
-
-  shellAliases = _: {
-    home = _: {
-      home.shellAliases.sudo = "sudo ";
-    };
+    home.sessionVariables =
+      sessionVariables
+      // lib.optionalAttrs isLinux {
+        NH_ELEVATION_STRATEGY = "${pkgs.systemd}/bin/run0";
+      };
   };
 
   systemCommands =
@@ -181,7 +179,7 @@ in
               name = "build-vm";
               text = ''
                 read -r -a rebuildFlags <<< "''${NIXOS_REBUILD_FLAGS:-}"
-                sudo nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
+                ${pkgs.systemd}/bin/run0 nixos-rebuild --flake "$NH_OS_FLAKE#$FLK_PROFILE" "''${rebuildFlags[@]}" build-vm
               '';
             };
           in

@@ -1,5 +1,6 @@
 _: {
   identity = import ./identity.nix;
+  privilege = import ./privilege.nix;
   homeManager = import ./home-manager.nix;
   locale = import ./locale.nix;
   documentation = import ./documentation.nix;

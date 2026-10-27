@@ -8,14 +8,14 @@
       ""
       "Run on the target x86 NixOS machine:"
       ""
-      "  cd ~/.files && sudo nixos-generate-config --show-hardware-config > hosts/nixos/hardware.nix"
+      "  cd ~/.files && run0 nixos-generate-config --show-hardware-config > hosts/nixos/hardware.nix"
     ])
   ];
 
   # Replace this with the real desktop hardware config before rebuilding the
   # `nixos` host:
   #
-  #   sudo nixos-generate-config --show-hardware-config > hosts/nixos/hardware.nix
+  #   run0 nixos-generate-config --show-hardware-config > hosts/nixos/hardware.nix
   #
   # The original x86 machine is currently unavailable, so this file is only an
   # eval placeholder.

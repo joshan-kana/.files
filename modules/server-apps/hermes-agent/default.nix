@@ -43,10 +43,6 @@ let
     ]
     ++ [ hermesGh ];
 
-  hermesSudo = pkgs.writeShellScriptBin "sudo" ''
-    exec /run/wrappers/bin/sudo "$@"
-  '';
-
   hermesServiceCli = pkgs.writeShellScriptBin "hermes-service-cli" ''
     export HOME=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.HOME}
     export HERMES_HOME=${lib.escapeShellArg config.systemd.services.hermes-agent.environment.HERMES_HOME}
@@ -65,13 +61,13 @@ let
     fi
 
     nsenter=${pkgs.util-linux}/bin/nsenter
-    sudo=/run/wrappers/bin/sudo
+    runuser=${pkgs.util-linux}/bin/runuser
     cli=${hermesServiceCli}/bin/hermes-service-cli
-    exec "$nsenter" --target "$pid" --mount --wdns="$PWD" -- "$sudo" -n -H -u ${hermesUser} -- "$cli" "$@"
+    exec "$nsenter" --target "$pid" --mount --wdns="$PWD" -- "$runuser" -u ${hermesUser} -- "$cli" "$@"
   '';
 
   hermesCli = pkgs.writeShellScriptBin "hermes" ''
-    exec /run/wrappers/bin/sudo -n ${hermesLauncher}/bin/hermes-launcher "$@"
+    exec ${pkgs.systemd}/bin/run0 ${hermesLauncher}/bin/hermes-launcher "$@"
   '';
 in
 {
@@ -84,7 +80,7 @@ in
     group = server.storage.appData.group.name;
     stateDir = "${server.storage.appData.root}/hermes";
 
-    extraPackages = hermesExtraPackages ++ [ hermesSudo ];
+    extraPackages = hermesExtraPackages;
 
     environment = {
       MATRIX_HOMESERVER = "https://matrix.org";
@@ -114,27 +110,13 @@ in
 
   environment.systemPackages = [ hermesCli ];
 
-  security.sudo.extraRules = [
-    {
-      users = [ primary.name ];
-      runAs = "root";
-      commands = [
-        {
-          command = "${hermesLauncher}/bin/hermes-launcher";
-          options = [ "NOPASSWD" ];
-        }
-      ];
-    }
-    {
-      users = [ hermesUser ];
-      commands = [
-        {
-          command = "ALL";
-          options = [ "NOPASSWD" ];
-        }
-      ];
-    }
-  ];
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "${hermesUser}") {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   fileSystems.${mappedHome} = {
     device = primaryHome;

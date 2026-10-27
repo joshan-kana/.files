@@ -6,7 +6,7 @@ When recovering an existing host, verify the restored repository:
 
 ```sh
 if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
-  sudo restic-secrets snapshots --latest 1
+  run0 restic-secrets snapshots --latest 1
 fi
 ```
 
@@ -14,9 +14,9 @@ On first-ever provisioning, populate the host's normal secrets tree first. Then 
 
 ```sh
 if [[ "$SECRETS_BACKUP_ENABLED" == true ]]; then
-  sudo restic-secrets init
-  sudo systemctl start restic-backups-secrets.service
-  sudo restic-secrets snapshots --latest 1
+  run0 restic-secrets init
+  run0 systemctl start restic-backups-secrets.service
+  run0 restic-secrets snapshots --latest 1
 fi
 ```
 

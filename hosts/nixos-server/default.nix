@@ -649,19 +649,14 @@
       security.pam.sshAgentAuth = {
         enable = true;
         authorizedKeysFiles = [
-          "/etc/sudo-authorized-key"
+          "/etc/elevation-authorized-key"
         ];
       };
 
-      security.sudo = {
-        extraConfig = ''
-          Defaults:joshan noninteractive_auth
-        '';
-        wheelNeedsPassword = true;
-      };
+      security.pam.services.polkit-1.sshAgentAuth = true;
 
       systemd.tmpfiles.rules = [
-        "f+ /etc/sudo-authorized-key 0444 root root - ${
+        "f+ /etc/elevation-authorized-key 0444 root root - ${
           lib.concatStringsSep "\\n" [
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIjtOri4c/7Nw3CMsv+ADMgepdVBTvtBlrTSJR+w5r7s joshan@nixos-server-sudo"
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"

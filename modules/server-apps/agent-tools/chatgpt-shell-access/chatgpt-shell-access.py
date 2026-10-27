@@ -26,23 +26,14 @@ class RemoteTarget:
     ssh_target: str
     credential: str
     shell: str
-    sudo: bool
+    forwardAgent: bool
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
 SUDO_AGENT = os.environ["SSH_AUTH_SOCK"]
-REMOTE_SUDO_AGENT = os.environ["CHATGPT_SHELL_REMOTE_SUDO_AGENT"]
+REMOTE_AUTH_AGENT = os.environ["CHATGPT_SHELL_REMOTE_AUTH_AGENT"]
 COMMAND_PATH = os.environ["CHATGPT_SHELL_COMMAND_PATH"]
-LOCAL = [
-    "/run/wrappers/bin/sudo",
-    "-n",
-    "-H",
-    "-u",
-    os.environ["CHATGPT_SHELL_LOCAL_USER"],
-    "--",
-    os.environ["CHATGPT_SHELL_BASH"],
-    "-lc",
-]
+LOCAL = [os.environ["CHATGPT_SHELL_BASH"], "-lc"]
 SSH = [
     "ssh",
     "-oBatchMode=yes",
@@ -73,8 +64,8 @@ COMMAND_ENV = {key: value for key, value in os.environ.items() if key in _ALLOWE
 
 def _command_env(host: Host) -> dict[str, str]:
     environment = COMMAND_ENV.copy()
-    if host != LOCAL_HOST and REMOTE_TARGETS[host].sudo:
-        environment["SSH_AUTH_SOCK"] = REMOTE_SUDO_AGENT
+    if host != LOCAL_HOST and REMOTE_TARGETS[host].forwardAgent:
+        environment["SSH_AUTH_SOCK"] = REMOTE_AUTH_AGENT
     return environment
 
 
@@ -149,7 +140,7 @@ def _build_argv(host: Host, script: str) -> list[str]:
     target = REMOTE_TARGETS[host]
     return [
         *SSH,
-        f"-oForwardAgent={'yes' if target.sudo else 'no'}",
+        f"-oForwardAgent={'yes' if target.forwardAgent else 'no'}",
         "-i",
         f"{CREDENTIALS}/{target.credential}",
         target.ssh_target,

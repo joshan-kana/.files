@@ -35,7 +35,7 @@ if [ -z "$disk_a" ] || [ -z "$disk_b" ] || [ -n "${4:-}" ]; then
 fi
 
 if [ "$EUID" -ne 0 ]; then
-  echo "ERROR: run this script with sudo so it can inspect disk signatures." >&2
+  echo "ERROR: run this script as root so it can inspect disk signatures." >&2
   exit 1
 fi
 
