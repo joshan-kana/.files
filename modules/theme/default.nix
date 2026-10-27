@@ -10,7 +10,7 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
-  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  inherit (lib.systems.elaborate system) isLinux;
   syntaxTheme =
     { config, pkgs }:
     let
@@ -372,47 +372,6 @@ in
               "window.titleBarStyle" = "custom";
               "window.controlsStyle" = "hidden";
             };
-          };
-      };
-      zen = {
-        home =
-          {
-            config,
-            lib,
-            pkgs,
-            ...
-          }:
-          lib.optionalAttrs isDarwin {
-            home.activation.zenBrowserFonts = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-              for prefs in "${config.home.homeDirectory}/Library/Application Support/Zen/Profiles/"*/prefs.js; do
-                [ -f "$prefs" ] || continue
-                user_js="''${prefs%/prefs.js}/user.js"
-                [ ! -L "$user_js" ] || continue
-                [ ! -e "$user_js" ] || [ -f "$user_js" ] || continue
-
-                tmp=$(${lib.getExe' pkgs.coreutils "mktemp"} "$user_js.XXXXXXXX")
-                if [ -f "$user_js" ]; then
-                  if [ "$(grep -c '^// BEGIN Stylix font preferences$' "$user_js")" != "$(grep -c '^// END Stylix font preferences$' "$user_js")" ]; then
-                    echo "zen-browser: invalid Stylix font block in $user_js" >&2
-                    rm "$tmp"
-                    continue
-                  fi
-                  ${lib.getExe pkgs.gnused} '/^\/\/ BEGIN Stylix font preferences$/,/^\/\/ END Stylix font preferences$/d' "$user_js" > "$tmp"
-                fi
-                cat >> "$tmp" <<'EOF'
-              // BEGIN Stylix font preferences
-              user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
-              user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
-              user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
-              // END Stylix font preferences
-              EOF
-                if ! cmp -s "$user_js" "$tmp"; then
-                  mv "$tmp" "$user_js"
-                else
-                  rm "$tmp"
-                fi
-              done
-            '';
           };
       };
       firefox = {
