@@ -37,6 +37,11 @@ let
                     command = f.read(8192).split(b"\0", 1)[0]
                 if os.path.basename(command) != b"run0":
                     return False
+                # Check the executable inode, not just caller-controlled argv[0].
+                executable = os.stat("exe", dir_fd=proc)
+                expected = os.stat("${pkgs.systemd}/bin/run0")
+                if (executable.st_dev, executable.st_ino) != (expected.st_dev, expected.st_ino):
+                    return False
                 environ_fd = os.open("environ", os.O_RDONLY, dir_fd=proc)
                 with os.fdopen(environ_fd, "rb") as f:
                     values = f.read(1024 * 1024).split(b"\0")
@@ -118,6 +123,8 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
   systemd.services."run0-ssh-agent-auth@" = {
     description = "Verify an SSH-agent signature for a run0 Polkit request";
     serviceConfig = {
+      # The helper needs only same-user /proc access and public keys, never root.
+      User = "joshan";
       ExecStart = "${verify}/bin/run0-ssh-agent-verify";
       StandardInput = "socket";
       StandardOutput = "socket";
