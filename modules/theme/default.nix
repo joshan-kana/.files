@@ -1,4 +1,5 @@
 {
+  inputs,
   lib,
   pkgs,
   scopeConfig,
@@ -13,7 +14,7 @@ let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
   browserFontPolicy."browser.display.use_document_fonts" = {
     Value = 0;
-    Status = "locked";
+    Status = "default";
     Type = "number";
   };
   syntaxTheme =
@@ -390,7 +391,33 @@ in
               user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
               user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
               user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
+              user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
             '';
+            home.file."Library/Application Support/Zen/Profiles/default/chrome/userChrome.css".text = ''
+              @import url("zen-themes.css");
+
+              ${import (inputs.stylix.outPath + "/modules/zen-browser/userChrome.nix") {
+                colors = config.lib.stylix.colors;
+                opacityHex = config.stylix.targets.zen-browser.opacityHex;
+              }}
+
+              :root,
+              #navigator-toolbox,
+              #sidebar-box,
+              #urlbar-input,
+              #urlbar-results,
+              .tab-label,
+              .toolbarbutton-text,
+              .zen-workspace-name {
+                font-family: ${builtins.toJSON config.stylix.fonts.sansSerif.name} !important;
+              }
+            '';
+            home.file."Library/Application Support/Zen/Profiles/default/chrome/userContent.css".text =
+              import (inputs.stylix.outPath + "/modules/zen-browser/userContent.nix")
+                {
+                  colors = config.lib.stylix.colors;
+                  opacityHex = config.stylix.targets.zen-browser.opacityHex;
+                };
           };
       };
       firefox = {
