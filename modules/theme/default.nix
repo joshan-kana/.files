@@ -10,7 +10,12 @@ let
   themeRegistry = import ./registry.nix { inherit lib pkgs; };
   activeTheme = themeRegistry.resolve scopeConfig.name;
   activeAssets = activeTheme.assets;
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
+  browserFontPolicy."browser.display.use_document_fonts" = {
+    Value = 0;
+    Status = "locked";
+    Type = "number";
+  };
   syntaxTheme =
     { config, pkgs }:
     let
@@ -374,8 +379,23 @@ in
             };
           };
       };
+      zen = {
+        home =
+          { config, ... }:
+          {
+            programs.zen-browser.policies.Preferences = browserFontPolicy;
+          }
+          // lib.optionalAttrs isDarwin {
+            home.file."Library/Application Support/Zen/Profiles/default/user.js".text = ''
+              user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
+              user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
+              user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
+            '';
+          };
+      };
       firefox = {
         home = _: {
+          programs.firefox.policies.Preferences = browserFontPolicy;
           stylix.targets.firefox.profileNames = [ "themed" ];
           stylix.targets.firefox.colorTheme.enable = true;
           programs.firefox.profiles.themed = {
@@ -391,6 +411,7 @@ in
       };
       floorp = {
         home = _: {
+          programs.floorp.policies.Preferences = browserFontPolicy;
           stylix.targets.floorp.profileNames = [ "themed" ];
           stylix.targets.floorp.colorTheme.enable = true;
           programs.floorp.profiles.themed = {
