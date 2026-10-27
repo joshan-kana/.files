@@ -33,6 +33,8 @@ in
       environment = {
         HEALTH_LISTEN_ADDR = "127.0.0.1:18793";
         MCP_SERVER_URL = "url=http://127.0.0.1:4444/mcp";
+        MCP_STARTUP_WAIT_TIMEOUT = "30s";
+        CONTROL_PLANE_POLL_CHANNELS = "main";
       };
 
       serviceConfig = {
