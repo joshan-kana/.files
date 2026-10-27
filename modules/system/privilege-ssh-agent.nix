@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   system,
@@ -39,7 +40,7 @@ let
                     return False
                 # Check the executable inode, not just caller-controlled argv[0].
                 executable = os.stat("exe", dir_fd=proc)
-                expected = os.stat("${pkgs.systemd}/bin/run0")
+                expected = os.stat("${config.systemd.package}/bin/run0")
                 if (executable.st_dev, executable.st_ino) != (expected.st_dev, expected.st_ino):
                     return False
                 environ_fd = os.open("environ", os.O_RDONLY, dir_fd=proc)
