@@ -284,8 +284,9 @@
                   ];
                   inherit (adguard) port;
                   upstream_dns = [ technitium.localBackend ];
-                  # Never forward private .home names to public fallback resolvers:
-                  # an upstream restart can otherwise cache public NXDOMAIN for hours.
+                  # Public fallback resolvers cannot answer private records and may
+                  # return cacheable NXDOMAIN during backend outages. Without a
+                  # fallback, uncached queries fail until Technitium recovers.
                   fallback_dns = [ ];
                 };
               };
