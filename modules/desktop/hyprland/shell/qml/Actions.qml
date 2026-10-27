@@ -16,6 +16,7 @@ QtObject {
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
     property bool mixerDetailOpen: false
+    property bool systemDetailOpen: false
     required property OverviewPanel overviewPanel
     required property MediaState mediaState
     required property SystemState systemState
@@ -148,8 +149,14 @@ QtObject {
             return;
 
         const geometry = origin || ambientBar.originFor(screen, "system");
-        const opening = !(expansionState.hasCurrent && expansionState.currentName === "system" && expansionState.screen === screen);
-        if (opening)
+        const showingSystem = expansionState.hasCurrent && expansionState.currentName === "system" && expansionState.screen === screen;
+        if (showingSystem && systemDetailOpen) {
+            // The Controls shortcut returns from any nested detail, including
+            // views opened directly from the Controls page.
+            showSystem(screen, origin, "controls");
+            return;
+        }
+        if (!showingSystem)
             hideTransient("system");
 
         expansionState.toggle("system", screen, geometry.center, geometry.width, geometry.height, "");
