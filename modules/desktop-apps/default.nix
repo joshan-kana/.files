@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   pkgs,
   system,
@@ -74,7 +73,6 @@ in
 
   zen = _: {
     home = _: {
-      imports = [ inputs.zen-browser.homeModules.beta ];
       # Browser-wide policies apply to the existing, unmanaged Zen profiles.
       stylix.targets.zen-browser.enable = false;
       programs.zen-browser = {
