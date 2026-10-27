@@ -806,7 +806,7 @@ FocusScope {
                     shortcut: "O"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"
-                    activeColor: root.powerProfile.current === "power-saver" ? root.theme.roleColor("warning") : root.theme.roleColor("positive")
+                    activeColor: root.theme.powerProfileColor(root.powerProfile.current)
                     onActivated: root.powerProfile.cycle()
                 }
 
