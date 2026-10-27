@@ -1137,7 +1137,7 @@ in
           accentSecondary = colors.base0E;
           accentTertiary = colors.base0C;
           accentWarm = colors.base09;
-          accentWorkspace = colors.base08;
+          accentWorkspace = colors.base0D;
           accentUtility = colors.base0F;
           accentEnergy = colors.base0A;
           accentNature = colors.base0B;
