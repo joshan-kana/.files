@@ -497,6 +497,7 @@ Item {
         theme: panel.theme
         motion: panel.motion
         glyph: panel.detailView ? "󰋼" : panel.system.wifiConnected ? "󰤨" : panel.system.networkConnected ? "󰈀" : "󰤭"
+        glyphFont: "Symbols Nerd Font"
         glyphColor: panel.system.networkConnected ? panel.theme.positive : panel.theme.warning
         eyebrow: "Connectivity / " + panel.system.connectivityText
         title: panel.detailView ? "Connection details" : panel.savedView ? "Saved connections" : panel.system.wifiAvailable ? "Wi-Fi" : "Network"
