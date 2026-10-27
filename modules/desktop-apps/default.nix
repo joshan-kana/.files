@@ -84,17 +84,16 @@ in
 
   firefox = _: {
     home = _: {
-      programs.firefox =
-        lib.optionalAttrs isDarwin {
-          package = pkgs.firefox-bin;
-          configPath = "Library/Application Support/Firefox";
-        }
-        // lib.optionalAttrs isLinux {
-          configPath = ".mozilla/firefox";
-        }
-        // {
-          policies.Preferences = browserFontPolicy;
-        };
+      programs.firefox = {
+        policies.Preferences = browserFontPolicy;
+      }
+      // lib.optionalAttrs isDarwin {
+        package = pkgs.firefox-bin;
+        configPath = "Library/Application Support/Firefox";
+      }
+      // lib.optionalAttrs isLinux {
+        configPath = ".mozilla/firefox";
+      };
     };
   };
 
