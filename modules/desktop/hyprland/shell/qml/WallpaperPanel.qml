@@ -172,9 +172,16 @@ Item {
     function moveSelection(delta: int): void {
         if (filteredEntries.length === 0)
             return;
-        const count = filteredEntries.length;
-        selectedIndex = ((selectedIndex + delta) % count + count) % count;
-        gallery.currentIndex = selectedIndex;
+        selectedIndex = Math.max(0, Math.min(filteredEntries.length - 1, selectedIndex + delta));
+    }
+
+    function moveGrid(x: int, y: int): void {
+        moveSelection(x + y * gallery.columnCount);
+    }
+
+    function moveHalfPage(direction: int): void {
+        const rows = Math.max(1, Math.floor(gallery.height / gallery.cellHeight / 2));
+        moveSelection(direction * rows * gallery.columnCount);
     }
 
     function activateThumbnail(index: int): void {
@@ -306,9 +313,9 @@ Item {
             width: parent.width
             height: 465
 
-            // Caelestia-style centre-selected wallpaper carousel, keeping our
-            // own Theme/Motion/StateLayer and awww-backed selection action.
-            PathView {
+            // The theme gallery's compact, scrollable card grid is a better
+            // match for choosing from a library than a one-at-a-time carousel.
+            GridView {
                 id: gallery
                 anchors {
                     top: parent.top
@@ -317,75 +324,24 @@ Item {
                 }
                 height: parent.height - 56
                 clip: true
-                interactive: false
-                highlightMoveDuration: panel.motion.enabled ? panel.motion.spatialSlow : 0
+                boundsBehavior: Flickable.StopAtBounds
+                readonly property int columnCount: width < 430 || panel.theme.textScale >= 1.5 ? 2 : width < 690 ? 3 : 4
+                cellWidth: width / columnCount
+                cellHeight: 145
                 model: panel.filteredEntries
-                pathItemCount: Math.min(5, Math.max(3, count))
                 currentIndex: panel.selectedIndex
-                preferredHighlightBegin: 0.5
-                preferredHighlightEnd: 0.5
-                highlightRangeMode: PathView.StrictlyEnforceRange
-                snapMode: PathView.SnapToItem
-
+                highlightMoveDuration: 0
                 onCurrentIndexChanged: {
                     if (currentIndex >= 0)
-                        panel.selectedIndex = currentIndex;
-                }
-
-                WheelHandler {
-                    target: null
-                    onWheel: event => panel.moveSelection(event.angleDelta.y > 0 ? -1 : 1)
-                }
-
-                path: Path {
-                    // Keep neighbouring cards visible as previews without
-                    // letting their edges crowd the full-size selection.
-                    startX: -gallery.width * 0.13
-                    startY: gallery.height / 2 + 15
-
-                    PathAttribute {
-                        name: "depthScale"
-                        value: 0.65
-                    }
-                    PathAttribute {
-                        name: "depthOpacity"
-                        value: 0.68
-                    }
-                    PathQuad {
-                        x: gallery.width / 2
-                        y: gallery.height / 2
-                        controlX: gallery.width * 0.19
-                        controlY: gallery.height / 2 - 18
-                    }
-                    PathAttribute {
-                        name: "depthScale"
-                        value: 1
-                    }
-                    PathAttribute {
-                        name: "depthOpacity"
-                        value: 1
-                    }
-                    PathQuad {
-                        x: gallery.width * 1.13
-                        y: gallery.height / 2 + 15
-                        controlX: gallery.width * 0.81
-                        controlY: gallery.height / 2 - 18
-                    }
-                    PathAttribute {
-                        name: "depthScale"
-                        value: 0.65
-                    }
-                    PathAttribute {
-                        name: "depthOpacity"
-                        value: 0.68
-                    }
+                        positionViewAtIndex(currentIndex, GridView.Contain);
                 }
 
                 delegate: Item {
                     id: entry
                     required property string modelData
                     required property int index
-                    readonly property bool current: PathView.isCurrentItem
+                    readonly property bool current: index === panel.selectedIndex
+                    readonly property bool applied: modelData === panel.currentPath
                     readonly property bool animatedFile: /\.(mp4|webm|mkv|mov|gif)$/i.test(modelData)
                     property string posterPath: ""
                     property string motionPosterPath: ""
@@ -408,6 +364,8 @@ Item {
                     onCurrentChanged: {
                         if (current && animatedFile && panel.open)
                             motionPreviewDebounce.restart();
+                        else
+                            motionPreviewDebounce.stop();
                     }
                     Connections {
                         target: panel
@@ -424,32 +382,37 @@ Item {
                     property Process posterProcess: Process {
                         stdout: entry.posterOutput
                         onExited: (code, status) => {
-                            if (code === 0) {
+                            if (code === 0)
                                 entry.posterPath = entry.posterOutput.text.trim();
-                            }
                         }
                     }
-
                     Component.onCompleted: {
-                        if (animatedFile && panel.runtime.wallpaperLibrary.length > 0)
+                        if (panel.runtime.wallpaperLibrary.length > 0)
                             posterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail", modelData]);
                         if (current && animatedFile && panel.open)
                             motionPreviewDebounce.restart();
                     }
-                    width: 360
-                    height: 305
-                    z: current ? 2 : 1
-                    // PathView interpolates these alongside position; changing the
-                    // selected item must not snap its scale or double-animate.
-                    scale: PathView.onPath ? PathView.depthScale : 0.65
-                    opacity: PathView.onPath ? PathView.depthOpacity : 0
+
+                    width: gallery.cellWidth
+                    height: gallery.cellHeight
+                    scale: cardPress.pressed ? 0.985 : cardPress.containsMouse ? 1.012 : 1
+                    Behavior on scale {
+                        Anim {
+                            motion: panel.motion
+                            type: Anim.FastSpatial
+                        }
+                    }
 
                     ShellSurface {
-                        anchors.fill: parent
+                        anchors {
+                            fill: parent
+                            rightMargin: panel.theme.spacing2
+                            bottomMargin: panel.theme.spacing2
+                        }
                         theme: panel.theme
                         motion: panel.motion
-                        surfaceLayer: ShellSurface.Group
-                        cornerRadius: theme.radiusMedium
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: panel.theme.radiusMedium
                         selected: entry.current
                         outlined: entry.current
                         clip: true
@@ -459,10 +422,10 @@ Item {
                                 top: parent.top
                                 left: parent.left
                                 right: parent.right
+                                bottom: filenameBar.top
                             }
-                            height: parent.height
-                            source: entry.animatedFile ? (entry.posterPath.length > 0 ? "file://" + entry.posterPath : "") : "file://" + entry.modelData
-                            sourceSize: Qt.size(620, 400)
+                            source: entry.posterPath.length > 0 ? "file://" + entry.posterPath : ""
+                            sourceSize: Qt.size(300, 180)
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
@@ -473,8 +436,8 @@ Item {
                                 top: parent.top
                                 left: parent.left
                                 right: parent.right
+                                bottom: filenameBar.top
                             }
-                            height: parent.height
                             source: entry.current && panel.open && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
                             fillMode: Image.PreserveAspectCrop
                             playing: entry.current && panel.open
@@ -483,18 +446,65 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            visible: entry.animatedFile && entry.posterPath.length === 0
-                            text: "󰐊"
-                            color: panel.theme.accent
+                            visible: entry.posterPath.length === 0
+                            text: entry.animatedFile ? "󰐊" : "󰋩"
+                            color: panel.theme.textMuted
                             font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(32)
+                            font.pixelSize: panel.theme.fontSize(19)
                         }
 
-                        // Selected filename is already in the dedicated caption
-                        // beneath the carousel; repeating it on every shrunken
-                        // side card made the gallery unnecessarily crowded.
+                        Text {
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                margins: panel.theme.spacing2
+                            }
+                            visible: entry.animatedFile && entry.posterPath.length > 0
+                            text: "󰐊"
+                            color: "#ffffff"
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(15)
+                        }
+
+                        Rectangle {
+                            id: filenameBar
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                bottom: parent.bottom
+                            }
+                            height: 32
+                            color: panel.theme.surface
+
+                            Row {
+                                anchors {
+                                    fill: parent
+                                    leftMargin: panel.theme.spacing2
+                                    rightMargin: panel.theme.spacing2
+                                }
+                                spacing: panel.theme.spacing1
+                                Text {
+                                    width: Math.max(1, parent.width - stateLabel.implicitWidth - parent.spacing)
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: entry.modelData.slice(entry.modelData.lastIndexOf("/") + 1)
+                                    color: panel.theme.textStrong
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(10)
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    id: stateLabel
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: entry.applied ? "ACTIVE" : entry.current ? "SELECTED" : ""
+                                    color: entry.applied ? panel.theme.positive : panel.theme.accent
+                                    font.family: panel.runtime.fontMono
+                                    font.pixelSize: panel.theme.fontSize(9)
+                                }
+                            }
+                        }
 
                         StateLayer {
+                            id: cardPress
                             theme: panel.theme
                             motion: panel.motion
                             selected: entry.current
@@ -637,6 +647,38 @@ Item {
                 horizontalCompact: true
                 enabled: panel.selectedPath().length > 0 && !panel.busy
                 onActivated: panel.applySelected()
+            }
+        }
+
+        Row {
+            anchors.right: parent.right
+            spacing: panel.theme.spacing2
+            Repeater {
+                model: [
+                    {
+                        shortcut: "H/L",
+                        label: "Choose"
+                    },
+                    {
+                        shortcut: "J/K",
+                        label: "Rows"
+                    },
+                    {
+                        shortcut: "/",
+                        label: "Search"
+                    },
+                    {
+                        shortcut: "ENTER",
+                        label: "Apply"
+                    }
+                ]
+                delegate: KeyHint {
+                    required property var modelData
+                    shortcut: modelData.shortcut
+                    label: modelData.label
+                    theme: panel.theme
+                    runtime: panel.runtime
+                }
             }
         }
 
