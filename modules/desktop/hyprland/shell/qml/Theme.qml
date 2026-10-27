@@ -75,10 +75,10 @@ QtObject {
         return profile === "power-saver" ? warning : roleColor("power");
     }
 
-    // Shared spectrum colour ramp, expressed only in Stylix Base16 tokens.
-    // Bass is warm, mids move through green, and treble ends in violet.
+    // Base16 red at the bass end blends through primary blue to cyan treble.
+    // One ramp serves every shared bar, curve, and wallpaper visualiser.
     function spectrumColor(position: real): color {
-        const stops = [accentWarm, accentEnergy, accentNature, accentTertiary, accentSecondary];
+        const stops = [critical, accent, accentTertiary];
         const scaled = Math.max(0, Math.min(1, position)) * (stops.length - 1);
         const index = Math.min(stops.length - 2, Math.floor(scaled));
         return blend(stops[index], stops[index + 1], scaled - index);
