@@ -484,6 +484,7 @@ ShellRoot {
                 name: "Pick Colour to Clipboard",
                 description: "Select a screen pixel and copy its HEX colour",
                 icon: "color-picker",
+                key: runtime.shortcut("colour.pick"),
                 keywords: ["colour", "color", "eyedropper", "hex", "sample", "picker", "clipboard"]
             },
             {
@@ -966,6 +967,12 @@ ShellRoot {
         name: "theme"
         description: "Open theme picker"
         onPressed: actions.showTheme()
+    }
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "colour-pick"
+        description: "Pick a screen colour and copy its HEX value"
+        onPressed: actions.pickColour()
     }
 
     GlobalShortcut {
