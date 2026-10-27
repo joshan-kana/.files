@@ -403,18 +403,18 @@ Variants {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         text: bar.notificationState.silent ? "󰂛" : "󰂚"
-                        color: bars.theme.textStrong
+                        color: bar.notificationState.hasCriticalUnread ? bars.theme.critical : bar.notificationState.unreadCount > 0 ? bars.theme.readableRoleColor("notifications") : bars.theme.textStrong
                         font.family: "Symbols Nerd Font"
                         font.pixelSize: bars.theme.fontSize(27)
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: bar.notificationState.count > 0
+                        visible: bar.notificationState.unreadCount > 0
                         height: 38
                         verticalAlignment: Text.AlignVCenter
-                        text: bar.notificationState.count > 99 ? "99+" : String(bar.notificationState.count)
-                        color: bars.theme.warning
+                        text: bar.notificationState.unreadCount > 99 ? "99+" : String(bar.notificationState.unreadCount)
+                        color: bars.theme.readableRoleColor(bar.notificationState.hasCriticalUnread ? "critical" : "notifications")
                         font.family: bars.runtime.fontMono
                         font.pixelSize: bars.theme.fontSize(11)
                         font.weight: Font.DemiBold
