@@ -7,7 +7,6 @@
 let
   inherit (lib) mkOption types;
   cfg = config.services.technitium-dns-server.roamingDns;
-  stateDir = "${config.dotfiles.server.storage.appData.root}/technitium/apps/RoamingDns";
   settingsFile = (pkgs.formats.json { }).generate "technitium-roaming-dns.json" {
     inherit (cfg)
       lanSubnet
@@ -74,18 +73,18 @@ in
     systemd.services.technitium-dns-server = {
       preStart = lib.mkAfter ''
         ${pkgs.coreutils}/bin/install -Dm644 ${pkgs.technitium-roaming-dns}/RoamingDns.dll \
-          ${stateDir}/RoamingDns.dll
+          "$STATE_DIRECTORY/apps/RoamingDns/RoamingDns.dll"
         ${pkgs.coreutils}/bin/install -Dm644 ${pkgs.technitium-roaming-dns}/RoamingDns.deps.json \
-          ${stateDir}/RoamingDns.deps.json
+          "$STATE_DIRECTORY/apps/RoamingDns/RoamingDns.deps.json"
         ${pkgs.coreutils}/bin/install -Dm644 ${settingsFile} \
-          ${stateDir}/dnsApp.config
+          "$STATE_DIRECTORY/apps/RoamingDns/dnsApp.config"
       '';
       postStop = lib.mkAfter ''
         ${pkgs.coreutils}/bin/rm -f \
-          ${stateDir}/RoamingDns.dll \
-          ${stateDir}/RoamingDns.deps.json \
-          ${stateDir}/dnsApp.config
-        ${pkgs.coreutils}/bin/rmdir ${stateDir} 2>/dev/null || true
+          "$STATE_DIRECTORY/apps/RoamingDns/RoamingDns.dll" \
+          "$STATE_DIRECTORY/apps/RoamingDns/RoamingDns.deps.json" \
+          "$STATE_DIRECTORY/apps/RoamingDns/dnsApp.config"
+        ${pkgs.coreutils}/bin/rmdir "$STATE_DIRECTORY/apps/RoamingDns" 2>/dev/null || true
       '';
     };
   };
