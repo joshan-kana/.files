@@ -40,7 +40,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)
+    implicitHeight: (groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)) + footer.implicitHeight + theme.spacing2
     focus: engaged
 
     onEngagedChanged: {
@@ -237,41 +237,6 @@ FocusScope {
                     }
                 }
             }
-
-            Row {
-                spacing: center.theme.spacing2
-                Repeater {
-                    model: [
-                        {
-                            shortcut: "J/K",
-                            label: "Navigate"
-                        },
-                        {
-                            shortcut: "H/L",
-                            label: "Groups"
-                        },
-                        {
-                            shortcut: "E",
-                            label: "Expand"
-                        },
-                        {
-                            shortcut: "M",
-                            label: "Read"
-                        },
-                        {
-                            shortcut: "DEL",
-                            label: "Dismiss"
-                        }
-                    ]
-                    delegate: KeyHint {
-                        required property var modelData
-                        shortcut: modelData.shortcut
-                        label: modelData.label
-                        runtime: center.runtime
-                        theme: center.theme
-                    }
-                }
-            }
         }
 
         ShellSurface {
@@ -312,15 +277,45 @@ FocusScope {
             }
         }
 
+        KeyHintStrip {
+            id: footer
+            anchors.bottom: parent.bottom
+            width: parent.width
+            runtime: center.runtime
+            theme: center.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Navigate"
+                },
+                {
+                    shortcut: "H/L",
+                    label: "Groups"
+                },
+                {
+                    shortcut: "E",
+                    label: "Expand"
+                },
+                {
+                    shortcut: "M",
+                    label: "Read"
+                },
+                {
+                    shortcut: "DEL",
+                    label: "Dismiss"
+                }
+            ]
+        }
+
         ListView {
             id: list
             anchors {
                 top: header.bottom
                 right: parent.right
-                bottom: parent.bottom
+                bottom: footer.top
                 left: parent.left
                 topMargin: center.theme.spacing4
-                bottomMargin: center.theme.spacing4
+                bottomMargin: center.theme.spacing2
             }
             model: center.groups
             spacing: center.theme.spacing3
