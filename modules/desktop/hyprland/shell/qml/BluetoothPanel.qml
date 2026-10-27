@@ -24,7 +24,8 @@ Item {
     readonly property var devices: system.bluetoothAdapterDevices || []
     readonly property bool adapterAvailable: system.bluetoothAvailable
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + (adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : 190) + footer.implicitHeight
+    readonly property real bodyHeight: adapterAvailable && adapter.enabled ? Math.min(440, Math.max(196, devices.length * 100)) : emptyState.implicitHeight + panel.theme.spacing3 + panel.theme.spacing4
+    implicitHeight: header.height + panel.theme.spacing4 + bodyHeight + panel.theme.spacing3 + footer.implicitHeight
     visible: open
 
     Timer {
@@ -380,46 +381,20 @@ Item {
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
         }
 
-        ShellSurface {
-            anchors.centerIn: parent
-            width: parent.width
-            height: 158
+        ConnectivityUnavailableCard {
+            id: emptyState
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+            }
             visible: !panel.adapterAvailable
+            runtime: panel.runtime
             theme: panel.theme
             motion: panel.motion
-            surfaceLayer: ShellSurface.Group
-            cornerRadius: panel.theme.radiusLarge
-
-            Column {
-                width: parent.width - panel.theme.spacing5 * 2
-                anchors.centerIn: parent
-                spacing: panel.theme.spacing3
-
-                Text {
-                    text: "BLUETOOTH UNAVAILABLE"
-                    color: panel.theme.readableRoleColor("warning")
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(11)
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    text: "No Bluetooth adapter"
-                    color: panel.theme.textStrong
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(20)
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    text: "Connect or enable an adapter to discover and pair devices."
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    color: panel.theme.textMuted
-                    font.family: panel.runtime.fontMono
-                    font.pixelSize: panel.theme.fontSize(10)
-                }
-            }
+            statusText: "BLUETOOTH UNAVAILABLE"
+            heading: "No Bluetooth adapter"
+            description: "Connect or enable an adapter to discover and pair devices."
         }
 
         Text {
