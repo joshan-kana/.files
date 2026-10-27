@@ -8,6 +8,13 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
+  browserFontPolicy = {
+    "browser.display.use_document_fonts" = {
+      Value = 0;
+      Status = "locked";
+      Type = "number";
+    };
+  };
 in
 {
   home =
@@ -66,20 +73,27 @@ in
 
   zen = _: {
     home = _: {
-      home.packages = [ pkgs.zen-browser-beta ];
+      # Browser-wide policies apply to the existing, unmanaged Zen profiles.
+      stylix.targets.zen-browser.enable = false;
+      programs.zen-browser = {
+        enable = true;
+        policies.Preferences = browserFontPolicy;
+      };
     };
   };
 
   firefox = _: {
     home = _: {
-      programs.firefox =
-        lib.optionalAttrs isDarwin {
-          package = pkgs.firefox-bin;
-          configPath = "Library/Application Support/Firefox";
-        }
-        // lib.optionalAttrs isLinux {
-          configPath = ".mozilla/firefox";
-        };
+      programs.firefox = {
+        policies.Preferences = browserFontPolicy;
+      }
+      // lib.optionalAttrs isDarwin {
+        package = pkgs.firefox-bin;
+        configPath = "Library/Application Support/Firefox";
+      }
+      // lib.optionalAttrs isLinux {
+        configPath = ".mozilla/firefox";
+      };
     };
   };
 
@@ -87,7 +101,7 @@ in
     home =
       _:
       lib.optionalAttrs isLinux {
-        programs.floorp = { };
+        programs.floorp.policies.Preferences = browserFontPolicy;
       };
   };
 
