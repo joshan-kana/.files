@@ -83,7 +83,7 @@ in
         };
       }
       // lib.optionalAttrs isDarwin {
-        home.file."Library/Application Support/Zen/Profiles/cffu5zel.Default (release)-1/user.js".text = ''
+        home.file."Library/Application Support/Zen/Profiles/default/user.js".text = ''
           user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
           user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
           user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
