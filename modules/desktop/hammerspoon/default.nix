@@ -40,6 +40,17 @@ in
     in
     {
       home.packages = [ pkgs.hammerspoon ];
+      launchd.agents.hammerspoon = {
+        enable = true;
+        config = {
+          Label = "com.joshankana.hammerspoon";
+          ProgramArguments = [
+            "${pkgs.hammerspoon}/Applications/Hammerspoon.app/Contents/MacOS/Hammerspoon"
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+        };
+      };
       home.file =
         lib.listToAttrs (
           map (name: {
