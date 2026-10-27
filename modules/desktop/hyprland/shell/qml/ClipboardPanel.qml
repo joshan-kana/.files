@@ -320,20 +320,20 @@ Item {
                     runtime: panel.runtime
                     theme: panel.theme
                     motion: panel.motion
-                    glyph: "▣"
+                    glyph: "󰅌"
+                    glyphFont: "Symbols Nerd Font"
+                    glyphColor: panel.theme.roleColor("clipboard")
                     eyebrow: "History / Clipboard"
                     title: "Clipboard"
-                    detail: panel.entries.length + (panel.entries.length === 1 ? " item" : " items") + " · Search and paste"
+                    detail: panel.entries.length + (panel.entries.length === 1 ? " item" : " items")
                 }
 
-                SquircleSurface {
+                SearchFieldSurface {
                     width: parent.width
                     height: 50
-                    exponent: panel.theme.squircleExponent
-                    cornerRadius: panel.theme.radiusMedium
-                    fillColor: panel.theme.background
-                    borderColor: search.activeFocus ? panel.theme.roleColor("clipboard") : panel.theme.outline
-                    borderWidth: search.activeFocus ? panel.theme.borderFocus : panel.theme.borderThin
+                    theme: panel.theme
+                    motion: panel.motion
+                    fieldFocused: search.activeFocus
 
                     TextInput {
                         id: search
@@ -346,7 +346,7 @@ Item {
 
                         verticalAlignment: TextInput.AlignVCenter
                         color: panel.theme.textStrong
-                        selectionColor: panel.theme.roleColor("clipboard")
+                        selectionColor: panel.theme.accent
                         selectedTextColor: panel.theme.background
                         font.family: panel.runtime.fontMono
                         font.pixelSize: panel.theme.fontSize(14)
@@ -358,7 +358,6 @@ Item {
                             text: "Search clipboard…"
                             visible: search.text.length === 0
                             color: panel.theme.textMuted
-                            opacity: 0.55
                             font: search.font
                         }
 
