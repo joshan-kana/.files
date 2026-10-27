@@ -332,7 +332,7 @@ Item {
                     exponent: panel.theme.squircleExponent
                     cornerRadius: panel.theme.radiusMedium
                     fillColor: panel.theme.background
-                    borderColor: search.activeFocus ? panel.theme.accent : panel.theme.outline
+                    borderColor: search.activeFocus ? panel.theme.roleColor("clipboard") : panel.theme.outline
                     borderWidth: search.activeFocus ? panel.theme.borderFocus : panel.theme.borderThin
 
                     TextInput {
@@ -346,7 +346,7 @@ Item {
 
                         verticalAlignment: TextInput.AlignVCenter
                         color: panel.theme.textStrong
-                        selectionColor: panel.theme.accent
+                        selectionColor: panel.theme.roleColor("clipboard")
                         selectedTextColor: panel.theme.background
                         font.family: panel.runtime.fontMono
                         font.pixelSize: panel.theme.fontSize(14)
@@ -436,7 +436,7 @@ Item {
                     exponent: panel.theme.squircleExponent
                     cornerRadius: panel.theme.radiusMedium
                     fillColor: index === panel.selectedIndex ? panel.theme.focusFill : panel.theme.background
-                    borderColor: index === panel.selectedIndex ? panel.theme.accent : panel.theme.outline
+                    borderColor: index === panel.selectedIndex ? panel.theme.roleColor("clipboard") : panel.theme.outline
                     borderWidth: index === panel.selectedIndex ? panel.theme.borderFocus : panel.theme.borderThin
 
                     StateLayer {
@@ -462,7 +462,7 @@ Item {
                             width: 64
                             anchors.verticalCenter: parent.verticalCenter
                             text: item.modelData.kind
-                            color: item.modelData.kind !== "TEXT" ? panel.theme.accentWarm : panel.theme.accentSecondary
+                            color: item.modelData.kind !== "TEXT" ? panel.theme.roleColor("capture") : panel.theme.roleColor("clipboard")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(9)
                             font.weight: Font.DemiBold
@@ -510,7 +510,7 @@ Item {
                         spacing: panel.theme.spacing2
                         Text {
                             text: "◈"
-                            color: panel.theme.accent
+                            color: panel.theme.roleColor("clipboard")
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(19)
                         }
@@ -589,7 +589,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: "▧"
-                                color: panel.theme.accent
+                                color: panel.theme.roleColor("clipboard")
                                 font.family: panel.runtime.fontMono
                                 font.pixelSize: panel.theme.fontSize(44)
                             }
@@ -632,7 +632,7 @@ Item {
                 anchors.centerIn: list
                 visible: panel.queryProcess.running
                 text: "Loading history…"
-                color: panel.theme.accent
+                color: panel.theme.roleColor("clipboard")
                 font.family: panel.runtime.fontMono
                 font.pixelSize: panel.theme.fontSize(11)
                 font.letterSpacing: 1.1

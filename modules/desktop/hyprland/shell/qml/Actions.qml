@@ -11,6 +11,7 @@ QtObject {
     // The detail can also be opened from Controls, not only the Super+Y shortcut.
     property bool themePanelOpen: false
     property bool sessionPanelOpen: false
+    property bool resourcesPanelOpen: false
     required property ShortcutCheatsheet cheatsheet
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
@@ -81,9 +82,7 @@ QtObject {
     }
 
     function toggleAudioMixer(): void {
-        // Match Now Playing: both the global shortcut and the Controls action
-        // navigate the single hub surface, never a second fullscreen modal.
-        showSystem(null, null, mixerDetailOpen ? "" : "mixer");
+        toggleSystemDetail("mixer", mixerDetailOpen);
     }
 
     function lockSession(): void {
@@ -183,24 +182,26 @@ QtObject {
         expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, fromCalendar ? "calendar" : "");
     }
 
+    // Repeating a detail shortcut closes the hub; it must not navigate back
+    // to the underlying Controls tab. A detail dismissed with Escape can reopen.
+    function toggleSystemDetail(view: string, detailOpen: bool): void {
+        if (expansionState.hasCurrent && expansionState.currentName === "system" && detailOpen) {
+            expansionState.close();
+            return;
+        }
+        showSystem(null, null, view);
+    }
+
     function showResources(): void {
-        showSystem(null, null, "resources");
+        toggleSystemDetail("resources", resourcesPanelOpen);
     }
 
     function showTheme(): void {
-        if (expansionState.hasCurrent && expansionState.currentName === "system" && (themePanelOpen || expansionState.currentView === "theme")) {
-            expansionState.close();
-            return;
-        }
-        showSystem(null, null, "theme");
+        toggleSystemDetail("theme", themePanelOpen);
     }
 
     function showSession(): void {
-        if (expansionState.hasCurrent && expansionState.currentName === "system" && (sessionPanelOpen || expansionState.currentView === "session")) {
-            expansionState.close();
-            return;
-        }
-        showSystem(null, null, "session");
+        toggleSystemDetail("session", sessionPanelOpen);
     }
 
     function showNotifications(targetScreen: var, origin: var): void {
