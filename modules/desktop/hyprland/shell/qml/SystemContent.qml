@@ -1172,7 +1172,7 @@ FocusScope {
                         }
 
                         Row {
-                            width: parent.width
+                            anchors.horizontalCenter: parent.horizontalCenter
                             height: 38
                             spacing: root.theme.spacing3
                             visible: root.media.available
