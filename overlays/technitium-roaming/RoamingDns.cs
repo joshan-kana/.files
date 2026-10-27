@@ -185,12 +185,8 @@ public sealed class App : IDnsApplication, IDnsPostProcessor, IDnsApplicationPre
                 return Task.FromResult<DnsDatagram?>(
                     Rewrite(response, [], DnsResponseCode.NoError)
                 );
-            // During the first poll, do not let a DHCP A record cache for 300s.
-            if (
-                ReferenceEquals(status, Snapshot.Empty)
-                && response.RCODE == DnsResponseCode.NoError
-            )
-                return Task.FromResult<DnsDatagram?>(WithShortTtl(response));
+            // Do not return an unverified LAN address before the first health poll.
+            // Remote networks may use the same IPv4 subnet.
             return Task.FromResult<DnsDatagram?>(
                 Rewrite(response, [], DnsResponseCode.ServerFailure)
             );

@@ -100,6 +100,11 @@ public class FakeDns : DispatchProxy
 {
     private volatile string _lanIp = "127.0.0.1";
     private volatile bool _hasLease = true;
+    private readonly TaskCompletionSource<bool> _queriesReady = new(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    );
+
+    public void AllowQueries() => _queriesReady.TrySetResult(true);
 
     public string LanIp
     {
@@ -119,17 +124,19 @@ public class FakeDns : DispatchProxy
         if (targetMethod?.Name != "DirectQueryAsync")
             throw new NotSupportedException(targetMethod?.Name);
         var question = (DnsQuestionRecord)args![0]!;
+        return RespondAsync(question);
+    }
+
+    private async Task<DnsDatagram> RespondAsync(DnsQuestionRecord question)
+    {
+        await _queriesReady.Task;
         if (
             question.Name.Equals(Test.Alternate, StringComparison.OrdinalIgnoreCase)
             && question.Type == DnsResourceRecordType.AAAA
         )
-            return Task.FromResult(
-                Test.Empty(question.Name, question.Type, DnsResponseCode.NoError)
-            );
+            return Test.Empty(question.Name, question.Type, DnsResponseCode.NoError);
         if (question.Name.Equals(Test.Name, StringComparison.OrdinalIgnoreCase) && !HasLease)
-            return Task.FromResult(
-                Test.Empty(question.Name, question.Type, DnsResponseCode.NxDomain)
-            );
+            return Test.Empty(question.Name, question.Type, DnsResponseCode.NxDomain);
         var address = question.Name.ToLowerInvariant() switch
         {
             Test.Name when question.Type == DnsResourceRecordType.A => LanIp,
@@ -138,7 +145,7 @@ public class FakeDns : DispatchProxy
                 "fd7a:115c:a1e0::123",
             _ => throw new InvalidOperationException("Unexpected fake DNS question"),
         };
-        return Task.FromResult(Test.Answer(question.Name, question.Type, address));
+        return Test.Answer(question.Name, question.Type, address);
     }
 }
 
@@ -172,6 +179,18 @@ public static class Program
             }
         );
         await app.InitializeAsync(dns, config);
+        var starting = await Test.Process(
+            app,
+            Test.Name,
+            DnsResourceRecordType.A,
+            fake.LanIp,
+            "192.168.1.3"
+        );
+        Test.Check(
+            starting.RCODE == DnsResponseCode.ServerFailure && starting.Answer.Count == 0,
+            "Before the first health poll, remote A does not leak an unchecked LAN address"
+        );
+        fake.AllowQueries();
         await Task.Delay(400);
 
         var local = await Test.Process(app, Test.Name, DnsResourceRecordType.A, fake.LanIp);
