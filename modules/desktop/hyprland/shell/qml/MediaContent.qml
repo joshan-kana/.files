@@ -233,7 +233,10 @@ FocusScope {
                 // Spectrum, curves and lyrics share the same surface as
                 // the album artwork and track details above them.
                 width: parent.width
-                height: content.compactHeight ? 150 : 220
+                // Let the spectrum use the area between artwork and the
+                // controls. The mode buttons now follow playback directly,
+                // so unused bottom padding becomes visualiser height.
+                height: Math.max(115, content.height - header.y - header.height - spectrumSlot.anchors.topMargin - transport.anchors.topMargin - transport.implicitHeight - mediaActions.anchors.topMargin - mediaActions.implicitHeight - content.theme.spacing3)
                 clip: true
 
                 SpectrumCurve {
@@ -487,76 +490,54 @@ FocusScope {
             }
         }
 
-        Column {
+        Row {
             id: mediaActions
             anchors {
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
+                top: transport.bottom
+                horizontalCenter: parent.horizontalCenter
+                topMargin: content.theme.spacing2
             }
-            height: implicitHeight
             spacing: content.theme.spacing2
 
-            Item {
-                width: parent.width
+            ShellAction {
+                width: 114
                 height: 42
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                compact: true
+                horizontalCompact: true
+                title: content.visualizerMode.toUpperCase()
+                shortcut: "V"
+                active: true
+                onActivated: content.toggleVisualizer()
+            }
 
-                Row {
-                    anchors.right: parent.right
-                    spacing: content.theme.spacing2
+            ShellAction {
+                width: 116
+                height: 42
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                compact: true
+                horizontalCompact: true
+                title: "LYRICS"
+                shortcut: "Y"
+                active: content.lyricsVisible
+                onActivated: content.toggleLyrics()
+            }
 
-                    ShellAction {
-                        width: 114
-                        height: 42
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        compact: true
-                        horizontalCompact: true
-                        title: content.visualizerMode.toUpperCase()
-                        shortcut: "V"
-                        active: true
-                        onActivated: content.toggleVisualizer()
-                    }
-
-                    ShellAction {
-                        width: 116
-                        height: 42
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        compact: true
-                        horizontalCompact: true
-                        title: "LYRICS"
-                        shortcut: "Y"
-                        active: content.lyricsVisible
-                        onActivated: content.toggleLyrics()
-                    }
-
-                    ShellAction {
-                        width: 42
-                        height: 42
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        compact: true
-                        iconOnly: true
-                        icon: "󰋗"
-                        title: "Help (?)"
-                        onActivated: content.helpOpen = true
-                    }
-
-                    ShellAction {
-                        width: 100
-                        height: 42
-                        runtime: content.runtime
-                        theme: content.theme
-                        motion: content.motion
-                        compact: true
-                        title: content.returnToControls ? "BACK" : "CLOSE"
-                        onActivated: content.closeRequested()
-                    }
-                }
+            ShellAction {
+                width: 42
+                height: 42
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                compact: true
+                iconOnly: true
+                icon: "󰋗"
+                title: "Help (?)"
+                onActivated: content.helpOpen = true
             }
         }
 
