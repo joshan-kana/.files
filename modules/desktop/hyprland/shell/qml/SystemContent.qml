@@ -1132,7 +1132,7 @@ FocusScope {
                                     anchors.centerIn: parent
                                     visible: root.media.artUrl.length === 0
                                     text: "♫"
-                                    color: root.theme.accent
+                                    color: root.theme.roleColor("media")
                                     font.family: root.runtime.fontMono
                                     font.pixelSize: root.theme.fontSize(28)
                                 }
@@ -1146,7 +1146,7 @@ FocusScope {
                                 MarqueeText {
                                     text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
                                     width: parent.width
-                                    color: root.theme.accent
+                                    color: root.theme.roleColor("media")
                                     font.family: root.runtime.fontMono
                                     font.pixelSize: root.theme.fontSize(10)
                                 }
@@ -1272,7 +1272,7 @@ FocusScope {
                                         width: Math.max(2, (parent.width - 35 * 4) / 36)
                                         height: 3
                                         radius: 2
-                                        color: root.theme.accent
+                                        color: root.theme.roleColor("media")
                                         opacity: 0.34
                                     }
                                 }
