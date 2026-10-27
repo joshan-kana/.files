@@ -14,6 +14,7 @@ ShellSurface {
     property string title: ""
     property string detail: ""
     property string glyph: "◇"
+    property string glyphFont: runtime.fontMono
     property color glyphColor: theme.accent
 
     implicitHeight: quiet ? 66 : 126
@@ -37,7 +38,7 @@ ShellSurface {
         text: hero.glyph
         color: hero.glyphColor
         opacity: 0.11
-        font.family: hero.runtime.fontMono
+        font.family: hero.glyphFont
         font.pixelSize: hero.theme.fontSize(98)
         visible: !hero.quiet && hero.glyph.length > 0
     }
@@ -62,7 +63,7 @@ ShellSurface {
             anchors.centerIn: parent
             text: hero.glyph
             color: hero.glyphColor
-            font.family: hero.runtime.fontMono
+            font.family: hero.glyphFont
             font.pixelSize: hero.theme.fontSize(35)
         }
     }
@@ -78,7 +79,7 @@ ShellSurface {
         }
         text: hero.glyph
         color: hero.glyphColor
-        font.family: hero.runtime.fontMono
+        font.family: hero.glyphFont
         font.pixelSize: hero.theme.fontSize(25)
     }
 

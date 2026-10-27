@@ -1300,9 +1300,12 @@ Item {
                 }
             }
 
-            SquircleSurface {
+            SearchFieldSurface {
                 id: searchBox
 
+                theme: palette.theme
+                motion: palette.motion
+                fieldFocused: search.activeFocus
                 height: 60
                 anchors {
                     top: paletteIntro.bottom
@@ -1310,12 +1313,6 @@ Item {
                     left: parent.left
                     right: parent.right
                 }
-
-                exponent: theme.squircleExponent
-                cornerRadius: theme.radiusMedium
-                fillColor: theme.expressiveSurfaceStrong
-                borderColor: search.activeFocus ? palette.scopeAccent : theme.outline
-                borderWidth: search.activeFocus ? theme.borderFocus : theme.borderThin
 
                 Behavior on borderColor {
                     ColorAnimation {
@@ -1353,7 +1350,7 @@ Item {
                     }
 
                     color: theme.textStrong
-                    selectionColor: palette.scopeAccent
+                    selectionColor: palette.theme.accent
                     selectedTextColor: theme.background
                     font.family: runtime.fontMono
                     font.pixelSize: theme.fontSize(18)
