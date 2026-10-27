@@ -8,13 +8,6 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  browserFontPolicy = {
-    "browser.display.use_document_fonts" = {
-      Value = 0;
-      Status = "locked";
-      Type = "number";
-    };
-  };
 in
 {
   home =
@@ -72,47 +65,25 @@ in
     };
 
   zen = _: {
-    home =
-      { config, ... }:
-      {
-        # Browser-wide policies apply to the existing, unmanaged Zen profiles.
-        stylix.targets.zen-browser.enable = false;
-        programs.zen-browser = {
-          enable = true;
-          policies.Preferences = browserFontPolicy;
-        };
-      }
-      // lib.optionalAttrs isDarwin {
-        home.file."Library/Application Support/Zen/Profiles/default/user.js".text = ''
-          user_pref("font.name.serif.x-western", ${builtins.toJSON config.stylix.fonts.serif.name});
-          user_pref("font.name.sans-serif.x-western", ${builtins.toJSON config.stylix.fonts.sansSerif.name});
-          user_pref("font.name.monospace.x-western", ${builtins.toJSON config.stylix.fonts.monospace.name});
-        '';
-      };
+    home = _: {
+      programs.zen-browser.enable = true;
+    };
   };
 
   firefox = _: {
     home = _: {
-      programs.firefox = {
-        policies.Preferences = browserFontPolicy;
-      }
-      // lib.optionalAttrs isDarwin {
-        package = pkgs.firefox-bin;
-        configPath = "Library/Application Support/Firefox";
-      }
-      // lib.optionalAttrs isLinux {
-        configPath = ".mozilla/firefox";
-      };
+      programs.firefox =
+        lib.optionalAttrs isDarwin {
+          package = pkgs.firefox-bin;
+          configPath = "Library/Application Support/Firefox";
+        }
+        // lib.optionalAttrs isLinux {
+          configPath = ".mozilla/firefox";
+        };
     };
   };
 
-  floorp = _: {
-    home =
-      _:
-      lib.optionalAttrs isLinux {
-        programs.floorp.policies.Preferences = browserFontPolicy;
-      };
-  };
+  floorp = _: { };
 
   kitty = _: {
     home = _: {
