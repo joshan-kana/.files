@@ -27,6 +27,11 @@ let
                     ids = next(line for line in f if line.startswith(b"Uid:"))
                 if any(int(n) != uid for n in ids.split()[1:5]):
                     return False
+                command_fd = os.open("cmdline", os.O_RDONLY, dir_fd=proc)
+                with os.fdopen(command_fd, "rb") as f:
+                    command = f.read(8192).split(b"\0", 1)[0]
+                if os.path.basename(command) != b"run0":
+                    return False
                 environ_fd = os.open("environ", os.O_RDONLY, dir_fd=proc)
                 with os.fdopen(environ_fd, "rb") as f:
                     values = f.read(1024 * 1024).split(b"\0")
