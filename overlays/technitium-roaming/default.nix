@@ -1,4 +1,6 @@
-_: {
+{ lib, system, ... }: {
+  imports = lib.optionals (lib.systems.elaborate system).isLinux [ ./module.nix ];
+
   nixpkgs.overlays = [
     (
       final: prev:

@@ -16,7 +16,6 @@
     inputs.nix-openclaw.nixosModules.openclaw-gateway
     ./options.nix
     ./hardware.nix
-    ../../overlays/technitium-roaming/module.nix
     (import ../../modules/virtualisation/containers/image-locking.nix {
       lockFile = ./container-images.lock;
     })
