@@ -12,7 +12,7 @@ PanelWindow {
 
     property bool closing: false
     readonly property bool keyboardMode: osd.kind === "keyboard"
-    readonly property color accentColor: keyboardMode && osd.keyboardLocked ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.roleColor("warmth") : theme.roleColor("media"))
+    readonly property color accentColor: keyboardMode && osd.keyboardLocked ? theme.warning : osd.muted ? theme.warning : (osd.kind === "brightness" ? theme.roleColor("warmth") : theme.roleColor("audio"))
 
     visible: true
     updatesEnabled: surfaceLifecycle.needsRendering
