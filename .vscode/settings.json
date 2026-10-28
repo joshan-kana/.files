@@ -1,31 +1,28 @@
 {
-  "nix.enableLanguageServer": true,
-  "nix.serverPath": "nixd",
-  "nix.serverSettings": {
-    "nixd": {
-      "formatting": {
-        "command": ["nixfmt"]
-      },
-      "options": {
-        "nixos": {
-          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos"
-        },
-        "nixos-server": {
-          "expr": "let f = builtins.getFlake \"${workspaceFolder}\"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos-server"
-        },
-        "home-manager": {
-          "expr": "(builtins.getFlake \"${workspaceFolder}\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+  "nix.enableLanguageServer": false,
+  "vscode-lspconfig.serverConfigurations": [
+    {
+      "name": "kakehashi",
+      "root_patterns": [
+        "kakehashi.toml",
+        "flake.nix",
+        ".git"
+      ],
+      "document_selector": [
+        {
+          "language": "nix"
         }
-      }
+      ],
+      "command": [
+        "kakehashi"
+      ]
     }
-  },
-
+  ],
   "[nix]": {
-    "editor.defaultFormatter": "jnoortheen.nix-ide",
+    "editor.defaultFormatter": "whtsht.vscode-lspconfig",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true
   },
-
   "editor.autoClosingBrackets": "always",
   "editor.autoClosingQuotes": "always",
   "editor.snippetSuggestions": "top",

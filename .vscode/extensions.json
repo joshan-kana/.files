@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "jnoortheen.nix-ide",
+    "whtsht.vscode-lspconfig",
     "christian-kohler.path-intellisense",
     "mkhl.direnv"
   ]
