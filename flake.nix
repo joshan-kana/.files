@@ -82,6 +82,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-embedded = {
+      url = "github:joshan-kana/nix-embedded-tooling?ref=feat/portable-embedded-tooling";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     pre-commit-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -145,6 +150,7 @@
       forAllSystems = f: lib.genAttrs systems f;
 
       pkgsFor = system: import nixpkgs { inherit system; };
+      embeddedFor = system: inputs.nix-embedded.lib.mkFor { pkgs = pkgsFor system; };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -164,6 +170,7 @@
         system:
         let
           pkgs = pkgsFor system;
+          embedded = embeddedFor system;
           markdownOptions = [
             "--disable"
             "MD013,MD057"
@@ -235,6 +242,8 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+              nix-embedded = embedded.formatter;
+              nixfmt-final = embedded.finalNixfmtFormatter;
 
               ruff-check.options = [
                 "--isolated"
@@ -493,6 +502,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = embeddedFor system;
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
@@ -534,6 +544,8 @@
               formatRepo
               repoOptionsFzf
               treefmt.config.build.wrapper
+              embedded.lspPackage
+              embedded.package
               docsCommands.build
               docsCommands.serve
             ];
@@ -558,6 +570,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          embedded = embeddedFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -574,7 +587,17 @@
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
-          repo-quality = treefmt.config.build.check self;
+          repo-quality = pkgs.runCommand "repo-quality" { } ''
+            mkdir -p "$out"
+            ln -s ${treefmt.config.build.check self} "$out/formatting"
+            ln -s ${
+              embedded.lintCheck {
+                src = self;
+                excludes = repoToolExcludedDirs;
+              }
+            } "$out/embedded-lint"
+          '';
+          embedded-lsp = embedded.lspCheck;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText

@@ -1,0 +1,14 @@
+# Repository-specific overlay. Portable routing/tool defaults are bundled with
+# kakehashi and this file only adds .files-specific nixd option sets.
+
+[languageServers.nixd.initializationOptions.options.nixos]
+expr = 'let f = builtins.getFlake "${workspaceFolder}"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos'
+
+[languageServers.nixd.initializationOptions.options.nixos-server]
+expr = 'let f = builtins.getFlake "${workspaceFolder}"; in f.lib.semanticScopeOptions.nixdHostOptions f.nixosConfigurations f.nixosConfigurations.nixos-server'
+
+[languageServers.nixd.initializationOptions.options.home-manager-unstable]
+expr = '(builtins.getFlake "${workspaceFolder}").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []'
+
+[languageServers.nixd.initializationOptions.options.home-manager-stable]
+expr = '(builtins.getFlake "${workspaceFolder}").nixosConfigurations.nixos-server.options.home-manager.users.type.getSubOptions []'
