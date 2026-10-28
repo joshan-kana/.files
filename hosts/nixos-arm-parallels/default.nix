@@ -36,13 +36,6 @@
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJsiQZEG5WB92zEubOX4InNHN4ev8byz2KBwzGLzMWPA chatgpt-shell-nixos-arm-parallels"
   ];
 
-  security.pam.sshAgentAuth = {
-    enable = true;
-    authorizedKeysFiles = [ "/etc/elevation-authorized-key" ];
-  };
-
-  security.pam.services.polkit-1.sshAgentAuth = true;
-
   systemd.tmpfiles.rules = [
     "f+ /etc/elevation-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIGRtvQBAj3/3cJYqS4KosghtI5fsh9poh3q+LIfFL8KR\\x20joshan@nixos-arm-parallels-sudo\\n"
   ];

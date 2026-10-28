@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   system,
@@ -6,6 +7,7 @@
 }:
 
 let
+  primaryUser = config.dotfiles.users.primary.name;
   verify = pkgs.writeScriptBin "run0-ssh-agent-verify" ''
     #!${pkgs.python3}/bin/python3
     import os
@@ -20,7 +22,7 @@ let
             if not request.isdecimal():
                 return "NOT_RUN0"
             pid = int(request)
-            uid = pwd.getpwnam("joshan").pw_uid
+            uid = pwd.getpwnam("${primaryUser}").pw_uid
             if pid <= 1:
                 return "NOT_RUN0"
 
@@ -96,7 +98,7 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
   security.polkit.extraConfig = ''
     polkit.addRule(function(action, subject) {
       if (action.id !== "org.freedesktop.systemd1.manage-units" ||
-          subject.user !== "joshan" || !subject.isInGroup("wheel"))
+          subject.user !== "${primaryUser}" || !subject.isInGroup("wheel"))
         return;
       // StartTransientUnit does not consistently provide unit/verb details.
       // SSH signature verification is required for every matched operation.
@@ -130,7 +132,7 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
     description = "Verify an SSH-agent signature for a run0 Polkit request";
     serviceConfig = {
       # The helper needs only same-user /proc access and public keys, never root.
-      User = "joshan";
+      User = primaryUser;
       ExecStart = "${verify}/bin/run0-ssh-agent-verify";
       StandardInput = "socket";
       StandardOutput = "socket";
