@@ -1,0 +1,8 @@
+[language-server.nix-embedded]
+command = "kakehashi"
+required-root-patterns = ["kakehashi.toml", "flake.nix", ".git"]
+
+[[language]]
+name = "nix"
+language-servers = ["kakehashi"]
+auto-format = true
