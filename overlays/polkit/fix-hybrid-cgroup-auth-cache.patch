@@ -1,0 +1,21 @@
+--- a/src/polkit/polkitunixprocess.c
++++ b/src/polkit/polkitunixprocess.c
+@@ -1403,3 +1403,9 @@
+-  /* The format is '0::/cgroup/path\n */
+-  p = strchr (contents, ':');
+-  if (p == NULL)
++  /* Find the unified hierarchy even when legacy controllers are mounted. */
++  p = contents;
++  while (!g_str_has_prefix (p, "0::"))
++    {
++      p = strchr (p, '\n');
++      if (p == NULL || *++p == '\0')
++        break;
++    }
++  if (p == NULL || !g_str_has_prefix (p, "0::"))
+@@ -1414 +1420 @@
+-  p += 2; /* skip '::' */
++  p += 3; /* skip '0::' */
+@@ -1425 +1431 @@
+-  contents[length - 1] = '\0'; /* remove the newline */
++  p[strcspn (p, "\n")] = '\0'; /* isolate the unified cgroup path */
