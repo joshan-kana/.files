@@ -331,9 +331,9 @@ QtObject {
             mediaToggleShuffle();
         else if (commandId === "media.cyclePlayer")
             mediaCyclePlayer();
-        else if (commandId === "system.toggle")
+        else if (commandId === "controls.toggle")
             toggleSystem();
-        else if (commandId === "calendar.toggle")
+        else if (commandId === "home.toggle")
             toggleCalendar();
         else if (commandId === "weather.toggle")
             toggleWeather();

@@ -151,7 +151,7 @@ Item {
             name: command.name,
             genericName: command.description || "Desktop action",
             icon: command.icon || "system-run",
-            key: command.key || "",
+            key: palette.runtime.shortcut(command.id),
             commandId: command.id,
             parameterMode: command.parameterMode || "",
             keywords: command.keywords || []
