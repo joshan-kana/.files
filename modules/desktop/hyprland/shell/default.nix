@@ -147,7 +147,7 @@ let
           set_phase authorizing
           printf 'Requesting permission to activate %s...\n' "$selected"
           set_phase activating
-          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --elevation-strategy run0 --no-nom --diff never
+          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --no-nom --diff never
           printf 'Activated %s.\n' "$selected"
           ;;
         *)
