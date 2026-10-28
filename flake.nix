@@ -21,6 +21,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Upstream nh CLI.
+    nh = {
+      url = "github:nix-community/nh";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Prebuilt AI agent packages.
     llm-agents.url = "github:numtide/llm-agents.nix";
 

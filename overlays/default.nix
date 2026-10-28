@@ -9,6 +9,7 @@
     ./cosmic-noir-icons
     ./gh-dash
     ./gtksourceview
+    ./nh
     ./nixos-options-doc
     ./tuicr
     ./technitium-roaming
