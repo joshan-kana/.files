@@ -2,7 +2,6 @@
   config,
   lib,
   moduleRegistry,
-  editScope,
   pkgs,
   ...
 }:
@@ -18,19 +17,13 @@
     appimage
     audio
     virtualisation
+    desktopApps
     desktop
     ;
 
   imports = [
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
-
-  desktopApps = editScope moduleRegistry.desktopApps {
-    mullvad = _: {
-      services.mullvad-vpn.package = pkgs.mullvadWithCgroup2;
-      boot.kernelParams = [ "cgroup_no_v1=net_cls" ];
-    };
-  };
 
   dotfiles = {
     defaults.terminal = "alacritty";
