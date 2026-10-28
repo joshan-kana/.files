@@ -646,15 +646,6 @@
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH2MhLVRuFAl9pssk8T3uxTr332TGoZMqjSoOLGudXpO Joshan's iPhone"
       ];
 
-      security.pam.sshAgentAuth = {
-        enable = true;
-        authorizedKeysFiles = [
-          "/etc/elevation-authorized-key"
-        ];
-      };
-
-      security.pam.services.polkit-1.sshAgentAuth = true;
-
       systemd.tmpfiles.rules = [
         "f+ /etc/elevation-authorized-key 0444 root root - ${
           lib.concatStringsSep "\\n" [

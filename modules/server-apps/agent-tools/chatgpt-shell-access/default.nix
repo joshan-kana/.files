@@ -67,8 +67,6 @@ let
 
 in
 {
-  security.pam.sshAgentAuth.authorizedKeysFiles = [ "/etc/chatgpt-shell-sudo-authorized-key" ];
-
   systemd.tmpfiles.rules = [
     "f+ /etc/chatgpt-shell-sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIEp/T7PcjFts+DbMZnJrMle2UhBtWhJ2ycLYIlFMNkIu\\x20chatgpt-shell-sudo\\n"
   ];
