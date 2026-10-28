@@ -554,8 +554,8 @@ Item {
                         }
                         Text {
                             id: status
-                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : themeCard.index === panel.selectedIndex ? "SELECTED" : ""
-                            color: themeCard.modelData.name === panel.currentTheme ? panel.theme.positive : panel.theme.accent
+                            text: themeCard.modelData.name === panel.currentTheme ? "ACTIVE" : ""
+                            color: panel.theme.positive
                             font.family: panel.runtime.fontMono
                             font.pixelSize: panel.theme.fontSize(9)
                         }
