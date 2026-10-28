@@ -143,11 +143,11 @@ let
           trap finish_operation EXIT
           set_phase building
           printf 'Building %s...\n' "$selected"
-          ${lib.getExe pkgs.nh} os build "$repoPath/themes" --hostname "${configurationName}-$selected" --no-nom --diff never
+          ${lib.getExe pkgs.nh} os build "$repoPath/themes" --hostname "${configurationName}-$selected" --diff never
           set_phase authorizing
           printf 'Requesting permission to activate %s...\n' "$selected"
           set_phase activating
-          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --no-nom --diff never
+          ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --diff never
           printf 'Activated %s.\n' "$selected"
           ;;
         *)
