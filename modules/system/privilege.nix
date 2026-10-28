@@ -1,4 +1,9 @@
-{ lib, pkgs, system, ... }:
+{
+  lib,
+  pkgs,
+  system,
+  ...
+}:
 
 lib.optionalAttrs (lib.systems.elaborate system).isLinux {
   security = {
