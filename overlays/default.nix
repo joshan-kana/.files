@@ -10,6 +10,7 @@
     ./gh-dash
     ./gtksourceview
     ./nh
+    ./polkit
     ./nixos-options-doc
     ./tuicr
     ./technitium-roaming

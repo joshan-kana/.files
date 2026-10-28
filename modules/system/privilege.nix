@@ -1,4 +1,4 @@
-{ lib, system, ... }:
+{ lib, pkgs, system, ... }:
 
 lib.optionalAttrs (lib.systems.elaborate system).isLinux {
   security = {
@@ -10,7 +10,10 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
     sudo-rs.enable = false;
     doas.enable = false;
     please.enable = false;
-    polkit.enablePkexecWrapper = false;
+    polkit = {
+      enablePkexecWrapper = false;
+      package = pkgs.polkitWithHybridCgroup;
+    };
     wrappers.su.enable = false;
   };
 }
