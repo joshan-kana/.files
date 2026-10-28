@@ -109,11 +109,11 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
         if (result === "ALLOW")
           return polkit.Result.YES;
         if (result === "DENY" && !subject.local)
-          return polkit.Result.NO;
+          return polkit.Result.AUTH_ADMIN;
       } catch (e) {
         polkit.log("run0 SSH-agent verification unavailable: " + e);
         if (!subject.local)
-          return polkit.Result.NO;
+          return polkit.Result.AUTH_ADMIN;
       }
     });
   '';
