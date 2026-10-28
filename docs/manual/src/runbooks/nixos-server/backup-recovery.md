@@ -55,8 +55,6 @@ run0 nixos-rebuild switch --rollback
 
 If Polkit itself is broken and `run0` cannot authorize the rollback, use a root recovery console or the installer environment to activate a known-good generation. A remote user session without a working elevation path is not a recovery mechanism.
 
-For remote administrative commands, `run0 -n` requires an SSH agent that can sign using a key in this host's elevation allowlist; logging in over SSH alone is insufficient. Forward the agent for that connection and use `run0 -n --pipe` for non-interactive binary streams. Without an available authorised key, remote elevation fails closed. Closing the forwarding connection or disabling the signing key stops new approvals; an already-running root command is not interrupted. A client that automatically reloads keys from its keychain may restore a removed key on the next connection; use `ssh -a` when the connection must not forward an agent. Separate SSH connections under the same Unix user can deliberately share an accessible agent socket, so forwarding is not a security boundary between same-user sessions.
-
 For a specific older repository revision, check out or inspect that revision in a separate worktree, build it, and switch only after reviewing the resulting system change.
 
 ## Secret and account-state recovery
