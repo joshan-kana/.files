@@ -431,7 +431,6 @@ ShellRoot {
                 name: root.wallpaperSpectrumEnabled ? "Disable Wallpaper Spectrum" : "Enable Wallpaper Spectrum",
                 description: "Show the live audio spectrum over the wallpaper",
                 icon: "audio-x-generic",
-                key: runtime.shortcut("media.wallpaperSpectrum"),
                 keywords: ["spectrum", "wallpaper", "music", "visualiser", "audio", "reactive"]
             },
             {
@@ -439,7 +438,6 @@ ShellRoot {
                 name: root.musicReactiveEnabled ? "Disable Music-reactive Shell" : "Enable Music-reactive Shell",
                 description: "Light up shell surfaces using live music frequencies",
                 icon: "audio-x-generic",
-                key: runtime.shortcut("media.reactiveShell"),
                 keywords: ["reactive", "visual", "music", "effects", "audio", "shell"]
             },
             {
@@ -447,7 +445,6 @@ ShellRoot {
                 name: "Workspaces & Window Overview",
                 description: "Browse live window previews and switch workspaces",
                 icon: "view-grid",
-                key: runtime.shortcut("overview.toggle"),
                 keywords: ["overview", "mission control", "windows", "workspaces", "switch", "preview"]
             },
             {
@@ -455,7 +452,6 @@ ShellRoot {
                 name: "Clipboard History",
                 description: "Search and restore clipboard entries",
                 icon: "edit-paste",
-                key: runtime.shortcut("clipboard.toggle"),
                 keywords: ["copy", "paste", "cliphist"]
             },
             {
@@ -484,7 +480,6 @@ ShellRoot {
                 name: "Pick Colour to Clipboard",
                 description: "Select a screen pixel and copy its HEX colour",
                 icon: "color-picker",
-                key: runtime.shortcut("colour.pick"),
                 keywords: ["colour", "color", "eyedropper", "hex", "sample", "picker", "clipboard"]
             },
             {
@@ -492,7 +487,6 @@ ShellRoot {
                 name: "Copy Frozen Screen Region",
                 description: "Freeze the focused display, select pixels and copy them",
                 icon: "camera-photo",
-                key: runtime.shortcut("capture.region"),
                 keywords: ["screenshot", "capture", "snip", "clipboard", "region", "image"]
             },
             {
@@ -521,7 +515,6 @@ ShellRoot {
                 name: "Start / Stop Screen Recording",
                 description: "Select live recording region and audio; use again to stop and save",
                 icon: "media-record",
-                key: runtime.shortcut("capture.recordToggle"),
                 keywords: ["screen", "record", "video", "capture", "screencast", "mp4"]
             },
             {
@@ -536,7 +529,6 @@ ShellRoot {
                 name: "Application Mixer",
                 description: "Control live PipeWire playback streams",
                 icon: "multimedia-volume-control",
-                key: runtime.shortcut("audio.mixer"),
                 keywords: ["audio", "volume", "apps", "pavucontrol", "pipewire"]
             },
             {
@@ -544,7 +536,6 @@ ShellRoot {
                 name: "Lock Session",
                 description: "Secure the current Wayland session",
                 icon: "system-lock-screen",
-                key: runtime.shortcut("session.lock"),
                 keywords: ["lock", "security", "password"]
             },
             {
@@ -552,7 +543,6 @@ ShellRoot {
                 name: "Power & Session",
                 description: "Suspend, log out, reboot, or power off",
                 icon: "system-shutdown",
-                key: runtime.shortcut("session.toggle"),
                 keywords: ["power", "session", "logout", "suspend", "reboot", "shutdown"]
             },
             {
@@ -567,7 +557,6 @@ ShellRoot {
                 name: "Play / Pause",
                 description: "Toggle the selected media player",
                 icon: "media-playback-start",
-                key: runtime.shortcut("media.playPause"),
                 keywords: ["music", "media", "pause"]
             },
             {
@@ -575,7 +564,6 @@ ShellRoot {
                 name: "Next Track",
                 description: "Skip to the next track",
                 icon: "media-skip-forward",
-                key: runtime.shortcut("media.next"),
                 keywords: ["music", "media", "skip"]
             },
             {
@@ -583,7 +571,6 @@ ShellRoot {
                 name: "Previous Track",
                 description: "Return to the previous track",
                 icon: "media-skip-backward",
-                key: runtime.shortcut("media.previous"),
                 keywords: ["music", "media", "back"]
             },
             {
@@ -591,7 +578,6 @@ ShellRoot {
                 name: "Seek Forward 10 Seconds",
                 description: "Seek the selected player forward",
                 icon: "media-seek-forward",
-                key: runtime.shortcut("media.seekForward"),
                 keywords: ["music", "media", "seek"]
             },
             {
@@ -599,7 +585,6 @@ ShellRoot {
                 name: "Seek Backward 10 Seconds",
                 description: "Seek the selected player backward",
                 icon: "media-seek-backward",
-                key: runtime.shortcut("media.seekBackward"),
                 keywords: ["music", "media", "seek"]
             },
             {
@@ -607,7 +592,6 @@ ShellRoot {
                 name: "Toggle Shuffle",
                 description: "Toggle shuffle on the selected player",
                 icon: "media-playlist-shuffle",
-                key: runtime.shortcut("media.shuffle"),
                 keywords: ["music", "media", "random"]
             },
             {
@@ -615,7 +599,6 @@ ShellRoot {
                 name: "Cycle Media Player",
                 description: "Control the next MPRIS player",
                 icon: "media-playlist-repeat",
-                key: runtime.shortcut("media.cyclePlayer"),
                 keywords: ["music", "media", "player", "switch"]
             },
             {
@@ -626,7 +609,7 @@ ShellRoot {
                 keywords: ["cpu", "ram", "memory", "resources", "performance", "usage"]
             },
             {
-                id: "system.toggle",
+                id: "controls.toggle",
                 name: "System Controls",
                 description: "Open audio and connectivity status",
                 icon: "preferences-system",
@@ -647,7 +630,7 @@ ShellRoot {
                 keywords: ["forecast", "temperature", "rain", "sunrise", "climate"]
             },
             {
-                id: "calendar.toggle",
+                id: "home.toggle",
                 name: "Calendar",
                 description: "Browse months and select dates",
                 icon: "x-office-calendar",
@@ -658,7 +641,6 @@ ShellRoot {
                 name: "Notifications",
                 description: "Open notification history",
                 icon: "preferences-system-notifications",
-                key: runtime.shortcut("notifications.toggle"),
                 keywords: ["alerts", "history", "messages"]
             },
             {
@@ -687,7 +669,6 @@ ShellRoot {
                 name: "Volume Up",
                 description: "Increase output volume by 5%",
                 icon: "audio-volume-high",
-                key: runtime.shortcut("audio.volumeUp"),
                 keywords: ["audio", "sound", "louder"]
             },
             {
@@ -695,7 +676,6 @@ ShellRoot {
                 name: "Volume Down",
                 description: "Decrease output volume by 5%",
                 icon: "audio-volume-low",
-                key: runtime.shortcut("audio.volumeDown"),
                 keywords: ["audio", "sound", "quieter"]
             },
             {
@@ -703,7 +683,6 @@ ShellRoot {
                 name: "Toggle Mute",
                 description: "Mute or unmute output audio",
                 icon: "audio-volume-muted",
-                key: runtime.shortcut("audio.toggleMute"),
                 keywords: ["audio", "sound", "silence"]
             },
             {
@@ -711,7 +690,6 @@ ShellRoot {
                 name: "Keyboard Shortcuts",
                 description: "Show the Hyprland key map",
                 icon: "preferences-desktop-keyboard-shortcuts",
-                key: runtime.shortcut("shortcuts.toggle"),
                 keywords: ["keybinds", "cheatsheet"]
             },
             {
@@ -719,7 +697,6 @@ ShellRoot {
                 name: "Toggle Animations",
                 description: "Enable or disable desktop motion",
                 icon: "preferences-desktop-effects",
-                key: runtime.shortcut("animations.toggle"),
                 keywords: ["motion", "reduce motion"]
             },
             {
@@ -727,7 +704,6 @@ ShellRoot {
                 name: "Open Terminal",
                 description: runtime.terminal,
                 icon: "utilities-terminal",
-                key: runtime.shortcut("terminal.open"),
                 keywords: ["shell", "console"]
             }
         ].concat(system.audioAvailable ? [
@@ -753,7 +729,6 @@ ShellRoot {
                 name: "Brightness Up",
                 description: "Increase hardware backlight by 5%",
                 icon: "display-brightness",
-                key: runtime.shortcut("brightness.up"),
                 keywords: ["display", "backlight", "brighter"]
             },
             {
@@ -761,7 +736,6 @@ ShellRoot {
                 name: "Brightness Down",
                 description: "Decrease hardware backlight by 5%",
                 icon: "display-brightness",
-                key: runtime.shortcut("brightness.down"),
                 keywords: ["display", "backlight", "dimmer"]
             }
         ] : [])
