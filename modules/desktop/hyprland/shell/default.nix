@@ -1612,7 +1612,7 @@ in
               exec systemctl suspend
               ;;
             logout)
-              exec hyprctl dispatch exit
+              exec hyprctl dispatch "hl.dsp.exit()"
               ;;
             reboot)
               exec systemctl reboot
