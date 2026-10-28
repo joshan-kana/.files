@@ -596,6 +596,26 @@
         "type": "github"
       }
     },
+    "nh": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793148286,
+        "narHash": "sha256-YIMFBD5N+QJ8HYMovZj2jbJmbGYRMomimeZq+jJB9TI=",
+        "owner": "nix-community",
+        "repo": "nh",
+        "rev": "b738091e2d44785095f6d7b4cc41db13b635dca5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nh",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -1019,6 +1039,7 @@
         "homebrew-cask": "homebrew-cask",
         "llm-agents": "llm-agents",
         "mautrix-packages": "mautrix-packages",
+        "nh": "nh",
         "nix-darwin": "nix-darwin",
         "nix-openclaw": "nix-openclaw",
         "nixpkgs": "nixpkgs_7",
