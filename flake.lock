@@ -685,11 +685,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793229263,
-        "narHash": "sha256-HgM9wAveAHyDNLTb3Fiv1f2gEMlW21hWLzED6hN7wLA=",
+        "lastModified": 1793229540,
+        "narHash": "sha256-ouVRtGkmc9IdbO96HZ8IoPYiBxSByPRfGHEZFkuRHRs=",
         "owner": "joshan-kana",
         "repo": "nix-embedded-tooling",
-        "rev": "e718e76d9a61d4122e8c2400d2364534c8509a5f",
+        "rev": "020514f301511da93b793d25e2ad6467923d3ad2",
         "type": "github"
       },
       "original": {
