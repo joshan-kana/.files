@@ -37,7 +37,7 @@ let
     name = "bbctl";
     text = ''
       if [ "$(${pkgs.coreutils}/bin/id -u)" -ne 0 ]; then
-        exec /run/wrappers/bin/sudo "$0" "$@"
+        exec ${pkgs.systemd}/bin/run0 "$0" "$@"
       fi
 
       case "''${1:-}" in

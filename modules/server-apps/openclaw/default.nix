@@ -34,10 +34,6 @@ let
 
   appDataGroup = server.storage.appData.group.name;
 
-  openclawSudo = pkgs.writeShellScriptBin "sudo" ''
-    exec /run/wrappers/bin/sudo "$@"
-  '';
-
 in
 {
   services.openclaw-gateway = {
@@ -77,7 +73,6 @@ in
       python3
       rsync
       systemd
-      openclawSudo
     ];
   };
 
@@ -104,19 +99,15 @@ in
 
   networking.firewall.interfaces.${server.lan.interface}.allowedTCPPorts = [ gatewayPort ];
 
-  # OpenClaw is intentionally host-root-equivalent. Passwordless sudo and the
-  # mapped primary home are operational capabilities, not a security boundary.
-  security.sudo.extraRules = [
-    {
-      users = [ openclawUser ];
-      commands = [
-        {
-          command = "ALL";
-          options = [ "NOPASSWD" ];
-        }
-      ];
-    }
-  ];
+  # The worker was already root-equivalent; retain that authority through
+  # run0 rather than a passwordless sudoers exception.
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "${openclawUser}") {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   # bindfs maps OpenClaw writes back to the primary user to preserve ownership.
   fileSystems.${mappedHome} = {

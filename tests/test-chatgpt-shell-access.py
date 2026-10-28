@@ -29,9 +29,8 @@ sys.modules["mcp.server"] = mcp.server
 os.environ.update(
     CREDENTIALS_DIRECTORY="/tmp",
     SSH_AUTH_SOCK="/tmp/agent.sock",
-    CHATGPT_SHELL_REMOTE_SUDO_AGENT="/tmp/remote-agent.sock",
+    CHATGPT_SHELL_REMOTE_AUTH_AGENT="/tmp/remote-agent.sock",
     CHATGPT_SHELL_COMMAND_PATH="/bin",
-    CHATGPT_SHELL_LOCAL_USER="test",
     CHATGPT_SHELL_BASH="bash",
     CHATGPT_SHELL_LOCAL_HOST="local",
     CHATGPT_SHELL_REMOTE_TARGETS="{}",
@@ -151,6 +150,30 @@ class ShellTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["success"])
         self.assertNotEqual(result.get("exit_code"), 0)
         self.assertNotIn("unsafe-continuation", result["output"])
+
+    def test_home_directory_is_preserved(self):
+        self.assertIn("HOME", shell._ALLOWED_ENV)
+        self.assertEqual(shell.COMMAND_ENV["HOME"], os.environ["HOME"])
+
+    def test_local_command_uses_unprivileged_shell(self):
+        command = shell.LOCAL
+        self.assertEqual(command[0], "bash")
+        self.assertEqual(command[1], "-lc")
+        self.assertNotIn("sudo", command)
+
+    def test_remote_agent_forwarding_is_explicit(self):
+        self.argv.stop()
+        try:
+            with patch.dict(
+                shell.REMOTE_TARGETS,
+                {
+                    "remote": shell.RemoteTarget("joshan@example", "key", "/bin/bash", True),
+                },
+            ):
+                argv = shell._build_argv("remote", "id -u")
+        finally:
+            self.argv.start()
+        self.assertIn("-oForwardAgent=yes", argv)
 
     def test_output_buffer_bounds(self):
         output = shell.OutputBuffer()

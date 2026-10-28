@@ -38,18 +38,13 @@
 
   security.pam.sshAgentAuth = {
     enable = true;
-    authorizedKeysFiles = [ "/etc/sudo-authorized-key" ];
+    authorizedKeysFiles = [ "/etc/elevation-authorized-key" ];
   };
 
-  security.sudo = {
-    extraConfig = ''
-      Defaults:${config.dotfiles.users.primary.name} noninteractive_auth
-    '';
-    wheelNeedsPassword = true;
-  };
+  security.pam.services.polkit-1.sshAgentAuth = true;
 
   systemd.tmpfiles.rules = [
-    "f+ /etc/sudo-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIGRtvQBAj3/3cJYqS4KosghtI5fsh9poh3q+LIfFL8KR\\x20joshan@nixos-arm-parallels-sudo\\n"
+    "f+ /etc/elevation-authorized-key 0444 root root - ssh-ed25519\\x20AAAAC3NzaC1lZDI1NTE5AAAAIGRtvQBAj3/3cJYqS4KosghtI5fsh9poh3q+LIfFL8KR\\x20joshan@nixos-arm-parallels-sudo\\n"
   ];
 
   boot = {

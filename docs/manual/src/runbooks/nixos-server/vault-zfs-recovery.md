@@ -33,7 +33,7 @@ Build and switch the storage configuration first. Then run the setup script in d
 ```sh
 cd "$DOTFILES_REPO"
 
-sudo ./scripts/nixos-server/create-vault-zfs.sh \
+run0 ./scripts/nixos-server/create-vault-zfs.sh \
   --dry-run \
   /dev/disk/by-id/DISK_A \
   /dev/disk/by-id/DISK_B
@@ -42,7 +42,7 @@ sudo ./scripts/nixos-server/create-vault-zfs.sh \
 Review the detected devices, signatures, and exact ZFS commands. Apply only when they match the intended disks:
 
 ```sh
-sudo ./scripts/nixos-server/create-vault-zfs.sh \
+run0 ./scripts/nixos-server/create-vault-zfs.sh \
   --apply \
   /dev/disk/by-id/DISK_A \
   /dev/disk/by-id/DISK_B
@@ -101,8 +101,8 @@ snapshot=<snapshot-name-after-@>
 relative_path=<path-relative-to-vault-root>
 recovery_path=/tmp/vault-recovery
 
-sudo mkdir -p "$recovery_path"
-sudo cp -a \
+run0 mkdir -p "$recovery_path"
+run0 cp -a \
   "$VAULT_ROOT/.zfs/snapshot/$snapshot/$relative_path" \
   "$recovery_path/"
 ```
@@ -111,7 +111,7 @@ For a larger restore, preview the changes with `rsync` first:
 
 ```sh
 snapshot=<snapshot-name-after-@>
-sudo rsync -aHAXn --delete \
+run0 rsync -aHAXn --delete \
   "$VAULT_ROOT/.zfs/snapshot/$snapshot/" \
   "$VAULT_ROOT/"
 ```
@@ -125,7 +125,7 @@ A clone is useful when the old state must be inspected without touching the live
 ```sh
 snapshot=<snapshot-name-after-@>
 
-sudo zfs clone \
+run0 zfs clone \
   -o mountpoint=/mnt/vault-recovery \
   "$VAULT_DATASET@$snapshot" \
   "$VAULT_POOL/recovery"
@@ -136,7 +136,7 @@ findmnt /mnt/vault-recovery
 After copying out the required data:
 
 ```sh
-sudo zfs destroy "$VAULT_POOL/recovery"
+run0 zfs destroy "$VAULT_POOL/recovery"
 ```
 
 ## Whole-dataset rollback
@@ -147,7 +147,7 @@ Stop every service that writes to Vault and preserve any current state that must
 
 ```sh
 snapshot=<snapshot-name-after-@>
-sudo zfs rollback -r "$VAULT_DATASET@$snapshot"
+run0 zfs rollback -r "$VAULT_DATASET@$snapshot"
 ```
 
 Prefer file copies or a temporary clone whenever they can solve the problem.
@@ -162,10 +162,10 @@ After rebuilding the internal system disk, reconnect the existing Vault drives o
 
 ```sh
 cd "$DOTFILES_REPO"
-sudo nixos-rebuild switch --flake ".#nixos-server"
+run0 nixos-rebuild switch --flake ".#nixos-server"
 
-sudo zpool import
-sudo zpool import "$VAULT_POOL"
+run0 zpool import
+run0 zpool import "$VAULT_POOL"
 
 zpool status "$VAULT_POOL"
 zfs list -r "$VAULT_POOL"
@@ -178,8 +178,8 @@ If import fails, inspect without forcing anything:
 
 ```sh
 lsblk -o NAME,PATH,SIZE,FSTYPE,LABEL,MODEL,SERIAL,TRAN,MOUNTPOINTS
-sudo zpool import -d /dev/disk/by-id
-sudo zpool import -d /dev/disk/by-id "$VAULT_POOL"
+run0 zpool import -d /dev/disk/by-id
+run0 zpool import -d /dev/disk/by-id "$VAULT_POOL"
 journalctl -b -u "zfs-import-$VAULT_POOL.service" --no-pager
 ```
 

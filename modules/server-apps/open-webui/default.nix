@@ -81,9 +81,6 @@ in
       primaryHome = "${primary.homeRoot}/${primary.name}";
       computerMappedHome = "/run/open-webui-computer-home";
       searxEnabled = config.dotfiles.resolvedScopes.serverApps.openWebui.searx.enable;
-      computerSudo = pkgs.writeShellScriptBin "sudo" ''
-        exec /run/wrappers/bin/sudo "$@"
-      '';
 
       computerStart = pkgs.writeShellScript "open-webui-computer-start" ''
         set -euo pipefail
@@ -109,17 +106,13 @@ in
         home = computerRoot;
       };
 
-      security.sudo.extraRules = [
-        {
-          users = [ computerUser ];
-          commands = [
-            {
-              command = "ALL";
-              options = [ "NOPASSWD" ];
-            }
-          ];
-        }
-      ];
+      security.polkit.extraConfig = ''
+        polkit.addRule(function(action, subject) {
+          if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "${computerUser}") {
+            return polkit.Result.YES;
+          }
+        });
+      '';
 
       fileSystems.${computerMappedHome} = {
         device = primaryHome;
@@ -140,7 +133,6 @@ in
           bash
           chromium
           codex
-          computerSudo
           coreutils
           curl
           git
