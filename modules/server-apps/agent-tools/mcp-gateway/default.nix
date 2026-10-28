@@ -36,6 +36,11 @@ let
       };
       targets = [
         {
+          name = "dropbox";
+          mcp.host = "https://mcp.dropbox.com/mcp";
+          policies.backendAuth.key.value.file = "/run/agentgateway-dropbox/token";
+        }
+        {
           name = "agent-mail";
           mcp.host = "http://127.0.0.1:8765/mcp/";
         }
@@ -86,9 +91,29 @@ let
         N8N_AUTHORIZATION = "validation-placeholder";
       }
       ''
-        ${pkgs.agentgateway}/bin/agentgateway --file ${configFile} --validate-only
+        # Validate the file-backed credential without requiring runtime secrets.
+        printf 'validation-placeholder' > "$TMPDIR/dropbox-token"
+        ${pkgs.gnused}/bin/sed "s@/run/agentgateway-dropbox/token@$TMPDIR/dropbox-token@g" ${configFile} > "$TMPDIR/agentgateway-validation.yaml"
+        ${pkgs.agentgateway}/bin/agentgateway --file "$TMPDIR/agentgateway-validation.yaml" --validate-only
         cp ${configFile} "$out"
       '';
+  refreshDropbox = pkgs.writeShellScript "agentgateway-dropbox-refresh" ''
+    set -euo pipefail
+    dir=/run/agentgateway-dropbox
+    export RCLONE_CONFIG="$dir/rclone.conf"
+
+    # Force renewal in the private copy; never change the backup credentials.
+    ${pkgs.rclone}/bin/rclone config dump |
+      ${pkgs.jq}/bin/jq -er '
+        .dropbox.token |= (fromjson | .expiry = "1970-01-01T00:00:00Z" | tojson)
+        | to_entries[] | "[\(.key)]\n" + ([.value | to_entries[] | "\(.key) = \(.value)"] | join("\n"))
+      ' > "$dir/rclone.conf.next"
+    mv "$dir/rclone.conf.next" "$RCLONE_CONFIG"
+    ${pkgs.rclone}/bin/rclone about dropbox: --json > /dev/null
+    ${pkgs.rclone}/bin/rclone config dump |
+      ${pkgs.jq}/bin/jq -ej '.dropbox.token | fromjson | .access_token' > "$dir/token.next"
+    mv "$dir/token.next" "$dir/token"
+  '';
   start = pkgs.writeShellScript "agentgateway-start" ''
     set -euo pipefail
     export CHATGPT_CLIENT_API_KEY="$(${pkgs.gnused}/bin/sed -n 's/^MCPGATEWAY_BEARER_TOKEN=//p' "$CREDENTIALS_DIRECTORY/chatgpt-client-env")"
@@ -97,6 +122,9 @@ let
     export GITHUB_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/github-authorization")"
     export YOUTRACK_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/youtrack-authorization")"
     export N8N_AUTHORIZATION="$(cat "$CREDENTIALS_DIRECTORY/n8n-authorization")"
+    # Keep the backup credential untouched; refresh an isolated runtime copy.
+    ${pkgs.coreutils}/bin/install -m 0600 "$CREDENTIALS_DIRECTORY/dropbox-rclone" "$RUNTIME_DIRECTORY/rclone.conf"
+    ${refreshDropbox}
     exec ${pkgs.agentgateway}/bin/agentgateway --file ${validatedConfig}
   '';
 in
@@ -106,6 +134,8 @@ in
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       DynamicUser = true;
+      RuntimeDirectory = "agentgateway-dropbox";
+      RuntimeDirectoryMode = "0700";
       ExecStart = start;
       LoadCredential = [
         "chatgpt-client-env:${server.secretsDir}/chatgpt-shared-tools.env"
@@ -113,10 +143,32 @@ in
         "github-authorization:${server.secretsDir}/agentgateway/github-authorization"
         "youtrack-authorization:${server.secretsDir}/agentgateway/youtrack-authorization"
         "n8n-authorization:${server.secretsDir}/agentgateway/n8n-authorization"
+        "dropbox-rclone:/var/lib/backup-credentials/rclone.conf"
       ];
       Restart = "always";
       RestartSec = "2s";
       UMask = "0077";
+    };
+  };
+
+  systemd.services.agentgateway-dropbox-refresh = {
+    description = "Refresh Dropbox MCP access token";
+    requires = [ "agentgateway.service" ];
+    after = [ "agentgateway.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      DynamicUser = true;
+      User = "agentgateway";
+      ReadWritePaths = [ "/run/agentgateway-dropbox" ];
+      UMask = "0077";
+      ExecStart = refreshDropbox;
+    };
+  };
+
+  systemd.timers.agentgateway-dropbox-refresh = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*:0/30";
     };
   };
 
