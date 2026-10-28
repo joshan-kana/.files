@@ -13,6 +13,7 @@ Item {
     property bool open: false
     property var entries: []
     property string currentPath: ""
+    property string applyingPath: ""
     property string searchText: ""
     property string resizeMode: "fit"
     property string statusText: ""
@@ -105,7 +106,7 @@ Item {
         stderr: panel.applyError
         onExited: (code, status) => {
             if (code === 0) {
-                panel.currentPath = panel.selectedPath();
+                panel.currentPath = panel.applyingPath;
                 panel.statusText = "Applied to " + panel.outputName;
             } else {
                 panel.statusText = panel.applyError.text.trim() || "Wallpaper apply failed";
@@ -185,10 +186,8 @@ Item {
     }
 
     function activateThumbnail(index: int): void {
-        const alreadySelected = selectedIndex === index;
         selectedIndex = index;
-        if (alreadySelected)
-            applySelected();
+        applySelected();
         keyboardRequested();
     }
 
@@ -198,8 +197,9 @@ Item {
     function applySelected(): void {
         if (busy || !selectedPath() || runtime.wallpaperLibrary.length === 0)
             return;
+        applyingPath = selectedPath();
         statusText = "Applying wallpaper to " + outputLabel + "…";
-        applyProcess.exec([runtime.wallpaperLibrary, "set", outputName, resizeMode, selectedPath()]);
+        applyProcess.exec([runtime.wallpaperLibrary, "set", outputName, resizeMode, applyingPath]);
     }
 
     function resetWallpaper(): void {
@@ -343,13 +343,14 @@ Item {
                     readonly property bool current: index === panel.selectedIndex
                     readonly property bool applied: modelData === panel.currentPath
                     readonly property bool animatedFile: /\.(mp4|webm|mkv|mov|gif)$/i.test(modelData)
+                    readonly property bool previewActive: current || cardPress.containsMouse
                     property string posterPath: ""
                     property string motionPosterPath: ""
                     property StdioCollector motionPosterOutput: StdioCollector {}
                     property Process motionPosterProcess: Process {
                         stdout: entry.motionPosterOutput
                         onExited: (code, status) => {
-                            if (code === 0 && entry.current)
+                            if (code === 0 && entry.previewActive)
                                 entry.motionPosterPath = entry.motionPosterOutput.text.trim();
                         }
                     }
@@ -357,12 +358,12 @@ Item {
                         id: motionPreviewDebounce
                         interval: 220
                         onTriggered: {
-                            if (entry.animatedFile && entry.current && panel.open && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running)
+                            if (entry.animatedFile && entry.previewActive && panel.open && panel.runtime.wallpaperLibrary.length > 0 && !entry.motionPosterProcess.running && entry.motionPosterPath.length === 0)
                                 entry.motionPosterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail-animated", entry.modelData]);
                         }
                     }
-                    onCurrentChanged: {
-                        if (current && animatedFile && panel.open)
+                    onPreviewActiveChanged: {
+                        if (previewActive && animatedFile && panel.open && motionPosterPath.length === 0)
                             motionPreviewDebounce.restart();
                         else
                             motionPreviewDebounce.stop();
@@ -370,7 +371,7 @@ Item {
                     Connections {
                         target: panel
                         function onOpenChanged(): void {
-                            if (panel.open && entry.current && entry.animatedFile)
+                            if (panel.open && entry.previewActive && entry.animatedFile && entry.motionPosterPath.length === 0)
                                 motionPreviewDebounce.restart();
                             if (!panel.open) {
                                 motionPreviewDebounce.stop();
@@ -389,7 +390,7 @@ Item {
                     Component.onCompleted: {
                         if (panel.runtime.wallpaperLibrary.length > 0)
                             posterProcess.exec([panel.runtime.wallpaperLibrary, "thumbnail", modelData]);
-                        if (current && animatedFile && panel.open)
+                        if (previewActive && animatedFile && panel.open && motionPosterPath.length === 0)
                             motionPreviewDebounce.restart();
                     }
 
@@ -437,9 +438,9 @@ Item {
                                 right: parent.right
                                 bottom: filenameBar.top
                             }
-                            source: entry.current && panel.open && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
+                            source: entry.previewActive && panel.open && entry.motionPosterPath.length > 0 ? "file://" + entry.motionPosterPath : ""
                             fillMode: Image.PreserveAspectCrop
-                            playing: entry.current && panel.open
+                            playing: entry.previewActive && panel.open
                             visible: status === AnimatedImage.Ready && playing
                         }
 
@@ -494,8 +495,8 @@ Item {
                                 Text {
                                     id: stateLabel
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: entry.applied ? "ACTIVE" : entry.current ? "SELECTED" : ""
-                                    color: entry.applied ? panel.theme.positive : panel.theme.roleColor("wallpaper")
+                                    text: entry.applied ? "ACTIVE" : ""
+                                    color: panel.theme.positive
                                     font.family: panel.runtime.fontMono
                                     font.pixelSize: panel.theme.fontSize(9)
                                 }
