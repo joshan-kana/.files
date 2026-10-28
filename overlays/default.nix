@@ -43,6 +43,7 @@ _: {
     ./matrix-bridges
     ./ncmpcpp
     ./mpv
+    ./mullvad
     ./openclaw
     ./openai-tunnel-client
     ./parallels-tools
