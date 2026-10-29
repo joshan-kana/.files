@@ -5,7 +5,7 @@ QtObject {
 
     property string currentName: ""
     property string currentView: ""
-    property bool controlsRoot: false
+    property string backDestination: ""
     property bool hasCurrent: false
     property var screen: null
     property real originCenter: 0
@@ -13,17 +13,39 @@ QtObject {
     property real originHeight: 0
 
     function show(name: string, targetScreen: var, center: real, width: real, height: real, view: string): void {
-        // Preserve Controls as the origin when a detail shortcut is invoked
-        // while its hub is already open. A direct shortcut has no parent.
-        const fromControls = hasCurrent && currentName === "system" && controlsRoot;
-        controlsRoot = name === "system" && (!view || view === "controls" || fromControls);
+        const requestedView = view || "";
+        const fromControls = hasCurrent && currentName === "system" && (currentView === "" || currentView === "controls" || backDestination === "controls");
+        const toControls = fromControls && (name === "media" || name === "system" && requestedView !== "" && requestedView !== "controls");
+        const toCalendar = hasCurrent && currentName === "calendar" && name === "weather";
+        backDestination = toControls ? "controls" : toCalendar ? "calendar" : "";
         currentName = name;
-        currentView = view || "";
+        currentView = name === "system" ? requestedView : "";
         screen = targetScreen;
         originCenter = center;
         originWidth = width;
         originHeight = height;
         hasCurrent = true;
+    }
+
+    // Detail navigation from a visible Controls page must update the same
+    // history as opening a detail through a global shortcut.
+    function enterDetail(view: string): void {
+        if (!hasCurrent || currentName !== "system")
+            return;
+        const fromControls = currentView === "" || currentView === "controls" || backDestination === "controls";
+        backDestination = fromControls ? "controls" : "";
+        currentView = view;
+    }
+
+    function back(): void {
+        const destination = backDestination;
+        if (!destination) {
+            close();
+            return;
+        }
+        backDestination = "";
+        currentName = destination === "controls" ? "system" : destination;
+        currentView = destination === "controls" ? "controls" : "";
     }
 
     function toggle(name: string, targetScreen: var, center: real, width: real, height: real, view: string): void {
@@ -37,14 +59,14 @@ QtObject {
     }
 
     function navigate(name: string): void {
-        controlsRoot = name === "system";
+        backDestination = "";
         currentView = "";
         currentName = name;
     }
 
     function close(): void {
         hasCurrent = false;
-        controlsRoot = false;
+        backDestination = "";
     }
 
     function finishClose(): void {
