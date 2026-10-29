@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."reaper-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

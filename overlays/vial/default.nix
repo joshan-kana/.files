@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."vial-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

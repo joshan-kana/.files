@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."notion-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

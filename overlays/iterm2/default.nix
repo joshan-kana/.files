@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."iterm2-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

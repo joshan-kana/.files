@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."open-webui-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

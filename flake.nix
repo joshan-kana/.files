@@ -415,37 +415,22 @@
           inherit (self) darwinConfigurations;
         };
 
-      macUpdatePackages = [
-        "arc-mac"
-        "arduino-ide-mac"
-        "bambu-studio"
-        "chatgpt-mac"
-        "cryptomator-mac"
-        "hammerspoon"
-        "heroic-mac"
-        "iterm2-mac"
-        "linear-mac"
-        "notion-mac"
-        "open-webui-mac"
-        "prusa-slicer"
-        "qmk-toolbox-mac"
-        "reaper-mac"
-        "vial-mac"
-      ];
+      # Each overlay declares its updatePolicy alongside its package.
       updatePackagesFor =
         system:
-        {
-          libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
-          cosmic-noir-icons = (pkgsFor system).callPackage ./overlays/cosmic-noir-icons/package.nix { };
-        }
-        // lib.optionalAttrs (pkgsFor system).stdenv.hostPlatform.isLinux {
-          cptr = (pkgsFor system).callPackage ./overlays/open-webui/computer.nix { };
-          agentgateway = (pkgsFor system).callPackage ./overlays/agentgateway/package.nix { };
-          openai-tunnel-client = (pkgsFor system).callPackage ./overlays/openai-tunnel-client/package.nix { };
-        }
-        // lib.optionalAttrs (system == "aarch64-darwin") (
-          lib.genAttrs macUpdatePackages (name: self.darwinConfigurations.mac.pkgs.${name})
-        );
+        lib.foldl'
+          (
+            packages: cfg:
+            if cfg.pkgs.stdenv.hostPlatform.system != system then
+              packages
+            else
+              packages
+              // lib.mapAttrs (name: _policy: cfg.pkgs.${name}) (
+                lib.filterAttrs (name: _: builtins.hasAttr name cfg.pkgs) cfg.config.dotfiles.updatePolicy
+              )
+          )
+          { }
+          ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
 
       docsCommandsFor =
         system:
@@ -483,9 +468,20 @@
         updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
         routinePackageUpdates = forAllSystems (
           system:
-          lib.filter (
-            name: ((updatePackagesFor system).${name}.passthru.dotfilesUpdatePolicy or "routine") == "routine"
-          ) (builtins.attrNames (updatePackagesFor system))
+          let
+            policies =
+              lib.foldl'
+                (
+                  selected: cfg:
+                  if cfg.pkgs.stdenv.hostPlatform.system != system then
+                    selected
+                  else
+                    selected // cfg.config.dotfiles.updatePolicy
+                )
+                { }
+                ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
+          in
+          lib.filter (name: policies.${name} == "auto") (builtins.attrNames (updatePackagesFor system))
         );
       };
 
@@ -616,7 +612,13 @@
                 python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
                 touch "$out"
               '';
-          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
+          roaming-dns-build =
+            let
+              matchingHost = lib.findFirst (host: host.pkgs.stdenv.hostPlatform.system == system) null (
+                builtins.attrValues self.nixosConfigurations
+              );
+            in
+            matchingHost.pkgs.technitium-roaming-dns;
           roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;

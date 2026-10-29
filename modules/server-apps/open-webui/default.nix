@@ -72,7 +72,7 @@ in
       inherit (server.storage) appData;
 
       computerUser = "open-webui-computer";
-      computerVersion = (pkgs.callPackage ../../../overlays/open-webui/computer.nix { }).version;
+      computerVersion = pkgs.open-webui-computer.version;
       computerPort = 8000;
       computerRoot = "${appData.root}/open-webui-computer";
       computerStateDir = "${computerRoot}/state";

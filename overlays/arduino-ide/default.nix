@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."arduino-ide-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

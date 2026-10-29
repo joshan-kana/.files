@@ -1,4 +1,5 @@
 _: {
+  dotfiles.updatePolicy."arc-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

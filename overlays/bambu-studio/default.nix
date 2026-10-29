@@ -1,4 +1,5 @@
-_: {
+{ lib, system, ... }: {
+  dotfiles.updatePolicy."bambu-studio" = lib.mkIf (lib.systems.elaborate system).isDarwin "auto";
   nixpkgs.overlays = [
     (
       _final: prev:
