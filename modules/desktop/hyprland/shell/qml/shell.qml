@@ -161,6 +161,8 @@ ShellRoot {
             onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
             onShellGlassToggleRequested: appearance.toggleShellGlass()
             requestedView: expansionState.currentView
+            controlsRoot: expansionState.controlsRoot
+            onControlsRequested: expansionState.currentView = "controls"
             onCloseRequested: expansionState.close()
             onMediaRequested: actions.toggleMedia()
         }

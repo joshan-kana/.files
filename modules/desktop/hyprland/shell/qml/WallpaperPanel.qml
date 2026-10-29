@@ -396,7 +396,7 @@ Item {
 
                     width: gallery.cellWidth
                     height: gallery.cellHeight
-                    scale: cardPress.pressed ? 0.985 : cardPress.containsMouse ? 1.012 : 1
+                    scale: cardPress.pressed ? 0.985 : 1
                     Behavior on scale {
                         Anim {
                             motion: panel.motion
