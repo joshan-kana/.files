@@ -381,7 +381,7 @@
             repo-quality = {
               enable = true;
               name = "Repository formatting and linting";
-              entry = "nix build --no-link .#checks.${system}.repo-quality";
+              entry = "nix build --no-link .#checks.${system}.repo-quality .#checks.${system}.embedded-lint";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -790,16 +790,11 @@
                 bash ${./tests/update-container-lock.sh} ${./scripts/update-container-lock.sh}
                 touch "$out"
               '';
-          repo-quality = pkgs.runCommand "repo-quality" { } ''
-            mkdir -p "$out"
-            ln -s ${treefmt.config.build.check self} "$out/formatting"
-            ln -s ${
-              embedded.lintCheck {
-                src = self;
-                excludes = repoToolExcludedDirs;
-              }
-            } "$out/embedded-lint"
-          '';
+          repo-quality = treefmt.config.build.check self;
+          embedded-lint = embedded.lintCheck {
+            src = self;
+            excludes = repoToolExcludedDirs;
+          };
           embedded-lsp = embedded.lspCheck;
           git-attributes =
             assert lib.assertMsg (
