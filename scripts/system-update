@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+native=
+package_systems=
+
 update_package() {
   if [[ $# -lt 1 || $# -gt 2 ]]; then
     echo 'Usage: system-update --package PACKAGE [--system SYSTEM]' >&2
     exit 2
   fi
 
-  native="$(nix eval --raw --impure --expr builtins.currentSystem)"
-  package_systems="$(nix eval --json .#lib.updateablePackages)"
+  # These do not change between package updates in the same invocation.
+  if [[ -z "$native" ]]; then
+    native="$(nix eval --raw --impure --expr builtins.currentSystem)"
+  fi
+  if [[ -z "$package_systems" ]]; then
+    package_systems="$(nix eval --json .#lib.updateablePackages)"
+  fi
   system="${2:-$(jq -r --arg name "$1" --arg native "$native" '
     [. | to_entries[] | select(.value | index($name)) | .key]
     | if index($native) != null then $native else .[0] // empty end
@@ -29,15 +37,9 @@ update_package() {
   url="$(nix eval --raw ".#packages.$system.$1.passthru.updateUrl" 2>/dev/null || true)"
   url_args=()
   [[ -z "$url" ]] || url_args=(--url "$url")
-  build=()
-  if [[ "$system" == "$native" ]]; then
-    build=(--build)
-  else
-    echo "Updating $1 for $system; native build validation remains required on that platform"
-  fi
   if recipe="$(nix eval --json ".#packages.$system.$1.passthru.updateScript" 2>/dev/null)"; then
     if [[ "$system" == "$native" ]]; then
-      nix-update --flake --system "$system" --use-update-script "${build[@]}" "$1"
+      nix-update --flake --system "$system" --use-update-script "$1"
     else
       mapfile -t command < <(jq -r '.[]' <<<"$recipe")
       # The package declares its updater; execute it with native Python rather
@@ -49,12 +51,19 @@ update_package() {
       python3 "${command[1]}" "${command[2]}"
     fi
   else
-    nix-update --flake --system "$system" "${url_args[@]}" --version "$mode" "${build[@]}" "$1"
+    nix-update --flake --system "$system" "${url_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
-  if [[ "$source_before" == "$source_after" && "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
-    echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
-    exit 1
+  if [[ "$source_before" == "$source_after" ]]; then
+    if [[ "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
+      echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
+      exit 1
+    fi
+  elif [[ "$system" == "$native" ]]; then
+    # Do not rebuild unchanged packages just to check for newer releases.
+    nix build --no-link ".#packages.$system.$1"
+  else
+    echo "Updated $1 for $system; native build validation remains required on that platform"
   fi
 
 }
