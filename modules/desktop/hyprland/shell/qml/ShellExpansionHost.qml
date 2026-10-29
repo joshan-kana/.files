@@ -246,11 +246,15 @@ PanelWindow {
 
     function navigate(destination: string): void {
         const next = destination === "home" ? "calendar" : destination === "activity" ? "activity" : "system";
-        if (next === expansionState.currentName)
+        if (next === expansionState.currentName) {
+            if (next === "system" && detailVisible) {
+                systemContent.closeDetails();
+                expansionState.navigate(next);
+            }
             return;
+        }
 
-        expansionState.currentView = "";
-        expansionState.currentName = next;
+        expansionState.navigate(next);
     }
 
     function cycleTab(direction: int): void {
