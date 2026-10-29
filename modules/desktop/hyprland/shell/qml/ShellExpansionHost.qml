@@ -248,7 +248,6 @@ PanelWindow {
         const next = destination === "home" ? "calendar" : destination === "activity" ? "activity" : "system";
         if (next === expansionState.currentName) {
             if (next === "system" && detailVisible) {
-                systemContent.closeDetails();
                 expansionState.navigate(next);
             }
             return;

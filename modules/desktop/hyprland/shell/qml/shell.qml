@@ -91,13 +91,8 @@ ShellRoot {
             theme: root.themeRef
             motion: root.motionRef
             engaged: expansionState.currentName === "media"
-            returnToControls: expansionState.currentView === "controls"
-            onCloseRequested: {
-                if (returnToControls)
-                    actions.showSystem();
-                else
-                    expansionState.close();
-            }
+            returnToControls: expansionState.backDestination === "controls"
+            onCloseRequested: expansionState.back()
         }
     }
 
@@ -125,12 +120,7 @@ ShellRoot {
             weather: root.weatherRef
             engaged: expansionState.currentName === "weather"
             onCalendarRequested: actions.toggleCalendar(expansionState.screen)
-            onCloseRequested: {
-                if (expansionState.currentView === "calendar")
-                    actions.toggleCalendar(expansionState.screen);
-                else
-                    expansionState.close();
-            }
+            onCloseRequested: expansionState.back()
         }
     }
 
@@ -161,8 +151,9 @@ ShellRoot {
             onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
             onShellGlassToggleRequested: appearance.toggleShellGlass()
             requestedView: expansionState.currentView
-            controlsRoot: expansionState.controlsRoot
-            onControlsRequested: expansionState.currentView = "controls"
+            returnToControls: expansionState.backDestination === "controls"
+            onBackRequested: expansionState.back()
+            onDetailRequested: view => expansionState.enterDetail(view)
             onCloseRequested: expansionState.close()
             onMediaRequested: actions.toggleMedia()
         }
