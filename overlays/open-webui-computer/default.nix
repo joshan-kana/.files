@@ -23,6 +23,7 @@ let
       # Keep the PyPI wheel pin separate from Open WebUI itself.
       passthru.dotfilesUpdateUrl = "https://pypi/project/cptr";
 
+      passthru.autoUpdate = true;
       dontUnpack = true;
       installPhase = ''
         mkdir -p "$out"
@@ -31,7 +32,6 @@ let
     };
 in
 _: {
-  dotfiles.updatePolicy."open-webui-computer" = "auto";
   nixpkgs.overlays = [
     (
       final: prev:

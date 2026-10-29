@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."linear-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

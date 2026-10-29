@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."cryptomator-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

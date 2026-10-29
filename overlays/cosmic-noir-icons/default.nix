@@ -17,6 +17,7 @@ let
         hash = "sha256-EhlbwO0gjW95ERNZKqd04v4T9KRTeYzGhcJP5fIX8Hc=";
       };
 
+      passthru.autoUpdate = true;
       propagatedBuildInputs = [ hicolor-icon-theme ];
       dontUnpack = true;
       dontBuild = true;
@@ -37,7 +38,6 @@ let
     };
 in
 _: {
-  dotfiles.updatePolicy."cosmic-noir-icons" = "auto";
   nixpkgs.overlays = [
     (final: _prev: {
       cosmic-noir-icons = final.callPackage package { };

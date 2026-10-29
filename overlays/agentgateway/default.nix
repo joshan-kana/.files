@@ -30,6 +30,7 @@ let
         hash = hashes.${system};
       };
       dontUnpack = true;
+      passthru.autoUpdate = true;
       passthru.updateScript = [
         "${python3}/bin/python3"
         "${../../scripts/update-binary-release.py}"
@@ -55,7 +56,6 @@ let
     };
 in
 _: {
-  dotfiles.updatePolicy."agentgateway" = "auto";
   nixpkgs.overlays = [
     (
       final: prev:

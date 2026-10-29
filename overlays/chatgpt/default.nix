@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."chatgpt-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

@@ -10,6 +10,7 @@
   homepage,
   license,
   unpacker ? prev.undmg,
+  autoUpdate ? true,
 }:
 let
   versions = prev.lib.splitString "," release.version;
@@ -25,6 +26,7 @@ prev.stdenvNoCC.mkDerivation {
     url = url metadata;
     inherit (release) hash;
   };
+  passthru.autoUpdate = autoUpdate;
   passthru.updateScript = [
     "${prev.python3}/bin/python3"
     "${../scripts/update-cask.py}"

@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."heroic-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

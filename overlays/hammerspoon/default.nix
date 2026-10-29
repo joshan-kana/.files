@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."hammerspoon" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

@@ -1,5 +1,4 @@
 _: {
-  dotfiles.updatePolicy."qmk-toolbox-mac" = "auto";
   nixpkgs.overlays = [
     (
       _final: prev:

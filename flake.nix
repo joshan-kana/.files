@@ -415,7 +415,7 @@
           inherit (self) darwinConfigurations;
         };
 
-      # Each overlay declares its updatePolicy alongside its package.
+      # Derive update candidates from the registered overlays and package metadata.
       updatePackagesFor =
         system:
         lib.foldl'
@@ -424,10 +424,24 @@
             if cfg.pkgs.stdenv.hostPlatform.system != system then
               packages
             else
-              packages
-              // lib.mapAttrs (name: _policy: cfg.pkgs.${name}) (
-                lib.filterAttrs (name: _: builtins.hasAttr name cfg.pkgs) cfg.config.dotfiles.updatePolicy
-              )
+              let
+                names = lib.unique (
+                  lib.concatMap (overlay: builtins.attrNames (overlay cfg.pkgs cfg.pkgs)) cfg.config.nixpkgs.overlays
+                );
+                updateable = lib.filterAttrs (
+                  _name: package:
+                  let
+                    policy = builtins.tryEval (package.passthru.autoUpdate or null);
+                  in
+                  policy.success
+                  && (
+                    policy.value == null
+                    || lib.assertMsg (builtins.isBool policy.value) "Package passthru.autoUpdate must be a Boolean."
+                  )
+                  && builtins.isBool policy.value
+                ) (lib.genAttrs names (name: cfg.pkgs.${name}));
+              in
+              packages // updateable
           )
           { }
           ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
@@ -468,20 +482,9 @@
         updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
         routinePackageUpdates = forAllSystems (
           system:
-          let
-            policies =
-              lib.foldl'
-                (
-                  selected: cfg:
-                  if cfg.pkgs.stdenv.hostPlatform.system != system then
-                    selected
-                  else
-                    selected // cfg.config.dotfiles.updatePolicy
-                )
-                { }
-                ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
-          in
-          lib.filter (name: policies.${name} == "auto") (builtins.attrNames (updatePackagesFor system))
+          lib.filter (name: (updatePackagesFor system).${name}.passthru.autoUpdate) (
+            builtins.attrNames (updatePackagesFor system)
+          )
         );
       };
 

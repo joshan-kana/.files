@@ -4,6 +4,7 @@ let
     pkgs.libplacebo.overrideAttrs (old: {
       passthru = (old.passthru or { }) // {
         dotfilesUpdateMode = "branch";
+        autoUpdate = false;
       };
       version = "7.373.0";
       src = pkgs.fetchFromGitHub {
@@ -15,7 +16,6 @@ let
     });
 in
 _: {
-  dotfiles.updatePolicy."libplacebo-mpv" = "manual";
   nixpkgs.overlays = [
     (final: prev: {
       libplacebo-mpv = package { pkgs = prev; };

@@ -1,17 +1,6 @@
 # Central registry for package definitions, version pins, and compatibility patches.
 # Add a package's overlay here rather than importing it from a host or feature module.
-{ lib, ... }: {
-  options.dotfiles.updatePolicy = lib.mkOption {
-    type = lib.types.attrsOf (
-      lib.types.enum [
-        "auto"
-        "manual"
-      ]
-    );
-    default = { };
-    description = "Routine or explicit-only updates for custom overlay packages.";
-  };
-
+_: {
   imports = [
     ./bottles
     ./brave
