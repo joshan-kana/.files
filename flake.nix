@@ -82,8 +82,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-embedded = {
-      url = "github:joshan-kana/nix-embedded-tooling?ref=feat/portable-embedded-tooling";
+    embedded-tooling = {
+      url = "github:joshan-kana/embedded-tooling";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -146,7 +146,12 @@
           inherit system;
           overlays = overlaysFor system;
         };
-      embeddedFor = system: inputs.nix-embedded.lib.mkFor { pkgs = pkgsFor system; };
+      embeddedFor =
+        system:
+        inputs.embedded-tooling.lib.mkFor {
+          pkgs = pkgsFor system;
+          treefmtConfig = (treefmtBaseFor system).config.build.configFile;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -162,20 +167,10 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
-      markdownOptions = [
-        "--disable"
-        "MD013,MD057"
-        "--extend-enable"
-        "MD060"
-        "--config"
-        "MD060.style = \"aligned\""
-      ];
-
-      treefmtFor =
+      treefmtModuleFor =
         system:
         let
           pkgs = pkgsFor system;
-          embedded = embeddedFor system;
           markdownOptions = [
             "--disable"
             "MD013,MD057"
@@ -189,7 +184,8 @@
             hass = "hass"
           '';
         in
-        treefmt-nix.lib.evalModule pkgs {
+        {
+          imports = [ inputs.embedded-tooling.lib.treefmtModule ];
           projectRootFile = "flake.nix";
 
           programs = {
@@ -244,8 +240,6 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
-              nix-embedded = embedded.formatter;
-              nixfmt-final = embedded.finalNixfmtFormatter;
 
               ruff-check.options = [
                 "--isolated"
@@ -301,11 +295,6 @@
                 includes = [ "*.inc" ];
               };
               typos.priority = 1;
-              lua-lint = {
-                command = lib.getExe pkgs.lua54Packages.luacheck;
-                includes = [ "*.lua" ];
-                priority = 2;
-              };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
@@ -368,6 +357,21 @@
                 no-positional-arg-support = true;
               };
             };
+          };
+        };
+
+      treefmtBaseFor = system: treefmt-nix.lib.evalModule (pkgsFor system) (treefmtModuleFor system);
+
+      treefmtFor =
+        system:
+        let
+          embedded = embeddedFor system;
+        in
+        treefmt-nix.lib.evalModule (pkgsFor system) {
+          imports = [ (treefmtModuleFor system) ];
+          settings.formatter = {
+            nix-embedded = embedded.formatter;
+            nixfmt-final = embedded.finalNixfmtFormatter;
           };
         };
 
