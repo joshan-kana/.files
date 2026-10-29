@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+cd "$repo"
+
+if [[ "${1:-}" == --list ]]; then
+  printf '%s\n' configarr
+  exit 0
+fi
+if (( $# > 1 )) || { (( $# == 1 )) && [[ "$1" != configarr && "$1" != --all ]]; }; then
+  echo 'Usage: update-schemas [configarr|--all|--list]' >&2
+  exit 2
+fi
+
+revision="$(jq -r '.nodes.configarr.locked.rev' flake.lock)"
+generator_hash="$(nix hash file --type sha256 --base16 overlays/configarr/export-schema.ts)"
+[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'Configarr must have a locked upstream revision' >&2; exit 1; }
+
+git fetch --quiet origin schema-artifacts
+existing="$(git show origin/schema-artifacts:configarr/source-revision | tr -d '\n')"
+existing_hash="$(git show origin/schema-artifacts:configarr/generator-hash 2>/dev/null | tr -d '\n' || true)"
+if [[ "$revision" == "$existing" && "$generator_hash" == "$existing_hash" ]]; then
+  nix flake update schema-artifacts
+  exit 0
+fi
+
+system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+source="$(nix build --no-link --print-out-paths --impure --expr "
+  let
+    flake = builtins.getFlake (toString $repo);
+    upstream = flake.inputs.configarr.inputs.nixpkgs.legacyPackages.$system;
+    pkgs = upstream // {
+      configarr = flake.inputs.configarr.packages.$system.default;
+    };
+  in import $repo/overlays/configarr/schema.nix { inputs = flake.inputs; inherit pkgs; }
+")"
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/schema-update.XXXXXXXX")"
+cleanup() {
+  git worktree remove --force "$tmp" >/dev/null 2>&1 || rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+git worktree add --detach --quiet "$tmp" origin/schema-artifacts
+install -m 0644 "$source/schema.json" "$tmp/configarr/schema.json"
+printf '%s\n' "$revision" > "$tmp/configarr/source-revision"
+printf '%s\n' "$generator_hash" > "$tmp/configarr/generator-hash"
+git -C "$tmp" add configarr
+if ! git -C "$tmp" diff --cached --quiet; then
+  git -C "$tmp" commit -qm 'Update Configarr schema'
+  git -C "$tmp" push --quiet origin HEAD:refs/heads/schema-artifacts
+fi
+nix flake update schema-artifacts

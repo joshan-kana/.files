@@ -8,10 +8,9 @@
 }:
 let
   inherit (lib.systems.elaborate system) isLinux;
-  schemaFile = import ./schema.nix { inherit inputs pkgs; };
-  schema = builtins.fromJSON (builtins.readFile "${schemaFile}/schema.json");
-  typed = import ./json-schema-type.nix { inherit lib; };
+  schemaType = (import ../lib/schemas { inherit inputs lib; }).configarr;
   yaml = pkgs.formats.yaml { tags = true; };
+  configFile = yaml.generate "configarr.yml" (stripNulls config.services.configarr.settings);
   stripNulls =
     value:
     if builtins.isAttrs value then
@@ -26,9 +25,15 @@ in
 
   options = lib.optionalAttrs isLinux {
     services.configarr.settings = lib.mkOption {
-      type = typed schema;
+      type = schemaType;
       default = { };
       description = "Configarr configuration, typed from the pinned upstream Zod input schema.";
+    };
+
+    services.configarr.generatedConfigFile = lib.mkOption {
+      type = lib.types.path;
+      internal = true;
+      readOnly = true;
     };
   };
 
@@ -39,8 +44,12 @@ in
       })
     ];
 
-    services.configarr.config = lib.mkIf config.services.configarr.enable (
-      builtins.readFile (yaml.generate "configarr.yml" (stripNulls config.services.configarr.settings))
+    services.configarr.generatedConfigFile = configFile;
+    systemd.services.configarr.preStart = lib.mkIf config.services.configarr.enable (
+      lib.mkForce ''
+        install -D -m 0644 ${configFile} ${config.services.configarr.dataDir}/config/config.yml
+        chown ${config.services.configarr.user}:${config.services.configarr.group} ${config.services.configarr.dataDir}/config/config.yml
+      ''
     );
   };
 }

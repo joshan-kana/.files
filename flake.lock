@@ -1046,11 +1046,29 @@
         "openai-tunnel": "openai-tunnel",
         "plasma-manager": "plasma-manager",
         "pre-commit-hooks": "pre-commit-hooks",
+        "schema-artifacts": "schema-artifacts",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix",
         "trash-guides": "trash-guides",
         "treefmt-nix": "treefmt-nix_2",
         "zen-browser": "zen-browser"
+      }
+    },
+    "schema-artifacts": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793273530,
+        "narHash": "sha256-qeg9Z/tYqOePB/V+7JVUbw7AEGroOlLBcWl4SXKGM2U=",
+        "owner": "joshan-kana",
+        "repo": ".files",
+        "rev": "472926c7e09cc1ad7e89684466e0d5cbfeb5f718",
+        "type": "github"
+      },
+      "original": {
+        "owner": "joshan-kana",
+        "ref": "schema-artifacts",
+        "repo": ".files",
+        "type": "github"
       }
     },
     "spicetify-nix": {

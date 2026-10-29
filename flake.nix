@@ -9,6 +9,12 @@
     # Use the upstream flake and its own dependency lock.
     configarr.url = "github:raydak-labs/configarr";
 
+    # Generated schemas kept outside the tracked configuration tree.
+    schema-artifacts = {
+      url = "github:joshan-kana/.files/schema-artifacts";
+      flake = false;
+    };
+
     # TRaSH custom-format definitions, pinned by flake.lock.
     trash-guides = {
       url = "github:TRaSH-Guides/Guides";
@@ -439,6 +445,46 @@
           inherit (self) darwinConfigurations;
         };
 
+      nativeChecksFor =
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          docs = (docsFor system).book;
+          repo-quality = (treefmtFor system).config.build.check self;
+        }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          shell-access =
+            pkgs.runCommand "shell-access-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  python3
+                  bash
+                  procps
+                ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
+                touch "$out"
+              '';
+          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
+          roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
+        };
+
+      # A builtin derivation is runnable by Nix on any host, including during
+      # `nix flake check --all-systems` without remote native builders.
+      evaluated = builtins.derivation {
+        name = "evaluated";
+        system = "builtin";
+        builder = "builtin:fetchurl";
+        url = "file:///dev/null";
+        outputHashAlgo = "sha256";
+        outputHashMode = "flat";
+        outputHash = "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+      };
+
       docsCommandsFor =
         system:
         let
@@ -483,6 +529,14 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+          native-validation =
+            (pkgsFor system).runCommand "native-validation"
+              {
+                checkedOutputs = lib.attrValues (nativeChecksFor system);
+              }
+              ''
+                touch "$out"
+              '';
         }
       );
 
@@ -554,7 +608,6 @@
         system:
         let
           pkgs = pkgsFor system;
-          treefmt = treefmtFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -569,40 +622,22 @@
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
-          ) self.nixosConfigurations) pkgs.emptyFile;
-          docs = self.packages.${system}.docs;
-          repo-quality = treefmt.config.build.check self;
+          ) self.nixosConfigurations) evaluated;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
             ) "Stale .gitattributes; run nix run .#update-git-attributes";
-            pkgs.emptyFile;
-          server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
-          semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
-          semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
+            evaluated;
+          server-app-standards = builtins.seq serverAppStandardsTest evaluated;
+          semantic-system-portability = builtins.seq semanticPortabilityTest evaluated;
+          semantic-options = builtins.seq semanticOptionsTest evaluated;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
+          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath evaluated;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          shell-access =
-            pkgs.runCommand "shell-access-tests"
-              {
-                nativeBuildInputs = with pkgs; [
-                  python3
-                  bash
-                  procps
-                ];
-              }
-              ''
-                export HOME="$TMPDIR"
-                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
-                touch "$out"
-              '';
-          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
-          roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
-          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
-          semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
+          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath evaluated;
+          semantic-scopes = builtins.seq semanticTest evaluated;
         }
       );
 
@@ -626,6 +661,16 @@
             text = builtins.readFile ./scripts/update-container-lock;
           };
 
+          updateSchemas = pkgs.writeShellApplication {
+            name = "update-schemas";
+            runtimeInputs = with pkgs; [
+              git
+              jq
+              nix
+            ];
+            text = builtins.readFile ./scripts/update-schemas;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -633,44 +678,63 @@
               pkgs.git
               pkgs.jq
               updateContainerLock
+              updateSchemas
+              pkgs.nix-update
             ];
             text = ''
               cd "$(git rev-parse --show-toplevel)"
 
               case "$#:''${1-}" in
+                1:--help)
+                  echo 'Usage: system-update [--all|--package PACKAGE]'
+                  exit 0
+                  ;;
+                2:--package)
+                  exec nix-update --flake "$2"
+                  ;;
                 0:)
                   selections=$(
                     set +o pipefail
                     {
-                      printf 'all\tUpdate all inputs and containers\n'
+                      printf 'all\tUpdate inputs, containers and schemas\n'
                       printf 'all-inputs\tUpdate all inputs\n'
                       printf 'all-containers\tUpdate all containers\n'
+                      printf 'all-schemas\tRefresh generated schemas\n'
                       nix flake metadata --json --no-update-lock-file \
                         | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
                       update-container-lock --list | jq -Rr '["container", .] | @tsv'
+                      update-schemas --list | jq -Rr '["schema", .] | @tsv'
                     } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
                       --header='Tab: select multiple • Enter: update'
                   ) || exit 0
                   ;;
                 1:--all) selections=$'all\t*' ;;
-                *) echo "usage: system-update [--all]" >&2; exit 1 ;;
+                *) echo 'Usage: system-update [--all|--package PACKAGE]' >&2; exit 1 ;;
               esac
 
               inputs=()
               containers=()
+              schemas=()
               while IFS=$'\t' read -r kind name; do
                 case "$kind" in
-                  all) inputs=("*"); containers=("*"); break ;;
-                  all-inputs) inputs=("*") ;;
+                  all) inputs=("*"); containers=("*"); schemas=("*"); break ;;
+                  all-inputs) inputs=("*"); schemas=("*") ;;
                   all-containers) containers=("*") ;;
+                  all-schemas) schemas=("*") ;;
                   input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
                   container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
+                  schema) [[ ''${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
                 esac
               done <<<"$selections"
 
               if ((''${#inputs[@]})); then
                 [[ ''${inputs[0]} == "*" ]] && inputs=()
                 nix flake update "''${inputs[@]}"
+              fi
+
+              if ((''${#inputs[@]} || ''${#schemas[@]})); then
+                [[ ''${schemas[0]-} == "*" ]] && schemas=()
+                update-schemas "''${schemas[@]}"
               fi
 
               if ((''${#containers[@]})); then
@@ -793,7 +857,7 @@
           system-update = {
             type = "app";
             program = lib.getExe systemUpdate;
-            meta.description = "Update Nix inputs and container locks, then check the flake";
+            meta.description = "Update inputs, packages, schemas and containers, then check the flake";
           };
           update-git-attributes = {
             type = "app";
@@ -807,6 +871,11 @@
               }
             );
             meta.description = "Regenerate .gitattributes from repository tool exclusions";
+          };
+          update-schemas = {
+            type = "app";
+            program = lib.getExe updateSchemas;
+            meta.description = "Refresh generated schemas for locked upstream revisions";
           };
           update-container-lock = {
             type = "app";
