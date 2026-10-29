@@ -305,7 +305,7 @@ Item {
 
             width: themeList.cellWidth
             height: themeList.cellHeight
-            scale: previewPress.pressed ? 0.985 : previewPress.containsMouse ? 1.012 : 1
+            scale: previewPress.pressed ? 0.985 : 1
 
             Behavior on scale {
                 Anim {
