@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# != 1 ]]; then
+  echo 'Usage: update-package PACKAGE' >&2
+  exit 2
+fi
+
+repo="$(git rev-parse --show-toplevel)"
+cd "$repo"
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo 'Commit or stash tracked changes before updating a package' >&2
+  exit 1
+fi
+
+system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+packages="$(nix eval --json ".#lib.updateablePackages.$system")"
+if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; then
+  printf 'Unknown manually updated package: %s\n' "$1" >&2
+  exit 2
+fi
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/package-update.XXXXXXXX")"
+cleanup() {
+  git worktree remove --force "$tmp" >/dev/null 2>&1 || rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+git worktree add --detach --quiet "$tmp" HEAD
+(
+  cd "$tmp"
+  nix-update --flake --build "$1"
+)
+
+patch="$(mktemp "${TMPDIR:-/tmp}/package-diff.XXXXXXXX")"
+trap 'rm -f "$patch"; cleanup' EXIT
+git -C "$tmp" diff --binary > "$patch"
+if [[ -s "$patch" ]]; then
+  git apply --check "$patch"
+  git apply "$patch"
+else
+  echo "$1 is already up to date"
+fi

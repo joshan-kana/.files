@@ -473,6 +473,10 @@
           roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
         };
 
+      updatePackagesFor = system: {
+        libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
+      };
+
       # A builtin derivation is runnable by Nix on any host, including during
       # `nix flake check --all-systems` without remote native builders.
       evaluated = builtins.derivation {
@@ -518,6 +522,7 @@
       lib = {
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
         schemaRegistry = (import ./overlays/lib/schemas { inherit inputs lib; }).registry;
+        updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -530,8 +535,6 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
-          # Explicitly updated source override; never part of routine system-update.
-          libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
           native-validation =
             (pkgsFor system).runCommand "native-validation"
               {
@@ -541,6 +544,7 @@
                 touch "$out"
               '';
         }
+        // updatePackagesFor system
       );
 
       devShells = forAllSystems (
@@ -674,6 +678,18 @@
             text = builtins.readFile ./scripts/update-schemas;
           };
 
+          updatePackage = pkgs.writeShellApplication {
+            name = "update-package";
+            runtimeInputs = with pkgs; [
+              coreutils
+              git
+              jq
+              nix
+              nix-update
+            ];
+            text = builtins.readFile ./scripts/update-package;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -682,7 +698,8 @@
               pkgs.jq
               updateContainerLock
               updateSchemas
-              pkgs.nix-update
+              updatePackage
+              pkgs.nix
             ];
             text = ''
               cd "$(git rev-parse --show-toplevel)"
@@ -693,7 +710,7 @@
                   exit 0
                   ;;
                 2:--package)
-                  exec nix-update --flake "$2"
+                  exec update-package "$2"
                   ;;
                 0:)
                   selections=$(
