@@ -3,7 +3,7 @@ _: {
     (final: prev: {
       libplacebo-mpv = prev.libplacebo.overrideAttrs (old: {
         passthru = (old.passthru or { }) // {
-          dotfilesUpdateMode = "branch";
+          updateMode = "branch";
           autoUpdate = false;
         };
         version = "7.373.0";

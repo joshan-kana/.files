@@ -25,8 +25,8 @@ update_package() {
 
   source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   diff_before="$(git diff --binary -- overlays)"
-  mode="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateMode" 2>/dev/null || echo stable)"
-  url="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateUrl" 2>/dev/null || true)"
+  mode="$(nix eval --raw ".#packages.$system.$1.passthru.updateMode" 2>/dev/null || echo stable)"
+  url="$(nix eval --raw ".#packages.$system.$1.passthru.updateUrl" 2>/dev/null || true)"
   url_args=()
   [[ -z "$url" ]] || url_args=(--url "$url")
   build=()

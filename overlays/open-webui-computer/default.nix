@@ -25,7 +25,7 @@ _: {
             };
 
             # Keep the PyPI wheel pin separate from Open WebUI itself.
-            passthru.dotfilesUpdateUrl = "https://pypi/project/cptr";
+            passthru.updateUrl = "https://pypi/project/cptr";
 
             passthru.autoUpdate = true;
             dontUnpack = true;
