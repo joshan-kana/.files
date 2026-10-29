@@ -52,7 +52,7 @@ let
       }
       {
         id = "explain";
-        definition = "Explain what the selected code does, how it works, and why it is required here. Do not treat this as a request to change the code.";
+        definition = "Explain what the selected code does, how it works, and why it is required here.";
       }
       {
         id = "praise";
