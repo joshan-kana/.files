@@ -3,19 +3,13 @@
   "vscode-lspconfig.serverConfigurations": [
     {
       "name": "kakehashi",
-      "root_patterns": [
-        "kakehashi.toml",
-        "flake.nix",
-        ".git"
-      ],
+      "root_patterns": ["kakehashi.toml", "flake.nix", ".git"],
       "document_selector": [
         {
           "language": "nix"
         }
       ],
-      "command": [
-        "kakehashi"
-      ]
+      "command": ["kakehashi"]
     }
   ],
   "[nix]": {
