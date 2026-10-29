@@ -15,10 +15,11 @@ if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; the
 fi
 
 source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+diff_before="$(git diff --binary -- overlays)"
 mode="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateMode" 2>/dev/null || echo stable)"
 nix-update --flake --version "$mode" --build "$1"
 source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
-if [[ "$source_before" == "$source_after" ]] && ! git diff --quiet; then
+if [[ "$source_before" == "$source_after" && "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
   echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
   exit 1
 fi
