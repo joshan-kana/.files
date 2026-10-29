@@ -158,7 +158,5 @@ if ((${#packages[@]})); then
   fi
 fi
 
-nix flake check --all-systems --no-build --no-update-lock-file \
-  --option allow-import-from-derivation false
-nix flake check --no-update-lock-file \
-  --option allow-import-from-derivation false
+nix flake check --all-systems --no-build --no-update-lock-file
+nix flake check --no-update-lock-file
