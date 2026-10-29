@@ -394,7 +394,7 @@
                         };
                       };
                       configurationOutputName = outputName;
-                      configurationFlakeSubdirectory = "themes";
+                      configurationFlakeSubdirectory = "modules/theme";
                     }
                   );
                 }
