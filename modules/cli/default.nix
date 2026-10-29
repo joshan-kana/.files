@@ -51,6 +51,10 @@ let
         definition = "context or clarification";
       }
       {
+        id = "explain";
+        definition = "Explain what the selected code does, how it works, and why it is required here.";
+      }
+      {
         id = "praise";
         definition = "positive observation";
       }
