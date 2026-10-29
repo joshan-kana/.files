@@ -180,6 +180,8 @@
             deadnix.enable = true;
             csharpier.enable = true;
             nixfmt.enable = true;
+            prettier.enable = true;
+            shfmt.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
             ruff-format = {
