@@ -1,0 +1,10 @@
+{
+  "configarr": {
+    "input": "configarr",
+    "generator": "lib/schemas/configarr-generator.nix",
+    "generatorSources": [
+      "lib/schemas/configarr-generator.nix",
+      "lib/schemas/export-schema.ts"
+    ]
+  }
+}

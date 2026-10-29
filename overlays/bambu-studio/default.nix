@@ -1,15 +1,19 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         bambu-studio =
-          import ../lib/mac-app.nix
+          import ../../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "bambu-studio";
+              release = {
+                version = "02.08.02.61,20260820225108";
+                hash = "sha256-z2SKlYWPtjDhNTxJhwON9g1sqraT8YQR+5X7gJ8taSY=";
+              };
               pname = "bambu-studio";
               appName = "BambuStudio.app";
               homepage = "https://github.com/bambulab/BambuStudio";

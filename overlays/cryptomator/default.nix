@@ -1,15 +1,19 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         cryptomator-mac =
-          import ../lib/mac-app.nix
+          import ../../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "cryptomator";
+              release = {
+                version = "1.19.4";
+                hash = "sha256-QTpIgG56ovTEFrhOOiPby6g64gsq1VU0t5j222WoWGA=";
+              };
               pname = "cryptomator-mac";
               appName = "Cryptomator.app";
               homepage = "https://cryptomator.org";

@@ -9,6 +9,12 @@
     # Use the upstream flake and its own dependency lock.
     configarr.url = "github:raydak-labs/configarr";
 
+    # Generated schemas kept outside the tracked configuration tree.
+    schema-artifacts = {
+      url = "github:joshan-kana/.files/schema-artifacts";
+      flake = false;
+    };
+
     # TRaSH custom-format definitions, pinned by flake.lock.
     trash-guides = {
       url = "github:TRaSH-Guides/Guides";
@@ -43,12 +49,6 @@
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # Package metadata for upstream macOS application bundles.
-    homebrew-cask = {
-      url = "github:Homebrew/homebrew-cask";
-      flake = false;
     };
 
     # Home Manager: declarative user configuration.
@@ -92,30 +92,6 @@
 
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
-    computer = {
-      url = "file+https://pypi.org/pypi/cptr/json";
-      flake = false;
-    };
-
-    openai-tunnel = {
-      url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
-      flake = false;
-    };
-
-    agentgateway-linux-amd64 = {
-      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64";
-      flake = false;
-    };
-
-    agentgateway-linux-arm64 = {
-      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64";
-      flake = false;
-    };
-
-    cosmic-noir-icons = {
-      url = "file+https://github.com/atraxsrc/cosmic-icon-themes/releases/latest/download/Cosmic-Noir-Orange.tar.xz";
-      flake = false;
-    };
   };
 
   outputs =
@@ -439,6 +415,38 @@
           inherit (self) darwinConfigurations;
         };
 
+      # Derive update candidates from the registered overlays and package metadata.
+      updatePackagesFor =
+        system:
+        lib.foldl'
+          (
+            packages: cfg:
+            if cfg.pkgs.stdenv.hostPlatform.system != system then
+              packages
+            else
+              let
+                names = lib.unique (
+                  lib.concatMap (overlay: builtins.attrNames (overlay cfg.pkgs cfg.pkgs)) cfg.config.nixpkgs.overlays
+                );
+                updateable = lib.filterAttrs (
+                  name: package:
+                  let
+                    # Some unrelated nixpkgs overlay attributes fail when forced.
+                    policy = builtins.tryEval (package.passthru.autoUpdate or null);
+                  in
+                  if !policy.success || policy.value == null then
+                    false
+                  else
+                    assert lib.assertMsg (builtins.isBool policy.value)
+                      "Package ${name}: passthru.autoUpdate must be a Boolean.";
+                    true
+                ) (lib.genAttrs names (name: cfg.pkgs.${name}));
+              in
+              packages // updateable
+          )
+          { }
+          ((builtins.attrValues self.nixosConfigurations) ++ (builtins.attrValues self.darwinConfigurations));
+
       docsCommandsFor =
         system:
         let
@@ -471,6 +479,14 @@
     {
       lib = {
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
+        schemaRegistry = (import ./lib/schemas { inherit inputs lib; }).registry;
+        updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
+        routinePackageUpdates = forAllSystems (
+          system:
+          lib.filter (name: (updatePackagesFor system).${name}.passthru.autoUpdate) (
+            builtins.attrNames (updatePackagesFor system)
+          )
+        );
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -484,6 +500,7 @@
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
         }
+        // updatePackagesFor system
       );
 
       devShells = forAllSystems (
@@ -599,7 +616,13 @@
                 python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
                 touch "$out"
               '';
-          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
+          roaming-dns-build =
+            let
+              matchingHost = lib.findFirst (host: host.pkgs.stdenv.hostPlatform.system == system) null (
+                builtins.attrValues self.nixosConfigurations
+              );
+            in
+            matchingHost.pkgs.technitium-roaming-dns;
           roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
           nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
           semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
@@ -626,6 +649,15 @@
             text = builtins.readFile ./scripts/update-container-lock;
           };
 
+          updateSchemas = pkgs.writeShellApplication {
+            name = "update-schemas";
+            runtimeInputs = with pkgs; [
+              git
+              jq
+            ];
+            text = builtins.readFile ./scripts/update-schemas;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -633,53 +665,11 @@
               pkgs.git
               pkgs.jq
               updateContainerLock
+              updateSchemas
+              pkgs.nix-update
+              pkgs.python3
             ];
-            text = ''
-              cd "$(git rev-parse --show-toplevel)"
-
-              case "$#:''${1-}" in
-                0:)
-                  selections=$(
-                    set +o pipefail
-                    {
-                      printf 'all\tUpdate all inputs and containers\n'
-                      printf 'all-inputs\tUpdate all inputs\n'
-                      printf 'all-containers\tUpdate all containers\n'
-                      nix flake metadata --json --no-update-lock-file \
-                        | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
-                      update-container-lock --list | jq -Rr '["container", .] | @tsv'
-                    } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
-                      --header='Tab: select multiple • Enter: update'
-                  ) || exit 0
-                  ;;
-                1:--all) selections=$'all\t*' ;;
-                *) echo "usage: system-update [--all]" >&2; exit 1 ;;
-              esac
-
-              inputs=()
-              containers=()
-              while IFS=$'\t' read -r kind name; do
-                case "$kind" in
-                  all) inputs=("*"); containers=("*"); break ;;
-                  all-inputs) inputs=("*") ;;
-                  all-containers) containers=("*") ;;
-                  input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
-                  container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
-                esac
-              done <<<"$selections"
-
-              if ((''${#inputs[@]})); then
-                [[ ''${inputs[0]} == "*" ]] && inputs=()
-                nix flake update "''${inputs[@]}"
-              fi
-
-              if ((''${#containers[@]})); then
-                [[ ''${containers[0]} == "*" ]] && containers=()
-                update-container-lock "''${containers[@]}"
-              fi
-
-              nix flake check --no-update-lock-file
-            '';
+            text = builtins.readFile ./scripts/system-update;
           };
 
           updatePlasma =
@@ -793,7 +783,7 @@
           system-update = {
             type = "app";
             program = lib.getExe systemUpdate;
-            meta.description = "Update Nix inputs and container locks, then check the flake";
+            meta.description = "Update inputs, packages, schemas and containers, then check the flake";
           };
           update-git-attributes = {
             type = "app";
@@ -807,6 +797,11 @@
               }
             );
             meta.description = "Regenerate .gitattributes from repository tool exclusions";
+          };
+          update-schemas = {
+            type = "app";
+            program = lib.getExe updateSchemas;
+            meta.description = "Refresh generated schemas for locked upstream revisions";
           };
           update-container-lock = {
             type = "app";

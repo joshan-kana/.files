@@ -1,6 +1,6 @@
 # Central registry for package definitions, version pins, and compatibility patches.
 # Add a package's overlay here rather than importing it from a host or feature module.
-{
+_: {
   imports = [
     ./bottles
     ./brave
@@ -29,6 +29,7 @@
     ./linear
     ./notion
     ./open-webui
+    ./open-webui-computer
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox

@@ -1,15 +1,19 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         vial-mac =
-          import ../lib/mac-app.nix
+          import ../../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "vial";
+              release = {
+                version = "0.7.5";
+                hash = "sha256-tijbEfjfAS+q/M7vfes2tUghtQfUyXAzb4WlbIAOiHY=";
+              };
               pname = "vial-mac";
               appName = "Vial.app";
               homepage = "https://get.vial.today";

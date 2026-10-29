@@ -540,7 +540,7 @@ in
       description = "Apply Configarr settings on deployment";
       wantedBy = [ "multi-user.target" ];
       restartTriggers = [
-        (pkgs.writeText "configarr-applied-settings.yml" config.services.configarr.config)
+        config.services.configarr.generatedConfigFile
       ];
       serviceConfig = {
         Type = "oneshot";

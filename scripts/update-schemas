@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+cd "$repo"
+registry=lib/schemas/registry.json
+
+if [[ ${1:-} == --list ]]; then
+  jq -r 'keys[]' "$registry"
+  exit 0
+fi
+
+if [[ $# == 0 || ( $# == 1 && $1 == --all ) ]]; then
+  mapfile -t selected < <(jq -r 'keys[]' "$registry")
+else
+  selected=("$@")
+fi
+
+for name in "${selected[@]}"; do
+  if ! jq -e --arg name "$name" 'has($name)' "$registry" >/dev/null; then
+    printf 'Unknown generated schema: %s\n' "$name" >&2
+    exit 2
+  fi
+done
+
+git fetch --quiet origin schema-artifacts
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/schema-update.XXXXXXXX")"
+cleanup() {
+  git worktree remove --force "$tmp" >/dev/null 2>&1 || rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+git worktree add --detach --quiet "$tmp" origin/schema-artifacts
+changed=false
+for name in "${selected[@]}"; do
+  input="$(jq -r --arg name "$name" '.[$name].input' "$registry")"
+  generator="$(jq -r --arg name "$name" '.[$name].generator' "$registry")"
+  revision="$(jq -er --arg input "$input" '.nodes[$input].locked.rev' flake.lock)"
+  [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "No locked revision for $name ($input)" >&2; exit 1; }
+
+  hashFile="$(mktemp "${TMPDIR:-/tmp}/schema-hash.XXXXXXXX")"
+  while IFS= read -r filename; do
+    [[ -f "$filename" ]] || { echo "Missing generator source: $filename" >&2; exit 1; }
+    cat "$filename" >> "$hashFile"
+  done < <(jq -r --arg name "$name" '.[$name].generatorSources[]' "$registry")
+  generator_hash="$(nix hash file --type sha256 --base16 "$hashFile")"
+  rm -f "$hashFile"
+
+  current_revision="$(cat "$tmp/$name/source-revision" 2>/dev/null || true)"
+  current_hash="$(cat "$tmp/$name/generator-hash" 2>/dev/null || true)"
+  if [[ "$revision" == "$current_revision" && "$generator_hash" == "$current_hash" ]]; then
+    continue
+  fi
+
+  system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+  output="$(nix build --no-link --print-out-paths --impure --expr "
+    let flake = builtins.getFlake (toString $repo);
+    in import ($repo + \"/$generator\") { inputs = flake.inputs; system = \"$system\"; }
+  ")"
+  [[ -s "$output/schema.json" ]] || { echo "No generated schema for $name" >&2; exit 1; }
+  jq -e . "$output/schema.json" >/dev/null
+  mkdir -p "$tmp/$name"
+  cp "$output/schema.json" "$tmp/$name/schema.json"
+  printf '%s\n' "$revision" > "$tmp/$name/source-revision"
+  printf '%s\n' "$generator_hash" > "$tmp/$name/generator-hash"
+  changed=true
+done
+
+if [[ $changed == true ]]; then
+  git -C "$tmp" add --all
+  if ! git -C "$tmp" diff --cached --quiet; then
+    git -C "$tmp" commit -qm 'Update generated schemas'
+    git -C "$tmp" push --quiet origin HEAD:refs/heads/schema-artifacts
+  fi
+fi
+nix flake update schema-artifacts
