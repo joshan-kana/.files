@@ -449,7 +449,6 @@
             name = "docs";
             runtimeInputs = [
               pkgs.git
-              pkgs.nix
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel)"
@@ -462,7 +461,6 @@
               pkgs.coreutils
               pkgs.git
               pkgs.mdbook
-              pkgs.nix
               pkgs.rsync
               pkgs.watchexec
             ];
@@ -502,7 +500,6 @@
               coreutils
               git
               jq
-              nix
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -713,7 +710,6 @@
             name = "theme-warm";
             runtimeInputs = [
               pkgs.coreutils
-              pkgs.nix
             ]
             ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.systemd ];
             text = ''
