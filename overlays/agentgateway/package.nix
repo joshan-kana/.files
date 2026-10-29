@@ -1,30 +1,41 @@
 {
-  inputs,
   stdenvNoCC,
   lib,
+  fetchurl,
+  python3,
 }:
-
 let
-  binary =
+  version = "1.7.0";
+  hashes = {
+    aarch64-linux = "sha256-hXJKFdyfUXn7bi/YWwui1P6lbdKJq7i/j++tw76ouJ4=";
+    x86_64-linux = "sha256-Gy/AGi3inKETu7Yli1yuex6zxyQHHAnWh6RJEy8vQvg=";
+  };
+  system = stdenvNoCC.hostPlatform.system;
+  asset =
     {
-      "aarch64-linux" = inputs.agentgateway-linux-arm64;
-      "x86_64-linux" = inputs.agentgateway-linux-amd64;
+      aarch64-linux = "linux-arm64";
+      x86_64-linux = "linux-amd64";
     }
-    .${stdenvNoCC.hostPlatform.system}
-      or (throw "Unsupported AgentGateway platform: ${stdenvNoCC.hostPlatform.system}");
+    .${system} or (throw "Unsupported AgentGateway platform: ${system}");
 in
 stdenvNoCC.mkDerivation {
-  name = "agentgateway";
-
-  src = binary;
+  pname = "agentgateway";
+  inherit version;
+  src = fetchurl {
+    url = "https://github.com/agentgateway/agentgateway/releases/download/v${version}/agentgateway-${asset}";
+    hash = hashes.${system};
+  };
   dontUnpack = true;
-
+  passthru.updateScript = [
+    "${python3}/bin/python3"
+    "${../../scripts/update-binary-release.py}"
+    "agentgateway"
+  ];
   installPhase = ''
     runHook preInstall
     install -Dm755 "$src" "$out/bin/agentgateway"
     runHook postInstall
   '';
-
   meta = {
     description = "Agent connectivity for any agent, framework, or environment";
     homepage = "https://agentgateway.dev";

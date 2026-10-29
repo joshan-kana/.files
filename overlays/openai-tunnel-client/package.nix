@@ -1,50 +1,49 @@
 {
-  lib,
-  stdenv,
-  runCommand,
+  stdenvNoCC,
   fetchurl,
   unzip,
-  openai-tunnel,
+  python3,
 }:
-
 let
-  assetPlatform =
-    {
-      "aarch64-linux" = "linux-arm64";
-      "x86_64-linux" = "linux-amd64";
-    }
-    .${stdenv.hostPlatform.system}
-      or (throw "Unsupported tunnel-client platform: ${stdenv.hostPlatform.system}");
-  pattern = "([0-9a-f]{64})  tunnel-client-runtime-v([0-9]+\\.[0-9]+\\.[0-9]+)-${assetPlatform}\\.zip";
-  matches = lib.filter (match: match != null) (
-    map (line: builtins.match pattern line) (lib.splitString "\n" (builtins.readFile openai-tunnel))
-  );
-  match =
-    if builtins.length matches == 1 then
-      builtins.head matches
-    else
-      throw "Missing tunnel-client checksum for ${assetPlatform}";
-  checksum = builtins.elemAt match 0;
-  version = builtins.elemAt match 1;
-  assetName = "tunnel-client-runtime-v${version}-${assetPlatform}.zip";
-  hash = builtins.convertHash {
-    hash = checksum;
-    hashAlgo = "sha256";
-    toHashFormat = "sri";
+  version = "0.0.18";
+  hashes = {
+    aarch64-linux = "sha256-LfhMDAHoBhq2XD0FeIOYSLUtXkvld2mdF04QcluBFms=";
+    x86_64-linux = "sha256-RYrMnUWrUy5oGPObz+6jI3SlEfOSd8nfKhhH6qvX98s=";
   };
+  system = stdenvNoCC.hostPlatform.system;
+  asset =
+    {
+      aarch64-linux = "linux-arm64";
+      x86_64-linux = "linux-amd64";
+    }
+    .${system} or (throw "Unsupported tunnel-client platform: ${system}");
 in
-runCommand "tunnel-client-${version}"
-  {
-    nativeBuildInputs = [ unzip ];
-  }
-  ''
+stdenvNoCC.mkDerivation {
+  pname = "openai-tunnel-client";
+  inherit version;
+  src = fetchurl {
+    url = "https://github.com/openai/tunnel-client/releases/download/v${version}/tunnel-client-runtime-v${version}-${asset}.zip";
+    hash = hashes.${system};
+  };
+  nativeBuildInputs = [ unzip ];
+  passthru.updateScript = [
+    "${python3}/bin/python3"
+    "${../../scripts/update-binary-release.py}"
+    "openai-tunnel-client"
+  ];
+  unpackPhase = ":";
+  installPhase = ''
     mkdir -p "$out/bin"
-    unzip -j ${
-      fetchurl {
-        url = "https://github.com/openai/tunnel-client/releases/download/v${version}/${assetName}";
-        inherit hash;
-      }
-    } tunnel-client-runtime -d "$out/bin"
+    unzip -j "$src" tunnel-client-runtime -d "$out/bin"
     mv "$out/bin/tunnel-client-runtime" "$out/bin/tunnel-client"
     chmod +x "$out/bin/tunnel-client"
-  ''
+  '';
+  meta = {
+    description = "Tunnel client runtime";
+    platforms = [
+      "aarch64-linux"
+      "x86_64-linux"
+    ];
+    mainProgram = "tunnel-client";
+  };
+}

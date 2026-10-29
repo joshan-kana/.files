@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -7,10 +6,14 @@
         chatgpt-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "chatgpt";
+              release = {
+                version = "26.1023.51421";
+                hash = "sha256-dkKyrCp6B0L5oYAKu6Fe74P3fmnYk7551kZ88h5eERA=";
+              };
               pname = "chatgpt-mac";
               appName = "ChatGPT.app";
               homepage = "https://chatgpt.com/";

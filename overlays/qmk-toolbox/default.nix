@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -6,10 +6,14 @@
         qmk-toolbox-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "qmk-toolbox";
+              release = {
+                version = "0.3.4";
+                hash = "sha256-CgUUltkU1YinVu5L4u6KoD3J1dMoczAS5vBv6k9CXQg=";
+              };
               pname = "qmk-toolbox-mac";
               appName = "QMK Toolbox.app";
               homepage = "https://github.com/qmk/qmk_toolbox";

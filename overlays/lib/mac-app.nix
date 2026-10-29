@@ -1,9 +1,9 @@
 {
-  inputs,
   prev,
 }:
 {
   token,
+  release,
   pname,
   url,
   appName,
@@ -12,18 +12,24 @@
   unpacker ? prev.undmg,
 }:
 let
-  release = import ./cask.nix {
-    inherit inputs token;
-    inherit (prev) lib;
+  versions = prev.lib.splitString "," release.version;
+  metadata = {
+    version = builtins.head versions;
+    inherit versions;
   };
 in
 prev.stdenvNoCC.mkDerivation {
   inherit pname;
-  inherit (release) version;
+  inherit (metadata) version;
   src = prev.fetchurl {
-    url = url release;
+    url = url metadata;
     inherit (release) hash;
   };
+  passthru.updateScript = [
+    "${prev.python3}/bin/python3"
+    "${../../scripts/update-cask.py}"
+    token
+  ];
   nativeBuildInputs = [ unpacker ];
   sourceRoot = ".";
   dontBuild = true;

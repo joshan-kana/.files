@@ -51,12 +51,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Package metadata for upstream macOS application bundles.
-    homebrew-cask = {
-      url = "github:Homebrew/homebrew-cask";
-      flake = false;
-    };
-
     # Home Manager: declarative user configuration.
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -103,25 +97,6 @@
       flake = false;
     };
 
-    openai-tunnel = {
-      url = "file+https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt";
-      flake = false;
-    };
-
-    agentgateway-linux-amd64 = {
-      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64";
-      flake = false;
-    };
-
-    agentgateway-linux-arm64 = {
-      url = "file+https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64";
-      flake = false;
-    };
-
-    cosmic-noir-icons = {
-      url = "file+https://github.com/atraxsrc/cosmic-icon-themes/releases/latest/download/Cosmic-Noir-Orange.tar.xz";
-      flake = false;
-    };
   };
 
   outputs =
@@ -445,9 +420,36 @@
           inherit (self) darwinConfigurations;
         };
 
-      updatePackagesFor = system: {
-        libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
-      };
+      macUpdatePackages = [
+        "arc-mac"
+        "arduino-ide-mac"
+        "bambu-studio"
+        "chatgpt-mac"
+        "cryptomator-mac"
+        "hammerspoon"
+        "heroic-mac"
+        "iterm2-mac"
+        "linear-mac"
+        "notion-mac"
+        "open-webui-mac"
+        "prusa-slicer"
+        "qmk-toolbox-mac"
+        "reaper-mac"
+        "vial-mac"
+      ];
+      updatePackagesFor =
+        system:
+        {
+          libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
+          cosmic-noir-icons = (pkgsFor system).callPackage ./overlays/cosmic-noir-icons/package.nix { };
+        }
+        // lib.optionalAttrs (pkgsFor system).stdenv.hostPlatform.isLinux {
+          agentgateway = (pkgsFor system).callPackage ./overlays/agentgateway/package.nix { };
+          openai-tunnel-client = (pkgsFor system).callPackage ./overlays/openai-tunnel-client/package.nix { };
+        }
+        // lib.optionalAttrs (system == "aarch64-darwin") (
+          lib.genAttrs macUpdatePackages (name: self.darwinConfigurations.mac.pkgs.${name})
+        );
 
       docsCommandsFor =
         system:
@@ -483,6 +485,9 @@
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
         schemaRegistry = (import ./overlays/lib/schemas { inherit inputs lib; }).registry;
         updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
+        routinePackageUpdates = forAllSystems (
+          system: lib.filter (name: name != "libplacebo-mpv") (builtins.attrNames (updatePackagesFor system))
+        );
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -694,14 +699,21 @@
                 2:--package)
                   exec update-package "$2"
                   ;;
+                4:--package)
+                  [[ "$3" == "--system" ]] || exit 2
+                  exec update-package "$2" "$4"
+                  ;;
                 0:)
                   selections=$(
                     set +o pipefail
                     {
-                      printf 'all\tUpdate inputs, containers and schemas\n'
+                      printf 'all\tUpdate inputs, packages, containers and schemas\n'
                       printf 'all-inputs\tUpdate all inputs\n'
                       printf 'all-containers\tUpdate all containers\n'
                       printf 'all-schemas\tRefresh generated schemas\n'
+                      printf 'all-packages\tUpdate ordinary overlay packages\n'
+                      nix eval --json .#lib.routinePackageUpdates \
+                        | jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
                       nix flake metadata --json --no-update-lock-file \
                         | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
                       update-container-lock --list | jq -Rr '["container", .] | @tsv'
@@ -711,18 +723,21 @@
                   ) || exit 0
                   ;;
                 1:--all) selections=$'all\t*' ;;
-                *) echo 'Usage: system-update [--all|--package PACKAGE]' >&2; exit 1 ;;
+                *) echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]' >&2; exit 1 ;;
               esac
 
               inputs=()
               containers=()
               schemas=()
+              packages=()
               while IFS=$'\t' read -r kind name; do
                 case "$kind" in
-                  all) inputs=("*"); containers=("*"); schemas=("*"); break ;;
+                  all) inputs=("*"); containers=("*"); schemas=("*"); packages=("*"); break ;;
                   all-inputs) inputs=("*"); schemas=("*") ;;
                   all-containers) containers=("*") ;;
                   all-schemas) schemas=("*") ;;
+                  all-packages) packages=("*") ;;
+                  package) packages+=("$name") ;;
                   input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
                   container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
                   schema) [[ ''${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
@@ -742,6 +757,30 @@
               if ((''${#containers[@]})); then
                 [[ ''${containers[0]} == "*" ]] && containers=()
                 update-container-lock "''${containers[@]}"
+              fi
+
+              if ((''${#packages[@]})); then
+                if [[ ''${packages[0]} == "*" ]]; then
+                  declare -A updated=()
+                  native="$(nix eval --raw --impure --expr builtins.currentSystem)"
+                  while IFS=$'\t' read -r packageSystem packageName; do
+                    if [[ -z ''${updated[$packageName]-} ]]; then
+                      update-package "$packageName" "$packageSystem"
+                      updated[$packageName]=1
+                    fi
+                  done < <(
+                    nix eval --json .#lib.routinePackageUpdates |
+                      jq -r --arg native "$native" '
+                        to_entries | sort_by(.key != $native)
+                        | .[] | .key as $system | .value[]
+                        | [$system, .] | @tsv
+                      '
+                  )
+                else
+                  for choice in "''${packages[@]}"; do
+                    update-package "''${choice#*/}" "''${choice%%/*}"
+                  done
+                fi
               fi
 
               nix flake check --no-update-lock-file

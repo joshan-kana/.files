@@ -1,29 +1,5 @@
 {
   "nodes": {
-    "agentgateway-linux-amd64": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-rpbXzByQeZ/O+QCuxlKTgo4U8ZUwQ9aEV8Dye1z0DUs=",
-        "type": "file",
-        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-amd64"
-      }
-    },
-    "agentgateway-linux-arm64": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-ijrY40F3I+SbpaIFwY+O8YWPhHz7FHA2o/8aNZreDqI=",
-        "type": "file",
-        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/agentgateway/agentgateway/releases/latest/download/agentgateway-linux-arm64"
-      }
-    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -173,18 +149,6 @@
         "owner": "raydak-labs",
         "repo": "configarr",
         "type": "github"
-      }
-    },
-    "cosmic-noir-icons": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-9xWwR8scHtEkGh583VaZ9cqfFOHL7ly2YP4Rn9LYVWc=",
-        "type": "file",
-        "url": "https://github.com/atraxsrc/cosmic-icon-themes/releases/latest/download/Cosmic-Noir-Orange.tar.xz"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/atraxsrc/cosmic-icon-themes/releases/latest/download/Cosmic-Noir-Orange.tar.xz"
       }
     },
     "determinate-nix": {
@@ -538,22 +502,6 @@
         "type": "github"
       }
     },
-    "homebrew-cask": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1793247427,
-        "narHash": "sha256-SFy4RLPanlwKiOJdud6Rnc/YOjlb6U2zVAAqPzqpZvg=",
-        "owner": "Homebrew",
-        "repo": "homebrew-cask",
-        "rev": "1593b376757829d1a7b50847e9ee499ee76360a2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Homebrew",
-        "repo": "homebrew-cask",
-        "type": "github"
-      }
-    },
     "llm-agents": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -894,18 +842,6 @@
         "type": "github"
       }
     },
-    "openai-tunnel": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-JxRtmU2twCa1/iRnp8eeddPdgjwashDbbl6H0VKzlB0=",
-        "type": "file",
-        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://github.com/openai/tunnel-client/releases/latest/download/SHA256SUMS.txt"
-      }
-    },
     "plasma-manager": {
       "inputs": {
         "home-manager": [
@@ -1028,22 +964,17 @@
     },
     "root": {
       "inputs": {
-        "agentgateway-linux-amd64": "agentgateway-linux-amd64",
-        "agentgateway-linux-arm64": "agentgateway-linux-arm64",
         "computer": "computer",
         "configarr": "configarr",
-        "cosmic-noir-icons": "cosmic-noir-icons",
         "determinate-nix": "determinate-nix",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",
-        "homebrew-cask": "homebrew-cask",
         "llm-agents": "llm-agents",
         "mautrix-packages": "mautrix-packages",
         "nh": "nh",
         "nix-darwin": "nix-darwin",
         "nix-openclaw": "nix-openclaw",
         "nixpkgs": "nixpkgs_7",
-        "openai-tunnel": "openai-tunnel",
         "plasma-manager": "plasma-manager",
         "pre-commit-hooks": "pre-commit-hooks",
         "schema-artifacts": "schema-artifacts",

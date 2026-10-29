@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -6,10 +6,14 @@
         heroic-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "heroic";
+              release = {
+                version = "2.22.4";
+                hash = "sha256-KdVHakvxrqTdPJByU6SboyciI7QgxbrIxymVs2tXzYk=";
+              };
               pname = "heroic-mac";
               appName = "Heroic.app";
               homepage = "https://heroicgameslauncher.com";

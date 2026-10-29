@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       final: prev:
@@ -8,9 +8,7 @@
           "x86_64-linux"
         ])
         {
-          openai-tunnel-client = final.callPackage ./package.nix {
-            inherit (inputs) openai-tunnel;
-          };
+          openai-tunnel-client = final.callPackage ./package.nix { };
         }
     )
   ];

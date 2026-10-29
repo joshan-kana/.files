@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       final: prev:
@@ -8,7 +8,7 @@
           "x86_64-linux"
         ])
         {
-          agentgateway = final.callPackage ./package.nix { inherit inputs; };
+          agentgateway = final.callPackage ./package.nix { };
         }
     )
   ];

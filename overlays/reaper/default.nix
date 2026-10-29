@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -6,10 +6,14 @@
         reaper-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "reaper";
+              release = {
+                version = "7.84";
+                hash = "sha256-n2h69TSAoetSg5d+kIhFOfDnT0HoS6lTRV3H7NPUJTA=";
+              };
               pname = "reaper-mac";
               appName = "REAPER.app";
               homepage = "https://www.reaper.fm";

@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -6,10 +6,14 @@
         notion-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "notion";
+              release = {
+                version = "7.41.1";
+                hash = "sha256-wUBajZ+ibKuNDSIQWfhIw5vs6wRJAmdT1QH6JhenLlA=";
+              };
               pname = "notion-mac";
               appName = "Notion.app";
               homepage = "https://www.notion.so";

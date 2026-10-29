@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -42,10 +41,14 @@
         open-webui-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "open-webui";
+              release = {
+                version = "0.0.20";
+                hash = "sha256-RU/ukQyHIWi3X5i/Z2r00Vsh38xrQ6Jt+tyUvZ7xC5c=";
+              };
               pname = "open-webui-mac";
               appName = "Open WebUI.app";
               homepage = "https://openwebui.com/";

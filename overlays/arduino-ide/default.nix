@@ -1,4 +1,4 @@
-{ inputs, ... }: {
+_: {
   nixpkgs.overlays = [
     (
       _final: prev:
@@ -6,10 +6,14 @@
         arduino-ide-mac =
           import ../lib/mac-app.nix
             {
-              inherit prev inputs;
+              inherit prev;
             }
             {
               token = "arduino-ide";
+              release = {
+                version = "2.3.10";
+                hash = "sha256-iBGGDch4K2zWuwB26SFSVYSfQEsbnm84Bp/cT1xDZI4=";
+              };
               pname = "arduino-ide-mac";
               appName = "Arduino IDE.app";
               homepage = "https://www.arduino.cc/en/software";
