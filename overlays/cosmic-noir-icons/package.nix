@@ -3,7 +3,6 @@
   stdenvNoCC,
   hicolor-icon-theme,
   fetchurl,
-  python3,
 }:
 let
   version = "1.2.0";
@@ -15,12 +14,6 @@ stdenvNoCC.mkDerivation {
     url = "https://github.com/atraxsrc/cosmic-icon-themes/releases/download/v${version}/Cosmic-Noir-Orange.tar.xz";
     hash = "sha256-EhlbwO0gjW95ERNZKqd04v4T9KRTeYzGhcJP5fIX8Hc=";
   };
-  passthru.updateScript = [
-    "${python3}/bin/python3"
-    "${../../scripts/update-binary-release.py}"
-    "cosmic-noir-icons"
-  ];
-
   propagatedBuildInputs = [ hicolor-icon-theme ];
   dontUnpack = true;
   dontBuild = true;

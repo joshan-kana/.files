@@ -2,6 +2,7 @@
 pkgs.libplacebo.overrideAttrs (old: {
   passthru = (old.passthru or { }) // {
     dotfilesUpdateMode = "branch";
+    dotfilesUpdatePolicy = "manual";
   };
   version = "7.373.0";
   src = pkgs.fetchFromGitHub {

@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+update_package() {
+  if [[ $# -lt 1 || $# -gt 2 ]]; then
+    echo 'Usage: system-update --package PACKAGE [--system SYSTEM]' >&2
+    exit 2
+  fi
+
+  native="$(nix eval --raw --impure --expr builtins.currentSystem)"
+  package_systems="$(nix eval --json .#lib.updateablePackages)"
+  system="${2:-$(jq -r --arg name "$1" --arg native "$native" '
+    [. | to_entries[] | select(.value | index($name)) | .key]
+    | if index($native) != null then $native else .[0] // empty end
+  ' <<<"$package_systems")}"
+  if [[ -z "$system" ]]; then
+    printf 'Unknown manually updated package: %s\n' "$1" >&2
+    exit 2
+  fi
+  packages="$(jq -c --arg system "$system" '.[$system] // []' <<<"$package_systems")"
+  if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; then
+    printf 'Unknown manually updated package: %s\n' "$1" >&2
+    exit 2
+  fi
+
+  source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+  diff_before="$(git diff --binary -- overlays)"
+  mode="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateMode" 2>/dev/null || echo stable)"
+  url="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateUrl" 2>/dev/null || true)"
+  url_args=()
+  [[ -z "$url" ]] || url_args=(--url "$url")
+  build=()
+  if [[ "$system" == "$native" ]]; then
+    build=(--build)
+  else
+    echo "Updating $1 for $system; native build validation remains required on that platform"
+  fi
+  if recipe="$(nix eval --json ".#packages.$system.$1.passthru.updateScript" 2>/dev/null)"; then
+    if [[ "$system" == "$native" ]]; then
+      nix-update --flake --system "$system" --use-update-script "${build[@]}" "$1"
+    else
+      mapfile -t command < <(jq -r '.[]' <<<"$recipe")
+      # The package declares its updater; execute it with native Python rather
+      # than asking Nix to run a foreign-platform development shell.
+      [[ "${#command[@]}" == 3 && -f "${command[1]}" ]] || {
+        echo "No portable updater for $1 on $system" >&2
+        exit 1
+      }
+      python3 "${command[1]}" "${command[2]}"
+    fi
+  else
+    nix-update --flake --system "$system" "${url_args[@]}" --version "$mode" "${build[@]}" "$1"
+  fi
+  source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+  if [[ "$source_before" == "$source_after" && "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
+    echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
+    exit 1
+  fi
+
+}
+
+cd "$(git rev-parse --show-toplevel)"
+
+case "$#:${1-}" in
+  1:--help)
+    echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]'
+    echo 'Without options: interactively choose flake inputs, packages, OCI images or schemas.'
+    echo '--all: update routine packages, inputs, OCI images and schemas (manual pins excluded).'
+    exit 0
+    ;;
+  2:--package)
+    update_package "$2"
+    exit
+    ;;
+  4:--package)
+    [[ "$3" == "--system" ]] || exit 2
+    update_package "$2" "$4"
+    exit
+    ;;
+  0:)
+    selections=$(
+      set +o pipefail
+      {
+        printf 'all\tUpdate inputs, packages, containers and schemas\n'
+        printf 'all-inputs\tUpdate all inputs\n'
+        printf 'all-containers\tUpdate all containers\n'
+        printf 'all-schemas\tRefresh generated schemas\n'
+        printf 'all-packages\tUpdate ordinary overlay packages\n'
+        nix eval --json .#lib.routinePackageUpdates \
+          | jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
+        nix flake metadata --json --no-update-lock-file \
+          | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
+        update-container-lock --list | jq -Rr '["container", .] | @tsv'
+        update-schemas --list | jq -Rr '["schema", .] | @tsv'
+      } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
+        --header='Tab: select multiple • Enter: update'
+    ) || exit 0
+    ;;
+  1:--all) selections=$'all\t*' ;;
+  *) echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]' >&2; exit 1 ;;
+esac
+
+inputs=()
+containers=()
+schemas=()
+packages=()
+while IFS=$'\t' read -r kind name; do
+  case "$kind" in
+    all) inputs=("*"); containers=("*"); schemas=("*"); packages=("*"); break ;;
+    all-inputs) inputs=("*"); schemas=("*") ;;
+    all-containers) containers=("*") ;;
+    all-schemas) schemas=("*") ;;
+    all-packages) packages=("*") ;;
+    package) packages+=("$name") ;;
+    input) [[ ${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
+    container) [[ ${containers[0]-} == "*" ]] || containers+=("$name") ;;
+    schema) [[ ${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
+  esac
+done <<<"$selections"
+
+if ((${#inputs[@]})); then
+  [[ ${inputs[0]} == "*" ]] && inputs=()
+  nix flake update "${inputs[@]}"
+fi
+
+if ((${#inputs[@]} || ${#schemas[@]})); then
+  [[ ${schemas[0]-} == "*" ]] && schemas=()
+  update-schemas "${schemas[@]}"
+fi
+
+if ((${#containers[@]})); then
+  [[ ${containers[0]} == "*" ]] && containers=()
+  update-container-lock "${containers[@]}"
+fi
+
+if ((${#packages[@]})); then
+  if [[ ${packages[0]} == "*" ]]; then
+    declare -A updated=()
+    native="$(nix eval --raw --impure --expr builtins.currentSystem)"
+    while IFS=$'\t' read -r packageSystem packageName; do
+      if [[ -z ${updated[$packageName]-} ]]; then
+        update_package "$packageName" "$packageSystem"
+        updated[$packageName]=1
+      fi
+    done < <(
+      nix eval --json .#lib.routinePackageUpdates |
+        jq -r --arg native "$native" '
+          to_entries | sort_by(.key != $native)
+          | .[] | .key as $system | .value[]
+          | [$system, .] | @tsv
+        '
+    )
+  else
+    for choice in "${packages[@]}"; do
+      update_package "${choice#*/}" "${choice%%/*}"
+    done
+  fi
+fi
+
+nix flake check --no-update-lock-file

@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo="$(git rev-parse --show-toplevel)"
 cd "$repo"
-registry=overlays/lib/schemas/registry.json
+registry=lib/schemas/registry.json
 
 if [[ ${1:-} == --list ]]; then
   jq -r 'keys[]' "$registry"

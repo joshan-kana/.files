@@ -4,7 +4,7 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         hammerspoon =
-          import ../lib/mac-app.nix
+          import ../../lib/mac-app.nix
             {
               inherit prev;
             }

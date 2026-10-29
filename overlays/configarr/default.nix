@@ -8,7 +8,7 @@
 }:
 let
   inherit (lib.systems.elaborate system) isLinux;
-  schemaType = (import ../lib/schemas { inherit inputs lib; }).configarr;
+  schemaType = (import ../../lib/schemas { inherit inputs lib; }).configarr;
   yaml = pkgs.formats.yaml { tags = true; };
   configFile = yaml.generate "configarr.yml" (stripNulls config.services.configarr.settings);
   stripNulls =

@@ -27,7 +27,7 @@ prev.stdenvNoCC.mkDerivation {
   };
   passthru.updateScript = [
     "${prev.python3}/bin/python3"
-    "${../../scripts/update-cask.py}"
+    "${../scripts/update-cask.py}"
     token
   ];
   nativeBuildInputs = [ unpacker ];

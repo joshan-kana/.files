@@ -92,11 +92,6 @@
 
     mautrix-packages.url = "github:Moraxyc/nur-packages";
 
-    computer = {
-      url = "file+https://pypi.org/pypi/cptr/json";
-      flake = false;
-    };
-
   };
 
   outputs =
@@ -444,6 +439,7 @@
           cosmic-noir-icons = (pkgsFor system).callPackage ./overlays/cosmic-noir-icons/package.nix { };
         }
         // lib.optionalAttrs (pkgsFor system).stdenv.hostPlatform.isLinux {
+          cptr = (pkgsFor system).callPackage ./overlays/open-webui/computer.nix { };
           agentgateway = (pkgsFor system).callPackage ./overlays/agentgateway/package.nix { };
           openai-tunnel-client = (pkgsFor system).callPackage ./overlays/openai-tunnel-client/package.nix { };
         }
@@ -483,10 +479,13 @@
     {
       lib = {
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
-        schemaRegistry = (import ./overlays/lib/schemas { inherit inputs lib; }).registry;
+        schemaRegistry = (import ./lib/schemas { inherit inputs lib; }).registry;
         updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
         routinePackageUpdates = forAllSystems (
-          system: lib.filter (name: name != "libplacebo-mpv") (builtins.attrNames (updatePackagesFor system))
+          system:
+          lib.filter (
+            name: ((updatePackagesFor system).${name}.passthru.dotfilesUpdatePolicy or "routine") == "routine"
+          ) (builtins.attrNames (updatePackagesFor system))
         );
       };
 
@@ -654,29 +653,6 @@
             text = builtins.readFile ./scripts/update-schemas;
           };
 
-          updatePackage = pkgs.writeShellApplication {
-            name = "update-package";
-            runtimeInputs = with pkgs; [
-              coreutils
-              git
-              jq
-              nix
-              nix-update
-            ];
-            text = builtins.readFile ./scripts/update-package;
-          };
-
-          checkPackagePins = pkgs.writeShellApplication {
-            name = "check-package-pins";
-            runtimeInputs = with pkgs; [
-              coreutils
-              git
-              nix
-              ripgrep
-            ];
-            text = builtins.readFile ./scripts/check-package-pins;
-          };
-
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -685,106 +661,11 @@
               pkgs.jq
               updateContainerLock
               updateSchemas
-              updatePackage
               pkgs.nix
+              pkgs.nix-update
+              pkgs.python3
             ];
-            text = ''
-              cd "$(git rev-parse --show-toplevel)"
-
-              case "$#:''${1-}" in
-                1:--help)
-                  echo 'Usage: system-update [--all|--package PACKAGE]'
-                  exit 0
-                  ;;
-                2:--package)
-                  exec update-package "$2"
-                  ;;
-                4:--package)
-                  [[ "$3" == "--system" ]] || exit 2
-                  exec update-package "$2" "$4"
-                  ;;
-                0:)
-                  selections=$(
-                    set +o pipefail
-                    {
-                      printf 'all\tUpdate inputs, packages, containers and schemas\n'
-                      printf 'all-inputs\tUpdate all inputs\n'
-                      printf 'all-containers\tUpdate all containers\n'
-                      printf 'all-schemas\tRefresh generated schemas\n'
-                      printf 'all-packages\tUpdate ordinary overlay packages\n'
-                      nix eval --json .#lib.routinePackageUpdates \
-                        | jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
-                      nix flake metadata --json --no-update-lock-file \
-                        | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
-                      update-container-lock --list | jq -Rr '["container", .] | @tsv'
-                      update-schemas --list | jq -Rr '["schema", .] | @tsv'
-                    } | fzf --multi --no-sort --layout=reverse --delimiter=$'\t' --with-nth=2 \
-                      --header='Tab: select multiple • Enter: update'
-                  ) || exit 0
-                  ;;
-                1:--all) selections=$'all\t*' ;;
-                *) echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]' >&2; exit 1 ;;
-              esac
-
-              inputs=()
-              containers=()
-              schemas=()
-              packages=()
-              while IFS=$'\t' read -r kind name; do
-                case "$kind" in
-                  all) inputs=("*"); containers=("*"); schemas=("*"); packages=("*"); break ;;
-                  all-inputs) inputs=("*"); schemas=("*") ;;
-                  all-containers) containers=("*") ;;
-                  all-schemas) schemas=("*") ;;
-                  all-packages) packages=("*") ;;
-                  package) packages+=("$name") ;;
-                  input) [[ ''${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
-                  container) [[ ''${containers[0]-} == "*" ]] || containers+=("$name") ;;
-                  schema) [[ ''${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
-                esac
-              done <<<"$selections"
-
-              if ((''${#inputs[@]})); then
-                [[ ''${inputs[0]} == "*" ]] && inputs=()
-                nix flake update "''${inputs[@]}"
-              fi
-
-              if ((''${#inputs[@]} || ''${#schemas[@]})); then
-                [[ ''${schemas[0]-} == "*" ]] && schemas=()
-                update-schemas "''${schemas[@]}"
-              fi
-
-              if ((''${#containers[@]})); then
-                [[ ''${containers[0]} == "*" ]] && containers=()
-                update-container-lock "''${containers[@]}"
-              fi
-
-              if ((''${#packages[@]})); then
-                if [[ ''${packages[0]} == "*" ]]; then
-                  declare -A updated=()
-                  native="$(nix eval --raw --impure --expr builtins.currentSystem)"
-                  while IFS=$'\t' read -r packageSystem packageName; do
-                    if [[ -z ''${updated[$packageName]-} ]]; then
-                      update-package "$packageName" "$packageSystem"
-                      updated[$packageName]=1
-                    fi
-                  done < <(
-                    nix eval --json .#lib.routinePackageUpdates |
-                      jq -r --arg native "$native" '
-                        to_entries | sort_by(.key != $native)
-                        | .[] | .key as $system | .value[]
-                        | [$system, .] | @tsv
-                      '
-                  )
-                else
-                  for choice in "''${packages[@]}"; do
-                    update-package "''${choice#*/}" "''${choice%%/*}"
-                  done
-                fi
-              fi
-
-              nix flake check --no-update-lock-file
-            '';
+            text = builtins.readFile ./scripts/system-update;
           };
 
           updatePlasma =
@@ -912,11 +793,6 @@
               }
             );
             meta.description = "Regenerate .gitattributes from repository tool exclusions";
-          };
-          check-package-pins = {
-            type = "app";
-            program = lib.getExe checkPackagePins;
-            meta.description = "Explicitly probe temporary nixpkgs fallback packages";
           };
           update-schemas = {
             type = "app";

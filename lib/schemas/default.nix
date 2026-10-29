@@ -2,7 +2,7 @@
 let
   typed = import ./json-schema-type.nix { inherit lib; };
   registry = builtins.fromJSON (builtins.readFile ./registry.json);
-  repo = ../../..;
+  repo = ../..;
   generatorHash =
     entry:
     builtins.hashString "sha256" (

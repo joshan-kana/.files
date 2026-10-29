@@ -62,7 +62,6 @@ in
   computer =
     {
       config,
-      inputs,
       lib,
       pkgs,
       ...
@@ -73,7 +72,7 @@ in
       inherit (server.storage) appData;
 
       computerUser = "open-webui-computer";
-      computerVersion = (builtins.fromJSON (builtins.readFile inputs.computer)).info.version;
+      computerVersion = (pkgs.callPackage ../../../overlays/open-webui/computer.nix { }).version;
       computerPort = 8000;
       computerRoot = "${appData.root}/open-webui-computer";
       computerStateDir = "${computerRoot}/state";

@@ -39,7 +39,7 @@ _: {
       }
       // prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         open-webui-mac =
-          import ../lib/mac-app.nix
+          import ../../lib/mac-app.nix
             {
               inherit prev;
             }

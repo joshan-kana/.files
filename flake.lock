@@ -119,18 +119,6 @@
         "type": "github"
       }
     },
-    "computer": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-ibmgy69pVD0Iho0hvgBNX1Cj5DsbnXA+J26m5tetMK4=",
-        "type": "file",
-        "url": "https://pypi.org/pypi/cptr/json"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://pypi.org/pypi/cptr/json"
-      }
-    },
     "configarr": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -964,7 +952,6 @@
     },
     "root": {
       "inputs": {
-        "computer": "computer",
         "configarr": "configarr",
         "determinate-nix": "determinate-nix",
         "hermes-agent": "hermes-agent",

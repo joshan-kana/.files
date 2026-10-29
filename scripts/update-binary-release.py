@@ -21,7 +21,7 @@ def sri(digest):
     return "sha256-" + base64.b64encode(bytes.fromhex(digest)).decode()
 
 
-if len(sys.argv) != 2 or sys.argv[1] not in ("agentgateway", "openai-tunnel-client", "cosmic-noir-icons"):
+if len(sys.argv) != 2 or sys.argv[1] not in ("agentgateway", "openai-tunnel-client"):
     sys.exit("Usage: update-binary-release PACKAGE")
 name = sys.argv[1]
 root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
@@ -30,7 +30,6 @@ source = source_path.read_text()
 repositories = {
     "agentgateway": "agentgateway/agentgateway",
     "openai-tunnel-client": "openai/tunnel-client",
-    "cosmic-noir-icons": "atraxsrc/cosmic-icon-themes",
 }
 release = json.loads(fetch(f"https://api.github.com/repos/{repositories[name]}/releases/latest"))
 tag = release["tag_name"]
@@ -53,29 +52,17 @@ elif name == "openai-tunnel-client":
         if len(matches) != 1:
             sys.exit(f"No unique upstream checksum for {filename}")
         digests[system] = sri(matches[0])
-else:
-    checksums = fetch(download + "SHA256SUMS").decode()
-    matches = re.findall(r"^([a-f0-9]{64})\s+Cosmic-Noir-Orange\.tar\.xz$", checksums, re.M)
-    if len(matches) != 1:
-        sys.exit("Missing upstream checksum for Cosmic-Noir-Orange")
-    digests = {"archive": sri(matches[0])}
-
 updated, n = re.subn(r'(version = ")[^"]+(";)', lambda m: m[1] + version + m[2], source, count=1)
 if n != 1:
     sys.exit(f"No version pin in {source_path}")
-if name == "cosmic-noir-icons":
-    updated, n = re.subn(r'(hash = ")[^"]+(";)', lambda m: m[1] + digests["archive"] + m[2], updated, count=1)
+for system, digest in digests.items():
+    updated, n = re.subn(
+        r"(" + system + r' = ")[^"]+(";)',
+        lambda m: m[1] + digest + m[2],
+        updated,
+        count=1,
+    )
     if n != 1:
-        sys.exit(f"No source hash in {source_path}")
-else:
-    for system, digest in digests.items():
-        updated, n = re.subn(
-            r"(" + system + r' = ")[^"]+(";)',
-            lambda m: m[1] + digest + m[2],
-            updated,
-            count=1,
-        )
-        if n != 1:
-            sys.exit(f"No {system} hash in {source_path}")
+        sys.exit(f"No {system} hash in {source_path}")
 source_path.write_text(updated)
 print(f"{name}: {version} ({len(digests)} verified SHA-256 pins)")
