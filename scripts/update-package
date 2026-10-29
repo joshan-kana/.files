@@ -41,6 +41,7 @@ fi
 
 patch="$(mktemp "${TMPDIR:-/tmp}/package-diff.XXXXXXXX")"
 trap 'rm -f "$patch"; cleanup' EXIT
+git -C "$tmp" add -N .
 git -C "$tmp" diff --binary > "$patch"
 if [[ -s "$patch" ]]; then
   git apply --check "$patch"

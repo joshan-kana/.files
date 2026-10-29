@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+cd "$repo"
+mapfile -t pinned < <(
+  rg -l 'builtins\.getFlake "github:NixOS/nixpkgs/[0-9a-f]{40}"' overlays -g default.nix \
+    | cut -d/ -f2 | sort -u
+)
+
+if [[ ${1:-} == --list ]]; then
+  printf '%s\n' "${pinned[@]}"
+  exit 0
+fi
+if [[ $# == 0 || ( $# == 1 && $1 == --all ) ]]; then
+  selected=("${pinned[@]}")
+else
+  selected=("$@")
+fi
+
+system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+failed=false
+for package in "${selected[@]}"; do
+  if ! printf '%s\n' "${pinned[@]}" | grep -Fxq -- "$package"; then
+    printf 'Unknown pinned nixpkgs package: %s\n' "$package" >&2
+    exit 2
+  fi
+  printf '\nChecking current nixpkgs package: %s (%s)\n' "$package" "$system"
+  if nix build -L --no-link --impure --expr "
+    let flake = builtins.getFlake (toString $repo);
+    in flake.inputs.nixpkgs.legacyPackages.$system.\"$package\"
+  "; then
+    printf '%s: current nixpkgs builds. Verify the original regression and patches before removing the overlay.\n' "$package"
+  else
+    printf '%s: current nixpkgs is not verified; keep the pinned overlay.\n' "$package" >&2
+    failed=true
+  fi
+done
+[[ $failed == false ]]

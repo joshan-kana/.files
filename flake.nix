@@ -690,6 +690,17 @@
             text = builtins.readFile ./scripts/update-package;
           };
 
+          checkPackagePins = pkgs.writeShellApplication {
+            name = "check-package-pins";
+            runtimeInputs = with pkgs; [
+              coreutils
+              git
+              nix
+              ripgrep
+            ];
+            text = builtins.readFile ./scripts/check-package-pins;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -891,6 +902,11 @@
               }
             );
             meta.description = "Regenerate .gitattributes from repository tool exclusions";
+          };
+          check-package-pins = {
+            type = "app";
+            program = lib.getExe checkPackagePins;
+            meta.description = "Explicitly probe temporary nixpkgs fallback packages";
           };
           update-schemas = {
             type = "app";
