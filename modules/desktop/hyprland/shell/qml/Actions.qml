@@ -98,11 +98,10 @@ QtObject {
 
         const geometry = origin || ambientBar.originFor(screen, "media");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "media" && expansionState.screen === screen);
-        const fromControls = expansionState.hasCurrent && expansionState.currentName === "system";
         if (opening)
             hideTransient("media");
 
-        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height, fromControls ? "controls" : "");
+        expansionState.toggle("media", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
     function mediaPlayPause(): void {
@@ -182,11 +181,10 @@ QtObject {
 
         const geometry = origin || ambientBar.originFor(screen, "calendar");
         const opening = !(expansionState.hasCurrent && expansionState.currentName === "weather" && expansionState.screen === screen);
-        const fromCalendar = expansionState.hasCurrent && expansionState.currentName === "calendar" && expansionState.screen === screen;
         if (opening)
             hideTransient("weather");
 
-        expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, fromCalendar ? "calendar" : "");
+        expansionState.toggle("weather", screen, geometry.center, geometry.width, geometry.height, "");
     }
 
     // Repeating a detail shortcut closes the hub; it must not navigate back

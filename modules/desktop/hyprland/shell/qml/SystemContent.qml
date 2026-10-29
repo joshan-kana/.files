@@ -31,7 +31,7 @@ FocusScope {
     property bool engaged: false
     property bool mixerOpen: false
     property string requestedView: ""
-    required property bool controlsRoot
+    required property bool returnToControls
     property bool helpOpen: false
     property int trayIndex: 0
     property int selectedAudioIndex: 0
@@ -111,7 +111,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: root.controlsRoot ? "Back to Controls" : "Close"
+            action: root.returnToControls ? "Back to Controls" : "Close"
         }
     ] : mixerOpen ? [
         {
@@ -128,7 +128,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: root.controlsRoot ? "Back to Controls" : "Close"
+            action: root.returnToControls ? "Back to Controls" : "Close"
         }
     ] : resourcesPanel.open ? [
         {
@@ -141,7 +141,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: root.controlsRoot ? "Back to Controls" : "Close"
+            action: root.returnToControls ? "Back to Controls" : "Close"
         }
     ] : bluetoothPanel.open ? [
         {
@@ -162,7 +162,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: root.controlsRoot ? "Back to Controls" : "Close"
+            action: root.returnToControls ? "Back to Controls" : "Close"
         }
     ] : (networkPanel.open ? [
             {
@@ -183,7 +183,7 @@ FocusScope {
             },
             {
                 key: "ESC",
-                action: root.controlsRoot ? "Back to Controls" : "Close"
+                action: root.returnToControls ? "Back to Controls" : "Close"
             }
         ] : (themePanel.open ? [
                 {
@@ -196,7 +196,7 @@ FocusScope {
                 },
                 {
                     key: "ESC",
-                    action: root.controlsRoot ? "Back to Controls" : "Close"
+                    action: root.returnToControls ? "Back to Controls" : "Close"
                 }
             ] : (sessionPanel.open ? [
                     {
@@ -209,7 +209,7 @@ FocusScope {
                     },
                     {
                         key: "ESC",
-                        action: root.controlsRoot ? "Back to Controls" : "Close"
+                        action: root.returnToControls ? "Back to Controls" : "Close"
                     }
                 ] : (trayMenu.open ? [
                         {
@@ -289,7 +289,8 @@ FocusScope {
 
     signal helpScrollRequested(int steps)
     signal closeRequested
-    signal controlsRequested
+    signal backRequested
+    signal detailRequested(string view)
     signal themeTerminalActiveChanged(bool active)
     signal mediaRequested
     signal revealContent(real top, real bottom)
@@ -311,13 +312,13 @@ FocusScope {
     }
 
     function backFromDetail(): void {
-        if (!controlsRoot) {
-            closeRequested();
-            return;
-        }
-        closeDetails();
-        controlsRequested();
+        backRequested();
         keyboardFocus.forceActiveFocus();
+    }
+
+    function markDetail(view: string): void {
+        if (requestedView !== view)
+            detailRequested(view);
     }
 
     function applyRequestedView(): void {
@@ -407,6 +408,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         networkPanel.openView();
+        markDetail("network");
     }
 
     function openBluetooth(): void {
@@ -420,6 +422,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         bluetoothPanel.openView();
+        markDetail("bluetooth");
     }
 
     function openWallpaper(): void {
@@ -433,6 +436,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         wallpaperPanel.openView();
+        markDetail("wallpaper");
     }
 
     function openTheme(): void {
@@ -446,6 +450,7 @@ FocusScope {
         bluetoothPanel.closeView();
         sessionPanel.closeView();
         themePanel.openView();
+        markDetail("theme");
     }
 
     function showTheme(): void {
@@ -463,6 +468,7 @@ FocusScope {
         bluetoothPanel.closeView();
         themePanel.closeView();
         sessionPanel.openView();
+        markDetail("session");
     }
 
     function showSession(): void {
@@ -480,6 +486,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         resourcesPanel.openView();
+        markDetail("resources");
     }
 
     function openMixer(): void {
@@ -493,6 +500,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         mixerOpen = true;
+        markDetail("mixer");
     }
 
     function openRecordings(): void {
@@ -506,6 +514,7 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         recordingsPanel.openView();
+        markDetail("recordings");
     }
 
     function selectedMixerStream(): var {
@@ -1479,7 +1488,7 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    returnToControls: root.controlsRoot
+                    returnToControls: root.returnToControls
                     onKeyboardRequested: keyboardFocus.forceActiveFocus()
                     onSwitchLaunched: root.themeTerminalActiveChanged(true)
                     onSwitchFinished: root.themeTerminalActiveChanged(false)
