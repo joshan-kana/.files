@@ -26,11 +26,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+mode="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateMode" 2>/dev/null || echo stable)"
 git worktree add --detach --quiet "$tmp" HEAD
 (
   cd "$tmp"
-  nix-update --flake --build "$1"
+  nix-update --flake --version "$mode" --build "$1"
 )
+source_after="$(cd "$tmp" && nix eval --raw ".#packages.$system.$1.src.outPath")"
+if [[ "$source_before" == "$source_after" ]] && ! git -C "$tmp" diff --quiet; then
+  echo "$1 changed without updating its pinned source; refusing misleading version bump" >&2
+  exit 1
+fi
 
 patch="$(mktemp "${TMPDIR:-/tmp}/package-diff.XXXXXXXX")"
 trap 'rm -f "$patch"; cleanup' EXIT
