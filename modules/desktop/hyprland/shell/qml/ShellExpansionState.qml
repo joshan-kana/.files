@@ -5,6 +5,7 @@ QtObject {
 
     property string currentName: ""
     property string currentView: ""
+    property bool controlsRoot: false
     property bool hasCurrent: false
     property var screen: null
     property real originCenter: 0
@@ -12,6 +13,10 @@ QtObject {
     property real originHeight: 0
 
     function show(name: string, targetScreen: var, center: real, width: real, height: real, view: string): void {
+        // Preserve Controls as the origin when a detail shortcut is invoked
+        // while its hub is already open. A direct shortcut has no parent.
+        const fromControls = hasCurrent && currentName === "system" && controlsRoot;
+        controlsRoot = name === "system" && (!view || view === "controls" || fromControls);
         currentName = name;
         currentView = view || "";
         screen = targetScreen;
@@ -31,8 +36,15 @@ QtObject {
         show(name, targetScreen, center, width, height, requestedView);
     }
 
+    function navigate(name: string): void {
+        controlsRoot = name === "system";
+        currentView = "";
+        currentName = name;
+    }
+
     function close(): void {
         hasCurrent = false;
+        controlsRoot = false;
     }
 
     function finishClose(): void {
