@@ -30,6 +30,13 @@ in
       default = { };
       description = "Configarr configuration, typed from the pinned upstream Zod input schema.";
     };
+
+    services.configarr.generatedConfigFile = lib.mkOption {
+      type = lib.types.path;
+      readOnly = true;
+      internal = true;
+      description = "Generated Configarr YAML, retaining tagged environment and secret references.";
+    };
   };
 
   config = lib.optionalAttrs isLinux {
@@ -39,8 +46,15 @@ in
       })
     ];
 
-    services.configarr.config = lib.mkIf config.services.configarr.enable (
-      builtins.readFile (yaml.generate "configarr.yml" (stripNulls config.services.configarr.settings))
+    services.configarr.generatedConfigFile = yaml.generate "configarr.yml" (
+      stripNulls config.services.configarr.settings
+    );
+
+    systemd.services.configarr.preStart = lib.mkIf config.services.configarr.enable (
+      lib.mkForce ''
+        install -D -m 0644 ${config.services.configarr.generatedConfigFile} ${config.services.configarr.dataDir}/config/config.yml
+        chown ${config.services.configarr.user}:${config.services.configarr.group} ${config.services.configarr.dataDir}/config/config.yml
+      ''
     );
   };
 }
