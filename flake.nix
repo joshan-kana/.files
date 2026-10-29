@@ -429,16 +429,17 @@
                   lib.concatMap (overlay: builtins.attrNames (overlay cfg.pkgs cfg.pkgs)) cfg.config.nixpkgs.overlays
                 );
                 updateable = lib.filterAttrs (
-                  _name: package:
+                  name: package:
                   let
+                    # Some unrelated nixpkgs overlay attributes fail when forced.
                     policy = builtins.tryEval (package.passthru.autoUpdate or null);
                   in
-                  policy.success
-                  && (
-                    policy.value == null
-                    || lib.assertMsg (builtins.isBool policy.value) "Package passthru.autoUpdate must be a Boolean."
-                  )
-                  && builtins.isBool policy.value
+                  if !policy.success || policy.value == null then
+                    false
+                  else
+                    assert lib.assertMsg (builtins.isBool policy.value)
+                      "Package ${name}: passthru.autoUpdate must be a Boolean.";
+                    true
                 ) (lib.genAttrs names (name: cfg.pkgs.${name}));
               in
               packages // updateable

@@ -70,12 +70,13 @@ case "$#:${1-}" in
     ;;
   2:--package)
     update_package "$2"
-    exit
+    # Continue to the shared validation without selecting other updates.
+    selections=""
     ;;
   4:--package)
     [[ "$3" == "--system" ]] || exit 2
     update_package "$2" "$4"
-    exit
+    selections=""
     ;;
   0:)
     selections=$(
@@ -157,4 +158,7 @@ if ((${#packages[@]})); then
   fi
 fi
 
-nix flake check --no-update-lock-file
+nix flake check --all-systems --no-build --no-update-lock-file \
+  --option allow-import-from-derivation false
+nix flake check --no-update-lock-file \
+  --option allow-import-from-derivation false
