@@ -15,6 +15,7 @@ Item {
     signal switchFinished
 
     property bool open: false
+    property bool returnToControls: false
     property var themes: []
     property string defaultTheme: ""
     property string currentTheme: ""
@@ -606,7 +607,7 @@ Item {
                     },
                     {
                         shortcut: "ESC",
-                        label: "Back"
+                        label: panel.returnToControls ? "Back" : "Close"
                     }
                 ]
                 delegate: KeyHint {
