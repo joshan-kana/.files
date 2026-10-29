@@ -299,7 +299,7 @@
             repo-quality = {
               enable = true;
               name = "Repository formatting and linting";
-              entry = "nix build --no-link .#checks.${system}.repo-quality";
+              entry = "nix build --no-link .#checks.${system}.repo-quality .#checks.${system}.embedded-lint";
               files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
@@ -587,16 +587,11 @@
             _: host: host.config.system.build.bootStage2.drvPath
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
-          repo-quality = pkgs.runCommand "repo-quality" { } ''
-            mkdir -p "$out"
-            ln -s ${treefmt.config.build.check self} "$out/formatting"
-            ln -s ${
-              embedded.lintCheck {
-                src = self;
-                excludes = repoToolExcludedDirs;
-              }
-            } "$out/embedded-lint"
-          '';
+          repo-quality = treefmt.config.build.check self;
+          embedded-lint = embedded.lintCheck {
+            src = self;
+            excludes = repoToolExcludedDirs;
+          };
           embedded-lsp = embedded.lspCheck;
           git-attributes =
             assert lib.assertMsg (
