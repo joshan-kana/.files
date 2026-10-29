@@ -6,13 +6,7 @@ if [[ $# != 1 ]]; then
   exit 2
 fi
 
-repo="$(git rev-parse --show-toplevel)"
-cd "$repo"
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo 'Commit or stash tracked changes before updating a package' >&2
-  exit 1
-fi
-
+cd "$(git rev-parse --show-toplevel)"
 system="$(nix eval --raw --impure --expr builtins.currentSystem)"
 packages="$(nix eval --json ".#lib.updateablePackages.$system")"
 if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; then
@@ -20,32 +14,11 @@ if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; the
   exit 2
 fi
 
-tmp="$(mktemp -d "${TMPDIR:-/tmp}/package-update.XXXXXXXX")"
-cleanup() {
-  git worktree remove --force "$tmp" >/dev/null 2>&1 || rm -rf "$tmp"
-}
-trap cleanup EXIT
-
 source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
 mode="$(nix eval --raw ".#packages.$system.$1.passthru.dotfilesUpdateMode" 2>/dev/null || echo stable)"
-git worktree add --detach --quiet "$tmp" HEAD
-(
-  cd "$tmp"
-  nix-update --flake --version "$mode" --build "$1"
-)
-source_after="$(cd "$tmp" && nix eval --raw ".#packages.$system.$1.src.outPath")"
-if [[ "$source_before" == "$source_after" ]] && ! git -C "$tmp" diff --quiet; then
-  echo "$1 changed without updating its pinned source; refusing misleading version bump" >&2
+nix-update --flake --version "$mode" --build "$1"
+source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+if [[ "$source_before" == "$source_after" ]] && ! git diff --quiet; then
+  echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
   exit 1
-fi
-
-patch="$(mktemp "${TMPDIR:-/tmp}/package-diff.XXXXXXXX")"
-trap 'rm -f "$patch"; cleanup' EXIT
-git -C "$tmp" add -N .
-git -C "$tmp" diff --binary > "$patch"
-if [[ -s "$patch" ]]; then
-  git apply --check "$patch"
-  git apply "$patch"
-else
-  echo "$1 is already up to date"
 fi

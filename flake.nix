@@ -445,48 +445,8 @@
           inherit (self) darwinConfigurations;
         };
 
-      nativeChecksFor =
-        system:
-        let
-          pkgs = pkgsFor system;
-        in
-        {
-          docs = (docsFor system).book;
-          repo-quality = (treefmtFor system).config.build.check self;
-        }
-        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          shell-access =
-            pkgs.runCommand "shell-access-tests"
-              {
-                nativeBuildInputs = with pkgs; [
-                  python3
-                  bash
-                  procps
-                ];
-              }
-              ''
-                export HOME="$TMPDIR"
-                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
-                touch "$out"
-              '';
-          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
-          roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
-        };
-
       updatePackagesFor = system: {
         libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
-      };
-
-      # A builtin derivation is runnable by Nix on any host, including during
-      # `nix flake check --all-systems` without remote native builders.
-      evaluated = builtins.derivation {
-        name = "evaluated";
-        system = "builtin";
-        builder = "builtin:fetchurl";
-        url = "file:///dev/null";
-        outputHashAlgo = "sha256";
-        outputHashMode = "flat";
-        outputHash = "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
       };
 
       docsCommandsFor =
@@ -535,14 +495,6 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
-          native-validation =
-            (pkgsFor system).runCommand "native-validation"
-              {
-                checkedOutputs = lib.attrValues (nativeChecksFor system);
-              }
-              ''
-                touch "$out"
-              '';
         }
         // updatePackagesFor system
       );
@@ -615,6 +567,7 @@
         system:
         let
           pkgs = pkgsFor system;
+          treefmt = treefmtFor system;
           semanticTest = import ./tests/semantic-scopes.nix { inherit inputs system; };
           semanticPortabilityTest = import ./tests/semantic-system-portability.nix { inherit inputs; };
           semanticOptionsTest = import ./tests/semantic-options.nix {
@@ -629,22 +582,40 @@
         {
           nixos-eval = builtins.deepSeq (builtins.mapAttrs (
             _: host: host.config.system.build.bootStage2.drvPath
-          ) self.nixosConfigurations) evaluated;
+          ) self.nixosConfigurations) pkgs.emptyFile;
+          docs = self.packages.${system}.docs;
+          repo-quality = treefmt.config.build.check self;
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
             ) "Stale .gitattributes; run nix run .#update-git-attributes";
-            evaluated;
-          server-app-standards = builtins.seq serverAppStandardsTest evaluated;
-          semantic-system-portability = builtins.seq semanticPortabilityTest evaluated;
-          semantic-options = builtins.seq semanticOptionsTest evaluated;
+            pkgs.emptyFile;
+          server-app-standards = builtins.seq serverAppStandardsTest pkgs.emptyFile;
+          semantic-system-portability = builtins.seq semanticPortabilityTest pkgs.emptyFile;
+          semantic-options = builtins.seq semanticOptionsTest pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath evaluated;
+          darwin-eval = builtins.seq self.darwinConfigurations.mac.config.system.build.toplevel.drvPath pkgs.emptyFile;
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath evaluated;
-          semantic-scopes = builtins.seq semanticTest evaluated;
+          shell-access =
+            pkgs.runCommand "shell-access-tests"
+              {
+                nativeBuildInputs = with pkgs; [
+                  python3
+                  bash
+                  procps
+                ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                python3 ${./tests/test-chatgpt-shell-access.py} ${./modules/server-apps/agent-tools/chatgpt-shell-access/chatgpt-shell-access.py}
+                touch "$out"
+              '';
+          roaming-dns-build = pkgs.callPackage ./overlays/technitium-roaming/package.nix { };
+          roaming-dns-tests = pkgs.callPackage ./tests/technitium-roaming { };
+          nixos-server-vm-eval = builtins.seq self.nixosConfigurations.nixos-server.config.system.build.vm.drvPath pkgs.emptyFile;
+          semantic-scopes = builtins.seq semanticTest pkgs.emptyFile;
         }
       );
 

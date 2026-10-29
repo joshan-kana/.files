@@ -196,11 +196,6 @@ jobs:
           fi
           nix build -L -v --no-link --print-out-paths "$installable" | tee "$RUNNER_TEMP/built-paths.txt"
 
-      - name: Run native package and repository checks
-        shell: bash
-        run: |
-          nix build -L --no-link ".#packages.${{ matrix.system }}.native-validation"
-
       - name: Publish closure to Attic
         timeout-minutes: 90
         shell: bash
