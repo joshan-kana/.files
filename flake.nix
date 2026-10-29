@@ -167,6 +167,10 @@
           markdownOptions = [
             "--disable"
             "MD013,MD057"
+            "--extend-enable"
+            "MD060"
+            "--config"
+            "MD060.style = \"aligned\""
           ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
@@ -239,9 +243,10 @@
               ];
               ruff-format.priority = 1;
 
+              prettier.excludes = [ "*.md" ];
               rumdl-format.options = markdownOptions;
               rumdl-check = {
-                options = markdownOptions;
+                options = lib.mkForce ([ "check" ] ++ markdownOptions);
                 priority = 2;
               };
               typos.priority = 1;
