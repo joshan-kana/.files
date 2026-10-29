@@ -3,38 +3,27 @@ set -euo pipefail
 
 repo="$(git rev-parse --show-toplevel)"
 cd "$repo"
+registry=overlays/lib/schemas/registry.json
 
-if [[ "${1:-}" == --list ]]; then
-  printf '%s\n' configarr
+if [[ ${1:-} == --list ]]; then
+  jq -r 'keys[]' "$registry"
   exit 0
 fi
-if (( $# > 1 )) || { (( $# == 1 )) && [[ "$1" != configarr && "$1" != --all ]]; }; then
-  echo 'Usage: update-schemas [configarr|--all|--list]' >&2
-  exit 2
+
+if [[ $# == 0 || ( $# == 1 && $1 == --all ) ]]; then
+  mapfile -t selected < <(jq -r 'keys[]' "$registry")
+else
+  selected=("$@")
 fi
 
-revision="$(jq -r '.nodes.configarr.locked.rev' flake.lock)"
-generator_hash="$(nix hash file --type sha256 --base16 overlays/configarr/export-schema.ts)"
-[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'Configarr must have a locked upstream revision' >&2; exit 1; }
+for name in "${selected[@]}"; do
+  if ! jq -e --arg name "$name" 'has($name)' "$registry" >/dev/null; then
+    printf 'Unknown generated schema: %s\n' "$name" >&2
+    exit 2
+  fi
+done
 
 git fetch --quiet origin schema-artifacts
-existing="$(git show origin/schema-artifacts:configarr/source-revision | tr -d '\n')"
-existing_hash="$(git show origin/schema-artifacts:configarr/generator-hash 2>/dev/null | tr -d '\n' || true)"
-if [[ "$revision" == "$existing" && "$generator_hash" == "$existing_hash" ]]; then
-  nix flake update schema-artifacts
-  exit 0
-fi
-
-system="$(nix eval --raw --impure --expr builtins.currentSystem)"
-source="$(nix build --no-link --print-out-paths --impure --expr "
-  let
-    flake = builtins.getFlake (toString $repo);
-    upstream = flake.inputs.configarr.inputs.nixpkgs.legacyPackages.$system;
-    pkgs = upstream // {
-      configarr = flake.inputs.configarr.packages.$system.default;
-    };
-  in import $repo/overlays/configarr/schema.nix { inputs = flake.inputs; inherit pkgs; }
-")"
 
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/schema-update.XXXXXXXX")"
 cleanup() {
@@ -43,12 +32,46 @@ cleanup() {
 trap cleanup EXIT
 
 git worktree add --detach --quiet "$tmp" origin/schema-artifacts
-install -m 0644 "$source/schema.json" "$tmp/configarr/schema.json"
-printf '%s\n' "$revision" > "$tmp/configarr/source-revision"
-printf '%s\n' "$generator_hash" > "$tmp/configarr/generator-hash"
-git -C "$tmp" add configarr
-if ! git -C "$tmp" diff --cached --quiet; then
-  git -C "$tmp" commit -qm 'Update Configarr schema'
-  git -C "$tmp" push --quiet origin HEAD:refs/heads/schema-artifacts
+changed=false
+for name in "${selected[@]}"; do
+  input="$(jq -r --arg name "$name" '.[$name].input' "$registry")"
+  generator="$(jq -r --arg name "$name" '.[$name].generator' "$registry")"
+  revision="$(jq -er --arg input "$input" '.nodes[$input].locked.rev' flake.lock)"
+  [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "No locked revision for $name ($input)" >&2; exit 1; }
+
+  hashFile="$(mktemp "${TMPDIR:-/tmp}/schema-hash.XXXXXXXX")"
+  while IFS= read -r filename; do
+    [[ -f "$filename" ]] || { echo "Missing generator source: $filename" >&2; exit 1; }
+    cat "$filename" >> "$hashFile"
+  done < <(jq -r --arg name "$name" '.[$name].generatorSources[]' "$registry")
+  generator_hash="$(nix hash file --type sha256 --base16 "$hashFile")"
+  rm -f "$hashFile"
+
+  current_revision="$(cat "$tmp/$name/source-revision" 2>/dev/null || true)"
+  current_hash="$(cat "$tmp/$name/generator-hash" 2>/dev/null || true)"
+  if [[ "$revision" == "$current_revision" && "$generator_hash" == "$current_hash" ]]; then
+    continue
+  fi
+
+  system="$(nix eval --raw --impure --expr builtins.currentSystem)"
+  output="$(nix build --no-link --print-out-paths --impure --expr "
+    let flake = builtins.getFlake (toString $repo);
+    in import ($repo + \"/$generator\") { inputs = flake.inputs; system = \"$system\"; }
+  ")"
+  [[ -s "$output/schema.json" ]] || { echo "No generated schema for $name" >&2; exit 1; }
+  jq -e . "$output/schema.json" >/dev/null
+  mkdir -p "$tmp/$name"
+  cp "$output/schema.json" "$tmp/$name/schema.json"
+  printf '%s\n' "$revision" > "$tmp/$name/source-revision"
+  printf '%s\n' "$generator_hash" > "$tmp/$name/generator-hash"
+  changed=true
+done
+
+if [[ $changed == true ]]; then
+  git -C "$tmp" add --all
+  if ! git -C "$tmp" diff --cached --quiet; then
+    git -C "$tmp" commit -qm 'Update generated schemas'
+    git -C "$tmp" push --quiet origin HEAD:refs/heads/schema-artifacts
+  fi
 fi
 nix flake update schema-artifacts

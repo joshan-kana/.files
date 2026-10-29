@@ -1,7 +1,7 @@
-{ inputs, pkgs }:
+{ inputs, system }:
 let
-  upstream = inputs.configarr.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-  package = pkgs.configarr;
+  upstream = inputs.configarr.inputs.nixpkgs.legacyPackages.${system};
+  package = inputs.configarr.packages.${system}.default;
 in
 upstream.stdenvNoCC.mkDerivation {
   pname = "configarr-json-schema";

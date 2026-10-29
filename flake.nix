@@ -517,6 +517,7 @@
     {
       lib = {
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
+        schemaRegistry = (import ./overlays/lib/schemas { inherit inputs lib; }).registry;
       };
 
       formatter = forAllSystems (system: (treefmtFor system).config.build.wrapper);
@@ -529,6 +530,8 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
+          # Explicitly updated source override; never part of routine system-update.
+          libplacebo-mpv = import ./overlays/mpv/package.nix { pkgs = pkgsFor system; };
           native-validation =
             (pkgsFor system).runCommand "native-validation"
               {

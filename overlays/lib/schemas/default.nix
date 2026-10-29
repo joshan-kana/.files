@@ -1,25 +1,31 @@
 { inputs, lib }:
 let
   typed = import ./json-schema-type.nix { inherit lib; };
-  schemaRoot = inputs.schema-artifacts;
+  registry = builtins.fromJSON (builtins.readFile ./registry.json);
+  repo = ../../..;
+  generatorHash =
+    entry:
+    builtins.hashString "sha256" (
+      lib.concatMapStringsSep "" (path: builtins.readFile (repo + "/${path}")) entry.generatorSources
+    );
   fromFile = path: typed (builtins.fromJSON (builtins.readFile path));
   fromGenerated =
-    name: sourceRevision: generatorHash:
-    assert lib.assertMsg
-      (
-        (lib.removeSuffix "\n" (builtins.readFile (schemaRoot + "/${name}/source-revision")))
-        == sourceRevision
-      )
+    name:
+    let
+      entry = registry.${name};
+      sourceRevision = inputs.${entry.input}.rev;
+      hash = generatorHash entry;
+      root = inputs.schema-artifacts + "/${name}";
+      recorded = field: lib.removeSuffix "\n" (builtins.readFile (root + "/${field}"));
+    in
+    assert lib.assertMsg (recorded "source-revision" == sourceRevision)
       "${name} schema does not match its locked upstream revision; run system-update to refresh schemas";
     assert lib.assertMsg (
-      (lib.removeSuffix "\n" (builtins.readFile (schemaRoot + "/${name}/generator-hash")))
-      == generatorHash
+      recorded "generator-hash" == hash
     ) "${name} schema generator changed; run system-update to refresh schemas";
-    fromFile (schemaRoot + "/${name}/schema.json");
+    fromFile (root + "/schema.json");
 in
 {
-  inherit fromFile fromGenerated;
-  configarr = fromGenerated "configarr" inputs.configarr.rev (
-    builtins.hashFile "sha256" ../../configarr/export-schema.ts
-  );
+  inherit fromFile fromGenerated registry;
+  configarr = fromGenerated "configarr";
 }

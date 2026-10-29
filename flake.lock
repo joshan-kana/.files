@@ -1057,11 +1057,11 @@
     "schema-artifacts": {
       "flake": false,
       "locked": {
-        "lastModified": 1793273530,
-        "narHash": "sha256-qeg9Z/tYqOePB/V+7JVUbw7AEGroOlLBcWl4SXKGM2U=",
+        "lastModified": 1793280370,
+        "narHash": "sha256-kh5noE3xbSto7iFecWx75dZMMS0qdrDqjB61MAX8ihI=",
         "owner": "joshan-kana",
         "repo": ".files",
-        "rev": "472926c7e09cc1ad7e89684466e0d5cbfeb5f718",
+        "rev": "ce48eb75aa0c69db74bfd785d548e09a372dd3f4",
         "type": "github"
       },
       "original": {
