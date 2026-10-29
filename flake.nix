@@ -654,7 +654,6 @@
             runtimeInputs = with pkgs; [
               git
               jq
-              nix
             ];
             text = builtins.readFile ./scripts/update-schemas;
           };
@@ -667,7 +666,6 @@
               pkgs.jq
               updateContainerLock
               updateSchemas
-              pkgs.nix
               pkgs.nix-update
               pkgs.python3
             ];
