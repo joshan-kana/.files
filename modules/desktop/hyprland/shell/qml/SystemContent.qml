@@ -31,6 +31,7 @@ FocusScope {
     property bool engaged: false
     property bool mixerOpen: false
     property string requestedView: ""
+    required property bool controlsRoot
     property bool helpOpen: false
     property int trayIndex: 0
     property int selectedAudioIndex: 0
@@ -110,7 +111,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: "Back to Controls"
+            action: root.controlsRoot ? "Back to Controls" : "Close"
         }
     ] : mixerOpen ? [
         {
@@ -127,7 +128,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: "Back to Controls"
+            action: root.controlsRoot ? "Back to Controls" : "Close"
         }
     ] : resourcesPanel.open ? [
         {
@@ -140,7 +141,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: "Back to controls"
+            action: root.controlsRoot ? "Back to Controls" : "Close"
         }
     ] : bluetoothPanel.open ? [
         {
@@ -288,6 +289,7 @@ FocusScope {
 
     signal helpScrollRequested(int steps)
     signal closeRequested
+    signal controlsRequested
     signal themeTerminalActiveChanged(bool active)
     signal mediaRequested
     signal revealContent(real top, real bottom)
@@ -295,6 +297,28 @@ FocusScope {
     implicitWidth: 710
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
+
+    function closeDetails(): void {
+        trayMenu.closeMenu();
+        wallpaperPanel.closeView();
+        networkPanel.closeView();
+        bluetoothPanel.closeView();
+        themePanel.closeView();
+        sessionPanel.closeView();
+        resourcesPanel.closeView();
+        recordingsPanel.closeView();
+        mixerOpen = false;
+    }
+
+    function backFromDetail(): void {
+        if (!controlsRoot) {
+            closeRequested();
+            return;
+        }
+        closeDetails();
+        controlsRequested();
+        keyboardFocus.forceActiveFocus();
+    }
 
     function applyRequestedView(): void {
         if (!engaged)
@@ -325,15 +349,7 @@ FocusScope {
                     trayMenu.openFor(item);
             }
         } else if (requestedView === "controls" || requestedView.length === 0) {
-            trayMenu.closeMenu();
-            wallpaperPanel.closeView();
-            networkPanel.closeView();
-            bluetoothPanel.closeView();
-            themePanel.closeView();
-            sessionPanel.closeView();
-            resourcesPanel.closeView();
-            recordingsPanel.closeView();
-            mixerOpen = false;
+            closeDetails();
         }
     }
 
@@ -374,15 +390,7 @@ FocusScope {
             requestedViewTimer.restart();
         } else {
             helpOpen = false;
-            trayMenu.closeMenu();
-            wallpaperPanel.closeView();
-            networkPanel.closeView();
-            bluetoothPanel.closeView();
-            themePanel.closeView();
-            sessionPanel.closeView();
-            resourcesPanel.closeView();
-            recordingsPanel.closeView();
-            mixerOpen = false;
+            closeDetails();
         }
     }
 
@@ -498,11 +506,6 @@ FocusScope {
         themePanel.closeView();
         sessionPanel.closeView();
         recordingsPanel.openView();
-    }
-
-    function closeMixer(): void {
-        mixerOpen = false;
-        keyboardFocus.forceActiveFocus();
     }
 
     function selectedMixerStream(): var {
@@ -1395,7 +1398,7 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    onCloseRequested: root.closeMixer()
+                    onCloseRequested: root.backFromDetail()
                 }
             }
         }
@@ -1564,7 +1567,7 @@ FocusScope {
 
                 if (wallpaperPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        wallpaperPanel.closeView();
+                        root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Slash) {
                         wallpaperPanel.invoke("enterSearch");
@@ -1605,7 +1608,7 @@ FocusScope {
                         if (recordingsPanel.deletePending.length > 0)
                             recordingsPanel.invoke("cancelDelete");
                         else
-                            recordingsPanel.closeView();
+                            root.backFromDetail();
                     } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
                         recordingsPanel.invoke("moveSelection", 1);
                     } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
@@ -1629,7 +1632,7 @@ FocusScope {
 
                 if (resourcesPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        resourcesPanel.closeView();
+                        root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_C) {
                         resourcesPanel.invoke("toggleCoreView");
@@ -1643,7 +1646,7 @@ FocusScope {
 
                 if (bluetoothPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        bluetoothPanel.closeView();
+                        root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         bluetoothPanel.invoke("moveSelection", -1);
@@ -1679,7 +1682,7 @@ FocusScope {
 
                 if (sessionPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        sessionPanel.closeView();
+                        root.backFromDetail();
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                         sessionPanel.invoke("moveGrid", 0, -1);
@@ -1703,7 +1706,7 @@ FocusScope {
 
                 if (themePanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
-                        themePanel.closeView();
+                        root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         themePanel.invoke("moveGrid", 0, -1);
@@ -1739,7 +1742,7 @@ FocusScope {
                         if (networkPanel.detailView)
                             networkPanel.invoke("toggleDetailView");
                         else
-                            networkPanel.closeView();
+                            root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         networkPanel.invoke("moveSelection", -1);
@@ -1778,7 +1781,10 @@ FocusScope {
 
                 if (trayMenu.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                        trayMenu.invoke("goBack");
+                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && trayMenu.panel && trayMenu.panel.stack.length <= 1)
+                            root.backFromDetail();
+                        else
+                            trayMenu.invoke("goBack");
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         trayMenu.invoke("moveSelection", -1);
