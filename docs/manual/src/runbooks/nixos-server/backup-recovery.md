@@ -14,14 +14,14 @@ Run that block in the shell before using snippets that reference those variables
 
 ## Quick recovery guide
 
-| Problem | First move |
-| --- | --- |
-| NixOS change broke the server | `run0 nixos-rebuild switch --rollback` |
-| One app is broken | Inspect local Snapper snapshots first |
-| Secret is missing or damaged | Inspect `restic-secrets` snapshots |
-| Local app data is gone | Inspect `restic-apps` snapshots |
-| Whole server was lost | Restore secrets/account state, app data, then application databases |
-| Vault file is missing or damaged | Recover from a ZFS snapshot before considering rollback |
+| Problem                          | First move                                                          |
+| -------------------------------- | ------------------------------------------------------------------- |
+| NixOS change broke the server    | `run0 nixos-rebuild switch --rollback`                              |
+| One app is broken                | Inspect local Snapper snapshots first                               |
+| Secret is missing or damaged     | Inspect `restic-secrets` snapshots                                  |
+| Local app data is gone           | Inspect `restic-apps` snapshots                                     |
+| Whole server was lost            | Restore secrets/account state, app data, then application databases |
+| Vault file is missing or damaged | Recover from a ZFS snapshot before considering rollback             |
 
 Before restoring mutable data, stop the service that writes to it and inspect the recovery source. When the machine still works, restore into a temporary directory before replacing live state.
 

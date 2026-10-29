@@ -25,7 +25,7 @@ assert_contains() {
   local expected="$2"
   local context="$3"
 
-  grep -Fq -- "$expected" <<< "$output" || fail "$context (missing: $expected)"
+  grep -Fq -- "$expected" <<<"$output" || fail "$context (missing: $expected)"
 }
 
 assert_not_contains() {
@@ -33,7 +33,7 @@ assert_not_contains() {
   local unexpected="$2"
   local context="$3"
 
-  if grep -Fq -- "$unexpected" <<< "$output"; then
+  if grep -Fq -- "$unexpected" <<<"$output"; then
     fail "$context (unexpected: $unexpected)"
   fi
 }
@@ -49,12 +49,12 @@ assert_eq() {
 repo_cache_key="$(printf '%s\0' "$repo" | sha256sum | awk '{print substr($1, 1, 16)}')"
 cache_root="$test_cache/dotfiles-options/$repo_cache_key"
 mkdir -p "$cache_root/values-v2"
-printf '%s\n' '[{"scope":"stale","name":"programs.gh.enable"}]' > "$cache_root/option-scopes-v2-$host.json"
-printf '%s\n' stale > "$cache_root/values-v2/sentinel"
+printf '%s\n' '[{"scope":"stale","name":"programs.gh.enable"}]' >"$cache_root/option-scopes-v2-$host.json"
+printf '%s\n' stale >"$cache_root/values-v2/sentinel"
 
 cold_list="$test_cache/cold-list"
 cold_docs_stderr="$test_cache/cold-docs.stderr"
-run_nf "$host" --refresh --list > "$cold_list" 2> "$cold_docs_stderr"
+run_nf "$host" --refresh --list >"$cold_list" 2>"$cold_docs_stderr"
 cache="$(run_nf "$host" --cache-path)"
 
 assert_eq "$cache" "$cache_root/option-scopes-v3-$host.json" "current docs cache version"
@@ -104,14 +104,14 @@ fi
 assert_contains "$invalid_scope" "invalid scope" "invalid scope diagnostic"
 
 gh_cold_stderr="$test_cache/gh-cold.stderr"
-gh_cold="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable 2> "$gh_cold_stderr")"
+gh_cold="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable 2>"$gh_cold_stderr")"
 assert_contains "$gh_cold" "current/effective value:" "Home Manager full value heading"
 assert_contains "$gh_cold" $'current/effective value:\ntrue' "semantic Home Manager value"
 assert_not_contains "$gh_cold" "<missing>" "defaulted Home Manager value"
 assert_contains "$(<"$gh_cold_stderr")" "cache miss:" "cold full-value cache"
 
 gh_warm_stderr="$test_cache/gh-warm.stderr"
-gh_warm="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable 2> "$gh_warm_stderr")"
+gh_warm="$(NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable 2>"$gh_warm_stderr")"
 assert_eq "$gh_warm" "$gh_cold" "warm full-value result"
 assert_contains "$(<"$gh_warm_stderr")" "cache hit:" "warm full-value cache"
 
@@ -127,7 +127,10 @@ assert_contains "$(run_nf "$host" --scope nixos --value programs.git.enable)" $'
 assert_contains "$(run_nf "$host" --scope nixos --value services.openssh.enable)" $'current/effective value:\nfalse' "normal NixOS service value"
 assert_contains "$(run_nf "$host" --scope nixos --value dotfiles.profile.name)" $'current/effective value:\nnixos-orbstack' "local custom option value"
 
-short_packages="$({ export NIX_OPTIONS_FZF_VALUE_MAX_ITEMS=1; run_nf "$host" --scope nixos --value environment.systemPackages; })"
+short_packages="$({
+  export NIX_OPTIONS_FZF_VALUE_MAX_ITEMS=1
+  run_nf "$host" --scope nixos --value environment.systemPackages
+})"
 assert_contains "$short_packages" "<list:" "normal list value"
 assert_contains "$short_packages" "... " "normal list truncation"
 full_packages="$(run_nf "$host" --scope nixos --value-full environment.systemPackages)"
@@ -182,73 +185,73 @@ assert_not_contains "$full_preview" "<missing>" "live full preview value"
 
 nixos_zsh_cache="$({ NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope nixos --value programs.zsh.enable >/dev/null; } 2>&1 | sed -n 's/^cache hit: //p')"
 hm_zsh_cache="$({ NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value programs.zsh.enable >/dev/null; } 2>&1 | sed -n 's/^cache hit: //p')"
-[ -n "$nixos_zsh_cache" ] && [ -n "$hm_zsh_cache" ] && [ "$nixos_zsh_cache" != "$hm_zsh_cache" ] \
-  || fail "multi-scope value cache keys collided"
+[ -n "$nixos_zsh_cache" ] && [ -n "$hm_zsh_cache" ] && [ "$nixos_zsh_cache" != "$hm_zsh_cache" ] ||
+  fail "multi-scope value cache keys collided"
 
 fzf() {
   local arg
   local call_count
   local selected
 
-  : > "$NF_FZF_ARGV_FILE"
+  : >"$NF_FZF_ARGV_FILE"
   for arg in "$@"; do
-    printf '%s\n' "$arg" >> "$NF_FZF_ARGV_FILE"
+    printf '%s\n' "$arg" >>"$NF_FZF_ARGV_FILE"
   done
 
   call_count="$(<"$NF_FZF_STATE_FILE")"
   call_count=$((call_count + 1))
-  printf '%s\n' "$call_count" > "$NF_FZF_STATE_FILE"
-  cat > "$NF_FZF_INPUT_FILE.$call_count"
+  printf '%s\n' "$call_count" >"$NF_FZF_STATE_FILE"
+  cat >"$NF_FZF_INPUT_FILE.$call_count"
 
   case "$FZF_STUB_MODE" in
-    ctrlp-hm-zsh)
-      selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-      [ -n "$selected" ] || return 1
-      printf 'ctrl-p\n%s\n' "$selected"
+  ctrlp-hm-zsh)
+    selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+    [ -n "$selected" ] || return 1
+    printf 'ctrl-p\n%s\n' "$selected"
+    ;;
+  ctrlp-unique)
+    selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.gh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+    [ -n "$selected" ] || return 1
+    printf 'ctrl-p\n%s\n' "$selected"
+    ;;
+  grouped-zoom)
+    case "$call_count" in
+    1)
+      selected="$(awk -F '\t' '$1 == "programs/" { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+      printf '%s\n' "$selected"
       ;;
-    ctrlp-unique)
-      selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.gh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-      [ -n "$selected" ] || return 1
-      printf 'ctrl-p\n%s\n' "$selected"
-      ;;
-    grouped-zoom)
-      case "$call_count" in
-        1)
-          selected="$(awk -F '\t' '$1 == "programs/" { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-          printf '%s\n' "$selected"
-          ;;
-        2)
-          selected="$(awk -F '\t' '$1 == "programs.zsh/" { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-          printf '%s\n' "$selected"
-          ;;
-        *)
-          selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-          printf 'ctrl-p\n%s\n' "$selected"
-          ;;
-      esac
-      ;;
-    prefix-back)
-      selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
-      if [ "$call_count" -eq 1 ]; then
-        printf 'ctrl-b\n%s\n' "$selected"
-      else
-        printf 'ctrl-p\n%s\n' "$selected"
-      fi
-      ;;
-    toggle-mode)
-      if [ "$call_count" -eq 1 ]; then
-        selected="$(sed -n '1p' "$NF_FZF_INPUT_FILE.$call_count")"
-        printf 'ctrl-o\n%s\n' "$selected"
-      else
-        return 1
-      fi
-      ;;
-    value-search)
-      sed -n '1p' "$NF_FZF_INPUT_FILE.$call_count"
+    2)
+      selected="$(awk -F '\t' '$1 == "programs.zsh/" { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+      printf '%s\n' "$selected"
       ;;
     *)
-      return 1
+      selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+      printf 'ctrl-p\n%s\n' "$selected"
       ;;
+    esac
+    ;;
+  prefix-back)
+    selected="$(awk -F '\t' -v scope="$hm_scope" '$1 == "programs.zsh.enable" && $3 == scope { print; exit }' "$NF_FZF_INPUT_FILE.$call_count")"
+    if [ "$call_count" -eq 1 ]; then
+      printf 'ctrl-b\n%s\n' "$selected"
+    else
+      printf 'ctrl-p\n%s\n' "$selected"
+    fi
+    ;;
+  toggle-mode)
+    if [ "$call_count" -eq 1 ]; then
+      selected="$(sed -n '1p' "$NF_FZF_INPUT_FILE.$call_count")"
+      printf 'ctrl-o\n%s\n' "$selected"
+    else
+      return 1
+    fi
+    ;;
+  value-search)
+    sed -n '1p' "$NF_FZF_INPUT_FILE.$call_count"
+    ;;
+  *)
+    return 1
+    ;;
   esac
 }
 export -f fzf
@@ -258,7 +261,7 @@ export NF_FZF_ARGV_FILE="$test_cache/fzf.argv"
 export NF_FZF_INPUT_FILE="$test_cache/fzf.input"
 export NF_FZF_STATE_FILE="$test_cache/fzf.state"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=ctrlp-hm-zsh
 ctrlp_output="$(run_nf "$host" programs.zsh)"
 assert_eq "$ctrlp_output" $'programs.zsh.enable\thome-manager:joshan' "Ctrl-P scoped collision identity"
@@ -270,11 +273,11 @@ assert_contains "$(<"$NF_FZF_ARGV_FILE")" "--scope {3} --definition-items {1}" "
 assert_contains "$(<"$NF_FZF_ARGV_FILE")" "preview-option' docs '$host' {3} {1}" "Ctrl-R scoped backing command"
 assert_contains "$(<"$NF_FZF_INPUT_FILE.1")" $'programs.zsh.enable\t[Home Manager: joshan]\thome-manager:joshan' "interactive backing scope identity"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=ctrlp-unique
 assert_eq "$(run_nf "$host" programs.gh)" "programs.gh.enable" "Ctrl-P unique natural option output"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=grouped-zoom
 grouped_output="$(NIX_OPTIONS_FZF_LIST_MODE=grouped run_nf "$host")"
 assert_eq "$grouped_output" $'programs.zsh.enable\thome-manager:joshan' "grouped Enter zoom and Ctrl-P identity"
@@ -282,25 +285,25 @@ assert_eq "$(<"$NF_FZF_STATE_FILE")" 3 "grouped navigation depth"
 assert_contains "$(<"$NF_FZF_INPUT_FILE.1")" $'programs/\t\t-' "root grouped browsing"
 assert_contains "$(<"$NF_FZF_INPUT_FILE.2")" $'programs.zsh/\t\t-' "nested grouped browsing"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=prefix-back
 prefix_back_output="$(run_nf "$host" programs.zsh)"
 assert_eq "$prefix_back_output" $'programs.zsh.enable\thome-manager:joshan' "prefix Ctrl-B navigation identity"
 assert_eq "$(<"$NF_FZF_STATE_FILE")" 2 "prefix Ctrl-B redraw"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=toggle-mode
 NIX_OPTIONS_FZF_LIST_MODE=flat run_nf "$host" programs >/dev/null
 assert_eq "$(<"$NF_FZF_STATE_FILE")" 2 "Ctrl-O redraw"
 assert_contains "$(<"$NF_FZF_INPUT_FILE.2")" $'programs.zsh/\t\t-' "Ctrl-O grouped mode"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 export FZF_STUB_MODE=value-search
 run_nf "$host" --scope "$hm_scope" --value-search programs.btop.settings >/dev/null
 assert_contains "$(<"$NF_FZF_ARGV_FILE")" "--definition-item 'programs.btop.settings' {1}" "value-search item-origin preview"
 assert_contains "$(<"$NF_FZF_INPUT_FILE.1")" "update_ms = 100" "value-search evaluated items"
 
-printf '0\n' > "$NF_FZF_STATE_FILE"
+printf '0\n' >"$NF_FZF_STATE_FILE"
 run_nf "$host" --scope "$hm_scope" --value-search programs.zsh.initContent >/dev/null
 multiline_record="$(<"$NF_FZF_INPUT_FILE.1")"
 assert_contains "$multiline_record" '\n' "multiline value-search transport"
@@ -310,10 +313,10 @@ assert_contains "$multiline_origin" "Home Manager integration bridge" "multiline
 assert_not_contains "$multiline_origin" "$multiline_id" "multiline definition item display"
 
 warm_docs_stderr="$test_cache/warm-docs.stderr"
-run_nf "$host" --list >/dev/null 2> "$warm_docs_stderr"
+run_nf "$host" --list >/dev/null 2>"$warm_docs_stderr"
 assert_not_contains "$(<"$warm_docs_stderr")" "Building scoped option docs cache" "warm docs cache"
 refresh_docs_stderr="$test_cache/refresh-docs.stderr"
-run_nf "$host" --refresh --list >/dev/null 2> "$refresh_docs_stderr"
+run_nf "$host" --refresh --list >/dev/null 2>"$refresh_docs_stderr"
 assert_contains "$(<"$refresh_docs_stderr")" "Building scoped option docs cache" "single-host refresh"
 
 run_nf --clear-value-cache >/dev/null
@@ -323,7 +326,7 @@ if find "$cache_root/values-v3" -type f -print -quit | grep -q .; then
 fi
 [ -f "$cache_root/values-v2/sentinel" ] || fail "clearing current values removed old version"
 post_clear_stderr="$test_cache/post-clear.stderr"
-NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable >/dev/null 2> "$post_clear_stderr"
+NIX_OPTIONS_FZF_CACHE_DEBUG=1 run_nf "$host" --scope "$hm_scope" --value-full programs.gh.enable >/dev/null 2>"$post_clear_stderr"
 assert_contains "$(<"$post_clear_stderr")" "cache miss:" "cold value after clear"
 
 hosts_output="$(run_nf --hosts)"
@@ -337,13 +340,12 @@ assert_contains "$mac_scopes" $'home-manager:joshan\tHome Manager: joshan' "Darw
 assert_contains "$(run_nf mac --scope darwin --value system.defaults.dock.autohide)" $'current/effective value:\ntrue' "Darwin configured system option"
 assert_contains "$(run_nf mac --scope "$hm_scope" --value programs.zsh.enable)" $'current/effective value:\ntrue' "Darwin Home Manager value"
 
-
 run_nf n --scopes >/dev/null
 assert_eq "$(run_nf --default-host)" "nixos" "remembered alias resolution"
 run_nf nixos --scopes >/dev/null
 nixos_cache="$(run_nf nixos --cache-path)"
-jq -e --arg hm "$hm_scope" 'any(.scope == $hm and .name == "programs.plasma.enable")' "$nixos_cache" >/dev/null \
-  || fail "host-imported third-party Plasma options are missing"
+jq -e --arg hm "$hm_scope" 'any(.scope == $hm and .name == "programs.plasma.enable")' "$nixos_cache" >/dev/null ||
+  fail "host-imported third-party Plasma options are missing"
 
 run_nf o --scopes >/dev/null
 assert_eq "$(run_nf --default-host)" "$host" "remembered host switch"
@@ -351,7 +353,10 @@ assert_contains "$(run_nf --scopes)" "$hm_scope" "bare command remembered host"
 
 run_nf --clear-default-host >/dev/null
 assert_eq "$(run_nf --default-host)" "<unset>" "clear remembered host"
-fallback_scopes="$({ export NIX_OPTIONS_FZF_DEFAULT_HOST=o; run_nf --scopes; })"
+fallback_scopes="$({
+  export NIX_OPTIONS_FZF_DEFAULT_HOST=o
+  run_nf --scopes
+})"
 assert_contains "$fallback_scopes" "$hm_scope" "environment host alias fallback"
 run_nf o --scopes >/dev/null
 
@@ -360,7 +365,7 @@ assert_contains "$server_stylix_origin" "home-manager/nixos/common.nix [Home Man
 run_nf o --scopes >/dev/null
 
 refresh_all_stderr="$test_cache/refresh-all.stderr"
-run_nf --refresh-all >/dev/null 2> "$refresh_all_stderr"
+run_nf --refresh-all >/dev/null 2>"$refresh_all_stderr"
 assert_eq "$(grep -c '^Building scoped option docs cache' "$refresh_all_stderr")" 5 "all-host refresh"
 for refreshed_host in mac nixos nixos-arm-parallels nixos-orbstack nixos-server; do
   [ -s "$cache_root/option-scopes-v3-$refreshed_host.json" ] || fail "missing refreshed cache for $refreshed_host"

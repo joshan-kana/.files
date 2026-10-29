@@ -25,12 +25,12 @@ normalize() {
   cp "$scratch" "$output"
 }
 
-if [[ -r "$live" ]]; then
+if [[ -r $live ]]; then
   live_file="$live"
 elif command -v orb >/dev/null 2>&1; then
   tmp_file="$(mktemp)"
   tmp_files+=("$tmp_file")
-  orb -m nixos-orbstack cat "$live" > "$tmp_file"
+  orb -m nixos-orbstack cat "$live" >"$tmp_file"
   live_file="$tmp_file"
 else
   echo "Cannot read $live and orb is not available." >&2

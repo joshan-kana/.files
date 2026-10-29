@@ -18,15 +18,15 @@ disk_a="${2:-}"
 disk_b="${3:-}"
 
 case "$mode" in
-  --dry-run | --apply) ;;
-  -h | --help | "")
-    usage
-    exit 0
-    ;;
-  *)
-    usage >&2
-    exit 2
-    ;;
+--dry-run | --apply) ;;
+-h | --help | "")
+  usage
+  exit 0
+  ;;
+*)
+  usage >&2
+  exit 2
+  ;;
 esac
 
 if [ -z "$disk_a" ] || [ -z "$disk_b" ] || [ -n "${4:-}" ]; then
@@ -64,7 +64,7 @@ if [ -z "$pool_name" ]; then
   exit 1
 fi
 
-if [[ "$data_root" != /* ]] || [ "$data_root" = "/" ]; then
+if [[ $data_root != /* ]] || [ "$data_root" = "/" ]; then
   echo "ERROR: unsafe data-root path evaluated from Nix: $data_root" >&2
   exit 1
 fi
@@ -87,11 +87,11 @@ printf 'Data group: %s\n' "$data_group"
 echo
 
 case "$disk_a:$disk_b" in
-  /dev/disk/by-id/*:/dev/disk/by-id/*) ;;
-  *)
-    echo "ERROR: use stable /dev/disk/by-id/... paths only." >&2
-    exit 1
-    ;;
+/dev/disk/by-id/*:/dev/disk/by-id/*) ;;
+*)
+  echo "ERROR: use stable /dev/disk/by-id/... paths only." >&2
+  exit 1
+  ;;
 esac
 
 for disk in "$disk_a" "$disk_b"; do
@@ -138,8 +138,7 @@ if printf '%s\n' "$import_output" |
     END {
       exit found ? 0 : 1
     }
-  '
-then
+  '; then
   echo "ERROR: an existing importable pool named '$pool_name' was detected." >&2
   echo "Import the existing pool instead of running first-time setup." >&2
   exit 1
