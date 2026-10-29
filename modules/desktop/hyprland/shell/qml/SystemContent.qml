@@ -162,7 +162,7 @@ FocusScope {
         },
         {
             key: "ESC",
-            action: "Back"
+            action: root.controlsRoot ? "Back to Controls" : "Close"
         }
     ] : (networkPanel.open ? [
             {
@@ -183,7 +183,7 @@ FocusScope {
             },
             {
                 key: "ESC",
-                action: "Back"
+                action: root.controlsRoot ? "Back to Controls" : "Close"
             }
         ] : (themePanel.open ? [
                 {
@@ -196,7 +196,7 @@ FocusScope {
                 },
                 {
                     key: "ESC",
-                    action: "Back"
+                    action: root.controlsRoot ? "Back to Controls" : "Close"
                 }
             ] : (sessionPanel.open ? [
                     {
@@ -209,7 +209,7 @@ FocusScope {
                     },
                     {
                         key: "ESC",
-                        action: "Back"
+                        action: root.controlsRoot ? "Back to Controls" : "Close"
                     }
                 ] : (trayMenu.open ? [
                         {
@@ -1479,6 +1479,7 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
+                    returnToControls: root.controlsRoot
                     onKeyboardRequested: keyboardFocus.forceActiveFocus()
                     onSwitchLaunched: root.themeTerminalActiveChanged(true)
                     onSwitchFinished: root.themeTerminalActiveChanged(false)
