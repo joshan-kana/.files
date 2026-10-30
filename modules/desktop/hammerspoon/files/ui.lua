@@ -7,6 +7,15 @@ local maximum = 3
 local width = 380
 local gap = 10
 local inset = 22
+local iconSize = 34
+local iconX = 23
+local textX = 72
+local textRight = 18
+local titleSize = 15
+local detailSize = 12
+local lineGap = 4
+local verticalPadding = 14
+local accentHeight = 36
 
 local styles = {
 	info = { symbol = "i", color = "blue", duration = 2.5 },
@@ -46,14 +55,69 @@ local function text(frame, value, size, color, alignment, lineBreak)
 	}
 end
 
-local function toastHeight(title, detail)
-	if detail then
-		return 80
+-- Use the actual Stylix font metrics so wrapping and vertical centring do not
+-- depend on the byte length of a message.
+local function measure(value, font, size)
+	return hs.drawing.getTextDrawingSize(hs.styledtext.new(value, {
+		font = { name = font, size = size },
+	}))
+end
+
+local function wrapTitle(title, maxWidth, font)
+	local lines = {}
+
+	local function addWord(word, current)
+		local candidate = current == "" and word or (current .. " " .. word)
+		if measure(candidate, font, titleSize).w <= maxWidth then
+			return candidate
+		end
+		if current ~= "" then
+			table.insert(lines, current)
+		end
+		if measure(word, font, titleSize).w <= maxWidth then
+			return word
+		end
+
+		-- Extremely long paths and unbroken strings still wrap cleanly.
+		local segment = ""
+		for _, codepoint in utf8.codes(word) do
+			local character = utf8.char(codepoint)
+			if segment ~= "" and measure(segment .. character, font, titleSize).w > maxWidth then
+				table.insert(lines, segment)
+				segment = ""
+			end
+			segment = segment .. character
+		end
+		return segment
 	end
-	if #title > 70 then
-		return 100
+
+	for paragraph in (title .. "\n"):gmatch("(.-)\n") do
+		local current = ""
+		for word in paragraph:gmatch("%S+") do
+			current = addWord(word, current)
+		end
+		table.insert(lines, current)
 	end
-	return #title > 34 and 82 or 66
+
+	return table.concat(lines, "\n"), #lines
+end
+
+local function textLayout(entry, canvasWidth)
+	local font = (theme.fonts or {}).sansSerif or "Helvetica Neue"
+	local bodyWidth = canvasWidth - textX - textRight
+	local title, lines = wrapTitle(entry.title, bodyWidth, font)
+	local titleHeight = measure("A", font, titleSize).h * lines
+	local detailHeight = entry.detail and measure("A", font, detailSize).h or 0
+	local contentHeight = titleHeight + (entry.detail and (lineGap + detailHeight) or 0)
+	return {
+		font = font,
+		bodyWidth = bodyWidth,
+		title = title,
+		titleHeight = titleHeight,
+		detailHeight = detailHeight,
+		contentHeight = contentHeight,
+		height = math.max(entry.detail and 80 or 68, contentHeight + verticalPadding * 2),
+	}
 end
 
 local function activeScreen()
@@ -65,7 +129,7 @@ local function position(entry, index)
 	local frame = entry.screen:frame()
 	local w = math.min(width, frame.w - inset * 2)
 	return {
-		x = frame.x + frame.w - w - inset,
+		x = frame.x + (frame.w - w) / 2,
 		y = frame.y + inset + (index - 1) * (entry.height + gap),
 		w = w,
 		h = entry.height,
@@ -104,30 +168,39 @@ local function render(entry)
 	local style = styles[entry.kind] or styles.info
 	local accent = colors[style.color] or colors.fg
 	local w, h = entry.canvas:frame().w, entry.height
-	local bodyWidth = w - 92
+	local layout = textLayout(entry, w)
+	local iconY = (h - iconSize) / 2
+	local symbolHeight = measure(style.symbol, layout.font, 18).h
+	local contentY = (h - layout.contentHeight) / 2
 	local elements = {
 		rect({ x = 0.5, y = 0.5, w = w - 1, h = h - 1 }, colors.bgAlphaStrong, 16, colorWithAlpha(colors.stroke, 0.42)),
-		rect({ x = 0, y = 13, w = 3, h = h - 26 }, accent, 1.5),
-		rect({ x = 17, y = (h - 32) / 2, w = 32, h = 32 }, colorWithAlpha(accent, 0.16), 10),
-		text({ x = 17, y = (h - 32) / 2 + 5, w = 32, h = 24 }, style.symbol, 18, accent, "center"),
-	}
-
-	local multiline = not entry.detail and entry.height > 66
-	local titleY = (entry.detail or multiline) and 16 or (h - 26) / 2
-	local titleHeight = multiline and h - 28 or 25
-	table.insert(
-		elements,
+		-- Keep the accent entirely within the panel instead of crossing its curved edge.
+		rect({ x = 9, y = (h - accentHeight) / 2, w = 4, h = accentHeight }, accent, 2),
+		rect({ x = iconX, y = iconY, w = iconSize, h = iconSize }, colorWithAlpha(accent, 0.16), 10),
 		text(
-			{ x = 64, y = titleY, w = bodyWidth, h = titleHeight },
-			entry.title,
-			15,
-			colors.fg,
-			nil,
-			multiline and "wordWrap" or nil
-		)
-	)
+			{ x = iconX, y = (h - symbolHeight) / 2, w = iconSize, h = symbolHeight },
+			style.symbol,
+			18,
+			accent,
+			"center"
+		),
+		text(
+			{ x = textX, y = contentY, w = layout.bodyWidth, h = layout.titleHeight },
+			layout.title,
+			titleSize,
+			colors.fg
+		),
+	}
 	if entry.detail then
-		table.insert(elements, text({ x = 64, y = 44, w = bodyWidth, h = 20 }, entry.detail, 12, colors.fgDim))
+		table.insert(
+			elements,
+			text({
+				x = textX,
+				y = contentY + layout.titleHeight + lineGap,
+				w = layout.bodyWidth,
+				h = layout.detailHeight,
+			}, entry.detail, detailSize, colors.fgDim)
+		)
 	end
 	entry.canvas:replaceElements(table.unpack(elements))
 end
@@ -154,7 +227,7 @@ function M.show(message, options)
 		entry.kind = kind
 		entry.detail = detail
 		entry.screen = screen
-		entry.height = toastHeight(title, detail)
+		entry.height = textLayout(entry, math.min(width, screen:frame().w - inset * 2)).height
 		entry.canvas:frame(position(entry, 1))
 	else
 		if #entries >= maximum then
@@ -166,8 +239,8 @@ function M.show(message, options)
 			kind = kind,
 			detail = detail,
 			screen = screen,
-			height = toastHeight(title, detail),
 		}
+		entry.height = textLayout(entry, math.min(width, screen:frame().w - inset * 2)).height
 		entry.canvas = hs.canvas.new(position(entry, 1))
 		entry.canvas:level("status")
 		entry.canvas:behavior({ "canJoinAllSpaces", "stationary" })
