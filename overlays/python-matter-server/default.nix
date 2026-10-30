@@ -13,11 +13,9 @@ _: {
             rev = "refs/tags/${version}";
             hash = "sha256-vnI57h/aesnaDYorq1PzcMCLmV0z0ZBJvMg4Nzh1Dtc=";
           };
-          passthru =
-            (old.passthru or { })
-            // prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
-              autoUpdate = false;
-            };
+          passthru = (old.passthru or { }) // {
+            autoUpdate = false;
+          };
           patches = (old.patches or [ ]) ++ [ ./skip-invalid-paa-certificates.patch ];
         });
     })
