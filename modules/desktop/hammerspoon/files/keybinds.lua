@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- All keybindings in one place. Add, remove, or change shortcuts here.
 -- Legend:
@@ -39,7 +40,7 @@ local function quickSpace()
 
 	local current = yabai_utils.json("query --spaces --space")
 	if not current or not yabai_utils.ok("space --create " .. current.display) then
-		hs.alert.show("Cannot create quick workspace (check yabai scripting addition)")
+		ui.error("Cannot create quick workspace (check yabai scripting addition)")
 		return nil
 	end
 
@@ -51,7 +52,7 @@ local function quickSpace()
 			break
 		end
 	end
-	hs.alert.show("Could not label quick workspace")
+	ui.error("Could not label quick workspace")
 	return nil
 end
 
@@ -257,7 +258,7 @@ local bindings = {
 			if win then
 				local target = quickSpace()
 				if target and not yabai_utils.windowCmd(win.id, "--space " .. target.index) then
-					hs.alert.show("Could not send window to quick workspace")
+					ui.error("Could not send window to quick workspace")
 				end
 			end
 		end,

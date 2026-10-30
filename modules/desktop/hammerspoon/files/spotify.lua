@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- Spotify "Expand Now Playing view" button.
 --
@@ -85,7 +86,7 @@ function M.open()
 		end
 
 		if attempts >= 20 then
-			hs.alert.show("Spotify window not found")
+			ui.error("Spotify window not found")
 			return
 		end
 

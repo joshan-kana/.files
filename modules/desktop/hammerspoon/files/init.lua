@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
@@ -49,11 +50,11 @@ end
 local stickyHyper = hs.hotkey.modal.new()
 
 function stickyHyper:entered()
-	hs.alert.show("Hyper-locked")
+	ui.mode("Hyper lock", true, "Shortcuts stay active")
 	self._active = true
 end
 function stickyHyper:exited()
-	hs.alert.show("Hyper-unlocked")
+	ui.mode("Hyper lock", false, "Normal keyboard input restored")
 	self._active = false
 end
 

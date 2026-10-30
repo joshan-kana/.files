@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- Seek-only media controls.
 -- No target picker, no polling, no Arc tab scanning.
@@ -18,7 +19,7 @@ local MPV_SOCKET_PATTERNS = {
 }
 
 local function alert(msg)
-	hs.alert.show(msg)
+	ui.show(msg, { kind = "warning" })
 end
 
 local function runAppleScript(script, quiet)

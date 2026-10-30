@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 local yabai = require("yabai_utils")
 
 local M = {}
@@ -7,23 +8,23 @@ local newWindowMenus = { "New Window", "New Finder Window", "New OS Window" }
 
 function M.toggleMode()
 	newWindowMode = not newWindowMode
-	hs.alert.show(newWindowMode and "Apps: new windows on this Space" or "Apps: switch to existing windows")
+	ui.mode("New-window mode", newWindowMode, newWindowMode and "Create on current Space" or "Switch to existing apps")
 end
 
 local function focusNewWindow(pid, existing, space, attempts)
 	for _, window in ipairs(yabai.json("query --windows") or {}) do
 		if window.pid == pid and not existing[window.id] and window.subrole == "AXStandardWindow" then
 			if window.space ~= space and not yabai.windowCmd(window.id, "--space " .. space) then
-				hs.alert.show("Could not move new window to this Space")
+				ui.error("Could not move new window to this Space")
 				return
 			end
 			local focusedSpace = yabai.json("query --spaces --space")
 			if (not focusedSpace or focusedSpace.index ~= space) and not yabai.ok("space --focus " .. space) then
-				hs.alert.show("Could not return to original Space")
+				ui.error("Could not return to original Space")
 				return
 			end
 			if not window["has-focus"] and not yabai.windowCmd(window.id, "--focus") then
-				hs.alert.show("Could not focus new window")
+				ui.error("Could not focus new window")
 			end
 			return
 		end
@@ -34,7 +35,7 @@ local function focusNewWindow(pid, existing, space, attempts)
 			focusNewWindow(pid, existing, space, attempts + 1)
 		end)
 	else
-		hs.alert.show("New app window did not appear")
+		ui.error("New app window did not appear")
 	end
 end
 
@@ -54,7 +55,7 @@ function M.open(name)
 	local currentSpace = yabai.json("query --spaces --space")
 	local windows = yabai.json("query --windows")
 	if not currentSpace or not windows then
-		hs.alert.show("Could not identify current Space")
+		ui.error("Could not identify current Space")
 		return
 	end
 
@@ -66,7 +67,7 @@ function M.open(name)
 	for _, menu in ipairs(newWindowMenus) do
 		if app:findMenuItem(menu) then
 			if not app:selectMenuItem(menu) then
-				hs.alert.show("Could not open a new " .. name .. " window")
+				ui.error("Could not open a new " .. name .. " window")
 				return
 			end
 			hs.timer.doAfter(0.1, function()
@@ -76,7 +77,7 @@ function M.open(name)
 		end
 	end
 
-	hs.alert.show(name .. " does not offer a New Window command")
+	ui.show(name .. " has no New Window command", { kind = "warning" })
 end
 
 return M

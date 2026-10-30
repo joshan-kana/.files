@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- Shared yabai command wrappers used by init.lua and feature modules.
 
@@ -140,12 +141,12 @@ M.resizeMode = hs.hotkey.modal.new()
 
 function M.resizeMode:entered()
 	self._active = true
-	hs.alert.show("Resize mode")
+	ui.mode("Resize mode", true, "Use the direction keys to resize")
 end
 
 function M.resizeMode:exited()
 	self._active = false
-	hs.alert.show("Resize done")
+	ui.mode("Resize mode", false)
 end
 
 function M.resizeMode:toggle()
