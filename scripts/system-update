@@ -3,6 +3,7 @@ set -euo pipefail
 
 native=
 package_systems=
+nixpkgs_path=
 
 update_package() {
   if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -29,6 +30,12 @@ update_package() {
   if ! jq -e --arg name "$1" 'index($name) != null' <<<"$packages" >/dev/null; then
     printf 'Unknown manually updated package: %s\n' "$1" >&2
     exit 2
+  fi
+
+  # nix-update's custom-script path imports <nixpkgs>; CI has no global NIX_PATH.
+  if [[ -z "$nixpkgs_path" ]]; then
+    nixpkgs_path="$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
+    export NIX_PATH="nixpkgs=$nixpkgs_path${NIX_PATH:+:$NIX_PATH}"
   fi
 
   source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
