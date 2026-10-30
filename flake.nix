@@ -437,7 +437,9 @@
                   else
                     assert lib.assertMsg (builtins.isBool policy.value)
                       "Package ${name}: passthru.autoUpdate must be a Boolean.";
-                    true
+                    # A package can be supported in metadata but have a broken
+                    # derivation on this system; skip only that system variant.
+                    (builtins.tryEval package.drvPath).success
                 ) (lib.genAttrs names (name: cfg.pkgs.${name}));
               in
               packages // updateable
