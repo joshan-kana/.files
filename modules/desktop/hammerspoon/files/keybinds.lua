@@ -104,7 +104,7 @@ local bindings = {
 	},
 	{
 		mods = "meh",
-		key = "c",
+		key = "p",
 		fn = function()
 			app_switcher.open("ChatGPT")
 		end,
