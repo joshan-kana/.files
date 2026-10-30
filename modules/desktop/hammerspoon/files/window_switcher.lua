@@ -22,7 +22,6 @@ local ui = {
 	iconSize = 36,
 	cornerRadius = 18,
 	rowRadius = 13,
-	font = "Helvetica Neue",
 	titleSize = 15,
 	appSize = 12,
 	-- colours are resolved from theme.lua at render-time via getColors()
@@ -65,7 +64,7 @@ local function text(frame, value, size, color, alignment)
 		action = "fill",
 		frame = frame,
 		text = value,
-		textFont = ui.font,
+		textFont = theme.fonts.sansSerif,
 		textSize = size,
 		textColor = color,
 		textLineBreak = "truncateTail",

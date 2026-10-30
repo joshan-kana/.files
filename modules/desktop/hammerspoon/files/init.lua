@@ -3,6 +3,12 @@ local hs = _G.hs
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
+local theme = require("theme")
+local colors = theme.colors()
+hs.alert.defaultStyle.fillColor = colors.bgAlphaStrong
+hs.alert.defaultStyle.strokeColor = colors.stroke
+hs.alert.defaultStyle.textColor = colors.fg
+hs.alert.defaultStyle.textFont = theme.fonts.sansSerif
 _G.eventtapBindings = {}
 
 local function bindEventtap(mods, key, fn, rpt)
