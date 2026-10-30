@@ -656,6 +656,15 @@
             text = builtins.readFile ./scripts/update-schemas;
           };
 
+          buildSystems = pkgs.writeShellApplication {
+            name = "build-systems";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.jq
+            ];
+            text = builtins.readFile ./scripts/build-systems;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -777,6 +786,11 @@
             type = "app";
             program = lib.getExe docsCommands.serve;
             meta.description = "Build and live-preview the generated repository manual";
+          };
+          build-systems = {
+            type = "app";
+            program = lib.getExe buildSystems;
+            meta.description = "Build all system configurations";
           };
           system-update = {
             type = "app";
