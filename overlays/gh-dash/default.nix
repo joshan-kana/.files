@@ -8,12 +8,12 @@ _:
         .legacyPackages.${final.stdenv.hostPlatform.system}.gh-dash.overrideAttrs
           (
             finalAttrs: old: {
-              version = "4.25.2-patched";
+              version = "4.25.2";
               __intentionallyOverridingVersion = true;
               src = final.fetchFromGitHub {
                 owner = "dlvhdr";
                 repo = "gh-dash";
-                rev = "v${final.lib.removeSuffix "-patched" finalAttrs.version}";
+                rev = "v${finalAttrs.version}";
                 hash = "sha256-3iUBuMvA2Xh7UjTiFNEs3tuZMCnSt/bIhTSEDD92yCU=";
               };
               passthru = (old.passthru or { }) // {
