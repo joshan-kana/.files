@@ -9,7 +9,6 @@ _:
           (
             finalAttrs: old: {
               version = "4.25.2";
-              __intentionallyOverridingVersion = true;
               src = final.fetchFromGitHub {
                 owner = "dlvhdr";
                 repo = "gh-dash";
