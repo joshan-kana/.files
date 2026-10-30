@@ -99,6 +99,15 @@ local bindings = {
 	},
 	{
 		mods = "meh",
+		key = "c",
+		fn = function()
+			app_switcher.open("ChatGPT")
+		end,
+		section = "APPS",
+		desc = "ChatGPT",
+	},
+	{
+		mods = "meh",
 		key = "s",
 		fn = function()
 			app_switcher.open("Spotify")
