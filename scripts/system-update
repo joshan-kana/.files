@@ -32,7 +32,6 @@ update_package() {
     exit 2
   fi
 
-  # nix-update's custom-script path imports <nixpkgs>; CI has no global NIX_PATH.
   if [[ -z "$nixpkgs_path" ]]; then
     nixpkgs_path="$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
     export NIX_PATH="nixpkgs=$nixpkgs_path${NIX_PATH:+:$NIX_PATH}"
