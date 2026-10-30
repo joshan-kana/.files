@@ -107,16 +107,32 @@
         ];
       };
   };
-  nix = extendScope moduleRegistry.nix {
-    server = { config, inputs, ... }: {
-      boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+  nix =
+    extendScope
+      (editScope moduleRegistry.nix {
+        builders = { inherited, lib, ... }: {
+          # The server is not a remote builder for itself.
+          nix.buildMachines = lib.filter (
+            builder: builder.hostName != "nixos-server.home"
+          ) inherited.nix.buildMachines;
+        };
+      })
+      {
+        server = { config, inputs, ... }: {
+          boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-      home-manager.sharedModules = [
-        "${inputs.home-manager}/modules/programs/attic-client.nix"
-      ];
-      users.users.${config.dotfiles.users.primary.name}.linger = true;
-    };
-  };
+          users.users.${config.dotfiles.users.primary.name} = {
+            openssh.authorizedKeys.keys = [
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEER0NqlNCN0MYwBhWKNnk8iNSApeiDPiXDziS5aU5jz nix-builder"
+            ];
+            linger = true;
+          };
+
+          home-manager.sharedModules = [
+            "${inputs.home-manager}/modules/programs/attic-client.nix"
+          ];
+        };
+      };
   networking =
     extendScope
       (editScope moduleRegistry.networking {

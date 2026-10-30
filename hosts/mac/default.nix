@@ -18,7 +18,11 @@
     builders = { inherited, ... }: {
       # OrbStack runs on this Mac, so use its local SSH port.
       nix.buildMachines = map (
-        builder: builder // { hostName = "127.0.0.1:32223"; }
+        builder:
+        if builder.hostName == "mac.home:32223" then
+          builder // { hostName = "127.0.0.1:32223"; }
+        else
+          builder
       ) inherited.nix.buildMachines;
     };
   };
