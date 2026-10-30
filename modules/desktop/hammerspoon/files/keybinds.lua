@@ -15,7 +15,7 @@ local hs = _G.hs
 
 local yabai_utils = require("yabai_utils")
 local window_switcher = require("window_switcher")
-local switcherModifier = "alt"
+local switcherModifier = "cmd"
 window_switcher.setHoldModifier(switcherModifier)
 local pip = require("pip")
 local spotify = require("spotify")
@@ -60,6 +60,7 @@ local bindings = {
 	{
 		mods = { switcherModifier },
 		key = "tab",
+		eventtap = true,
 		fn = window_switcher.next,
 		rpt = window_switcher.next,
 		section = "WINDOWS",
@@ -68,6 +69,7 @@ local bindings = {
 	{
 		mods = { switcherModifier, "shift" },
 		key = "tab",
+		eventtap = true,
 		fn = window_switcher.previous,
 		rpt = window_switcher.previous,
 		section = "WINDOWS",
