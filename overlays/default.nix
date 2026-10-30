@@ -29,6 +29,7 @@ _: {
     ./linear
     ./notion
     ./open-webui
+    ./open-webui-mac
     ./open-webui-computer
     ./python-matter-server
     ./prusaslicer

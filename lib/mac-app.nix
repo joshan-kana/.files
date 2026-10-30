@@ -3,6 +3,7 @@
 }:
 {
   token,
+  updateDir ? token,
   release,
   pname,
   url,
@@ -31,7 +32,8 @@ prev.stdenvNoCC.mkDerivation {
     "${prev.python3}/bin/python3"
     "${../scripts/update-cask.py}"
     token
-  ];
+  ]
+  ++ prev.lib.optional (updateDir != token) updateDir;
   nativeBuildInputs = [ unpacker ];
   sourceRoot = ".";
   dontBuild = true;

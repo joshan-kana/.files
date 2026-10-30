@@ -9,11 +9,12 @@ import sys
 from pathlib import Path
 from urllib.request import urlopen
 
-if len(sys.argv) != 2 or not re.fullmatch(r"[a-z][a-z0-9-]*", sys.argv[1]):
-    sys.exit("Usage: update-cask TOKEN")
+if len(sys.argv) not in (2, 3) or any(not re.fullmatch(r"[a-z][a-z0-9-]*", arg) for arg in sys.argv[1:]):
+    sys.exit("Usage: update-cask TOKEN [OVERLAY_DIR]")
 token = sys.argv[1]
+update_dir = sys.argv[2] if len(sys.argv) == 3 else token
 root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-target = root / "overlays" / token / "default.nix"
+target = root / "overlays" / update_dir / "default.nix"
 if not target.is_file():
     sys.exit(f"Missing package: {token}")
 with urlopen(f"https://formulae.brew.sh/api/cask/{token}.json", timeout=30) as response:

@@ -44,11 +44,11 @@ update_package() {
       mapfile -t command < <(jq -r '.[]' <<<"$recipe")
       # The package declares its updater; execute it with native Python rather
       # than asking Nix to run a foreign-platform development shell.
-      [[ "${#command[@]}" == 3 && -f "${command[1]}" ]] || {
+      [[ "${#command[@]}" -ge 3 && -f "${command[1]}" ]] || {
         echo "No portable updater for $1 on $system" >&2
         exit 1
       }
-      python3 "${command[1]}" "${command[2]}"
+      python3 "${command[@]:1}"
     fi
   else
     nix-update --flake --system "$system" "${url_args[@]}" --version "$mode" "$1"
