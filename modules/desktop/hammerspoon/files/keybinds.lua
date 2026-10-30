@@ -88,10 +88,10 @@ local bindings = {
 		mods = "meh",
 		key = "a",
 		fn = function()
-			app_switcher.open("Arc")
+			app_switcher.open("Zen")
 		end,
 		section = "APPS",
-		desc = "Arc",
+		desc = "Zen Browser",
 	},
 	{
 		mods = "meh",
