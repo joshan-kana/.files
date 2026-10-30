@@ -5,6 +5,11 @@ local hs = _G.hs
 -- Current Space only for yabai-friendly switching.
 
 local M = {}
+local holdModifier = nil
+
+function M.setHoldModifier(modifier)
+	holdModifier = modifier
+end
 local imap = hs.fnutils.imap
 local theme = require("theme")
 
@@ -116,7 +121,7 @@ local function ensureReleaseWatcher()
 		.new({
 			hs.eventtap.event.types.flagsChanged,
 		}, function(event)
-			if active and not event:getFlags().alt then
+			if active and not event:getFlags()[holdModifier] then
 				local ok, err = xpcall(function()
 					close(true)
 				end, debug.traceback)
@@ -288,9 +293,9 @@ local function advance(direction)
 		active = true
 		render()
 
-		-- The watcher is persistent, but this closes immediately if Option was
+		-- The watcher is persistent, but this closes immediately if the modifier was
 		-- released while the hotkey callback was still being handled.
-		if not hs.eventtap.checkKeyboardModifiers().alt then
+		if not hs.eventtap.checkKeyboardModifiers()[holdModifier] then
 			close(true)
 		end
 		return

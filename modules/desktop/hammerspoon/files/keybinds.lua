@@ -14,6 +14,8 @@ local hs = _G.hs
 
 local yabai_utils = require("yabai_utils")
 local window_switcher = require("window_switcher")
+local switcherModifier = "alt"
+window_switcher.setHoldModifier(switcherModifier)
 local pip = require("pip")
 local spotify = require("spotify")
 local media = require("media")
@@ -55,7 +57,7 @@ end
 local bindings = {
 	-- Free AltTab-style canvas switcher
 	{
-		mods = { "alt" },
+		mods = { switcherModifier },
 		key = "tab",
 		fn = window_switcher.next,
 		rpt = window_switcher.next,
@@ -63,7 +65,7 @@ local bindings = {
 		desc = "Window switcher (next)",
 	},
 	{
-		mods = { "alt", "shift" },
+		mods = { switcherModifier, "shift" },
 		key = "tab",
 		fn = window_switcher.previous,
 		rpt = window_switcher.previous,
