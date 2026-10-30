@@ -7,6 +7,7 @@ local hs = _G.hs
 --   cmd     - yabai command or command list
 --   fn      - function reference (for module callbacks, gives autocomplete)
 --   modal   - optional modal to bind this key inside
+--   eventtap - intercept system-reserved shortcuts before macOS handles them
 --   stickyToggle - marks the sticky Hyper toggle binding
 --   rpt     - optional repeat function, or true to repeat the binding action
 --   section - category label for the cheatsheet overlay
