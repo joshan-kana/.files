@@ -656,6 +656,15 @@
             text = builtins.readFile ./scripts/update-schemas;
           };
 
+          buildAll = pkgs.writeShellApplication {
+            name = "build-all";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.jq
+            ];
+            text = builtins.readFile ./scripts/build-all;
+          };
+
           systemUpdate = pkgs.writeShellApplication {
             name = "system-update";
             runtimeInputs = [
@@ -777,6 +786,11 @@
             type = "app";
             program = lib.getExe docsCommands.serve;
             meta.description = "Build and live-preview the generated repository manual";
+          };
+          build-all = {
+            type = "app";
+            program = lib.getExe buildAll;
+            meta.description = "Build all NixOS and Darwin system configurations";
           };
           system-update = {
             type = "app";
