@@ -3,6 +3,40 @@ local hs = _G.hs
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
+_G.eventtapBindings = {}
+
+local function bindEventtap(mods, key, fn, rpt)
+	local expected = {}
+	for _, mod in ipairs(mods) do
+		expected[mod] = true
+	end
+
+	local tap = hs.eventtap
+		.new({ hs.eventtap.event.types.keyDown }, function(event)
+			if event:getKeyCode() ~= hs.keycodes.map[key] then
+				return false
+			end
+			local flags = event:getFlags()
+			for _, mod in ipairs({ "cmd", "alt", "ctrl", "shift" }) do
+				if (flags[mod] or false) ~= (expected[mod] or false) then
+					return false
+				end
+			end
+
+			local repeated = event:getProperty(hs.eventtap.event.properties.keyboardEventAutorepeat) == 1
+			local callback = fn
+			if repeated then
+				callback = rpt
+			end
+			if callback then
+				callback()
+			end
+			return true
+		end)
+		:start()
+	-- Retain event taps for the lifetime of this configuration.
+	table.insert(_G.eventtapBindings, tap)
+end
 
 -- Sticky Hyper mode
 -- hyper+tab toggles a modal in which bare keys act as hyper bindings.
@@ -32,7 +66,9 @@ for _, b in ipairs(bindings) do
 		end
 		local rpt = b.rpt == true and fn or b.rpt
 
-		if b.modal then
+		if b.eventtap then
+			bindEventtap(modifiers.resolve(b.mods), b.key, fn, rpt)
+		elseif b.modal then
 			b.modal:bind(modifiers.resolve(b.mods), b.key, fn, nil, rpt)
 		else
 			hs.hotkey.bind(modifiers.resolve(b.mods), b.key, fn, nil, rpt)
