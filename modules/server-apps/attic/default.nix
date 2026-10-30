@@ -20,10 +20,21 @@ in
     group = "atticd";
   };
 
+  services.postgresql = {
+    ensureDatabases = [ "atticd" ];
+    ensureUsers = [
+      {
+        name = "atticd";
+        ensureDBOwnership = true;
+      }
+    ];
+  };
+
   services.atticd = {
     enable = true;
     environmentFile = atticSecret;
     settings = {
+      database.url = "postgresql://atticd@localhost/atticd?host=/run/postgresql";
       listen = "0.0.0.0:${toString cachePort}";
       allowed-hosts = [
         cacheHost
