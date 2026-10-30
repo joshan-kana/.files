@@ -20,13 +20,13 @@ local function rect(frame, fillColor, radius)
 	}
 end
 
-local function label(frame, value, size, color, alignment)
+local function label(frame, value, size, color, alignment, font)
 	return {
 		type = "text",
 		action = "fill",
 		frame = frame,
 		text = value,
-		textFont = "Helvetica Neue",
+		textFont = font or theme.fonts.sansSerif,
 		textSize = size,
 		textColor = color,
 		textAlignment = alignment or "left",
@@ -238,7 +238,14 @@ local function buildRow(elements, originX, y, item, palette)
 
 	table.insert(
 		elements,
-		label({ x = originX, y = y, w = L.keyW, h = L.rowH }, keyLabel, L.sizes.key, palette.key, "right")
+		label(
+			{ x = originX, y = y, w = L.keyW, h = L.rowH },
+			keyLabel,
+			L.sizes.key,
+			palette.key,
+			"right",
+			theme.fonts.monospace
+		)
 	)
 	table.insert(
 		elements,

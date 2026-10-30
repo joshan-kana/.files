@@ -20,6 +20,10 @@ in
       runtime = ''
         return {
           yabai = ${builtins.toJSON (lib.getExe pkgs.yabai)},
+          fonts = {
+            sansSerif = ${builtins.toJSON config.stylix.fonts.sansSerif.name},
+            monospace = ${builtins.toJSON config.stylix.fonts.monospace.name},
+          },
           colors = {
             bg = ${builtins.toJSON colors.base00},
             bgAlt = ${builtins.toJSON colors.base01},

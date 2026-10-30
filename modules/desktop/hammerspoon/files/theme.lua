@@ -1,6 +1,8 @@
--- Palette follows the active Stylix theme from the evaluated Mac configuration.
+-- Hammerspoon visual settings come from the evaluated Stylix configuration.
 local M = {}
-local scheme = require("nix_runtime").colors
+local runtime = require("nix_runtime")
+local scheme = runtime.colors
+M.fonts = runtime.fonts
 
 -- Canvas color space correction
 -- hs.canvas uses calibrated RGB (gamma ~1.8), not sRGB (gamma ~2.2).
