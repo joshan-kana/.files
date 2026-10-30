@@ -45,6 +45,9 @@ prev.stdenvNoCC.mkDerivation {
     app="$(find . -type d -name '${appName}' -print -quit)"
     test -n "$app"
     cp -R "$app" "$out/Applications/"
+    mkdir -p "$out/bin"
+    printf '#!/bin/sh\nexec /usr/bin/open -a "%s/Applications/${appName}" --args "$@"\n' "$out" > "$out/bin/${pname}"
+    chmod +x "$out/bin/${pname}"
     runHook postInstall
   '';
   meta = {
