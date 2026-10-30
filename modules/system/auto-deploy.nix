@@ -41,7 +41,10 @@ in
   };
 
   home = _: {
-    home.shellAliases.cw = "comin watch";
+    home.shellAliases = {
+      cw = "comin watch";
+      ce = "comin deployment submit-latest";
+    };
   };
 
   webhook =
