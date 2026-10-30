@@ -26,6 +26,8 @@ _: {
             (old: {
               postInstall = (old.postInstall or "") + ''
                 mkdir -p "$out/bin" "$out/lib"
+                # Replace the generic app launcher with the real CLI for `serve` and MLX.
+                rm "$out/bin/ollama"
                 ln -s ../Applications/Ollama.app/Contents/Resources/ollama "$out/bin/ollama"
                 ln -s ../Applications/Ollama.app/Contents/Resources "$out/lib/ollama"
               '';
