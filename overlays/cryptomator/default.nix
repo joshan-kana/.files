@@ -11,8 +11,8 @@ _: {
             {
               token = "cryptomator";
               release = {
-                version = "1.19.4";
-                hash = "sha256-QTpIgG56ovTEFrhOOiPby6g64gsq1VU0t5j222WoWGA=";
+                version = "1.19.6";
+                hash = "sha256-/fyO9QsQusoQeLep7fQE4zA2PIo6QP2in4bdXToKCwI=";
               };
               pname = "cryptomator-mac";
               appName = "Cryptomator.app";

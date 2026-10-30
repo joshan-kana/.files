@@ -11,8 +11,8 @@ _: {
             {
               token = "linear";
               release = {
-                version = "1.32.7";
-                hash = "sha256-mZGa7z6jw/YuKQA3LOSi9jd3CVuDVmTvangzLiSuUGU=";
+                version = "1.32.8";
+                hash = "sha256-CNQrkXvEQGgjHUep4Urp/awsqV+mtFHoEPzaD3Vu1KM=";
               };
               pname = "linear-mac";
               appName = "Linear.app";

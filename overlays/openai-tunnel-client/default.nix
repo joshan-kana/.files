@@ -17,11 +17,11 @@ _: {
               python3,
             }:
             let
-              version = "0.0.18";
+              version = "0.0.19";
               hashes = {
-                aarch64-darwin = "sha256-gVbXgTWtNK5Fz1DDWjvI7hukycG5BbmO0CMsRKxWx+w=";
-                aarch64-linux = "sha256-LfhMDAHoBhq2XD0FeIOYSLUtXkvld2mdF04QcluBFms=";
-                x86_64-linux = "sha256-RYrMnUWrUy5oGPObz+6jI3SlEfOSd8nfKhhH6qvX98s=";
+                aarch64-darwin = "sha256-IldgWEVjoa1u5yWFvAAbrjSnFB1zJGoRfO7ShAkFkMw=";
+                aarch64-linux = "sha256-7dAWZ9Rrzr+ojdF9kr21YVhnaKfeNBC4s8g5e1J/1uk=";
+                x86_64-linux = "sha256-pDvq5vCFBaG2dRBX0CeXuqcKiO9/nrXf0DpVtrKRFq0=";
               };
               system = stdenvNoCC.hostPlatform.system;
               asset =

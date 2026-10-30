@@ -11,8 +11,8 @@ _: {
             {
               token = "arc";
               release = {
-                version = "1.170.0,89123";
-                hash = "sha256-De9DszStSYTWPYcJ7JDjcabnGlpdEeBjX/+TR+j5atA=";
+                version = "1.171.0,89666";
+                hash = "sha256-73GOq7IH5dQrwJdaCxcMgclN4PpoTCwznx9rOEY+Y0s=";
               };
               pname = "arc-mac";
               appName = "Arc.app";
