@@ -2,17 +2,17 @@
 
 **Convention:** Place each change under the idea, application, or capability that owns it, not simply under the native option namespace it uses.
 
-| Path | Responsibility |
-| --- | --- |
-| `flake.nix` | Inputs, host composition, checks, and flake outputs |
-| `hosts/<host>/` | Host entry points and genuine host-specific differences |
-| `modules/` | Shared semantic modules |
-| `lib/` | Shared Nix helpers and semantic-scope machinery |
-| `overlays/` | Non-stock packages, overrides, and upstream pins |
-| `scripts/` | Repo and operational commands |
-| `tests/` | Evaluated and behavioral tests |
-| `docs/manual/src/` | Handwritten conventions and runbooks |
-| `docs/default.nix` | Generated reference, navigation, and mdBook assembly |
+| Path               | Responsibility                                          |
+| ------------------ | ------------------------------------------------------- |
+| `flake.nix`        | Inputs, host composition, checks, and flake outputs     |
+| `hosts/<host>/`    | Host entry points and genuine host-specific differences |
+| `modules/`         | Shared semantic modules                                 |
+| `lib/`             | Shared Nix helpers and semantic-scope machinery         |
+| `overlays/`        | Non-stock packages, overrides, and upstream pins        |
+| `scripts/`         | Repo and operational commands                           |
+| `tests/`           | Evaluated and behavioral tests                          |
+| `docs/manual/src/` | Handwritten conventions and runbooks                    |
+| `docs/default.nix` | Generated reference, navigation, and mdBook assembly    |
 
 ## Registries and imports
 
