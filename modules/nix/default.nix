@@ -78,6 +78,15 @@ in
             system = "aarch64-linux";
             maxJobs = 12;
           }
+          {
+            hostName = "nixos-server.home";
+            protocol = "ssh-ng";
+            sshUser = config.dotfiles.users.primary.name;
+            sshKey = nixBuilderSecret;
+            publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSURZUjZOYjNuRDdqcFN0QlJEb1h2MFpEaUFwR1RxK1VUb3oxYTc4QVFMVFA=";
+            system = "x86_64-linux";
+            maxJobs = 12;
+          }
         ];
     };
   };
