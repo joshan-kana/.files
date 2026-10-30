@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- Small stateless toggle functions used by keybinds.lua.
 
@@ -12,7 +13,7 @@ function M.spaceFloat()
 	local space = y.json("query --spaces --space")
 
 	if not space then
-		hs.alert.show("Could not read yabai space")
+		ui.error("Could not read yabai space")
 		return
 	end
 
@@ -49,7 +50,7 @@ function M.mouseFollowsFocus()
 	local stateStr = newState and "on" or "off"
 
 	y.exec("config mouse_follows_focus " .. stateStr)
-	hs.alert.show("Mouse follows focus: " .. stateStr)
+	ui.mode("Mouse follows focus", newState)
 end
 
 --- Power lock.
@@ -77,7 +78,7 @@ local function setPowerLock(enabled, notify)
 	end
 
 	if notify then
-		hs.alert.show("Power Lock: " .. (enabled and "ON 🔒" or "OFF 🔓"))
+		ui.mode("Power Lock", enabled, enabled and "Mac stays awake" or "System sleep restored")
 	end
 end
 

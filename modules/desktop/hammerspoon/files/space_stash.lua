@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- A managed, inset BSP workspace for each ordinary Space.
 -- Windows stay in yabai's normal tiling tree, so existing bindings still work.
@@ -84,7 +85,7 @@ local function ensureStash(origin)
 	end
 
 	if not y.ok("space --create " .. origin.display) then
-		hs.alert.show("Cannot create scratchpad Space (load yabai scripting addition)")
+		ui.error("Cannot create scratchpad Space (load yabai scripting addition)")
 		return
 	end
 
@@ -101,11 +102,11 @@ local function ensureStash(origin)
 				style(space, origin.display)
 				return space
 			end
-			hs.alert.show("Could not label scratchpad Space")
+			ui.error("Could not label scratchpad Space")
 			return
 		end
 	end
-	hs.alert.show("Could not find created scratchpad Space")
+	ui.error("Could not find created scratchpad Space")
 end
 
 function M.toggle()
@@ -116,7 +117,7 @@ function M.toggle()
 	local all = spaces()
 	local origin, inStash = originFor(active, all)
 	if inStash and not origin then
-		hs.alert.show("Original Space no longer exists")
+		ui.error("Original Space no longer exists")
 		return
 	end
 	local target = origin or ensureStash(active)
@@ -128,11 +129,11 @@ end
 function M.stashFocused()
 	local win = y.json("query --windows --window")
 	if not win or win["is-native-fullscreen"] or not win["can-move"] or win.subrole ~= "AXStandardWindow" then
-		hs.alert.show("This window cannot be stashed")
+		ui.error("This window cannot be stashed")
 		return
 	end
 	if win["is-floating"] then
-		hs.alert.show("Only tiled windows support the full yabai keyboard workflow")
+		ui.error("Only tiled windows support the full yabai keyboard workflow")
 		return
 	end
 
@@ -143,12 +144,12 @@ function M.stashFocused()
 	end
 	local original, inStash = originFor(active, all)
 	if inStash and not original then
-		hs.alert.show("Original Space no longer exists")
+		ui.error("Original Space no longer exists")
 		return
 	end
 	local target = original or ensureStash(active)
 	if target and not y.windowCmd(win.id, "--space " .. target.index) then
-		hs.alert.show("Could not move window into or out of scratchpad")
+		ui.error("Could not move window into or out of scratchpad")
 	end
 end
 

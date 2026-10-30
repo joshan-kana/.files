@@ -1,4 +1,5 @@
 local hs = _G.hs
+local ui = require("ui")
 
 -- Picture-in-picture style floating sticky top-layer window.
 -- sticky makes it visible across Spaces.
@@ -30,7 +31,7 @@ local function pipRestore(id)
 
 	pipWindowId = nil
 	hs.settings.set("hs_pip_window_id", nil)
-	hs.alert.show("PiP off")
+	ui.mode("Picture in picture", false)
 end
 
 function M.toggle()
@@ -46,7 +47,7 @@ function M.toggle()
 	local focused = y.json("query --windows --window")
 
 	if not focused then
-		hs.alert.show("Could not read yabai window")
+		ui.error("Could not read yabai window")
 		return
 	end
 
@@ -81,9 +82,9 @@ function M.toggle()
 		hs.settings.set("hs_pip_window_id", id)
 
 		if not subLayerOk or not updated or updated["sub-layer"] ~= "above" then
-			hs.alert.show("PiP on, but sub-layer above failed")
+			ui.error("PiP on, but sub-layer above failed")
 		else
-			hs.alert.show("PiP on")
+			ui.mode("Picture in picture", true)
 		end
 	end)
 end
