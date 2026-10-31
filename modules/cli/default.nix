@@ -670,6 +670,8 @@ in
         extraPackages = with pkgs; [
           fd
           ripgrep
+          jujutsu
+          jjui
         ];
         plugins = with pkgs.vimPlugins; [
           snacks-nvim
