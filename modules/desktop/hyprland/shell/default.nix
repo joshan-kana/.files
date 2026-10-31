@@ -1417,13 +1417,14 @@ in
                 input="$(mktemp "$private_dir/linux-desktop-annotation-XXXXXXXX.png")"
                 trap 'rm -f -- "$input"' EXIT
                 magick "$2" -crop "$geometry" +repage -strip "$input"
+                snapshot="$2"
+                trap 'rm -f -- "$input" "$snapshot"' EXIT
                 dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
                 mkdir -p -- "$dest"
                 satty --filename "$input" --output-filename "$dest/Screenshot-%Y%m%d-%H%M%S.png" \
                   --copy-command wl-copy --initial-tool arrow --no-window-decoration \
                   --font-family ${lib.escapeShellArg config.stylix.fonts.monospace.name} \
                   --actions-on-enter save-to-clipboard --actions-on-escape exit --early-exit all
-                rm -f -- "$2"
               elif [ "$mode" = copy ]; then
                 magick "$2" -crop "$geometry" +repage -strip png:- | wl-copy --type image/png
                 notify-send --app-name=linux-desktop "Screenshot copied" "''${w} × ''${h} pixels" || true
