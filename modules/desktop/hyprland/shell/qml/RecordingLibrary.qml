@@ -107,6 +107,13 @@ Item {
         statusText = "OPEN REQUESTED · " + selectedEntry.name;
         statusError = false;
     }
+    function editSelected(): void {
+        if (!selectedEntry || !open || isBusy || runtime.recordingLibrary.length === 0)
+            return;
+        Quickshell.execDetached([runtime.recordingLibrary, "edit", selectedEntry.name]);
+        statusText = "EDITOR REQUESTED · " + selectedEntry.name;
+        statusError = false;
+    }
     function requestDelete(): void {
         if (!selectedEntry || isBusy)
             return;
@@ -366,7 +373,7 @@ Item {
                     width: parent.width
                     spacing: library.theme.spacing2
                     ShellAction {
-                        width: (parent.width - parent.spacing) / 2
+                        width: (parent.width - parent.spacing * 2) / 3
                         height: 37
                         runtime: library.runtime
                         theme: library.theme
@@ -380,7 +387,21 @@ Item {
                         onActivated: library.openSelected()
                     }
                     ShellAction {
-                        width: (parent.width - parent.spacing) / 2
+                        width: (parent.width - parent.spacing * 2) / 3
+                        height: 37
+                        runtime: library.runtime
+                        theme: library.theme
+                        motion: library.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: "󰏫"
+                        title: "EDIT"
+                        shortcut: "E"
+                        enabled: !!library.selectedEntry && !library.isBusy
+                        onActivated: library.editSelected()
+                    }
+                    ShellAction {
+                        width: (parent.width - parent.spacing * 2) / 3
                         height: 37
                         runtime: library.runtime
                         theme: library.theme
@@ -429,6 +450,10 @@ Item {
                 {
                     shortcut: "ENTER",
                     label: "Open"
+                },
+                {
+                    shortcut: "E",
+                    label: "Edit"
                 },
                 {
                     shortcut: "D",
