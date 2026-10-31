@@ -214,7 +214,7 @@ PanelWindow {
 
     screen: expansionState.screen || Quickshell.screens[0]
     visible: true
-    updatesEnabled: surfaceLifecycle.needsRendering
+    updatesEnabled: true
     color: "transparent"
     focusable: expansionState.hasCurrent && !themeTerminalActive
     exclusionMode: ExclusionMode.Ignore
