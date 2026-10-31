@@ -16,6 +16,7 @@ local ui = require("ui")
 
 local yabai_utils = require("yabai_utils")
 local window_switcher = require("window_switcher")
+local shortcut_passthrough = require("shortcut_passthrough")
 local switcherModifier = "cmd"
 window_switcher.setHoldModifier(switcherModifier)
 local pip = require("pip")
@@ -75,6 +76,14 @@ local bindings = {
 		rpt = window_switcher.previous,
 		section = "WINDOWS",
 		desc = "Window switcher (prev)",
+	},
+
+	{
+		mods = "hyper + shift",
+		key = "tab",
+		fn = shortcut_passthrough.toggle,
+		section = "SYSTEM",
+		desc = "Toggle shortcut pass-through for focused app",
 	},
 
 	-- App switching (meh = ctrl+alt+shift). Meh+Space toggles new-window mode.

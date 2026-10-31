@@ -4,6 +4,7 @@ local ui = require("ui")
 local yabai_utils = require("yabai_utils")
 local bindings = require("keybinds")
 local modifiers = require("modifiers")
+local shortcut_passthrough = require("shortcut_passthrough")
 local theme = require("theme")
 local colors = theme.colors()
 hs.alert.defaultStyle.fillColor = colors.bgAlphaStrong
@@ -28,6 +29,10 @@ local function bindEventtap(mods, key, fn, rpt)
 				if (flags[mod] or false) ~= (expected[mod] or false) then
 					return false
 				end
+			end
+
+			if shortcut_passthrough.enabled() then
+				return false
 			end
 
 			local repeated = event:getProperty(hs.eventtap.event.properties.keyboardEventAutorepeat) == 1
