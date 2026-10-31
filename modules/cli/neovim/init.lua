@@ -91,6 +91,12 @@ snacks.setup({
 
 require("blink.cmp").setup({
 	keymap = { preset = "default" },
+	cmdline = {
+		keymap = {
+			preset = "cmdline",
+			["<Right>"] = { "accept", "fallback" },
+		},
+	},
 	completion = { documentation = { auto_show = true } },
 	fuzzy = { implementation = "lua" },
 	sources = { default = { "lsp", "path", "snippets", "buffer" } },
