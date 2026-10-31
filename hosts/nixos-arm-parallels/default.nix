@@ -1,5 +1,6 @@
 {
   config,
+  editScope,
   lib,
   moduleRegistry,
   pkgs,
@@ -18,7 +19,6 @@
     audio
     virtualisation
     desktopApps
-    desktop
     ;
 
   imports = [
@@ -28,6 +28,12 @@
 
   dotfiles = {
     defaults.terminal = "alacritty";
+  };
+
+  desktop = editScope moduleRegistry.desktop {
+    hyprland.home = _: {
+      wayland.windowManager.hyprland.settings.config.quirks.skip_non_kms_dmabuf_formats = false;
+    };
   };
 
   hardware = import ./hardware.nix;
