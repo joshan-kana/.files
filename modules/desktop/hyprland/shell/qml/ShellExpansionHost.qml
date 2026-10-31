@@ -199,11 +199,11 @@ PanelWindow {
     // viewport. Off-viewport islands start at the nearest visible edge, rather
     // than forcing a new full-width Wayland surface or compositor relayout.
     readonly property real originHalfWidth: Math.min(viewportWidth / 2, Math.max(1, expansionState.originWidth / 2))
-    readonly property real localOriginCenter: screen ? expansionState.originCenter - (screen.width - viewportWidth) / 2 : viewportWidth / 2
+    readonly property real localOriginCenter: screen ? expansionState.originCenter - theme.spacing4 : viewportWidth / 2
     readonly property real boundedOriginCenter: Math.max(originHalfWidth, Math.min(viewportWidth - originHalfWidth, localOriginCenter))
     // The visible close morph must shrink in place, not simultaneously drift
     // toward the bar island. Reset its source centre only after fading out.
-    property real animatedSurfaceCenter: contentExpanded || closing ? Math.min(targetWidth, viewportWidth) / 2 : originHalfWidth
+    property real animatedSurfaceCenter: contentExpanded || closing ? Math.min(targetWidth, viewportWidth) / 2 : boundedOriginCenter
 
     Behavior on animatedSurfaceCenter {
         enabled: host.contentExpanded || host.closing
@@ -373,7 +373,7 @@ PanelWindow {
 
         // The centre moves independently of width so the two morph curves do
         // not repeatedly restart each other as the target's width changes.
-        x: 0
+        x: Math.max(0, Math.min(host.viewportWidth - width, host.animatedSurfaceCenter - width / 2))
         y: 0
         width: Math.min(host.viewportWidth, host.targetWidth)
         height: Math.min(host.viewportHeight, host.targetHeight)
