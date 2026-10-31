@@ -106,6 +106,12 @@ Item {
         }
     }
 
+    function resetToDeclared(): void {
+        capturePreferences.freezeEnabled = true;
+        capturePreferences.setValue("freezeEnabled", true);
+        capturePreferences.sync();
+    }
+
     function toggleFreeze(): void {
         if (selectionMode === "record" || exporting)
             return;
@@ -518,7 +524,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
-                        title: picker.selectionMode === "record" ? "START" : picker.copying ? "COPY" : "SAVE"
+                        title: picker.selectionMode === "record" ? "START" : picker.annotateAfterCapture ? "MARKUP" : picker.copying ? "COPY" : "SAVE"
                         shortcut: "SPACE"
                         onActivated: picker.capture("")
                     }
@@ -532,7 +538,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         icon: "󰏫"
-                        title: picker.annotateAfterCapture ? "MARKUP ON" : "MARKUP OFF"
+                        title: picker.annotateAfterCapture ? "EDIT ON" : "EDIT OFF"
                         active: picker.annotateAfterCapture
                         shortcut: "E"
                         onActivated: picker.toggleAnnotation()
