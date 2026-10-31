@@ -47,23 +47,96 @@ local function persist(field)
 	end
 end
 
+local function select_motion(motion)
+	return function()
+		local count = vim.v.count > 0 and tostring(vim.v.count) or ""
+		vim.cmd({ cmd = "normal", bang = true, args = { "v" .. count .. motion } })
+	end
+end
+
+local function select_char_motion(motion)
+	return function()
+		local character = vim.fn.getcharstr()
+		if character == "\027" then
+			return
+		end
+		local count = vim.v.count > 0 and tostring(vim.v.count) or ""
+		vim.cmd({ cmd = "normal", bang = true, args = { "v" .. count .. motion .. character } })
+	end
+end
+
 local mappings = {
 	positional = {
 		z = { "u", "Undo" },
 		x = { "<C-r>", "Redo" },
+		H = { "^", "First non-blank character" },
+		L = { "$", "End of line" },
+		J = { "<C-d>", "Half-page down" },
+		K = { "<C-u>", "Half-page up" },
+		["<leader>ej"] = { "J", "Join lines" },
+		["<leader>ek"] = { "K", "Keyword help" },
+		["<leader>eh"] = { "H", "Top of screen" },
+		["<leader>el"] = { "L", "Bottom of screen" },
+		["<leader>ed"] = { "dd", "Delete line" },
+		["<leader>ey"] = { "yy", "Yank line" },
+		["<leader>ec"] = { "cc", "Change line" },
+		["<leader>ep"] = { "p", "Paste after" },
+		["<leader>eP"] = { "P", "Paste before" },
+		["<leader>eo"] = { "o", "Open line below" },
+		["<leader>eO"] = { "O", "Open line above" },
+		["<leader>ea"] = { "A", "Append to end of line" },
+		["<leader>ei"] = { "I", "Insert at first nonblank" },
+		["<leader>ex"] = { "x", "Delete character" },
+		["<leader>eX"] = { "X", "Delete character backwards" },
+		["<leader>uc"] = { "zz", "Center current line" },
+		["<leader>ut"] = { "zt", "Place current line at top" },
+		["<leader>ub"] = { "zb", "Place current line at bottom" },
+		["<leader>ua"] = { "za", "Toggle fold" },
+		["<leader>uo"] = { "zo", "Open fold" },
+		["<leader>uC"] = { "zc", "Close fold" },
 	},
 	selection = {
-		w = { "vaw", "Select word" },
-		W = { "vaW", "Select WORD" },
+		s = { "v", "Select using a motion or text object" },
 		S = { "V", "Select line" },
+		w = { select_motion("aw"), "Select word" },
+		W = { select_motion("aW"), "Select WORD" },
+		b = { select_motion("b"), "Select to previous word" },
+		B = { select_motion("B"), "Select to previous WORD" },
+		e = { select_motion("e"), "Select to end of word" },
+		E = { select_motion("E"), "Select to end of WORD" },
+		["0"] = { select_motion("0"), "Select to beginning of line" },
+		["^"] = { select_motion("^"), "Select to first non-blank" },
+		["$"] = { select_motion("$"), "Select to end of line" },
+		gg = { select_motion("gg"), "Select to start of file" },
+		G = { select_motion("G"), "Select to end of file or line number" },
+		["("] = { select_motion("("), "Select to previous sentence" },
+		[")"] = { select_motion(")"), "Select to next sentence" },
+		["{"] = { select_motion("{"), "Select to previous paragraph" },
+		["}"] = { select_motion("}"), "Select to next paragraph" },
+		f = { select_char_motion("f"), "Select until character" },
+		F = { select_char_motion("F"), "Select backward until character" },
+		t = { select_char_motion("t"), "Select before character" },
+		T = { select_char_motion("T"), "Select backward before character" },
+		n = { select_motion("n"), "Select next search match" },
+		N = { select_motion("N"), "Select previous search match" },
 	},
 }
+local function global_mapping(lhs)
+	local expanded = lhs:gsub("^<leader>", vim.g.mapleader or "\\")
+	local key = vim.api.nvim_replace_termcodes(expanded, true, true, true)
+	for _, mapping in ipairs(vim.api.nvim_get_keymap("n")) do
+		if vim.api.nvim_replace_termcodes(mapping.lhs, true, true, true) == key then
+			return mapping
+		end
+	end
+	return nil
+end
 
 local function apply(group, enabled)
 	local items = mappings[group]
 	if enabled then
 		for lhs in pairs(items) do
-			if vim.fn.maparg(lhs, "n") ~= "" then
+			if global_mapping(lhs) ~= nil then
 				error("Existing normal-mode mapping for " .. lhs .. " prevents enabling " .. group)
 			end
 		end
@@ -72,7 +145,14 @@ local function apply(group, enabled)
 		end
 	else
 		for lhs, value in pairs(items) do
-			if vim.fn.maparg(lhs, "n"):lower() ~= value[1]:lower() then
+			local mapping = global_mapping(lhs)
+			local owned = mapping and mapping.desc == value[2]
+			if owned and type(value[1]) == "function" then
+				owned = mapping.callback == value[1]
+			elseif owned then
+				owned = mapping.rhs:lower() == value[1]:lower()
+			end
+			if not owned then
 				error("Mapping for " .. lhs .. " changed while " .. group .. " was active")
 			end
 		end
