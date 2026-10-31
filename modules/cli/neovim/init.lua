@@ -60,7 +60,7 @@ snacks.setup({
 	dashboard = {
 		enabled = true,
 		preset = {
-			header = "Neovim",
+			header = "get. to. work.",
 			keys = {
 				{ icon = "󰱼 ", key = "f", desc = "Find files", action = ":lua Snacks.picker.files()" },
 				{ icon = "󰊄 ", key = "g", desc = "Search project", action = ":lua Snacks.picker.grep()" },
