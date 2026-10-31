@@ -79,8 +79,8 @@ local bindings = {
 	},
 
 	{
-		mods = "hyper + shift",
-		key = "tab",
+		mods = "hyper",
+		key = "escape",
 		fn = shortcut_passthrough.toggle,
 		section = "SYSTEM",
 		desc = "Toggle shortcut pass-through for focused app",
