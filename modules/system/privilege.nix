@@ -21,4 +21,7 @@ lib.optionalAttrs (lib.systems.elaborate system).isLinux {
     };
     wrappers.su.enable = false;
   };
+  home = _: {
+    home.shellAliases.run0 = "run0 ";
+  };
 }

@@ -167,7 +167,6 @@ in
           sysedit = "edit-config";
         }
         // lib.optionalAttrs isLinux {
-          run0 = "run0 ";
           sysboot = commands.rebuild "boot";
           sbt = commands.rebuild "boot";
           systest = commands.rebuild "test";
