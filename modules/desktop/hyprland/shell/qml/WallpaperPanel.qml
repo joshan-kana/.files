@@ -20,6 +20,13 @@ Item {
     property string statusText: ""
     property int selectedIndex: 0
     property bool loading: false
+    property bool transitionPending: false
+    Timer {
+        id: transitionComplete
+        interval: 1100
+        repeat: false
+        onTriggered: panel.transitionPending = false
+    }
     property bool resetPending: false
 
     readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()))
@@ -44,7 +51,7 @@ Item {
         if (open && !busy)
             refreshCurrent();
     }
-    readonly property bool busy: applyProcess.running || resetProcess.running
+    readonly property bool busy: applyProcess.running || resetProcess.running || transitionPending
     readonly property bool searching: searchField.activeFocus
 
     signal keyboardRequested
@@ -112,6 +119,7 @@ Item {
             } else {
                 panel.statusText = panel.applyError.text.trim() || "Wallpaper apply failed";
             }
+            transitionComplete.restart();
             panel.keyboardRequested();
             if (panel.resetPending) {
                 panel.resetPending = false;
@@ -123,6 +131,7 @@ Item {
     property Process resetProcess: Process {
         stderr: panel.applyError
         onExited: (code, status) => {
+            transitionComplete.restart();
             panel.statusText = code === 0 ? "Restored Stylix wallpaper" : (panel.applyError.text.trim() || "Wallpaper reset failed");
             panel.refreshCurrent();
             panel.keyboardRequested();
@@ -198,6 +207,7 @@ Item {
     function applySelected(): void {
         if (busy || !selectedPath() || runtime.wallpaperLibrary.length === 0)
             return;
+        transitionPending = true;
         applyingPath = selectedPath();
         statusText = "Applying wallpaper to " + outputLabel + "…";
         applyProcess.exec([runtime.wallpaperLibrary, "set", outputName, resizeMode, applyingPath]);
@@ -211,6 +221,7 @@ Item {
             statusText = "Restoring wallpaper after current selection…";
             return;
         }
+        transitionPending = true;
         statusText = "Restoring Stylix wallpaper on " + outputLabel + "…";
         resetProcess.exec([runtime.wallpaperLibrary, "reset", outputName]);
     }
