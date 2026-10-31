@@ -236,7 +236,7 @@ ShellRoot {
     SpectrumState {
         id: spectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || (motion.enabled && (root.wallpaperSpectrumEnabled || root.musicReactiveEnabled))
+        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || (motion.enabled && root.musicReactiveEnabled)
     }
 
     MusicReactiveState {
@@ -249,7 +249,6 @@ ShellRoot {
         id: wallpaperSpectrum
         spectrum: root.spectrumRef
         theme: root.themeRef
-        motion: root.motionRef
         enabled: root.wallpaperSpectrumEnabled
     }
 
@@ -688,8 +687,8 @@ ShellRoot {
             },
             {
                 id: "animations.toggle",
-                name: "Toggle Animations",
-                description: "Enable or disable desktop motion",
+                name: "Toggle Reduced Motion",
+                description: "Reduce desktop transitions without stopping wallpaper visualizers",
                 icon: "preferences-desktop-effects",
                 keywords: ["motion", "reduce motion"]
             },
