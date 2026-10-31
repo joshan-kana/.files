@@ -43,6 +43,7 @@ Item {
             readonly property real fraction: (index + 0.5) / root.count
             readonly property real level: root.levelFor(index)
 
+            visible: root.spectrum.hasEnergy && level > 0.003
             width: Math.max(1, root.width / root.count * 0.72)
             height: Math.max(2, level * root.height)
             x: (index + 0.5) * root.width / root.count - width / 2
