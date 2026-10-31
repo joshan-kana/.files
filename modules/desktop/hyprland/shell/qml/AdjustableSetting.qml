@@ -21,16 +21,9 @@ ShellSurface {
     signal decreaseRequested
     signal increaseRequested
 
-    height: 78
+    height: 104
     Accessible.role: Accessible.Button
     Accessible.name: label + ", " + valueText + (active ? ", on" : ", off")
-    scale: toggleArea.pressed ? 0.94 : toggleArea.containsMouse ? 1.018 : 1
-    Behavior on scale {
-        Anim {
-            motion: setting.motion
-            type: Anim.FastSpatial
-        }
-    }
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: active ? theme.radiusLarge : theme.radiusMedium
@@ -39,7 +32,7 @@ ShellSurface {
     luminousColor: roleAccent
     borderColor: active ? roleAccent : "transparent"
     hovered: toggleArea.containsMouse
-    fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
+    fillColor: active ? theme.blend(theme.materialContainerHigh, roleAccent, theme.dark ? 0.28 : 0.21) : theme.materialContainer
     Behavior on cornerRadius {
         Anim {
             motion: setting.motion
@@ -65,7 +58,7 @@ ShellSurface {
             fill: parent
             leftMargin: setting.theme.spacing2
             rightMargin: setting.theme.spacing2
-            topMargin: setting.theme.spacing2 + 2
+            topMargin: setting.theme.spacing3
             bottomMargin: setting.theme.spacing2
         }
         spacing: setting.theme.spacing1

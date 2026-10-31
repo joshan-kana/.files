@@ -8,9 +8,10 @@ ShellSurface {
     property string value: ""
 
     implicitWidth: 178
-    implicitHeight: 72
+    implicitHeight: 88
     surfaceLayer: ShellSurface.Control
-    cornerRadius: theme.radiusMedium
+    cornerRadius: theme.radiusLarge
+    fillColor: theme.materialContainer
 
     Row {
         anchors.centerIn: parent
@@ -40,7 +41,7 @@ ShellSurface {
                 text: metric.value
                 color: metric.theme.textStrong
                 font.family: metric.theme.runtime.fontMono
-                font.pixelSize: metric.theme.fontSize(15)
+                font.pixelSize: metric.theme.fontSize(18)
                 font.weight: Font.DemiBold
             }
         }

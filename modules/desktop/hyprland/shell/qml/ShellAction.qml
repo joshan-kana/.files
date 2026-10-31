@@ -30,13 +30,20 @@ Item {
     opacity: enabled ? 1 : 0.42
 
     ShellSurface {
+        id: actionSurface
         anchors.fill: parent
         theme: root.theme
         motion: root.motion
         surfaceLayer: ShellSurface.Control
         selected: root.active
-        fillColor: root.active ? root.theme.blend(root.theme.controlBase, root.activeColor, root.theme.dark ? 0.20 : 0.12) : root.theme.expressiveSurfaceStrong
-        cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
+        fillColor: root.active ? root.theme.blend(root.theme.materialContainerHigh, root.activeColor, root.theme.dark ? 0.34 : 0.24) : root.theme.materialContainerHigh
+        cornerRadius: root.active ? theme.radiusLarge : root.compact ? theme.radiusSmall : theme.radiusMedium
+        Behavior on cornerRadius {
+            Anim {
+                motion: root.motion
+                type: Anim.FastSpatial
+            }
+        }
     }
 
     Column {
@@ -202,7 +209,7 @@ Item {
         disabled: !root.enabled
         selected: root.active
         stateColor: root.active ? root.activeColor : root.theme.textStrong
-        cornerRadius: root.compact ? theme.radiusSmall : theme.radiusMedium
+        cornerRadius: actionSurface.cornerRadius
         onActivated: root.activated()
     }
 }

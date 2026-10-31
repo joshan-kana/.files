@@ -99,11 +99,11 @@ QtObject {
         return Math.max(1, Math.round(size * textScale));
     }
 
-    readonly property int radiusSmall: 14
-    readonly property int radiusMedium: 25
-    readonly property int radiusIsland: 22
-    readonly property int radiusLarge: 42
-    readonly property int radiusPanel: 62
+    readonly property int radiusSmall: 16
+    readonly property int radiusMedium: 28
+    readonly property int radiusIsland: 25
+    readonly property int radiusLarge: 46
+    readonly property int radiusPanel: 58
     readonly property int barHeight: 70
     readonly property int barInsetTop: 12
     readonly property int barInsetBottom: 8
@@ -154,10 +154,19 @@ QtObject {
     readonly property color layer1: paneBase
     readonly property color layer2: groupBase
     readonly property color layer3: blend(paneBase, accent, dark ? 0.08 : 0.07)
-    readonly property color selectionFill: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.20 : 0.15)
-    readonly property color selectedTabFill: blend(controlBase, accent, dark ? 0.52 : 0.34)
-    readonly property color expressiveSurface: blend(groupBase, accent, dark ? 0.035 : 0.022)
-    readonly property color expressiveSurfaceStrong: blend(controlBase, accent, dark ? 0.055 : 0.035)
+    // M3 Expressive tonal containers stay inside the one Stylix palette.
+    // Distinct active and passive tones establish hierarchy without glass glare.
+    readonly property color materialCanvas: blend(background, surface, dark ? 0.27 : 0.14)
+    readonly property color materialContainerLow: blend(paneBase, surfaceRaised, dark ? 0.17 : 0.10)
+    readonly property color materialContainer: blend(groupBase, surfaceRaised, dark ? 0.35 : 0.19)
+    readonly property color materialContainerHigh: blend(controlBase, surfaceRaised, dark ? 0.53 : 0.33)
+    readonly property color materialPrimaryContainer: blend(materialContainerHigh, accent, dark ? 0.39 : 0.30)
+    readonly property color materialSecondaryContainer: blend(materialContainerHigh, accentSecondary, dark ? 0.21 : 0.15)
+    readonly property color materialTertiaryContainer: blend(materialContainerHigh, accentTertiary, dark ? 0.20 : 0.14)
+    readonly property color selectionFill: materialPrimaryContainer
+    readonly property color selectedTabFill: materialPrimaryContainer
+    readonly property color expressiveSurface: materialContainer
+    readonly property color expressiveSurfaceStrong: materialContainerHigh
     readonly property real panelClosedScale: 0.965
 
     readonly property int fontKeyHint: fontSize(11)
@@ -167,7 +176,9 @@ QtObject {
     readonly property int keyHintGroupGap: 28
     readonly property int minActionTarget: 44
     readonly property int fontPanelEyebrow: fontSize(11)
-    readonly property int fontPanelTitle: fontSize(27)
+    readonly property int fontPanelTitle: fontSize(30)
+    readonly property int fontFeatureTitle: fontSize(22)
+    readonly property int fontLargeData: fontSize(46)
     readonly property int fontSubpanelEyebrow: fontSize(10)
     readonly property int fontSubpanelTitle: fontSize(24)
 

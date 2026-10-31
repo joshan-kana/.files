@@ -358,6 +358,7 @@ Item {
         motion: overview.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
+        fillColor: theme.materialContainerLow
         clip: true
         scale: overview.open ? 1 : theme.panelClosedScale
         opacity: overview.open ? 1 : 0

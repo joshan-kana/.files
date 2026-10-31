@@ -28,13 +28,13 @@ Item {
             top: parent.top
             horizontalCenter: parent.horizontalCenter
         }
-        width: 115
-        height: 115
+        width: 122
+        height: 122
         theme: button.theme
         motion: button.motion
-        cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
-        exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
+        cornerRadius: button.selected ? width / 2 : button.theme.radiusLarge
+        exponent: button.selected ? 2.2 : button.theme.squircleExponent
+        fillColor: button.armed ? button.theme.blend(button.theme.materialPrimaryContainer, button.theme.warning, 0.25) : button.selected ? button.theme.blend(button.theme.materialContainerHigh, button.accentColor, button.theme.dark ? 0.34 : 0.27) : button.theme.materialContainer
         borderColor: button.armed ? button.theme.warning : button.selected ? button.accentColor : "transparent"
         borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
 

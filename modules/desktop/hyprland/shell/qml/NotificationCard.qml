@@ -66,10 +66,17 @@ SquircleSurface {
         }
     }
 
-    implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
-    cornerRadius: theme.radiusMedium
+    implicitHeight: Math.max(106, contents.implicitHeight + theme.spacing4 * 2)
+    cornerRadius: selected ? theme.radiusLarge : theme.radiusMedium
     exponent: theme.squircleExponent
-    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.roleColor("notifications"), theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
+    fillColor: selected ? theme.blend(theme.materialContainerHigh, theme.roleColor("notifications"), theme.dark ? 0.21 : 0.13) : theme.materialContainer
+    Behavior on cornerRadius {
+        enabled: !card.dismissing
+        Anim {
+            motion: card.motion
+            type: Anim.FastSpatial
+        }
+    }
     borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.roleColor("notifications") : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
@@ -185,7 +192,7 @@ SquircleSurface {
             textFormat: Text.PlainText
             color: card.theme.textStrong
             font.family: card.runtime.fontMono
-            font.pixelSize: card.theme.fontSize(14)
+            font.pixelSize: card.theme.fontSize(16)
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
         }

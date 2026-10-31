@@ -17,11 +17,11 @@ ShellSurface {
     property string glyphFont: runtime.fontMono
     property color glyphColor: theme.accent
 
-    implicitHeight: quiet ? 66 : 126
+    implicitHeight: quiet ? 70 : 148
     surfaceLayer: ShellSurface.Group
     luminous: !quiet
     luminousColor: hero.glyphColor
-    fillColor: quiet ? "transparent" : theme.blend(theme.groupBase, hero.glyphColor, theme.dark ? 0.12 : 0.07)
+    fillColor: quiet ? "transparent" : theme.blend(theme.materialContainer, hero.glyphColor, theme.dark ? 0.17 : 0.12)
     borderWidth: quiet ? 0 : theme.borderThin
     cornerRadius: theme.radiusLarge
     clip: true
@@ -46,8 +46,8 @@ ShellSurface {
     ShellSurface {
         id: iconTile
         visible: !hero.quiet
-        width: 68
-        height: 68
+        width: 80
+        height: 80
         anchors {
             left: parent.left
             leftMargin: hero.theme.spacing4
@@ -56,7 +56,7 @@ ShellSurface {
         theme: hero.theme
         motion: hero.motion
         surfaceLayer: ShellSurface.Control
-        cornerRadius: hero.theme.radiusMedium
+        cornerRadius: hero.theme.radiusLarge
         fillColor: Qt.rgba(hero.glyphColor.r, hero.glyphColor.g, hero.glyphColor.b, 0.19)
 
         Text {
@@ -64,7 +64,7 @@ ShellSurface {
             text: hero.glyph
             color: hero.glyphColor
             font.family: hero.glyphFont
-            font.pixelSize: hero.theme.fontSize(35)
+            font.pixelSize: hero.theme.fontSize(38)
         }
     }
 
@@ -111,7 +111,7 @@ ShellSurface {
             theme: hero.theme
             text: hero.title
             color: hero.theme.textStrong
-            font.pixelSize: hero.quiet ? hero.theme.fontSize(18) : hero.theme.fontSubpanelTitle
+            font.pixelSize: hero.quiet ? hero.theme.fontSize(18) : hero.theme.fontSize(29)
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }

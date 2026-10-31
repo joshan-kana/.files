@@ -22,11 +22,11 @@ QtObject {
     readonly property int slow: enabled ? 220 : 0
     readonly property int pulse: enabled ? 520 : 0
 
-    readonly property int spatialFast: enabled ? 150 : 0
+    readonly property int spatialFast: enabled ? 170 : 0
     // Geometry morphs settle after the shorter content transition.
-    readonly property int morph: enabled ? 240 : 0
+    readonly property int morph: enabled ? 270 : 0
     readonly property int contentFade: enabled ? 115 : 0
-    readonly property int spatialNormal: enabled ? 220 : 0
+    readonly property int spatialNormal: enabled ? 250 : 0
     readonly property int spatialSlow: enabled ? 320 : 0
     readonly property int effectsFast: enabled ? 90 : 0
     readonly property int effectsNormal: enabled ? 150 : 0
@@ -35,7 +35,7 @@ QtObject {
     // CSS-style cubic Bézier profiles shared by all shell animations.
     // Short feedback stays responsive, while large surface changes have a
     // deliberate ease-in and longer settling phase. Never overshoot geometry.
-    readonly property var spatialCurve: [0.35, 0, 0.15, 1, 1, 1]
+    readonly property var spatialCurve: [0.3, 0, 0.12, 1, 1, 1]
     readonly property var morphCurve: [0.4, 0, 0.2, 1, 1, 1]
     readonly property var enterCurve: [0, 0, 0.2, 1, 1, 1]
     readonly property var exitCurve: [0.4, 0, 1, 1, 1, 1]

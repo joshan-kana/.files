@@ -1183,6 +1183,7 @@ Item {
         motion: palette.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusPanel
+        fillColor: theme.materialContainerLow
 
         scale: palette.open ? 1 : theme.panelClosedScale
         opacity: palette.open ? 1 : 0
@@ -1235,7 +1236,7 @@ Item {
                         elide: Text.ElideRight
                         color: theme.textStrong
                         font.family: runtime.fontMono
-                        font.pixelSize: theme.fontSize(24)
+                        font.pixelSize: theme.fontFeatureTitle
                         font.weight: Font.DemiBold
                     }
 
@@ -1453,7 +1454,7 @@ Item {
                 highlight: SquircleSurface {
                     exponent: theme.squircleExponent
                     cornerRadius: theme.radiusMedium
-                    fillColor: theme.blend(theme.layer2, palette.scopeAccent, theme.dark ? 0.07 : 0.045)
+                    fillColor: theme.blend(theme.materialPrimaryContainer, palette.scopeAccent, theme.dark ? 0.13 : 0.08)
                     borderColor: Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, theme.dark ? 0.53 : 0.62)
                     borderWidth: theme.borderThin
                 }
@@ -1481,7 +1482,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             exponent: theme.squircleExponent
                             cornerRadius: theme.radiusSmall
-                            fillColor: result.ListView.isCurrentItem ? theme.blend(theme.controlBase, palette.scopeAccent, 0.18) : theme.controlBase
+                            fillColor: result.ListView.isCurrentItem ? theme.materialPrimaryContainer : theme.materialContainerHigh
                             borderColor: result.ListView.isCurrentItem ? Qt.rgba(palette.scopeAccent.r, palette.scopeAccent.g, palette.scopeAccent.b, 0.55) : theme.subtleBorder
                             borderWidth: theme.borderThin
 
@@ -1606,14 +1607,14 @@ Item {
                 }
             }
 
-            Row {
+            Column {
                 id: footer
-
                 anchors {
                     left: parent.left
                     right: parent.right
                     bottom: parent.bottom
                 }
+                spacing: theme.spacing2
 
                 Text {
                     text: palette.copyFeedback || displayedModel.values.length + (palette.actionMode ? " ACTIONS" : " RESULTS")
@@ -1623,18 +1624,54 @@ Item {
                     font.letterSpacing: 1.2
                 }
 
-                Item {
-                    width: parent.width - parent.children[0].width - hints.width
-                    height: 1
-                }
-
-                Text {
-                    id: hints
-                    text: palette.actionMode ? "J/K SELECT  ·  ↵ EXECUTE  ·  ESC BACK" : search.activeFocus ? "TYPE TO SEARCH  ·  TAB NAV  ·  ALT+↵ ACTIONS  ·  ⇧ESC CLOSE" : "J/K SELECT  ·  U/D PAGE  ·  ALT+↵ ACTIONS  ·  ESC BACK"
-                    color: theme.textMuted
-                    font.family: runtime.fontMono
-                    font.pixelSize: theme.fontSize(10)
-                    font.letterSpacing: 0.7
+                KeyHintStrip {
+                    width: parent.width
+                    runtime: palette.runtime
+                    theme: palette.theme
+                    hints: palette.actionMode ? [
+                        {
+                            shortcut: "J/K",
+                            label: "Choose"
+                        },
+                        {
+                            shortcut: "ENTER",
+                            label: "Run"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back"
+                        }
+                    ] : search.activeFocus ? [
+                        {
+                            shortcut: "TAB",
+                            label: "Results"
+                        },
+                        {
+                            shortcut: "ALT+ENTER",
+                            label: "Actions"
+                        },
+                        {
+                            shortcut: "SHIFT+ESC",
+                            label: "Close"
+                        }
+                    ] : [
+                        {
+                            shortcut: "J/K",
+                            label: "Choose"
+                        },
+                        {
+                            shortcut: "U/D",
+                            label: "Page"
+                        },
+                        {
+                            shortcut: "ALT+ENTER",
+                            label: "Actions"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Back"
+                        }
+                    ]
                 }
             }
         }

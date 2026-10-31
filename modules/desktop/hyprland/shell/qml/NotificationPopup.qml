@@ -86,7 +86,7 @@ PanelWindow {
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: popup.theme.groupBase
+        fillColor: popup.theme.materialContainerHigh
         borderColor: popup.notification && popup.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
         borderWidth: popup.theme.borderThin
 

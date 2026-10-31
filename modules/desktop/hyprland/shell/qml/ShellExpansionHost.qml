@@ -403,16 +403,14 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        fillColor: host.theme.panelBase
-        luminous: true
-        luminousColor: host.theme.textStrong
-        lightIntensity: 0.22
+        fillColor: host.theme.materialContainerLow
+        luminous: false
         elevated: true
         // The old double-offset silhouette produced grey corner blobs on
         // light backgrounds. The panel already has a continuous contour.
         shadowStrength: 0
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
-        borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
+        borderColor: host.theme.subtleBorder
         borderWidth: host.theme.borderThin
 
         Behavior on cornerRadius {

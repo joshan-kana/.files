@@ -1,10 +1,10 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-// Compact, live-state action for the Controls strip. The caller owns the action.
+// One large expressive tile for all compact system modes and actions.
+// State changes the shape and tonal fill; hovering never resizes the grid.
 Item {
     id: chip
-
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
@@ -13,101 +13,108 @@ Item {
     property string shortcut: ""
     property bool active: false
     property color activeColor: theme.accent
-
     signal activated
 
-    implicitHeight: 78
+    implicitHeight: 104
     Accessible.role: Accessible.Button
     Accessible.name: title
 
-    scale: press.pressed ? 0.94 : press.containsMouse ? 1.018 : 1
-    Behavior on scale {
-        Anim {
-            motion: chip.motion
-            type: Anim.FastSpatial
-        }
-    }
-
     ShellSurface {
-        id: chipSurface
+        id: tile
         anchors.fill: parent
         theme: chip.theme
         motion: chip.motion
         surfaceLayer: ShellSurface.Control
+        selected: false
         cornerRadius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
-        luminous: chip.active
-        luminousColor: chip.activeColor
-        outlined: chip.active
-        borderColor: chip.active ? chip.activeColor : "transparent"
-        hovered: press.containsMouse
-        fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.12 : 0.08) : chip.theme.expressiveSurfaceStrong
-
+        fillColor: chip.active ? chip.theme.blend(chip.theme.materialContainerHigh, chip.activeColor, chip.theme.dark ? 0.28 : 0.21) : chip.theme.materialContainer
+        borderColor: chip.active ? Qt.rgba(chip.activeColor.r, chip.activeColor.g, chip.activeColor.b, 0.48) : "transparent"
+        borderWidth: chip.active ? chip.theme.borderThin : 0
         Behavior on cornerRadius {
             Anim {
                 motion: chip.motion
                 type: Anim.FastSpatial
             }
         }
+        Behavior on fillColor {
+            Anim {
+                motion: chip.motion
+                type: Anim.FastEffects
+            }
+        }
 
-        // Tiles share the same two-row layout: glyph and keycap above the
-        // title. Neither the shortcut nor its placement is widget-specific.
-        Column {
+        ShellSurface {
+            id: symbolContainer
+            width: 44
+            height: 44
             anchors {
-                fill: parent
-                leftMargin: chip.theme.spacing2
-                rightMargin: chip.theme.spacing2
-                topMargin: chip.theme.spacing3 + 3
-                bottomMargin: chip.theme.spacing2
+                left: parent.left
+                top: parent.top
+                margins: chip.theme.spacing3
             }
-            spacing: chip.theme.spacing2
-
-            Item {
-                width: parent.width
-                height: Math.max(chip.theme.keycapHeight - 3, chip.theme.fontSize(21))
-                Text {
-                    anchors {
-                        horizontalCenter: parent.horizontalCenter
-                        verticalCenter: parent.verticalCenter
-                    }
-                    text: chip.icon
-                    color: chip.activeColor
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: chip.theme.fontSize(20)
-                }
-                KeyHint {
-                    visible: chip.shortcut.length > 0
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                    }
-                    shortcut: chip.shortcut
-                    compact: true
-                    runtime: chip.runtime
-                    theme: chip.theme
-                    emphasized: chip.active
-                    emphasisColor: chip.activeColor
+            theme: chip.theme
+            motion: chip.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: chip.active ? 22 : chip.theme.radiusSmall
+            fillColor: chip.active ? chip.activeColor : chip.theme.materialContainerHigh
+            Behavior on cornerRadius {
+                Anim {
+                    motion: chip.motion
+                    type: Anim.FastSpatial
                 }
             }
-
-            MarqueeText {
-                width: parent.width
-                text: chip.title
-                color: chip.theme.textStrong
-                alignCenter: true
-                font.family: chip.runtime.fontMono
-                font.pixelSize: chip.theme.fontSize(10)
-                font.weight: chip.active ? Font.DemiBold : Font.Medium
+            Text {
+                anchors.centerIn: parent
+                text: chip.icon
+                font.family: "Symbols Nerd Font"
+                font.pixelSize: chip.theme.fontSize(23)
+                color: chip.active ? chip.theme.background : chip.activeColor
             }
+        }
+
+        KeyHint {
+            visible: chip.shortcut.length > 0
+            anchors {
+                right: parent.right
+                top: parent.top
+                margins: chip.theme.spacing3
+            }
+            shortcut: chip.shortcut
+            compact: true
+            runtime: chip.runtime
+            theme: chip.theme
+            emphasized: chip.active
+            emphasisColor: chip.activeColor
+        }
+
+        Text {
+            anchors {
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                margins: chip.theme.spacing3
+            }
+            height: chip.theme.fontSize(30)
+            verticalAlignment: Text.AlignBottom
+            horizontalAlignment: Text.AlignLeft
+            text: chip.title
+            textFormat: Text.PlainText
+            color: chip.theme.textStrong
+            font.family: chip.runtime.fontMono
+            font.pixelSize: chip.theme.fontSize(11)
+            font.weight: chip.active ? Font.Bold : Font.DemiBold
+            wrapMode: Text.Wrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
         }
     }
 
     StateLayer {
-        id: press
         theme: chip.theme
         motion: chip.motion
         selected: chip.active
         stateColor: chip.activeColor
-        cornerRadius: chipSurface.cornerRadius
+        cornerRadius: tile.cornerRadius
         onActivated: chip.activated()
     }
 }

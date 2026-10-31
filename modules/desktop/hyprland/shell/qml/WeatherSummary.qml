@@ -9,10 +9,8 @@ ShellSurface {
 
     implicitHeight: theme.textScale >= 1.5 ? 238 : 202
     surfaceLayer: ShellSurface.Group
-    luminous: true
-    luminousColor: theme.textStrong
-    lightIntensity: 1.35
-    fillColor: theme.blend(theme.groupBase, theme.roleColor("weather"), theme.dark ? 0.15 : 0.08)
+    luminous: false
+    fillColor: theme.blend(theme.materialTertiaryContainer, theme.roleColor("weather"), theme.dark ? 0.13 : 0.09)
     cornerRadius: theme.radiusLarge
     clip: true
 

@@ -25,15 +25,7 @@ Item {
 
     signal activated
 
-    implicitHeight: 92
-    scale: interaction.pressed ? 0.982 : interaction.containsMouse ? 1.012 : 1
-
-    Behavior on scale {
-        Anim {
-            motion: tile.motion
-            type: Anim.FastSpatial
-        }
-    }
+    implicitHeight: 112
 
     Accessible.role: Accessible.Button
     Accessible.name: title + ", " + detail + ", " + status
@@ -43,16 +35,16 @@ Item {
         theme: tile.theme
         motion: tile.motion
         surfaceLayer: ShellSurface.Group
-        cornerRadius: tile.theme.radiusLarge
+        cornerRadius: tile.connected ? tile.theme.radiusPanel : tile.theme.radiusLarge
         luminous: tile.connected || tile.pending || tile.scanning || tile.failed
         luminousColor: tile.signalColor
         hovered: interaction.containsMouse
-        fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.signalColor, tile.theme.dark ? 0.095 : 0.065) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
+        fillColor: tile.failed ? tile.theme.blend(tile.theme.materialContainer, tile.theme.critical, 0.22) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.materialContainer, tile.theme.warning, 0.20) : tile.connected ? tile.theme.blend(tile.theme.materialContainerHigh, tile.signalColor, tile.theme.dark ? 0.19 : 0.13) : tile.unavailable ? tile.theme.materialContainerLow : tile.theme.materialContainer
 
         ShellSurface {
             id: glyphSurface
-            width: 47
-            height: 47
+            width: 56
+            height: 56
             anchors {
                 left: parent.left
                 leftMargin: tile.theme.spacing4
@@ -61,15 +53,15 @@ Item {
             theme: tile.theme
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
-            cornerRadius: tile.theme.radiusMedium
-            fillColor: tile.connected ? tile.theme.blend(tile.theme.controlBase, tile.signalColor, 0.17) : tile.pending || tile.scanning || tile.failed ? tile.theme.blend(tile.theme.expressiveSurface, tile.signalColor, 0.17) : tile.theme.expressiveSurface
+            cornerRadius: tile.connected ? 28 : tile.theme.radiusSmall
+            fillColor: tile.connected ? tile.signalColor : tile.theme.materialContainerHigh
 
             Text {
                 anchors.centerIn: parent
                 text: tile.glyph
-                color: tile.unavailable ? tile.theme.textMuted : tile.connected || tile.pending || tile.scanning || tile.failed ? tile.signalColor : tile.foreground
+                color: tile.connected ? tile.theme.background : tile.unavailable ? tile.theme.textMuted : tile.pending || tile.scanning || tile.failed ? tile.signalColor : tile.foreground
                 font.family: "Symbols Nerd Font"
-                font.pixelSize: tile.theme.fontSize(24)
+                font.pixelSize: tile.theme.fontSize(27)
             }
         }
 
@@ -88,7 +80,7 @@ Item {
                 text: tile.title
                 color: tile.foreground
                 font.family: tile.runtime.fontMono
-                font.pixelSize: tile.theme.fontSize(15)
+                font.pixelSize: tile.theme.fontSize(17)
                 font.weight: Font.DemiBold
             }
 

@@ -93,16 +93,22 @@ FocusScope {
             height: 112
             theme: mixer.theme
             motion: mixer.motion
-            cornerRadius: theme.radiusMedium
+            cornerRadius: chosen ? theme.radiusLarge : theme.radiusMedium
             surfaceLayer: ShellSurface.Group
-            fillColor: chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
+            fillColor: chosen ? theme.blend(theme.materialContainerHigh, theme.roleColor("audio"), theme.dark ? 0.19 : 0.12) : theme.materialContainer
+            Behavior on cornerRadius {
+                Anim {
+                    motion: mixer.motion
+                    type: Anim.FastSpatial
+                }
+            }
             borderColor: chosen ? theme.roleColor("audio") : "transparent"
             borderWidth: chosen ? theme.borderFocus : 0
 
             StateLayer {
                 theme: mixer.theme
                 motion: mixer.motion
-                cornerRadius: mixer.theme.radiusMedium
+                cornerRadius: streamRow.cornerRadius
                 onActivated: mixer.selectedIndex = streamRow.index
             }
 

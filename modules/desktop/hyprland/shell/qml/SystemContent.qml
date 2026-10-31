@@ -766,7 +766,7 @@ FocusScope {
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
                 spacing: root.theme.spacing2
-                readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
+                readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : 3
 
                 function cellWidth(index: int): real {
                     const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
@@ -775,7 +775,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth(0)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -789,7 +789,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth(1)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -803,7 +803,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth(2)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -816,7 +816,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth(3)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -831,7 +831,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: actionStrip.cellWidth(4)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -877,7 +877,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(0)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -891,7 +891,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(1)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -905,7 +905,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(2)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -919,7 +919,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(3)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -933,7 +933,7 @@ FocusScope {
 
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(4)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -946,7 +946,7 @@ FocusScope {
                 }
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(5)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -960,7 +960,7 @@ FocusScope {
 
                 AdjustableSetting {
                     width: visualModeStrip.cellWidth(6)
-                    height: 78
+                    height: 104
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion

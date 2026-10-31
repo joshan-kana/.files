@@ -25,18 +25,18 @@ Item {
 
     signal tabRequested(string destination)
 
-    implicitHeight: 46
+    implicitHeight: 58
 
     ShellSurface {
         id: track
         width: parent.width
-        height: 42
+        height: 54
         anchors.horizontalCenter: parent.horizontalCenter
         theme: root.theme
         motion: root.motion
         surfaceLayer: ShellSurface.Control
         cornerRadius: root.theme.radiusLarge
-        fillColor: root.theme.expressiveSurface
+        fillColor: root.theme.materialContainerHigh
 
         SquircleSurface {
             id: slidingSelection
@@ -46,10 +46,10 @@ Item {
             height: track.height - 2 * root.theme.spacing1
             exponent: root.theme.squircleExponent
             cornerRadius: root.theme.radiusLarge
-            fillColor: root.theme.selectedTabFill
+            fillColor: root.theme.materialPrimaryContainer
             // Do not bloom the whole active tab with the accent colour.
             lightColor: root.theme.textStrong
-            lightStrength: 0.025
+            lightStrength: 0
         }
 
         Row {
@@ -90,7 +90,7 @@ Item {
                         text: tab.modelData.label
                         color: tab.chosen ? root.theme.textStrong : root.theme.textMuted
                         font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(12)
+                        font.pixelSize: root.theme.fontSize(14)
                         font.weight: tab.chosen ? Font.DemiBold : Font.Medium
                         Behavior on color {
                             ColorAnimation {

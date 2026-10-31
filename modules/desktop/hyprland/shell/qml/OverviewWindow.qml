@@ -14,8 +14,14 @@ ShellSurface {
     signal dropped(real pointerX, real pointerY)
 
     surfaceLayer: ShellSurface.Control
-    cornerRadius: theme.radiusMedium
-    fillColor: selected ? theme.blend(theme.layer2, theme.accent, theme.dark ? 0.075 : 0.045) : theme.layer2
+    cornerRadius: selected ? theme.radiusLarge : theme.radiusMedium
+    fillColor: selected ? theme.materialPrimaryContainer : theme.materialContainer
+    Behavior on cornerRadius {
+        Anim {
+            motion: tile.motion
+            type: Anim.FastSpatial
+        }
+    }
     borderColor: selected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.72) : theme.subtleBorder
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
@@ -58,7 +64,7 @@ ShellSurface {
             motion: tile.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: theme.radiusSmall
-            fillColor: theme.paneBase
+            fillColor: theme.materialContainerHigh
             visible: !!tile.toplevel && !!tile.toplevel.workspace
             Text {
                 anchors.centerIn: parent
@@ -81,7 +87,7 @@ ShellSurface {
             motion: tile.motion
             surfaceLayer: ShellSurface.Group
             cornerRadius: theme.radiusSmall
-            fillColor: theme.paneBase
+            fillColor: theme.materialContainerHigh
 
             Row {
                 anchors {
