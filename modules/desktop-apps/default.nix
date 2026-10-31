@@ -158,12 +158,14 @@ in
       }
     );
 
-  sunshine = _: {
-    environment.systemPackages = [ pkgs.sunshine ];
-    config = lib.optionalAttrs isLinux {
+  sunshine =
+    _:
+    {
+      environment.systemPackages = [ pkgs.sunshine ];
+    }
+    // lib.optionalAttrs isLinux {
       networking.firewall.allowedTCPPorts = [ 47990 ];
     };
-  };
 
   moonlight = _: {
     home = _: {
@@ -316,11 +318,11 @@ in
       };
   };
 
-  twingate = _: {
-    config = lib.optionalAttrs isLinux {
+  twingate =
+    _:
+    lib.optionalAttrs isLinux {
       services.twingate.enable = true;
     };
-  };
 
   beeperMatrixClient = _: {
     home = _: {

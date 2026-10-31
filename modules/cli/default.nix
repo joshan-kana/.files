@@ -199,17 +199,19 @@ in
         );
     };
 
-  nh = args: {
-    # The rebuild helper must also be available to system administrators.
-    config = lib.optionalAttrs isLinux {
+  nh =
+    args:
+    {
+      home = args: {
+        inherit ((nhConfig args)) programs;
+      };
+    }
+    // lib.optionalAttrs isLinux {
+      # The rebuild helper must also be available to system administrators.
       programs = lib.recursiveUpdate (nhConfig args).programs {
         nh.enable = true;
       };
     };
-    home = args: {
-      inherit ((nhConfig args)) programs;
-    };
-  };
 
   direnv =
     _args:
@@ -455,11 +457,6 @@ in
         };
       };
 
-      # Git remains available for system recovery even without Home Manager.
-      config = lib.optionalAttrs isLinux {
-        programs.git.enable = true;
-      };
-
       delta = _: {
         home = { config, ... }: {
           programs.delta = {
@@ -486,48 +483,53 @@ in
           inherit (lazygitConfig args) programs;
         };
       };
+    }
+    // lib.optionalAttrs isLinux {
+      # Git remains available for system recovery even without Home Manager.
+      programs.git.enable = true;
     };
 
-  zsh = args: {
-    config = lib.optionalAttrs isLinux {
+  zsh =
+    args:
+    {
+      home = args: {
+        home.shellAliases = {
+          bk = "cd ..";
+          sz = "dust";
+        };
+        programs.zsh = (zshConfig args).programs.zsh // {
+          autosuggestion.enable = true;
+          syntaxHighlighting.enable = true;
+          plugins = [
+            {
+              name = "zsh-fzf-tab";
+              file = "share/fzf-tab/fzf-tab.plugin.zsh";
+              src = pkgs.zsh-fzf-tab;
+            }
+          ];
+          initContent = ''
+            bindkey "^[[1;5D" backward-word
+            bindkey "^[[1;5C" forward-word
+            bindkey "^H" backward-kill-word
+            bindkey "^[[3;3~" kill-word
+
+            autoload -U edit-command-line
+            zle -N edit-command-line
+            bindkey '^xe' edit-command-line
+            bindkey '^x^e' edit-command-line
+
+            bindkey -v '^?' backward-delete-char
+          '';
+        };
+      };
+    }
+    // lib.optionalAttrs isLinux {
       programs.zsh = (zshConfig args).programs.zsh // {
         enable = true;
         enableBashCompletion = true;
       };
       users.defaultUserShell = pkgs.zsh;
     };
-
-    home = args: {
-      home.shellAliases = {
-        bk = "cd ..";
-        sz = "dust";
-      };
-      programs.zsh = (zshConfig args).programs.zsh // {
-        autosuggestion.enable = true;
-        syntaxHighlighting.enable = true;
-        plugins = [
-          {
-            name = "zsh-fzf-tab";
-            file = "share/fzf-tab/fzf-tab.plugin.zsh";
-            src = pkgs.zsh-fzf-tab;
-          }
-        ];
-        initContent = ''
-          bindkey "^[[1;5D" backward-word
-          bindkey "^[[1;5C" forward-word
-          bindkey "^H" backward-kill-word
-          bindkey "^[[3;3~" kill-word
-
-          autoload -U edit-command-line
-          zle -N edit-command-line
-          bindkey '^xe' edit-command-line
-          bindkey '^x^e' edit-command-line
-
-          bindkey -v '^?' backward-delete-char
-        '';
-      };
-    };
-  };
 
   yazi = _: {
     home = _: {
