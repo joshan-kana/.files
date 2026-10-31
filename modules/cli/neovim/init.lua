@@ -94,8 +94,12 @@ require("blink.cmp").setup({
 	cmdline = {
 		keymap = {
 			preset = "cmdline",
-			["<Right>"] = { "accept", "fallback" },
+			["<Tab>"] = { "accept", "fallback" },
+			["<Up>"] = { "insert_prev", "fallback" },
+			["<Down>"] = { "insert_next", "fallback" },
+			["<Right>"] = false,
 		},
+		completion = { menu = { auto_show = true } },
 	},
 	completion = { documentation = { auto_show = true } },
 	fuzzy = { implementation = "lua" },

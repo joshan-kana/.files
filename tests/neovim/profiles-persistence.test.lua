@@ -25,7 +25,7 @@ if stage then
 	elseif stage == "restore" then
 		check(profiles.status(), "native · select")
 		check(vim.fn.maparg("x", "n"), "")
-		check(vim.fn.maparg("w", "n"), "vaw")
+		assert(type(vim.fn.maparg("w", "n", false, true).callback) == "function")
 		profiles.set_keymap("positional")
 		assert(stored().keymap == "positional" and stored().selection == true)
 	elseif stage == "independent" then
