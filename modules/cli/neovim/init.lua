@@ -18,6 +18,7 @@ vim.opt.confirm = true
 vim.opt.updatetime = 250
 vim.opt.timeoutlen = 400
 vim.opt.termguicolors = true
+vim.opt.exrc = true
 vim.opt.winborder = "rounded"
 
 vim.api.nvim_create_autocmd("BufReadPost", {
