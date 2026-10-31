@@ -151,6 +151,11 @@ ShellRoot {
             onBarToggleRequested: appearance.toggleBar()
             onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
             onShellGlassToggleRequested: appearance.toggleShellGlass()
+            onRestoreDefaultsRequested: {
+                appearance.resetToDeclared();
+                motion.resetToDeclared();
+                screenshotPicker.resetToDeclared();
+            }
             requestedView: expansionState.currentView
             returnToControls: expansionState.backDestination === "controls"
             onBackRequested: expansionState.back()
