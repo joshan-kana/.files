@@ -1,27 +1,15 @@
 # Platforms
 
-**Convention:** Share behavior across NixOS, nix-darwin, and Home Manager where supported; make OS and architecture restrictions explicit and local.
+Share behavior across supported operating systems and architectures, but do not assume a compatible package implies compatible service, option, or desktop support.
 
-## Prefer current capabilities over assumptions
+## Platform boundaries
 
-Inspect the actual package and native-option support. Use `lib.systems.elaborate system` when the module supplies a system argument, and `isLinux` or `isDarwin` to express platform-specific attribute trees.
+Inspect package availability, native module interfaces, and runtime requirements for each target system. Use system metadata and explicit conditions to exclude unsupported declarations.
 
-- `lib.optionalAttrs isLinux`: Linux-only settings.
-- `lib.optionalAttrs isDarwin`: Darwin-only native integrations.
-- `lib.optionals isLinux`: Linux-only list items.
-- Ordinary `if`: meaningful alternative values.
-- Explicit system allowlists: binaries only published for particular architectures.
-
-The same semantic owner may map to different native option schemas on each OS. Preserve that distinction without inventing an ersatz common module API.
+Keep OS-specific native options within the matching platform branch. Use architecture allowlists when a publisher supports only certain systems. Share data across differing option schemas instead of fabricating a universal native module interface.
 
 ## Host exceptions
 
-Hardware, VM network topology, packages, and recovery paths can justify host-local changes. For example, the Parallels ARM VM uses shared/NAT networking and Tailscale for normal remote access; do not introduce bridged LAN networking as a generic DNS fix.
+Hardware dependencies, virtualization limitations, and host-only services justify local differences. Keep these within the relevant host's semantic scope rather than imposing them globally.
 
-A package available on one platform does not necessarily imply its associated graphical session, systemd integration, or service should be enabled there.
-
-## Verification
-
-Evaluate every affected host. Build architecture-specific packages on a compatible builder when packaging changes. An x86-64 `nix flake check` may omit aarch64 and Darwin systems; explicitly distinguish evaluated outputs from builds and live deployments.
-
-**Exception:** A host-specific service or hardware driver need not become a cross-platform module just because Nix can evaluate part of it.
+Evaluate every affected host. Build packages on compatible target systems where architecture matters, and distinguish evaluation from builds and runtime verification. A check executed on one architecture does not prove the others work.

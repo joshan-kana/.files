@@ -1,26 +1,20 @@
 # Tooling
 
-**Convention:** Prefer the development environment and repository-provided commands, keep scripts readable and portable to their intended hosts, and apply consistent formatter/linter support when introducing a language.
+Use the repository-provided development environment, formatter, tests, and commands. Prefer reproducible dependencies to globally installed tools.
 
-## Development environment
+## Toolchain
 
-The repository's `nix develop -c $SHELL` provides the intended toolchain. Prefer Nix-provided dependencies, `nix shell` for necessary temporary tools, and packages already defined by the flake rather than global, untracked package installations.
+Use `nix develop` for repository work and Nix-provided tools for missing temporary dependencies. Keep formatter and linter definitions in the shared tooling configuration. Add language support through the same toolchain rather than introducing a separate ad hoc path for each feature.
 
-`nix fmt` is the formatting entry point. The flake's Treefmt configuration owns the language formatters, linters, ordering, and exclusions. Language support added to the repository should use the shared, language-agnostic Treefmt configuration rather than a special-case script under one app.
+Formatting, linting, type checks, and runtime tests verify different properties; one cannot stand in for the others.
 
-Run `nix fmt -- --ci` to check without applying edits. The repo-quality pre-commit hook checks formatting and linting, while the staged-whitespace hook runs `git diff --cached --check`.
+## Commands and scripts
 
-## Scripts, aliases, and small helpers
+- Prefer small, readable, directly runnable commands over opaque wrappers.
+- Use native module options for shell settings when possible.
+- Keep feature-specific logic with its owner; use `scripts/` for broadly reusable repository commands.
+- Declare executable runtime dependencies rather than depending on an interactive user's shell.
+- Design repeatable operations to be safe when run again. Separate dry-run/reporting paths from destructive actions where appropriate.
+- Preserve observable CLI behavior and help text when refactoring command implementation.
 
-- Prefer ordinary, copyable commands and small scripts over opaque wrappers or encoding tricks.
-- Prefer native `environment.shellAliases` and Home Manager options for shell configuration when appropriate.
-- Put feature-specific operational logic with the feature when that is clearer than a generic script directory; shared repository commands can live in `scripts/`.
-- Use package-provided executables and explicit runtime dependencies for executable scripts where practical.
-- Keep scripts idempotent where re-running is expected. Separate a reporting/check mode from a destructive fix mode when that distinction matters.
-- Prefer the supported execution environment of each host over assumptions about a local user shell.
-
-## Review
-
-Formatting success does not prove shell portability, editor correctness, or service behavior. Validate scripts in their relevant runtime, evaluate consumers, and preserve exact help/usage semantics when refactoring a tool.
-
-Do not introduce a new convenience abstraction unless it reduces complexity for the actual users of the repository.
+Test commands under the environments in which they will run. Avoid introducing another layer of tooling unless it removes real repetition or complexity.

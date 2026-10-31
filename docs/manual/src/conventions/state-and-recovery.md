@@ -1,25 +1,21 @@
 # State and recovery
 
-**Convention:** Persistent data must have an intentional location, identity, backup boundary, and recovery path. A successful build or service restart is not evidence that important data can be restored.
+Persistent data requires deliberate placement, ownership, backup coverage, and a restoration path. Rebuilding a host or restarting a service does not prove data is recoverable.
 
-## Storage placement
+## Storage ownership
 
-On the home server, persistent application configuration and state normally live under `config.dotfiles.server.storage.appData.root`. Large user data belongs under `config.dotfiles.server.storage.dataRoot.path`. A dedicated mount or documented upstream requirement can justify an exception.
+Use the owning host's shared storage policy for application state and large data. An application scope declares its required paths, permissions, and backup participation; the storage scope owns filesystems and mounts.
 
-Do not duplicate filesystem layout constants in multiple modules. Prefer existing shared storage policy and app-owned paths. Each app configures its own directories, ownership, and backup integration; shared storage infrastructure manages the filesystems and mounts.
+Do not duplicate root paths across modules or scatter one application's persistent state without a reason. Use declarative state directories and identity management where possible, and include any identity database necessary to restore permissions.
 
-Prefer declarative systemd directories, user/group ownership, and tmpfiles rules to startup permission-repair scripts. Where Userborn preserves service identities across rebuilds, recover its identity database along with application data.
+## Recovery boundaries
 
-## Backup boundaries
+Keep configuration rollback, application-state restoration, filesystem snapshots, and encrypted offsite backups separate. None alone substitutes for a complete recovery plan.
 
-Keep secrets backup, app-state backup, filesystem snapshots, and Vault recovery conceptually distinct. None alone covers all recovery needs. Declare app-specific backup coverage where the app is configured and prefer verified paths to broad guesses that may miss bind mounts.
+Keep runtime secrets out of generated configuration and store paths; encrypted recovery material must remain protected. Verify backup coverage against real persistent paths, including volumes and bind mounts.
 
-Credentials remain runtime-only. Backups of secret material must be encrypted; never embed passwords or tokens in store paths or a runbook.
+## Changes to persistent data
 
-## Changes and validation
+Inspect mounted paths, service ownership, backup state, and recovery options before a migration. Preserve existing data across ordinary configuration refactors. Do not move, repair, or delete live state as a side effect of a documentation or formatting change.
 
-For data-moving changes, inspect the current mounted layout, preservation requirements, and backup status before execution. Do not migrate or delete application state as a side effect of a formatting or module-ownership PR.
-
-Run safe evaluation checks first; verify filesystem ownership and service behavior on the actual host when applicable. For migrations, document an explicit restore or rollback route and test it where practical.
-
-The manual [backup and application recovery](../runbooks/nixos-server/backup-recovery.md) and [Vault/ZFS recovery](../runbooks/nixos-server/vault-zfs-recovery.md) runbooks own operational commands. Higher-level policy is in [Server Backups](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/NIXOS_SERVER_BACKUPS.md).
+Validate the effective configuration and, when state moves, test ownership, application startup, and restoration on the appropriate host. Operational recovery steps belong in the [runbooks](../runbooks/nixos-server/backup-recovery.md); overarching policy belongs in the [recovery handbook](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/NIXOS_SERVER_BACKUPS.md).

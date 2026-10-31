@@ -1,25 +1,22 @@
 # Desktop and appearance
 
-**Convention:** The application owns installation and behavior; the theme owns shared visual policy; the desktop/compositor owns session and window-management behavior.
+Separate application functionality, shared appearance, and desktop-session behavior by ownership.
 
-## Application and theme boundaries
+## Boundaries
 
-- `modules/desktop-apps/` owns applications that are not intrinsically tied to one desktop environment: installation, profiles, program-specific functional settings, and native Home Manager integration.
-- `modules/theme/` owns shared palette, assets, typography, and application chrome. Use `scopeEdits.desktopApps.<app>` to apply theme policy to an app rather than duplicating styling under each app scope.
-- `scopeEdits.desktop.hyprland` is appropriate for **Hyprland-specific visual policy**, including GTK/GNOME window-button layout; gate this to Linux so Darwin and unrelated desktops remain unaffected.
-- `modules/desktop/hyprland/` owns compositor sessions, keybindings, window-management behavior, and desktop integration that is not shared appearance policy.
-- `overlays/` owns package patches, even when they address a visual compatibility issue. The chosen visual policy can still be described by the theme.
+- Application scopes own installation, profiles, functional settings, and application-specific integrations.
+- The theme scope owns common colors, typography, assets, and visual choices, including an application's appearance when that policy is shared.
+- Desktop and compositor scopes own sessions, window management, focus, keybindings, and other desktop behavior.
+- Overlays own packaging and compatibility patches, including patches necessary for an appearance feature.
 
-Avoid installing the same application in competing desktop and desktop-app modules.
+Apply shared appearance to consumers through the existing cross-scope edit mechanism instead of duplicating styles in each application. Keep platform-specific visuals within the platforms that support them. Avoid installing or enabling an application through competing scopes.
 
-## Native interface and defaults
+## Defaults and behavior
 
-Prefer native Home Manager application modules and defaults. Keep required application declarations, such as Firefox/Floorp profile activation and VS Code's default profile, even if their visual settings move into the theme. A seemingly empty declaration may affect evaluated enablement.
+Prefer native application modules and defaults. Preserve declarations that affect profiles, session integration, or enablement even if their apparent settings move elsewhere.
 
-Central reusable program choices, such as the default browser executable, belong to `dotfiles.defaults.*` policy. A binding that launches the browser should consume that default, not hard-code a particular browser. Platform-specific MIME associations belong to the native environment.
+Reusable application choices belong to shared policy inputs; shortcuts and integrations should consume those inputs rather than hard-code an executable.
 
-## Validation
+## Verification
 
-Evaluate the app's effective settings and enabled profiles, not just the moved Nix source. Confirm appearance values and host derivations remain unchanged for an ownership-only refactor. For visual changes, test actual rendering, animation, accessibility, focus, and keyboard interaction at supported display sizes and refresh rates.
-
-Not all session behavior can be verified through Nix evaluation; interactive desktop testing remains necessary for such changes.
+Compare effective settings and host derivations when changing ownership without intended behavior changes. For visual or interactive changes, validate rendered appearance, focus, keyboard navigation, animation, responsiveness, and accessibility on representative target clients. Nix evaluation cannot establish interactive behavior.
