@@ -70,7 +70,7 @@ Item {
         const result = [];
         for (const row of output.split("\n")) {
             const columns = row.split("\t");
-            if (columns.length !== 4 || !/^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$/.test(columns[1]))
+            if (columns.length !== 4 || !/^(Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4|Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png)$/.test(columns[1]))
                 continue;
             const size = Number(columns[2]);
             const modified = Number(columns[0]);
@@ -79,6 +79,7 @@ Item {
                 continue;
             result.push({
                 name: columns[1],
+                isImage: columns[1].endsWith(".png"),
                 size,
                 modified,
                 duration
@@ -112,6 +113,13 @@ Item {
             return;
         Quickshell.execDetached([runtime.recordingLibrary, "edit", selectedEntry.name]);
         statusText = "EDITOR REQUESTED · " + selectedEntry.name;
+        statusError = false;
+    }
+    function copySelected(): void {
+        if (!selectedEntry || !selectedEntry.isImage || isBusy)
+            return;
+        Quickshell.execDetached([runtime.recordingLibrary, "copy", selectedEntry.name]);
+        statusText = "COPY REQUESTED · " + selectedEntry.name;
         statusError = false;
     }
     function requestDelete(): void {
@@ -162,7 +170,7 @@ Item {
                 });
             } else {
                 library.statusError = true;
-                library.statusText = "RECORDING DIRECTORY UNAVAILABLE";
+                library.statusText = "CAPTURES UNAVAILABLE";
             }
         }
     }
@@ -185,7 +193,7 @@ Item {
             const deleted = library.deletePending;
             library.deletePending = "";
             library.statusError = exitCode !== 0;
-            library.statusText = exitCode === 0 ? "MOVED TO TRASH · " + deleted : "COULD NOT MOVE RECORDING TO TRASH";
+            library.statusText = exitCode === 0 ? "MOVED TO TRASH · " + deleted : "COULD NOT MOVE CAPTURE TO TRASH";
             if (exitCode === 0)
                 library.refresh();
         }
@@ -222,8 +230,8 @@ Item {
         glyphFont: "Symbols Nerd Font"
         glyphColor: library.theme.roleColor("capture")
         eyebrow: "Capture / Local library"
-        title: "Recordings"
-        detail: library.entries.length + (library.entries.length === 1 ? " clip" : " clips") + " · ~/Videos/Screencasts"
+        title: "Captures"
+        detail: library.entries.length + (library.entries.length === 1 ? " saved image or video" : " saved images and videos")
     }
 
     Row {
@@ -293,7 +301,7 @@ Item {
                         spacing: library.theme.spacing1
                         MarqueeText {
                             width: parent.width
-                            text: recordRow.entry ? recordRow.entry.name.replace(/^Recording-/, "") : ""
+                            text: recordRow.entry ? recordRow.entry.name.replace(/^(Recording|Screenshot)-/, "") : ""
                             textFormat: Text.PlainText
                             color: library.theme.textStrong
                             font.family: library.runtime.fontMono
@@ -301,7 +309,7 @@ Item {
                             font.weight: Font.DemiBold
                         }
                         Text {
-                            text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + " · MP4"
+                            text: library.formatBytes(recordRow.entry ? recordRow.entry.size : 0) + (recordRow.entry && recordRow.entry.isImage ? " · IMAGE" : " · VIDEO")
                             color: library.theme.textMuted
                             font.family: library.runtime.fontMono
                             font.pixelSize: library.theme.fontSize(9)
@@ -312,7 +320,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: !library.listProcess.running && library.entries.length === 0
-                text: "NO COMPLETED RECORDINGS"
+                text: "NO SAVED CAPTURES"
                 color: library.theme.textMuted
                 font.family: library.runtime.fontMono
                 font.pixelSize: library.theme.fontSize(11)
@@ -363,53 +371,64 @@ Item {
                 }
                 MarqueeText {
                     width: parent.width
-                    text: library.selectedEntry ? library.timeLabel(library.selectedEntry.duration) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CLIP"
+                    text: library.selectedEntry ? (library.selectedEntry.isImage ? "IMAGE" : library.timeLabel(library.selectedEntry.duration)) + " · " + library.formatBytes(library.selectedEntry.size) : "SELECT A CAPTURE"
                     color: library.theme.textStrong
                     font.family: library.runtime.fontMono
                     font.pixelSize: library.theme.fontSize(11)
                     font.weight: Font.DemiBold
                 }
-                Row {
+                Grid {
                     width: parent.width
+                    columns: 2
                     spacing: library.theme.spacing2
                     ShellAction {
-                        width: (parent.width - parent.spacing * 2) / 3
-                        height: 37
+                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
+                        height: 34
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
-                        icon: "󰐊"
-                        title: "OPEN"
+                        title: "Open"
                         shortcut: "ENTER"
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.openSelected()
                     }
                     ShellAction {
-                        width: (parent.width - parent.spacing * 2) / 3
-                        height: 37
+                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
+                        height: 34
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
-                        icon: "󰏫"
-                        title: "EDIT"
+                        title: library.selectedEntry && library.selectedEntry.isImage ? "Markup" : "Trim"
                         shortcut: "E"
                         enabled: !!library.selectedEntry && !library.isBusy
                         onActivated: library.editSelected()
                     }
                     ShellAction {
-                        width: (parent.width - parent.spacing * 2) / 3
-                        height: 37
+                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
+                        height: 34
                         runtime: library.runtime
                         theme: library.theme
                         motion: library.motion
                         compact: true
                         horizontalCompact: true
-                        icon: "󰩺"
-                        title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "CONFIRM" : "TRASH"
+                        title: "Copy"
+                        shortcut: "C"
+                        enabled: !!library.selectedEntry && library.selectedEntry.isImage && !library.isBusy
+                        onActivated: library.copySelected()
+                    }
+                    ShellAction {
+                        width: (previewPane.width - library.theme.spacing3 * 2 - library.theme.spacing2) / 2
+                        height: 34
+                        runtime: library.runtime
+                        theme: library.theme
+                        motion: library.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: library.selectedEntry && library.deletePending === library.selectedEntry.name ? "Confirm" : "Trash"
                         shortcut: "D"
                         enabled: !!library.selectedEntry && !library.isBusy
                         active: !!library.selectedEntry && library.deletePending === library.selectedEntry.name
@@ -445,19 +464,11 @@ Item {
             hints: [
                 {
                     shortcut: "J/K",
-                    label: "Select"
+                    label: "Choose"
                 },
                 {
-                    shortcut: "ENTER",
-                    label: "Open"
-                },
-                {
-                    shortcut: "E",
-                    label: "Edit"
-                },
-                {
-                    shortcut: "D",
-                    label: "Trash"
+                    shortcut: "U/D",
+                    label: "Page"
                 },
                 {
                     shortcut: "R",
