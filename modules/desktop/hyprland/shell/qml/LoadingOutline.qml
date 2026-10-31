@@ -47,7 +47,7 @@ Item {
             strokeWidth: outline.lineWidth
             joinStyle: ShapePath.RoundJoin
             PathSvg {
-                path: outline.surface.buildPath(outline.inset) || "M 0 0"
+                path: outline.surface.buildPath(outline.inset) || "M 0 0 L 0.01 0 L 0 0.01 Z"
             }
         }
 
@@ -60,7 +60,7 @@ Item {
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
             PathSvg {
-                path: outline.motionEnabled ? "M 0 0" : (outline.surface.buildPath(outline.inset) || "M 0 0")
+                path: outline.motionEnabled ? "M 0 0 L 0.01 0 L 0 0.01 Z" : (outline.surface.buildPath(outline.inset) || "M 0 0 L 0.01 0 L 0 0.01 Z")
             }
         }
     }
