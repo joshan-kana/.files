@@ -110,11 +110,20 @@ QtObject {
     function captureKind(notification): string {
         if (!notification || notification.appName !== "linux-desktop")
             return "";
-        if (notification.summary === "Screenshot saved")
+        if (notification.summary === "Screenshot saved" || notification.summary === "Screenshot copied")
             return "screenshot";
         if (notification.summary === "Recording saved")
             return "recording";
         return "";
+    }
+
+    function invokeCaptureEdit(notification): void {
+        const kind = captureKind(notification);
+        if (!kind || runtime.notificationOpen.length === 0)
+            return;
+        Quickshell.execDetached([runtime.notificationOpen, kind === "screenshot" ? "edit-screenshot" : "edit-recording", notification.body]);
+        setRead(notification, true);
+        hidePopup();
     }
 
     function invokeDefault(notification): void {
