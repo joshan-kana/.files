@@ -521,23 +521,30 @@ in
               unit="linux-desktop-wallpaper-video@$output.service"
               args=()
               [ "$output" = all ] || args=(--outputs "$output")
+              previous_file="$state_dir/$output.wall"
+              [ -f "$previous_file" ] || previous_file="$state_dir/all.wall"
+              if [ -f "$previous_file" ]; then
+                previous="$(tail -n 1 "$previous_file")"
+                case "''${previous,,}" in
+                  *.mp4|*.webm|*.mkv|*.mov)
+                    # The video layer covers the image layer. Retain its poster
+                    # before stopping it, so the next image has a visible old frame.
+                    previous_poster="$($0 thumbnail "$previous")"
+                    awww img "''${args[@]}" --resize "$resize" --transition-type none "$previous_poster"
+                    ;;
+                esac
+              fi
+              systemctl --user stop "$unit" || true
               if [ "$kind" = video ]; then
                 ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$image" | grep -qx video || exit 2
-                # Reveal the previous poster so the new poster can transition
-                # before the replacement video surface starts playing.
-                systemctl --user stop "$unit" || true
-                # Stage the first video frame instead of exposing black as
-                # the old mpvpaper surface is replaced.
-                still="$("$0" thumbnail "$image")"
-                awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
+                still="$($0 thumbnail "$image")"
               else
-                systemctl --user stop "$unit" || true
                 still="$image"
                 if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] && [[ "''${image,,}" = *.gif ]]; then
-                  still="$("$0" thumbnail "$image")"
+                  still="$($0 thumbnail "$image")"
                 fi
-                awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               fi
+              awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               mkdir -p "$state_dir"
               temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
               trap 'rm -f "$temp"' EXIT
