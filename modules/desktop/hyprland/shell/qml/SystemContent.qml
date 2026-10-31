@@ -33,6 +33,7 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
+    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
@@ -640,7 +641,15 @@ FocusScope {
         Column {
             id: content
             width: parent.width
-            visible: !trayMenu.open && !networkPanel.open && !bluetoothPanel.open && !themePanel.open && !wallpaperPanel.open && !sessionPanel.open && !resourcesPanel.open && !root.mixerOpen && !recordingsPanel.open
+            enabled: !root.detailsVisible
+            opacity: root.detailsVisible ? 0 : 1
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.motion.contentFade
+                    easing.type: root.detailsVisible ? root.motion.exitType : root.motion.enterType
+                    easing.bezierCurve: root.detailsVisible ? root.motion.exitCurve : root.motion.enterCurve
+                }
+            }
             spacing: root.theme.spacing2
 
             Row {
