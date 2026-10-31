@@ -128,6 +128,7 @@ ShellRoot {
         id: systemExpansionComponent
 
         SystemContent {
+            appearance: appearance
             runtime: root.runtimeRef
             theme: root.themeRef
             motion: root.motionRef
