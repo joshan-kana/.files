@@ -25,6 +25,7 @@
 
   dotfiles = {
     rebuild.flags = "--impure";
+    scopes.theme.bootSplash.enable = true;
   };
 
   hardware = import ./hardware.nix;
@@ -37,7 +38,6 @@
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
-    plymouth.enable = false;
   };
 
   cli = extendScope moduleRegistry.cli {
