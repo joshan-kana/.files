@@ -169,9 +169,9 @@ in
         // lib.optionalAttrs isLinux {
           run0 = "run0 ";
           sysboot = commands.rebuild "boot";
-          sboot = commands.rebuild "boot";
+          sbt = commands.rebuild "boot";
           systest = commands.rebuild "test";
-          stest = commands.rebuild "test";
+          stst = commands.rebuild "test";
         };
       };
 
