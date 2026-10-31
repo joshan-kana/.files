@@ -527,26 +527,6 @@ Item {
                 }
             }
 
-            SquircleSurface {
-                id: galleryBusySurface
-                anchors {
-                    top: parent.top
-                    left: parent.left
-                    right: parent.right
-                }
-                height: gallery.height
-                visible: panel.busy || panel.loading
-                cornerRadius: panel.theme.radiusLarge
-                exponent: panel.theme.squircleExponent
-                LoadingOutline {
-                    anchors.fill: parent
-                    surface: galleryBusySurface
-                    active: panel.busy || panel.loading
-                    motionEnabled: panel.motion.enabled
-                    highlightColor: panel.theme.roleColor("wallpaper")
-                }
-            }
-
             ShellSurface {
                 id: currentWallpaperPreview
                 anchors {
