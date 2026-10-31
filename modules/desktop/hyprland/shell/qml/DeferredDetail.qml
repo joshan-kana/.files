@@ -8,11 +8,23 @@ Loader {
     asynchronous: true
     active: true
     required property Motion motion
-    opacity: (open || (panel && panel.open === undefined && visible)) ? 1 : 0
+    readonly property bool exposed: open || (panel && panel.open === undefined && visible)
+    opacity: exposed ? 1 : 0
+    transform: Translate {
+        y: detail.exposed ? 0 : -12
+        Behavior on y {
+            NumberAnimation {
+                duration: detail.motion.spatialFast
+                easing.type: detail.motion.spatialType
+                easing.bezierCurve: detail.motion.spatialCurve
+            }
+        }
+    }
     Behavior on opacity {
-        Anim {
-            motion: detail.motion
-            type: Anim.FastEffects
+        NumberAnimation {
+            duration: detail.motion.contentFade
+            easing.type: detail.exposed ? detail.motion.enterType : detail.motion.exitType
+            easing.bezierCurve: detail.exposed ? detail.motion.enterCurve : detail.motion.exitCurve
         }
     }
 
