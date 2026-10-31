@@ -14,6 +14,7 @@ FocusScope {
     readonly property var streams: (system.audioApplicationStreams || []).concat(system.audioCaptureStreams || [])
 
     signal closeRequested
+    signal keyboardRequested
 
     implicitWidth: 730
     implicitHeight: header.implicitHeight + theme.spacing4 * 2 + (streams.length > 0 ? 120 : 148) + footer.implicitHeight
@@ -24,13 +25,16 @@ FocusScope {
     onActiveChanged: {
         if (active) {
             selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, streams.length - 1)));
-            Qt.callLater(() => keySink.forceActiveFocus());
+            Qt.callLater(() => {
+                if (mixer.active)
+                    mixer.keyboardRequested();
+            });
         }
     }
 
     function focusKeyboard(): void {
         if (active)
-            keySink.forceActiveFocus();
+            keyboardRequested();
     }
 
     function selectedStream(): var {
@@ -291,39 +295,32 @@ FocusScope {
         ]
     }
 
-    FocusScope {
-        id: keySink
-        anchors.fill: parent
-        focus: mixer.active
-
-        Keys.onPressed: event => {
-            if (event.key === Qt.Key_A) {
-                mixer.focusKeyboard();
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Escape) {
-                mixer.closeRequested();
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                mixer.selectedIndex = Math.max(0, mixer.selectedIndex - 1);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                mixer.selectedIndex = Math.min(Math.max(0, mixer.streams.length - 1), mixer.selectedIndex + 1);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
-                const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                mixer.selectedIndex = Math.max(0, Math.min(Math.max(0, mixer.streams.length - 1), mixer.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-                mixer.adjustSelected(-0.05);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                mixer.adjustSelected(0.05);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_M) {
-                mixer.toggleSelectedMute();
-                event.accepted = true;
-            }
+    // One keyboard owner per hub. The parent FocusScope forwards local keys
+    // here rather than racing a nested FocusScope for layer-shell focus.
+    function handleKey(key: int): bool {
+        if (!active)
+            return false;
+        if (key === Qt.Key_A)
+            return true;
+        if (key === Qt.Key_Escape) {
+            closeRequested();
+        } else if (key === Qt.Key_Up || key === Qt.Key_K) {
+            selectedIndex = Math.max(0, selectedIndex - 1);
+        } else if (key === Qt.Key_Down || key === Qt.Key_J) {
+            selectedIndex = Math.min(Math.max(0, streams.length - 1), selectedIndex + 1);
+        } else if (key === Qt.Key_U || key === Qt.Key_D) {
+            const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
+            const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
+            selectedIndex = Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + (key === Qt.Key_D ? rows : -rows)));
+        } else if (key === Qt.Key_Left || key === Qt.Key_H) {
+            adjustSelected(-0.05);
+        } else if (key === Qt.Key_Right || key === Qt.Key_L) {
+            adjustSelected(0.05);
+        } else if (key === Qt.Key_M) {
+            toggleSelectedMute();
+        } else {
+            return false;
         }
+        return true;
     }
 }
