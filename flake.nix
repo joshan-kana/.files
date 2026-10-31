@@ -118,7 +118,13 @@
 
       forAllSystems = f: lib.genAttrs systems f;
 
-      pkgsFor = system: import nixpkgs { inherit system; };
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          # Lint the same Quickshell version that hosts actually deploy.
+          overlays = (import ./overlays/quickshell { }).nixpkgs.overlays;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -146,6 +152,14 @@
             "--config"
             "MD060.style = \"aligned\""
           ];
+          javascriptIncludes = [
+            "*.cjs"
+            "*.js"
+            "*.jsx"
+            "*.mjs"
+            "*.ts"
+            "*.tsx"
+          ];
           typosConfig = pkgs.writeText "typos.toml" ''
             [default.extend-words]
             hass = "hass"
@@ -155,10 +169,12 @@
           projectRootFile = "flake.nix";
 
           programs = {
+            clang-format.enable = true;
             deadnix.enable = true;
             csharpier.enable = true;
             nixfmt.enable = true;
             prettier.enable = true;
+            qmlformat.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
             ruff-check.enable = true;
@@ -209,6 +225,39 @@
             formatter = {
               statix.priority = 1;
               nixfmt.priority = 2;
+              clang-format.priority = 1;
+              prettier.priority = 1;
+              quick-lint-js = {
+                command = lib.getExe pkgs.quick-lint-js;
+                includes = javascriptIncludes;
+                priority = 2;
+              };
+
+              qml-lint = {
+                command = lib.getExe' pkgs.kdePackages.qtdeclarative "qmllint";
+                includes = [ "*.qml" ];
+                options =
+                  lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "--max-warnings"
+                    "0"
+                    # Qt 6.12 flags existing scoped ids and Quickshell's opaque
+                    # screen/anchor/model metadata. Keep every other diagnostic
+                    # strict while waiting for upstream type metadata fixes.
+                    "--id-shadows-member"
+                    "disable"
+                    "--missing-property"
+                    "disable"
+                  ]
+                  ++ [
+                    "-I"
+                    "${pkgs.kdePackages.qtdeclarative}/lib/qt-6/qml"
+                  ]
+                  ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                    "-I"
+                    "${pkgs.quickshell}/lib/qt-6/qml"
+                  ];
+                priority = 2;
+              };
 
               ruff-check.options = [
                 "--isolated"
@@ -224,6 +273,23 @@
                 priority = 2;
               };
               typos.priority = 1;
+              cppcheck = {
+                command = lib.getExe' pkgs.cppcheck "cppcheck";
+                priority = 2;
+                includes = [
+                  "*.c"
+                  "*.cc"
+                  "*.cpp"
+                  "*.h"
+                  "*.hh"
+                  "*.hpp"
+                ];
+                options = [
+                  "--enable=warning,style,performance,portability"
+                  "--error-exitcode=1"
+                  "--quiet"
+                ];
+              };
               lua-lint = {
                 command = lib.getExe pkgs.lua54Packages.luacheck;
                 includes = [ "*.lua" ];
@@ -265,7 +331,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(c|cc|cjs|cpp|h|hh|hpp|js|cs|csproj|jsx|lock|lua|md|mjs|nix|py|qml|sh|ts|tsx|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
