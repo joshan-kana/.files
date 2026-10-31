@@ -436,8 +436,8 @@ FocusScope {
         if (mixerOpen) {
             mixerView.finishLoading();
             Qt.callLater(() => {
-                if (root.engaged && root.mixerOpen && mixerView.panel)
-                    mixerView.panel.focusKeyboard();
+                if (root.engaged && root.mixerOpen)
+                    keyboardFocus.forceActiveFocus();
             });
         }
     }
@@ -446,10 +446,7 @@ FocusScope {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
             helpOpen = false;
-            if (mixerOpen && mixerView.panel)
-                mixerView.panel.focusKeyboard();
-            else
-                keyboardFocus.forceActiveFocus();
+            keyboardFocus.forceActiveFocus();
             nightLight.refresh();
             requestedViewTimer.restart();
         } else {
@@ -1505,6 +1502,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     onCloseRequested: root.backFromDetail()
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
                 }
             }
         }
@@ -1631,7 +1629,7 @@ FocusScope {
         FocusScope {
             id: keyboardFocus
             anchors.fill: parent
-            focus: root.engaged && !root.mixerOpen
+            focus: root.engaged
 
             Keys.onPressed: event => {
                 if (root.resetConfirmPending) {
@@ -1671,11 +1669,9 @@ FocusScope {
                 }
 
                 if (root.mixerOpen) {
-                    if (event.key === Qt.Key_A) {
-                        if (mixerView.panel)
-                            mixerView.panel.focusKeyboard();
+                    mixerView.finishLoading();
+                    if (mixerView.panel && mixerView.panel.handleKey(event.key))
                         event.accepted = true;
-                    }
                     return;
                 }
 
