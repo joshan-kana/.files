@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 FocusScope {
     id: root
@@ -28,9 +29,56 @@ FocusScope {
     signal barToggleRequested
     signal windowTransparencyToggleRequested
     signal shellGlassToggleRequested
+    signal restoreDefaultsRequested
 
     property bool engaged: false
     property bool mixerOpen: false
+    property bool resetConfirmPending: false
+    property bool resetRunning: false
+    property string resetStatus: ""
+    property var resetOutputs: []
+    property int resetIndex: 0
+
+    Process {
+        id: wallpaperReset
+        onExited: (code, status) => {
+            if (code !== 0) {
+                root.resetRunning = false;
+                root.resetStatus = "Wallpaper reset failed. Other preferences were restored.";
+                return;
+            }
+            root.resetIndex++;
+            root.resetNextWallpaper();
+        }
+    }
+
+    function startDefaultReset(): void {
+        if (!resetConfirmPending || resetRunning)
+            return;
+        resetConfirmPending = false;
+        resetRunning = true;
+        resetStatus = "Restoring declared desktop preferences…";
+        restoreDefaultsRequested();
+        notificationState.resetToDeclared();
+        resetOutputs = Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]);
+        resetIndex = 0;
+        resetNextWallpaper();
+    }
+
+    function resetNextWallpaper(): void {
+        if (resetIndex >= resetOutputs.length) {
+            resetRunning = false;
+            resetStatus = "Declared desktop defaults restored";
+            return;
+        }
+        if (!runtime.wallpaperLibrary) {
+            resetRunning = false;
+            resetStatus = "Wallpaper reset unavailable. Other preferences were restored.";
+            return;
+        }
+        wallpaperReset.exec([runtime.wallpaperLibrary, "reset", resetOutputs[resetIndex]]);
+    }
+
     property string requestedView: ""
     required property bool returnToControls
     property bool helpOpen: false
@@ -879,7 +927,7 @@ FocusScope {
                 readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
 
                 function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 7 - Math.floor(index / columns) * columns);
+                    const itemsInRow = Math.min(columns, 8 - Math.floor(index / columns) * columns);
                     return (width - spacing * (itemsInRow - 1)) / itemsInRow;
                 }
 
@@ -986,6 +1034,62 @@ FocusScope {
                     onToggleRequested: root.nightLight.toggle()
                     onDecreaseRequested: root.nightLight.warmer()
                     onIncreaseRequested: root.nightLight.cooler()
+                }
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth(7)
+                    height: 78
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    icon: "󰑓"
+                    title: root.resetRunning ? "Restoring…" : "Restore defaults"
+                    shortcut: "SHIFT+D"
+                    active: root.resetConfirmPending
+                    enabled: !root.resetRunning
+                    activeColor: root.theme.roleColor("warning")
+                    onActivated: root.resetConfirmPending = !root.resetConfirmPending
+                }
+            }
+
+            ShellSurface {
+                visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
+                width: parent.width
+                height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
+                theme: root.theme
+                motion: root.motion
+                surfaceLayer: ShellSurface.Group
+                cornerRadius: root.theme.radiusMedium
+                fillColor: root.theme.groupBase
+
+                Column {
+                    id: resetContents
+                    width: parent.width - root.theme.spacing3 * 2
+                    anchors.centerIn: parent
+                    spacing: root.theme.spacing2
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
+                        color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(11)
+                    }
+                    KeyHintStrip {
+                        visible: root.resetConfirmPending
+                        width: parent.width
+                        runtime: root.runtime
+                        theme: root.theme
+                        hints: [
+                            {
+                                shortcut: "ENTER",
+                                label: "Restore"
+                            },
+                            {
+                                shortcut: "ESC",
+                                label: "Cancel"
+                            }
+                        ]
+                    }
                 }
             }
 
@@ -1530,6 +1634,14 @@ FocusScope {
             focus: root.engaged && !root.mixerOpen
 
             Keys.onPressed: event => {
+                if (root.resetConfirmPending) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                        root.startDefaultReset();
+                    else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)))
+                        root.resetConfirmPending = false;
+                    event.accepted = true;
+                    return;
+                }
                 const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
 
                 if (root.helpOpen) {
@@ -1929,6 +2041,10 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_A) {
                     root.openMixer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
+                    root.resetConfirmPending = true;
+                    root.resetStatus = "";
                     event.accepted = true;
                 } else if (event.key === Qt.Key_D) {
                     root.toggleSelectedAudioDeviceChooser();
