@@ -6,6 +6,7 @@ local entries = {}
 local maximum = 3
 local width = 380
 local gap = 10
+local fadeDuration = 0.12
 local inset = 22
 local iconSize = 34
 local iconX = 23
@@ -149,18 +150,26 @@ local function rearrange()
 end
 
 local function remove(entry)
+	if entry.dismissing then
+		return
+	end
+	entry.dismissing = true
 	if entry.timer then
 		entry.timer:stop()
 		entry.timer = nil
 	end
-	for i, current in ipairs(entries) do
-		if current == entry then
-			table.remove(entries, i)
-			break
+	entry.canvas:hide(fadeDuration)
+	entry.dismissTimer = hs.timer.doAfter(fadeDuration, function()
+		entry.canvas:delete()
+		entry.dismissTimer = nil
+		for i, current in ipairs(entries) do
+			if current == entry then
+				table.remove(entries, i)
+				break
+			end
 		end
-	end
-	entry.canvas:delete(0.12)
-	rearrange()
+		rearrange()
+	end)
 end
 
 local function render(entry)
@@ -216,7 +225,7 @@ function M.show(message, options)
 
 	local entry
 	for _, existing in ipairs(entries) do
-		if existing.key == key then
+		if existing.key == key and not existing.dismissing then
 			entry = existing
 			break
 		end
@@ -230,8 +239,20 @@ function M.show(message, options)
 		entry.height = textLayout(entry, math.min(width, screen:frame().w - inset * 2)).height
 		entry.canvas:frame(position(entry, 1))
 	else
-		if #entries >= maximum then
-			remove(entries[1])
+		local active = 0
+		for _, current in ipairs(entries) do
+			if not current.dismissing then
+				active = active + 1
+			end
+		end
+		if active >= maximum then
+			for i = #entries, 1, -1 do
+				local current = entries[i]
+				if not current.dismissing then
+					remove(current)
+					break
+				end
+			end
 		end
 		entry = {
 			key = key,
@@ -244,7 +265,7 @@ function M.show(message, options)
 		entry.canvas = hs.canvas.new(position(entry, 1))
 		entry.canvas:level("status")
 		entry.canvas:behavior({ "canJoinAllSpaces", "stationary" })
-		table.insert(entries, entry)
+		table.insert(entries, 1, entry)
 	end
 
 	render(entry)
