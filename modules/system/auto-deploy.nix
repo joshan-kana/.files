@@ -49,21 +49,22 @@ in
 
   startup =
     _:
-    {
-      config = lib.optionalAttrs isLinux {
-        systemd.services.comin-startup-fetch = {
-          description = "Fetch Comin updates after boot";
-          after = [ "comin.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = "${lib.getExe config.services.comin.package} fetch";
-          };
+    let
+      delaySeconds = 30;
+    in
+    lib.optionalAttrs isLinux {
+      systemd.services.comin-startup-fetch = {
+        description = "Fetch Comin updates after boot";
+        after = [ "comin.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${lib.getExe config.services.comin.package} fetch";
         };
+      };
 
-        systemd.timers.comin-startup-fetch = {
-          wantedBy = [ "timers.target" ];
-          timerConfig.OnBootSec = "10s";
-        };
+      systemd.timers.comin-startup-fetch = {
+        wantedBy = [ "timers.target" ];
+        timerConfig.OnBootSec = "${toString delaySeconds}s";
       };
     }
     // lib.optionalAttrs isDarwin {
@@ -71,7 +72,7 @@ in
         ProgramArguments = [
           "/bin/sh"
           "-c"
-          "/bin/wait4path /nix/store && /bin/sleep 10 && exec ${lib.getExe config.services.comin.package} fetch"
+          "/bin/wait4path /nix/store && /bin/sleep ${toString delaySeconds} && exec ${lib.getExe config.services.comin.package} fetch"
         ];
         RunAtLoad = true;
         StandardOutPath = "/var/log/comin-startup-fetch.log";
