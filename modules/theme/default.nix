@@ -84,6 +84,8 @@ let
     '';
 in
 {
+  bootSplash = import ./boot-splash.nix;
+
   scopeOptions.name = lib.mkOption {
     type = lib.types.enum (builtins.attrNames themeRegistry.variants);
     inherit (themeRegistry) default;

@@ -27,6 +27,7 @@
 
   dotfiles = {
     defaults.terminal = "alacritty";
+    scopes.theme.bootSplash.enable = true;
   };
 
   hardware = import ./hardware.nix;
@@ -46,7 +47,6 @@
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
-    plymouth.enable = false;
   };
 
 }
