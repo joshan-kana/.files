@@ -948,8 +948,8 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
-                    icon: root.motion.enabled ? "󰔎" : "󰾅"
-                    title: root.motion.enabled ? "Animations" : "Motion off"
+                    icon: root.motion.enabled ? "󰐊" : "󰏤"
+                    title: root.motion.enabled ? "Animations" : "Reduced motion"
                     shortcut: "R"
                     active: !root.motion.enabled
                     activeColor: root.theme.roleColor("warning")
