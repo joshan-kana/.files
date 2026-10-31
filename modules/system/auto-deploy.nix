@@ -86,22 +86,20 @@ in
     let
       topic = "${config.dotfiles.services.ntfy.url}/comin";
     in
-    {
-      config = lib.optionalAttrs isLinux {
-        systemd.services.comin-event-listener = {
-          description = "Trigger Comin from ntfy events";
-          wantedBy = [ "multi-user.target" ];
+    lib.optionalAttrs isLinux {
+      systemd.services.comin-event-listener = {
+        description = "Trigger Comin from ntfy events";
+        wantedBy = [ "multi-user.target" ];
 
-          script = ''
-            exec ${lib.getExe pkgs.ntfy-sh} subscribe \
-              ${lib.escapeShellArg topic} \
-              ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
-          '';
+        script = ''
+          exec ${lib.getExe pkgs.ntfy-sh} subscribe \
+            ${lib.escapeShellArg topic} \
+            ${lib.escapeShellArg "${lib.getExe config.services.comin.package} fetch"}
+        '';
 
-          serviceConfig = {
-            Restart = "on-failure";
-            RestartSec = "5s";
-          };
+        serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "5s";
         };
       };
     }

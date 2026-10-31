@@ -103,10 +103,9 @@ in
       variant = activeTheme.polarity;
       palette = activeTheme.colors;
     };
-  };
-
-  config = lib.optionalAttrs isLinux {
-    stylix.cursor = activeAssets.cursor;
+  }
+  // lib.optionalAttrs isLinux {
+    inherit (activeAssets) cursor;
   };
 
   fonts =
@@ -362,10 +361,8 @@ in
       };
     };
     desktopApps = {
-      chromium = {
-        config = lib.optionalAttrs isLinux {
-          programs.chromium.initialPrefs.extensions.theme.system_theme = 2; # Qt
-        };
+      chromium = lib.optionalAttrs isLinux {
+        programs.chromium.initialPrefs.extensions.theme.system_theme = 2; # Qt
       };
       vscode = {
         home =

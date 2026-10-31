@@ -29,13 +29,6 @@ in
     rclone
   ];
 
-  config = lib.optionalAttrs isLinux {
-    # Ensure the backup bootstrap directory exists and is accessible only to root.
-    systemd.tmpfiles.rules = [
-      "d ${backupCredentialsDir} 0700 root root - -"
-    ];
-  };
-
   home = { config, ... }: {
     # Register Restic wrapper completions after Home Manager initializes Zsh completion.
     programs.zsh.initContent = lib.mkIf (config.programs.zsh.enable && resticWrapperCommands != [ ]) (
@@ -180,4 +173,10 @@ in
         "d ${config.dotfiles.secretsDir} 0700 ${primary.name} users - -"
       ];
     };
+}
+// lib.optionalAttrs isLinux {
+  # Ensure the backup bootstrap directory exists and is accessible only to root.
+  systemd.tmpfiles.rules = [
+    "d ${backupCredentialsDir} 0700 root root - -"
+  ];
 }
