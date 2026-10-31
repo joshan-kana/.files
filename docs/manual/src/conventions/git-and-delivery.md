@@ -1,28 +1,24 @@
 # Git and delivery
 
-**Convention:** Keep changes isolated, reviewable, and recoverable. GitHub tracks code and issues; a successful merge does not imply deployment or live validation.
+Keep changes isolated, reviewable, and recoverable. Follow the [GitHub project workflow](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/GITHUB_PROJECT_WORKFLOW.md) for issue, project, and pull-request relationships.
 
 ## Working state
 
-Use a separate temporary **detached worktree** based on the intended source revision; leave the normal checkout untouched. Create or switch branches only in the task worktree. Coordinate concurrent edits through the project's existing agent mail workflow or ordinary contributor coordination before overlapping work.
+Use a separate temporary detached worktree based on the intended revision. Leave the normal checkout untouched and create or switch branches only inside the task worktree. Coordinate overlapping edits through agent mail or the project's established contributor coordination.
 
-Clean up disposable worktrees, generated helpers, and temporary logs when the task is complete. Do not delete another contributor's work, outstanding branches, intentional artifacts, or recovery material merely to tidy the filesystem.
+Remove disposable worktrees, scratch files, and generated test artifacts after use. Preserve unrelated changes, branches, intentional outputs, and recovery material.
 
-## Commits, issues, and PRs
+## History and review
 
-- Keep related changes in a focused PR. Separate mechanical refactors from behavior changes where practical.
-- Use issues for trackable repository work, with GitHub Projects providing planning metadata, not a second source of task truth.
-- Use native issue relationships for real parent/sub-issue or blocked-by dependencies. Do not fabricate relationships.
-- A PR intended to land may begin as draft. Move it to ready for review only after checks and conflict reconciliation.
-- Use `Closes #N` when merging should close that issue; otherwise use `Refs #N`.
-- Rebase and reconcile against the current target branch rather than choosing one side of a conflict without review.
-- Do not rewrite published `main` history to amend an old commit. Follow up with a focused fix instead.
-- Never merge a PR or commit on `main` without explicit authorization.
+- Keep a pull request focused on one coherent change. Separate mechanical moves from behavioral changes where practical.
+- Use repository issues to record trackable work, native relationships for true dependencies, and project fields for workflow metadata.
+- Draft PRs are appropriate while implementation or verification remains incomplete. Mark ready only when reviewable and sufficiently validated.
+- Link closing issues only when the change actually completes them; otherwise record a reference.
+- Reconcile with the target branch without discarding concurrent changes. Use lease-protected force pushes after an intentional rebase.
+- Do not commit on the primary branch, rewrite its published history, or merge a PR without explicit permission.
 
-## Delivery and deployment
+## Delivery
 
-Review the diff, formatter/linter results, evaluated or built outputs, and any necessary runtime validation. Use force-with-lease rather than an unconditional force-push when updating a rebased PR branch.
+Review the diff, affected evaluations, relevant builds, and runtime validation. Delivery and deployment follow their respective operational procedures; a merged PR does not imply live deployment.
 
-Deployment should follow the repository's native deployment policy and the affected host's runbook. A PR can be code-complete and reviewable without having been deployed; describe remaining physical/runtime validation honestly.
-
-See the cross-project [GitHub Project Workflow](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/GITHUB_PROJECT_WORKFLOW.md) and [Operating Style](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/OPERATING_STYLE.md) for the authoritative delivery and approval rules.
+Report evidence and outstanding verification plainly, without embedding transient task status in lasting repository documentation.

@@ -1,26 +1,23 @@
 # Services
 
-**Convention:** The application scope owns its full system integration: native service settings, identities, permissions, storage, network exposure, secrets delivery, dependencies, and backup coverage.
+The owning application scope controls service lifecycle, identities, permissions, storage, dependencies, credential delivery, network exposure, and backup coverage.
 
-This page adapts the previous server-app conventions to the current semantic-scope architecture. Some defaults below specifically describe the home server; they are not universal requirements for services on other hosts.
+## Lifecycle
 
-## Lifecycle and runtime
+Prefer an existing native service module when it supports the required behavior. Otherwise choose the simplest reliable supported execution mechanism, including containers where appropriate.
 
-- Prefer a native NixOS service module when it supports the deployment cleanly; otherwise use the simplest reliable mechanism, including OCI containers when appropriate.
-- Enabled apps should start if requirements exist. Missing mandatory runtime secrets should produce an explicit service failure, not silently disable requested behavior. Use systemd assertions such as `AssertPathExists` where relevant.
-- Keep app-owned users, groups, systemd units, firewall rules, credentials, and backups with the app. Shared infrastructure belongs to its own scope.
-- Derive repeated settings from a single value. Distinguish host-side published ports from the fixed internal application port.
-- Keep rich application records, dashboards, and other mutable app state inside the application's supported configuration interface rather than copying it into Nix.
-- Express VM-only suppression or hardware limitations explicitly under the relevant scope.
+Enabled mandatory functionality must fail clearly when prerequisites are absent. Do not silently disable a requested service because its required runtime credentials are missing. Optional integrations may be gated on their own optional dependencies.
 
-## Permissions and ownership
+Keep service-specific definitions and backup declarations with the application. Keep genuinely shared storage, networking, and authentication infrastructure in their respective scopes.
 
-Prefer declarative users/groups, systemd state directories, and tmpfiles over scripts that repeatedly run `mkdir` or `chown` at startup. Name the owning service identity, not a magic numeric UID, when dealing with persistent data. Where Userborn preserves persistent identities, its identity database is part of recovery.
+## State and permissions
 
-## Native and container services
+Prefer declarative service users/groups, systemd-managed directories, and tmpfiles to repeated imperative startup repairs. Use named service identities for persistent data rather than hard-coded numeric IDs. Account for persistent identity databases in recovery when identities depend on them.
 
-OCI services retain correct Docker dependencies and bind host-side published ports to the intended interface. A custom `mkServerApp` framework is not needed to write ordinary NixOS options. Fixed container ports remain literal unless the application itself is intentionally reconfigured.
+Distinguish external listener addresses and published ports from upstream internal service ports. Reuse a configurable value where multiple settings must agree; leave independent upstream defaults unchanged.
 
-The [server-app standards test](https://github.com/joshan-kana/.files/blob/main/tests/server-app-standards.nix) checks selected stable invariants (secret assertions, firewall trust, container dependencies, and secret directory permissions). Other conventions are review obligations, not an invitation to invent a source-code linter.
+Keep mutable application records and business state in the application's supported interface instead of reproducing them as Nix configuration.
 
-Related: [Networking and security](networking-and-security.md), [State and recovery](state-and-recovery.md), and [Packaging](packages.md).
+## Verification
+
+Verify effective units, permissions, credential assertions, dependencies, network boundaries, and backup paths. Runtime behavior requires a smoke test where Nix evaluation cannot establish it. Avoid introducing a framework or general-purpose linter merely to express ordinary native service settings.

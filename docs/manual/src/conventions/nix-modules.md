@@ -1,33 +1,30 @@
 # Nix modules
 
-**Convention:** Write readable native Nix module definitions with minimal abstraction. Local variables, conditions, and overrides should have a semantic reason, not exist merely to shorten expressions.
+Prefer readable native NixOS, nix-darwin, and Home Manager definitions over custom wrappers that merely rename native options.
 
-## Options and defaults
+## Defaults and expressions
 
-- Prefer a native NixOS or Home Manager option over an equivalent custom `dotfiles.*` wrapper.
-- Prefer native package defaults; keep an explicit `package = pkgs.foo;` only when it meaningfully changes the module's effective package.
-- Re-evaluate before deleting such settings. Some upstream defaults contain overrides even when their names look equivalent to `pkgs.foo`.
-- Keep shared semantic children enabled by default where they apply.
-- Use `inherit` for genuinely reused semantic values. Avoid a `let` block that merely aliases a one-off expression.
-- Name policy inputs and values needing derivation, rather than scattering duplicated configurable ports or paths.
-- Explain non-obvious behavior and constraints in comments; don't restate the following assignment.
+- Rely on native defaults when their behavior is suitable; verify effective values before removing explicit assignments.
+- Use a local variable when a value is shared, derived, or conveys policy. Avoid `let` bindings that only rename a single expression.
+- Derive repeated configurable values from one owner rather than copying constants across modules.
+- Keep comments for non-obvious constraints and rationale. Code that merely repeats the following assignment adds no value.
+- Preserve the shared module's behavior when adding host-specific overrides.
 
 ## Conditionals
 
-Use `lib.optionalAttrs` for conditional attribute **presence**, `lib.optionals` for list entries, `lib.mkIf` for module-system conditional definitions, and ordinary `if` for scalar or genuinely alternative values.
+Use the expression appropriate to what is conditional:
 
-```nix
-lib.optionalAttrs isLinux {
-  programs.someTool.enable = true;
-}
-```
+| Intent                              | Expression          |
+| ----------------------------------- | ------------------- |
+| Include or omit attributes          | `lib.optionalAttrs` |
+| Include or omit list elements       | `lib.optionals`     |
+| Conditionally define module options | `lib.mkIf`          |
+| Select between values               | `if … then … else`  |
 
-Do not build elaborate attribute merges to avoid an appropriate `if`. Platform conditions should ensure unsupported native options never enter the corresponding evaluation.
+Gate platform-specific native options before they enter an unsupported evaluator. Prefer a simple condition over elaborate merges that obscure intent.
 
-## Overrides and precedence
+## Precedence and checks
 
-Use `lib.mkDefault` and `lib.mkForce` deliberately according to their actual merge semantics. Prefer a host-local override to altering shared scope machinery for a host exception. Preserve the default module behavior unless there is a documented reason to change it.
+Use `lib.mkDefault` and `lib.mkForce` only with their actual module merge semantics in mind. Prefer a local override to changing shared defaults for one exceptional host.
 
-## Formatting and verification
-
-Follow repository `nixfmt` output, including multiline function declarations and `home` fragments. Run `nix fmt -- --ci` and `nix flake check`. When moving or simplifying declarations, compare effective configuration and system derivations before assuming behavior is unchanged.
+Format with the repository toolchain, run relevant checks, and compare evaluated results when refactoring definitions that should preserve behavior.
