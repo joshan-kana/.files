@@ -547,7 +547,7 @@ Item {
             if (event.key === Qt.Key_Escape) {
                 picker.dismiss(true);
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                picker.capture();
+                picker.capture("");
             } else if (event.key === Qt.Key_Tab) {
                 picker.nextMonitor();
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
