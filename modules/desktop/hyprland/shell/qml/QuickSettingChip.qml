@@ -25,9 +25,10 @@ Item {
         theme: chip.theme
         motion: chip.motion
         surfaceLayer: ShellSurface.Control
+        glassAllowed: false
         selected: false
         cornerRadius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
-        fillColor: chip.active ? chip.theme.blend(chip.theme.materialContainerHigh, chip.activeColor, chip.theme.dark ? 0.28 : 0.21) : chip.theme.materialContainer
+        fillColor: chip.active ? chip.theme.blend(chip.theme.materialPrimaryContainer, chip.activeColor, chip.theme.dark ? 0.36 : 0.25) : chip.theme.materialContainer
         borderColor: chip.active ? Qt.rgba(chip.activeColor.r, chip.activeColor.g, chip.activeColor.b, 0.48) : "transparent"
         borderWidth: chip.active ? chip.theme.borderThin : 0
         Behavior on cornerRadius {
@@ -55,6 +56,7 @@ Item {
             theme: chip.theme
             motion: chip.motion
             surfaceLayer: ShellSurface.Control
+            glassAllowed: false
             cornerRadius: chip.active ? 22 : chip.theme.radiusSmall
             fillColor: chip.active ? chip.activeColor : chip.theme.materialContainerHigh
             Behavior on cornerRadius {
@@ -112,7 +114,7 @@ Item {
     StateLayer {
         theme: chip.theme
         motion: chip.motion
-        selected: chip.active
+        selected: false
         stateColor: chip.activeColor
         cornerRadius: tile.cornerRadius
         onActivated: chip.activated()
