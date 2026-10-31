@@ -74,7 +74,6 @@ snacks.setup({
 			{ section = "keys", gap = 1, padding = 1 },
 			{ title = "Recent files", padding = 1 },
 			{ section = "recent_files", limit = 6 },
-			{ section = "startup" },
 		},
 	},
 	explorer = { enabled = true },
@@ -96,6 +95,24 @@ require("blink.cmp").setup({
 	fuzzy = { implementation = "lua" },
 	sources = { default = { "lsp", "path", "snippets", "buffer" } },
 })
+
+local conform = require("conform")
+conform.setup({
+	formatters_by_ft = {
+		nix = { "nixfmt" },
+		lua = { "stylua" },
+		python = { "ruff_format" },
+		sh = { "shfmt" },
+		bash = { "shfmt" },
+		markdown = { "prettier" },
+		json = { "prettier" },
+		yaml = { "prettier" },
+	},
+	notify_on_error = true,
+})
+vim.api.nvim_create_user_command("Format", function()
+	conform.format({ async = false, lsp_format = "fallback" })
+end, { desc = "Format the current buffer" })
 
 local which_key = require("which-key")
 which_key.setup({ preset = "modern", delay = 250 })
@@ -161,9 +178,7 @@ key("n", "<leader>ci", picker.lsp_implementations, { desc = "Find implementation
 key("n", "<leader>ch", vim.lsp.buf.hover, { desc = "Hover documentation" })
 key("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code actions" })
 key("n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename symbol" })
-key("n", "<leader>cf", function()
-	vim.lsp.buf.format({ async = true })
-end, { desc = "Format with attached language server" })
+key("n", "<leader>cf", "<cmd>Format<cr>", { desc = "Format current buffer" })
 key("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 key("n", "<leader>cD", picker.diagnostics, { desc = "All diagnostics" })
 key("n", "]d", function()

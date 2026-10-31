@@ -97,6 +97,7 @@ let
     };
   };
 
+  terminalEditor = import ./neovim/package.nix { inherit pkgs; };
   neovimConfig = _: {
     programs.neovim = {
       withRuby = false;
@@ -607,7 +608,7 @@ in
 
   zellij = _: {
     home = _: {
-      programs.zellij = { };
+      programs.zellij.settings = terminalEditor.zellijSettings;
     };
   };
 
@@ -665,33 +666,8 @@ in
     home = args: {
       home.shellAliases.v = "nvim";
       programs.neovim = (neovimConfig args).programs.neovim // {
-        extraPackages = with pkgs; [
-          fd
-          ripgrep
-          jujutsu
-          jjui
-        ];
-        plugins = with pkgs.vimPlugins; [
-          snacks-nvim
-          blink-cmp
-          which-key-nvim
-          lualine-nvim
-          nvim-lspconfig
-          (nvim-treesitter.withPlugins (
-            parsers: with parsers; [
-              bash
-              json
-              lua
-              markdown
-              markdown_inline
-              nix
-              python
-              vim
-              vimdoc
-              yaml
-            ]
-          ))
-        ];
+        inherit (terminalEditor) plugins;
+        extraPackages = terminalEditor.runtimePackages;
         initLua = builtins.readFile ./neovim/init.lua;
       };
       xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
