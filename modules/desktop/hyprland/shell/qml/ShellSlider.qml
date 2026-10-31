@@ -52,8 +52,14 @@ Item {
             leftMargin: root.handleSize / 2
             rightMargin: root.handleSize / 2
         }
-        height: root.trackHeight
+        height: root.trackHeight * (interaction.pressed ? 1.2 : 1)
         radius: height / 2
+        Behavior on height {
+            Anim {
+                motion: root.motion
+                type: Anim.FastSpatial
+            }
+        }
         color: root.theme.layer3
 
         Rectangle {
@@ -72,7 +78,7 @@ Item {
         x: root.displayedValue * Math.max(1, root.width - width)
         anchors.verticalCenter: parent.verticalCenter
         color: root.accentColor
-        scale: interaction.pressed ? 1.18 : 1
+        scale: interaction.pressed ? 1.13 : 1
 
         Behavior on scale {
             Anim {

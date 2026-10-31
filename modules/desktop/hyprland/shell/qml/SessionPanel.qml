@@ -15,7 +15,7 @@ Item {
     property bool open: false
     property int selectedIndex: 0
     property int preferredColumn: 0
-    readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3
+    readonly property int gridColumns: 1
     onGridColumnsChanged: preferredColumn = selectedIndex % gridColumns
     property string armedAction: ""
     property string statusText: ""
@@ -133,8 +133,8 @@ Item {
         statusError = false;
         if (open) {
             const row = Math.floor(selectedIndex / gridColumns);
-            const top = buttonGrid.y + row * (155 + buttonGrid.spacing);
-            revealSelection(top, top + 155);
+            const top = buttonGrid.y + row * (92 + buttonGrid.spacing);
+            revealSelection(top, top + 92);
         }
     }
 
@@ -213,40 +213,82 @@ Item {
         spacing: panel.theme.spacing3
 
         Repeater {
-            model: Math.ceil(panel.entries.length / panel.gridColumns)
-
-            delegate: Row {
-                id: actionRow
+            model: panel.entries
+            delegate: Item {
+                id: entryRow
+                required property var modelData
                 required property int index
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: panel.theme.spacing3
+                width: Math.max(1, panel.width - panel.theme.spacing4)
+                height: 92
+                readonly property bool chosen: panel.selectedIndex === index
+                readonly property color role: panel.theme.roleColor(modelData.accentRole)
 
-                Repeater {
-                    model: panel.entries.slice(actionRow.index * panel.gridColumns, (actionRow.index + 1) * panel.gridColumns)
-
-                    delegate: SessionActionButton {
-                        required property var modelData
-                        readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
-
-                        runtime: panel.runtime
+                ShellSurface {
+                    id: entrySurface
+                    anchors.fill: parent
+                    theme: panel.theme
+                    motion: panel.motion
+                    glassAllowed: false
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: entryRow.chosen ? panel.theme.radiusPanel : panel.theme.radiusMedium
+                    fillColor: entryRow.chosen ? panel.theme.blend(panel.theme.materialPrimaryContainer, entryRow.role, 0.18) : panel.theme.materialContainer
+                    borderColor: panel.armedAction === entryRow.modelData.id ? panel.theme.warning : entryRow.chosen ? entryRow.role : panel.theme.subtleBorder
+                    borderWidth: panel.theme.borderThin
+                    Behavior on cornerRadius {
+                        Anim {
+                            motion: panel.motion
+                            type: Anim.FastSpatial
+                        }
+                    }
+                    ShellSurface {
+                        x: panel.theme.spacing3
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 56
+                        height: 56
                         theme: panel.theme
                         motion: panel.motion
-                        icon: modelData.icon
-                        label: modelData.label
-                        accentColor: panel.theme.roleColor(modelData.accentRole)
-                        selected: panel.selectedIndex === actionIndex
-                        armed: panel.armedAction === modelData.id
-
-                        onHovered: {
-                            if (panel.selectedIndex !== actionIndex)
-                                panel.moveSelection(actionIndex - panel.selectedIndex);
+                        glassAllowed: false
+                        surfaceLayer: ShellSurface.Control
+                        cornerRadius: entryRow.chosen ? 28 : panel.theme.radiusSmall
+                        fillColor: entryRow.chosen ? entryRow.role : panel.theme.materialContainerHigh
+                        Text {
+                            anchors.centerIn: parent
+                            font.family: "Symbols Nerd Font"
+                            font.pixelSize: panel.theme.fontSize(29)
+                            color: entryRow.chosen ? panel.theme.background : entryRow.role
+                            text: entryRow.modelData.icon
                         }
-                        onActivated: {
-                            if (panel.selectedIndex !== actionIndex)
-                                panel.moveSelection(actionIndex - panel.selectedIndex);
-                            panel.activateSelected();
-                            panel.keyboardRequested();
+                    }
+                    Column {
+                        x: 86
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 155
+                        spacing: 4
+                        Text {
+                            text: entryRow.modelData.label
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(17)
+                            font.weight: Font.Bold
+                            color: panel.theme.textStrong
                         }
+                        Text {
+                            text: entryRow.modelData.description
+                            width: parent.width
+                            elide: Text.ElideRight
+                            font.family: panel.runtime.fontMono
+                            font.pixelSize: panel.theme.fontSize(11)
+                            color: panel.theme.textMuted
+                        }
+                    }
+                }
+                StateLayer {
+                    theme: panel.theme
+                    motion: panel.motion
+                    cornerRadius: entrySurface.cornerRadius
+                    onActivated: {
+                        panel.moveSelection(entryRow.index - panel.selectedIndex);
+                        panel.activateSelected();
+                        panel.keyboardRequested();
                     }
                 }
             }
@@ -274,14 +316,24 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        Text {
+        KeyHintStrip {
             width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontKeyHint
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Choose"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Select / confirm"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
+                }
+            ]
         }
     }
 }

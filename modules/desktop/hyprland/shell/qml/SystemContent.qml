@@ -302,7 +302,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: 710
+    implicitWidth: mixerOpen || sessionPanel.open ? 740 : recordingsPanel.open || themePanel.open ? 900 : 960
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -662,409 +662,456 @@ FocusScope {
                 }
             }
 
-            ShellSurface {
-                width: parent.width
-                height: 84
-                visible: root.brightness.supported
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
-
-                ShellSection {
-                    anchors {
-                        fill: parent
-                        margins: theme.spacing4
-                    }
-                    runtime: root.runtime
-                    theme: root.theme
-                    title: "Display  " + root.brightness.percent + "%"
-                    detail: root.brightness.device
-
-                    ShellSlider {
-                        width: parent.width
-                        theme: root.theme
-                        motion: root.motion
-                        value: root.brightness.percent / 100
-                        interactive: false
-                        accentColor: theme.positive
-                        trackHeight: 8
-                        handleSize: 0
-                    }
-                }
-            }
-
-            Grid {
-                id: connectionTiles
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 560 || root.theme.textScale >= 1.5 ? 1 : 2
-                columnSpacing: root.theme.spacing3
-                rowSpacing: root.theme.spacing3
-                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
-
-                ConnectivityTile {
-                    width: connectionTiles.cellWidth
-                    height: 84
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Network"
-                    detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
-                    status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
-                    glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
-                    shortcut: "N"
-                    connected: root.system.networkConnected
-                    pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
-                    failed: networkPanel.open && networkPanel.statusError
-                    unavailable: root.system.networkDevices.length === 0
-                    onActivated: root.openNetwork()
-                }
-
-                ConnectivityTile {
-                    width: connectionTiles.cellWidth
-                    height: 84
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Bluetooth"
-                    detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
-                    status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
-                    glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
-                    shortcut: "B"
-                    connected: root.system.bluetoothEnabled
-                    scanning: root.system.bluetoothDiscovering
-                    pending: root.system.bluetoothDevices.some(device => device && device.pairing)
-                    failed: bluetoothPanel.open && bluetoothPanel.statusError
-                    unavailable: !root.system.bluetoothAvailable
-                    onActivated: root.openBluetooth()
-                }
-            }
-
-            Row {
-                width: parent.width
-                height: 36
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "QUICK ACTIONS"
-                    color: root.theme.readableRoleColor("attention")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.1
-                }
-            }
-
             Item {
-                width: 1
-                height: root.theme.spacing1
-            }
-
-            Flow {
-                id: actionStrip
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                spacing: root.theme.spacing2
-                readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
-
-                function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
-                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(0)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                    title: root.notificationState.silent ? "Silent" : "Alerts"
-                    shortcut: "Q"
-                    active: root.notificationState.silent
-                    activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
-                    onActivated: root.notificationState.toggleSilent()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(1)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.system.idleInhibited ? "󰅶" : "󰒲"
-                    title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                    shortcut: "I"
-                    active: root.system.idleInhibited
-                    activeColor: root.theme.roleColor("warmth")
-                    onActivated: root.system.toggleIdleInhibited()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(2)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰍛"
-                    title: "Resources"
-                    shortcut: "G"
-                    activeColor: root.theme.roleColor("resources")
-                    onActivated: root.openResources()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(3)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                    title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                    shortcut: "O"
-                    enabled: root.powerProfile.available && !root.powerProfile.applying
-                    active: root.powerProfile.current === "power-saver"
-                    activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                    onActivated: root.powerProfile.cycle()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(4)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰕧"
-                    title: "Captures"
-                    shortcut: "C"
-                    activeColor: root.theme.roleColor("capture")
-                    onActivated: root.openRecordings()
-                }
-            }
-
-            Row {
+                id: dashboardPanels
                 width: parent.width
-                height: 36
+                height: dashboardColumns.implicitHeight + root.theme.spacing4 * 2
 
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "VISUAL MODES"
-                    color: root.theme.readableRoleColor("display")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.1
-                }
-            }
-
-            Item {
-                width: 1
-                height: root.theme.spacing1
-            }
-
-            Flow {
-                id: visualModeStrip
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                spacing: root.theme.spacing2
-                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
-
-                function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 7 - Math.floor(index / columns) * columns);
-                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
-                }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(0)
-                    height: 78
-                    runtime: root.runtime
+                ShellSurface {
+                    x: 0
+                    y: 0
+                    width: dashboardPanels.width * 0.48
+                    height: dashboardPanels.height
                     theme: root.theme
                     motion: root.motion
-                    icon: "󰸉"
-                    title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
-                    shortcut: "SHIFT+G"
-                    active: root.wallpaperSpectrumEnabled
-                    activeColor: root.theme.roleColor("workspace")
-                    onActivated: root.wallpaperSpectrumToggleRequested()
+                    glassAllowed: false
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: root.theme.radiusPanel
                 }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(1)
-                    height: 78
-                    runtime: root.runtime
+                ShellSurface {
+                    x: dashboardPanels.width * 0.48 + root.theme.spacing4
+                    y: 0
+                    width: dashboardPanels.width * 0.52 - root.theme.spacing4
+                    height: dashboardPanels.height
                     theme: root.theme
                     motion: root.motion
-                    icon: "♫"
-                    title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
-                    shortcut: "SHIFT+N"
-                    active: root.musicReactiveEnabled
-                    activeColor: root.theme.roleColor("audio")
-                    onActivated: root.musicReactiveToggleRequested()
+                    glassAllowed: false
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: root.theme.radiusPanel
                 }
 
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(2)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰍹"
-                    title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
-                    shortcut: "SHIFT+O"
-                    active: root.windowTransparencyEnabled
-                    activeColor: root.theme.roleColor("display")
-                    onActivated: root.windowTransparencyToggleRequested()
-                }
+                Row {
+                    id: dashboardColumns
+                    x: root.theme.spacing3
+                    y: root.theme.spacing4
+                    width: parent.width - root.theme.spacing3 * 2
+                    spacing: root.theme.spacing4
+                    Column {
+                        id: dashboardLeft
+                        width: Math.max(1, (dashboardColumns.width - dashboardColumns.spacing) * 0.48)
+                        spacing: root.theme.spacing3
+                        ShellSurface {
+                            width: parent.width
+                            height: 84
+                            visible: root.brightness.supported
+                            theme: root.theme
+                            motion: root.motion
+                            surfaceLayer: ShellSurface.Group
+                            cornerRadius: theme.radiusLarge
 
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(3)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰊠"
-                    title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
-                    shortcut: "SHIFT+F"
-                    active: root.shellGlassEnabled
-                    activeColor: root.theme.roleColor("connectivity")
-                    onActivated: root.shellGlassToggleRequested()
-                }
+                            ShellSection {
+                                anchors {
+                                    fill: parent
+                                    margins: theme.spacing4
+                                }
+                                runtime: root.runtime
+                                theme: root.theme
+                                title: "Display  " + root.brightness.percent + "%"
+                                detail: root.brightness.device
 
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(4)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰀻"
-                    title: root.barVisible ? "Bar visible" : "Bar hidden"
-                    shortcut: "SHIFT+B"
-                    active: !root.barVisible
-                    activeColor: root.theme.roleColor("positive")
-                    onActivated: root.barToggleRequested()
-                }
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(5)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.motion.enabled ? "󰐊" : "󰏤"
-                    title: root.motion.enabled ? "Animations" : "Reduced motion"
-                    shortcut: "R"
-                    active: !root.motion.enabled
-                    activeColor: root.theme.roleColor("warning")
-                    onActivated: root.motion.toggle()
-                }
-
-                AdjustableSetting {
-                    width: visualModeStrip.cellWidth(6)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.nightLight.active ? "󰖔" : "󰖙"
-                    label: "Night Light"
-                    valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
-                    toggleShortcut: "T"
-                    decrementShortcut: "-"
-                    incrementShortcut: "+"
-                    roleAccent: root.theme.roleColor("warmth")
-                    active: root.nightLight.active
-                    canToggle: root.nightLight.supported && !root.nightLight.busy
-                    canDecrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
-                    canIncrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
-                    onToggleRequested: root.nightLight.toggle()
-                    onDecreaseRequested: root.nightLight.warmer()
-                    onIncreaseRequested: root.nightLight.cooler()
-                }
-            }
-
-            ShellSurface {
-                width: parent.width
-                height: audioStack.implicitHeight + root.theme.spacing3 * 2
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
-                fillColor: root.theme.groupBase
-
-                Column {
-                    id: audioStack
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                        top: parent.top
-                        margins: root.theme.spacing3
-                    }
-                    spacing: root.theme.spacing1
-
-                    AudioQuickSection {
-                        id: outputQuick
-                        width: audioStack.width
-                        showMixer: true
-                        inline: true
-                        meterEnabled: root.visible && !root.mixerOpen
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                inputQuick.chooserOpen = false;
+                                ShellSlider {
+                                    width: parent.width
+                                    theme: root.theme
+                                    motion: root.motion
+                                    value: root.brightness.percent / 100
+                                    interactive: false
+                                    accentColor: theme.positive
+                                    trackHeight: 8
+                                    handleSize: 0
+                                }
+                            }
                         }
-                        baseIndex: 0
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
-                        onMixerRequested: root.openMixer()
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                    }
-                    AudioQuickSection {
-                        id: inputQuick
-                        width: audioStack.width
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                outputQuick.chooserOpen = false;
+
+                        Grid {
+                            id: connectionTiles
+                            x: root.theme.spacing2
+                            width: Math.max(1, parent.width - root.theme.spacing2 * 2)
+                            columns: width < 560 || root.theme.textScale >= 1.5 ? 1 : 2
+                            columnSpacing: root.theme.spacing3
+                            rowSpacing: root.theme.spacing3
+                            readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+
+                            ConnectivityTile {
+                                width: connectionTiles.cellWidth
+                                height: 84
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                title: "Network"
+                                detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
+                                status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
+                                glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
+                                shortcut: "N"
+                                connected: root.system.networkConnected
+                                pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
+                                failed: networkPanel.open && networkPanel.statusError
+                                unavailable: root.system.networkDevices.length === 0
+                                onActivated: root.openNetwork()
+                            }
+
+                            ConnectivityTile {
+                                width: connectionTiles.cellWidth
+                                height: 84
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                title: "Bluetooth"
+                                detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
+                                status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
+                                glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
+                                shortcut: "B"
+                                connected: root.system.bluetoothEnabled
+                                scanning: root.system.bluetoothDiscovering
+                                pending: root.system.bluetoothDevices.some(device => device && device.pairing)
+                                failed: bluetoothPanel.open && bluetoothPanel.statusError
+                                unavailable: !root.system.bluetoothAvailable
+                                onActivated: root.openBluetooth()
+                            }
                         }
-                        visible: root.system.microphoneAvailable
-                        microphone: true
-                        inline: true
-                        meterEnabled: root.visible && !root.mixerOpen
-                        baseIndex: root.microphoneAudioIndex
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
+
+                        Row {
+                            width: parent.width
+                            height: 36
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "QUICK ACTIONS"
+                                color: root.theme.readableRoleColor("attention")
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontPanelEyebrow
+                                font.weight: Font.DemiBold
+                                font.letterSpacing: 1.1
+                            }
+                        }
+
+                        Item {
+                            width: 1
+                            height: root.theme.spacing1
+                        }
+
+                        Flow {
+                            id: actionStrip
+                            x: root.theme.spacing2
+                            width: Math.max(1, parent.width - root.theme.spacing2 * 2)
+                            spacing: root.theme.spacing2
+                            readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : 3
+
+                            function cellWidth(index: int): real {
+                                const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
+                                return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(0)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                                title: root.notificationState.silent ? "Silent" : "Alerts"
+                                shortcut: "Q"
+                                active: root.notificationState.silent
+                                activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                                onActivated: root.notificationState.toggleSilent()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(1)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.system.idleInhibited ? "󰅶" : "󰒲"
+                                title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
+                                shortcut: "I"
+                                active: root.system.idleInhibited
+                                activeColor: root.theme.roleColor("warmth")
+                                onActivated: root.system.toggleIdleInhibited()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(2)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰍛"
+                                title: "Resources"
+                                shortcut: "G"
+                                activeColor: root.theme.roleColor("resources")
+                                onActivated: root.openResources()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(3)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                                title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                                shortcut: "O"
+                                enabled: root.powerProfile.available && !root.powerProfile.applying
+                                active: root.powerProfile.current === "power-saver"
+                                activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                                onActivated: root.powerProfile.cycle()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(4)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰕧"
+                                title: "Captures"
+                                shortcut: "C"
+                                activeColor: root.theme.roleColor("capture")
+                                onActivated: root.openRecordings()
+                            }
+                        }
+                    }
+                    Column {
+                        id: dashboardRight
+                        width: Math.max(1, (dashboardColumns.width - dashboardColumns.spacing) * 0.52)
+                        spacing: root.theme.spacing3
+                        Row {
+                            width: parent.width
+                            height: 36
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "VISUAL MODES"
+                                color: root.theme.readableRoleColor("display")
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontPanelEyebrow
+                                font.weight: Font.DemiBold
+                                font.letterSpacing: 1.1
+                            }
+                        }
+
+                        Item {
+                            width: 1
+                            height: root.theme.spacing1
+                        }
+
+                        Flow {
+                            id: visualModeStrip
+                            x: root.theme.spacing2
+                            width: Math.max(1, parent.width - root.theme.spacing2 * 2)
+                            spacing: root.theme.spacing2
+                            readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
+
+                            function cellWidth(index: int): real {
+                                const itemsInRow = Math.min(columns, 7 - Math.floor(index / columns) * columns);
+                                return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                            }
+
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(0)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰸉"
+                                title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
+                                shortcut: "SHIFT+G"
+                                active: root.wallpaperSpectrumEnabled
+                                activeColor: root.theme.roleColor("workspace")
+                                onActivated: root.wallpaperSpectrumToggleRequested()
+                            }
+
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(1)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "♫"
+                                title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
+                                shortcut: "SHIFT+N"
+                                active: root.musicReactiveEnabled
+                                activeColor: root.theme.roleColor("audio")
+                                onActivated: root.musicReactiveToggleRequested()
+                            }
+
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(2)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰍹"
+                                title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
+                                shortcut: "SHIFT+O"
+                                active: root.windowTransparencyEnabled
+                                activeColor: root.theme.roleColor("display")
+                                onActivated: root.windowTransparencyToggleRequested()
+                            }
+
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(3)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰊠"
+                                title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
+                                shortcut: "SHIFT+F"
+                                active: root.shellGlassEnabled
+                                activeColor: root.theme.roleColor("connectivity")
+                                onActivated: root.shellGlassToggleRequested()
+                            }
+
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(4)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰀻"
+                                title: root.barVisible ? "Bar visible" : "Bar hidden"
+                                shortcut: "SHIFT+B"
+                                active: !root.barVisible
+                                activeColor: root.theme.roleColor("positive")
+                                onActivated: root.barToggleRequested()
+                            }
+                            QuickSettingChip {
+                                width: visualModeStrip.cellWidth(5)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.motion.enabled ? "󰐊" : "󰏤"
+                                title: root.motion.enabled ? "Animations" : "Reduced motion"
+                                shortcut: "R"
+                                active: !root.motion.enabled
+                                activeColor: root.theme.roleColor("warning")
+                                onActivated: root.motion.toggle()
+                            }
+
+                            AdjustableSetting {
+                                width: visualModeStrip.cellWidth(6)
+                                height: 104
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.nightLight.active ? "󰖔" : "󰖙"
+                                label: "Night Light"
+                                valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
+                                toggleShortcut: "T"
+                                decrementShortcut: "-"
+                                incrementShortcut: "+"
+                                roleAccent: root.theme.roleColor("warmth")
+                                active: root.nightLight.active
+                                canToggle: root.nightLight.supported && !root.nightLight.busy
+                                canDecrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
+                                canIncrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
+                                onToggleRequested: root.nightLight.toggle()
+                                onDecreaseRequested: root.nightLight.warmer()
+                                onIncreaseRequested: root.nightLight.cooler()
+                            }
+                        }
+
+                        ShellSurface {
+                            width: parent.width
+                            height: audioStack.implicitHeight + root.theme.spacing3 * 2
+                            theme: root.theme
+                            motion: root.motion
+                            surfaceLayer: ShellSurface.Group
+                            cornerRadius: theme.radiusLarge
+                            fillColor: root.theme.groupBase
+
+                            Column {
+                                id: audioStack
+                                anchors {
+                                    left: parent.left
+                                    right: parent.right
+                                    top: parent.top
+                                    margins: root.theme.spacing3
+                                }
+                                spacing: root.theme.spacing1
+
+                                AudioQuickSection {
+                                    id: outputQuick
+                                    width: audioStack.width
+                                    showMixer: true
+                                    inline: true
+                                    meterEnabled: root.visible && !root.mixerOpen
+                                    onChooserOpenChanged: {
+                                        if (chooserOpen)
+                                            inputQuick.chooserOpen = false;
+                                    }
+                                    baseIndex: 0
+                                    selectedAudioIndex: root.selectedAudioIndex
+                                    onSelectionRequested: index => root.selectedAudioIndex = index
+                                    onMixerRequested: root.openMixer()
+                                    system: root.system
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                }
+                                AudioQuickSection {
+                                    id: inputQuick
+                                    width: audioStack.width
+                                    onChooserOpenChanged: {
+                                        if (chooserOpen)
+                                            outputQuick.chooserOpen = false;
+                                    }
+                                    visible: root.system.microphoneAvailable
+                                    microphone: true
+                                    inline: true
+                                    meterEnabled: root.visible && !root.mixerOpen
+                                    baseIndex: root.microphoneAudioIndex
+                                    selectedAudioIndex: root.selectedAudioIndex
+                                    onSelectionRequested: index => root.selectedAudioIndex = index
+                                    system: root.system
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                }
+                            }
+                        }
+
+                        KeyHintStrip {
+                            width: parent.width
+                            runtime: root.runtime
+                            theme: root.theme
+                            hints: [
+                                {
+                                    shortcut: "J/K",
+                                    label: "Select audio"
+                                },
+                                {
+                                    shortcut: "H/L",
+                                    label: "Level"
+                                },
+                                {
+                                    shortcut: "M",
+                                    label: "Mute"
+                                },
+                                {
+                                    shortcut: "X",
+                                    label: "Mic"
+                                }
+                            ]
+                        }
                     }
                 }
             }
 
-            KeyHintStrip {
-                width: parent.width
-                runtime: root.runtime
-                theme: root.theme
-                hints: [
-                    {
-                        shortcut: "J/K",
-                        label: "Select audio"
-                    },
-                    {
-                        shortcut: "H/L",
-                        label: "Level"
-                    },
-                    {
-                        shortcut: "M",
-                        label: "Mute"
-                    },
-                    {
-                        shortcut: "X",
-                        label: "Mic"
-                    }
-                ]
-            }
-
+            // Media spans both dashboard columns, keeping controls balanced
+            // without a tall empty panel beside the spectrum visualiser.
             Column {
                 width: parent.width
                 spacing: root.theme.spacing2
@@ -1083,7 +1130,7 @@ FocusScope {
 
                 ShellSurface {
                     width: parent.width
-                    height: root.media.available ? 250 : 0
+                    height: root.media.available ? Math.max(250, mediaQuickContents.implicitHeight + root.theme.spacing3 * 2) : 0
                     visible: root.media.available
                     theme: root.theme
                     motion: root.motion
@@ -1118,8 +1165,11 @@ FocusScope {
                     }
 
                     Column {
+                        id: mediaQuickContents
                         anchors {
-                            fill: parent
+                            left: parent.left
+                            right: parent.right
+                            top: parent.top
                             margins: root.theme.spacing3
                         }
                         spacing: root.theme.spacing2

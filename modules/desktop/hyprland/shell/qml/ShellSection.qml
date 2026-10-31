@@ -11,12 +11,21 @@ Column {
     default property alias contentData: body.data
 
     width: parent ? parent.width : implicitWidth
-    spacing: theme.spacing2
+    spacing: theme.spacing3
 
     Row {
         width: parent.width
         height: Math.max(titleText.implicitHeight, detailText.implicitHeight)
         spacing: root.theme.spacing2
+
+        Rectangle {
+            id: sectionMark
+            width: 4
+            height: 17
+            radius: 2
+            anchors.verticalCenter: parent.verticalCenter
+            color: root.theme.accent
+        }
 
         ShellText {
             id: titleText
@@ -25,12 +34,12 @@ Column {
             theme: root.theme
             text: root.title
             color: theme.textStrong
-            font.pixelSize: theme.fontSize(11)
+            font.pixelSize: theme.fontSize(13)
             font.weight: Font.DemiBold
         }
 
         Item {
-            width: Math.max(0, parent.width - parent.children[0].width - detailText.width - parent.spacing * 2)
+            width: Math.max(0, parent.width - sectionMark.width - titleText.implicitWidth - detailText.width - parent.spacing * 3)
             height: 1
         }
 
@@ -42,7 +51,7 @@ Column {
             theme: root.theme
             text: root.detail
             color: theme.textMuted
-            font.pixelSize: theme.fontSize(9)
+            font.pixelSize: theme.fontSize(10)
         }
     }
 

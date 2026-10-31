@@ -111,12 +111,12 @@ FocusScope {
 
         ShellSurface {
             width: parent.width
-            height: 124
+            height: 156
             theme: panel.theme
             motion: panel.motion
             surfaceLayer: ShellSurface.Control
             cornerRadius: panel.theme.radiusLarge
-            fillColor: panel.theme.layer3
+            fillColor: panel.theme.materialTertiaryContainer
 
             Row {
                 anchors.centerIn: parent
@@ -127,7 +127,7 @@ FocusScope {
                     text: panel.weather.icon
                     color: panel.theme.roleColor("weather")
                     font.family: "Symbols Nerd Font"
-                    font.pixelSize: panel.theme.fontSize(75)
+                    font.pixelSize: panel.theme.fontSize(89)
                 }
 
                 Column {
@@ -138,7 +138,7 @@ FocusScope {
                         text: panel.weather.available ? panel.weather.temperatureText(panel.weather.temperature) : "--°"
                         color: panel.theme.textStrong
                         font.family: panel.runtime.fontMono
-                        font.pixelSize: panel.theme.fontSize(46)
+                        font.pixelSize: panel.theme.fontLargeData
                         font.weight: Font.DemiBold
                     }
 

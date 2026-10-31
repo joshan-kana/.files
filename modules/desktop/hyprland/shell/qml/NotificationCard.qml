@@ -66,10 +66,17 @@ SquircleSurface {
         }
     }
 
-    implicitHeight: Math.max(92, contents.implicitHeight + theme.spacing4 * 2)
-    cornerRadius: theme.radiusMedium
+    implicitHeight: Math.max(130, contents.implicitHeight + theme.spacing4 * 2)
+    cornerRadius: selected ? theme.radiusLarge : theme.radiusMedium
     exponent: theme.squircleExponent
-    fillColor: selected ? theme.blend(theme.expressiveSurface, theme.roleColor("notifications"), theme.dark ? 0.065 : 0.04) : theme.expressiveSurface
+    fillColor: selected ? theme.materialPrimaryContainer : theme.materialContainerHigh
+    Behavior on cornerRadius {
+        enabled: !card.dismissing
+        Anim {
+            motion: card.motion
+            type: Anim.FastSpatial
+        }
+    }
     borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.roleColor("notifications") : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
@@ -109,6 +116,29 @@ SquircleSurface {
         onDoubleClicked: card.defaultRequested()
     }
 
+    ShellSurface {
+        anchors {
+            left: parent.left
+            top: parent.top
+            margins: card.theme.spacing3
+        }
+        width: 52
+        height: 52
+        theme: card.theme
+        motion: card.motion
+        glassAllowed: false
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: card.selected ? 26 : card.theme.radiusSmall
+        fillColor: card.theme.blend(card.theme.materialPrimaryContainer, card.theme.roleColor("notifications"), card.selected ? 0.32 : 0.18)
+        Text {
+            anchors.centerIn: parent
+            text: card.notification && card.notification.urgency === NotificationUrgency.Critical ? "󰀪" : "󰂚"
+            font.family: "Symbols Nerd Font"
+            font.pixelSize: card.theme.fontSize(27)
+            color: card.theme.readableRoleColor("notifications")
+        }
+    }
+
     Column {
         id: contents
         anchors {
@@ -116,6 +146,7 @@ SquircleSurface {
             left: parent.left
             right: parent.right
             margins: card.theme.spacing4
+            leftMargin: card.theme.spacing4 + 56
         }
         spacing: card.theme.spacing2
 
@@ -185,7 +216,7 @@ SquircleSurface {
             textFormat: Text.PlainText
             color: card.theme.textStrong
             font.family: card.runtime.fontMono
-            font.pixelSize: card.theme.fontSize(14)
+            font.pixelSize: card.theme.fontSize(16)
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
         }

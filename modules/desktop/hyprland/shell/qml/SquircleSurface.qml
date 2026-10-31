@@ -24,8 +24,8 @@ Item {
 
     // A zero-sized surface has no contour yet. Keep SVG parsing valid while
     // its first frame or animated size is being measured.
-    readonly property string fillPathData: buildPath(0) || "M 0 0"
-    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? (buildPath(borderWidth / 2) || "M 0 0") : "M 0 0"
+    readonly property string fillPathData: buildPath(0) || "M 0 0 L 0 0 Z"
+    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? (buildPath(borderWidth / 2) || "M 0 0 L 0 0 Z") : "M 0 0 L 0 0 Z"
 
     function point(value: real): string {
         return Number(value).toFixed(4);
@@ -65,7 +65,7 @@ Item {
         const innerHeight = height - inset * 2;
         const r = Math.min(Math.max(0, cornerRadius - inset), innerWidth / 2, innerHeight / 2);
 
-        if (innerWidth <= 0 || innerHeight <= 0 || r <= 0)
+        if (!Number.isFinite(innerWidth) || !Number.isFinite(innerHeight) || !Number.isFinite(r) || !Number.isFinite(exponent) || exponent <= 0 || innerWidth <= 0 || innerHeight <= 0 || r <= 0)
             return "";
 
         const left = inset;

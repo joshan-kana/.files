@@ -15,11 +15,17 @@ ShellSurface {
     implicitHeight: 42
     surfaceLayer: ShellSurface.Control
     selected: false
-    cornerRadius: theme.radiusMedium
+    cornerRadius: picked || dayState === 1 ? theme.radiusLarge : theme.radiusMedium
+    Behavior on cornerRadius {
+        Anim {
+            motion: cell.motion
+            type: Anim.FastSpatial
+        }
+    }
     borderColor: picked ? (dayState === 1 ? theme.textStrong : theme.roleColor("calendar")) : "transparent"
     borderWidth: picked ? theme.borderFocus : 0
 
-    fillColor: dayState === 1 ? theme.roleColor("calendar") : (hover.hovered && !header ? theme.blend(theme.layer1, theme.roleColor("calendar"), theme.dark ? 0.1 : 0.06) : "transparent")
+    fillColor: dayState === 1 ? theme.roleColor("calendar") : picked ? theme.materialPrimaryContainer : hover.hovered && !header ? theme.materialContainerHigh : "transparent"
 
     Text {
         anchors.centerIn: parent

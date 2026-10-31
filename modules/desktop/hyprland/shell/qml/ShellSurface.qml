@@ -43,7 +43,7 @@ SquircleSurface {
     readonly property real musicGlow: musicBass * 0.55 + musicBeat * 0.38
     readonly property color musicLight: theme.blend(theme.accent, theme.positive, musicTreble * 0.85)
 
-    shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
+    shadowStrength: elevated ? (theme.dark ? 0.22 : 0.13) : 0
     shadowOffset: elevated ? 3 : 0
 
     exponent: theme.squircleExponent
@@ -66,16 +66,16 @@ SquircleSurface {
         else
             switch (surfaceLayer) {
             case ShellSurface.Background:
-                base = theme.layer0;
+                base = theme.materialCanvas;
                 break;
             case ShellSurface.Group:
-                base = theme.expressiveSurface;
+                base = theme.materialContainer;
                 break;
             case ShellSurface.Control:
-                base = theme.expressiveSurfaceStrong;
+                base = theme.materialContainerHigh;
                 break;
             default:
-                base = theme.layer1;
+                base = theme.materialContainerLow;
                 break;
             }
         // A sustained 808 colours the whole surface; transient attacks

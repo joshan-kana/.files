@@ -131,7 +131,7 @@ FocusScope {
             cornerRadius: content.theme.radiusLarge
             luminous: true
             luminousColor: content.theme.roleColor("media")
-            fillColor: content.theme.surface
+            fillColor: content.theme.materialSecondaryContainer
         }
 
         Row {
@@ -149,7 +149,7 @@ FocusScope {
             spacing: content.theme.spacing4
 
             ShellSurface {
-                width: content.compactHeight ? 120 : 168
+                width: content.compactHeight ? 120 : 186
                 height: width
                 theme: content.theme
                 motion: content.motion
@@ -178,7 +178,7 @@ FocusScope {
             }
 
             Column {
-                width: header.width - (content.compactHeight ? 120 : 168) - header.spacing
+                width: header.width - (content.compactHeight ? 120 : 186) - header.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: content.theme.spacing2
 
@@ -195,7 +195,7 @@ FocusScope {
                     text: content.media.title
                     color: content.theme.textStrong
                     font.family: content.runtime.fontMono
-                    font.pixelSize: content.theme.fontSize(content.compactHeight ? 22 : 28)
+                    font.pixelSize: content.theme.fontSize(content.compactHeight ? 22 : 31)
                     font.weight: Font.DemiBold
                 }
 

@@ -67,7 +67,7 @@ Item {
                 }
             }
             PathSvg {
-                path: root.geometry.filled
+                path: root.geometry.filled || "M 0 0 L 0.01 0 L 0 0.01 Z"
             }
         }
         ShapePath {
@@ -77,7 +77,7 @@ Item {
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
             PathSvg {
-                path: root.geometry.outline
+                path: root.geometry.outline || "M 0 0 L 0.01 0 L 0 0.01 Z"
             }
         }
     }

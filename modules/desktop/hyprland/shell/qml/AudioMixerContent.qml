@@ -89,20 +89,26 @@ FocusScope {
             readonly property var stream: mixer.streams[index] || null
             readonly property bool chosen: index === mixer.selectedIndex
 
-            width: Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
+            width: mixer.streams.length === 1 ? list.width : Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
             height: 112
             theme: mixer.theme
             motion: mixer.motion
-            cornerRadius: theme.radiusMedium
+            cornerRadius: chosen ? theme.radiusLarge : theme.radiusMedium
             surfaceLayer: ShellSurface.Group
-            fillColor: chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
+            fillColor: chosen ? theme.blend(theme.materialContainerHigh, theme.roleColor("audio"), theme.dark ? 0.19 : 0.12) : theme.materialContainer
+            Behavior on cornerRadius {
+                Anim {
+                    motion: mixer.motion
+                    type: Anim.FastSpatial
+                }
+            }
             borderColor: chosen ? theme.roleColor("audio") : "transparent"
             borderWidth: chosen ? theme.borderFocus : 0
 
             StateLayer {
                 theme: mixer.theme
                 motion: mixer.motion
-                cornerRadius: mixer.theme.radiusMedium
+                cornerRadius: streamRow.cornerRadius
                 onActivated: mixer.selectedIndex = streamRow.index
             }
 
