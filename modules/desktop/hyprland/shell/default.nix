@@ -1384,6 +1384,7 @@ in
           pkgs.coreutils
           pkgs.wl-clipboard
           pkgs.libnotify
+          pkgs.satty
         ];
         text = ''
           mode="''${1:-}"
@@ -1402,7 +1403,7 @@ in
               [ "$#" -eq 2 ] && ensure_snapshot "$2" || exit 2
               rm -f -- "$2"
               ;;
-            copy|save)
+            copy|save|annotate)
               [ "$#" -eq 6 ] && ensure_snapshot "$2" || exit 2
               for number in "$3" "$4" "$5" "$6"; do [[ "$number" =~ ^[0-9]+$ ]] || exit 2; done
               x="$3"; y="$4"; w="$5"; h="$6"
@@ -1411,7 +1412,19 @@ in
               [ "$((x + w))" -le "$full_width" ] && [ "$((y + h))" -le "$full_height" ] || exit 2
               # Preserve the frozen frame on export failure so Enter can retry.
               geometry="''${w}x''${h}+''${x}+''${y}"
-              if [ "$mode" = copy ]; then
+              if [ "$mode" = annotate ]; then
+                umask 077
+                input="$(mktemp "$private_dir/linux-desktop-annotation-XXXXXXXX.png")"
+                trap 'rm -f -- "$input"' EXIT
+                magick "$2" -crop "$geometry" +repage -strip "$input"
+                dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+                mkdir -p -- "$dest"
+                satty --filename "$input" --output-filename "$dest/Screenshot-%Y%m%d-%H%M%S.png" \
+                  --copy-command wl-copy --initial-tool arrow --no-window-decoration \
+                  --font-family ${lib.escapeShellArg config.stylix.fonts.monospace.name} \
+                  --actions-on-enter save-to-clipboard --actions-on-escape exit --early-exit all
+                rm -f -- "$2"
+              elif [ "$mode" = copy ]; then
                 magick "$2" -crop "$geometry" +repage -strip png:- | wl-copy --type image/png
                 notify-send --app-name=linux-desktop "Screenshot copied" "''${w} × ''${h} pixels" || true
               else
@@ -1510,6 +1523,7 @@ in
           pkgs.ffmpeg
           pkgs.gnused
           pkgs.xdg-utils
+          pkgs.losslesscut
         ];
         text = ''
           action="''${1:-}"
@@ -1548,7 +1562,7 @@ in
               [ ! -L "$preview_dir" ] || exit 2
               rm -rf -- "$preview_dir"
               ;;
-            preview|open|trash)
+            preview|open|edit|trash)
               [ "$#" -eq 2 ] || exit 2
               name="$2"
               [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
@@ -1556,6 +1570,8 @@ in
               [ -f "$path" ] && [ ! -L "$path" ] || exit 2
               if [ "$action" = open ]; then
                 exec xdg-open "$path"
+              elif [ "$action" = edit ]; then
+                exec losslesscut --disable-networking "$path"
               elif [ "$action" = trash ]; then
                 exec gio trash "$path"
               fi
