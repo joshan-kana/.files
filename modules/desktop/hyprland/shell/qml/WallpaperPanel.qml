@@ -9,13 +9,14 @@ Item {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property AppearancePreferences appearance
 
     property bool open: false
     property var entries: []
     property string currentPath: ""
     property string applyingPath: ""
     property string searchText: ""
-    property string resizeMode: "fit"
+    readonly property string resizeMode: appearance.wallpaperResizeMode
     property string statusText: ""
     property int selectedIndex: 0
     property bool loading: false
@@ -192,7 +193,7 @@ Item {
     }
 
     function toggleFit(): void {
-        resizeMode = resizeMode === "fit" ? "crop" : "fit";
+        appearance.toggleWallpaperResizeMode();
     }
     function applySelected(): void {
         if (busy || !selectedPath() || runtime.wallpaperLibrary.length === 0)
