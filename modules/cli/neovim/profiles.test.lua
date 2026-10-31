@@ -1,4 +1,5 @@
 local vim = assert(_G.vim)
+vim.env.XDG_STATE_HOME = vim.fn.tempname()
 local profiles = dofile("modules/cli/neovim/profiles.lua")
 
 vim.g.mapleader = " "
@@ -71,22 +72,31 @@ expect(vim.fn.maparg("z", "n") == "u", "Positional mappings can be re-enabled")
 profiles.set_keymap("native")
 expect(vim.fn.maparg("z", "n") == "" and vim.fn.maparg("x", "n") == "", "Native mappings have no residual overlays")
 vim.keymap.set("n", "z", "q")
+local state_file = vim.fn.stdpath("state") .. "/editor-profiles.json"
+local saved_before = table.concat(vim.fn.readfile(state_file), "\n")
 local okay = pcall(profiles.set_keymap, "positional")
 expect(
 	not okay and vim.fn.maparg("x", "n") == "" and profiles.status() == "native",
 	"Collision fails without a partial profile switch"
 )
+expect(table.concat(vim.fn.readfile(state_file), "\n") == saved_before, "Collision leaves saved preferences unchanged")
 vim.keymap.del("n", "z")
 profiles.set_keymap("positional")
 expect(profiles.status() == "positional", "Profile works after collision has been resolved")
 vim.keymap.set("n", "x", "q")
+saved_before = table.concat(vim.fn.readfile(state_file), "\n")
 local removed = pcall(profiles.set_keymap, "native")
 expect(
 	not removed and vim.fn.maparg("x", "n") == "q" and profiles.status() == "positional",
 	"A changed active mapping is never removed"
 )
+expect(
+	table.concat(vim.fn.readfile(state_file), "\n") == saved_before,
+	"Failed switch does not update saved preferences"
+)
 vim.keymap.del("n", "x")
 vim.keymap.set("n", "x", "<C-r>", { desc = "Redo", noremap = true })
 profiles.set_keymap("native")
 expect(profiles.status() == "native", "Switching succeeds when the active map is restored")
+vim.fn.delete(vim.env.XDG_STATE_HOME, "rf")
 print(checked .. " editing-profile checks passed")
