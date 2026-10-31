@@ -28,6 +28,11 @@ FocusScope {
         }
     }
 
+    function focusKeyboard(): void {
+        if (active)
+            keySink.forceActiveFocus();
+    }
+
     function selectedStream(): var {
         return streams.length > 0 ? streams[Math.max(0, Math.min(selectedIndex, streams.length - 1))] : null;
     }
@@ -292,7 +297,10 @@ FocusScope {
         focus: mixer.active
 
         Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape) {
+            if (event.key === Qt.Key_A) {
+                mixer.focusKeyboard();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
                 mixer.closeRequested();
                 event.accepted = true;
             } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
