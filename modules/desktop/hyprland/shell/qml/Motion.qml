@@ -62,6 +62,14 @@ QtObject {
             Quickshell.execDetached([runtime.wallpaperLibrary, "motion", enabled ? "on" : "off"]);
     }
 
+    function resetToDeclared(): void {
+        preferences.animationsEnabled = runtime.animationsEnabled;
+        preferences.setValue("animationsEnabled", preferences.animationsEnabled);
+        preferences.sync();
+        syncCompositorMotion();
+        syncWallpaperMotion();
+    }
+
     function toggle(): void {
         preferences.animationsEnabled = !preferences.animationsEnabled;
         preferences.setValue("animationsEnabled", preferences.animationsEnabled);
