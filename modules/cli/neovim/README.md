@@ -57,3 +57,9 @@ Native operator-pending commands are unchanged by the selection layer. `dw`, `d3
 When entering an Ex command such as `:EditorSelection`, suggestions appear automatically. Use `Up` / `Down` to navigate them, `Tab` to accept the selected suggestion without running the command, and `Enter` to execute. `Right` retains normal cursor movement. This does not change insert-mode code completion.
 
 Key descriptions are also discoverable through `Space ?` and `Space e n`.
+
+## Project-local configuration
+
+Neovim loads trusted `.nvim.lua` files from the current directory or its parents. Place project-specific LSP configurations in `.nvim/lsp/<server>.lua` and add that directory to `runtimepath` from the project’s `.nvim.lua`. Keep shared language servers, parsers, and formatters in the global Nix-managed editor configuration; `.editorconfig` and language-native files are preferred for portable formatting conventions.
+
+Project-local Lua can execute code, so review it before running `:trust` on its `.nvim.lua`. Neovim keeps the trust decision locally, and changes to the trusted file require renewed approval. Start Neovim from the project or one of its subdirectories to load this configuration.
