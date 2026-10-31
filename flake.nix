@@ -119,7 +119,6 @@
       forAllSystems = f: lib.genAttrs systems f;
 
       pkgsFor = system: import nixpkgs { inherit system; };
-      terminalEditorFor = system: import ./modules/cli/neovim/package.nix { pkgs = pkgsFor system; };
 
       repoToolExcludedDirs = [
         ".direnv/"
@@ -498,8 +497,6 @@
         {
           docs = generatedDocs.book;
           docs-source = generatedDocs.docsSource;
-          editor = (terminalEditorFor system).nvim;
-          terminal-editor = (terminalEditorFor system).workspace;
         }
         // updatePackagesFor system
       );
@@ -561,13 +558,6 @@
             inherit (preCommit) shellHook;
           };
 
-          editor = pkgs.mkShell {
-            packages = [
-              (terminalEditorFor system).nvim
-              (terminalEditorFor system).workspace
-            ];
-          };
-
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
             inherit (preCommit) shellHook;
@@ -597,32 +587,6 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
-          editor =
-            let
-              editor = terminalEditorFor system;
-            in
-            pkgs.runCommand "terminal-editor-tests"
-              {
-                nativeBuildInputs = [
-                  editor.nvim
-                  pkgs.neovim
-                  pkgs.zellij
-                ];
-              }
-              ''
-                export HOME="$TMPDIR/home"
-                export XDG_CACHE_HOME="$TMPDIR/cache"
-                export XDG_CONFIG_HOME="$TMPDIR/config"
-                export XDG_DATA_HOME="$TMPDIR/data"
-                export XDG_STATE_HOME="$TMPDIR/state"
-                mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME"
-                cd ${self}
-                nvim --clean --headless -l ./modules/cli/neovim/profiles.test.lua
-                printf '{ foo=1; }\n' > "$TMPDIR/format.nix"
-                editor-nvim --headless "$TMPDIR/format.nix" -c 'luafile ${./tests/neovim/smoke.lua}'
-                zellij --config ${./modules/cli/neovim/zellij.kdl} setup --check >/dev/null
-                touch "$out"
-              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
@@ -819,16 +783,6 @@
           vscodePkg = pkgs.vscodium or (pkgs.vscode or null);
         in
         {
-          editor = {
-            type = "app";
-            program = lib.getExe (terminalEditorFor system).nvim;
-            meta.description = "Open the portable configured Neovim editor";
-          };
-          terminal-editor = {
-            type = "app";
-            program = lib.getExe (terminalEditorFor system).workspace;
-            meta.description = "Open the portable Neovim and Zellij terminal workspace";
-          };
           docs-serve = {
             type = "app";
             program = lib.getExe docsCommands.serve;
