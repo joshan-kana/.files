@@ -45,6 +45,26 @@ QtObject {
     onNotificationGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed)
     onOsdGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed)
 
+    function resetToDeclared(): void {
+        const defaults = {
+            wallpaperSpectrumEnabled: false,
+            wallpaperResizeMode: "fit",
+            musicReactiveEnabled: false,
+            barVisible: true,
+            windowTransparencyEnabled: false,
+            shellGlassEnabled: false,
+            mediaVisualizerMode: "bars",
+            mediaLyricsVisible: false
+        };
+        for (const key of Object.keys(defaults)) {
+            saved[key] = defaults[key];
+            saved.setValue(key, defaults[key]);
+        }
+        saved.sync();
+        applyWindowTransparency();
+        applyShellGlass();
+    }
+
     function toggleWallpaperResizeMode(): void {
         saved.wallpaperResizeMode = wallpaperResizeMode === "fit" ? "crop" : "fit";
         saved.setValue("wallpaperResizeMode", saved.wallpaperResizeMode);
