@@ -19,4 +19,4 @@ if ((${#targets[@]} == 0)); then
   exit 1
 fi
 
-exec nix build -L --no-link "${targets[@]}" "$@"
+exec rom build "${targets[@]}" -- -L --no-link "$@"

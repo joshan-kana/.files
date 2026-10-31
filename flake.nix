@@ -661,6 +661,7 @@
             runtimeInputs = [
               pkgs.git
               pkgs.jq
+              pkgs.rom
             ];
             text = builtins.readFile ./scripts/build-systems;
           };
