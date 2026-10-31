@@ -527,6 +527,26 @@ Item {
                 }
             }
 
+            SquircleSurface {
+                id: galleryBusySurface
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                }
+                height: gallery.height
+                visible: panel.busy || panel.loading
+                cornerRadius: panel.theme.radiusLarge
+                exponent: panel.theme.squircleExponent
+                LoadingOutline {
+                    anchors.fill: parent
+                    surface: galleryBusySurface
+                    active: panel.busy || panel.loading
+                    motionEnabled: panel.motion.enabled
+                    highlightColor: panel.theme.roleColor("wallpaper")
+                }
+            }
+
             ShellSurface {
                 id: currentWallpaperPreview
                 anchors {
@@ -621,7 +641,7 @@ Item {
             spacing: panel.theme.spacing2
 
             ShellAction {
-                width: (parent.width - parent.spacing * 2) / 3
+                width: (parent.width - parent.spacing) / 2
                 height: 40
                 runtime: panel.runtime
                 theme: panel.theme
@@ -634,7 +654,7 @@ Item {
             }
 
             ShellAction {
-                width: (parent.width - parent.spacing * 2) / 3
+                width: (parent.width - parent.spacing) / 2
                 height: 40
                 runtime: panel.runtime
                 theme: panel.theme
@@ -646,52 +666,30 @@ Item {
                 enabled: !panel.busy
                 onActivated: panel.resetWallpaper()
             }
-
-            ShellAction {
-                width: (parent.width - parent.spacing * 2) / 3
-                height: 40
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                title: "Apply"
-                shortcut: "ENTER"
-                horizontalCompact: true
-                enabled: panel.selectedPath().length > 0 && !panel.busy
-                onActivated: panel.applySelected()
-            }
         }
 
-        Row {
-            anchors.right: parent.right
-            spacing: panel.theme.spacing2
-            Repeater {
-                model: [
-                    {
-                        shortcut: "H/L",
-                        label: "Choose"
-                    },
-                    {
-                        shortcut: "J/K",
-                        label: "Rows"
-                    },
-                    {
-                        shortcut: "/",
-                        label: "Search"
-                    },
-                    {
-                        shortcut: "ENTER",
-                        label: "Apply"
-                    }
-                ]
-                delegate: KeyHint {
-                    required property var modelData
-                    shortcut: modelData.shortcut
-                    label: modelData.label
-                    theme: panel.theme
-                    runtime: panel.runtime
+        KeyHintStrip {
+            width: parent.width
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "H/J/K/L",
+                    label: "Choose"
+                },
+                {
+                    shortcut: "U/D",
+                    label: "Page"
+                },
+                {
+                    shortcut: "/",
+                    label: "Search"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Set"
                 }
-            }
+            ]
         }
 
         Text {

@@ -232,18 +232,35 @@ PanelWindow {
                 }
             }
 
+            ShellAction {
+                anchors {
+                    right: parent.right
+                    bottom: parent.bottom
+                }
+                visible: popup.notificationState.captureKind(popup.notification).length > 0
+                width: 132
+                height: 31
+                runtime: popup.runtime
+                theme: popup.theme
+                motion: popup.motion
+                compact: true
+                horizontalCompact: true
+                icon: "󰏫"
+                title: popup.notificationState.captureKind(popup.notification) === "screenshot" ? "Markup" : "Trim"
+                onActivated: popup.notificationState.invokeCaptureEdit(popup.notification)
+            }
+
             Text {
                 anchors {
                     left: accent.right
                     bottom: parent.bottom
                     leftMargin: popup.theme.spacing4
                 }
-                text: popup.notificationState.captureKind(popup.notification) ? "CLICK  OPEN   //   RMB  DISMISS" : "CLICK  HISTORY   //   RMB  DISMISS"
+                text: popup.notificationState.captureKind(popup.notification) ? "CLICK TO OPEN" : "CLICK · HISTORY  /  RMB · DISMISS"
                 color: popup.theme.textMuted
                 opacity: 0.62
                 font.family: popup.runtime.fontMono
                 font.pixelSize: popup.theme.fontSize(8)
-                font.letterSpacing: 0.8
             }
         }
     }
