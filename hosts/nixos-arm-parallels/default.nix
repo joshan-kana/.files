@@ -22,6 +22,7 @@
     ;
 
   imports = [
+    (moduleRegistry.profiles { inherit lib; }).desktop.default
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
@@ -46,7 +47,6 @@
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
-    plymouth.enable = false;
   };
 
 }

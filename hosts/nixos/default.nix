@@ -1,6 +1,7 @@
 {
   extendScope,
   inputs,
+  lib,
   moduleRegistry,
   pkgs,
   ...
@@ -21,6 +22,7 @@
 
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
+    (moduleRegistry.profiles { inherit lib; }).desktop.default
   ];
 
   dotfiles = {
@@ -37,7 +39,6 @@
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
-    plymouth.enable = false;
   };
 
   cli = extendScope moduleRegistry.cli {

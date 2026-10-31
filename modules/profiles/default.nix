@@ -1,6 +1,7 @@
 { lib }:
 
 {
+  desktop.default.boot.plymouth.enable = true;
   desktop.arm.dotfiles.scopes.desktopApps =
     lib.genAttrs
       [

@@ -84,6 +84,201 @@ let
     '';
 in
 {
+  bootSplash =
+    { config, pkgs, ... }:
+    let
+      frames = 60;
+      resolution = 768;
+      background =
+        with config.lib.stylix.colors;
+        "${toString base00-dec-r}, ${toString base00-dec-g}, ${toString base00-dec-b}";
+      foreground =
+        with config.lib.stylix.colors;
+        "${toString base05-dec-r}, ${toString base05-dec-g}, ${toString base05-dec-b}";
+      renderFrames = pkgs.writeText "plymouth-wireframe.py" ''
+        import math
+        import pathlib
+        import subprocess
+        import sys
+        import tempfile
+
+        destination = pathlib.Path(sys.argv[1])
+        foreground, secondary = ("#" + color for color in sys.argv[2:4])
+        count = int(sys.argv[4])
+        size = int(sys.argv[5])
+        radius = size * 0.36
+        center = size / 2
+        circle = 2 * math.pi
+        golden_angle = math.pi * (3 - math.sqrt(5))
+
+        def rotate(point, yaw, pitch):
+            x, y, z = point
+            x, z = x * math.cos(yaw) + z * math.sin(yaw), -x * math.sin(yaw) + z * math.cos(yaw)
+            y, z = y * math.cos(pitch) - z * math.sin(pitch), y * math.sin(pitch) + z * math.cos(pitch)
+            return x, y, z
+
+        def paths(points):
+            sections = []
+            section = []
+            current_depth = None
+            for previous, following in zip(points, points[1:]):
+                depth = (previous[2] + following[2]) >= 0
+                if depth != current_depth:
+                    if section:
+                        sections.append((current_depth, section))
+                    section = [f"M {previous[0]:.2f} {previous[1]:.2f}"]
+                    current_depth = depth
+                section.append(f"L {following[0]:.2f} {following[1]:.2f}")
+            if section:
+                sections.append((current_depth, section))
+            return sections
+
+        with tempfile.TemporaryDirectory() as temporary:
+            svg = pathlib.Path(temporary) / "frame.svg"
+            for frame in range(count):
+                turn = circle * frame / count
+                pitch = 0.26 + 0.18 * math.sin(turn)
+                art = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">']
+                for index in range(38):
+                    tilt = 0.10 + 1.35 * index / 37
+                    node = (index * golden_angle) % circle
+                    points = []
+                    for sample in range(193):
+                        angle = circle * sample / 192
+                        radial = 1 - 0.025 * math.sin(3 * angle + index * 0.7)
+                        x = radial * math.cos(angle)
+                        y = radial * math.sin(angle) * math.cos(tilt)
+                        z = radial * math.sin(angle) * math.sin(tilt)
+                        x, y = x * math.cos(node) - y * math.sin(node), x * math.sin(node) + y * math.cos(node)
+                        x, y, z = rotate((x, y, z), turn, pitch)
+                        points.append((center + radius * x, center + radius * y, z))
+                    for front, section in paths(points):
+                        path = " ".join(section)
+                        # Faint halos soften the strokes without raster blur.
+                        art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
+                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.75" stroke-opacity="{0.65 if front else 0.20}"/>')
+                art.append('</svg>')
+                svg.write_text("\n".join(art))
+                image = destination / f"frame-{frame}.png"
+                subprocess.run(["rsvg-convert", "--format=png", "--output", str(image), str(svg)], check=True)
+                indexed = destination / f"frame-{frame}.indexed.png"
+                result = subprocess.run([
+                    "pngquant", "--quality=90-100", "--speed=3", "--output", str(indexed), str(image)
+                ], check=False)
+                if result.returncode == 0:
+                    indexed.replace(image)
+                elif result.returncode != 99:
+                    raise RuntimeError(f"pngquant failed: {result.returncode}")
+      '';
+      theme =
+        pkgs.runCommand "stylix-wireframe-plymouth"
+          {
+            nativeBuildInputs = [
+              pkgs.python3
+              pkgs.librsvg
+              pkgs.pngquant
+            ];
+          }
+          ''
+            themeDir="$out/share/plymouth/themes/wireframe"
+            mkdir -p "$themeDir"
+            python3 ${renderFrames} "$themeDir" \
+              "${config.lib.stylix.colors.base05}" "${config.lib.stylix.colors.base04}" \
+              ${toString frames} ${toString resolution}
+            cat > "$themeDir/wireframe.plymouth" <<EOF
+            [Plymouth Theme]
+            Name=Wireframe
+            ModuleName=script
+
+            [script]
+            ImageDir=$themeDir
+            ScriptFile=$themeDir/wireframe.script
+            EOF
+            cat > "$themeDir/wireframe.script" <<'EOF'
+            center_x = Window.GetWidth() / 2;
+            center_y = Window.GetHeight() / 2;
+            bottom_y = Window.GetHeight() * 0.85;
+            message_y = Window.GetHeight() * 0.74;
+            Window.SetBackgroundTopColor(${background});
+            Window.SetBackgroundBottomColor(${background});
+
+            width = Math.Min(${toString resolution}, Math.Min(Window.GetWidth(), Window.GetHeight()) * 0.52);
+            images = [];
+            for (i = 0; i < ${toString frames}; i++) {
+              image = Image("frame-" + i + ".png");
+              images[i] = image.Scale(width, width);
+            }
+            orb = Sprite(images[0]);
+            orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
+            tick = 0;
+            fun animate() {
+              orb.SetImage(images[Math.Int(tick / 2) % ${toString frames}]);
+              tick++;
+            }
+            Plymouth.SetRefreshFunction(animate);
+
+            prompt = null;
+            bullets = null;
+            bullet = Image.Text("•", ${foreground});
+            fun password_callback(label, count) {
+              prompt = null;
+              bullets = null;
+              prompt_image = Image.Text(label, ${foreground});
+              prompt = Sprite(prompt_image);
+              prompt.SetPosition(center_x - prompt_image.GetWidth() / 2, bottom_y - prompt_image.GetHeight(), 2);
+              start_x = center_x - count * bullet.GetWidth() / 2;
+              for (i = 0; i < count; i++) {
+                bullets[i] = Sprite(bullet);
+                bullets[i].SetPosition(start_x + i * bullet.GetWidth(), bottom_y + bullet.GetHeight(), 2);
+              }
+            }
+            Plymouth.SetDisplayPasswordFunction(password_callback);
+
+            question = null;
+            answer = null;
+            fun question_callback(label, entry) {
+              question = null;
+              answer = null;
+              question_image = Image.Text(label, ${foreground});
+              answer_image = Image.Text(entry, ${foreground});
+              question = Sprite(question_image);
+              answer = Sprite(answer_image);
+              question.SetPosition(center_x - question_image.GetWidth() / 2, bottom_y - question_image.GetHeight(), 2);
+              answer.SetPosition(center_x - answer_image.GetWidth() / 2, bottom_y + answer_image.GetHeight(), 2);
+            }
+            Plymouth.SetDisplayQuestionFunction(question_callback);
+
+            message = null;
+            fun message_callback(text) {
+              message = null;
+              message_image = Image.Text(text, ${foreground});
+              message = Sprite(message_image);
+              message.SetPosition(center_x - message_image.GetWidth() / 2, message_y, 2);
+            }
+            Plymouth.SetMessageFunction(message_callback);
+
+            fun normal_callback() {
+              prompt = null;
+              bullets = null;
+              question = null;
+              answer = null;
+              message = null;
+            }
+            Plymouth.SetDisplayNormalFunction(normal_callback);
+            Plymouth.SetQuitFunction(normal_callback);
+            EOF
+          '';
+    in
+    lib.optionalAttrs isLinux {
+      stylix.targets.plymouth.enable = false;
+      boot.plymouth = {
+        theme = "wireframe";
+        themePackages = [ theme ];
+        showDelay = 0;
+      };
+      boot.kernelParams = lib.optionals config.boot.plymouth.enable [ "quiet" ];
+    };
+
   scopeOptions.name = lib.mkOption {
     type = lib.types.enum (builtins.attrNames themeRegistry.variants);
     inherit (themeRegistry) default;
