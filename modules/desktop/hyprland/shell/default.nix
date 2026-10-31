@@ -1376,6 +1376,36 @@ in
         '';
       };
 
+      imageMarkup = pkgs.writeShellApplication {
+        name = "linux-desktop-markup";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.file
+          pkgs.kdePackages.kdialog
+          pkgs.satty
+          pkgs.wl-clipboard
+        ];
+        text = ''
+          [ "$#" -le 1 ] || exit 2
+          if [ "$#" -eq 0 ]; then
+            selected="$(kdialog --getopenfilename "$HOME/Pictures" 'Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif)' )" || exit 0
+            [ -n "$selected" ] || exit 0
+            set -- "$selected"
+          fi
+          [ -f "$1" ] && [ -r "$1" ] || exit 2
+          case "$(file --brief --mime-type -- "$1")" in image/*) ;; *) exit 2 ;; esac
+          umask 077
+          dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+          mkdir -p -- "$dest"
+          output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
+          exec satty --filename "$1" --output-filename "$output" \
+            --copy-command wl-copy --initial-tool arrow --no-window-decoration \
+            --font-family ${lib.escapeShellArg config.stylix.fonts.monospace.name} \
+            --save-after-copy --actions-on-enter save-to-clipboard \
+            --actions-on-escape exit --early-exit all
+        '';
+      };
+
       frozenCapture = pkgs.writeShellApplication {
         name = "linux-desktop-frozen-capture";
         runtimeInputs = [
@@ -1412,30 +1442,19 @@ in
               [ "$((x + w))" -le "$full_width" ] && [ "$((y + h))" -le "$full_height" ] || exit 2
               # Preserve the frozen frame on export failure so Enter can retry.
               geometry="''${w}x''${h}+''${x}+''${y}"
-              if [ "$mode" = annotate ]; then
-                umask 077
-                input="$(mktemp "$private_dir/linux-desktop-annotation-XXXXXXXX.png")"
-                trap 'rm -f -- "$input"' EXIT
-                magick "$2" -crop "$geometry" +repage -strip "$input"
-                snapshot="$2"
-                trap 'rm -f -- "$input" "$snapshot"' EXIT
-                dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-                mkdir -p -- "$dest"
-                satty --filename "$input" --output-filename "$dest/Screenshot-%Y%m%d-%H%M%S.png" \
-                  --copy-command wl-copy --initial-tool arrow --no-window-decoration \
-                  --font-family ${lib.escapeShellArg config.stylix.fonts.monospace.name} \
-                  --actions-on-enter save-to-clipboard --actions-on-escape exit --early-exit all
-              elif [ "$mode" = copy ]; then
-                magick "$2" -crop "$geometry" +repage -strip png:- | wl-copy --type image/png
-                notify-send --app-name=linux-desktop "Screenshot copied" "''${w} × ''${h} pixels" || true
-              else
-                dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
-                mkdir -p -- "$dest"
-                output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
-                magick "$2" -crop "$geometry" +repage -strip "$output"
-                printf '%s\n' "$output"
-                notify-send --app-name=linux-desktop "Screenshot saved" "$output" || true
+              umask 077
+              dest="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+              mkdir -p -- "$dest"
+              output="$dest/Screenshot-$(date +%Y%m%d-%H%M%S)-$$.png"
+              magick "$2" -crop "$geometry" +repage -strip "$output"
+              if [ "$mode" = copy ]; then
+                wl-copy --type image/png < "$output"
               fi
+              notify-send --app-name=linux-desktop "Screenshot saved" "$output" || true
+              if [ "$mode" = annotate ]; then
+                ${lib.getExe imageMarkup} "$output"
+              fi
+              printf '%s\n' "$output"
               # Keep the source available for retry if either export fails.
               rm -f -- "$2"
               ;;
@@ -1492,18 +1511,21 @@ in
 
       notificationOpen = pkgs.writeShellApplication {
         name = "linux-desktop-open-capture";
-        runtimeInputs = [ pkgs.xdg-utils ];
+        runtimeInputs = [
+          pkgs.xdg-utils
+          pkgs.losslesscut
+        ];
         text = ''
           [ "$#" -eq 2 ] || exit 2
           case "$1" in
-            screenshot)
+            screenshot|edit-screenshot)
               path="$2"
               name="''${path##*/}"
               dir="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
               [[ "$name" =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || exit 2
               [[ "$path" == "$dir/$name" ]] || exit 2
               ;;
-            recording)
+            recording|edit-recording)
               name="$2"
               [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
               path="$HOME/Videos/Screencasts/$name"
@@ -1511,6 +1533,10 @@ in
             *) exit 2 ;;
           esac
           [ -f "$path" ] && [ ! -L "$path" ] || exit 1
+          case "$1" in
+            edit-screenshot) exec ${lib.getExe imageMarkup} "$path" ;;
+            edit-recording) exec losslesscut --disable-networking "$path" ;;
+          esac
           exec xdg-open "$path"
         '';
       };
@@ -1525,6 +1551,7 @@ in
           pkgs.gnused
           pkgs.xdg-utils
           pkgs.losslesscut
+          pkgs.wl-clipboard
         ];
         text = ''
           action="''${1:-}"
@@ -1532,49 +1559,72 @@ in
           preview_dir="''${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-preview"
           case "$action" in
             list)
-              [ -d "$recordings" ] || exit 0
-              # Recordings are scanned once on open. Fetch duration metadata
-              # here so selection never waits for thumbnail frame decoding.
               umask 077
               metadata_dir="''${XDG_RUNTIME_DIR:?}/linux-desktop-recordings-metadata"
               [ ! -L "$metadata_dir" ] || exit 2
               mkdir -p -- "$metadata_dir"
               chmod 700 -- "$metadata_dir"
-              while IFS=$'\t' read -r modified name size; do
-                [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || continue
-                path="$recordings/$name"
-                [ -f "$path" ] && [ ! -L "$path" ] || continue
-                key="$(printf '%s|%s|%s' "$name" "$modified" "$size" | sha256sum | cut -d' ' -f1)"
-                metadata="$metadata_dir/$key"
-                if [ ! -s "$metadata" ]; then
-                  duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path" || true)"
-                  [[ "$duration" =~ ^[0-9]+(\.[0-9]+)?$ ]] || duration=0
-                  tmp="$(mktemp "$metadata_dir/.duration-XXXXXXXX")"
-                  printf '%s\n' "$duration" > "$tmp"
-                  mv -- "$tmp" "$metadata"
+              {
+                if [ -d "$recordings" ]; then
+                  while IFS=$'\t' read -r modified name size; do
+                    [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || continue
+                    path="$recordings/$name"
+                    [ -f "$path" ] && [ ! -L "$path" ] || continue
+                    key="$(printf '%s|%s|%s' "$name" "$modified" "$size" | sha256sum | cut -d' ' -f1)"
+                    metadata="$metadata_dir/$key"
+                    if [ ! -s "$metadata" ]; then
+                      duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$path" || true)"
+                      [[ "$duration" =~ ^[0-9]+(\.[0-9]+)?$ ]] || duration=0
+                      tmp="$(mktemp "$metadata_dir/.duration-XXXXXXXX")"
+                      printf '%s\n' "$duration" > "$tmp"
+                      mv -- "$tmp" "$metadata"
+                    fi
+                    read -r duration < "$metadata"
+                    printf '%s\t%s\t%s\t%s\n' "$modified" "$name" "$size" "$duration"
+                  done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
+                    -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4' -printf '%T@\t%f\t%s\n')
                 fi
-                read -r duration < "$metadata"
-                printf '%s\t%s\t%s\t%s\n' "$modified" "$name" "$size" "$duration"
-              done < <(find "$recordings" -maxdepth 1 -type f -regextype posix-extended \
-                -regex '.*/Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4' \
-                -printf '%T@\t%f\t%s\n' | sort -rn | sed -n '1,100p')
+                screenshots="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+                if [ -d "$screenshots" ]; then
+                  while IFS=$'\t' read -r modified name size; do
+                    [[ "$name" =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]] || continue
+                    printf '%s\t%s\t%s\t0\n' "$modified" "$name" "$size"
+                  done < <(find "$screenshots" -maxdepth 1 -type f -regextype posix-extended \
+                    -regex '.*/Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png' -printf '%T@\t%f\t%s\n')
+                fi
+              } | sort -rn | sed -n '1,100p'
               ;;
             clear-preview)
               [ ! -L "$preview_dir" ] || exit 2
               rm -rf -- "$preview_dir"
               ;;
-            preview|open|edit|trash)
+            preview|open|edit|copy|trash)
               [ "$#" -eq 2 ] || exit 2
               name="$2"
-              [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]] || exit 2
-              path="$recordings/$name"
+              if [[ "$name" =~ ^Recording-[0-9]{8}-[0-9]{6}-[0-9]+\.mp4$ ]]; then
+                path="$recordings/$name"
+                kind=recording
+              elif [[ "$name" =~ ^Screenshot-[0-9]{8}-[0-9]{6}-[0-9]+\.png$ ]]; then
+                path="''${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots/$name"
+                kind=image
+              else
+                exit 2
+              fi
               [ -f "$path" ] && [ ! -L "$path" ] || exit 2
               if [ "$action" = open ]; then
                 exec xdg-open "$path"
               elif [ "$action" = edit ]; then
+                if [ "$kind" = image ]; then exec ${lib.getExe imageMarkup} "$path"; fi
                 exec losslesscut --disable-networking "$path"
+              elif [ "$action" = copy ]; then
+                [ "$kind" = image ] || exit 2
+                exec wl-copy --type image/png < "$path"
               elif [ "$action" = trash ]; then
                 exec gio trash "$path"
+              fi
+              if [ "$kind" = image ]; then
+                printf '%s\n' "$path"
+                exit 0
               fi
               [ ! -L "$preview_dir" ] || exit 2
               umask 077
@@ -1660,6 +1710,22 @@ in
         videoWallpaper
         wallpaperLibrary
         recordingToggle
+        imageMarkup
+        (pkgs.makeDesktopItem {
+          name = "linux-desktop-markup";
+          desktopName = "Annotate Image";
+          genericName = "Screenshot and image markup";
+          exec = "${lib.getExe imageMarkup} %f";
+          icon = "accessories-text-editor";
+          categories = [ "Graphics" ];
+          mimeTypes = [
+            "image/png"
+            "image/jpeg"
+            "image/webp"
+            "image/bmp"
+            "image/gif"
+          ];
+        })
         colourPicker
         nightLightControl
         agendaIcalSync
