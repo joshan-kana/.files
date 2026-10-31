@@ -665,11 +665,34 @@ in
     home = args: {
       home.shellAliases.v = "nvim";
       programs.neovim = (neovimConfig args).programs.neovim // {
-        extraConfig = ''
-          autocmd BufRead * autocmd FileType <buffer> ++once
-          \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
-        '';
+        extraPackages = with pkgs; [
+          fd
+          ripgrep
+        ];
+        plugins = with pkgs.vimPlugins; [
+          snacks-nvim
+          blink-cmp
+          which-key-nvim
+          lualine-nvim
+          nvim-lspconfig
+          (nvim-treesitter.withPlugins (
+            parsers: with parsers; [
+              bash
+              json
+              lua
+              markdown
+              markdown_inline
+              nix
+              python
+              vim
+              vimdoc
+              yaml
+            ]
+          ))
+        ];
+        initLua = builtins.readFile ./neovim/init.lua;
       };
+      xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
     };
   };
 
