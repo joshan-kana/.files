@@ -18,6 +18,7 @@ Item {
     property bool exporting: false
     property bool copying: true
     property string exportAction: "copy"
+    property bool annotateAfterCapture: false
     property string selectionMode: "image"
     property string audioMode: "none"
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
@@ -79,6 +80,7 @@ Item {
         captureScreen = target;
         copying = copy;
         selectionMode = mode;
+        annotateAfterCapture = false;
         if (mode !== "record")
             audioMode = "none";
         initialiseSelection = true;
@@ -210,6 +212,11 @@ Item {
             Quickshell.execDetached([runtime.frozenCapture, "clear", oldPath]);
     }
 
+    function toggleAnnotation(): void {
+        annotateAfterCapture = !annotateAfterCapture;
+        statusText = annotateAfterCapture ? "ANNOTATE AFTER CAPTURE · SPACE TO CONFIRM" : "CAPTURE ONLY · SPACE TO CONFIRM";
+    }
+
     function capture(action: string): void {
         if (!open || exporting || pending || selectionWidth < 5 || selectionHeight < 5)
             return;
@@ -223,7 +230,7 @@ Item {
             Quickshell.execDetached([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
             return;
         }
-        exportAction = action === "annotate" ? "annotate" : (copying ? "copy" : "save");
+        exportAction = annotateAfterCapture ? "annotate" : (copying ? "copy" : "save");
         exporting = true;
         if (!frozenForCapture) {
             // The modal must disappear before grim reads the live desktop;
@@ -445,7 +452,7 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.statusText = picker.selectionMode === "record" ? "REGION READY · SPACE TO RECORD" : "REGION READY · SPACE TO CAPTURE · E TO ANNOTATE";
+            picker.statusText = picker.selectionMode === "record" ? "REGION READY · SPACE TO RECORD" : (picker.annotateAfterCapture ? "REGION READY · SPACE TO CAPTURE + MARKUP" : "REGION READY · SPACE TO CAPTURE");
             keyboard.forceActiveFocus();
         }
     }
@@ -525,9 +532,10 @@ Item {
                         compact: true
                         horizontalCompact: true
                         icon: "󰏫"
-                        title: "MARKUP"
+                        title: picker.annotateAfterCapture ? "MARKUP ON" : "MARKUP OFF"
+                        active: picker.annotateAfterCapture
                         shortcut: "E"
-                        onActivated: picker.capture("annotate")
+                        onActivated: picker.toggleAnnotation()
                     }
                     ShellAction {
                         width: 103
@@ -610,7 +618,7 @@ Item {
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
                 picker.cycleAudio();
             } else if (event.key === Qt.Key_E && picker.selectionMode !== "record") {
-                picker.capture("annotate");
+                picker.toggleAnnotation();
             } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
                 picker.toggleFreeze();
             } else if (event.key === Qt.Key_F) {

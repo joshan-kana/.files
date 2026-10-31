@@ -1898,6 +1898,7 @@ in
 
           Service = {
             ExecStart = lib.getExe lockServiceLauncher;
+            X-RestartIfChanged = false;
             Restart = "no";
           };
         };
