@@ -329,13 +329,10 @@ in
 
   (mk {
     keys = "R";
-    action = dispatcher ''
-      function()
-            hl.dispatch(hl.dsp.submap("resize"))
-            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode"))
-          end'';
+    id = "window.resizeMode";
+    action = global "linux-desktop:resize-mode";
     section = "WINDOWS";
-    description = "Resize mode";
+    description = "Resize window with a visual keyboard mode";
   })
 ]
 ++ launcherResults
@@ -634,133 +631,5 @@ in
     action = dispatcher ''hl.dsp.submap("passthru")'';
     section = "SYSTEM";
     description = "Enter passthrough mode";
-  })
-  (mk {
-    keys = "H";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Narrower";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "J";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Taller";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "K";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Shorter";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "L";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Wider";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "SHIFT + H";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Resize opposite left";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "SHIFT + J";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Resize opposite down";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "SHIFT + K";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Resize opposite up";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "SHIFT + L";
-    mainMod = false;
-    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
-    flags.repeating = true;
-    section = "RESIZE MODE";
-    description = "Resize opposite right";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "B";
-    mainMod = false;
-    action = dispatcher ''hl.dsp.layout("splitratio 1.0 exact")'';
-    section = "RESIZE MODE";
-    description = "Balance split";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "Escape";
-    mainMod = false;
-    action = dispatcher ''
-      function()
-            hl.dispatch(hl.dsp.submap("reset"))
-            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
-          end'';
-    section = "RESIZE MODE";
-    description = "Exit resize mode";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "Return";
-    mainMod = false;
-    action = dispatcher ''
-      function()
-            hl.dispatch(hl.dsp.submap("reset"))
-            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
-          end'';
-    section = "RESIZE MODE";
-    description = "Exit resize mode";
-    cheatsheet = false;
-    submap = "resize";
-  })
-  (mk {
-    keys = "R";
-    mainMod = false;
-    action = dispatcher ''
-      function()
-            hl.dispatch(hl.dsp.submap("reset"))
-            hl.dispatch(hl.dsp.global("linux-desktop:resize-mode-exit"))
-          end'';
-    section = "RESIZE MODE";
-    description = "Exit resize mode";
-    cheatsheet = false;
-    submap = "resize";
   })
 ]

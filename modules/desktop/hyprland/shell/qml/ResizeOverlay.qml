@@ -1,149 +1,187 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 
 PanelWindow {
     id: overlay
-
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
-
     property bool open: false
+    property string lastAction: ""
 
     visible: true
+    focusable: true
+    color: "transparent"
+    exclusionMode: ExclusionMode.Ignore
+    implicitWidth: 510
+    implicitHeight: 210
+    anchors {
+        top: true
+    }
+    margins.top: theme.panelTopOffset
     updatesEnabled: surfaceLifecycle.needsRendering
+    mask: surfaceLifecycle.inputRegion
+    WlrLayershell.namespace: "linux-desktop-resize-controls"
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: overlay
         exposed: overlay.open
     }
-    mask: surfaceLifecycle.inputRegion
-    color: "transparent"
-    focusable: false
-    exclusionMode: ExclusionMode.Ignore
-    implicitWidth: 560
-    implicitHeight: 118
 
-    anchors {
-        top: true
+    onOpenChanged: {
+        if (open) {
+            lastAction = "H/J/K/L change size, Shift reverses";
+            Qt.callLater(() => resizeKeys.forceActiveFocus());
+        }
     }
 
-    margins.top: theme.panelTopOffset
+    function resizeWindow(x: int, y: int): void {
+        Hyprland.dispatch(`hl.dsp.window.resize({ x = ${x}, y = ${y}, relative = true })`);
+        lastAction = `${x > 0 ? "+" : ""}${x} × ${y > 0 ? "+" : ""}${y}`;
+    }
 
-    WlrLayershell.namespace: "linux-desktop-resize-hints"
+    function balance(): void {
+        Hyprland.dispatch('hl.dsp.layout("splitratio 1.0 exact")');
+        lastAction = "Balanced split";
+    }
 
-    ShellSurface {
+    FocusScope {
+        id: resizeKeys
         anchors.fill: parent
-        theme: overlay.theme
-        motion: overlay.motion
-        surfaceLayer: ShellSurface.Pane
-        cornerRadius: theme.radiusLarge
-
-        Row {
-            anchors {
-                fill: parent
-                margins: overlay.theme.spacing4
+        focus: overlay.open
+        enabled: overlay.open
+        Keys.onPressed: event => {
+            const opposite = !!(event.modifiers & Qt.ShiftModifier);
+            const size = opposite ? -50 : 50;
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_R) {
+                overlay.open = false;
+            } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                overlay.resizeWindow(-size, 0);
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                overlay.resizeWindow(0, size);
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                overlay.resizeWindow(0, -size);
+            } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                overlay.resizeWindow(size, 0);
+            } else if (event.key === Qt.Key_B) {
+                overlay.balance();
+            } else {
+                return;
             }
-            spacing: overlay.theme.spacing5
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: overlay.theme.spacing1
-
-                Text {
-                    text: "Resize"
-                    color: overlay.theme.textStrong
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(17)
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    text: "Window stays focused"
-                    color: overlay.theme.textMuted
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(10)
-                }
-            }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: 54
-                color: overlay.theme.subtleBorder
-            }
-
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: overlay.theme.spacing3
-
-                Text {
-                    text: "H"
-                    color: overlay.theme.accent
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(12)
-                    font.weight: Font.Bold
-                }
-                Text {
-                    text: "left"
-                    color: overlay.theme.text
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(11)
-                }
-                Text {
-                    text: "J"
-                    color: overlay.theme.accent
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(12)
-                    font.weight: Font.Bold
-                }
-                Text {
-                    text: "down"
-                    color: overlay.theme.text
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(11)
-                }
-                Text {
-                    text: "K"
-                    color: overlay.theme.accent
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(12)
-                    font.weight: Font.Bold
-                }
-                Text {
-                    text: "up"
-                    color: overlay.theme.text
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(11)
-                }
-                Text {
-                    text: "L"
-                    color: overlay.theme.accent
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(12)
-                    font.weight: Font.Bold
-                }
-                Text {
-                    text: "right"
-                    color: overlay.theme.text
-                    font.family: overlay.runtime.fontMono
-                    font.pixelSize: overlay.theme.fontSize(11)
-                }
-            }
+            event.accepted = true;
         }
 
-        Text {
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-                rightMargin: overlay.theme.spacing4
-                bottomMargin: overlay.theme.spacing2
+        ShellSurface {
+            anchors.fill: parent
+            theme: overlay.theme
+            motion: overlay.motion
+            surfaceLayer: ShellSurface.Pane
+            cornerRadius: overlay.theme.radiusPanel
+
+            Column {
+                anchors {
+                    fill: parent
+                    margins: overlay.theme.spacing4
+                }
+                spacing: overlay.theme.spacing3
+
+                Row {
+                    width: parent.width
+                    spacing: overlay.theme.spacing3
+                    Text {
+                        text: "󰩨"
+                        color: overlay.theme.accent
+                        font.family: "Symbols Nerd Font"
+                        font.pixelSize: overlay.theme.fontSize(28)
+                    }
+                    Column {
+                        spacing: overlay.theme.spacing1
+                        Text {
+                            text: "Resize window"
+                            color: overlay.theme.textStrong
+                            font.family: overlay.runtime.fontMono
+                            font.pixelSize: overlay.theme.fontSize(18)
+                            font.weight: Font.Bold
+                        }
+                        Text {
+                            text: overlay.lastAction
+                            color: overlay.theme.textMuted
+                            font.family: overlay.runtime.fontMono
+                            font.pixelSize: overlay.theme.fontSize(11)
+                        }
+                    }
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: overlay.theme.spacing2
+                    Repeater {
+                        model: [
+                            {
+                                key: "H",
+                                title: "Narrower",
+                                x: -50,
+                                y: 0
+                            },
+                            {
+                                key: "J",
+                                title: "Taller",
+                                x: 0,
+                                y: 50
+                            },
+                            {
+                                key: "K",
+                                title: "Shorter",
+                                x: 0,
+                                y: -50
+                            },
+                            {
+                                key: "L",
+                                title: "Wider",
+                                x: 50,
+                                y: 0
+                            }
+                        ]
+                        delegate: ShellAction {
+                            required property var modelData
+                            width: (resizeKeys.width - overlay.theme.spacing4 * 2 - overlay.theme.spacing2 * 3) / 4
+                            height: 70
+                            runtime: overlay.runtime
+                            theme: overlay.theme
+                            motion: overlay.motion
+                            shortcut: modelData.key
+                            title: modelData.title
+                            onActivated: overlay.resizeWindow(modelData.x, modelData.y)
+                        }
+                    }
+                }
+
+                KeyHintStrip {
+                    width: parent.width
+                    runtime: overlay.runtime
+                    theme: overlay.theme
+                    hints: [
+                        {
+                            shortcut: "SHIFT",
+                            label: "Reverse"
+                        },
+                        {
+                            shortcut: "B",
+                            label: "Balance"
+                        },
+                        {
+                            shortcut: "ESC",
+                            label: "Done"
+                        }
+                    ]
+                }
             }
-            text: "Shift reverses  ·  B balance  ·  Enter / Esc / R done"
-            color: overlay.theme.textMuted
-            font.family: overlay.runtime.fontMono
-            font.pixelSize: overlay.theme.fontSize(9)
         }
     }
 }

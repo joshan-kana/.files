@@ -60,7 +60,7 @@ FocusScope {
     readonly property bool themeOpen: themePanel.open
     readonly property bool themeOperationRunning: themePanel.open && themePanel.operationRunning
     readonly property bool wallpaperOpen: wallpaperPanel.open
-    readonly property bool wallpaperOperationRunning: wallpaperPanel.open && (wallpaperPanel.busy || wallpaperPanel.loading)
+    readonly property bool wallpaperOperationRunning: wallpaperPanel.open && wallpaperPanel.busy
     readonly property bool captureEditorRequestRunning: recordingsPanel.open && recordingsPanel.editorRequestRunning
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
@@ -385,15 +385,23 @@ FocusScope {
     }
 
     onMixerOpenChanged: {
-        if (mixerOpen)
+        if (mixerOpen) {
             mixerView.finishLoading();
+            Qt.callLater(() => {
+                if (root.engaged && root.mixerOpen && mixerView.panel)
+                    mixerView.panel.focusKeyboard();
+            });
+        }
     }
 
     onEngagedChanged: {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
             helpOpen = false;
-            keyboardFocus.forceActiveFocus();
+            if (mixerOpen && mixerView.panel)
+                mixerView.panel.focusKeyboard();
+            else
+                keyboardFocus.forceActiveFocus();
             nightLight.refresh();
             requestedViewTimer.restart();
         } else {
@@ -1382,6 +1390,7 @@ FocusScope {
 
         DeferredDetail {
             id: mixerView
+            motion: root.motion
             anchors.fill: parent
             visible: root.mixerOpen
             sourceComponent: Component {
@@ -1398,6 +1407,7 @@ FocusScope {
 
         DeferredDetail {
             id: recordingsPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 RecordingLibrary {
@@ -1411,6 +1421,7 @@ FocusScope {
 
         DeferredDetail {
             id: resourcesPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 ResourceDashboard {
@@ -1425,6 +1436,7 @@ FocusScope {
 
         DeferredDetail {
             id: networkPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 NetworkPanel {
@@ -1439,6 +1451,7 @@ FocusScope {
 
         DeferredDetail {
             id: bluetoothPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 BluetoothPanel {
@@ -1453,6 +1466,7 @@ FocusScope {
 
         DeferredDetail {
             id: wallpaperPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 WallpaperPanel {
@@ -1467,6 +1481,7 @@ FocusScope {
 
         DeferredDetail {
             id: themePanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 ThemePanel {
@@ -1483,6 +1498,7 @@ FocusScope {
 
         DeferredDetail {
             id: sessionPanel
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 SessionPanel {
@@ -1497,6 +1513,7 @@ FocusScope {
 
         DeferredDetail {
             id: trayMenu
+            motion: root.motion
             anchors.fill: parent
             sourceComponent: Component {
                 TrayMenuView {
@@ -1510,7 +1527,7 @@ FocusScope {
         FocusScope {
             id: keyboardFocus
             anchors.fill: parent
-            focus: root.engaged
+            focus: root.engaged && !root.mixerOpen
 
             Keys.onPressed: event => {
                 const helpKey = event.key === Qt.Key_Question || (event.key === Qt.Key_Slash && (event.modifiers & Qt.ShiftModifier));
