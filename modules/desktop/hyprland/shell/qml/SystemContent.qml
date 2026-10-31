@@ -63,7 +63,7 @@ FocusScope {
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
-    readonly property string helpTitle: recordingsPanel.open ? "Recording library" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property string helpTitle: recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: recordingsPanel.open ? [
         {
             key: "J/K · U/D",
@@ -71,11 +71,11 @@ FocusScope {
         },
         {
             key: "ENTER / O",
-            action: "Open selected recording"
+            action: "Open selected capture"
         },
         {
-            key: "E",
-            action: "Edit selected recording"
+            key: "E / C",
+            action: "Edit or copy selected image"
         },
         {
             key: "D · ENTER",
@@ -83,7 +83,7 @@ FocusScope {
         },
         {
             key: "R",
-            action: "Refresh saved clips"
+            action: "Refresh captures"
         },
         {
             key: "ESC",
@@ -834,7 +834,7 @@ FocusScope {
                     theme: root.theme
                     motion: root.motion
                     icon: "󰕧"
-                    title: "Recordings"
+                    title: "Captures"
                     shortcut: "C"
                     activeColor: root.theme.roleColor("capture")
                     onActivated: root.openRecordings()
@@ -1539,8 +1539,14 @@ FocusScope {
                     return;
                 }
 
-                if (root.mixerOpen)
+                if (root.mixerOpen) {
+                    if (event.key === Qt.Key_A) {
+                        if (mixerView.panel)
+                            mixerView.panel.focusKeyboard();
+                        event.accepted = true;
+                    }
                     return;
+                }
 
                 if (outputQuick.chooserOpen || inputQuick.chooserOpen) {
                     const picker = outputQuick.chooserOpen ? outputQuick : inputQuick;
@@ -1614,6 +1620,8 @@ FocusScope {
                         recordingsPanel.invoke("requestDelete");
                     } else if (event.key === Qt.Key_E) {
                         recordingsPanel.invoke("editSelected");
+                    } else if (event.key === Qt.Key_C) {
+                        recordingsPanel.invoke("copySelected");
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_O) {
                         recordingsPanel.invoke("openSelected");
                     } else if (event.key === Qt.Key_R) {

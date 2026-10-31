@@ -294,7 +294,7 @@ FocusScope {
                 },
                 {
                     shortcut: "E",
-                    label: "Expand"
+                    label: center.notificationState.captureKind(center.selectedNotification()) === "screenshot" ? "Markup" : center.notificationState.captureKind(center.selectedNotification()) === "recording" ? "Trim" : "Expand"
                 },
                 {
                     shortcut: "M",
@@ -489,7 +489,10 @@ FocusScope {
                     center.selectGroup((event.key === Qt.Key_D ? 1 : -1) * steps);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_E) {
-                    center.toggleExpanded();
+                    if (center.notificationState.captureKind(center.selectedNotification()))
+                        center.notificationState.invokeCaptureEdit(center.selectedNotification());
+                    else
+                        center.toggleExpanded();
                     event.accepted = true;
                 } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
                     center.notificationState.invokeAction(center.selectedNotification(), event.key - Qt.Key_1);

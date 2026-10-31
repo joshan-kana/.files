@@ -260,6 +260,11 @@ Item {
         endY = newY + rectHeight;
     }
 
+    function cycleAudio(): void {
+        if (selectionMode === "record")
+            audioMode = audioMode === "none" ? "system" : audioMode === "system" ? "microphone" : "none";
+    }
+
     function nextMonitor(): void {
         if (!open || exporting || Quickshell.screens.length < 2)
             return;
@@ -440,7 +445,8 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.capture(mouse.modifiers & Qt.ShiftModifier ? "annotate" : "");
+            picker.statusText = picker.selectionMode === "record" ? "REGION READY · CONFIRM TO RECORD" : "REGION READY · CONFIRM OR ANNOTATE";
+            keyboard.forceActiveFocus();
         }
     }
 
@@ -450,75 +456,126 @@ Item {
             horizontalCenter: parent.horizontalCenter
             topMargin: picker.theme.spacing5
         }
-        width: Math.min(picker.width - 48, 900)
-        height: 78
+        width: Math.min(picker.width - 48, 1000)
+        height: 37 + picker.theme.spacing2 * 3 + pickerLegend.implicitHeight
         z: 5
         theme: picker.theme
         motion: picker.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: picker.theme.radiusLarge
+
         Column {
             anchors {
-                left: parent.left
-                right: parent.right
-                leftMargin: picker.theme.spacing4
-                rightMargin: picker.selectionMode === "record" ? picker.theme.spacing4 : 275
-                verticalCenter: parent.verticalCenter
+                fill: parent
+                margins: picker.theme.spacing2
             }
             spacing: picker.theme.spacing2
 
-            MarqueeText {
+            Row {
                 width: parent.width
-                text: (picker.selectionMode === "record" ? "VIDEO REGION · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN REGION · " : "LIVE REGION · ") + (picker.copying ? "COPY" : "SAVE")) + " · " + (picker.captureScreen ? picker.captureScreen.name : "")
-                color: picker.theme.readableRoleColor("capture")
-                font.family: picker.runtime.fontMono
-                font.pixelSize: picker.theme.fontSize(12)
-                font.weight: Font.DemiBold
+                height: 37
+                spacing: picker.theme.spacing2
+
+                Column {
+                    width: Math.max(1, parent.width - actions.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 3
+                    Text {
+                        width: parent.width
+                        text: picker.selectionMode === "record" ? "VIDEO · " + picker.audioLabel : (picker.frozenForCapture ? "FROZEN IMAGE" : "LIVE IMAGE")
+                        color: picker.theme.readableRoleColor("capture")
+                        font.family: picker.runtime.fontMono
+                        font.pixelSize: picker.theme.fontSize(12)
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        width: parent.width
+                        text: picker.statusText.length > 0 ? picker.statusText : "DRAG TO SELECT · RELEASE TO ADJUST"
+                        color: picker.theme.textMuted
+                        font.family: picker.runtime.fontMono
+                        font.pixelSize: picker.theme.fontSize(9)
+                        elide: Text.ElideRight
+                    }
+                }
+
+                Row {
+                    id: actions
+                    spacing: picker.theme.spacing1
+                    ShellAction {
+                        width: 113
+                        height: 37
+                        runtime: picker.runtime
+                        theme: picker.theme
+                        motion: picker.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
+                        title: picker.selectionMode === "record" ? "START" : picker.copying ? "COPY" : "SAVE"
+                        shortcut: "ENTER"
+                        onActivated: picker.capture("")
+                    }
+                    ShellAction {
+                        visible: picker.selectionMode !== "record"
+                        width: visible ? 108 : 0
+                        height: 37
+                        runtime: picker.runtime
+                        theme: picker.theme
+                        motion: picker.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: "󰏫"
+                        title: "MARKUP"
+                        shortcut: "E"
+                        onActivated: picker.capture("annotate")
+                    }
+                    ShellAction {
+                        width: 103
+                        height: 37
+                        runtime: picker.runtime
+                        theme: picker.theme
+                        motion: picker.motion
+                        compact: true
+                        horizontalCompact: true
+                        title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "FROZEN" : "LIVE"
+                        shortcut: picker.selectionMode === "record" ? "A" : "Z"
+                        onActivated: {
+                            if (picker.selectionMode === "record")
+                                picker.cycleAudio();
+                            else
+                                picker.toggleFreeze();
+                        }
+                    }
+                }
             }
 
-            MarqueeText {
+            KeyHintStrip {
+                id: pickerLegend
                 width: parent.width
-                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "Z FREEZE/LIVE · E EDIT · SHIFT+DRAG EDIT · ") + "ENTER CONFIRM · ESC CANCEL"
-                color: picker.theme.textMuted
-                font.family: picker.runtime.fontMono
-                font.pixelSize: picker.theme.fontSize(9)
-            }
-        }
-
-        Row {
-            anchors {
-                right: parent.right
-                rightMargin: picker.theme.spacing2
-                verticalCenter: parent.verticalCenter
-            }
-            visible: picker.selectionMode !== "record"
-            spacing: picker.theme.spacing2
-
-            ShellAction {
-                width: 116
-                height: 33
                 runtime: picker.runtime
                 theme: picker.theme
-                motion: picker.motion
-                horizontalCompact: true
-                compact: true
-                icon: "󰏫"
-                title: "EDIT"
-                shortcut: "E"
-                onActivated: picker.capture("annotate")
-            }
-            ShellAction {
-                width: 122
-                height: 33
-                runtime: picker.runtime
-                theme: picker.theme
-                motion: picker.motion
-                horizontalCompact: true
-                compact: true
-                icon: "󰹑"
-                title: picker.frozenForCapture ? "FROZEN" : "LIVE"
-                shortcut: "Z"
-                onActivated: picker.toggleFreeze()
+                hints: [
+                    {
+                        shortcut: "H/J/K/L",
+                        label: "Move"
+                    },
+                    {
+                        shortcut: "SHIFT+ARROWS",
+                        label: "Resize"
+                    },
+                    {
+                        shortcut: "F",
+                        label: "Full"
+                    },
+                    {
+                        shortcut: "TAB",
+                        label: "Display"
+                    },
+                    {
+                        shortcut: "ESC",
+                        label: "Cancel"
+                    }
+                ]
             }
         }
     }
@@ -551,7 +608,7 @@ Item {
             } else if (event.key === Qt.Key_Tab) {
                 picker.nextMonitor();
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
-                picker.audioMode = picker.audioMode === "none" ? "system" : picker.audioMode === "system" ? "microphone" : "none";
+                picker.cycleAudio();
             } else if (event.key === Qt.Key_E && picker.selectionMode !== "record") {
                 picker.capture("annotate");
             } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
