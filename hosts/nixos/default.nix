@@ -1,6 +1,7 @@
 {
   extendScope,
   inputs,
+  lib,
   moduleRegistry,
   pkgs,
   ...
@@ -21,11 +22,11 @@
 
   imports = [
     inputs.spicetify-nix.nixosModules.spicetify
+    (moduleRegistry.profiles { inherit lib; }).desktop.default
   ];
 
   dotfiles = {
     rebuild.flags = "--impure";
-    scopes.theme.bootSplash.enable = true;
   };
 
   hardware = import ./hardware.nix;
