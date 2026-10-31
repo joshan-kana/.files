@@ -12,7 +12,7 @@ Item {
 
     readonly property var geometry: {
         const values = spectrum.bands || [];
-        if (values.length < 2)
+        if (values.length < 2 || !spectrum.hasEnergy)
             return {
                 outline: "",
                 filled: ""
