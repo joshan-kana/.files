@@ -1,32 +1,26 @@
 # Validation
 
-**Convention:** Validate the *semantic effect* of a change, not merely its syntax. Pick checks relevant to the changed behavior and distinguish evaluation, build success, and live deployment.
+Validate the behavioral effect of a change, not only the source syntax. Choose checks appropriate to the affected scopes, platforms, and risks.
 
-## Normal checks
+## Baseline
 
-```sh
-nix fmt -- --ci
-git diff --check
-nix flake check
-```
+Run the repository's formatter/linter check, whitespace check, and configured flake checks. Review unsupported or skipped systems rather than treating one platform's result as fleet-wide verification.
 
-These verify repository formatting and linting, whitespace, Nix evaluation, and the flake's configured tests. Some checks are architecture-specific; read reported omissions instead of claiming that all hosts were built.
+For manual changes, build the assembled documentation source and rendered book, check links/navigation, and inspect representative output.
 
-For a docs PR, build both `.#docs-source` and the rendered `.#docs` and inspect generated navigation, links, and content.
+## Evidence by change type
 
-## Regressions and parity
+- **Behavior-preserving refactor:** compare evaluated configurations and relevant system derivations before and after.
+- **Package change:** evaluate consumers, build on relevant architectures, and test execution or patch behavior where necessary.
+- **Service change:** inspect effective units, dependencies, credentials, ownership, network exposure, and startup behavior.
+- **Desktop change:** validate actual rendering, focus, input, performance, and accessibility.
+- **Security/network change:** verify listener bindings, firewall rules, authentication, and reachable paths.
+- **Storage change:** verify data preservation, permissions, backup coverage, and recovery.
 
-- **Mechanical refactor:** compare the relevant `config.system.build.toplevel.drvPath` on all affected hosts before and after. Exact matches are strong evidence of behavior preservation.
-- **Package relocation:** compare the package derivation and its consuming service or host derivation. Build non-stock packages on a supported target.
-- **Service integration:** inspect evaluated service commands, secrets delivery, dependencies, and network settings; perform runtime smoke tests when possible.
-- **Desktop behavior:** verify rendered UI, keyboard focus, input latency, and frame behavior on appropriate clients where evaluation cannot prove the result.
-- **Network and security:** confirm the actual interfaces, access paths, and firewall rules on the target host.
-- **Storage/recovery:** verify data preservation, permissions, backup coverage, and realistic restoration rather than relying solely on Nix assertions.
+An unexpected derivation change warrants investigation. A matching derivation is useful evidence of preservation, but does not establish every runtime property.
 
-Do not silently explain away a changed derivation as harmless without investigating what changed. Conversely, avoid rebuilding the entire fleet for a docs-only source edit when the generated docs check already verifies the change.
+## Tests and reporting
 
-## Test design
+Prefer focused assertions for stable invariants and real runtime verification for behavior evaluation cannot prove. Do not encode subjective style preferences in a large, brittle source linter.
 
-Prefer focused evaluated assertions for stable invariants. The [server-app standards test](https://github.com/joshan-kana/.files/blob/main/tests/server-app-standards.nix) is intentionally narrow. Subjective conventions are best reviewed rather than encoded into a sprawling source-code linter.
-
-Report exactly what was run and which supported systems were evaluated, built, or deployed. A merged PR and a successful live deployment are separate states.
+Report which evaluations, builds, and live tests actually passed. A merged change, a successful build, and a successful deployment are distinct outcomes.

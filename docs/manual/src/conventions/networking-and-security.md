@@ -1,30 +1,26 @@
 # Networking and security
 
-**Convention:** Expose only what a feature actually requires. Keep network boundaries, authentication, firewall rules, and credential delivery explicit and with their semantic owners.
+Expose only the network surface a capability needs, and keep authentication, listener bindings, firewall rules, and credential delivery with their semantic owners.
 
-## Network exposure
+## Network boundaries
 
-The home server's normal application exposure boundary is its LAN, with Tailscale providing remote access through the centrally configured route. Where supported, native services bind to the configured LAN address, and service-specific ports open only on the intended LAN interface.
+Keep services private by default. Public ingress requires an explicit authenticated purpose and a narrowly scoped exception.
 
-- Reuse shared `config.dotfiles.server.lan` settings instead of inventing duplicated host addresses.
-- Do not add app-specific `tailscale0` firewall rules; Tailscale trust belongs to the server networking scope.
-- OCI published ports bind **host-side** to the intended address. The internal container port stays the upstream default unless the application is actually reconfigured.
-- A public authenticated endpoint is an explicit exception, not the default deployment pattern.
-- Roaming hostnames, DHCP, local DNS, and Tailscale fallback are shared networking concerns. Avoid per-app DNS workarounds.
+Use shared network identity, address, routing, and trust policy instead of duplicating host values or app-specific workarounds. A service owns its application listener and necessary firewall access; shared networking owns common VPN, DNS, and routing behavior.
 
-These choices are server-specific policy, not universal assumptions about every NixOS host.
+For containers, distinguish the host-published binding from the container's internal port. Reconfiguring one does not automatically require changing the other.
 
-## Secrets and privilege
+## Credentials and privilege
 
-- Store credentials outside Git, generated documentation, and the Nix store; runtime services receive paths, environment files, or systemd credentials.
-- Evaluation and builds must not probe the contents or presence of runtime secret files.
-- Missing **required** credentials should cause clear runtime failure, with `AssertPathExists` or the service's supported validation mechanism when appropriate.
-- Optional credentials gate only the optional feature consuming them.
-- Restrict services to the identities and permissions they need. Do not expand a shared MCP gateway's privileges merely because a separate shell-access service requires sudo or SSH.
-- Avoid secrets in logs, commit metadata, error messages, and build arguments.
+- Keep secrets outside Git, documentation, build outputs, and the Nix store.
+- Do not read runtime secret contents or require secret files to exist during evaluation or builds.
+- A missing mandatory credential must produce an explicit runtime failure; an optional credential only gates the feature requiring it.
+- Give each service the narrowest identities, file permissions, and privileged operations it needs.
+- Do not extend privileges from a restricted interface to a more widely exposed one by convenience.
+- Keep sensitive values out of logs, errors, command lines, and commit metadata.
 
-## Review and enforcement
+## Verification
 
-Review listeners, firewall interfaces, authentication paths, service identities, and credential handling together. The existing [server-app standards test](https://github.com/joshan-kana/.files/blob/main/tests/server-app-standards.nix) asserts some of these evaluated policies; it is not a substitute for a live port and authorization check after deployment.
+Review the effective listener, trusted interfaces, authorization path, firewall policy, identity, and credential handling together. Validate access from intended and unintended network paths when exposure changes.
 
-See the cross-project [Networking](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/NETWORKING.md) and [Secrets](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/SECRETS.md) policies for the broader design.
+For broader security policy, follow the [networking](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/NETWORKING.md) and [secrets](https://github.com/joshan-kana/infrastructure-docs/blob/main/docs/SECRETS.md) handbook sections.

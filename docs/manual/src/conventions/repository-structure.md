@@ -1,33 +1,26 @@
 # Repository structure
 
-**Convention:** Place each change under the idea, application, or capability that owns it, not simply under the native option namespace it uses.
+Organize code by the capability or application that owns it. Native option namespaces do not determine file placement.
 
-| Path               | Responsibility                                          |
-| ------------------ | ------------------------------------------------------- |
-| `flake.nix`        | Inputs, host composition, checks, and flake outputs     |
-| `hosts/<host>/`    | Host entry points and genuine host-specific differences |
-| `modules/`         | Shared semantic modules                                 |
-| `lib/`             | Shared Nix helpers and semantic-scope machinery         |
-| `overlays/`        | Non-stock packages, overrides, and upstream pins        |
-| `scripts/`         | Repo and operational commands                           |
-| `tests/`           | Evaluated and behavioral tests                          |
-| `docs/manual/src/` | Handwritten conventions and runbooks                    |
-| `docs/default.nix` | Generated reference, navigation, and mdBook assembly    |
+| Location           | Responsibility                                 |
+| ------------------ | ---------------------------------------------- |
+| `flake.nix`        | Flake inputs, outputs, composition, and checks |
+| `hosts/`           | Host entry points and host-specific policy     |
+| `modules/`         | Shared semantic capabilities                   |
+| `lib/`             | Reusable Nix helpers                           |
+| `overlays/`        | Package definitions and overrides              |
+| `scripts/`         | Reusable repository and operational commands   |
+| `tests/`           | Behavioral and evaluation checks               |
+| `docs/manual/src/` | Human-maintained guidance and runbooks         |
 
-## Registries and imports
+## Registration and imports
 
-Register a new child in the appropriate existing `default.nix`, such as `modules/server-apps/default.nix`. Keep the shared `modules/default.nix` registry as the discoverable map of semantic areas. Import the existing overlay directory in host composition and register package overlays under `overlays/default.nix`.
+Use the owning directory's existing `default.nix` to register children. Keep package registration in the overlay registry and semantic module registration in the module hierarchy. Avoid parallel registries or special-case composition in the flake when the existing mechanism suffices.
 
-Use ordinary Nix module `imports = [ ... ];` when the module is a native import list. Avoid creating another competing package or module registry inside `flake.nix`.
+Use native module imports for ordinary native modules. A feature may span multiple files when they have coherent responsibilities; one-file wrappers and extra directories are not inherently improvements.
 
-## Shared and local ownership
+## Shared versus host-local
 
-Common behavior belongs in the shared semantic module. An exception specific to a host belongs to that host's configuration under the same semantic scope. Avoid copying full shared modules just to change one option.
+Common behavior belongs with its shared owner. Genuine differences belong to the affected host under the same semantic scope. Extend shared definitions instead of copying or replacing them to change a single option.
 
-A substantial feature can be split into files by coherent responsibilities. A directory for every tiny expression is not inherently clearer.
-
-## Examples and checks
-
-An application's package installation stays with its application scope; its appearance policy belongs to the theme scope; its custom package construction belongs to overlays. A runbook lives with the manual, while the facts it references are generated from evaluated state.
-
-Review the changed paths, parent registry, and all affected hosts. For structural changes, compare the relevant evaluated derivations before and after. **Exception:** a shared capability can own cross-cutting integration for several consumers.
+Keep package construction in overlays, runtime integration with the consuming capability, and appearance policy with the theme. Verify registration, imports, and affected host evaluations after structural changes.
