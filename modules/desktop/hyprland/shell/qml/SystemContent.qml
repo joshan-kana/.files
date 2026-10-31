@@ -8,6 +8,7 @@ FocusScope {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    required property AppearancePreferences appearance
     required property SystemState system
     required property MediaState media
     required property SpectrumState spectrum
@@ -71,6 +72,10 @@ FocusScope {
         {
             key: "ENTER / O",
             action: "Open selected recording"
+        },
+        {
+            key: "E",
+            action: "Edit selected recording"
         },
         {
             key: "D · ENTER",
@@ -1472,6 +1477,7 @@ FocusScope {
             anchors.fill: parent
             sourceComponent: Component {
                 WallpaperPanel {
+                    appearance: root.appearance
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
@@ -1629,6 +1635,8 @@ FocusScope {
                         recordingsPanel.invoke("moveSelection", 4);
                     } else if (event.key === Qt.Key_D) {
                         recordingsPanel.invoke("requestDelete");
+                    } else if (event.key === Qt.Key_E) {
+                        recordingsPanel.invoke("editSelected");
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_O) {
                         recordingsPanel.invoke("openSelected");
                     } else if (event.key === Qt.Key_R) {
