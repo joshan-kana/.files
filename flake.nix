@@ -557,6 +557,17 @@
               nixfmt
               nixd
               nil
+              lua-language-server
+              basedpyright
+              bash-language-server
+              yaml-language-server
+              vscode-langservers-extracted
+              marksman
+              typescript-language-server
+              typescript
+              csharp-ls
+              taplo
+              lemminx
               statix
               deadnix
               nixdoc

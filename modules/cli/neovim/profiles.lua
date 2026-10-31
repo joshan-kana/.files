@@ -7,36 +7,53 @@ local active = {
 }
 
 local state_dir = vim.fn.stdpath("state")
-local state_file = state_dir .. "/editor-profiles.json"
+local legacy_file = state_dir .. "/editor-profiles.json"
+local state_files = {
+	keymap = state_dir .. "/editor-keymap",
+	selection = state_dir .. "/editor-selection",
+}
 
 local function read_state()
 	local stored = { keymap = "positional", selection = false }
-	local file = io.open(state_file, "r")
-	if not file then
-		return stored
+	local legacy = io.open(legacy_file, "r")
+	if legacy then
+		local contents = legacy:read("*a")
+		legacy:close()
+		local ok, decoded = pcall(vim.json.decode, contents)
+		if ok and type(decoded) == "table" then
+			if decoded.keymap == "native" or decoded.keymap == "positional" then
+				stored.keymap = decoded.keymap
+			end
+			stored.selection = decoded.selection == true
+		else
+			vim.notify("Invalid saved editor preferences; using defaults", vim.log.levels.WARN)
+		end
 	end
-	local contents = file:read("*a")
-	file:close()
-	local ok, decoded = pcall(vim.json.decode, contents)
-	if not ok or type(decoded) ~= "table" then
-		vim.notify("Invalid saved editor preferences; using defaults", vim.log.levels.WARN)
-		return stored
+
+	for field, path in pairs(state_files) do
+		local file = io.open(path, "r")
+		if file then
+			local value = file:read("*l")
+			file:close()
+			if field == "keymap" and (value == "native" or value == "positional") then
+				stored.keymap = value
+			elseif field == "selection" and (value == "true" or value == "false") then
+				stored.selection = value == "true"
+			else
+				vim.notify("Ignoring invalid saved editor " .. field, vim.log.levels.WARN)
+			end
+		end
 	end
-	if decoded.keymap == "native" or decoded.keymap == "positional" then
-		stored.keymap = decoded.keymap
-	end
-	stored.selection = decoded.selection == true
 	return stored
 end
 
 local function persist(field)
-	local stored = read_state()
-	stored[field] = active[field]
-	local temporary = state_file .. "." .. vim.fn.getpid() .. ".tmp"
+	local path = state_files[field]
+	local temporary = path .. "." .. vim.fn.getpid() .. ".tmp"
 	local ok, err = pcall(function()
 		vim.fn.mkdir(state_dir, "p")
-		vim.fn.writefile({ vim.json.encode(stored) }, temporary)
-		local renamed, reason = vim.uv.fs_rename(temporary, state_file)
+		vim.fn.writefile({ tostring(active[field]) }, temporary)
+		local renamed, reason = vim.uv.fs_rename(temporary, path)
 		if not renamed then
 			error(reason)
 		end

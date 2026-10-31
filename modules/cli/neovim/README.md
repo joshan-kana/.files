@@ -2,7 +2,7 @@
 
 Use `Space e m` to switch between the positional and native Vim layouts, or run `:EditorKeymap positional` / `:EditorKeymap native`. The selection-first layer is independent: toggle it with `Space e s` or use `:EditorSelection on|off|toggle`.
 
-Both preferences are restored when Neovim restarts. They are stored per machine in Neovim's local XDG state directory as `editor-profiles.json`, not in the repository. A new installation defaults to positional editing with selection-first disabled.
+Both preferences are restored when Neovim restarts. They are saved independently as `editor-keymap` and `editor-selection` in Neovim's local XDG state directory, not in the repository. Existing `editor-profiles.json` preferences are read for compatibility. A new installation defaults to positional editing with selection-first disabled.
 
 ## Positional layout
 
@@ -63,3 +63,7 @@ Key descriptions are also discoverable through `Space ?` and `Space e n`.
 Neovim loads trusted `.nvim.lua` files from the current directory or its parents. Place project-specific LSP configurations in `.nvim/lsp/<server>.lua` and add that directory to `runtimepath` from the project’s `.nvim.lua`. Keep shared language servers, parsers, and formatters in the global Nix-managed editor configuration; `.editorconfig` and language-native files are preferred for portable formatting conventions.
 
 Project-local Lua can execute code, so review it before running `:trust` on its `.nvim.lua`. Neovim keeps the trust decision locally, and changes to the trusted file require renewed approval. Start Neovim from the project or one of its subdirectories to load this configuration.
+
+The `.files` project also activates its language servers independently of the global server-enable list. The development shell supplies Nixd, Lua, Python, Bash, JSON, YAML, Markdown, TypeScript, C#, SCSS, TOML and XML tools. Start Neovim from the project with its Nix development shell active (for example through direnv). Eww Yuck has no packaged language server in this setup.
+
+On first use, review `.nvim.lua` and approve it with `:trust`. The project's LSP enablement is independent of the default editing profile and selection-first preferences.

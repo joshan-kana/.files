@@ -72,7 +72,7 @@ expect(vim.fn.maparg("z", "n") == "u", "Positional mappings can be re-enabled")
 profiles.set_keymap("native")
 expect(vim.fn.maparg("z", "n") == "" and vim.fn.maparg("x", "n") == "", "Native mappings have no residual overlays")
 vim.keymap.set("n", "z", "q")
-local state_file = vim.fn.stdpath("state") .. "/editor-profiles.json"
+local state_file = vim.fn.stdpath("state") .. "/editor-keymap"
 local saved_before = table.concat(vim.fn.readfile(state_file), "\n")
 local okay = pcall(profiles.set_keymap, "positional")
 expect(
