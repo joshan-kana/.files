@@ -445,7 +445,7 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.statusText = picker.selectionMode === "record" ? "REGION READY · CONFIRM TO RECORD" : "REGION READY · CONFIRM OR ANNOTATE";
+            picker.statusText = picker.selectionMode === "record" ? "REGION READY · SPACE TO RECORD" : "REGION READY · SPACE TO CAPTURE · E TO ANNOTATE";
             keyboard.forceActiveFocus();
         }
     }
@@ -503,7 +503,7 @@ Item {
                     id: actions
                     spacing: picker.theme.spacing1
                     ShellAction {
-                        width: 113
+                        width: 126
                         height: 37
                         runtime: picker.runtime
                         theme: picker.theme
@@ -512,7 +512,7 @@ Item {
                         horizontalCompact: true
                         icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
                         title: picker.selectionMode === "record" ? "START" : picker.copying ? "COPY" : "SAVE"
-                        shortcut: "ENTER"
+                        shortcut: "SPACE"
                         onActivated: picker.capture("")
                     }
                     ShellAction {
@@ -603,7 +603,7 @@ Item {
             const step = resize ? 8 : 16;
             if (event.key === Qt.Key_Escape) {
                 picker.dismiss(true);
-            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            } else if (event.key === Qt.Key_Space) {
                 picker.capture("");
             } else if (event.key === Qt.Key_Tab) {
                 picker.nextMonitor();
