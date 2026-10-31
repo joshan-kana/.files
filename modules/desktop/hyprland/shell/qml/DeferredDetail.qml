@@ -7,6 +7,14 @@ Loader {
     id: detail
     asynchronous: true
     active: false
+    required property Motion motion
+    opacity: (open || (panel && panel.open === undefined && visible)) ? 1 : 0
+    Behavior on opacity {
+        Anim {
+            motion: detail.motion
+            type: Anim.FastEffects
+        }
+    }
 
     readonly property var panel: item
     property bool pendingOpen: false

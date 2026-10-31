@@ -966,15 +966,8 @@ ShellRoot {
     GlobalShortcut {
         appid: "linux-desktop"
         name: "resize-mode"
-        description: "Show resize mode hints"
-        onPressed: resizeOverlay.open = true
-    }
-
-    GlobalShortcut {
-        appid: "linux-desktop"
-        name: "resize-mode-exit"
-        description: "Hide resize mode hints"
-        onPressed: resizeOverlay.open = false
+        description: "Open keyboard-driven window resize controls"
+        onPressed: resizeOverlay.open = !resizeOverlay.open
     }
 
     GlobalShortcut {
