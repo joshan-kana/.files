@@ -236,7 +236,7 @@ ShellRoot {
     SpectrumState {
         id: spectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (media.playing && (ambientBar.shown || (expansionState.hasCurrent && expansionState.currentName === "system"))) || (expansionState.hasCurrent && expansionState.currentName === "media") || (motion.enabled && (root.wallpaperSpectrumEnabled || root.musicReactiveEnabled))
+        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || (motion.enabled && (root.wallpaperSpectrumEnabled || root.musicReactiveEnabled))
     }
 
     MusicReactiveState {
