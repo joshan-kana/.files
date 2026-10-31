@@ -22,6 +22,7 @@
     ;
 
   imports = [
+    (moduleRegistry.profiles { inherit lib; }).desktop.default
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
