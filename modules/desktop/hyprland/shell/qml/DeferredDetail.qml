@@ -21,6 +21,8 @@ Loader {
     property var pendingMenuItem: null
     readonly property bool open: panel ? !!panel.open : pendingOpen
     readonly property bool operationRunning: !!(panel && panel.operationRunning)
+    readonly property bool busy: !!(panel && panel.busy)
+    readonly property bool editorRequestRunning: !!(panel && panel.editorRequestRunning)
     readonly property bool statusError: !!(panel && panel.statusError)
     readonly property bool passwordPrompt: !!(panel && panel.passwordPrompt)
     readonly property bool detailView: !!(panel && panel.detailView)
