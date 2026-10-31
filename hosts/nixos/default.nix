@@ -25,6 +25,7 @@
 
   dotfiles = {
     rebuild.flags = "--impure";
+    scopes.theme.bootMenu.enable = true;
   };
 
   hardware = import ./hardware.nix;

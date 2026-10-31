@@ -84,6 +84,8 @@ let
     '';
 in
 {
+  bootMenu = import ./boot-menu.nix;
+
   scopeOptions.name = lib.mkOption {
     type = lib.types.enum (builtins.attrNames themeRegistry.variants);
     inherit (themeRegistry) default;
