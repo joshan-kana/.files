@@ -20,6 +20,7 @@ Item {
     property string deletePending: ""
     property string statusText: ""
     property bool statusError: false
+    property bool editorRequestRunning: false
     readonly property var selectedEntry: entries.length > 0 ? entries[Math.max(0, Math.min(selectedIndex, entries.length - 1))] : null
     readonly property bool isBusy: listProcess.running || actionProcess.running
 
@@ -47,6 +48,8 @@ Item {
         listingSignature = "";
         deletePending = "";
         statusText = "";
+        editorRequestRunning = false;
+        editorRequestTimeout.stop();
         refresh();
         keyboardRequested();
     }
@@ -54,6 +57,8 @@ Item {
         if (!open)
             return;
         open = false;
+        editorRequestRunning = false;
+        editorRequestTimeout.stop();
         deletePending = "";
         previewName = "";
         previewPath = "";
@@ -111,8 +116,10 @@ Item {
     function editSelected(): void {
         if (!selectedEntry || !open || isBusy || runtime.recordingLibrary.length === 0)
             return;
+        editorRequestRunning = true;
+        editorRequestTimeout.restart();
         Quickshell.execDetached([runtime.recordingLibrary, "edit", selectedEntry.name]);
-        statusText = "EDITOR REQUESTED · " + selectedEntry.name;
+        statusText = "OPENING EDITOR · " + selectedEntry.name;
         statusError = false;
     }
     function copySelected(): void {
@@ -142,6 +149,12 @@ Item {
         deletePending = "";
         statusText = "";
         statusError = false;
+    }
+
+    Timer {
+        id: editorRequestTimeout
+        interval: 900
+        onTriggered: library.editorRequestRunning = false
     }
 
     property StdioCollector listOutput: StdioCollector {}
