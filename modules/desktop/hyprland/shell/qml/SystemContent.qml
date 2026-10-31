@@ -60,6 +60,8 @@ FocusScope {
     readonly property bool themeOpen: themePanel.open
     readonly property bool themeOperationRunning: themePanel.open && themePanel.operationRunning
     readonly property bool wallpaperOpen: wallpaperPanel.open
+    readonly property bool wallpaperOperationRunning: wallpaperPanel.open && (wallpaperPanel.busy || wallpaperPanel.loading)
+    readonly property bool captureEditorRequestRunning: recordingsPanel.open && recordingsPanel.editorRequestRunning
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
