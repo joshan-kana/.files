@@ -10,7 +10,6 @@ Variants {
 
     required property SpectrumState spectrum
     required property Theme theme
-    required property Motion motion
     property bool enabled: false
 
     model: Quickshell.screens
@@ -20,7 +19,7 @@ Variants {
 
         required property var modelData
         screen: modelData
-        visible: visuals.enabled && visuals.motion.enabled && visuals.spectrum.hasEnergy
+        visible: visuals.enabled && visuals.spectrum.hasEnergy
         focusable: false
         exclusionMode: ExclusionMode.Ignore
         color: "transparent"
