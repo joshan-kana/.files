@@ -684,7 +684,6 @@ let
     Procedures shared by multiple NixOS hosts.
 
     - [NixOS installer SSH](nixos-installer-ssh.md)
-    - [Terminal editor](terminal-editor.md)
   '';
 
   hostRunbookIndexMarkdown =
@@ -719,7 +718,6 @@ let
 
     - [Common](runbooks/common/index.md)
       - [NixOS installer SSH](runbooks/common/nixos-installer-ssh.md)
-      - [Terminal editor](runbooks/common/terminal-editor.md)
     ${lib.concatMapStringsSep "\n" (
       name:
       let
