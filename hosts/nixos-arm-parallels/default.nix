@@ -27,7 +27,6 @@
 
   dotfiles = {
     defaults.terminal = "alacritty";
-    scopes.theme.bootSplash.enable = true;
   };
 
   hardware = import ./hardware.nix;

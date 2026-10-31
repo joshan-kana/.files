@@ -84,7 +84,12 @@ let
     '';
 in
 {
-  bootSplash = import ./boot-splash.nix;
+  bootSplash =
+    { config, lib, ... }:
+    lib.optionalAttrs isLinux {
+      boot.plymouth.showDelay = 0;
+      boot.kernelParams = lib.optionals config.boot.plymouth.enable [ "quiet" ];
+    };
 
   scopeOptions.name = lib.mkOption {
     type = lib.types.enum (builtins.attrNames themeRegistry.variants);
