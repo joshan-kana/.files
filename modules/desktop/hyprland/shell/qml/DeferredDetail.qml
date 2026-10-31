@@ -6,7 +6,7 @@ import QtQuick
 Loader {
     id: detail
     asynchronous: true
-    active: false
+    active: true
     required property Motion motion
     opacity: (open || (panel && panel.open === undefined && visible)) ? 1 : 0
     Behavior on opacity {
