@@ -17,6 +17,7 @@ Item {
     property bool pending: false
     property bool exporting: false
     property bool copying: true
+    property string exportAction: "copy"
     property string selectionMode: "image"
     property string audioMode: "none"
     readonly property string audioLabel: audioMode === "system" ? "SYSTEM AUDIO" : audioMode === "microphone" ? "MICROPHONE" : "NO AUDIO"
@@ -179,7 +180,7 @@ Item {
         if (liveExportPending) {
             liveExportPending = false;
             const pixels = selectedPixels;
-            exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h)]);
+            exportProcess.exec([runtime.frozenCapture, exportAction, snapshotPath, String(pixels.x), String(pixels.y), String(pixels.w), String(pixels.h)]);
             return;
         }
         if (!pending)
@@ -209,7 +210,7 @@ Item {
             Quickshell.execDetached([runtime.frozenCapture, "clear", oldPath]);
     }
 
-    function capture(): void {
+    function capture(action: string): void {
         if (!open || exporting || pending || selectionWidth < 5 || selectionHeight < 5)
             return;
         const pixelRect = selectedPixels;
@@ -222,6 +223,7 @@ Item {
             Quickshell.execDetached([runtime.recordingToggle, "start", outputName, recordGeometry, selectedAudio]);
             return;
         }
+        exportAction = action === "annotate" ? "annotate" : (copying ? "copy" : "save");
         exporting = true;
         if (!frozenForCapture) {
             // The modal must disappear before grim reads the live desktop;
@@ -234,8 +236,10 @@ Item {
             liveExportPending = true;
             liveCaptureDelay.restart();
         } else {
-            statusText = copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…";
-            exportProcess.exec([runtime.frozenCapture, copying ? "copy" : "save", snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
+            statusText = exportAction === "annotate" ? "OPENING ANNOTATION…" : (copying ? "COPYING EXACT FRAME…" : "SAVING EXACT FRAME…");
+            if (exportAction === "annotate")
+                open = false;
+            exportProcess.exec([runtime.frozenCapture, exportAction, snapshotPath, String(pixelRect.x), String(pixelRect.y), String(pixelRect.w), String(pixelRect.h)]);
         }
     }
 
@@ -327,7 +331,7 @@ Item {
             if (exitCode === 0)
                 picker.dismiss(false);
             else {
-                if (!picker.frozenForCapture) {
+                if (!picker.frozenForCapture || picker.exportAction === "annotate") {
                     picker.open = true;
                     keyboard.forceActiveFocus();
                 }
@@ -436,7 +440,7 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.capture();
+            picker.capture(mouse.modifiers & Qt.ShiftModifier ? "annotate" : "");
         }
     }
 
@@ -458,7 +462,7 @@ Item {
                 left: parent.left
                 right: parent.right
                 leftMargin: picker.theme.spacing4
-                rightMargin: picker.selectionMode === "record" ? picker.theme.spacing4 : 145
+                rightMargin: picker.selectionMode === "record" ? picker.theme.spacing4 : 275
                 verticalCenter: parent.verticalCenter
             }
             spacing: picker.theme.spacing2
@@ -474,32 +478,47 @@ Item {
 
             MarqueeText {
                 width: parent.width
-                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "Z FREEZE/LIVE · ") + "ENTER CONFIRM · ESC CANCEL"
+                text: picker.statusText.length > 0 ? picker.statusText : "DRAG SELECT · ARROWS MOVE · SHIFT+ARROWS RESIZE · F FULL · TAB DISPLAY · " + (picker.selectionMode === "record" ? "A AUDIO · " : "Z FREEZE/LIVE · E EDIT · SHIFT+DRAG EDIT · ") + "ENTER CONFIRM · ESC CANCEL"
                 color: picker.theme.textMuted
                 font.family: picker.runtime.fontMono
                 font.pixelSize: picker.theme.fontSize(9)
             }
         }
 
-        ShellAction {
+        Row {
             anchors {
                 right: parent.right
                 rightMargin: picker.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
             visible: picker.selectionMode !== "record"
-            width: 122
-            height: 33
-            runtime: picker.runtime
-            theme: picker.theme
-            motion: picker.motion
-            horizontalCompact: true
-            compact: true
-            icon: "󰹑"
-            title: picker.frozenForCapture ? "FROZEN" : "LIVE"
-            shortcut: "Z"
-            onActivated: {
-                picker.toggleFreeze();
+            spacing: picker.theme.spacing2
+
+            ShellAction {
+                width: 116
+                height: 33
+                runtime: picker.runtime
+                theme: picker.theme
+                motion: picker.motion
+                horizontalCompact: true
+                compact: true
+                icon: "󰏫"
+                title: "EDIT"
+                shortcut: "E"
+                onActivated: picker.capture("annotate")
+            }
+            ShellAction {
+                width: 122
+                height: 33
+                runtime: picker.runtime
+                theme: picker.theme
+                motion: picker.motion
+                horizontalCompact: true
+                compact: true
+                icon: "󰹑"
+                title: picker.frozenForCapture ? "FROZEN" : "LIVE"
+                shortcut: "Z"
+                onActivated: picker.toggleFreeze()
             }
         }
     }
@@ -533,6 +552,8 @@ Item {
                 picker.nextMonitor();
             } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
                 picker.audioMode = picker.audioMode === "none" ? "system" : picker.audioMode === "system" ? "microphone" : "none";
+            } else if (event.key === Qt.Key_E && picker.selectionMode !== "record") {
+                picker.capture("annotate");
             } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
                 picker.toggleFreeze();
             } else if (event.key === Qt.Key_F) {

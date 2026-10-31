@@ -14,6 +14,7 @@ QtObject {
         location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
         category: "Appearance"
         property bool wallpaperSpectrumEnabled: false
+        property string wallpaperResizeMode: "fit"
         property bool musicReactiveEnabled: false
         property bool barVisible: true
         property bool windowTransparencyEnabled: false
@@ -23,6 +24,7 @@ QtObject {
     }
 
     readonly property bool wallpaperSpectrumEnabled: saved.wallpaperSpectrumEnabled
+    readonly property string wallpaperResizeMode: saved.wallpaperResizeMode === "crop" ? "crop" : "fit"
     readonly property bool musicReactiveEnabled: saved.musicReactiveEnabled
     readonly property bool barVisible: saved.barVisible
     readonly property bool windowTransparencyEnabled: saved.windowTransparencyEnabled
@@ -42,6 +44,12 @@ QtObject {
     onModalGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-modal", "^linux-desktop-modal$", modalGlassExposed)
     onNotificationGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed)
     onOsdGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed)
+
+    function toggleWallpaperResizeMode(): void {
+        saved.wallpaperResizeMode = wallpaperResizeMode === "fit" ? "crop" : "fit";
+        saved.setValue("wallpaperResizeMode", saved.wallpaperResizeMode);
+        saved.sync();
+    }
 
     function toggleWallpaperSpectrum(): void {
         saved.wallpaperSpectrumEnabled = !saved.wallpaperSpectrumEnabled;
