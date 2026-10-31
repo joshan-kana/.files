@@ -26,6 +26,12 @@ QtObject {
     function toggleSilent(): void {
         settings.silent = !settings.silent;
     }
+
+    function resetToDeclared(): void {
+        settings.silent = false;
+        settings.setValue("silent", false);
+        settings.sync();
+    }
     readonly property var history: server.trackedNotifications.values
     readonly property int count: history.length
     property var readNotifications: []
