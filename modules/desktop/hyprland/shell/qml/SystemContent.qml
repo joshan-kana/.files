@@ -1272,29 +1272,6 @@ FocusScope {
                                 highHz: root.spectrum.highHz
                             }
 
-                            Row {
-                                visible: !root.media.available && !root.spectrum.hasEnergy
-                                anchors {
-                                    left: parent.left
-                                    right: parent.right
-                                    bottom: parent.bottom
-                                }
-                                height: 3
-                                spacing: 4
-
-                                Repeater {
-                                    model: 36
-                                    delegate: Rectangle {
-                                        required property int index
-                                        width: Math.max(2, (parent.width - 35 * 4) / 36)
-                                        height: 3
-                                        radius: 2
-                                        color: root.theme.roleColor("media")
-                                        opacity: 0.34
-                                    }
-                                }
-                            }
-
                             SpectrumBars {
                                 anchors.fill: parent
                                 spectrum: root.spectrum
