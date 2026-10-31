@@ -47,6 +47,39 @@ in
     };
   };
 
+  startup =
+    _:
+    let
+      delaySeconds = 30;
+    in
+    lib.optionalAttrs isLinux {
+      systemd.services.comin-startup-fetch = {
+        description = "Fetch Comin updates after boot";
+        after = [ "comin.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${lib.getExe config.services.comin.package} fetch";
+        };
+      };
+
+      systemd.timers.comin-startup-fetch = {
+        wantedBy = [ "timers.target" ];
+        timerConfig.OnBootSec = "${toString delaySeconds}s";
+      };
+    }
+    // lib.optionalAttrs isDarwin {
+      launchd.daemons.comin-startup-fetch.serviceConfig = {
+        ProgramArguments = [
+          "/bin/sh"
+          "-c"
+          "/bin/wait4path /nix/store && /bin/sleep ${toString delaySeconds} && exec ${lib.getExe config.services.comin.package} fetch"
+        ];
+        RunAtLoad = true;
+        StandardOutPath = "/var/log/comin-startup-fetch.log";
+        StandardErrorPath = "/var/log/comin-startup-fetch.log";
+      };
+    };
+
   webhook =
     _:
 
