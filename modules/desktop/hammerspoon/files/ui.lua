@@ -246,7 +246,8 @@ function M.show(message, options)
 			end
 		end
 		if active >= maximum then
-			for _, current in ipairs(entries) do
+			for i = #entries, 1, -1 do
+				local current = entries[i]
 				if not current.dismissing then
 					remove(current)
 					break
@@ -264,7 +265,7 @@ function M.show(message, options)
 		entry.canvas = hs.canvas.new(position(entry, 1))
 		entry.canvas:level("status")
 		entry.canvas:behavior({ "canJoinAllSpaces", "stationary" })
-		table.insert(entries, entry)
+		table.insert(entries, 1, entry)
 	end
 
 	render(entry)
