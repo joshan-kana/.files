@@ -40,7 +40,7 @@ FocusScope {
 
     signal closeRequested
     implicitWidth: 620
-    implicitHeight: (groups.length === 0 ? 295 : Math.max(360, 235 + Math.min(groups.length, 5) * 116)) + footer.implicitHeight + theme.spacing2
+    implicitHeight: (groups.length === 0 ? 245 : Math.max(260, 120 + Math.min(groups.length, 6) * 136)) + footer.implicitHeight + theme.spacing2
     focus: engaged
 
     onEngagedChanged: {

@@ -302,7 +302,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: 960
+    implicitWidth: mixerOpen || sessionPanel.open ? 740 : recordingsPanel.open || themePanel.open ? 900 : 960
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -880,227 +880,6 @@ FocusScope {
                                 onActivated: root.openRecordings()
                             }
                         }
-
-                        Column {
-                            width: parent.width
-                            spacing: root.theme.spacing2
-
-                            Text {
-                                width: parent.width
-                                height: 30
-                                verticalAlignment: Text.AlignVCenter
-                                text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                                color: root.theme.readableRoleColor("media")
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
-                                font.weight: Font.DemiBold
-                                font.letterSpacing: 1
-                            }
-
-                            ShellSurface {
-                                width: parent.width
-                                height: root.media.available ? 250 : 0
-                                visible: root.media.available
-                                theme: root.theme
-                                motion: root.motion
-                                surfaceLayer: ShellSurface.Group
-                                cornerRadius: theme.radiusLarge
-                                luminous: true
-                                lightIntensity: 1.25
-                                luminousColor: root.theme.roleColor("media")
-                                fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
-
-                                StateLayer {
-                                    theme: root.theme
-                                    motion: root.motion
-                                    cornerRadius: root.theme.radiusLarge
-                                    Accessible.role: Accessible.Button
-                                    Accessible.name: "Open full media player"
-                                    onActivated: root.mediaRequested()
-                                }
-
-                                Text {
-                                    anchors {
-                                        top: parent.top
-                                        right: parent.right
-                                        margins: root.theme.spacing3
-                                    }
-                                    z: 1
-                                    text: "V"
-                                    visible: root.media.available
-                                    color: root.theme.textMuted
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(11)
-                                }
-
-                                Column {
-                                    anchors {
-                                        fill: parent
-                                        margins: root.theme.spacing3
-                                    }
-                                    spacing: root.theme.spacing2
-
-                                    Row {
-                                        width: parent.width
-                                        height: 60
-                                        spacing: root.theme.spacing3
-
-                                        ShellSurface {
-                                            width: 60
-                                            height: 60
-                                            theme: root.theme
-                                            motion: root.motion
-                                            surfaceLayer: ShellSurface.Control
-                                            cornerRadius: theme.radiusMedium
-                                            clip: true
-
-                                            Image {
-                                                anchors.fill: parent
-                                                source: root.media.artUrl
-                                                asynchronous: true
-                                                cache: true
-                                                fillMode: Image.PreserveAspectCrop
-                                                visible: root.media.artUrl.length > 0
-                                            }
-
-                                            Text {
-                                                anchors.centerIn: parent
-                                                visible: root.media.artUrl.length === 0
-                                                text: "♫"
-                                                color: root.theme.roleColor("media")
-                                                font.family: root.runtime.fontMono
-                                                font.pixelSize: root.theme.fontSize(28)
-                                            }
-                                        }
-
-                                        Column {
-                                            width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            spacing: root.theme.spacing1
-
-                                            MarqueeText {
-                                                text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
-                                                width: parent.width
-                                                color: root.theme.roleColor("media")
-                                                font.family: root.runtime.fontMono
-                                                font.pixelSize: root.theme.fontSize(10)
-                                            }
-
-                                            MarqueeText {
-                                                text: root.media.available ? root.media.title : "No active media player"
-                                                width: parent.width
-                                                color: root.theme.textStrong
-                                                font.family: root.runtime.fontMono
-                                                font.pixelSize: root.theme.fontSize(16)
-                                                font.weight: Font.DemiBold
-                                            }
-
-                                            MarqueeText {
-                                                text: root.media.artist
-                                                visible: root.media.available
-                                                width: parent.width
-                                                color: root.theme.textMuted
-                                                font.family: root.runtime.fontMono
-                                                font.pixelSize: root.theme.fontSize(10)
-                                            }
-                                        }
-                                    }
-
-                                    Row {
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                        height: 38
-                                        spacing: root.theme.spacing3
-                                        visible: root.media.available
-                                        MediaTransport {
-                                            id: mediaInlineTransport
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            visible: root.media.available
-                                            width: root.media.available ? implicitWidth : 0
-                                            media: root.media
-                                            runtime: root.runtime
-                                            theme: root.theme
-                                            motion: root.motion
-                                            compact: true
-                                            minimal: true
-                                        }
-
-                                        Row {
-                                            id: mediaQuickExtras
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            spacing: root.theme.spacing1
-                                            visible: root.media.available
-                                            width: root.media.available ? implicitWidth : 0
-
-                                            ShellAction {
-                                                width: 70
-                                                height: 36
-                                                runtime: root.runtime
-                                                theme: root.theme
-                                                motion: root.motion
-                                                compact: true
-                                                horizontalCompact: true
-                                                icon: "󰒝"
-                                                title: root.media.shuffled ? "ON" : "OFF"
-                                                shortcut: "S"
-                                                active: root.media.shuffled
-                                                enabled: root.media.shuffleAvailable
-                                                onActivated: root.media.toggleShuffle()
-                                            }
-                                            ShellAction {
-                                                width: 84
-                                                height: 36
-                                                runtime: root.runtime
-                                                theme: root.theme
-                                                motion: root.motion
-                                                compact: true
-                                                horizontalCompact: true
-                                                icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
-                                                title: root.media.repeatLabel
-                                                shortcut: "⇧R"
-                                                active: root.media.repeatState !== 0
-                                                enabled: root.media.repeatAvailable
-                                                onActivated: root.media.toggleRepeat()
-                                            }
-                                            ShellAction {
-                                                width: 70
-                                                height: 36
-                                                runtime: root.runtime
-                                                theme: root.theme
-                                                motion: root.motion
-                                                compact: true
-                                                horizontalCompact: true
-                                                icon: "󰎄"
-                                                title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
-                                                shortcut: "⇧P"
-                                                active: root.media.playerCount > 1
-                                                enabled: root.media.playerCount > 1
-                                                onActivated: root.media.cyclePlayer()
-                                            }
-                                        }
-                                    }
-
-                                    Item {
-                                        width: parent.width
-                                        height: root.media.available ? 94 : 60
-                                        visible: true
-
-                                        SpectrumScale {
-                                            id: compactFrequency
-                                            lowHz: root.spectrum.lowHz
-                                            highHz: root.spectrum.highHz
-                                        }
-
-                                        SpectrumBars {
-                                            anchors.fill: parent
-                                            spectrum: root.spectrum
-                                            theme: root.theme
-                                            frequencyScale: compactFrequency
-                                            barCount: 36
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                     Column {
                         id: dashboardRight
@@ -1326,6 +1105,232 @@ FocusScope {
                                     label: "Mic"
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+
+            // Media spans both dashboard columns, keeping controls balanced
+            // without a tall empty panel beside the spectrum visualiser.
+            Column {
+                width: parent.width
+                spacing: root.theme.spacing2
+
+                Text {
+                    width: parent.width
+                    height: 30
+                    verticalAlignment: Text.AlignVCenter
+                    text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
+                    color: root.theme.readableRoleColor("media")
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(10)
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                }
+
+                ShellSurface {
+                    width: parent.width
+                    height: root.media.available ? Math.max(250, mediaQuickContents.implicitHeight + root.theme.spacing3 * 2) : 0
+                    visible: root.media.available
+                    theme: root.theme
+                    motion: root.motion
+                    surfaceLayer: ShellSurface.Group
+                    cornerRadius: theme.radiusLarge
+                    luminous: true
+                    lightIntensity: 1.25
+                    luminousColor: root.theme.roleColor("media")
+                    fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
+
+                    StateLayer {
+                        theme: root.theme
+                        motion: root.motion
+                        cornerRadius: root.theme.radiusLarge
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Open full media player"
+                        onActivated: root.mediaRequested()
+                    }
+
+                    Text {
+                        anchors {
+                            top: parent.top
+                            right: parent.right
+                            margins: root.theme.spacing3
+                        }
+                        z: 1
+                        text: "V"
+                        visible: root.media.available
+                        color: root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(11)
+                    }
+
+                    Column {
+                        id: mediaQuickContents
+                        anchors {
+                            left: parent.left
+                            right: parent.right
+                            top: parent.top
+                            margins: root.theme.spacing3
+                        }
+                        spacing: root.theme.spacing2
+
+                        Row {
+                            width: parent.width
+                            height: 60
+                            spacing: root.theme.spacing3
+
+                            ShellSurface {
+                                width: 60
+                                height: 60
+                                theme: root.theme
+                                motion: root.motion
+                                surfaceLayer: ShellSurface.Control
+                                cornerRadius: theme.radiusMedium
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: root.media.artUrl
+                                    asynchronous: true
+                                    cache: true
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: root.media.artUrl.length > 0
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: root.media.artUrl.length === 0
+                                    text: "♫"
+                                    color: root.theme.roleColor("media")
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(28)
+                                }
+                            }
+
+                            Column {
+                                width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: root.theme.spacing1
+
+                                MarqueeText {
+                                    text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
+                                    width: parent.width
+                                    color: root.theme.roleColor("media")
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(10)
+                                }
+
+                                MarqueeText {
+                                    text: root.media.available ? root.media.title : "No active media player"
+                                    width: parent.width
+                                    color: root.theme.textStrong
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(16)
+                                    font.weight: Font.DemiBold
+                                }
+
+                                MarqueeText {
+                                    text: root.media.artist
+                                    visible: root.media.available
+                                    width: parent.width
+                                    color: root.theme.textMuted
+                                    font.family: root.runtime.fontMono
+                                    font.pixelSize: root.theme.fontSize(10)
+                                }
+                            }
+                        }
+
+                        Row {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            height: 38
+                            spacing: root.theme.spacing3
+                            visible: root.media.available
+                            MediaTransport {
+                                id: mediaInlineTransport
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: root.media.available
+                                width: root.media.available ? implicitWidth : 0
+                                media: root.media
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                compact: true
+                                minimal: true
+                            }
+
+                            Row {
+                                id: mediaQuickExtras
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: root.theme.spacing1
+                                visible: root.media.available
+                                width: root.media.available ? implicitWidth : 0
+
+                                ShellAction {
+                                    width: 70
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: "󰒝"
+                                    title: root.media.shuffled ? "ON" : "OFF"
+                                    shortcut: "S"
+                                    active: root.media.shuffled
+                                    enabled: root.media.shuffleAvailable
+                                    onActivated: root.media.toggleShuffle()
+                                }
+                                ShellAction {
+                                    width: 84
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
+                                    title: root.media.repeatLabel
+                                    shortcut: "⇧R"
+                                    active: root.media.repeatState !== 0
+                                    enabled: root.media.repeatAvailable
+                                    onActivated: root.media.toggleRepeat()
+                                }
+                                ShellAction {
+                                    width: 70
+                                    height: 36
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    horizontalCompact: true
+                                    icon: "󰎄"
+                                    title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
+                                    shortcut: "⇧P"
+                                    active: root.media.playerCount > 1
+                                    enabled: root.media.playerCount > 1
+                                    onActivated: root.media.cyclePlayer()
+                                }
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: root.media.available ? 94 : 60
+                            visible: true
+
+                            SpectrumScale {
+                                id: compactFrequency
+                                lowHz: root.spectrum.lowHz
+                                highHz: root.spectrum.highHz
+                            }
+
+                            SpectrumBars {
+                                anchors.fill: parent
+                                spectrum: root.spectrum
+                                theme: root.theme
+                                frequencyScale: compactFrequency
+                                barCount: 36
+                            }
                         }
                     }
                 }

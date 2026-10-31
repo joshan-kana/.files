@@ -150,14 +150,15 @@ PanelWindow {
     // Derive the destination geometry from the live view, not only the cache:
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
-    readonly property int navigationWidth: 124
-    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 880) + theme.spacing4 * 2 + navigationWidth : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
+    readonly property int navigationWidth: 104
+    readonly property real minimumBodyWidth: detailVisible ? 740 : 880
+    readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, minimumBodyWidth) + theme.spacing4 * 2 + navigationWidth : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
     readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
-        measuredContentWidth = Math.max(loadedContent.implicitWidth, 880) + theme.spacing4 * 2 + navigationWidth;
+        measuredContentWidth = Math.max(loadedContent.implicitWidth, minimumBodyWidth) + theme.spacing4 * 2 + navigationWidth;
         measuredContentHeight = loadedContent.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2;
     }
 
@@ -202,7 +203,7 @@ PanelWindow {
     readonly property real boundedOriginCenter: Math.max(originHalfWidth, Math.min(viewportWidth - originHalfWidth, localOriginCenter))
     // The visible close morph must shrink in place, not simultaneously drift
     // toward the bar island. Reset its source centre only after fading out.
-    property real animatedSurfaceCenter: contentExpanded || closing ? viewportWidth / 2 : boundedOriginCenter
+    property real animatedSurfaceCenter: contentExpanded || closing ? Math.min(targetWidth, viewportWidth) / 2 : originHalfWidth
 
     Behavior on animatedSurfaceCenter {
         enabled: host.contentExpanded || host.closing
@@ -219,8 +220,8 @@ PanelWindow {
     color: "transparent"
     focusable: expansionState.hasCurrent && !themeTerminalActive
     exclusionMode: ExclusionMode.Ignore
-    implicitWidth: Math.max(1, viewportWidth)
-    implicitHeight: Math.max(1, viewportHeight)
+    implicitWidth: Math.max(1, Math.min(viewportWidth, contentWidth))
+    implicitHeight: Math.max(1, Math.min(viewportHeight, contentHeight))
 
     anchors {
         top: true
@@ -229,7 +230,7 @@ PanelWindow {
 
     margins {
         top: theme.barHeight + theme.spacing1
-        left: screen ? (screen.width - viewportWidth) / 2 : 0
+        left: theme.spacing4
     }
 
     WlrLayershell.namespace: "linux-desktop-expansion"
@@ -242,8 +243,8 @@ PanelWindow {
         popup: host
         exposed: host.expansionState.hasCurrent || host.closing
         interactiveItem: shellSurface
-        fullWidth: Math.max(1, host.viewportWidth)
-        fullHeight: Math.max(1, host.viewportHeight)
+        fullWidth: Math.max(1, host.implicitWidth)
+        fullHeight: Math.max(1, host.implicitHeight)
     }
     mask: surfaceLifecycle.inputRegion
 
@@ -367,57 +368,12 @@ PanelWindow {
         }
     }
 
-    // The connected perimeter is a separate, purely visual layer.
-    // Input remains masked to the actual hub, not the transparent frame.
-    SquircleSurface {
-        anchors.fill: parent
-        visible: host.contentExpanded && host.expansionState.hasCurrent
-        cornerRadius: host.theme.radiusPanel
-        exponent: host.theme.squircleExponent
-        fillColor: "transparent"
-        borderColor: host.theme.blend(host.theme.materialPrimaryContainer, host.theme.accent, host.theme.dark ? 0.18 : 0.12)
-        borderWidth: host.theme.borderFocus + 1
-        opacity: host.contentExpanded ? 1 : 0
-        Behavior on opacity {
-            Anim {
-                motion: host.motion
-                type: Anim.FastEffects
-            }
-        }
-    }
-
-    // The rail connects into the screen perimeter with soft concave shoulders.
-    Canvas {
-        id: frameShoulder
-        x: Math.max(0, (host.viewportWidth - host.targetWidth) / 2)
-        y: 0
-        width: host.navigationWidth + 56
-        height: 60
-        visible: host.contentExpanded && host.expansionState.hasCurrent
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        onPaint: {
-            const c = getContext("2d");
-            c.reset();
-            c.fillStyle = host.theme.materialPrimaryContainer;
-            c.beginPath();
-            c.moveTo(0, 0);
-            c.lineTo(width, 0);
-            c.quadraticCurveTo(width - 48, 0, width - 48, 36);
-            c.quadraticCurveTo(width - 48, 58, width - 74, height);
-            c.lineTo(26, height);
-            c.quadraticCurveTo(0, height, 0, 24);
-            c.closePath();
-            c.fill();
-        }
-    }
-
     ShellSurface {
         id: shellSurface
 
         // The centre moves independently of width so the two morph curves do
         // not repeatedly restart each other as the target's width changes.
-        x: Math.max(0, Math.min(host.viewportWidth - width, host.animatedSurfaceCenter - width / 2))
+        x: 0
         y: 0
         width: Math.min(host.viewportWidth, host.targetWidth)
         height: Math.min(host.viewportHeight, host.targetHeight)
@@ -456,8 +412,8 @@ PanelWindow {
         // light backgrounds. The panel already has a continuous contour.
         shadowStrength: 0
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
-        borderColor: host.theme.subtleBorder
-        borderWidth: host.theme.borderThin
+        borderColor: host.contentExpanded ? host.theme.blend(host.theme.materialPrimaryContainer, host.theme.accent, 0.20) : host.theme.subtleBorder
+        borderWidth: host.contentExpanded ? host.theme.borderFocus : host.theme.borderThin
 
         Behavior on cornerRadius {
             enabled: host.contentExpanded || host.closing
@@ -475,40 +431,12 @@ PanelWindow {
             width: host.navigationWidth
         }
 
-        Canvas {
-            id: connectedNavigation
+        Rectangle {
             x: 0
             y: 0
             width: host.navigationWidth
             height: parent.height
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            Connections {
-                target: host.theme
-                function onAccentChanged(): void {
-                    connectedNavigation.requestPaint();
-                }
-            }
-            onPaint: {
-                const ctx = getContext("2d");
-                ctx.reset();
-                ctx.fillStyle = host.theme.materialPrimaryContainer;
-                const w = width;
-                const h = height;
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(w - 38, 0);
-                ctx.quadraticCurveTo(w - 17, 0, w - 17, 34);
-                ctx.lineTo(w - 17, 97);
-                ctx.quadraticCurveTo(w - 17, 119, w, 133);
-                ctx.lineTo(w, h - 132);
-                ctx.quadraticCurveTo(w - 17, h - 118, w - 17, h - 96);
-                ctx.lineTo(w - 17, h - 34);
-                ctx.quadraticCurveTo(w - 17, h, w - 38, h);
-                ctx.lineTo(0, h);
-                ctx.closePath();
-                ctx.fill();
-            }
+            color: host.theme.blend(host.theme.materialContainerHigh, host.theme.accent, 0.09)
         }
 
         Column {
@@ -520,14 +448,14 @@ PanelWindow {
 
             Text {
                 width: parent.width
-                text: "◉"
+                text: "󰕰"
                 horizontalAlignment: Text.AlignHCenter
                 font.pixelSize: host.theme.fontSize(28)
                 color: host.theme.accent
             }
             Text {
                 width: parent.width
-                text: "SHELL"
+                text: "DESKTOP"
                 font.family: host.runtime.fontMono
                 font.pixelSize: host.theme.fontSize(9)
                 font.letterSpacing: 2
@@ -556,7 +484,7 @@ PanelWindow {
                 delegate: ShellAction {
                     required property var modelData
                     width: navigationRail.width
-                    height: 82
+                    height: 68
                     runtime: host.runtime
                     theme: host.theme
                     motion: host.motion
@@ -567,21 +495,6 @@ PanelWindow {
                     onActivated: host.navigate(modelData.destination)
                 }
             }
-        }
-
-        Text {
-            anchors {
-                left: parent.left
-                bottom: parent.bottom
-                leftMargin: host.theme.spacing3
-                bottomMargin: host.theme.spacing4
-            }
-            width: host.navigationWidth - host.theme.spacing4
-            horizontalAlignment: Text.AlignHCenter
-            color: host.theme.textMuted
-            text: "SUPER + U/I/O"
-            font.family: host.runtime.fontMono
-            font.pixelSize: host.theme.fontSize(9)
         }
 
         Column {
@@ -601,39 +514,30 @@ PanelWindow {
             // optional scrolling gets a separate, non-crowded second line.
             readonly property real scrollBudget: Math.max(1, host.viewportHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: host.theme.keyHintGroupGap
-
-                Repeater {
-                    model: [
-                        {
-                            shortcut: "Z",
-                            label: "Next"
-                        },
-                        {
-                            shortcut: "SHIFT+Z",
-                            label: "Previous"
-                        },
-                    ].concat(host.detailVisible ? [] : [
-                        {
-                            shortcut: "ESC",
-                            label: "Close"
-                        }
-                    ]).concat([
-                        {
-                            shortcut: "SHIFT+ESC",
-                            label: "Close all"
-                        }
-                    ])
-                    delegate: KeyHint {
-                        required property var modelData
-                        shortcut: modelData.shortcut
-                        label: modelData.label
-                        runtime: host.runtime
-                        theme: host.theme
+            KeyHintStrip {
+                width: parent.width
+                runtime: host.runtime
+                theme: host.theme
+                hints: [
+                    {
+                        shortcut: "Z",
+                        label: "Next"
+                    },
+                    {
+                        shortcut: "SHIFT+Z",
+                        label: "Previous"
                     }
-                }
+                ].concat(host.detailVisible ? [] : [
+                    {
+                        shortcut: "ESC",
+                        label: "Close"
+                    }
+                ]).concat([
+                    {
+                        shortcut: "SHIFT+ESC",
+                        label: "Close all"
+                    }
+                ])
             }
 
             Row {
@@ -682,7 +586,7 @@ PanelWindow {
                 id: contentLoaderA
                 asynchronous: true
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(880, contentItem ? contentItem.implicitWidth : 880)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(host.minimumBodyWidth, contentItem ? contentItem.implicitWidth : host.minimumBodyWidth)))
                 height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
@@ -703,7 +607,7 @@ PanelWindow {
                 id: contentLoaderB
                 asynchronous: true
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(880, contentItem ? contentItem.implicitWidth : 880)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(host.minimumBodyWidth, contentItem ? contentItem.implicitWidth : host.minimumBodyWidth)))
                 height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
@@ -724,7 +628,7 @@ PanelWindow {
                 id: contentLoaderC
                 asynchronous: true
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(880, contentItem ? contentItem.implicitWidth : 880)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(host.minimumBodyWidth, contentItem ? contentItem.implicitWidth : host.minimumBodyWidth)))
                 height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
@@ -745,7 +649,7 @@ PanelWindow {
                 id: contentLoaderD
                 asynchronous: true
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(880, contentItem ? contentItem.implicitWidth : 880)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(host.minimumBodyWidth, contentItem ? contentItem.implicitWidth : host.minimumBodyWidth)))
                 height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))
@@ -766,7 +670,7 @@ PanelWindow {
                 id: contentLoaderE
                 asynchronous: true
                 readonly property Item contentItem: item as Item
-                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(880, contentItem ? contentItem.implicitWidth : 880)))
+                width: Math.max(1, Math.min(host.viewportWidth - host.navigationWidth - host.theme.spacing4 * 2, Math.max(host.minimumBodyWidth, contentItem ? contentItem.implicitWidth : host.minimumBodyWidth)))
                 height: Math.max(1, contentItem ? contentItem.implicitHeight : 0)
                 transformOrigin: Item.TopLeft
                 scale: Math.min(1, contentViewport.width / Math.max(1, width))

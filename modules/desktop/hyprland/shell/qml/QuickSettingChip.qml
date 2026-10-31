@@ -1,8 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-// One large expressive tile for all compact system modes and actions.
-// State changes the shape and tonal fill; hovering never resizes the grid.
 Item {
     id: chip
     required property RuntimeConfig runtime
@@ -19,32 +17,30 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: title
 
-    ShellSurface {
+    // Native rounded rectangles avoid SVG tessellation failures when many
+    // compact controls simultaneously change their active tone.
+    Rectangle {
         id: tile
         anchors.fill: parent
-        theme: chip.theme
-        motion: chip.motion
-        surfaceLayer: ShellSurface.Control
-        glassAllowed: false
-        selected: false
-        cornerRadius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
-        fillColor: chip.active ? chip.theme.blend(chip.theme.materialPrimaryContainer, chip.activeColor, chip.theme.dark ? 0.36 : 0.25) : chip.theme.materialContainer
-        borderColor: chip.active ? Qt.rgba(chip.activeColor.r, chip.activeColor.g, chip.activeColor.b, 0.48) : "transparent"
-        borderWidth: chip.active ? chip.theme.borderThin : 0
-        Behavior on cornerRadius {
+        radius: chip.active ? chip.theme.radiusLarge : chip.theme.radiusMedium
+        color: chip.active ? chip.theme.blend(chip.theme.materialPrimaryContainer, chip.activeColor, chip.theme.dark ? 0.36 : 0.25) : chip.theme.blend(chip.theme.materialContainerHigh, chip.theme.textStrong, chip.theme.dark ? 0.16 : 0.065)
+        border.color: chip.active ? Qt.rgba(chip.activeColor.r, chip.activeColor.g, chip.activeColor.b, 0.48) : "transparent"
+        border.width: chip.active ? chip.theme.borderThin : 0
+        Behavior on radius {
             Anim {
                 motion: chip.motion
                 type: Anim.FastSpatial
             }
         }
-        Behavior on fillColor {
-            Anim {
-                motion: chip.motion
-                type: Anim.FastEffects
+        Behavior on color {
+            ColorAnimation {
+                duration: chip.motion.effectsFast
+                easing.type: chip.motion.effectsType
+                easing.bezierCurve: chip.motion.effectsCurve
             }
         }
 
-        ShellSurface {
+        Rectangle {
             id: symbolContainer
             width: 44
             height: 44
@@ -53,16 +49,17 @@ Item {
                 top: parent.top
                 margins: chip.theme.spacing3
             }
-            theme: chip.theme
-            motion: chip.motion
-            surfaceLayer: ShellSurface.Control
-            glassAllowed: false
-            cornerRadius: chip.active ? 22 : chip.theme.radiusSmall
-            fillColor: chip.active ? chip.activeColor : chip.theme.materialContainerHigh
-            Behavior on cornerRadius {
+            radius: chip.active ? 22 : chip.theme.radiusSmall
+            color: chip.active ? chip.activeColor : chip.theme.materialContainerHigh
+            Behavior on radius {
                 Anim {
                     motion: chip.motion
                     type: Anim.FastSpatial
+                }
+            }
+            Behavior on color {
+                ColorAnimation {
+                    duration: chip.motion.effectsFast
                 }
             }
             Text {
@@ -96,14 +93,14 @@ Item {
                 bottom: parent.bottom
                 margins: chip.theme.spacing3
             }
-            height: chip.theme.fontSize(30)
+            height: paintedHeight
             verticalAlignment: Text.AlignBottom
             horizontalAlignment: Text.AlignLeft
             text: chip.title
             textFormat: Text.PlainText
             color: chip.theme.textStrong
             font.family: chip.runtime.fontMono
-            font.pixelSize: chip.theme.fontSize(11)
+            font.pixelSize: chip.theme.fontSize(14)
             font.weight: chip.active ? Font.Bold : Font.DemiBold
             wrapMode: Text.Wrap
             maximumLineCount: 2
@@ -116,7 +113,7 @@ Item {
         motion: chip.motion
         selected: false
         stateColor: chip.activeColor
-        cornerRadius: tile.cornerRadius
+        cornerRadius: tile.radius
         onActivated: chip.activated()
     }
 }

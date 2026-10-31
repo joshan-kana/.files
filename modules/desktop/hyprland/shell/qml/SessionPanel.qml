@@ -280,18 +280,6 @@ Item {
                             color: panel.theme.textMuted
                         }
                     }
-                    KeyHint {
-                        anchors {
-                            right: parent.right
-                            verticalCenter: parent.verticalCenter
-                            rightMargin: panel.theme.spacing4
-                        }
-                        shortcut: "ENTER"
-                        compact: true
-                        emphasized: entryRow.chosen
-                        runtime: panel.runtime
-                        theme: panel.theme
-                    }
                 }
                 StateLayer {
                     theme: panel.theme
@@ -328,14 +316,24 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        Text {
+        KeyHintStrip {
             width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.Wrap
-            text: "H/J/K/L · NAVIGATE   ENTER · ARM/RUN   ESC · BACK"
-            color: panel.theme.textMuted
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontKeyHint
+            runtime: panel.runtime
+            theme: panel.theme
+            hints: [
+                {
+                    shortcut: "J/K",
+                    label: "Choose"
+                },
+                {
+                    shortcut: "ENTER",
+                    label: "Select / confirm"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
+                }
+            ]
         }
     }
 }

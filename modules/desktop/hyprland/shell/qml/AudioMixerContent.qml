@@ -89,7 +89,7 @@ FocusScope {
             readonly property var stream: mixer.streams[index] || null
             readonly property bool chosen: index === mixer.selectedIndex
 
-            width: Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
+            width: mixer.streams.length === 1 ? list.width : Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
             height: 112
             theme: mixer.theme
             motion: mixer.motion

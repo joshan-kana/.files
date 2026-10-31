@@ -252,6 +252,14 @@ ShellRoot {
         enabled: root.wallpaperSpectrumEnabled
     }
 
+    DesktopFrame {
+        theme: root.themeRef
+        expansionState: expansionState
+        hubTop: theme.barHeight + theme.spacing1
+        hubBottom: theme.barHeight + theme.spacing1 + expansionHost.targetHeight
+        enabled: appearance.barVisible
+    }
+
     AmbientBar {
         id: ambientBar
         shown: appearance.barVisible
