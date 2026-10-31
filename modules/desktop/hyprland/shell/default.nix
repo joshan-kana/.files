@@ -534,7 +534,6 @@ in
                     ;;
                 esac
               fi
-              systemctl --user stop "$unit" || true
               if [ "$kind" = video ]; then
                 ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$image" | grep -qx video || exit 2
                 still="$($0 thumbnail "$image")"
@@ -544,6 +543,7 @@ in
                   still="$($0 thumbnail "$image")"
                 fi
               fi
+              systemctl --user stop "$unit" || true
               awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               mkdir -p "$state_dir"
               temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
