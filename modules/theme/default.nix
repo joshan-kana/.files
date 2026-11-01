@@ -87,8 +87,8 @@ in
   bootSplash =
     { config, pkgs, ... }:
     let
-      frames = 60;
-      resolution = 768;
+      frames = 40;
+      resolution = 640;
       background =
         with config.lib.stylix.colors;
         "${toString base00-dec-r}, ${toString base00-dec-g}, ${toString base00-dec-b}";
@@ -109,7 +109,6 @@ in
         radius = size * 0.36
         center = size / 2
         circle = 2 * math.pi
-        golden_angle = math.pi * (3 - math.sqrt(5))
 
         def rotate(point, yaw, pitch):
             x, y, z = point
@@ -137,26 +136,42 @@ in
             svg = pathlib.Path(temporary) / "frame.svg"
             for frame in range(count):
                 turn = circle * frame / count
-                pitch = 0.26 + 0.18 * math.sin(turn)
+                pitch = 0.19 + 0.09 * math.sin(turn)
                 art = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">']
-                for index in range(38):
-                    tilt = 0.10 + 1.35 * index / 37
-                    node = (index * golden_angle) % circle
+                for index in range(46):
+                    longitude = circle * index / 46
                     points = []
                     for sample in range(193):
                         angle = circle * sample / 192
-                        radial = 1 - 0.025 * math.sin(3 * angle + index * 0.7)
-                        x = radial * math.cos(angle)
-                        y = radial * math.sin(angle) * math.cos(tilt)
-                        z = radial * math.sin(angle) * math.sin(tilt)
-                        x, y = x * math.cos(node) - y * math.sin(node), x * math.sin(node) + y * math.cos(node)
-                        x, y, z = rotate((x, y, z), turn, pitch)
+                        # A travelling twist makes each meridian ripple independently.
+                        bend = (
+                            0.32 * math.sin(3 * angle - 2 * turn + index * 0.31)
+                            + 0.13 * math.sin(5 * angle + turn + index * 0.67)
+                        )
+                        azimuth = longitude + bend
+                        x = math.sin(angle) * math.cos(azimuth)
+                        y = math.cos(angle)
+                        z = math.sin(angle) * math.sin(azimuth)
+                        x, y, z = rotate((x, y, z), 0.27 * math.sin(turn), pitch)
                         points.append((center + radius * x, center + radius * y, z))
                     for front, section in paths(points):
                         path = " ".join(section)
                         # Faint halos soften the strokes without raster blur.
                         art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
-                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.75" stroke-opacity="{0.65 if front else 0.20}"/>')
+                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.85" stroke-opacity="{0.55 if front else 0.18}"/>')
+                    # Short, brighter sections travel around each line.
+                    for start in range(0, 192, 12):
+                        phase = circle * (start + 6) / 192
+                        glint = max(0, math.cos(phase - 2 * turn + index * 0.31)) ** 8
+                        if glint < 0.18:
+                            continue
+                        section = points[start:start + 13]
+                        if not any(point[2] > 0 for point in section):
+                            continue
+                        path = f"M {section[0][0]:.2f} {section[0][1]:.2f} " + " ".join(
+                            f"L {x:.2f} {y:.2f}" for x, y, _ in section[1:]
+                        )
+                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.9" stroke-opacity="{0.28 * glint:.3f}"/>')
                 art.append('</svg>')
                 svg.write_text("\n".join(art))
                 image = destination / f"frame-{frame}.png"
@@ -206,13 +221,16 @@ in
             images = [];
             for (i = 0; i < ${toString frames}; i++) {
               image = Image("frame-" + i + ".png");
-              images[i] = image.Scale(width, width);
+              if (width < image.GetWidth()) {
+                image = image.Scale(width, width);
+              }
+              images[i] = image;
             }
             orb = Sprite(images[0]);
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
             tick = 0;
             fun animate() {
-              orb.SetImage(images[Math.Int(tick / 2) % ${toString frames}]);
+              orb.SetImage(images[Math.Int(tick / 3) % ${toString frames}]);
               tick++;
             }
             Plymouth.SetRefreshFunction(animate);
