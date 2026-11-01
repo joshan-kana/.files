@@ -60,6 +60,7 @@ Item {
             theme: island.theme
             motion: island.motion
             cornerRadius: theme.radiusIsland
+            exponent: Math.min(4, theme.squircleExponent)
             stateColor: island.theme.textStrong
             acceptedButtons: Qt.NoButton
             hoverEnabled: false
