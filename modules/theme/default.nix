@@ -243,9 +243,15 @@ in
             fun activity_callback(status) {
               if (!status || status == "") return;
               activity = null;
-              activity_image = Image.Text("Loading: " + status, ${muted}, 1, font_name);
-              text_scale = Math.Min(Math.Max(1, Window.GetHeight() / 1000), Window.GetWidth() * 0.75 / activity_image.GetWidth());
-              activity_image = activity_image.Scale(activity_image.GetWidth() * text_scale, activity_image.GetHeight() * text_scale);
+              activity_text = "Loading: " + status;
+              activity_font_size = Math.Max(1, Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Max(1, Window.GetHeight() / 1000)));
+              activity_font = "${config.stylix.fonts.sansSerif.name} " + activity_font_size;
+              activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
+              if (activity_image.GetWidth() > Window.GetWidth() * 0.75) {
+                activity_font_size = Math.Max(1, Math.Int(activity_font_size * Window.GetWidth() * 0.75 / activity_image.GetWidth()));
+                activity_font = "${config.stylix.fonts.sansSerif.name} " + activity_font_size;
+                activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
+              }
               activity = Sprite(activity_image);
               activity.SetPosition(center_x - activity_image.GetWidth() / 2, Window.GetHeight() * 0.81, 2);
             }
