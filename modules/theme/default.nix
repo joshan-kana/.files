@@ -95,6 +95,9 @@ in
       foreground =
         with config.lib.stylix.colors;
         "${toString base05-dec-r}, ${toString base05-dec-g}, ${toString base05-dec-b}";
+      muted =
+        with config.lib.stylix.colors;
+        "${toString base04-dec-r}, ${toString base04-dec-g}, ${toString base04-dec-b}";
       renderFrames = pkgs.writeText "plymouth-wireframe.py" ''
         import math
         import pathlib
@@ -231,6 +234,9 @@ in
             }
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
+            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted});
+            hint = Sprite(hint_image);
+            hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
             tick = 0;
             fun animate() {
               orb.SetImage(load_frame(Math.Int(tick / 3) % ${toString frames}));
@@ -297,7 +303,10 @@ in
         themePackages = [ theme ];
         showDelay = 0;
       };
-      boot.kernelParams = lib.optionals config.boot.plymouth.enable [ "quiet" ];
+      boot.kernelParams = lib.optionals config.boot.plymouth.enable [
+        "quiet"
+        "systemd.show_status=1"
+      ];
     };
 
   scopeOptions.name = lib.mkOption {
