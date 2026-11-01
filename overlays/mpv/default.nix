@@ -6,12 +6,12 @@ _: {
           updateMode = "branch";
           autoUpdate = false;
         };
-        version = "7.373.0";
+        version = "7.387.0";
         src = prev.fetchFromGitHub {
           owner = "haasn";
           repo = "libplacebo";
-          rev = "1930e6bf704e5631e6d2fd8cdd94b2fdcb94cdfe";
-          hash = "sha256-eyHULuy8jM3qdDGQNQhfr3992gkBwfdO7sPULGxwEgU=";
+          rev = "v7.387.0";
+          hash = "sha256-PYi21y7uAZUsbn9nqn4ZP8QB9iQ9pRvnIKdOtG0WeIw=";
         };
       });
       mpv-unwrapped = prev.mpv-unwrapped.override { libplacebo = final.libplacebo-mpv; };
