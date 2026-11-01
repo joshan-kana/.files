@@ -21,6 +21,8 @@ let
     };
     init.defaultBranch = "main";
     pull.rebase = true;
+    rerere.enabled = true;
+    rerere.autoUpdate = false;
     commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
