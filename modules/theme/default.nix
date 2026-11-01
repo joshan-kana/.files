@@ -119,22 +119,6 @@ in
             y, z = y * math.cos(pitch) - z * math.sin(pitch), y * math.sin(pitch) + z * math.cos(pitch)
             return x, y, z
 
-        def paths(points):
-            sections = []
-            section = []
-            current_depth = None
-            for previous, following in zip(points, points[1:]):
-                depth = (previous[2] + following[2]) >= 0
-                if depth != current_depth:
-                    if section:
-                        sections.append((current_depth, section))
-                    section = [f"M {previous[0]:.2f} {previous[1]:.2f}"]
-                    current_depth = depth
-                section.append(f"L {following[0]:.2f} {following[1]:.2f}")
-            if section:
-                sections.append((current_depth, section))
-            return sections
-
         with tempfile.TemporaryDirectory() as temporary:
             svg = pathlib.Path(temporary) / "frame.svg"
             for frame in range(count):
@@ -155,26 +139,25 @@ in
                         x = math.sin(angle) * math.cos(azimuth)
                         y = math.cos(angle)
                         z = math.sin(angle) * math.sin(azimuth)
-                        x, y, z = rotate((x, y, z), 0.27 * math.sin(turn), pitch)
+                        x, y, z = rotate((x, y, z), turn, pitch)
                         points.append((center + radius * x, center + radius * y, z))
-                    for front, section in paths(points):
-                        path = " ".join(section)
-                        # Faint halos soften the strokes without raster blur.
-                        art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
-                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.85" stroke-opacity="{0.55 if front else 0.18}"/>')
-                    # Short, brighter sections travel around each line.
+                    # Draw every strand continuously: rotating behind the sphere must not
+                    # make its geometry blink out at a depth boundary.
+                    path = f"M {points[0][0]:.2f} {points[0][1]:.2f} " + " ".join(
+                        f"L {x:.2f} {y:.2f}" for x, y, _ in points[1:]
+                    )
+                    art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
+                    art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.85" stroke-opacity="0.38"/>')
+                    # Soft highlights travel along the curve without abruptly appearing
+                    # or disappearing as it moves between front and back.
                     for start in range(0, 192, 12):
                         phase = circle * (start + 6) / 192
-                        glint = max(0, math.cos(phase - 2 * turn + index * 0.31)) ** 8
-                        if glint < 0.18:
-                            continue
+                        glint = (0.5 + 0.5 * math.cos(phase - 2 * turn + index * 0.31)) ** 4
                         section = points[start:start + 13]
-                        if not any(point[2] > 0 for point in section):
-                            continue
                         path = f"M {section[0][0]:.2f} {section[0][1]:.2f} " + " ".join(
                             f"L {x:.2f} {y:.2f}" for x, y, _ in section[1:]
                         )
-                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.9" stroke-opacity="{0.28 * glint:.3f}"/>')
+                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.9" stroke-opacity="{0.04 + 0.22 * glint:.3f}"/>')
                 art.append('</svg>')
                 svg.write_text("\n".join(art))
                 image = destination / f"frame-{frame}.png"
@@ -235,6 +218,8 @@ in
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
             hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted});
+            hint_scale = Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200));
+            hint_image = hint_image.Scale(hint_image.GetWidth() * hint_scale, hint_image.GetHeight() * hint_scale);
             hint = Sprite(hint_image);
             hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
 
@@ -242,7 +227,7 @@ in
             fun activity_callback(status) {
               if (!status || status == "") return;
               activity = null;
-              activity_image = Image.Text(status, ${muted});
+              activity_image = Image.Text("Loading: " + status, ${muted});
               text_scale = Math.Min(Math.Max(1, Window.GetHeight() / 1000), Window.GetWidth() * 0.75 / activity_image.GetWidth());
               activity_image = activity_image.Scale(activity_image.GetWidth() * text_scale, activity_image.GetHeight() * text_scale);
               activity = Sprite(activity_image);
@@ -317,10 +302,6 @@ in
         themePackages = [ theme ];
         showDelay = 0;
       };
-      boot.kernelParams = lib.optionals config.boot.plymouth.enable [
-        "quiet"
-        "systemd.show_status=1"
-      ];
 
     };
 

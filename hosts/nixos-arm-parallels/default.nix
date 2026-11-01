@@ -11,6 +11,7 @@
     system
     backups
     nix
+    theme
     cli
     networking
     appimage
@@ -18,7 +19,6 @@
     virtualisation
     desktopApps
     desktop
-    theme
     ;
 
   imports = [
