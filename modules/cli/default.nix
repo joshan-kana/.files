@@ -692,13 +692,7 @@ in
             lualine-nvim
             nvim-lspconfig
             otter-nvim
-            (nvim-treesitter.withPlugins (
-              parsers:
-              import ../../.nvim/parsers.nix {
-                inherit lib parsers;
-                root = ../..;
-              }
-            ))
+            nvim-treesitter.withAllGrammars
           ];
           initLua = ''
             vim.g.editorLspPath = "${lib.makeBinPath editorTools}"

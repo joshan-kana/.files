@@ -528,17 +528,17 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
-          neovimGrammars = import ./.nvim/parsers.nix {
-            inherit lib;
-            parsers = pkgs.vimPlugins.nvim-treesitter-parsers;
-            root = ./.;
+          neovimGrammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
+          neovimGrammarRuntime = pkgs.buildEnv {
+            name = "neovim-grammar-runtime";
+            paths = [ neovimGrammarPackage ] ++ neovimGrammarPackage.passthru.dependencies;
+            ignoreCollisions = true;
           };
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim
             pkgs.vimPlugins.nvim-lspconfig
-          ]
-          ++ neovimGrammars
-          ++ map (grammar: grammar.associatedQuery) neovimGrammars;
+            neovimGrammarRuntime
+          ];
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
