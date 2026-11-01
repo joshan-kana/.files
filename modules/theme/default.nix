@@ -237,6 +237,20 @@ in
             hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted});
             hint = Sprite(hint_image);
             hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
+
+            activity = null;
+            fun activity_callback(status) {
+              if (!status || status == "") return;
+              activity = null;
+              activity_image = Image.Text(status, ${muted});
+              text_scale = Math.Min(Math.Max(1, Window.GetHeight() / 1000), Window.GetWidth() * 0.75 / activity_image.GetWidth());
+              activity_image = activity_image.Scale(activity_image.GetWidth() * text_scale, activity_image.GetHeight() * text_scale);
+              activity = Sprite(activity_image);
+              activity.SetPosition(center_x - activity_image.GetWidth() / 2, Window.GetHeight() * 0.81, 2);
+            }
+            activity_callback("Preparing system services");
+            Plymouth.SetUpdateStatusFunction(activity_callback);
+
             tick = 0;
             fun animate() {
               orb.SetImage(load_frame(Math.Int(tick / 3) % ${toString frames}));
@@ -307,6 +321,7 @@ in
         "quiet"
         "systemd.show_status=1"
       ];
+
     };
 
   scopeOptions.name = lib.mkOption {
