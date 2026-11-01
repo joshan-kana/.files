@@ -11,7 +11,6 @@
     system
     backups
     nix
-    theme
     cli
     networking
     appimage
@@ -19,6 +18,7 @@
     virtualisation
     desktopApps
     desktop
+    theme
     ;
 
   imports = [
@@ -42,6 +42,7 @@
   ];
 
   boot = {
+    initrd.kernelModules = [ "virtio_gpu" ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;

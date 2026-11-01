@@ -219,18 +219,21 @@ in
 
             width = Math.Min(${toString resolution}, Math.Min(Window.GetWidth(), Window.GetHeight()) * 0.52);
             images = [];
-            for (i = 0; i < ${toString frames}; i++) {
-              image = Image("frame-" + i + ".png");
-              if (width < image.GetWidth()) {
-                image = image.Scale(width, width);
+            fun load_frame(index) {
+              if (images[index] == null) {
+                image = Image("frame-" + index + ".png");
+                if (width < image.GetWidth()) {
+                  image = image.Scale(width, width);
+                }
+                images[index] = image;
               }
-              images[i] = image;
+              return images[index];
             }
-            orb = Sprite(images[0]);
+            orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
             tick = 0;
             fun animate() {
-              orb.SetImage(images[Math.Int(tick / 3) % ${toString frames}]);
+              orb.SetImage(load_frame(Math.Int(tick / 3) % ${toString frames}));
               tick++;
             }
             Plymouth.SetRefreshFunction(animate);
