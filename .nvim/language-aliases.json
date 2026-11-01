@@ -1,0 +1,21 @@
+{
+  "cs": "c_sharp",
+  "ex": "elixir",
+  "exs": "elixir",
+  "h": "c",
+  "hpp": "cpp",
+  "js": "javascript",
+  "jsx": "javascript",
+  "kt": "kotlin",
+  "md": "markdown",
+  "mdx": "markdown",
+  "py": "python",
+  "rb": "ruby",
+  "rs": "rust",
+  "sh": "bash",
+  "shell": "bash",
+  "tf": "hcl",
+  "ts": "typescript",
+  "yml": "yaml",
+  "zsh": "bash"
+}

@@ -2,6 +2,15 @@ local vim = assert(_G.vim)
 local M = {}
 
 function M.setup()
+	-- Use the same uncommon language aliases as the Nix grammar selection.
+	-- Register before parsing; this also works without an embedded LSP bridge.
+	for _, path in ipairs(vim.api.nvim_get_runtime_file("language-aliases.json", true)) do
+		local aliases = vim.json.decode(table.concat(vim.fn.readfile(path), "\n"))
+		for label, language in pairs(aliases) do
+			vim.treesitter.language.register(language, label)
+		end
+	end
+
 	local ok, otter = pcall(require, "otter")
 	if not ok then
 		return

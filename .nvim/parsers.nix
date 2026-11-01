@@ -4,58 +4,51 @@
   root,
 }:
 let
-  # Pick up new languages from the project's tracked source automatically.
-  extensions = lib.unique (
-    map (path: lib.last (lib.splitString "." (builtins.baseNameOf path))) (
-      lib.filesystem.listFilesRecursive root
-    )
-  );
-  filetypes = {
-    cs = "c_sharp";
-    ex = "elixir";
-    exs = "elixir";
-    h = "c";
-    hpp = "cpp";
-    js = "javascript";
-    jsx = "javascript";
-    kt = "kotlin";
-    md = "markdown";
-    mdx = "markdown";
-    py = "python";
-    rb = "ruby";
-    rs = "rust";
-    sh = "bash";
-    tf = "hcl";
-    ts = "typescript";
-    yml = "yaml";
-    zsh = "bash";
-  };
-  detected = map (extension: filetypes.${extension} or extension) extensions;
-  # Keep common embedded languages available even without standalone source files.
-  common = [
-    "bash"
-    "c_sharp"
-    "css"
-    "html"
-    "javascript"
-    "json"
-    "lua"
-    "markdown"
+  sources = lib.filesystem.listFilesRecursive root;
+  markdown = builtins.filter (
+    path:
+    lib.any (extension: lib.hasSuffix extension (toString path)) [
+      ".md"
+      ".mdx"
+    ]
+  ) sources;
+
+  # One source for grammar selection and Markdown fence language aliases.
+  languageAliases = builtins.fromJSON (builtins.readFile ./language-aliases.json);
+
+  sourceLanguages = map (path: lib.last (lib.splitString "." (builtins.baseNameOf path))) sources;
+  fencedLanguages = lib.concatMap (
+    path:
+    lib.concatMap (
+      line:
+      let
+        match = builtins.match "^[[:blank:]]*(```|~~~)[[:blank:]]*([A-Za-z_][A-Za-z0-9_+.-]*).*" line;
+      in
+      if match == null then [ ] else [ (builtins.elemAt match 1) ]
+    ) (lib.splitString "\n" (builtins.readFile path))
+  ) markdown;
+  injectedLanguages = lib.concatMap (
+    path:
+    lib.concatMap (
+      line:
+      let
+        match = builtins.match ".*injection[.]language \"([A-Za-z0-9_+-]+)\".*" line;
+      in
+      if match == null then [ ] else match
+    ) (lib.splitString "\n" (builtins.readFile path))
+  ) [ ./queries/nix/injections.scm ];
+
+  # Editor/Markdown helper grammars, not a separate registry of project languages.
+  infrastructure = [
     "markdown_inline"
-    "nix"
-    "python"
     "regex"
-    "rust"
-    "scss"
-    "sql"
-    "toml"
-    "typescript"
     "vim"
     "vimdoc"
-    "xml"
-    "yaml"
   ];
+  discovered = map (name: languageAliases.${lib.toLower name} or (lib.toLower name)) (
+    sourceLanguages ++ fencedLanguages ++ injectedLanguages
+  );
 in
 map (name: parsers.${name}) (
-  builtins.filter (name: builtins.hasAttr name parsers) (lib.unique (common ++ detected))
+  builtins.filter (name: builtins.hasAttr name parsers) (lib.unique (infrastructure ++ discovered))
 )
