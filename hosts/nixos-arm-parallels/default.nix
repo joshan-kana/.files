@@ -45,6 +45,7 @@
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
+    kernelParams = [ "video=Virtual-1:5120x2880" ];
     kernelPackages = pkgs.linuxPackages_latest;
     plymouth.enable = false;
   };
