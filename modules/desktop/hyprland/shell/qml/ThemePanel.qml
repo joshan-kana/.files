@@ -35,7 +35,7 @@ Item {
         }
     }
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + Math.min(505, Math.max(280, Math.ceil(themes.length / 2) * themeList.cellHeight)) + footer.implicitHeight
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
     visible: open
 
     property StdioCollector registryOutput: StdioCollector {}
@@ -285,7 +285,7 @@ Item {
             topMargin: panel.theme.spacing4
             bottomMargin: panel.theme.spacing3
         }
-        readonly property int columnCount: width < 580 || panel.theme.textScale >= 1.5 ? 1 : 2
+        readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
         cellWidth: width / columnCount
         cellHeight: 230
         model: panel.themes

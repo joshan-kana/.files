@@ -12,6 +12,7 @@ PanelWindow {
     required property Motion motion
     property bool open: false
     property string lastAction: ""
+    property bool closing: false
 
     visible: true
     focusable: true
@@ -31,14 +32,27 @@ PanelWindow {
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: overlay
-        exposed: overlay.open
+        exposed: overlay.open || overlay.closing
     }
 
     onOpenChanged: {
         if (open) {
+            closing = false;
+            closeTimer.stop();
             lastAction = "H/J/K/L change size, Shift reverses";
             Qt.callLater(() => resizeKeys.forceActiveFocus());
+        } else if (motion.enabled) {
+            closing = true;
+            closeTimer.restart();
+        } else {
+            closing = false;
         }
+    }
+
+    Timer {
+        id: closeTimer
+        interval: overlay.motion.fast
+        onTriggered: overlay.closing = false
     }
 
     function resizeWindow(x: int, y: int): void {
@@ -54,6 +68,20 @@ PanelWindow {
     FocusScope {
         id: resizeKeys
         anchors.fill: parent
+        opacity: overlay.open ? 1 : 0
+        scale: overlay.open ? 1 : 0.96
+        Behavior on opacity {
+            Anim {
+                motion: overlay.motion
+                type: Anim.FastEffects
+            }
+        }
+        Behavior on scale {
+            Anim {
+                motion: overlay.motion
+                type: Anim.FastSpatial
+            }
+        }
         focus: overlay.open
         enabled: overlay.open
         Keys.onPressed: event => {
