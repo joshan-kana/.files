@@ -234,9 +234,8 @@ in
             }
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
-            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted}, 1, font_name);
-            hint_scale = Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200));
-            hint_image = hint_image.Scale(hint_image.GetWidth() * hint_scale, hint_image.GetHeight() * hint_scale);
+            hint_font = "${config.stylix.fonts.sansSerif.name} " + Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200)));
+            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted}, 1, hint_font);
             hint = Sprite(hint_image);
             hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
 
