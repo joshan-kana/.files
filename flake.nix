@@ -118,7 +118,29 @@
 
       forAllSystems = f: lib.genAttrs systems f;
 
-      pkgsFor = system: import nixpkgs { inherit system; };
+      overlaysFor =
+        system:
+        (lib.evalModules {
+          specialArgs = { inherit inputs system; };
+          modules = [
+            ./overlays
+            ({ lib, ... }: {
+              # Host-only options are checked by mkHost, not this package-only evaluation.
+              config._module.check = false;
+              options.nixpkgs.overlays = lib.mkOption {
+                type = lib.types.listOf lib.types.unspecified;
+                default = [ ];
+              };
+            })
+          ];
+        }).config.nixpkgs.overlays;
+
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = overlaysFor system;
+        };
 
       repoToolExcludedDirs = [
         ".direnv/"
