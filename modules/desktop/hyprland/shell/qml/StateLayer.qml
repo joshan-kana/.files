@@ -86,6 +86,8 @@ MouseArea {
         exponent: root.exponent
         fillColor: root.stateColor
         opacity: {
+            if (!root.showHover)
+                return 0;
             if (root.pressed || root.manualPress)
                 return root.pressOpacity;
             if (root.showHover && (root.containsMouse || root.manualHover))
