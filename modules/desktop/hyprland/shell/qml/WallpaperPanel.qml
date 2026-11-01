@@ -57,7 +57,7 @@ Item {
     signal keyboardRequested
 
     visible: open
-    implicitWidth: 512
+    implicitWidth: 1120
     implicitHeight: 760
 
     onOpenChanged: {
@@ -323,7 +323,7 @@ Item {
 
         Item {
             width: parent.width
-            height: 465
+            height: 510
 
             // The theme gallery's compact, scrollable card grid is a better
             // match for choosing from a library than a one-at-a-time carousel.
@@ -337,9 +337,9 @@ Item {
                 height: parent.height - 56
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                readonly property int columnCount: width < 430 || panel.theme.textScale >= 1.5 ? 2 : width < 690 ? 3 : 4
+                readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
                 cellWidth: width / columnCount
-                cellHeight: 145
+                cellHeight: 215
                 model: panel.filteredEntries
                 currentIndex: panel.selectedIndex
                 highlightMoveDuration: 0
