@@ -1,6 +1,6 @@
 -- Hammerspoon visual settings come from the evaluated Stylix configuration.
 local M = {}
-local runtime = require("nix_runtime")
+local runtime = require("nix_theme")
 local scheme = runtime.colors
 M.fonts = runtime.fonts
 

@@ -152,16 +152,58 @@ in
       };
     };
   scopeEdits = {
-    desktop = lib.optionalAttrs isLinux {
-      hyprland = {
-        home = _: {
-          # Preserve GTK client headerbars while hiding toolkit window buttons.
-          gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
-          gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
-          dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
+    desktop =
+      lib.optionalAttrs isLinux {
+        hyprland = {
+          home = _: {
+            # Preserve GTK client headerbars while hiding toolkit window buttons.
+            gtk.gtk3.extraConfig.gtk-decoration-layout = ":";
+            gtk.gtk4.extraConfig.gtk-decoration-layout = ":";
+            dconf.settings."org/gnome/desktop/wm/preferences".button-layout = ":";
+          };
+        };
+      }
+      // lib.optionalAttrs isDarwin {
+        hammerspoon = {
+          home =
+            { config, ... }:
+            let
+              colors = config.lib.stylix.colors.withHashtag;
+            in
+            {
+              home.file.".hammerspoon/nix_theme.lua" = {
+                text = ''
+                  return {
+                    fonts = {
+                      sansSerif = ${builtins.toJSON config.stylix.fonts.sansSerif.name},
+                      monospace = ${builtins.toJSON config.stylix.fonts.monospace.name},
+                    },
+                    colors = {
+                      bg = ${builtins.toJSON colors.base00},
+                      bgAlt = ${builtins.toJSON colors.base01},
+                      bgSelected = ${builtins.toJSON colors.base02},
+                      stroke = ${builtins.toJSON colors.base03},
+                      fg = ${builtins.toJSON colors.base05},
+                      fgDim = ${builtins.toJSON colors.base04},
+                      fgMuted = ${builtins.toJSON colors.base03},
+                      accent = ${builtins.toJSON colors.base08},
+                      green = ${builtins.toJSON colors.base0B},
+                      yellow = ${builtins.toJSON colors.base0A},
+                      blue = ${builtins.toJSON colors.base0D},
+                      magenta = ${builtins.toJSON colors.base0E},
+                      cyan = ${builtins.toJSON colors.base0C},
+                    },
+                  }
+                '';
+                onChange = ''
+                  if /usr/bin/pgrep -x Hammerspoon > /dev/null; then
+                    ${pkgs.hammerspoon}/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs -q -c 'hs.reload()'
+                  fi
+                '';
+              };
+            };
         };
       };
-    };
     cli = {
       bat = {
         home =
