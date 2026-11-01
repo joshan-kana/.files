@@ -5,7 +5,7 @@ _: {
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
         polkitWithHybridCgroup =
           let
-            version = "127";
+            version = "128";
           in
           prev.polkit.overrideAttrs (old: {
             inherit version;
@@ -13,8 +13,14 @@ _: {
               owner = "polkit-org";
               repo = "polkit";
               rev = version;
-              hash = "sha256-YTugETy0rqu/bv53jV1UeGqSK79bRXR52EJNcTblvzo=";
+              hash = "sha256-v9Um2o9/JQQ1LBa/1mtCoiZS3fv8Dif9mdVSwK22EKE=";
             };
+            # Release 128 no longer uses /bin/true or /bin/false in its test fixture.
+            postPatch =
+              builtins.replaceStrings
+                [ "--replace-fail /bin/true" "--replace-fail /bin/false" ]
+                [ "--replace-warn /bin/true" "--replace-warn /bin/false" ]
+                (old.postPatch or "");
             passthru = (old.passthru or { }) // {
               autoUpdate = false;
             };

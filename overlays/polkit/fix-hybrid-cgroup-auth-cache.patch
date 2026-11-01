@@ -1,6 +1,8 @@
+diff --git a/src/polkit/polkitunixprocess.c b/src/polkit/polkitunixprocess.c
+index 5d82272..a6a0eda 100644
 --- a/src/polkit/polkitunixprocess.c
 +++ b/src/polkit/polkitunixprocess.c
-@@ -1403,3 +1403,9 @@
+@@ -1408,3 +1408,9 @@ get_cgroupid_for_pidfd (gint    pidfd,
 -  /* The format is '0::/cgroup/path\n */
 -  p = strchr (contents, ':');
 -  if (p == NULL)
@@ -13,9 +15,9 @@
 +        break;
 +    }
 +  if (p == NULL || !g_str_has_prefix (p, "0::"))
-@@ -1414 +1420 @@
+@@ -1419 +1425 @@ get_cgroupid_for_pidfd (gint    pidfd,
 -  p += 2; /* skip '::' */
 +  p += 3; /* skip '0::' */
-@@ -1425 +1431 @@
+@@ -1430 +1436 @@ get_cgroupid_for_pidfd (gint    pidfd,
 -  contents[length - 1] = '\0'; /* remove the newline */
 +  p[strcspn (p, "\n")] = '\0'; /* isolate the unified cgroup path */
