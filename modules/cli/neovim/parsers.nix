@@ -1,0 +1,23 @@
+parsers: with parsers; [
+  bash
+  c_sharp
+  css
+  html
+  javascript
+  json
+  lua
+  markdown
+  markdown_inline
+  nix
+  python
+  regex
+  rust
+  scss
+  sql
+  toml
+  typescript
+  vim
+  vimdoc
+  xml
+  yaml
+]

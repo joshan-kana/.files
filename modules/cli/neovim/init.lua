@@ -43,7 +43,31 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = { "bash", "json", "lua", "markdown", "nix", "python", "sh", "vim", "vimdoc", "yaml" },
+	pattern = {
+		"bash",
+		"cs",
+		"css",
+		"html",
+		"javascript",
+		"javascriptreact",
+		"json",
+		"lua",
+		"markdown",
+		"nix",
+		"python",
+		"regex",
+		"rust",
+		"scss",
+		"sql",
+		"toml",
+		"typescript",
+		"typescriptreact",
+		"vim",
+		"vimdoc",
+		"xml",
+		"yaml",
+		"sh",
+	},
 	callback = function(args)
 		pcall(vim.treesitter.start, args.buf)
 	end,
@@ -108,7 +132,12 @@ require("blink.cmp").setup({
 })
 
 local conform = require("conform")
+local formatterCommands = {}
+for name, command in pairs(vim.g.editorFormatterCommands or {}) do
+	formatterCommands[name] = { command = command }
+end
 conform.setup({
+	formatters = formatterCommands,
 	formatters_by_ft = {
 		nix = { "nixfmt" },
 		lua = { "stylua" },
@@ -124,6 +153,11 @@ conform.setup({
 vim.api.nvim_create_user_command("Format", function()
 	conform.format({ async = false, lsp_format = "fallback" })
 end, { desc = "Format the current buffer" })
+vim.api.nvim_create_user_command("FormatEmbedded", function()
+	conform.format({ formatters = { "injected" }, async = false })
+end, { desc = "Format detected embedded language regions" })
+
+require("editor.embedded").setup()
 
 local which_key = require("which-key")
 which_key.setup({ preset = "modern", delay = 250 })

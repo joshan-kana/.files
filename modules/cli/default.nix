@@ -692,24 +692,23 @@ in
           lualine-nvim
           nvim-lspconfig
           conform-nvim
-          (nvim-treesitter.withPlugins (
-            parsers: with parsers; [
-              bash
-              json
-              lua
-              markdown
-              markdown_inline
-              nix
-              python
-              vim
-              vimdoc
-              yaml
-            ]
-          ))
+          otter-nvim
+          (nvim-treesitter.withPlugins (import ./neovim/parsers.nix))
         ];
-        initLua = builtins.readFile ./neovim/init.lua;
+        initLua = ''
+          vim.g.editorFormatterCommands = {
+            nixfmt = "${lib.getExe pkgs.nixfmt}",
+            stylua = "${lib.getExe pkgs.stylua}",
+            ruff_format = "${lib.getExe pkgs.ruff}",
+            shfmt = "${lib.getExe pkgs.shfmt}",
+            prettier = "${lib.getExe pkgs.prettier}",
+          }
+        ''
+        + builtins.readFile ./neovim/init.lua;
       };
       xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
+      xdg.configFile."nvim/lua/editor/embedded.lua".source = ./neovim/embedded.lua;
+      xdg.configFile."nvim/queries/nix/injections.scm".source = ./neovim/queries/nix/injections.scm;
     };
   };
 
