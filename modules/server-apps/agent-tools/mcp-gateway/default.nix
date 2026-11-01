@@ -46,7 +46,7 @@ let
         }
         {
           name = "github";
-          mcp.host = "https://api.githubcopilot.com/mcp/";
+          mcp.host = "https://api.githubcopilot.com/mcp/?features=mcp_apps_disable_form_deferral";
           policies.backendAuth.key = {
             value = "$GITHUB_AUTHORIZATION";
             location.header = {
