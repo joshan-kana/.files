@@ -8,11 +8,12 @@ QtObject {
 
     signal themeChanged
     property alias jsonAdapter: data
+    property alias themeAdapter: themeData
     readonly property var configData: root.jsonAdapter
 
     readonly property string terminal: root.configData.defaults.terminal
     readonly property string editor: root.configData.defaults.editor
-    readonly property string wallpaper: root.configData.wallpaper
+    readonly property string wallpaper: root.themeAdapter.wallpaper
     readonly property string bluetoothctl: root.configData.tools.bluetoothctl
     readonly property string weatherCurl: Quickshell.env("LINUX_DESKTOP_WEATHER_CURL") || root.configData.tools.weatherCurl
     readonly property string agendaSetup: root.configData.tools.agendaSetup
@@ -30,7 +31,7 @@ QtObject {
     readonly property string powerprofilesctl: root.configData.tools.powerprofilesctl
     readonly property string powerprofilesMonitor: root.configData.tools.powerprofilesMonitor
     readonly property string sessionCommand: Quickshell.env("LINUX_DESKTOP_SESSION_COMMAND") || root.configData.tools.sessionCommand
-    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.configData.tools.themeSet
+    readonly property string themeSet: Quickshell.env("LINUX_DESKTOP_THEME_SET") || root.themeAdapter.tools.themeSet
     readonly property string urlOpen: root.configData.tools.urlOpen
     readonly property string paletteSearch: root.configData.tools.paletteSearch
     readonly property string clipboardPaste: root.configData.tools.clipboardPaste
@@ -42,26 +43,26 @@ QtObject {
     readonly property string colourPicker: root.configData.tools.colourPicker
     readonly property string nightLightControl: root.configData.tools.nightLightControl
 
-    readonly property string fontMono: root.configData.fonts.mono
+    readonly property string fontMono: root.themeAdapter.fonts.mono
 
-    readonly property color background: root.configData.theme.background
-    readonly property color surface: root.configData.theme.surface
-    readonly property color surfaceRaised: root.configData.theme.surfaceRaised
-    readonly property color outline: root.configData.theme.outline
-    readonly property color textMuted: root.configData.theme.textMuted
-    readonly property color text: root.configData.theme.text
-    readonly property color textStrong: root.configData.theme.textStrong
-    readonly property color critical: root.configData.theme.critical
-    readonly property color warning: root.configData.theme.warning
-    readonly property color positive: root.configData.theme.positive
-    readonly property color accent: root.configData.theme.accent
-    readonly property color accentSecondary: root.configData.theme.accentSecondary
-    readonly property color accentTertiary: root.configData.theme.accentTertiary
-    readonly property color accentWarm: root.configData.theme.accentWarm
-    readonly property color accentWorkspace: root.configData.theme.accentWorkspace
-    readonly property color accentUtility: root.configData.theme.accentUtility
-    readonly property color accentEnergy: root.configData.theme.accentEnergy
-    readonly property color accentNature: root.configData.theme.accentNature
+    readonly property color background: root.themeAdapter.theme.background
+    readonly property color surface: root.themeAdapter.theme.surface
+    readonly property color surfaceRaised: root.themeAdapter.theme.surfaceRaised
+    readonly property color outline: root.themeAdapter.theme.outline
+    readonly property color textMuted: root.themeAdapter.theme.textMuted
+    readonly property color text: root.themeAdapter.theme.text
+    readonly property color textStrong: root.themeAdapter.theme.textStrong
+    readonly property color critical: root.themeAdapter.theme.critical
+    readonly property color warning: root.themeAdapter.theme.warning
+    readonly property color positive: root.themeAdapter.theme.positive
+    readonly property color accent: root.themeAdapter.theme.accent
+    readonly property color accentSecondary: root.themeAdapter.theme.accentSecondary
+    readonly property color accentTertiary: root.themeAdapter.theme.accentTertiary
+    readonly property color accentWarm: root.themeAdapter.theme.accentWarm
+    readonly property color accentWorkspace: root.themeAdapter.theme.accentWorkspace
+    readonly property color accentUtility: root.themeAdapter.theme.accentUtility
+    readonly property color accentEnergy: root.themeAdapter.theme.accentEnergy
+    readonly property color accentNature: root.themeAdapter.theme.accentNature
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
@@ -83,8 +84,8 @@ QtObject {
         return value === undefined || value === null ? "" : String(value);
     }
 
-    property FileView configFile: FileView {
-        path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
+    property FileView themeFile: FileView {
+        path: Quickshell.env("LINUX_DESKTOP_THEME") || root.configFile.path.replace(/runtime\.json$/, "theme.json")
         blockLoading: true
         watchChanges: true
         onFileChanged: {
@@ -93,17 +94,7 @@ QtObject {
         }
 
         JsonAdapter {
-            id: data
-
-            property JsonObject accessibility: JsonObject {
-                property real textScale: 1.0
-            }
-
-            property JsonObject defaults: JsonObject {
-                property string terminal: ""
-                property string editor: ""
-            }
-
+            id: themeData
             property JsonObject theme: JsonObject {
                 property string background: "#111111"
                 property string surface: "#1a1a1a"
@@ -127,6 +118,34 @@ QtObject {
 
             property JsonObject fonts: JsonObject {
                 property string mono: "monospace"
+            }
+            property string wallpaper: ""
+
+            property JsonObject tools: JsonObject {
+                property string themeSet: ""
+            }
+        }
+    }
+
+    property FileView configFile: FileView {
+        path: Quickshell.env("LINUX_DESKTOP_RUNTIME") || ""
+        blockLoading: true
+        watchChanges: true
+        onFileChanged: {
+            reload();
+            root.themeChanged();
+        }
+
+        JsonAdapter {
+            id: data
+
+            property JsonObject accessibility: JsonObject {
+                property real textScale: 1.0
+            }
+
+            property JsonObject defaults: JsonObject {
+                property string terminal: ""
+                property string editor: ""
             }
 
             property JsonObject motion: JsonObject {
@@ -158,7 +177,6 @@ QtObject {
                 property string powerprofilesctl: ""
                 property string powerprofilesMonitor: ""
                 property string sessionCommand: ""
-                property string themeSet: ""
                 property string urlOpen: ""
                 property string paletteSearch: ""
                 property string clipboardPaste: ""
@@ -174,7 +192,6 @@ QtObject {
             property var keybindings: []
             property var shortcuts: ({})
             property var shortcutHints: ({})
-            property string wallpaper: ""
         }
     }
 }

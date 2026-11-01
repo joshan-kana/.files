@@ -1,8 +1,4 @@
 {
-  config,
-  configurationFlakeSubdirectory ? null,
-  configurationName,
-  configurationOutputName,
   lib,
   pkgs,
   scopeConfig,
@@ -10,19 +6,6 @@
 }:
 
 let
-  themeIntegration = import ../../../theme/linux-desktop.nix {
-    inherit
-      configurationFlakeSubdirectory
-      configurationName
-      configurationOutputName
-      lib
-      pkgs
-      ;
-    primaryUser = config.dotfiles.users.primary.name;
-    repoPath = config.dotfiles.paths.repoPath;
-  };
-  inherit (themeIntegration) themeSet;
-
   windowEffectsToggle = pkgs.writeShellApplication {
     name = "linux-desktop-window-effects-toggle";
     runtimeInputs = [ pkgs.quickshell ];
@@ -993,9 +976,6 @@ in
           editor = osConfig.dotfiles.defaults.editor;
         };
 
-        theme = themeIntegration.palette config;
-        fonts.mono = themeIntegration.monoFont config;
-
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
         visual = shellVisual;
@@ -1021,7 +1001,6 @@ in
           powerprofilesctl = lib.getExe' pkgs.power-profiles-daemon "powerprofilesctl";
           powerprofilesMonitor = lib.getExe' pkgs.dbus "dbus-monitor";
           sessionCommand = lib.getExe sessionCommand;
-          themeSet = lib.getExe themeSet;
           urlOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
           paletteSearch = lib.getExe paletteSearch;
           clipboardPaste = lib.getExe' pkgs.wl-clipboard "wl-paste";
@@ -1033,8 +1012,6 @@ in
           colourPicker = lib.getExe colourPicker;
           nightLightControl = lib.getExe nightLightControl;
         };
-
-        wallpaper = toString osConfig.stylix.image;
       };
 
       launcher = pkgs.writeShellApplication {
@@ -1550,7 +1527,6 @@ in
       services.awww.enable = true;
 
       home.packages = [
-        themeSet
         windowEffectsToggle
         launcher
         paletteSearch
