@@ -168,7 +168,7 @@ key("n", "<leader>ci", picker.lsp_implementations, { desc = "Find implementation
 key("n", "<leader>ch", vim.lsp.buf.hover, { desc = "Hover documentation" })
 key("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code actions" })
 key("n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename symbol" })
-key("n", "<leader>cf", "<cmd>Format<cr>", { desc = "Format current buffer" })
+key("n", "<leader>cf", "<cmd>Format<cr>", { desc = "Format project" })
 key("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 key("n", "<leader>cD", picker.diagnostics, { desc = "All diagnostics" })
 key("n", "]d", function()

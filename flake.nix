@@ -532,7 +532,6 @@
           neovimGrammarRuntime = pkgs.buildEnv {
             name = "neovim-grammar-runtime";
             paths = [ neovimGrammarPackage ] ++ neovimGrammarPackage.passthru.dependencies;
-            ignoreCollisions = true;
           };
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim

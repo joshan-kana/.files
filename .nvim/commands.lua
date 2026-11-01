@@ -1,9 +1,9 @@
 local vim = assert(_G.vim)
 local M = {}
 
-local function run(root, title, args)
-	if vim.bo.modified then
-		vim.notify("Save your changes before running " .. title, vim.log.levels.WARN)
+local function run(root, title, args, modifies_files)
+	if modifies_files and #vim.fn.getbufinfo({ bufloaded = 1, bufmodified = 1 }) > 0 then
+		vim.notify("Save modified buffers before running " .. title, vim.log.levels.WARN)
 		return
 	end
 	vim.system(
@@ -28,7 +28,7 @@ end
 
 function M.setup(root)
 	vim.api.nvim_create_user_command("ProjectFormat", function()
-		run(root, "Project formatting and linting", { "nix", "fmt" })
+		run(root, "Project formatting and linting", { "nix", "fmt" }, true)
 	end, { desc = "Run the complete project treefmt formatting and linting suite" })
 
 	vim.api.nvim_create_user_command("ProjectCheck", function()

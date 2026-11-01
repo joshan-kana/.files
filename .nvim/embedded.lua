@@ -2,8 +2,7 @@ local vim = assert(_G.vim)
 local M = {}
 
 function M.setup()
-	-- Use the same uncommon language aliases as the Nix grammar selection.
-	-- Register before parsing; this also works without an embedded LSP bridge.
+	-- Resolve language labels in Markdown fences before Tree-sitter parsing.
 	for _, path in ipairs(vim.api.nvim_get_runtime_file("language-aliases.json", true)) do
 		local aliases = vim.json.decode(table.concat(vim.fn.readfile(path), "\n"))
 		for label, language in pairs(aliases) do
