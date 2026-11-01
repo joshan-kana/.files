@@ -139,6 +139,7 @@ Item {
             theme: island.theme
             motion: island.motion
             cornerRadius: island.theme.radiusIsland
+            exponent: Math.min(4, island.theme.squircleExponent)
             onActivated: island.activated()
             onWheel: event => {
                 if (event.angleDelta.y !== 0 && island.system.audioAvailable) {
