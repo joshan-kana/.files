@@ -406,6 +406,9 @@ in
   git =
     _:
     let
+      rebaseBase = pkgs.writeShellScriptBin "git-rebase-base" ''
+        exec ${lib.getExe pkgs.git} rebase "origin/''${1:-HEAD}"
+      '';
       stash = pkgs.writeShellApplication {
         name = "git-stash-editor";
         runtimeInputs = [ pkgs.git ];
@@ -432,7 +435,7 @@ in
     in
     {
       home = _: {
-        home.packages = [ stash ];
+        home.packages = [ stash rebaseBase ];
         home.shellAliases = {
           gs = "git status";
           gf = "git fetch --prune";
@@ -443,7 +446,7 @@ in
           gd = "git diff";
           ga = "git add";
           grt = "git restore";
-          grb = ''() { git rebase "origin/''${1:-HEAD}"; }'';
+          grb = "git-rebase-base";
           gc = "git commit";
           gca = "git commit -a";
           gst = "git-stash-editor";
@@ -451,6 +454,15 @@ in
           gph = "git push";
           gphf = "git push --force-with-lease";
         };
+        programs.zsh.initContent = lib.mkAfter ''
+          _grb() {
+            local -a branches
+            branches=( ''${(f)"$(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin)"} )
+            branches=( ''${branches:#HEAD} )
+            _describe 'remote branch' branches
+          }
+          compdef _grb git-rebase-base
+        '';
         programs.git = {
           settings = gitSettings;
           signing.format = gitSigningFormat;
