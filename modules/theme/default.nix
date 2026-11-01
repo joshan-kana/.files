@@ -207,6 +207,9 @@ in
             [script]
             ImageDir=$themeDir
             ScriptFile=$themeDir/wireframe.script
+            MonospaceFont=${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.terminal}
+            ConsoleLogTextColor=0xff${config.lib.stylix.colors.base05}
+            ConsoleLogBackgroundColor=0xff${config.lib.stylix.colors.base00}
             EOF
             cat > "$themeDir/wireframe.script" <<'EOF'
             center_x = Window.GetWidth() / 2;

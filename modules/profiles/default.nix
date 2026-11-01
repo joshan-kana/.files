@@ -6,7 +6,6 @@
     kernelParams = [
       "quiet"
       "systemd.show_status=1"
-      "plymouth.prefer-fbcon"
     ];
   };
   desktop.arm.dotfiles.scopes.desktopApps =
