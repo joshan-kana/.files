@@ -237,7 +237,7 @@ in
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
             hint_font = "${config.stylix.fonts.monospace.name} " + Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200)));
-            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted}, 1, hint_font);
+            hint_image = Image.Text("esc - boot details", ${muted}, 1, hint_font);
             hint = Sprite(hint_image);
             hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
 
@@ -245,7 +245,7 @@ in
             fun activity_callback(status) {
               if (!status || status == "") return;
               activity = null;
-              activity_text = "Loading: " + status;
+              activity_text = "loading: " + status;
               activity_font_size = Math.Max(1, Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Max(1, Window.GetHeight() / 1000)));
               activity_font = "${config.stylix.fonts.monospace.name} " + activity_font_size;
               activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
