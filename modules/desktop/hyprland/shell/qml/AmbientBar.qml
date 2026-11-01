@@ -363,6 +363,9 @@ Variants {
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
+                    stateColor: bars.theme.accent
+                    hoverOpacity: 0.05
+                    pressOpacity: 0.11
                     onActivated: bars.calendarRequested(bar.modelData, bars.originFor(bar.modelData, "calendar"))
                 }
             }
