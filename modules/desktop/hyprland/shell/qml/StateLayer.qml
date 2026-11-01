@@ -34,7 +34,9 @@ MouseArea {
     }
 
     function startRipple(x: real, y: real): void {
-        if (!animationsEnabled)
+        // An interaction with no hover surface must not leave a separate
+        // ripple tracing an imaginary pill in a connected frame.
+        if (!animationsEnabled || !showHover)
             return;
         fadeRipple.stop();
         growRipple.stop();
