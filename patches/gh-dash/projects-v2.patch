@@ -5955,7 +5955,7 @@ index e7cf4ec..f7de54e 100644
  
  func (issue *Issue) getTextStyle() lipgloss.Style {
 diff --git a/internal/tui/components/issuessection/issuessection.go b/internal/tui/components/issuessection/issuessection.go
-index f421664..6edb322 100644
+index d0f6483..3c2c001 100644
 --- a/internal/tui/components/issuessection/issuessection.go
 +++ b/internal/tui/components/issuessection/issuessection.go
 @@ -11,6 +11,8 @@ import (
@@ -6017,7 +6017,7 @@ index f421664..6edb322 100644
 +		}
 +
  	case SectionIssuesFetchedMsg:
- 		if m.LastFetchTaskId == msg.TaskId {
+ 		if m.LastFetch.TaskId == msg.TaskId {
  			if m.PageInfo != nil {
 @@ -165,7 +194,50 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			m.Table.SetRows(m.BuildRows())
@@ -6103,7 +6103,7 @@ index f421664..6edb322 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -323,7 +412,17 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -324,7 +413,17 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  		if limit == nil {
  			limit = &m.Ctx.Config.Defaults.IssuesLimit
  		}
@@ -6122,7 +6122,7 @@ index f421664..6edb322 100644
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
-@@ -350,6 +449,34 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -352,6 +451,34 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  	return cmds
  }
  
@@ -6155,9 +6155,9 @@ index f421664..6edb322 100644
 +}
 +
  func (m *Model) UpdateLastUpdated(t time.Time) {
- 	m.Table.UpdateLastUpdated(t)
+ 	m.Table.SetLastUpdated(t)
  }
-@@ -391,6 +518,15 @@ type SectionIssuesFetchedMsg struct {
+@@ -401,6 +528,15 @@ type SectionIssuesFetchedMsg struct {
  	TaskId     string
  }
  
@@ -6175,10 +6175,10 @@ index f421664..6edb322 100644
  	for _, assignee := range addedAssignees {
 diff --git a/internal/tui/components/issuessection/issuessection_test.go b/internal/tui/components/issuessection/issuessection_test.go
 new file mode 100644
-index 0000000..5c92a29
+index 0000000..d757fe6
 --- /dev/null
 +++ b/internal/tui/components/issuessection/issuessection_test.go
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,67 @@
 +package issuessection
 +
 +import (
@@ -6212,7 +6212,7 @@ index 0000000..5c92a29
 +func TestIssuePagesContinueLoadingAfterFirstPaint(t *testing.T) {
 +	ctx := testIssuesSectionContext(t, false)
 +	m := NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
-+	m.LastFetchTaskId = "page-1"
++	m.LastFetch.TaskId = "page-1"
 +
 +	_, cmd := m.Update(SectionIssuesFetchedMsg{
 +		Issues:     []data.IssueData{{ID: "issue-1", Number: 1}},
@@ -6222,15 +6222,13 @@ index 0000000..5c92a29
 +	})
 +
 +	require.NotNil(t, cmd)
-+	require.NotEqual(t, "page-1", m.LastFetchTaskId,
-+		"the next search page should be scheduled automatically")
 +	require.Len(t, m.Issues, 1)
 +}
 +
 +func TestProjectValidationIsIndependentFromOrdinaryPageTask(t *testing.T) {
 +	ctx := testIssuesSectionContext(t, true)
 +	m := NewModel(1, ctx, config.IssuesSectionConfig{}, time.Now(), time.Now())
-+	m.LastFetchTaskId = "page-2"
++	m.LastFetch.TaskId = "page-2"
 +	m.Issues = []data.IssueData{{ID: "issue-1"}}
 +	m.projectValidationByID["issue-1"] = 1
 +
@@ -6501,7 +6499,7 @@ index 6996626..3cc5bc0 100644
 +	return true
 +}
 diff --git a/internal/tui/components/notificationssection/notificationssection.go b/internal/tui/components/notificationssection/notificationssection.go
-index e25424c..692ac35 100644
+index e6e8e41..3d9612a 100644
 --- a/internal/tui/components/notificationssection/notificationssection.go
 +++ b/internal/tui/components/notificationssection/notificationssection.go
 @@ -28,6 +28,11 @@ const SectionType = "notification"
@@ -6516,7 +6514,7 @@ index e25424c..692ac35 100644
  // stateFilterRegex matches "is:unread", "is:read", "is:done", "is:all" patterns
  var stateFilterRegex = regexp.MustCompile(`is:(unread|read|done|all)`)
  
-@@ -970,7 +975,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -958,7 +963,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching PR for comment count", "url", url)
@@ -6525,7 +6523,7 @@ index e25424c..692ac35 100644
  				if err != nil {
  					log.Error("Failed to fetch PR for comment count", "url", url, "err", err)
  					return nil
-@@ -1004,7 +1009,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
+@@ -992,7 +997,7 @@ func (m *Model) fetchCommentCountsForNotifications(notifications []notificationr
  			id, url, readAt, commentUrl := notifId, subjectUrl, lastReadAt, latestCommentUrl
  			cmds = append(cmds, func() tea.Msg {
  				log.Debug("Fetching Issue for comment count", "url", url)
@@ -7505,18 +7503,18 @@ index 0000000..474fafe
 +	require.LessOrEqual(t, lipgloss.Width(row), m.width)
 +}
 diff --git a/internal/tui/components/prrow/prrow.go b/internal/tui/components/prrow/prrow.go
-index 1b2b493..8a10c0c 100644
+index 0b7320f..b56d157 100644
 --- a/internal/tui/components/prrow/prrow.go
 +++ b/internal/tui/components/prrow/prrow.go
-@@ -8,6 +8,7 @@ import (
- 	"charm.land/lipgloss/v2/compat"
+@@ -9,6 +9,7 @@ import (
+ 	"github.com/charmbracelet/x/ansi"
  	checks "github.com/dlvhdr/x/gh-checks"
  
 +	"github.com/dlvhdr/gh-dash/v4/internal/data"
  	"github.com/dlvhdr/gh-dash/v4/internal/git"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components"
-@@ -385,8 +386,9 @@ func (pr *PullRequest) RenderMergeStateStatus() string {
+@@ -390,8 +391,9 @@ func (pr *PullRequest) RenderMergeStateStatus() string {
  }
  
  func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
@@ -7527,7 +7525,7 @@ index 1b2b493..8a10c0c 100644
  			pr.renderState(),
  			pr.renderExtendedTitle(isSelected),
  			pr.renderLabels(isSelected),
-@@ -399,21 +401,33 @@ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
+@@ -404,21 +406,33 @@ func (pr *PullRequest) ToTableRow(isSelected bool) table.Row {
  			pr.renderUpdateAt(),
  			pr.renderCreatedAt(),
  		}
@@ -7577,7 +7575,7 @@ index 1b2b493..8a10c0c 100644
 +	return row
  }
 diff --git a/internal/tui/components/prssection/prssection.go b/internal/tui/components/prssection/prssection.go
-index 08e996b..8a41d19 100644
+index db031a4..d120ce7 100644
 --- a/internal/tui/components/prssection/prssection.go
 +++ b/internal/tui/components/prssection/prssection.go
 @@ -11,6 +11,8 @@ import (
@@ -7589,27 +7587,29 @@ index 08e996b..8a41d19 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
-@@ -25,7 +27,9 @@ const SectionType = "pr"
+@@ -25,8 +27,10 @@ const SectionType = "pr"
  
  type Model struct {
  	section.BaseModel
 -	Prs []prrow.Data
+-	cfg config.PrsSectionConfig
 +	Prs                       []prrow.Data
++	cfg                       config.PrsSectionConfig
 +	projectValidationSequence uint64
 +	projectValidationByID     map[string]uint64
  }
  
  func NewModel(
-@@ -35,7 +39,7 @@ func NewModel(
+@@ -36,7 +40,7 @@ func NewModel(
  	lastUpdated time.Time,
  	createdAt time.Time,
  ) Model {
 -	m := Model{}
 +	m := Model{projectValidationByID: make(map[string]uint64)}
+ 	m.cfg = cfg
+ 	m.Prs = []prrow.Data{}
  	m.BaseModel = section.NewModel(
- 		ctx,
- 		section.NewSectionOptions{
-@@ -196,6 +200,32 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -198,6 +202,32 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			break
  		}
  
@@ -7640,11 +7640,11 @@ index 08e996b..8a41d19 100644
 +		}
 +
  	case SectionPullRequestsFetchedMsg:
- 		if m.LastFetchTaskId == msg.TaskId {
+ 		if m.LastFetch.TaskId == msg.TaskId {
  			if m.PageInfo != nil {
-@@ -209,7 +239,46 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
+@@ -211,7 +241,46 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
  			m.Table.SetRows(m.BuildRows())
- 			m.Table.UpdateLastUpdated(time.Now())
+ 			m.Table.SetLastUpdated(time.Now())
  			m.UpdateTotalItemsCount(m.TotalCount)
 +			if m.Ctx.Config.Defaults.Layout.Projects.Enabled {
 +				cmd = tea.Batch(cmd, m.revalidateProjects(msg.Prs, msg.TaskId))
@@ -7689,7 +7689,7 @@ index 08e996b..8a41d19 100644
  	}
  
  	search, searchCmd := m.SearchBar.Update(msg)
-@@ -273,7 +342,7 @@ func GetSectionColumns(
+@@ -275,7 +344,7 @@ func GetSectionColumns(
  	linesLayout := config.MergeColumnConfigs(dLayout.Lines, sLayout.Lines)
  
  	if !ctx.Config.Theme.Ui.Table.Compact {
@@ -7698,7 +7698,7 @@ index 08e996b..8a41d19 100644
  			{
  				Title:  "",
  				Width:  utils.IntPtr(3),
-@@ -330,10 +399,10 @@ func GetSectionColumns(
+@@ -332,10 +401,10 @@ func GetSectionColumns(
  				Width:  createdAtLayout.Width,
  				Hidden: createdAtLayout.Hidden,
  			},
@@ -7711,7 +7711,7 @@ index 08e996b..8a41d19 100644
  		{
  			Title:  "",
  			Width:  utils.IntPtr(3),
-@@ -400,7 +469,23 @@ func GetSectionColumns(
+@@ -402,7 +471,23 @@ func GetSectionColumns(
  			Width:  createdAtLayout.Width,
  			Hidden: createdAtLayout.Hidden,
  		},
@@ -7735,7 +7735,7 @@ index 08e996b..8a41d19 100644
  }
  
  func (m Model) BuildRows() []table.Row {
-@@ -436,6 +521,15 @@ type SectionPullRequestsFetchedMsg struct {
+@@ -438,6 +523,15 @@ type SectionPullRequestsFetchedMsg struct {
  	TaskId     string
  }
  
@@ -7751,7 +7751,7 @@ index 08e996b..8a41d19 100644
  func (m *Model) GetCurrRow() data.RowData {
  	idx := m.Table.GetCurrItem()
  	if idx < 0 || idx >= len(m.Prs) {
-@@ -482,7 +576,13 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -485,7 +579,13 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  			limit = &m.Ctx.Config.Defaults.PrsLimit
  		}
  
@@ -7766,7 +7766,7 @@ index 08e996b..8a41d19 100644
  		if err != nil {
  			return constants.TaskFinishedMsg{
  				SectionId:   m.Id,
-@@ -519,6 +619,36 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
+@@ -518,6 +618,36 @@ func (m *Model) FetchNextPageSectionRows() []tea.Cmd {
  	return cmds
  }
  
@@ -7927,7 +7927,7 @@ index 0000000..f8060e6
 +	return value
 +}
 diff --git a/internal/tui/components/prview/prview.go b/internal/tui/components/prview/prview.go
-index 470d9f9..917935e 100644
+index df28796..b7edfc2 100644
 --- a/internal/tui/components/prview/prview.go
 +++ b/internal/tui/components/prview/prview.go
 @@ -5,6 +5,7 @@ import (
@@ -8315,10 +8315,10 @@ index 88c244f..06c9d27 100644
  			key = &PRKeys.SummaryViewMore
  		default:
 diff --git a/internal/tui/ui.go b/internal/tui/ui.go
-index eb3c714..d65b144 100644
+index 5a7270a..5656f62 100644
 --- a/internal/tui/ui.go
 +++ b/internal/tui/ui.go
-@@ -34,6 +34,7 @@ import (
+@@ -35,6 +35,7 @@ import (
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationssection"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/notificationview"
@@ -8326,7 +8326,7 @@ index eb3c714..d65b144 100644
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prrow"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prssection"
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/prview"
-@@ -49,24 +50,31 @@ import (
+@@ -50,6 +51,11 @@ import (
  	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
  )
  
@@ -8336,46 +8336,18 @@ index eb3c714..d65b144 100644
 +)
 +
  type Model struct {
--	keys             *keys.KeyMap
--	sidebar          sidebar.Model
--	prView           prview.Model
--	issueSidebar     issueview.Model
--	branchSidebar    branchsidebar.Model
--	notificationView notificationview.Model
--	currSectionId    int
--	footer           footer.Model
--	repo             section.Section
--	prs              []section.Section
--	issues           []section.Section
--	notifications    []section.Section
--	tabs             tabs.Model
--	ctx              *context.ProgramContext
--	taskSpinner      spinner.Model
--	tasks            map[string]context.Task
--	positionOverride string // "" means no override, "right" or "bottom"
-+	keys                          *keys.KeyMap
-+	sidebar                       sidebar.Model
-+	prView                        prview.Model
-+	issueSidebar                  issueview.Model
-+	branchSidebar                 branchsidebar.Model
-+	notificationView              notificationview.Model
-+	currSectionId                 int
-+	footer                        footer.Model
-+	repo                          section.Section
-+	prs                           []section.Section
-+	issues                        []section.Section
-+	notifications                 []section.Section
-+	tabs                          tabs.Model
-+	ctx                           *context.ProgramContext
-+	taskSpinner                   spinner.Model
-+	tasks                         map[string]context.Task
-+	positionOverride              string // "" means no override, "right" or "bottom"
+ 	keys             *keys.KeyMap
+ 	sidebar          sidebar.Model
+@@ -69,6 +75,8 @@ type Model struct {
+ 	tasks            map[string]context.Task
+ 	positionOverride string // "" means no override, "right" or "bottom"
+ 	mode             Mode
 +	projectPreviewGeneration      uint64
 +	relationshipPreviewGeneration uint64
  }
  
- type Repositories struct {
-@@ -231,6 +239,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+ type Mode int
+@@ -241,6 +249,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			return m, nil
  		}
  
@@ -8396,7 +8368,7 @@ index eb3c714..d65b144 100644
  		switch {
  		case m.isUserDefinedKeybinding(msg):
  			cmd = m.executeKeybinding(msg.String())
-@@ -425,6 +447,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -450,6 +472,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			case key.Matches(msg, keys.PRKeys.Comment):
  				return m, m.openSidebarForPRInput(m.prView.SetIsCommenting)
  
@@ -8408,7 +8380,7 @@ index eb3c714..d65b144 100644
  			case key.Matches(msg, keys.PRKeys.Close):
  				if currRowData != nil {
  					cmd = m.promptConfirmation(currSection, "close")
-@@ -486,6 +513,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -511,6 +538,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			case key.Matches(msg, keys.IssueKeys.Comment):
  				return m, m.openSidebarForInput(m.issueSidebar.SetIsCommenting)
  
@@ -8426,7 +8398,7 @@ index eb3c714..d65b144 100644
  			case key.Matches(msg, keys.IssueKeys.Checkout):
  				cmd, err := m.issueSidebar.Checkout()
  				if err != nil {
-@@ -525,6 +563,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -550,6 +588,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  
  			// PR keybindings when viewing a PR notification
  			case m.notificationView.GetSubjectPR() != nil:
@@ -8438,7 +8410,7 @@ index eb3c714..d65b144 100644
  				// Check for PR actions first (before updating prView)
  				if !m.prView.IsTextInputBoxFocused() {
  					action := prview.MsgToAction(msg)
-@@ -604,6 +647,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -629,6 +672,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  
  			// Issue keybindings when viewing an Issue notification
  			case m.notificationView.GetSubjectIssue() != nil:
@@ -8456,7 +8428,7 @@ index eb3c714..d65b144 100644
  				var issueCmd tea.Cmd
  				var action *issueview.IssueAction
  				m.issueSidebar, issueCmd, action = m.issueSidebar.Update(msg)
-@@ -636,6 +690,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -661,6 +715,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  					case issueview.IssueActionReopen:
  						cmd = m.promptConfirmationForNotificationIssue("reopen")
  						return m, cmd
@@ -8473,15 +8445,15 @@ index eb3c714..d65b144 100644
  					}
  				}
  
-@@ -704,6 +768,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -730,6 +794,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			m.doRefreshAtInterval(), m.doUpdateFooterAtInterval())
  
  	case intervalRefresh:
 +		data.ClearEnrichmentCache()
- 		newSections, fetchSectionsCmds := m.fetchAllViewSections()
- 		m.setCurrentViewSections(newSections)
+ 		fetchSectionsCmds := m.fetchAllViewSections()
+ 		m.updateTabs()
  		cmds = append(cmds, fetchSectionsCmds, m.doRefreshAtInterval())
-@@ -738,6 +803,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -764,6 +829,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  		}
  
  	case prview.EnrichedPrMsg:
@@ -8491,7 +8463,7 @@ index eb3c714..d65b144 100644
  		if msg.Err == nil {
  			m.prView.SetEnrichedPR(msg.Data)
  			m.prs[msg.Id].(*prssection.Model).EnrichPR(msg.Data)
-@@ -747,6 +815,160 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -773,6 +841,160 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			log.Error("failed enriching pr", "err", msg.Err)
  		}
  
@@ -8652,7 +8624,7 @@ index eb3c714..d65b144 100644
  	case notificationPRFetchedMsg:
  		if msg.Err == nil {
  			// Convert enriched PR to prrow.Data for display
-@@ -760,6 +982,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -786,6 +1008,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with PR view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.prView.SetSectionId(0)
@@ -8660,7 +8632,7 @@ index eb3c714..d65b144 100644
  			m.prView.SetRow(m.notificationView.GetSubjectPR())
  			m.prView.SetWidth(width)
  			m.prView.SetEnrichedPR(msg.PR)
-@@ -776,6 +999,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -802,6 +1025,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.SetContent(m.prView.View())
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -8670,7 +8642,7 @@ index eb3c714..d65b144 100644
  		} else {
  			log.Error("failed fetching notification PR", "err", msg.Err)
  		}
-@@ -787,6 +1013,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -813,6 +1039,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  			// Update sidebar with Issue view
  			width := m.sidebar.GetSidebarContentWidth()
  			m.issueSidebar.SetSectionId(0)
@@ -8678,7 +8650,7 @@ index eb3c714..d65b144 100644
  			m.issueSidebar.SetRow(m.notificationView.GetSubjectIssue())
  			m.issueSidebar.SetWidth(width)
  			m.sidebar.SetContent(m.issueSidebar.View())
-@@ -795,10 +1022,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -821,10 +1048,46 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  				m.sidebar.ScrollToBottom()
  			}
  			m.markNotificationAsRead(msg.NotificationId)
@@ -8725,7 +8697,7 @@ index eb3c714..d65b144 100644
  	case notificationssection.UpdateNotificationReadStateMsg:
  		m.updateNotificationSections(msg)
  
-@@ -886,7 +1149,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+@@ -912,7 +1175,36 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
  	}
  
  	if m.issueSidebar.IsTextInputBoxFocused() {
@@ -8763,7 +8735,7 @@ index eb3c714..d65b144 100644
  		m.syncSidebar()
  	}
  
-@@ -1025,6 +1317,68 @@ type notificationIssueFetchedMsg struct {
+@@ -1059,6 +1351,68 @@ type notificationIssueFetchedMsg struct {
  	Err              error
  }
  
@@ -8832,7 +8804,7 @@ index eb3c714..d65b144 100644
  func (m *Model) setCurrSectionId(newSectionId int) {
  	m.currSectionId = newSectionId
  	m.tabs.SetCurrSectionId(newSectionId)
-@@ -1051,14 +1405,66 @@ func (m *Model) markNotificationAsRead(notificationId string) {
+@@ -1085,14 +1439,66 @@ func (m *Model) markNotificationAsRead(notificationId string) {
  }
  
  func (m *Model) onViewedRowChanged() tea.Cmd {
@@ -8901,7 +8873,7 @@ index eb3c714..d65b144 100644
  }
  
  func (m *Model) onWindowSizeChanged(msg tea.WindowSizeMsg) {
-@@ -1110,8 +1516,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
+@@ -1144,8 +1550,9 @@ func (m *Model) updateSection(id int, sType string, msg tea.Msg) (cmd tea.Cmd) {
  
  	currSection := m.getCurrSection()
  	if currSection != nil && id == currSection.GetId() {
@@ -8914,7 +8886,7 @@ index eb3c714..d65b144 100644
  	}
  
 diff --git a/internal/tui/ui_test.go b/internal/tui/ui_test.go
-index e391c6f..b421ab0 100644
+index b724bd6..a83c967 100644
 --- a/internal/tui/ui_test.go
 +++ b/internal/tui/ui_test.go
 @@ -21,6 +21,7 @@ import (
@@ -9129,7 +9101,7 @@ index e391c6f..b421ab0 100644
  func TestPromptConfirmation_NilSection(t *testing.T) {
  	// promptConfirmation should return nil when currSection is nil
  	m := Model{}
-@@ -1191,6 +1389,50 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
+@@ -1189,6 +1387,50 @@ func TestTogglePreviewPosition_NoOpWhenSidebarClosed(t *testing.T) {
  		"positionOverride should remain empty when sidebar is closed")
  }
  
@@ -9180,7 +9152,7 @@ index e391c6f..b421ab0 100644
  func TestTogglePreviewPosition_TogglesWhenSidebarOpen(t *testing.T) {
  	cfg, err := config.ParseConfig(config.Location{
  		ConfigFlag:       "../config/testdata/test-config.yml",
-@@ -1738,6 +1980,29 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
+@@ -1730,6 +1972,29 @@ func TestRefreshAll_ClearsEnrichmentCache(t *testing.T) {
  		"cache should be cleared after refresh all key press")
  }
  
