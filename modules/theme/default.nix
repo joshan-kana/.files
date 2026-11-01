@@ -105,9 +105,9 @@ in
           }
           ''
             export FONTCONFIG_FILE=${
-              pkgs.makeFontsConf { fontDirectories = [ config.stylix.fonts.sansSerif.package ]; }
+              pkgs.makeFontsConf { fontDirectories = [ config.stylix.fonts.monospace.package ]; }
             }
-            font=$(fc-match -f '%{file}' ${lib.escapeShellArg config.stylix.fonts.sansSerif.name})
+            font=$(fc-match -f '%{file}' ${lib.escapeShellArg config.stylix.fonts.monospace.name})
             test -f "$font"
             cp "$font" "$out"
           '';
@@ -207,7 +207,9 @@ in
             [script]
             ImageDir=$themeDir
             ScriptFile=$themeDir/wireframe-sphere.script
-            MonospaceFont=${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.terminal}
+            MonospaceFont=${config.stylix.fonts.monospace.name} ${
+              toString (builtins.floor (config.stylix.fonts.sizes.terminal * 1.5))
+            }
             ConsoleLogTextColor=0x${config.lib.stylix.colors.base05}ff
             ConsoleLogBackgroundColor=0x${config.lib.stylix.colors.base00}ff
             EOF
@@ -216,7 +218,7 @@ in
             center_y = Window.GetHeight() / 2;
             bottom_y = Window.GetHeight() * 0.85;
             message_y = Window.GetHeight() * 0.74;
-            font_name = "${config.stylix.fonts.sansSerif.name} ${toString config.stylix.fonts.sizes.desktop}";
+            font_name = "${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.desktop}";
             Window.SetBackgroundTopColor(${background});
             Window.SetBackgroundBottomColor(${background});
 
@@ -234,7 +236,7 @@ in
             }
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
-            hint_font = "${config.stylix.fonts.sansSerif.name} " + Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200)));
+            hint_font = "${config.stylix.fonts.monospace.name} " + Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200)));
             hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted}, 1, hint_font);
             hint = Sprite(hint_image);
             hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
@@ -245,11 +247,11 @@ in
               activity = null;
               activity_text = "Loading: " + status;
               activity_font_size = Math.Max(1, Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Max(1, Window.GetHeight() / 1000)));
-              activity_font = "${config.stylix.fonts.sansSerif.name} " + activity_font_size;
+              activity_font = "${config.stylix.fonts.monospace.name} " + activity_font_size;
               activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
               if (activity_image.GetWidth() > Window.GetWidth() * 0.75) {
                 activity_font_size = Math.Max(1, Math.Int(activity_font_size * Window.GetWidth() * 0.75 / activity_image.GetWidth()));
-                activity_font = "${config.stylix.fonts.sansSerif.name} " + activity_font_size;
+                activity_font = "${config.stylix.fonts.monospace.name} " + activity_font_size;
                 activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
               }
               activity = Sprite(activity_image);
