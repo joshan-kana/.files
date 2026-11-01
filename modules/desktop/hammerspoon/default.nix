@@ -14,31 +14,11 @@ let
 in
 {
   home =
-    { config, ... }:
+    _:
     let
-      colors = config.lib.stylix.colors.withHashtag;
       runtime = ''
         return {
           yabai = ${builtins.toJSON (lib.getExe pkgs.yabai)},
-          fonts = {
-            sansSerif = ${builtins.toJSON config.stylix.fonts.sansSerif.name},
-            monospace = ${builtins.toJSON config.stylix.fonts.monospace.name},
-          },
-          colors = {
-            bg = ${builtins.toJSON colors.base00},
-            bgAlt = ${builtins.toJSON colors.base01},
-            bgSelected = ${builtins.toJSON colors.base02},
-            stroke = ${builtins.toJSON colors.base03},
-            fg = ${builtins.toJSON colors.base05},
-            fgDim = ${builtins.toJSON colors.base04},
-            fgMuted = ${builtins.toJSON colors.base03},
-            accent = ${builtins.toJSON colors.base08},
-            green = ${builtins.toJSON colors.base0B},
-            yellow = ${builtins.toJSON colors.base0A},
-            blue = ${builtins.toJSON colors.base0D},
-            magenta = ${builtins.toJSON colors.base0E},
-            cyan = ${builtins.toJSON colors.base0C},
-          },
         }
       '';
     in
