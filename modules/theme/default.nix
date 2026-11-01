@@ -111,7 +111,7 @@ in
             test -f "$font"
             cp "$font" "$out"
           '';
-      renderFrames = pkgs.writeText "plymouth-wireframe.py" ''
+      renderFrames = pkgs.writeText "plymouth-wireframe-sphere.py" ''
         import math
         import pathlib
         import subprocess
@@ -185,7 +185,7 @@ in
                     raise RuntimeError(f"pngquant failed: {result.returncode}")
       '';
       theme =
-        pkgs.runCommand "stylix-wireframe-plymouth"
+        pkgs.runCommand "stylix-wireframe-sphere-plymouth"
           {
             nativeBuildInputs = [
               pkgs.python3
@@ -194,24 +194,24 @@ in
             ];
           }
           ''
-            themeDir="$out/share/plymouth/themes/wireframe"
+            themeDir="$out/share/plymouth/themes/wireframe-sphere"
             mkdir -p "$themeDir"
             python3 ${renderFrames} "$themeDir" \
               "${config.lib.stylix.colors.base05}" "${config.lib.stylix.colors.base04}" \
               ${toString frames} ${toString resolution}
-            cat > "$themeDir/wireframe.plymouth" <<EOF
+            cat > "$themeDir/wireframe-sphere.plymouth" <<EOF
             [Plymouth Theme]
-            Name=Wireframe
+            Name=Wireframe Sphere
             ModuleName=script
 
             [script]
             ImageDir=$themeDir
-            ScriptFile=$themeDir/wireframe.script
+            ScriptFile=$themeDir/wireframe-sphere.script
             MonospaceFont=${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.terminal}
             ConsoleLogTextColor=0xff${config.lib.stylix.colors.base05}
             ConsoleLogBackgroundColor=0xff${config.lib.stylix.colors.base00}
             EOF
-            cat > "$themeDir/wireframe.script" <<'EOF'
+            cat > "$themeDir/wireframe-sphere.script" <<'EOF'
             center_x = Window.GetWidth() / 2;
             center_y = Window.GetHeight() / 2;
             bottom_y = Window.GetHeight() * 0.85;
@@ -316,7 +316,7 @@ in
       stylix.targets.plymouth.enable = false;
       boot.plymouth = {
         font = fontFile;
-        theme = "wireframe";
+        theme = "wireframe-sphere";
         themePackages = [ theme ];
         showDelay = 0;
       };
