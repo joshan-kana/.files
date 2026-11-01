@@ -27,8 +27,9 @@ PanelWindow {
     implicitHeight: 76
     exclusionMode: ExclusionMode.Ignore
 
-    anchors.top: true
-    margins.top: theme.panelTopOffset
+    // Keep the OSD centered and clear of the top Controls hub.
+    anchors.bottom: true
+    margins.bottom: theme.panelSideOffset
 
     WlrLayershell.namespace: "linux-desktop-osd"
 
