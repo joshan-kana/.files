@@ -443,6 +443,7 @@ in
           gd = "git diff";
           ga = "git add";
           grt = "git restore";
+          grb = ''() { git rebase "origin/''${1:-HEAD}"; }'';
           gc = "git commit";
           gca = "git commit -a";
           gst = "git-stash-editor";
