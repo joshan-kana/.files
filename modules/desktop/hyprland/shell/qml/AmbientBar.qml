@@ -165,6 +165,7 @@ Variants {
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
+                    exponent: Math.min(4, bars.theme.squircleExponent)
                     manualHover: workspaceHover.hovered
                     onActivated: {
                         if (bar.hyprMonitor && bar.hyprMonitor.activeWorkspace)
@@ -363,6 +364,7 @@ Variants {
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
+                    exponent: Math.min(4, bars.theme.squircleExponent)
                     stateColor: bars.theme.accent
                     hoverOpacity: 0.05
                     pressOpacity: 0.11
@@ -429,6 +431,7 @@ Variants {
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
+                    exponent: Math.min(4, bars.theme.squircleExponent)
                     onActivated: bars.notificationsRequested(bar.modelData, bars.originFor(bar.modelData, "activity"))
                 }
             }
@@ -476,6 +479,7 @@ Variants {
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
                     disabled: !bar.recordingState.capturing
+                    exponent: Math.min(4, bars.theme.squircleExponent)
                     onActivated: bars.recordingStopRequested()
                 }
             }
