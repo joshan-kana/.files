@@ -672,7 +672,6 @@ in
           ripgrep
           git
           jujutsu
-          jjui
           nixd
           lua-language-server
           basedpyright

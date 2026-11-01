@@ -181,15 +181,6 @@ end, { desc = "Previous diagnostic" })
 key("n", "<leader>gs", picker.git_status, { desc = "Git status" })
 key("n", "<leader>gd", picker.git_diff, { desc = "Git diff" })
 key("n", "<leader>gl", picker.git_log, { desc = "Git log" })
-key("n", "<leader>gj", function()
-	local root = vim.fs.root(0, { ".jj" })
-	if not root then
-		vim.notify("Not inside a Jujutsu repository", vim.log.levels.WARN)
-		return
-	end
-	snacks.terminal.toggle("jjui", { cwd = root })
-end, { desc = "Jujutsu workbench" })
-
 key("n", "<leader>tt", function()
 	snacks.terminal.toggle()
 end, { desc = "Toggle terminal" })
