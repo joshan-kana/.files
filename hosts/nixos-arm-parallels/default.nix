@@ -22,6 +22,7 @@
     ;
 
   imports = [
+    (moduleRegistry.profiles { inherit lib; }).desktop.default
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
@@ -41,12 +42,12 @@
   ];
 
   boot = {
+    initrd.kernelModules = [ "virtio_gpu" ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
     kernelPackages = pkgs.linuxPackages_latest;
-    plymouth.enable = false;
   };
 
 }

@@ -84,6 +84,252 @@ let
     '';
 in
 {
+  bootSplash =
+    { config, pkgs, ... }:
+    let
+      frames = 40;
+      resolution = 640;
+      background =
+        with config.lib.stylix.colors;
+        "${toString base00-dec-r}, ${toString base00-dec-g}, ${toString base00-dec-b}";
+      foreground =
+        with config.lib.stylix.colors;
+        "${toString base05-dec-r}, ${toString base05-dec-g}, ${toString base05-dec-b}";
+      muted =
+        with config.lib.stylix.colors;
+        "${toString base04-dec-r}, ${toString base04-dec-g}, ${toString base04-dec-b}";
+      fontFile =
+        pkgs.runCommand "stylix-plymouth-font.ttf"
+          {
+            nativeBuildInputs = [ pkgs.fontconfig ];
+          }
+          ''
+            export FONTCONFIG_FILE=${
+              pkgs.makeFontsConf { fontDirectories = [ config.stylix.fonts.monospace.package ]; }
+            }
+            font=$(fc-match -f '%{file}' ${lib.escapeShellArg config.stylix.fonts.monospace.name})
+            test -f "$font"
+            cp "$font" "$out"
+          '';
+      renderFrames = pkgs.writeText "plymouth-wireframe-sphere.py" ''
+        import math
+        import pathlib
+        import subprocess
+        import sys
+        import tempfile
+
+        destination = pathlib.Path(sys.argv[1])
+        foreground, secondary = ("#" + color for color in sys.argv[2:4])
+        count = int(sys.argv[4])
+        size = int(sys.argv[5])
+        radius = size * 0.36
+        center = size / 2
+        circle = 2 * math.pi
+
+        def rotate(point, yaw, pitch):
+            x, y, z = point
+            x, z = x * math.cos(yaw) + z * math.sin(yaw), -x * math.sin(yaw) + z * math.cos(yaw)
+            y, z = y * math.cos(pitch) - z * math.sin(pitch), y * math.sin(pitch) + z * math.cos(pitch)
+            return x, y, z
+
+        with tempfile.TemporaryDirectory() as temporary:
+            svg = pathlib.Path(temporary) / "frame.svg"
+            for frame in range(count):
+                turn = circle * frame / count
+                pitch = 0.19
+                art = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">']
+                for index in range(46):
+                    longitude = circle * index / 46
+                    points = []
+                    for sample in range(193):
+                        angle = circle * sample / 192
+                        # Fixed geometry: animate the rotation, not the strands themselves.
+                        bend = (
+                            0.32 * math.sin(3 * angle + index * 0.31)
+                            + 0.13 * math.sin(5 * angle + index * 0.67)
+                        )
+                        azimuth = longitude + bend
+                        x = math.sin(angle) * math.cos(azimuth)
+                        y = math.cos(angle)
+                        z = math.sin(angle) * math.sin(azimuth)
+                        x, y, z = rotate((x, y, z), turn, pitch)
+                        points.append((center + radius * x, center + radius * y, z))
+                    # Draw every strand continuously: rotating behind the sphere must not
+                    # make its geometry blink out at a depth boundary.
+                    path = f"M {points[0][0]:.2f} {points[0][1]:.2f} " + " ".join(
+                        f"L {x:.2f} {y:.2f}" for x, y, _ in points[1:]
+                    )
+                    art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
+                    art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.85" stroke-opacity="0.38"/>')
+                    # Attach highlights to the geometry so strands never fade
+                    # or unravel when the sphere rotates through the center.
+                    for start in range(0, 192, 12):
+                        phase = circle * (start + 6) / 192
+                        glint = (0.5 + 0.5 * math.cos(phase + index * 0.31)) ** 4
+                        section = points[start:start + 13]
+                        path = f"M {section[0][0]:.2f} {section[0][1]:.2f} " + " ".join(
+                            f"L {x:.2f} {y:.2f}" for x, y, _ in section[1:]
+                        )
+                        art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.9" stroke-opacity="{0.04 + 0.22 * glint:.3f}"/>')
+                art.append('</svg>')
+                svg.write_text("\n".join(art))
+                image = destination / f"frame-{frame}.png"
+                subprocess.run(["rsvg-convert", "--format=png", "--output", str(image), str(svg)], check=True)
+                indexed = destination / f"frame-{frame}.indexed.png"
+                result = subprocess.run([
+                    "pngquant", "--quality=90-100", "--speed=3", "--output", str(indexed), str(image)
+                ], check=False)
+                if result.returncode == 0:
+                    indexed.replace(image)
+                elif result.returncode != 99:
+                    raise RuntimeError(f"pngquant failed: {result.returncode}")
+      '';
+      theme =
+        pkgs.runCommand "stylix-wireframe-sphere-plymouth"
+          {
+            nativeBuildInputs = [
+              pkgs.python3
+              pkgs.librsvg
+              pkgs.pngquant
+            ];
+          }
+          ''
+            themeDir="$out/share/plymouth/themes/wireframe-sphere"
+            mkdir -p "$themeDir"
+            python3 ${renderFrames} "$themeDir" \
+              "${config.lib.stylix.colors.base05}" "${config.lib.stylix.colors.base04}" \
+              ${toString frames} ${toString resolution}
+            cat > "$themeDir/wireframe-sphere.plymouth" <<EOF
+            [Plymouth Theme]
+            Name=Wireframe Sphere
+            ModuleName=script
+
+            [script]
+            ImageDir=$themeDir
+            ScriptFile=$themeDir/wireframe-sphere.script
+            MonospaceFont=${config.stylix.fonts.monospace.name} ${
+              toString (builtins.floor (config.stylix.fonts.sizes.terminal * 1.5))
+            }
+            ConsoleLogTextColor=0x${config.lib.stylix.colors.base05}ff
+            ConsoleLogBackgroundColor=0x${config.lib.stylix.colors.base00}ff
+            EOF
+            cat > "$themeDir/wireframe-sphere.script" <<'EOF'
+            center_x = Window.GetWidth() / 2;
+            center_y = Window.GetHeight() / 2;
+            bottom_y = Window.GetHeight() * 0.85;
+            message_y = Window.GetHeight() * 0.74;
+            font_name = "${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.desktop}";
+            Window.SetBackgroundTopColor(${background});
+            Window.SetBackgroundBottomColor(${background});
+
+            width = Math.Min(${toString resolution}, Math.Min(Window.GetWidth(), Window.GetHeight()) * 0.52);
+            images = [];
+            fun load_frame(index) {
+              if (images[index] == null) {
+                image = Image("frame-" + index + ".png");
+                if (width < image.GetWidth()) {
+                  image = image.Scale(width, width);
+                }
+                images[index] = image;
+              }
+              return images[index];
+            }
+            orb = Sprite(load_frame(0));
+            orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
+            hint_font = "${config.stylix.fonts.monospace.name} " + Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200)));
+            hint_image = Image.Text("esc - boot details", ${muted}, 1, hint_font);
+            hint = Sprite(hint_image);
+            hint.SetPosition(center_x - hint_image.GetWidth() / 2, Window.GetHeight() * 0.89, 1);
+
+            activity = null;
+            fun activity_callback(status) {
+              if (!status || status == "") return;
+              activity = null;
+              activity_text = "loading: " + status;
+              activity_font_size = Math.Max(1, Math.Int(${toString config.stylix.fonts.sizes.desktop} * Math.Max(1, Window.GetHeight() / 1000)));
+              activity_font = "${config.stylix.fonts.monospace.name} " + activity_font_size;
+              activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
+              if (activity_image.GetWidth() > Window.GetWidth() * 0.75) {
+                activity_font_size = Math.Max(1, Math.Int(activity_font_size * Window.GetWidth() * 0.75 / activity_image.GetWidth()));
+                activity_font = "${config.stylix.fonts.monospace.name} " + activity_font_size;
+                activity_image = Image.Text(activity_text, ${muted}, 1, activity_font);
+              }
+              activity = Sprite(activity_image);
+              activity.SetPosition(center_x - activity_image.GetWidth() / 2, Window.GetHeight() * 0.81, 2);
+            }
+            activity_callback("Preparing system services");
+            Plymouth.SetUpdateStatusFunction(activity_callback);
+
+            tick = 0;
+            fun animate() {
+              orb.SetImage(load_frame(Math.Int(tick / 3) % ${toString frames}));
+              tick++;
+            }
+            Plymouth.SetRefreshFunction(animate);
+
+            prompt = null;
+            bullets = null;
+            bullet = Image.Text("•", ${foreground}, 1, font_name);
+            fun password_callback(label, count) {
+              prompt = null;
+              bullets = null;
+              prompt_image = Image.Text(label, ${foreground}, 1, font_name);
+              prompt = Sprite(prompt_image);
+              prompt.SetPosition(center_x - prompt_image.GetWidth() / 2, bottom_y - prompt_image.GetHeight(), 2);
+              start_x = center_x - count * bullet.GetWidth() / 2;
+              for (i = 0; i < count; i++) {
+                bullets[i] = Sprite(bullet);
+                bullets[i].SetPosition(start_x + i * bullet.GetWidth(), bottom_y + bullet.GetHeight(), 2);
+              }
+            }
+            Plymouth.SetDisplayPasswordFunction(password_callback);
+
+            question = null;
+            answer = null;
+            fun question_callback(label, entry) {
+              question = null;
+              answer = null;
+              question_image = Image.Text(label, ${foreground}, 1, font_name);
+              answer_image = Image.Text(entry, ${foreground}, 1, font_name);
+              question = Sprite(question_image);
+              answer = Sprite(answer_image);
+              question.SetPosition(center_x - question_image.GetWidth() / 2, bottom_y - question_image.GetHeight(), 2);
+              answer.SetPosition(center_x - answer_image.GetWidth() / 2, bottom_y + answer_image.GetHeight(), 2);
+            }
+            Plymouth.SetDisplayQuestionFunction(question_callback);
+
+            message = null;
+            fun message_callback(text) {
+              message = null;
+              message_image = Image.Text(text, ${foreground}, 1, font_name);
+              message = Sprite(message_image);
+              message.SetPosition(center_x - message_image.GetWidth() / 2, message_y, 2);
+            }
+            Plymouth.SetMessageFunction(message_callback);
+
+            fun normal_callback() {
+              prompt = null;
+              bullets = null;
+              question = null;
+              answer = null;
+              message = null;
+            }
+            Plymouth.SetDisplayNormalFunction(normal_callback);
+            Plymouth.SetQuitFunction(normal_callback);
+            EOF
+          '';
+    in
+    lib.optionalAttrs isLinux {
+      stylix.targets.plymouth.enable = false;
+      boot.plymouth = {
+        font = fontFile;
+        theme = "wireframe-sphere";
+        themePackages = [ theme ];
+        showDelay = 0;
+      };
+
+    };
+
   scopeOptions.name = lib.mkOption {
     type = lib.types.enum (builtins.attrNames themeRegistry.variants);
     inherit (themeRegistry) default;
