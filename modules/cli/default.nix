@@ -664,10 +664,10 @@ in
   };
 
   neovim = _args: {
-    home = args: {
-      home.shellAliases.v = "nvim";
-      programs.neovim = (neovimConfig args).programs.neovim // {
-        extraPackages = with pkgs; [
+    home =
+      args:
+      let
+        editorTools = with pkgs; [
           fd
           ripgrep
           git
@@ -680,21 +680,36 @@ in
           yaml-language-server
           vscode-langservers-extracted
         ];
-        plugins = with pkgs.vimPlugins; [
-          snacks-nvim
-          blink-cmp
-          which-key-nvim
-          lualine-nvim
-          nvim-lspconfig
-          otter-nvim
-          (nvim-treesitter.withPlugins (import ../../.nvim/parsers.nix))
-        ];
-        initLua = builtins.readFile ./neovim/init.lua;
+      in
+      {
+        home.shellAliases.v = "nvim";
+        programs.neovim = (neovimConfig args).programs.neovim // {
+          extraPackages = editorTools;
+          plugins = with pkgs.vimPlugins; [
+            snacks-nvim
+            blink-cmp
+            which-key-nvim
+            lualine-nvim
+            nvim-lspconfig
+            otter-nvim
+            (nvim-treesitter.withPlugins (
+              parsers:
+              import ../../.nvim/parsers.nix {
+                inherit lib parsers;
+                root = ../..;
+              }
+            ))
+          ];
+          initLua = ''
+            vim.g.editorLspPath = "${lib.makeBinPath editorTools}"
+          ''
+          + builtins.readFile ./neovim/init.lua;
+        };
+        xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
+        xdg.configFile."nvim/lua/editor/lsp.lua".source = ../../.nvim/lsp.lua;
+        xdg.configFile."nvim/lua/editor/embedded.lua".source = ../../.nvim/embedded.lua;
+        xdg.configFile."nvim/queries/nix/injections.scm".source = ../../.nvim/queries/nix/injections.scm;
       };
-      xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
-      xdg.configFile."nvim/lua/editor/embedded.lua".source = ../../.nvim/embedded.lua;
-      xdg.configFile."nvim/queries/nix/injections.scm".source = ../../.nvim/queries/nix/injections.scm;
-    };
   };
 
   mpv = _: {

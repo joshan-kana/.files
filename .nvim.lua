@@ -9,6 +9,12 @@ for runtime in (vim.env.NVIM_PROJECT_RUNTIMEPATH or ""):gmatch("[^,]+") do
 end
 vim.opt.runtimepath:append(root .. "/.nvim")
 
+-- Project overrides must win even when the global editor already loaded a server.
+for _, path in ipairs(vim.fn.glob(root .. "/.nvim/lsp/*.lua", false, true)) do
+	local name = vim.fn.fnamemodify(path, ":t:r")
+	vim.lsp.config(name, assert(loadfile(path))())
+end
+
 local function project_module(name)
 	return assert(loadfile(root .. "/.nvim/" .. name .. ".lua"))()
 end

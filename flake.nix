@@ -528,9 +528,14 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
-          neovimGrammars = (import ./.nvim/parsers.nix) pkgs.vimPlugins.nvim-treesitter-parsers;
+          neovimGrammars = import ./.nvim/parsers.nix {
+            inherit lib;
+            parsers = pkgs.vimPlugins.nvim-treesitter-parsers;
+            root = ./.;
+          };
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim
+            pkgs.vimPlugins.nvim-lspconfig
           ]
           ++ neovimGrammars
           ++ map (grammar: grammar.associatedQuery) neovimGrammars;
@@ -595,6 +600,7 @@
           default = pkgs.mkShell {
             packages = commonTools;
             NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
+            NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
             NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };
@@ -602,6 +608,7 @@
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
             NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
+            NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
             NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };

@@ -147,19 +147,7 @@ require("lualine").setup({
 	},
 })
 
-local servers = {
-	nixd = "nixd",
-	lua_ls = "lua-language-server",
-	basedpyright = "basedpyright-langserver",
-	bashls = "bash-language-server",
-	jsonls = "vscode-json-language-server",
-	yamlls = "yaml-language-server",
-}
-for name, command in pairs(servers) do
-	if vim.fn.executable(command) == 1 then
-		vim.lsp.enable(name)
-	end
-end
+require("editor.lsp").setup()
 
 local key = vim.keymap.set
 local picker = snacks.picker
