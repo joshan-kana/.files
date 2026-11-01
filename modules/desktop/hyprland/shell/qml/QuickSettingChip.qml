@@ -106,7 +106,9 @@ Item {
         theme: chip.theme
         motion: chip.motion
         selected: chip.active
-        stateColor: chip.activeColor
+        stateColor: chip.theme.textStrong
+        hoverOpacity: 0.05
+        pressOpacity: 0.11
         cornerRadius: chipSurface.cornerRadius
         onActivated: chip.activated()
     }
