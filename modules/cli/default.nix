@@ -679,11 +679,6 @@ in
           bash-language-server
           yaml-language-server
           vscode-langservers-extracted
-          nixfmt
-          stylua
-          ruff
-          shfmt
-          prettier
         ];
         plugins = with pkgs.vimPlugins; [
           snacks-nvim
@@ -691,24 +686,14 @@ in
           which-key-nvim
           lualine-nvim
           nvim-lspconfig
-          conform-nvim
           otter-nvim
-          (nvim-treesitter.withPlugins (import ./neovim/parsers.nix))
+          (nvim-treesitter.withPlugins (import ../../.nvim/parsers.nix))
         ];
-        initLua = ''
-          vim.g.editorFormatterCommands = {
-            nixfmt = "${lib.getExe pkgs.nixfmt}",
-            stylua = "${lib.getExe pkgs.stylua}",
-            ruff_format = "${lib.getExe pkgs.ruff}",
-            shfmt = "${lib.getExe pkgs.shfmt}",
-            prettier = "${lib.getExe pkgs.prettier}",
-          }
-        ''
-        + builtins.readFile ./neovim/init.lua;
+        initLua = builtins.readFile ./neovim/init.lua;
       };
       xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
-      xdg.configFile."nvim/lua/editor/embedded.lua".source = ./neovim/embedded.lua;
-      xdg.configFile."nvim/queries/nix/injections.scm".source = ./neovim/queries/nix/injections.scm;
+      xdg.configFile."nvim/lua/editor/embedded.lua".source = ../../.nvim/embedded.lua;
+      xdg.configFile."nvim/queries/nix/injections.scm".source = ../../.nvim/queries/nix/injections.scm;
     };
   };
 

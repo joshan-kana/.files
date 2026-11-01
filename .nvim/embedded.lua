@@ -1,9 +1,6 @@
 local vim = assert(_G.vim)
 local M = {}
 
-local hosts =
-	{ nix = true, markdown = true, lua = true, python = true, html = true, typescript = true, javascript = true }
-
 function M.setup()
 	local ok, otter = pcall(require, "otter")
 	if not ok then
@@ -20,7 +17,7 @@ function M.setup()
 	local activated = {}
 	local checked = {}
 	local function try_activate(buffer)
-		if activated[buffer] or not vim.api.nvim_buf_is_valid(buffer) or not hosts[vim.bo[buffer].filetype] then
+		if activated[buffer] or not vim.api.nvim_buf_is_valid(buffer) then
 			return
 		end
 		if vim.api.nvim_buf_line_count(buffer) > 12000 then
@@ -28,6 +25,15 @@ function M.setup()
 		end
 		local tick = vim.api.nvim_buf_get_changedtick(buffer)
 		if checked[buffer] == tick then
+			return
+		end
+		local lang = vim.treesitter.language.get_lang(vim.bo[buffer].filetype)
+		if not lang then
+			return
+		end
+		local found, query = pcall(vim.treesitter.query.get, lang, "injections")
+		if not found or not query then
+			checked[buffer] = tick
 			return
 		end
 		local parsed, parser = pcall(vim.treesitter.get_parser, buffer)

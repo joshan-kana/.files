@@ -528,7 +528,7 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
-          neovimGrammars = (import ./modules/cli/neovim/parsers.nix) pkgs.vimPlugins.nvim-treesitter-parsers;
+          neovimGrammars = (import ./.nvim/parsers.nix) pkgs.vimPlugins.nvim-treesitter-parsers;
           neovimRuntime = [
             pkgs.vimPlugins.otter-nvim
           ]
@@ -561,10 +561,6 @@
             with pkgs;
             [
               nixfmt
-              stylua
-              ruff
-              shfmt
-              prettier
               nixd
               nil
               lua-language-server
@@ -599,7 +595,6 @@
           default = pkgs.mkShell {
             packages = commonTools;
             NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
-            NVIM_PROJECT_TREEFMT = lib.getExe treefmt.config.build.wrapper;
             NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };
@@ -607,7 +602,6 @@
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
             NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
-            NVIM_PROJECT_TREEFMT = lib.getExe treefmt.config.build.wrapper;
             NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };

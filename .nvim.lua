@@ -9,6 +9,10 @@ for runtime in (vim.env.NVIM_PROJECT_RUNTIMEPATH or ""):gmatch("[^,]+") do
 end
 vim.opt.runtimepath:append(root .. "/.nvim")
 
-require("project.lsp").setup()
-require("project.embedded").setup()
-require("project.treefmt").setup(root)
+local function project_module(name)
+	return assert(loadfile(root .. "/.nvim/" .. name .. ".lua"))()
+end
+
+project_module("lsp").setup()
+project_module("embedded").setup()
+project_module("commands").setup(root)

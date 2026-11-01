@@ -43,31 +43,6 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = {
-		"bash",
-		"cs",
-		"css",
-		"html",
-		"javascript",
-		"javascriptreact",
-		"json",
-		"lua",
-		"markdown",
-		"nix",
-		"python",
-		"regex",
-		"rust",
-		"scss",
-		"sql",
-		"toml",
-		"typescript",
-		"typescriptreact",
-		"vim",
-		"vimdoc",
-		"xml",
-		"yaml",
-		"sh",
-	},
 	callback = function(args)
 		pcall(vim.treesitter.start, args.buf)
 	end,
@@ -131,31 +106,13 @@ require("blink.cmp").setup({
 	sources = { default = { "lsp", "path", "snippets", "buffer" } },
 })
 
-local conform = require("conform")
-local formatterCommands = {}
-for name, command in pairs(vim.g.editorFormatterCommands or {}) do
-	formatterCommands[name] = { command = command }
-end
-conform.setup({
-	formatters = formatterCommands,
-	formatters_by_ft = {
-		nix = { "nixfmt" },
-		lua = { "stylua" },
-		python = { "ruff_format" },
-		sh = { "shfmt" },
-		bash = { "shfmt" },
-		markdown = { "prettier" },
-		json = { "prettier" },
-		yaml = { "prettier" },
-	},
-	notify_on_error = true,
-})
 vim.api.nvim_create_user_command("Format", function()
-	conform.format({ async = false, lsp_format = "fallback" })
-end, { desc = "Format the current buffer" })
-vim.api.nvim_create_user_command("FormatEmbedded", function()
-	conform.format({ formatters = { "injected" }, async = false })
-end, { desc = "Format detected embedded language regions" })
+	if vim.fn.exists(":ProjectFormat") == 2 then
+		vim.cmd.ProjectFormat()
+	else
+		vim.notify("No project formatter is configured", vim.log.levels.WARN)
+	end
+end, { desc = "Format using the project's formatter" })
 
 require("editor.embedded").setup()
 
