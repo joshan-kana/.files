@@ -98,6 +98,19 @@ in
       muted =
         with config.lib.stylix.colors;
         "${toString base04-dec-r}, ${toString base04-dec-g}, ${toString base04-dec-b}";
+      fontFile =
+        pkgs.runCommand "stylix-plymouth-font.ttf"
+          {
+            nativeBuildInputs = [ pkgs.fontconfig ];
+          }
+          ''
+            export FONTCONFIG_FILE=${
+              pkgs.makeFontsConf { fontDirectories = [ config.stylix.fonts.sansSerif.package ]; }
+            }
+            font=$(fc-match -f '%{file}' ${lib.escapeShellArg config.stylix.fonts.sansSerif.name})
+            test -f "$font"
+            cp "$font" "$out"
+          '';
       renderFrames = pkgs.writeText "plymouth-wireframe.py" ''
         import math
         import pathlib
@@ -123,17 +136,17 @@ in
             svg = pathlib.Path(temporary) / "frame.svg"
             for frame in range(count):
                 turn = circle * frame / count
-                pitch = 0.19 + 0.09 * math.sin(turn)
+                pitch = 0.19
                 art = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">']
                 for index in range(46):
                     longitude = circle * index / 46
                     points = []
                     for sample in range(193):
                         angle = circle * sample / 192
-                        # A travelling twist makes each meridian ripple independently.
+                        # Fixed geometry: animate the rotation, not the strands themselves.
                         bend = (
-                            0.32 * math.sin(3 * angle - 2 * turn + index * 0.31)
-                            + 0.13 * math.sin(5 * angle + turn + index * 0.67)
+                            0.32 * math.sin(3 * angle + index * 0.31)
+                            + 0.13 * math.sin(5 * angle + index * 0.67)
                         )
                         azimuth = longitude + bend
                         x = math.sin(angle) * math.cos(azimuth)
@@ -148,11 +161,11 @@ in
                     )
                     art.append(f'<path d="{path}" fill="none" stroke="{secondary}" stroke-width="2.4" stroke-opacity="0.04"/>')
                     art.append(f'<path d="{path}" fill="none" stroke="{foreground}" stroke-width="0.85" stroke-opacity="0.38"/>')
-                    # Soft highlights travel along the curve without abruptly appearing
-                    # or disappearing as it moves between front and back.
+                    # Attach highlights to the geometry so strands never fade
+                    # or unravel when the sphere rotates through the center.
                     for start in range(0, 192, 12):
                         phase = circle * (start + 6) / 192
-                        glint = (0.5 + 0.5 * math.cos(phase - 2 * turn + index * 0.31)) ** 4
+                        glint = (0.5 + 0.5 * math.cos(phase + index * 0.31)) ** 4
                         section = points[start:start + 13]
                         path = f"M {section[0][0]:.2f} {section[0][1]:.2f} " + " ".join(
                             f"L {x:.2f} {y:.2f}" for x, y, _ in section[1:]
@@ -200,6 +213,7 @@ in
             center_y = Window.GetHeight() / 2;
             bottom_y = Window.GetHeight() * 0.85;
             message_y = Window.GetHeight() * 0.74;
+            font_name = "${config.stylix.fonts.sansSerif.name} ${toString config.stylix.fonts.sizes.desktop}";
             Window.SetBackgroundTopColor(${background});
             Window.SetBackgroundBottomColor(${background});
 
@@ -217,7 +231,7 @@ in
             }
             orb = Sprite(load_frame(0));
             orb.SetPosition(center_x - width / 2, center_y - width / 2, 1);
-            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted});
+            hint_image = Image.Text("ESC  -  BOOT DETAILS", ${muted}, 1, font_name);
             hint_scale = Math.Min(2.4, Math.Max(1.4, Window.GetHeight() / 1200));
             hint_image = hint_image.Scale(hint_image.GetWidth() * hint_scale, hint_image.GetHeight() * hint_scale);
             hint = Sprite(hint_image);
@@ -227,7 +241,7 @@ in
             fun activity_callback(status) {
               if (!status || status == "") return;
               activity = null;
-              activity_image = Image.Text("Loading: " + status, ${muted});
+              activity_image = Image.Text("Loading: " + status, ${muted}, 1, font_name);
               text_scale = Math.Min(Math.Max(1, Window.GetHeight() / 1000), Window.GetWidth() * 0.75 / activity_image.GetWidth());
               activity_image = activity_image.Scale(activity_image.GetWidth() * text_scale, activity_image.GetHeight() * text_scale);
               activity = Sprite(activity_image);
@@ -245,11 +259,11 @@ in
 
             prompt = null;
             bullets = null;
-            bullet = Image.Text("•", ${foreground});
+            bullet = Image.Text("•", ${foreground}, 1, font_name);
             fun password_callback(label, count) {
               prompt = null;
               bullets = null;
-              prompt_image = Image.Text(label, ${foreground});
+              prompt_image = Image.Text(label, ${foreground}, 1, font_name);
               prompt = Sprite(prompt_image);
               prompt.SetPosition(center_x - prompt_image.GetWidth() / 2, bottom_y - prompt_image.GetHeight(), 2);
               start_x = center_x - count * bullet.GetWidth() / 2;
@@ -265,8 +279,8 @@ in
             fun question_callback(label, entry) {
               question = null;
               answer = null;
-              question_image = Image.Text(label, ${foreground});
-              answer_image = Image.Text(entry, ${foreground});
+              question_image = Image.Text(label, ${foreground}, 1, font_name);
+              answer_image = Image.Text(entry, ${foreground}, 1, font_name);
               question = Sprite(question_image);
               answer = Sprite(answer_image);
               question.SetPosition(center_x - question_image.GetWidth() / 2, bottom_y - question_image.GetHeight(), 2);
@@ -277,7 +291,7 @@ in
             message = null;
             fun message_callback(text) {
               message = null;
-              message_image = Image.Text(text, ${foreground});
+              message_image = Image.Text(text, ${foreground}, 1, font_name);
               message = Sprite(message_image);
               message.SetPosition(center_x - message_image.GetWidth() / 2, message_y, 2);
             }
@@ -298,6 +312,7 @@ in
     lib.optionalAttrs isLinux {
       stylix.targets.plymouth.enable = false;
       boot.plymouth = {
+        font = fontFile;
         theme = "wireframe";
         themePackages = [ theme ];
         showDelay = 0;
