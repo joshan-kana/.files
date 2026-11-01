@@ -208,8 +208,8 @@ in
             ImageDir=$themeDir
             ScriptFile=$themeDir/wireframe-sphere.script
             MonospaceFont=${config.stylix.fonts.monospace.name} ${toString config.stylix.fonts.sizes.terminal}
-            ConsoleLogTextColor=0xff${config.lib.stylix.colors.base05}
-            ConsoleLogBackgroundColor=0xff${config.lib.stylix.colors.base00}
+            ConsoleLogTextColor=0x${config.lib.stylix.colors.base05}ff
+            ConsoleLogBackgroundColor=0x${config.lib.stylix.colors.base00}ff
             EOF
             cat > "$themeDir/wireframe-sphere.script" <<'EOF'
             center_x = Window.GetWidth() / 2;
