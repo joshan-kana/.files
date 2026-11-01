@@ -700,6 +700,7 @@ in
           + builtins.readFile ./neovim/init.lua;
         };
         xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
+        xdg.configFile."nvim/lua/editor/guide.lua".source = ./neovim/guide.lua;
         xdg.configFile."nvim/lua/editor/lsp.lua".source = ../../.nvim/lsp.lua;
         xdg.configFile."nvim/language-aliases.json".source = ../../.nvim/language-aliases.json;
         xdg.configFile."nvim/lua/editor/embedded.lua".source = ../../.nvim/embedded.lua;

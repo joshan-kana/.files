@@ -117,7 +117,7 @@ end, { desc = "Format using the project's formatter" })
 require("editor.embedded").setup()
 
 local which_key = require("which-key")
-which_key.setup({ preset = "modern", delay = 250 })
+which_key.setup({ preset = "modern", delay = 0 })
 which_key.add({
 	{ "<leader>c", group = "Code" },
 	{ "<leader>e", group = "Editor" },
@@ -201,6 +201,4 @@ key("n", "<leader>uw", function()
 end, { desc = "Toggle line wrapping" })
 key("n", "<leader>en", picker.keymaps, { desc = "Find keybindings" })
 key("n", "<leader>eu", picker.undo, { desc = "Undo history" })
-key("n", "<leader>?", function()
-	which_key.show({ global = false })
-end, { desc = "Show keybindings" })
+key("n", "<leader>?", require("editor.guide").open, { desc = "Keyboard reference" })
