@@ -10,12 +10,15 @@ Item {
     required property SystemState system
     required property PowerProfileState powerProfile
     property bool compact: false
+    property bool frameConnected: false
+    readonly property bool frameHover: statusPress.containsMouse
+    readonly property bool framePressed: statusPress.visualPressed
 
     signal activated
     signal trayMenuRequested(int index)
 
     implicitWidth: statusRow.implicitWidth + theme.spacing4 * 2
-    implicitHeight: 50
+    implicitHeight: theme.barIslandHeight
 
     ShellSurface {
         anchors.fill: parent
@@ -24,9 +27,9 @@ Item {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusIsland
         exponent: Math.min(4, theme.squircleExponent)
-        elevated: true
-        outlined: true
-        fillColor: theme.paneBase
+        elevated: false
+        outlined: false
+        fillColor: island.frameConnected ? "transparent" : theme.background
 
         Row {
             id: statusRow
@@ -36,7 +39,7 @@ Item {
                 leftMargin: island.theme.spacing4
                 verticalCenter: parent.verticalCenter
             }
-            height: 38
+            height: island.theme.barIslandHeight
             spacing: island.compact ? island.theme.spacing1 : island.theme.spacing3
 
             // Contextual statuses belong to this single background surface.
@@ -136,6 +139,7 @@ Item {
 
         StateLayer {
             id: statusPress
+            showHover: !island.frameConnected
             theme: island.theme
             motion: island.motion
             cornerRadius: island.theme.radiusIsland

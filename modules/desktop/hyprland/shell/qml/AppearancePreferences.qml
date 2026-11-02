@@ -17,6 +17,7 @@ QtObject {
         property string wallpaperResizeMode: "fit"
         property bool musicReactiveEnabled: false
         property bool barVisible: true
+        property bool frameVisible: true
         property bool windowTransparencyEnabled: false
         property bool shellGlassEnabled: false
         property string mediaVisualizerMode: "bars"
@@ -27,6 +28,7 @@ QtObject {
     readonly property string wallpaperResizeMode: saved.wallpaperResizeMode === "crop" ? "crop" : "fit"
     readonly property bool musicReactiveEnabled: saved.musicReactiveEnabled
     readonly property bool barVisible: saved.barVisible
+    readonly property bool frameVisible: saved.frameVisible
     readonly property bool windowTransparencyEnabled: saved.windowTransparencyEnabled
     readonly property bool shellGlassEnabled: saved.shellGlassEnabled
     readonly property string mediaVisualizerMode: saved.mediaVisualizerMode === "curve" ? "curve" : "bars"
@@ -51,6 +53,7 @@ QtObject {
             wallpaperResizeMode: "fit",
             musicReactiveEnabled: false,
             barVisible: true,
+            frameVisible: true,
             windowTransparencyEnabled: false,
             shellGlassEnabled: false,
             mediaVisualizerMode: "bars",
@@ -80,6 +83,12 @@ QtObject {
     function toggleMusicReactive(): void {
         saved.musicReactiveEnabled = !saved.musicReactiveEnabled;
         saved.setValue("musicReactiveEnabled", saved.musicReactiveEnabled);
+        saved.sync();
+    }
+
+    function toggleFrame(): void {
+        saved.frameVisible = !saved.frameVisible;
+        saved.setValue("frameVisible", saved.frameVisible);
         saved.sync();
     }
 
