@@ -73,23 +73,13 @@ update_package() {
       [[ -z "$sibling_filename" ]] || sibling_args=(--override-filename "$sibling_filename")
       nix-update --flake --system "$sibling_system" "${sibling_args[@]}" --version skip "$sibling"
     done < <(
-      # Reuse the existing overlay package inventory; no separate flake registry.
-      # shellcheck disable=SC2016 # The expressions belong to Nix, not Bash.
-      nix eval --impure --json --expr '
-        let
-          flake = builtins.getFlake (toString ./.);
-        in
-        builtins.concatLists (
-          builtins.attrValues (
-            builtins.mapAttrs (system: names: map (name: {
-              inherit system name;
-              group = flake.packages.${system}.${name}.passthru.updateGroup or null;
-            }) names) flake.lib.updateablePackages
-          )
-        )
-      ' | jq -r --arg group "$group" '
-        .[] | select(.group == $group) | [.system, .name] | @tsv
-      '
+      # Use the package list already evaluated above. Platform variants use
+      # the release-group name, with a -mac suffix for the macOS bundle.
+      jq -r --arg group "$group" '
+        to_entries[] | .key as $system | .value[]
+        | select(. == $group or . == ($group + "-mac"))
+        | [$system, .] | @tsv
+      ' <<<"$package_systems"
     )
   fi
   if [[ "$source_before" == "$source_after" ]]; then
