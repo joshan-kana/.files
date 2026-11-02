@@ -125,19 +125,6 @@ function traceSamples(points, length, circuit, fraction) {
 // Reduced-motion operations must remain visibly active. Show an accent
 // segment that follows the same contour without a running animation or
 // full-screen Canvas texture; a solid full perimeter is just another border.
-function stationaryPath(points, length, fraction = 0.12) {
-  const { samples } = traceSamples(points, length, 0.17, fraction);
-  if (samples.length < 2) return "";
-  const fixed = (value) => value.toFixed(2);
-  return (
-    `M ${fixed(samples[0].x)} ${fixed(samples[0].y)} ` +
-    samples
-      .slice(1)
-      .map((point) => `L ${fixed(point.x)} ${fixed(point.y)}`)
-      .join(" ")
-  );
-}
-
 function traceBounds(
   points,
   length,
