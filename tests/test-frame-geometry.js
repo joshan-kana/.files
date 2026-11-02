@@ -777,11 +777,11 @@ test("the inactive frame operation trace cannot paint the corner placeholder", (
   );
   assert.match(
     qml,
-    /strokeColor: output\.busyHere && !frame\.motion\.enabled \? Qt\.rgba\([\s\S]*?\) : "transparent"/,
+    /strokeColor: output\.exposed && output\.busyHere && !frame\.motion\.enabled \? Qt\.rgba\([\s\S]*?\) : "transparent"/,
   );
   assert.match(
     qml,
-    /path: output\.busyHere && !frame\.motion\.enabled \? output\.geometry\.inner :/,
+    /path: output\.exposed && output\.busyHere && !frame\.motion\.enabled \? \(OutlineTrace\.stationaryPath\(output\.geometry\.points, output\.geometry\.length, 0\.10\)/,
   );
 });
 
@@ -806,7 +806,10 @@ test("motion-enabled frame loading uses the shared tapered glowing tracer", () =
     qml,
     /visible: output\.exposed && output\.busyHere && frame\.motion\.enabled/,
   );
-  assert.match(qml, /strokeColor: output\.busyHere && !frame\.motion\.enabled/);
+  assert.match(
+    qml,
+    /strokeColor: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+  );
 });
 
 test("the hub's content reveal follows its surface without leaving visible clipped fragments", () => {
@@ -889,4 +892,28 @@ test("moving full-screen loading trace uses a bounded Canvas texture", () => {
   assert.match(qml, /height: bounds \? bounds\.height : 1/);
   assert.match(qml, /onBoundsChanged: requestPaint\(\)/);
   assert.doesNotMatch(qml, /id: busyTrace\s+anchors\.fill: parent/);
+});
+
+test("motion-off loading remains visibly distinct without animation work", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const frame = fs.readFileSync(path.join(root, "DesktopFrame.qml"), "utf8");
+  const outline = fs.readFileSync(
+    path.join(root, "LoadingOutline.qml"),
+    "utf8",
+  );
+  assert.match(
+    frame,
+    /OutlineTrace\.stationaryPath\(output\.geometry\.points, output\.geometry\.length, 0\.10\)/,
+  );
+  assert.match(
+    frame,
+    /output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+  );
+  assert.match(
+    outline,
+    /OutlineTrace\.stationaryPath\(outline\.contour, outline\.perimeter, outline\.segmentFraction\)/,
+  );
+  assert.match(outline, /visible: outline\.active && outline\.motionEnabled/);
+  assert.match(outline, /running: outline\.active && outline\.motionEnabled/);
+  assert.doesNotMatch(frame, /dashOffset: -frame\.progress/);
 });
