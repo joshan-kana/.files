@@ -145,12 +145,14 @@ ShellRoot {
             wallpaperSpectrumEnabled: root.wallpaperSpectrumEnabled
             musicReactiveEnabled: root.musicReactiveEnabled
             barVisible: appearance.barVisible
+            frameVisible: appearance.frameVisible
             windowTransparencyEnabled: appearance.windowTransparencyEnabled
             shellGlassEnabled: appearance.shellGlassEnabled
             engaged: expansionState.currentName === "system"
             onWallpaperSpectrumToggleRequested: appearance.toggleWallpaperSpectrum()
             onMusicReactiveToggleRequested: appearance.toggleMusicReactive()
             onBarToggleRequested: appearance.toggleBar()
+            onFrameToggleRequested: appearance.toggleFrame()
             onWindowTransparencyToggleRequested: appearance.toggleWindowTransparency()
             onShellGlassToggleRequested: appearance.toggleShellGlass()
             onRestoreDefaultsRequested: {
@@ -185,6 +187,8 @@ ShellRoot {
         runtime: runtime
         theme: theme
         motion: motion
+        frameEnabled: appearance.frameVisible
+        barVisible: appearance.barVisible
         expansionState: expansionState
         barWindows: ambientBar.instances
         mediaComponent: mediaExpansionComponent
@@ -259,9 +263,32 @@ ShellRoot {
         enabled: root.wallpaperSpectrumEnabled
     }
 
+    DesktopFrame {
+        theme: root.themeRef
+        motion: root.motionRef
+        enabled: appearance.frameVisible
+        barVisible: appearance.barVisible
+        islands: ambientBar.frameIslands
+        hub: expansionHost.frameBounds
+        hubScreen: expansionHost.screen
+        toast: notificationPopup.frameDocks
+        toastScreen: notificationPopup.screen
+        osd: osdPopup.frameBounds
+        osdScreen: osdPopup.screen
+        resize: resizeOverlay.frameBounds
+        resizeScreen: resizeOverlay.screen
+        busy: expansionHost.themeOperationVisible || expansionHost.wallpaperOperationVisible || expansionHost.captureEditorRequestVisible
+        busyScreen: expansionState.screen
+    }
+
     AmbientBar {
         id: ambientBar
+        // The expanding hub consumes the clock island throughout the whole
+        // opening and closing transition, not only while Controls is active.
+        controlsExpanded: expansionState.hasCurrent || expansionHost.closing || resizeOverlay.open || resizeOverlay.closing
+        clockReveal: resizeOverlay.open || resizeOverlay.closing ? 0 : expansionHost.clockReveal
         shown: appearance.barVisible
+        frameVisible: appearance.frameVisible
         runtime: runtime
         theme: theme
         motion: motion
@@ -391,6 +418,8 @@ ShellRoot {
     ResizeOverlay {
         id: resizeOverlay
         screen: screens.focusedScreen
+        frameEnabled: appearance.frameVisible
+        barVisible: appearance.barVisible
         runtime: runtime
         theme: theme
         motion: motion
@@ -403,6 +432,7 @@ ShellRoot {
         runtime: runtime
         theme: theme
         motion: motion
+        frameEnabled: appearance.frameVisible
         onCenterRequested: actions.showNotifications()
     }
 
@@ -413,6 +443,7 @@ ShellRoot {
         runtime: runtime
         theme: theme
         motion: motion
+        frameEnabled: appearance.frameVisible
     }
 
     CommandPalette {
@@ -1296,6 +1327,14 @@ ShellRoot {
 
         function toggleBar(): void {
             root.toggleBar();
+        }
+
+        function frameShown(): bool {
+            return appearance.frameVisible;
+        }
+
+        function toggleFrame(): void {
+            appearance.toggleFrame();
         }
 
         function toggleWindowEffects(): void {
