@@ -37,13 +37,26 @@ in
     };
   };
 
-  config = lib.optionalAttrs isLinux {
+  config = {
     nixpkgs.overlays = [
       (final: _prev: {
-        configarr = inputs.configarr.packages.${final.stdenv.hostPlatform.system}.default;
+        configarr =
+          inputs.configarr.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
+            (old: {
+              # Keep update positions local for nix-update --no-src.
+              src = inputs.configarr;
+              inherit (old) version;
+              pnpmDeps = old.pnpmDeps.override {
+                hash = "sha256-58Q5OHorGHQ1YYP0R1xWGExeRP5yONW4vlyP6GEaVSQ=";
+              };
+              passthru = (old.passthru or { }) // {
+                autoUpdate = false;
+              };
+            });
       })
     ];
-
+  }
+  // lib.optionalAttrs isLinux {
     services.configarr.generatedConfigFile = configFile;
     systemd.services.configarr.preStart = lib.mkIf config.services.configarr.enable (
       lib.mkForce ''
