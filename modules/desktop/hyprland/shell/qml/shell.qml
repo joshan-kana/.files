@@ -277,7 +277,7 @@ ShellRoot {
         osdScreen: osdPopup.screen
         resize: resizeOverlay.frameBounds
         resizeScreen: resizeOverlay.screen
-        busy: expansionHost.themeOperationVisible || expansionHost.wallpaperOperationVisible || expansionHost.captureEditorRequestVisible
+        busy: expansionHost.loadingOperationVisible
         busyScreen: expansionState.screen
     }
 

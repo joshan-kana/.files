@@ -113,6 +113,10 @@ FocusScope {
     readonly property bool wallpaperOpen: wallpaperPanel.open
     readonly property bool wallpaperOperationRunning: wallpaperPanel.open && wallpaperPanel.busy
     readonly property bool captureEditorRequestRunning: recordingsPanel.open && recordingsPanel.editorRequestRunning
+    // Only foreground actions with an observable lifetime use the shared busy
+    // contour. Passive scans, polling and gallery incubation stay local.
+    readonly property bool maintenanceOperationRunning: resetRunning || (networkPanel.open && networkPanel.profileActionRunning) || (recordingsPanel.open && recordingsPanel.captureTrashRunning)
+    readonly property string maintenanceOperationRole: recordingsPanel.open && recordingsPanel.captureTrashRunning ? "capture" : networkPanel.open && networkPanel.profileActionRunning ? "connectivity" : ""
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
