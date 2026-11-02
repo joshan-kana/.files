@@ -18,6 +18,7 @@ _: {
           appName = "SquirrelDisk.app";
           inherit homepage license;
           updateScript = null;
+          updateGroup = "squirreldisk";
           updateUrl = "https://github.com/adileo/squirreldisk";
           url =
             _: "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-macOS.dmg";
@@ -67,7 +68,10 @@ _: {
                       ]
                     }
                   '';
-                  passthru.autoUpdate = true;
+                  passthru = {
+                    autoUpdate = true;
+                    updateGroup = "squirreldisk";
+                  };
                   meta = {
                     inherit homepage license;
                     platforms = [ "aarch64-linux" ];
@@ -82,7 +86,10 @@ _: {
                     url = "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-x86_64.AppImage";
                     hash = "sha256-rSROPmdpwKuah/1NydQrIAqepU6i+3m9NwKcn6ugJmg=";
                   };
-                  passthru.autoUpdate = true;
+                  passthru = {
+                    autoUpdate = true;
+                    updateGroup = "squirreldisk";
+                  };
                   appimageContents = prev.appimageTools.extract { inherit pname version src; };
                   extraInstallCommands = ''
                     install -Dm444 "${appimageContents}/squirreldisk.desktop" "$out/share/applications/squirreldisk.desktop"
