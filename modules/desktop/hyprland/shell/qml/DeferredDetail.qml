@@ -40,6 +40,7 @@ Loader {
     readonly property bool detailView: !!(panel && panel.detailView)
     readonly property bool savedView: !!(panel && panel.savedView)
     readonly property bool profileActionRunning: !!(panel && panel.profileAction && panel.profileAction.running)
+    readonly property bool captureTrashRunning: !!(panel && panel.actionProcess && panel.actionProcess.running)
     readonly property var pendingNetwork: panel ? panel.pendingNetwork : null
     readonly property string deletePending: panel && panel.deletePending ? panel.deletePending : ""
     readonly property int itemCount: panel && panel.itemCount ? panel.itemCount : 0
