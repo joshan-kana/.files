@@ -190,6 +190,17 @@ Item {
             currentProcess.exec([runtime.themeSet, "current"]);
     }
 
+    // Resolve the registry once while the persistent Controls view is warming.
+    // Building the theme gallery's delegates during its width morph caused
+    // the first opening to compete with SVG scene-graph construction.
+    function prewarm(): void {
+        if (runtime.themeSet.length === 0)
+            return;
+        if (themes.length === 0 && !registryProcess.running)
+            registryProcess.exec([runtime.themeSet, "list", "--json"]);
+        refreshCurrentTheme();
+    }
+
     function refresh(): void {
         statusText = "";
         statusError = false;
@@ -199,16 +210,13 @@ Item {
             return;
         }
 
-        if (!registryProcess.running)
-            registryProcess.exec([runtime.themeSet, "list", "--json"]);
-
-        refreshCurrentTheme();
+        prewarm();
     }
 
     function openView(): void {
         open = true;
         refreshOperation();
-        selectedIndex = 0;
+        // Keep the cached model and selected index stable across the morph.
         refresh();
         keyboardRequested();
     }

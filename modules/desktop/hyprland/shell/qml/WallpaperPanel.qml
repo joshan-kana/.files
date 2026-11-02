@@ -138,6 +138,14 @@ Item {
         }
     }
 
+    // Populate thumbnail data while Controls is idle, before the gallery's
+    // opening morph. Reuse the snapshot on entry; refreshing the on-disk
+    // library remains a separate, deferred operation.
+    function prewarm(): void {
+        if (runtime.wallpaperLibrary.length > 0 && entries.length === 0 && !listProcess.running)
+            listProcess.exec([runtime.wallpaperLibrary, "list"]);
+    }
+
     function openView(): void {
         selectedOutput = hostOutput;
         open = true;
@@ -158,7 +166,7 @@ Item {
     function refresh(): void {
         if (runtime.wallpaperLibrary.length === 0)
             return;
-        if (!listProcess.running) {
+        if (!listProcess.running && entries.length === 0) {
             loading = true;
             listProcess.exec([runtime.wallpaperLibrary, "list"]);
         }
