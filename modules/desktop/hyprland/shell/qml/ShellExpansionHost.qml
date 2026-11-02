@@ -63,6 +63,8 @@ PanelWindow {
     readonly property bool themeOperationVisible: !!systemContent && systemContent.themeOperationRunning && expansionState.hasCurrent
     readonly property bool wallpaperOperationVisible: !!systemContent && systemContent.wallpaperOperationRunning && expansionState.hasCurrent
     readonly property bool captureEditorRequestVisible: !!systemContent && systemContent.captureEditorRequestRunning && expansionState.hasCurrent
+    readonly property bool maintenanceOperationVisible: !!systemContent && systemContent.maintenanceOperationRunning && expansionState.hasCurrent
+    readonly property bool loadingOperationVisible: themeOperationVisible || wallpaperOperationVisible || captureEditorRequestVisible || maintenanceOperationVisible
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
     readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
@@ -737,9 +739,9 @@ PanelWindow {
         LoadingOutline {
             anchors.fill: parent
             surface: shellSurface
-            active: !host.frameVisible && (host.themeOperationVisible || host.wallpaperOperationVisible || host.captureEditorRequestVisible)
+            active: !host.frameVisible && host.loadingOperationVisible
             motionEnabled: host.motion.enabled
-            highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.theme.accent
+            highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.systemContent && host.systemContent.maintenanceOperationRole.length > 0 ? host.theme.roleColor(host.systemContent.maintenanceOperationRole) : host.theme.accent
             lineWidth: 3
         }
     }
