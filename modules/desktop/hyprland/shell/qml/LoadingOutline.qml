@@ -4,8 +4,7 @@ import "OutlineTrace.js" as OutlineTrace
 
 // Reusable busy feedback for the owner's existing squircle outline. The
 // illuminated segment travels around the real contour using eased motion;
-// reduced motion keeps a clearly visible stationary accent segment without
-// starting an animation or repainting a Canvas.
+// reduced motion softly pulses the whole outline without repainting Canvas.
 Item {
     id: outline
 
@@ -51,20 +50,14 @@ Item {
                 path: outline.surface.buildPath(outline.inset) || "M 0 0 L 0.01 0 L 0 0.01 Z"
             }
         }
+    }
 
-        ShapePath {
-            // Reduced-motion mode keeps an identifiable highlighted segment,
-            // not a second faint border that is indistinguishable from idle.
-            fillColor: "transparent"
-            strokeColor: outline.active && !outline.motionEnabled ? Qt.rgba(outline.highlightColor.r, outline.highlightColor.g, outline.highlightColor.b, 0.90) : "transparent"
-            strokeWidth: outline.lineWidth
-            strokeStyle: ShapePath.SolidLine
-            capStyle: ShapePath.RoundCap
-            joinStyle: ShapePath.RoundJoin
-            PathSvg {
-                path: outline.active && !outline.motionEnabled ? (OutlineTrace.stationaryPath(outline.contour, outline.perimeter, outline.segmentFraction) || "M 0 0 L 0.01 0 L 0 0.01 Z") : "M 0 0 L 0.01 0 L 0 0.01 Z"
-            }
-        }
+    OutlinePulse {
+        anchors.fill: parent
+        active: outline.active && !outline.motionEnabled
+        contourPath: outline.surface.buildPath(outline.inset)
+        highlightColor: outline.highlightColor
+        lineWidth: outline.lineWidth
     }
 
     Canvas {
