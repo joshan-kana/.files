@@ -10,12 +10,13 @@ _: {
           python3,
         }:
         let
-          version = "1.2.0";
+          version = "1.6.0";
         in
         stdenvNoCC.mkDerivation {
           pname = "cosmic-noir-icons";
           inherit version;
           src = fetchurl {
+            name = "Cosmic-Noir-Orange-${version}.tar.xz";
             url = "https://github.com/atraxsrc/cosmic-icon-themes/releases/download/v${version}/Cosmic-Noir-Orange.tar.xz";
             hash = "sha256-EhlbwO0gjW95ERNZKqd04v4T9KRTeYzGhcJP5fIX8Hc=";
           };
