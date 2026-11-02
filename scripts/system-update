@@ -2,6 +2,7 @@
 set -euo pipefail
 
 native=
+package_metadata=
 package_systems=
 nixpkgs_path=
 
@@ -15,8 +16,21 @@ update_package() {
   if [[ -z "$native" ]]; then
     native="$(nix eval --raw --impure --expr builtins.currentSystem)"
   fi
-  if [[ -z "$package_systems" ]]; then
-    package_systems="$(nix eval --json .#lib.updateablePackages)"
+  if [[ -z "$package_metadata" ]]; then
+    # Read update-group metadata alongside the existing package inventory.
+    # shellcheck disable=SC2016 # Expressions are evaluated by Nix, not Bash.
+    package_metadata="$(nix eval --impure --json --expr '
+      let
+        flake = builtins.getFlake (toString ./.);
+      in
+      builtins.mapAttrs (system: names:
+        builtins.listToAttrs (map (name: {
+          inherit name;
+          value = flake.packages.${system}.${name}.passthru.updateGroup or null;
+        }) names)
+      ) flake.lib.updateablePackages
+    ')"
+    package_systems="$(jq -c 'map_values(keys)' <<<"$package_metadata")"
   fi
   system="${2:-$(jq -r --arg name "$1" --arg native "$native" '
     [. | to_entries[] | select(.value | index($name)) | .key]
@@ -63,7 +77,7 @@ update_package() {
     nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
-  group="$(nix eval --raw ".#packages.$system.$1.passthru.updateGroup" 2>/dev/null || true)"
+  group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name] // empty' <<<"$package_metadata")"
   if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
     # One upstream release can publish different archives and hashes per platform.
     while IFS=$'\t' read -r sibling_system sibling; do
@@ -73,13 +87,10 @@ update_package() {
       [[ -z "$sibling_filename" ]] || sibling_args=(--override-filename "$sibling_filename")
       nix-update --flake --system "$sibling_system" "${sibling_args[@]}" --version skip "$sibling"
     done < <(
-      # Use the package list already evaluated above. Platform variants use
-      # the release-group name, with a -mac suffix for the macOS bundle.
       jq -r --arg group "$group" '
-        to_entries[] | .key as $system | .value[]
-        | select(. == $group or . == ($group + "-mac"))
-        | [$system, .] | @tsv
-      ' <<<"$package_systems"
+        to_entries[] | .key as $system | .value | to_entries[]
+        | select(.value == $group) | [$system, .key] | @tsv
+      ' <<<"$package_metadata"
     )
   fi
   if [[ "$source_before" == "$source_after" ]]; then
