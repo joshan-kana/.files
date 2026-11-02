@@ -2,13 +2,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
 import QtCore
+import "ToastQueue.js" as ToastQueue
 
 QtObject {
     id: root
     required property RuntimeConfig runtime
 
-    property var latest: null
-    property bool popupVisible: false
+    // Stable model identities preserve exit and reflow animations. A single
+    // event-driven timer handles expiry for the bounded three-toast stack.
+    property ListModel popups: ListModel {}
+    property int popupRevision: 0
+    readonly property int maxToasts: 3
+    readonly property bool popupVisible: popups.count > 0
     readonly property bool silent: settings.silent
 
     property Settings preferences: Settings {
@@ -83,32 +88,112 @@ QtObject {
 
         onNotification: notification => {
             notification.tracked = !notification.transient;
-            root.latest = notification;
-            if (!root.silent) {
-                root.popupVisible = true;
-                root.popupTimer.interval = notification.urgency === NotificationUrgency.Critical ? 9000 : 5000;
-                root.popupTimer.restart();
-            }
+            if (!root.silent)
+                root.showPopup(notification);
         }
     }
 
-    property Timer popupTimer: Timer {
-        interval: 5000
-        repeat: false
-        onTriggered: root.popupVisible = false
+    function rebalancePopups(now: real): void {
+        const entries = [];
+        for (let i = 0; i < popups.count; ++i)
+            entries.push(popups.get(i));
+        const layout = ToastQueue.layout(entries, maxToasts, now, 220);
+        for (let i = 0; i < layout.length; ++i) {
+            const current = entries[i];
+            const next = layout[i];
+            // Set the exit direction before changing phase, so the delegate
+            // never briefly starts a horizontal shrink during eviction.
+            if (current.evicted !== next.evicted)
+                popups.setProperty(i, "evicted", next.evicted);
+            if (current.phase !== next.phase)
+                popups.setProperty(i, "phase", next.phase);
+            if (current.slot !== next.slot)
+                popups.setProperty(i, "slot", next.slot);
+            if (current.removeAt !== next.removeAt)
+                popups.setProperty(i, "removeAt", next.removeAt);
+        }
+        // Keep a bounded exit layer during exceptional notification floods.
+        // Normally all three old cards remain until their exit completes.
+        for (let i = popups.count - 1; i >= 0 && popups.count > maxToasts * 2; --i) {
+            if (popups.get(i).phase === "closing")
+                popups.remove(i);
+        }
     }
 
-    function hidePopup(): void {
+    function showPopup(notification): void {
+        const now = Date.now();
+        for (let i = popups.count - 1; i >= 0; --i) {
+            if (popups.get(i).notification === notification)
+                popups.remove(i);
+        }
+        popups.insert(0, {
+            notification: notification,
+            phase: "visible",
+            slot: 0,
+            evicted: false,
+            expires: now + (notification.urgency === NotificationUrgency.Critical ? 9000 : 5000),
+            removeAt: 0
+        });
+        rebalancePopups(now);
+        popupRevision++;
+        schedulePopups();
+    }
+
+    function schedulePopups(): void {
         popupTimer.stop();
-        popupVisible = false;
+        if (!popups.count)
+            return;
+        let due = Infinity;
+        for (let i = 0; i < popups.count; ++i) {
+            const item = popups.get(i);
+            due = Math.min(due, item.phase === "visible" ? item.expires : item.removeAt);
+        }
+        popupTimer.interval = Math.max(1, due - Date.now());
+        popupTimer.restart();
+    }
+
+    property Timer popupTimer: Timer {
+        repeat: false
+        onTriggered: {
+            const now = Date.now();
+            for (let i = root.popups.count - 1; i >= 0; --i) {
+                const item = root.popups.get(i);
+                if (item.phase === "closing" && item.removeAt <= now)
+                    root.popups.remove(i);
+                else if (item.phase === "visible" && item.expires <= now) {
+                    root.popups.setProperty(i, "phase", "closing");
+                    root.popups.setProperty(i, "removeAt", now + 220);
+                }
+            }
+            root.rebalancePopups(now);
+            root.popupRevision++;
+            root.schedulePopups();
+        }
+    }
+
+    function hidePopup(notification): void {
+        if (!notification) {
+            popups.clear();
+        } else {
+            const now = Date.now();
+            for (let i = 0; i < popups.count; ++i) {
+                if (popups.get(i).notification === notification) {
+                    popups.setProperty(i, "phase", "closing");
+                    popups.setProperty(i, "removeAt", now + 220);
+                    break;
+                }
+            }
+        }
+        rebalancePopups(Date.now());
+        popupRevision++;
+        schedulePopups();
     }
 
     function dismiss(notification): void {
         if (!notification)
             return;
 
-        if (latest === notification)
-            hidePopup();
+        hidePopup(notification);
 
         notification.tracked = false;
     }
