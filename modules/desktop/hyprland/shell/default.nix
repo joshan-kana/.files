@@ -1726,10 +1726,13 @@ in
         linux-desktop = {
           Unit = {
             Description = "Hyprland desktop shell";
-            # Home Manager atomically replaces runtime.json's symlink on theme
-            # switches. Restart on the evaluated config change: FileView watches
-            # the former symlink target, not the replacement inode.
-            X-Restart-Triggers = [ runtimeConfig ];
+            # Home Manager replaces both configuration symlinks on theme
+            # switches. FileView may keep watching the former store target,
+            # so restart when either evaluated source changes.
+            X-Restart-Triggers = [
+              runtimeConfig
+              config.xdg.configFile."linux-desktop/theme.json".source
+            ];
             PartOf = [ "hyprland-session.target" ];
             Wants = [ "linux-desktop-spectrum.service" ];
             After = [
