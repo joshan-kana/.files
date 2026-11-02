@@ -33,7 +33,7 @@ in
 
   neodisk = _: {
     home = _: {
-      home.packages = [ (if isDarwin then pkgs.neodisk-mac else pkgs.neodisk) ];
+      home.packages = [ pkgs.neodisk ];
     };
   };
 

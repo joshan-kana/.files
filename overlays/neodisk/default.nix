@@ -8,13 +8,13 @@ _: {
         license = prev.lib.licenses.gpl3Only;
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        neodisk-mac = import ../../lib/mac-app.nix { inherit prev; } {
+        neodisk = import ../../lib/mac-app.nix { inherit prev; } {
           token = "neodisk";
           release = {
             inherit version;
             hash = "sha256-70EpqemxTJDCI0BFRgc9OIThCuWVWIiOr/QZd0+ljvc=";
           };
-          pname = "neodisk-mac";
+          pname = "neodisk";
           appName = "Neodisk.app";
           inherit homepage license;
           unpacker = prev.unzip;
