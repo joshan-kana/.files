@@ -11,6 +11,8 @@ MouseArea {
     property bool selected: false
     property bool manualHover: false
     property bool manualPress: false
+    property bool heldPress: false
+    readonly property bool visualPressed: pressed || manualPress || heldPress
     property bool showHover: true
     property color stateColor: selected ? theme.accent : theme.textStrong
     property real hoverOpacity: 0.10
@@ -55,7 +57,23 @@ MouseArea {
     cursorShape: disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
 
     onClicked: event => activated(event)
-    onPressed: event => startRipple(event.x, event.y)
+    // A quick physical click can finish between two rendered frames. Preserve
+    // the shared press state for one short effects interval so both detached
+    // controls and connected frame contours actually display feedback.
+    onPressed: event => {
+        heldPress = true;
+        pressFeedback.restart();
+        startRipple(event.x, event.y);
+    }
+    onDisabledChanged: {
+        if (disabled)
+            heldPress = false;
+    }
+    Timer {
+        id: pressFeedback
+        interval: root.motion.enabled ? Math.max(110, root.motion.effectsFast) : 0
+        onTriggered: root.heldPress = false
+    }
     onReleased: fadeRipple.restart()
     onCanceled: fadeRipple.restart()
 
@@ -88,7 +106,7 @@ MouseArea {
         opacity: {
             if (!root.showHover)
                 return 0;
-            if (root.pressed || root.manualPress)
+            if (root.visualPressed)
                 return root.pressOpacity;
             if (root.showHover && (root.containsMouse || root.manualHover))
                 return root.hoverOpacity;
