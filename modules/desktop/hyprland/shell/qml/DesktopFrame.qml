@@ -138,15 +138,13 @@ Variants {
                     fillColor: "transparent"
                     // An unused PathSvg keeps a tiny valid placeholder path.
                     // Never paint its stroke when no operation is running.
-                    strokeColor: output.busyHere && !frame.motion.enabled ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, 0.40) : "transparent"
-                    strokeWidth: 4
+                    strokeColor: output.exposed && output.busyHere && !frame.motion.enabled ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, 0.90) : "transparent"
+                    strokeWidth: 2
                     joinStyle: ShapePath.RoundJoin
                     capStyle: ShapePath.RoundCap
                     strokeStyle: ShapePath.SolidLine
-                    dashPattern: [Math.max(1, output.geometry.length * 0.11 / 3), Math.max(1, output.geometry.length * 0.89 / 3)]
-                    dashOffset: -frame.progress * output.geometry.length / 3
                     PathSvg {
-                        path: output.busyHere && !frame.motion.enabled ? output.geometry.inner : "M 0 0 L 0.01 0 L 0 0.01 Z"
+                        path: output.exposed && output.busyHere && !frame.motion.enabled ? (OutlineTrace.stationaryPath(output.geometry.points, output.geometry.length, 0.10) || "M 0 0 L 0.01 0 L 0 0.01 Z") : "M 0 0 L 0.01 0 L 0 0.01 Z"
                     }
                 }
             }
