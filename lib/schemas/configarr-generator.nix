@@ -1,7 +1,15 @@
 { inputs, system }:
 let
   upstream = inputs.configarr.inputs.nixpkgs.legacyPackages.${system};
-  package = inputs.configarr.packages.${system}.default;
+  overlay =
+    builtins.head
+      (import ../../overlays/configarr {
+        config = { };
+        inherit inputs system;
+        inherit (upstream) lib;
+        pkgs = upstream;
+      }).config.nixpkgs.overlays;
+  package = (overlay upstream upstream).configarr;
 in
 upstream.stdenvNoCC.mkDerivation {
   pname = "configarr-json-schema";
