@@ -777,9 +777,33 @@ test("the inactive frame operation trace cannot paint the corner placeholder", (
   );
   assert.match(
     qml,
-    /strokeColor: output\.busyHere \? Qt\.rgba\([\s\S]*?\) : "transparent"/,
+    /strokeColor: output\.busyHere && !frame\.motion\.enabled \? Qt\.rgba\([\s\S]*?\) : "transparent"/,
   );
-  assert.match(qml, /path: output\.busyHere \? output\.geometry\.inner :/);
+  assert.match(
+    qml,
+    /path: output\.busyHere && !frame\.motion\.enabled \? output\.geometry\.inner :/,
+  );
+});
+
+test("motion-enabled frame loading uses the shared tapered glowing tracer", () => {
+  const qml = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/DesktopFrame.qml",
+    ),
+    "utf8",
+  );
+  assert.match(qml, /import "OutlineTrace\.js" as OutlineTrace/);
+  assert.match(qml, /Canvas\s*\{[\s\S]*?onPaint: OutlineTrace\.paint/);
+  assert.match(
+    qml,
+    /            Canvas\s*\{[\s\S]*?onPaint: OutlineTrace\.paint/,
+  );
+  assert.match(
+    qml,
+    /visible: output\.exposed && output\.busyHere && frame\.motion\.enabled/,
+  );
+  assert.match(qml, /strokeColor: output\.busyHere && !frame\.motion\.enabled/);
 });
 
 test("the hub's content reveal follows its surface without leaving visible clipped fragments", () => {

@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import "FrameGeometry.js" as FrameGeometry
+import "OutlineTrace.js" as OutlineTrace
 
 // A single geometric silhouette per screen: the desktop frame, bar islands,
 // expanded hub and notification dock share one continuous inside boundary.
@@ -137,15 +138,41 @@ Variants {
                     fillColor: "transparent"
                     // An unused PathSvg keeps a tiny valid placeholder path.
                     // Never paint its stroke when no operation is running.
-                    strokeColor: output.busyHere ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, frame.motion.enabled ? 0.94 : 0.40) : "transparent"
+                    strokeColor: output.busyHere && !frame.motion.enabled ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, 0.40) : "transparent"
                     strokeWidth: 4
                     joinStyle: ShapePath.RoundJoin
                     capStyle: ShapePath.RoundCap
-                    strokeStyle: frame.motion.enabled ? ShapePath.DashLine : ShapePath.SolidLine
+                    strokeStyle: ShapePath.SolidLine
                     dashPattern: [Math.max(1, output.geometry.length * 0.11 / 3), Math.max(1, output.geometry.length * 0.89 / 3)]
                     dashOffset: -frame.progress * output.geometry.length / 3
                     PathSvg {
-                        path: output.busyHere ? output.geometry.inner : "M 0 0 L 0.01 0 L 0 0.01 Z"
+                        path: output.busyHere && !frame.motion.enabled ? output.geometry.inner : "M 0 0 L 0.01 0 L 0 0.01 Z"
+                    }
+                }
+            }
+
+            Canvas {
+                id: busyTrace
+                anchors.fill: parent
+                visible: output.exposed && output.busyHere && frame.motion.enabled
+                antialiasing: true
+                onPaint: OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.theme.accent, 2, width, height)
+                Connections {
+                    target: frame
+                    function onProgressChanged() {
+                        busyTrace.requestPaint();
+                    }
+                    function onBusyChanged() {
+                        busyTrace.requestPaint();
+                    }
+                }
+                Connections {
+                    target: output
+                    function onGeometryChanged() {
+                        busyTrace.requestPaint();
+                    }
+                    function onBusyHereChanged() {
+                        busyTrace.requestPaint();
                     }
                 }
             }
