@@ -24,8 +24,11 @@ Item {
 
     // A zero-sized surface has no contour yet. Keep SVG parsing valid while
     // its first frame or animated size is being measured.
-    readonly property string fillPathData: buildPath(0) || "M 0 0"
-    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? (buildPath(borderWidth / 2) || "M 0 0") : "M 0 0"
+    // PathSvg requires drawable geometry even before the first layout pass.
+    // A move-only SVG path is invalid and causes startup parser warnings.
+    readonly property string emptyPathData: "M 0 0 L 0.01 0 L 0 0.01 Z"
+    readonly property string fillPathData: buildPath(0) || emptyPathData
+    readonly property string borderPathData: borderWidth > 0 && borderColor.a > 0 ? (buildPath(borderWidth / 2) || emptyPathData) : emptyPathData
 
     function point(value: real): string {
         return Number(value).toFixed(4);
