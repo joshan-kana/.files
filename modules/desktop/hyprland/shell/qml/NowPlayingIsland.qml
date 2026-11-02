@@ -12,9 +12,12 @@ Item {
     signal activated
 
     // Leave the centered clock island unobstructed on narrow logical screens.
+    property bool frameConnected: false
+    readonly property bool frameHover: mainHitArea.containsMouse || playbackHitArea.containsMouse
+    readonly property bool framePressed: mainHitArea.pressed || playbackHitArea.pressed
     property real maximumWidth: 458
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
-    height: 50
+    height: theme.barIslandHeight
     visible: width > 1
     opacity: media.available ? 1 : 0
 
@@ -50,9 +53,9 @@ Item {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusIsland
         exponent: Math.min(4, theme.squircleExponent)
-        elevated: true
-        outlined: true
-        fillColor: theme.paneBase
+        elevated: false
+        outlined: false
+        fillColor: island.frameConnected ? "transparent" : theme.background
 
         // One uninterrupted hover shape, shared by the two pointer targets.
         // Neither target draws its own partial-width highlight.
@@ -64,15 +67,16 @@ Item {
             stateColor: island.theme.textStrong
             acceptedButtons: Qt.NoButton
             hoverEnabled: false
-            manualHover: mainHitArea.containsMouse || playbackHitArea.containsMouse
+            manualHover: island.frameHover
+            showHover: !island.frameConnected
             manualPress: mainHitArea.pressed || playbackHitArea.pressed
         }
 
         Item {
             id: artwork
 
-            width: 40
-            height: 40
+            width: 30
+            height: 30
             anchors {
                 left: parent.left
                 leftMargin: 4
@@ -93,8 +97,8 @@ Item {
                 anchors.margins: 0
                 visible: island.media.artUrl.length > 0
                 source: island.media.artUrl
-                sourceSize.width: 56
-                sourceSize.height: 56
+                sourceSize.width: 40
+                sourceSize.height: 40
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: true
@@ -142,7 +146,7 @@ Item {
             id: miniSpectrum
 
             width: island.width >= 410 ? 148 : island.width >= 320 ? 75 : 0
-            height: 37
+            height: 30
             anchors {
                 right: playbackZone.left
                 rightMargin: island.theme.spacing2
