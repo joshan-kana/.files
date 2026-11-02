@@ -29,6 +29,29 @@ PanelWindow {
         }
     }
     property bool themeTerminalActive: false
+    property bool frameEnabled: true
+    property bool barVisible: true
+    readonly property var frameBounds: ({
+            x: (screen ? (screen.width - viewportWidth) / 2 : 0) + shellSurface.x,
+            y: topOffset + shellSurface.y,
+            width: shellSurface.width,
+            height: shellSurface.height,
+            visible: (expansionState.hasCurrent || closing) && shellSurface.opacity > 0.01
+        })
+    readonly property real topOffset: frameVisible ? theme.frameThickness : barVisible ? theme.barInsetTop : theme.spacing4
+    readonly property bool frameVisible: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    // The bar clock returns as the hub retracts into its source island,
+    // rather than appearing abruptly when closeTimer completes.
+    readonly property real clockReveal: {
+        if (expansionState.hasCurrent)
+            return 0;
+        if (!closing)
+            return 1;
+        const span = Math.max(1, Math.max(contentWidth, expansionState.originWidth) - expansionState.originWidth);
+        const progress = Math.max(0, Math.min(1, (Math.max(contentWidth, expansionState.originWidth) - shellSurface.width) / span));
+        const reveal = Math.max(0, Math.min(1, (progress - 0.55) / 0.45));
+        return reveal * reveal * (3 - 2 * reveal);
+    }
     property bool keyboardFocusReady: false
 
     // Precreate each hub view before its first invocation, including Media and
@@ -194,16 +217,19 @@ PanelWindow {
             geometryUpdate.restart();
         }
     }
-    readonly property real targetWidth: contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
-    readonly property real targetHeight: contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
+    // With neither frame nor bar, the floating hub opens at its natural size.
+    // That shortcut must NOT apply while closing: it prevented the normal
+    // width/height animations from receiving a smaller target at all.
+    readonly property bool floatingOpen: !frameVisible && !barVisible && !closing
+    readonly property real targetWidth: floatingOpen || contentExpanded ? Math.max(contentWidth, expansionState.originWidth) : expansionState.originWidth
+    readonly property real targetHeight: floatingOpen || contentExpanded ? Math.max(contentHeight, expansionState.originHeight) : expansionState.originHeight
     // Keep the layer as small as the hub's compositor-safe viewport.
     // A fullscreen transparent backing needlessly multiplies blur work
     // when Frosted Glass is enabled, especially on high-DPI displays.
-    // Keep the Wayland layer at a stable, prewarmed detail viewport size.
-    // Resizing this layer at the same time as the inner squircle and GridView
-    // forces a compositor surface reallocation and stalls their animation.
+    // Keep the detail viewport stable across the gallery's inner morph;
+    // the top inset still follows the frame/bar visibility policy.
     readonly property real viewportWidth: screen ? Math.max(1, Math.min(screen.width - theme.spacing4 * 2, theme.controlsDetailWidth + theme.spacing4 * 2)) : 1
-    readonly property real viewportHeight: screen ? Math.max(1, screen.height - (theme.barHeight + theme.spacing1) - theme.spacing4) : 1
+    readonly property real viewportHeight: screen ? Math.max(1, screen.height - topOffset - theme.spacing4) : 1
     // Match the bar's measured source when it lies inside our compositor-safe
     // viewport. Off-viewport islands start at the nearest visible edge, rather
     // than forcing a new full-width Wayland surface or compositor relayout.
@@ -238,7 +264,7 @@ PanelWindow {
     }
 
     margins {
-        top: theme.barHeight + theme.spacing1
+        top: host.topOffset
         left: screen ? (screen.width - viewportWidth) / 2 : 0
     }
 
@@ -337,7 +363,7 @@ PanelWindow {
 
     HyprlandFocusGrab {
         active: host.expansionState.hasCurrent && host.backingWindowVisible && !host.themeTerminalActive
-        windows: host.keyboardFocusReady ? [host].concat(host.barWindows) : [host]
+        windows: host.keyboardFocusReady && host.barVisible ? [host].concat(host.barWindows) : [host]
         onCleared: {
             if (!host.themeTerminalActive)
                 host.expansionState.close();
@@ -415,8 +441,14 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
-        fillColor: host.theme.panelBase
-        luminous: true
+        // The same background colour in both modes prevents a visible dark
+        // flash when the connected frame is toggled around an open panel.
+        // The frame outline and this attached surface share one background.
+        // Keep its fill across frame toggles so the fade cannot expose an
+        // empty, flickering rectangle between the two Wayland layers.
+        fillColor: host.theme.background
+        glassAllowed: !host.frameVisible
+        luminous: false
         luminousColor: host.theme.textStrong
         lightIntensity: 0.22
         elevated: true
@@ -425,7 +457,7 @@ PanelWindow {
         shadowStrength: 0
         cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
         borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
-        borderWidth: host.theme.borderThin
+        borderWidth: host.frameVisible ? 0 : host.theme.borderThin
 
         Behavior on cornerRadius {
             enabled: host.contentExpanded || host.closing
@@ -705,7 +737,7 @@ PanelWindow {
         LoadingOutline {
             anchors.fill: parent
             surface: shellSurface
-            active: host.themeOperationVisible || host.wallpaperOperationVisible || host.captureEditorRequestVisible
+            active: !host.frameVisible && (host.themeOperationVisible || host.wallpaperOperationVisible || host.captureEditorRequestVisible)
             motionEnabled: host.motion.enabled
             highlightColor: host.wallpaperOperationVisible ? host.theme.roleColor("wallpaper") : host.captureEditorRequestVisible ? host.theme.roleColor("screenshot") : host.theme.accent
             lineWidth: 3
