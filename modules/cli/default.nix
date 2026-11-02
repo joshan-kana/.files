@@ -857,6 +857,7 @@ in
   codex = _: {
     home = _: {
       programs.codex = { };
+      home.shellAliases.cx = "codex resume";
     };
   };
 
