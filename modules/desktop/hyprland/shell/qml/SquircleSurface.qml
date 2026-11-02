@@ -64,6 +64,10 @@ Item {
     }
 
     function buildPath(inset: real): string {
+        // Reactive geometry can briefly be unmeasured while a popup is
+        // constructed. Never serialize NaN/Infinity into an SVG path.
+        if (![width, height, inset, cornerRadius, exponent].every(Number.isFinite))
+            return "";
         const innerWidth = width - inset * 2;
         const innerHeight = height - inset * 2;
         const r = Math.min(Math.max(0, cornerRadius - inset), innerWidth / 2, innerHeight / 2);
