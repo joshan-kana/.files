@@ -18,12 +18,16 @@ Variants {
     required property RecordingState recordingState
 
     property bool shown: true
+    property bool controlsExpanded: false
+    property real clockReveal: 1
+    property bool frameVisible: false
 
     onShownChanged: {
         if (!shown)
             system.idleInhibited = false;
     }
     property var origins: ({})
+    property var frameIslands: ({})
 
     signal mediaRequested(var screen, var origin)
     signal systemRequested(var screen, var origin)
@@ -50,6 +54,15 @@ Variants {
         };
         next[key] = screenOrigins;
         origins = next;
+    }
+
+    function setFrameIslands(screen: var, surfaces: var): void {
+        const key = screenKey(screen);
+        if (!key)
+            return;
+        const next = Object.assign({}, frameIslands);
+        next[key] = surfaces;
+        frameIslands = next;
     }
 
     function originFor(screen: var, name: string): var {
@@ -83,25 +96,63 @@ Variants {
         readonly property NotificationState notificationState: bars.notificationState
         readonly property RecordingState recordingState: bars.recordingState
         readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
+        readonly property bool fullscreen: hyprMonitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
+        // A compositor reservation reduces the bar panel's usable width.
+        // Restore its real screen-space inset, instead of assuming its size.
+        readonly property real screenOffset: Math.max(0, (modelData.width - bar.width) / 2)
+        // Animate the *island layout* alongside the shared frame's outline.
+        // Hyprland still owns reserved space immediately; this interpolates
+        // only internal QML margins, so window gaps remain compositor-driven.
+        property real frameBlend: bars.frameVisible ? 1 : 0
+        Behavior on frameBlend {
+            NumberAnimation {
+                duration: bar.motion.morph
+                easing.type: bar.motion.morphType
+                easing.bezierCurve: bar.motion.morphCurve
+            }
+        }
+        onFrameBlendChanged: Qt.callLater(publishOrigins)
+        onScreenOffsetChanged: Qt.callLater(publishOrigins)
+        onFullscreenChanged: Qt.callLater(publishOrigins)
+        property bool workspacePressed: false
 
         function publishOrigins(): void {
             if (!barContent || !mediaIsland || !systemIsland)
                 return;
 
-            bars.setOrigin(modelData, "media", barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
-            bars.setOrigin(modelData, "system", barContent.x + systemIsland.x + systemIsland.width / 2, systemIsland.width, systemIsland.height);
-            bars.setOrigin(modelData, "calendar", barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
-            bars.setOrigin(modelData, "activity", barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
+            bars.setOrigin(modelData, "media", bar.screenOffset + barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
+            bars.setOrigin(modelData, "system", bar.screenOffset + barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
+            bars.setOrigin(modelData, "calendar", bar.screenOffset + barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
+            bars.setOrigin(modelData, "activity", bar.screenOffset + barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
+            const surfaces = [workspaceIsland, mediaIsland, clockIsland, notificationIsland, recordingIsland, systemIsland];
+            bars.setFrameIslands(modelData, surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2).map(item => ({
+                        x: bar.screenOffset + barContent.x + item.x,
+                        y: barContent.y + item.y,
+                        width: item.width,
+                        height: item.height,
+                        hovered: item === workspaceIsland ? workspaceHover.hovered : item === mediaIsland ? mediaIsland.frameHover : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? systemIsland.frameHover : false,
+                        pressed: item === workspaceIsland ? workspacePressed : item === mediaIsland ? mediaIsland.framePressed : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? systemIsland.framePressed : false,
+                        visible: true
+                    })));
         }
 
         Component.onCompleted: Qt.callLater(publishOrigins)
         onWidthChanged: Qt.callLater(publishOrigins)
+        Connections {
+            target: bars
+            function onControlsExpandedChanged(): void {
+                Qt.callLater(bar.publishOrigins);
+            }
+            function onShownChanged(): void {
+                Qt.callLater(bar.publishOrigins);
+            }
+        }
 
-        visible: bars.shown
+        visible: bars.shown && !bar.fullscreen
         implicitHeight: bars.theme.barHeight
         color: "transparent"
         exclusionMode: ExclusionMode.Normal
-        exclusiveZone: bars.shown ? bars.theme.barHeight : 0
+        exclusiveZone: bar.visible ? bars.theme.barHeight : 0
 
         anchors {
             top: true
@@ -128,38 +179,59 @@ Variants {
         // Display only real workspaces. Hyprland creates workspace objects
         // for occupied or currently active workspaces; do not manufacture slots.
         readonly property var workspaceIds: normalWorkspaces.map(workspace => workspace.id)
-        readonly property var visibleWorkspaceIds: fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? workspaceIds : [focusedWorkspaceId]
-        readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? workspaceIds.length * 42 + Math.max(0, workspaceIds.length - 1) * 6 + bars.theme.spacing3 * 2 : 0
+        readonly property var visibleWorkspaceIds: workspaceIds.length === 0 ? [focusedWorkspaceId] : fullWorkspaceWidth <= clockIsland.x - bars.theme.spacing3 ? workspaceIds : [focusedWorkspaceId]
+        readonly property int workspaceCellWidth: 42
+        readonly property int workspaceCellGap: 6
+        readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? workspaceIds.length * workspaceCellWidth + Math.max(0, workspaceIds.length - 1) * workspaceCellGap + bars.theme.spacing3 * 2 : 0
 
         Item {
             id: barContent
 
+            onXChanged: Qt.callLater(bar.publishOrigins)
+            onYChanged: Qt.callLater(bar.publishOrigins)
+            onWidthChanged: Qt.callLater(bar.publishOrigins)
+            onHeightChanged: Qt.callLater(bar.publishOrigins)
             anchors.fill: parent
             anchors {
-                leftMargin: 17
-                rightMargin: 17
-                topMargin: bars.theme.barInsetTop
-                bottomMargin: bars.theme.barInsetBottom
+                // The bar's compositor reservation accounts for frameThickness.
+                // Keep island hit targets beyond the outer squircle's shoulder
+                // without adding that reservation to their local coordinates.
+                leftMargin: bars.theme.spacing3 + (bars.theme.frameIslandInset - bars.theme.spacing3) * bar.frameBlend
+                rightMargin: bars.theme.spacing3 + (bars.theme.frameIslandInset - bars.theme.spacing3) * bar.frameBlend
+                // The inner contour begins at frameThickness, so controls
+                // must never begin above it. Keep the actual hit regions,
+                // blue workspace selection and icon row within the recess.
+                topMargin: bars.theme.barInsetTop + (bars.theme.frameThickness - bars.theme.barInsetTop) * bar.frameBlend
+                bottomMargin: bars.theme.barInsetBottom + (Math.max(0, bars.theme.barHeight - bars.theme.frameThickness - bars.theme.barIslandHeight) - bars.theme.barInsetBottom) * bar.frameBlend
             }
 
             ShellSurface {
                 id: workspaceIsland
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
-                width: workspaceTrack.implicitWidth + theme.spacing3 * 2
-                height: parent.height
-                anchors.left: parent.left
+                width: Math.max(bar.workspaceCellWidth, workspaceTrack.implicitWidth) + theme.spacing3 * 2
+                height: bars.theme.barIslandHeight
+                anchors {
+                    left: parent.left
+                    verticalCenter: parent.verticalCenter
+                }
 
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusIsland
                 exponent: Math.min(4, theme.squircleExponent)
-                elevated: true
-                outlined: true
-                fillColor: theme.paneBase
+                elevated: false
+                outlined: false
+                fillColor: bars.frameVisible ? "transparent" : theme.background
 
                 HoverHandler {
                     id: workspaceHover
+                    onHoveredChanged: Qt.callLater(bar.publishOrigins)
                 }
                 StateLayer {
                     theme: bars.theme
@@ -167,6 +239,7 @@ Variants {
                     cornerRadius: bars.theme.radiusIsland
                     exponent: Math.min(4, bars.theme.squircleExponent)
                     manualHover: workspaceHover.hovered
+                    showHover: !bars.frameVisible
                     onActivated: {
                         if (bar.hyprMonitor && bar.hyprMonitor.activeWorkspace)
                             bar.hyprMonitor.activeWorkspace.activate();
@@ -177,8 +250,11 @@ Variants {
                     id: workspaceTrack
                     z: 1
                     anchors.centerIn: parent
-                    implicitWidth: workspaceRow.implicitWidth
-                    implicitHeight: 34
+                    // Repeater children can be materialised before Row reports
+                    // their implicit width. Using Row.implicitWidth gave this
+                    // 42px pill a 24px island and clipped the frame contour.
+                    implicitWidth: Math.max(1, bar.visibleWorkspaceIds.length) * bar.workspaceCellWidth + Math.max(0, bar.visibleWorkspaceIds.length - 1) * bar.workspaceCellGap
+                    implicitHeight: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
                     // Keep the selection inside the island when an unused
                     // workspace vanishes and the track contracts.
                     clip: true
@@ -197,7 +273,7 @@ Variants {
                         if (!ids.includes(focused))
                             return;
                         const index = ids.indexOf(focused);
-                        const destination = index * (42 + workspaceRow.spacing);
+                        const destination = index * (bar.workspaceCellWidth + bar.workspaceCellGap);
                         const slide = settled && ids.length >= previousIds.length && ids.includes(previousFocus) && focused !== previousFocus && bars.motion.enabled;
 
                         workspaceAnimation.stop();
@@ -236,10 +312,10 @@ Variants {
                         id: workspaceSelection
                         x: 0
                         y: 0
-                        width: 42
-                        height: 34
+                        width: bar.workspaceCellWidth
+                        height: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
                         exponent: bars.theme.squircleExponent
-                        cornerRadius: 16
+                        cornerRadius: bars.theme.radiusSmall
                         fillColor: bars.theme.accent
                         lightColor: bars.theme.accent
                         lightStrength: 0.035
@@ -248,7 +324,7 @@ Variants {
 
                     Row {
                         id: workspaceRow
-                        spacing: 6
+                        spacing: bar.workspaceCellGap
 
                         Repeater {
                             model: bar.visibleWorkspaceIds
@@ -260,15 +336,15 @@ Variants {
                                 readonly property int number: modelData
                                 readonly property bool active: bar.focusedWorkspaceId === number
 
-                                width: 42
-                                height: 34
+                                width: bar.workspaceCellWidth
+                                height: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: workspace.number
                                     // Make the ink follow the sliding pill,
                                     // not the destination before it arrives.
-                                    color: Math.abs(workspaceSelection.x - workspace.index * (42 + workspaceRow.spacing)) < 21 ? bars.theme.background : bars.theme.textMuted
+                                    color: Math.abs(workspaceSelection.x - workspace.index * (bar.workspaceCellWidth + bar.workspaceCellGap)) < 21 ? bars.theme.background : bars.theme.textMuted
                                     font.family: bars.runtime.fontMono
                                     font.pixelSize: bars.theme.fontSize(12)
                                     font.weight: Font.DemiBold
@@ -282,6 +358,18 @@ Variants {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
+                                    onPressed: {
+                                        bar.workspacePressed = true;
+                                        bar.publishOrigins();
+                                    }
+                                    onReleased: {
+                                        bar.workspacePressed = false;
+                                        bar.publishOrigins();
+                                    }
+                                    onCanceled: {
+                                        bar.workspacePressed = false;
+                                        bar.publishOrigins();
+                                    }
                                     onClicked: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
                                 }
                             }
@@ -292,12 +380,17 @@ Variants {
 
             NowPlayingIsland {
                 id: mediaIsland
+                onFrameHoverChanged: Qt.callLater(bar.publishOrigins)
+                onFramePressedChanged: bar.publishOrigins()
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
                 maximumWidth: Math.max(0, clockIsland.x - bars.theme.spacing3 - x)
 
                 anchors {
                     left: workspaceIsland.right
-                    leftMargin: theme.spacing3
+                    leftMargin: theme.spacing3 + (bars.theme.frameIslandGap - theme.spacing3) * bar.frameBlend
                     verticalCenter: parent.verticalCenter
                 }
 
@@ -306,6 +399,7 @@ Variants {
                 motion: (bar.motion as Motion)
                 media: (bar.media as MediaState)
                 spectrum: (bar.spectrum as SpectrumState)
+                frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onActivated: bars.mediaRequested(bar.modelData, bars.originFor(bar.modelData, "media"))
@@ -313,19 +407,32 @@ Variants {
 
             ShellSurface {
                 id: clockIsland
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
+                // The hub immediately takes ownership of the centred island.
+                // An independent fade would draw clock text over its opening
+                // squircle, while the shared contour is already expanding.
+                visible: bars.clockReveal > 0.001
+                opacity: bars.clockReveal
 
                 width: Math.min(parent.width, Math.max(206, clockRow.implicitWidth + bars.theme.spacing4 * 2))
-                height: parent.height
-                anchors.horizontalCenter: parent.horizontalCenter
+                height: bars.theme.barIslandHeight
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    verticalCenter: parent.verticalCenter
+                }
 
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: theme.radiusIsland
                 exponent: Math.min(4, theme.squircleExponent)
-                elevated: true
-                outlined: true
-                fillColor: theme.paneBase
+                elevated: false
+                outlined: false
+                fillColor: bars.frameVisible ? "transparent" : theme.background
 
                 Row {
                     id: clockRow
@@ -361,6 +468,9 @@ Variants {
 
                 StateLayer {
                     id: clockPress
+                    showHover: !bars.frameVisible
+                    onContainsMouseChanged: Qt.callLater(bar.publishOrigins)
+                    onPressedChanged: bar.publishOrigins()
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
@@ -374,14 +484,19 @@ Variants {
 
             ShellSurface {
                 id: notificationIsland
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
                 // Notification history remains reachable through Activity when space is tight.
                 visible: barContent.width - (clockIsland.x + clockIsland.width) >= systemIsland.width + (recordingIsland.visible ? recordingIsland.width + bars.theme.spacing3 : 0) + width + bars.theme.spacing3 * 2
                 width: notificationRow.implicitWidth + bars.theme.spacing3 * 2
-                height: parent.height
+                height: bars.theme.barIslandHeight
                 anchors {
                     right: recordingIsland.visible ? recordingIsland.left : systemIsland.left
-                    rightMargin: bars.theme.spacing3
+                    rightMargin: bars.theme.spacing3 + (bars.theme.frameIslandGap - bars.theme.spacing3) * bar.frameBlend
                     verticalCenter: parent.verticalCenter
                 }
 
@@ -389,16 +504,14 @@ Variants {
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: bars.theme.radiusIsland
-                elevated: true
-                outlined: true
-                fillColor: theme.paneBase
-                onXChanged: Qt.callLater(bar.publishOrigins)
-                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                elevated: false
+                outlined: false
+                fillColor: bars.frameVisible ? "transparent" : theme.background
 
                 Row {
                     id: notificationRow
                     anchors.centerIn: parent
-                    height: 38
+                    height: bars.theme.barIslandHeight
                     spacing: bars.theme.spacing2
 
                     Text {
@@ -428,6 +541,9 @@ Variants {
 
                 StateLayer {
                     id: notificationPress
+                    showHover: !bars.frameVisible
+                    onContainsMouseChanged: Qt.callLater(bar.publishOrigins)
+                    onPressedChanged: bar.publishOrigins()
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
@@ -438,21 +554,26 @@ Variants {
 
             ShellSurface {
                 id: recordingIsland
+                onXChanged: Qt.callLater(bar.publishOrigins)
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onWidthChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
                 visible: bar.recordingState.visibleInBar
                 width: recordingContent.implicitWidth + bars.theme.spacing4 * 2
-                height: parent.height
+                height: bars.theme.barIslandHeight
                 anchors {
                     right: systemIsland.left
-                    rightMargin: bars.theme.spacing3
+                    rightMargin: bars.theme.spacing3 + (bars.theme.frameIslandGap - bars.theme.spacing3) * bar.frameBlend
                     verticalCenter: parent.verticalCenter
                 }
                 theme: (bar.theme as Theme)
                 motion: (bar.motion as Motion)
                 surfaceLayer: ShellSurface.Pane
                 cornerRadius: bars.theme.radiusIsland
-                elevated: true
-                outlined: true
-                fillColor: theme.blend(theme.paneBase, bar.recordingState.phase === "failed" ? theme.critical : theme.warning, 0.08)
+                elevated: false
+                outlined: false
+                fillColor: bars.frameVisible ? "transparent" : theme.background
 
                 Row {
                     id: recordingContent
@@ -475,6 +596,10 @@ Variants {
                     }
                 }
                 StateLayer {
+                    id: recordingPress
+                    showHover: !bars.frameVisible
+                    onContainsMouseChanged: Qt.callLater(bar.publishOrigins)
+                    onPressedChanged: bar.publishOrigins()
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
@@ -486,6 +611,11 @@ Variants {
 
             SystemIsland {
                 id: systemIsland
+                onFrameHoverChanged: Qt.callLater(bar.publishOrigins)
+                onFramePressedChanged: bar.publishOrigins()
+                onYChanged: Qt.callLater(bar.publishOrigins)
+                onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
                 anchors {
                     right: parent.right
@@ -497,6 +627,7 @@ Variants {
                 motion: (bar.motion as Motion)
                 system: (bar.system as SystemState)
                 powerProfile: (bars.powerProfile as PowerProfileState)
+                frameConnected: bars.frameVisible
                 compact: barContent.width - (clockIsland.x + clockIsland.width) < 260
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)

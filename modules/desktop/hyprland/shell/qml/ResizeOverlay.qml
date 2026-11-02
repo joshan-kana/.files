@@ -13,6 +13,24 @@ PanelWindow {
     property bool open: false
     property string lastAction: ""
     property bool closing: false
+    property bool frameEnabled: false
+    property bool barVisible: true
+    readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    property real attachmentProgress: frameConnected ? (open ? 1 : 0) : 1
+    Behavior on attachmentProgress {
+        NumberAnimation {
+            duration: overlay.motion.morph
+            easing.type: overlay.motion.morphType
+            easing.bezierCurve: overlay.motion.morphCurve
+        }
+    }
+    readonly property var frameBounds: ({
+            x: screen ? (screen.width - width) / 2 : 0,
+            y: margins.top,
+            width: width,
+            height: height * attachmentProgress,
+            visible: frameConnected && attachmentProgress > 0.001
+        })
 
     visible: true
     focusable: true
@@ -23,7 +41,7 @@ PanelWindow {
     anchors {
         top: true
     }
-    margins.top: theme.panelTopOffset
+    margins.top: frameConnected ? (barVisible ? theme.barInsetTop : theme.frameThickness) : theme.panelTopOffset
     updatesEnabled: surfaceLifecycle.needsRendering
     mask: surfaceLifecycle.inputRegion
     WlrLayershell.namespace: "linux-desktop-resize-controls"
@@ -51,7 +69,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-        interval: overlay.motion.fast
+        interval: overlay.frameConnected ? overlay.motion.morph : overlay.motion.fast
         onTriggered: overlay.closing = false
     }
 
@@ -67,16 +85,24 @@ PanelWindow {
 
     FocusScope {
         id: resizeKeys
-        anchors.fill: parent
-        opacity: overlay.open ? 1 : 0
-        scale: overlay.open ? 1 : 0.96
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+        }
+        height: overlay.frameConnected ? overlay.height * overlay.attachmentProgress : overlay.height
+        clip: overlay.frameConnected
+        opacity: overlay.frameConnected ? 1 : (overlay.open ? 1 : 0)
+        scale: overlay.frameConnected ? 1 : (overlay.open ? 1 : 0.96)
         Behavior on opacity {
+            enabled: !overlay.frameConnected
             Anim {
                 motion: overlay.motion
                 type: Anim.FastEffects
             }
         }
         Behavior on scale {
+            enabled: !overlay.frameConnected
             Anim {
                 motion: overlay.motion
                 type: Anim.FastSpatial
@@ -108,6 +134,9 @@ PanelWindow {
         ShellSurface {
             anchors.fill: parent
             theme: overlay.theme
+            fillColor: overlay.frameConnected ? "transparent" : overlay.theme.panelBase
+            glassAllowed: !overlay.frameConnected
+            borderWidth: overlay.frameConnected ? 0 : overlay.theme.borderFocus
             motion: overlay.motion
             surfaceLayer: ShellSurface.Pane
             cornerRadius: overlay.theme.radiusPanel
