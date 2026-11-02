@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 
 PanelWindow {
@@ -9,6 +10,25 @@ PanelWindow {
     required property RuntimeConfig runtime
     required property Theme theme
     required property Motion motion
+    property bool frameEnabled: false
+    readonly property bool frameConnected: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    // The contour itself grows from the bottom edge; it does not wait for a
+    // completed panel to appear and then snap an outline around it.
+    property real attachmentProgress: frameConnected && osd.visible ? 1 : 0
+    Behavior on attachmentProgress {
+        NumberAnimation {
+            duration: popup.motion.morph
+            easing.type: popup.motion.morphType
+            easing.bezierCurve: popup.motion.morphCurve
+        }
+    }
+    readonly property var frameBounds: ({
+            x: screen ? (screen.width - width) / 2 : 0,
+            y: screen ? screen.height - theme.frameThickness - height * attachmentProgress : 0,
+            width: width,
+            height: height * attachmentProgress,
+            visible: frameConnected && attachmentProgress > 0.001
+        })
 
     property bool closing: false
     readonly property bool keyboardMode: osd.kind === "keyboard"
@@ -19,23 +39,23 @@ PanelWindow {
     PopupSurfaceLifecycle {
         id: surfaceLifecycle
         popup: popup
-        exposed: popup.osd.visible || popup.closing
+        exposed: popup.osd.visible || popup.closing || popup.attachmentProgress > 0.001
     }
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
-    implicitWidth: 370
+    implicitWidth: Math.max(1, Math.min(370, (screen ? screen.width : 370) - (frameConnected ? theme.frameThickness : theme.panelSideOffset) * 2))
     implicitHeight: 76
     exclusionMode: ExclusionMode.Ignore
 
-    // Keep the OSD centered and clear of the top Controls hub.
+    // Centre the OSD at the bottom in both modes, below the Controls hub.
     anchors.bottom: true
-    margins.bottom: theme.panelSideOffset
+    margins.bottom: frameConnected ? theme.frameThickness : theme.panelSideOffset
 
     WlrLayershell.namespace: "linux-desktop-osd"
 
     Timer {
         id: closeTimer
-        interval: popup.motion.fast
+        interval: popup.frameConnected ? popup.motion.morph + 16 : popup.motion.fast
         onTriggered: popup.closing = false
     }
 
@@ -56,19 +76,33 @@ PanelWindow {
     }
 
     ShellSurface {
-        anchors.fill: parent
+        id: osdSurface
+        anchors {
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+        }
+        // Content is clipped by the very same extent used by the joined
+        // frame contour. Nothing fades away before an independent outline.
+        height: popup.frameConnected ? popup.height * popup.attachmentProgress : popup.height
+        clip: popup.frameConnected
         theme: popup.theme
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: popup.theme.groupBase
+        fillColor: popup.frameConnected ? "transparent" : popup.theme.groupBase
+        glassAllowed: !popup.frameConnected
         borderColor: popup.theme.subtleBorder
-        borderWidth: popup.theme.borderThin
+        borderWidth: popup.frameConnected ? 0 : popup.theme.borderThin
 
-        opacity: popup.osd.visible ? 1 : 0
-        scale: popup.osd.visible ? 1 : 0.97
+        // Attached content appears only after the continuous frame contour
+        // opens far enough to hold it. No double-painted surface or residual
+        // line through the disappearing body.
+        opacity: popup.frameConnected ? 1 : (popup.osd.visible ? 1 : 0)
+        scale: popup.frameConnected ? 1 : (popup.osd.visible ? 1 : 0.97)
 
         Behavior on opacity {
+            enabled: !popup.frameConnected
             NumberAnimation {
                 duration: popup.motion.fast
                 easing.type: popup.osd.visible ? popup.motion.enterType : popup.motion.exitType
@@ -77,6 +111,7 @@ PanelWindow {
         }
 
         Behavior on scale {
+            enabled: !popup.frameConnected
             NumberAnimation {
                 duration: popup.motion.fast
                 easing.type: popup.motion.enterType
