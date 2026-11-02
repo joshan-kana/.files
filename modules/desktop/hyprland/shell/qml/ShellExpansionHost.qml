@@ -20,6 +20,14 @@ PanelWindow {
     property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
+    // One shared visibility track for Controls and every detail gallery.
+    property real chromeOpacity: expansionState.hasCurrent && contentExpanded ? 1 : 0
+    Behavior on chromeOpacity {
+        Anim {
+            motion: host.motion
+            type: Anim.FastEffects
+        }
+    }
     property bool themeTerminalActive: false
     property bool keyboardFocusReady: false
 
@@ -379,7 +387,8 @@ PanelWindow {
         width: Math.min(host.viewportWidth, host.targetWidth)
         height: Math.min(host.viewportHeight, host.targetHeight)
         clip: true
-        opacity: host.contentExpanded && host.expansionState.hasCurrent ? 1 : 0
+        // Keep the backing surface visible until the closing geometry finishes.
+        opacity: host.expansionState.hasCurrent || host.closing ? 1 : 0
 
         Behavior on width {
             NumberAnimation {
@@ -428,8 +437,16 @@ PanelWindow {
             }
         }
 
+        // The prewarmed page grows with the viewport, including Themes and
+        // Wallpaper. Do not wait until the outer squircle is nearly full size.
+        readonly property real contentReveal: {
+            const fraction = Math.min(width / Math.max(1, host.contentWidth), height / Math.max(1, host.contentHeight));
+            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.18) / 0.72));
+        }
+
         HubTabs {
             id: tabs
+            opacity: shellSurface.contentReveal
             anchors {
                 left: parent.left
                 right: parent.right
@@ -447,6 +464,7 @@ PanelWindow {
 
         Column {
             id: hubFooter
+            opacity: shellSurface.contentReveal
             width: Math.max(1, parent.width - host.theme.spacing3 * 2)
             height: implicitHeight
             anchors {
@@ -519,6 +537,7 @@ PanelWindow {
 
         Flickable {
             id: contentViewport
+            opacity: shellSurface.contentReveal
             anchors {
                 top: tabs.bottom
                 left: parent.left
@@ -658,22 +677,28 @@ PanelWindow {
             }
         }
 
-        WidgetHelp {
-            id: scopedHelp
-            keyboardScroll: true
+        Item {
+            z: 200
             anchors.fill: parent
-            runtime: host.runtime
-            theme: host.theme
-            motion: host.motion
-            open: host.helpVisible
-            title: host.helpCaption
-            bindings: host.helpKeys
-            backdropRadius: host.theme.radiusPanel
-            onDismissed: {
-                if (host.systemContent)
-                    host.systemContent.helpOpen = false;
-                else if (host.mediaContent)
-                    host.mediaContent.helpOpen = false;
+            opacity: shellSurface.contentReveal
+
+            WidgetHelp {
+                id: scopedHelp
+                keyboardScroll: true
+                anchors.fill: parent
+                runtime: host.runtime
+                theme: host.theme
+                motion: host.motion
+                open: host.helpVisible
+                title: host.helpCaption
+                bindings: host.helpKeys
+                backdropRadius: host.theme.radiusPanel
+                onDismissed: {
+                    if (host.systemContent)
+                        host.systemContent.helpOpen = false;
+                    else if (host.mediaContent)
+                        host.mediaContent.helpOpen = false;
+                }
             }
         }
 
