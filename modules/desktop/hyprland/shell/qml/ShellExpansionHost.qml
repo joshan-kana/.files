@@ -191,7 +191,10 @@ PanelWindow {
     // Keep the layer as small as the hub's compositor-safe viewport.
     // A fullscreen transparent backing needlessly multiplies blur work
     // when Frosted Glass is enabled, especially on high-DPI displays.
-    readonly property real viewportWidth: screen ? Math.min(screen.width - theme.spacing4 * 2, Math.max(960, contentWidth)) : 1
+    // Keep the Wayland layer at a stable, prewarmed detail viewport size.
+    // Resizing this layer at the same time as the inner squircle and GridView
+    // forces a compositor surface reallocation and stalls their animation.
+    readonly property real viewportWidth: screen ? Math.max(1, Math.min(screen.width - theme.spacing4 * 2, theme.controlsDetailWidth + theme.spacing4 * 2)) : 1
     readonly property real viewportHeight: screen ? Math.max(1, screen.height - (theme.barHeight + theme.spacing1) - theme.spacing4) : 1
     // Match the bar's measured source when it lies inside our compositor-safe
     // viewport. Off-viewport islands start at the nearest visible edge, rather
