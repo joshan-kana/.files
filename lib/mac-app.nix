@@ -12,6 +12,14 @@
   license,
   unpacker ? prev.undmg,
   autoUpdate ? true,
+  updateUrl ? null,
+  updateGroup ? null,
+  updateScript ? [
+    "${prev.python3}/bin/python3"
+    "${../scripts/update-cask.py}"
+    token
+  ]
+  ++ prev.lib.optional (updateDir != token) updateDir,
 }:
 let
   versions = prev.lib.splitString "," release.version;
@@ -27,13 +35,15 @@ prev.stdenvNoCC.mkDerivation {
     url = url metadata;
     inherit (release) hash;
   };
-  passthru.autoUpdate = autoUpdate;
-  passthru.updateScript = [
-    "${prev.python3}/bin/python3"
-    "${../scripts/update-cask.py}"
-    token
-  ]
-  ++ prev.lib.optional (updateDir != token) updateDir;
+  passthru = {
+    inherit autoUpdate;
+  }
+  // prev.lib.optionalAttrs (updateScript != null) { inherit updateScript; }
+  // prev.lib.optionalAttrs (updateScript == null) {
+    updateFilename = "overlays/${updateDir}/default.nix";
+  }
+  // prev.lib.optionalAttrs (updateUrl != null) { inherit updateUrl; }
+  // prev.lib.optionalAttrs (updateGroup != null) { inherit updateGroup; };
   nativeBuildInputs = [ unpacker ];
   sourceRoot = ".";
   dontBuild = true;
