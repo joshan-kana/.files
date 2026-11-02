@@ -383,6 +383,7 @@ in
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     {
@@ -396,6 +397,7 @@ in
       '';
     }
     // lib.optionalAttrs isLinux {
+      home.packages = [ (lib.hiPrio pkgs.breeze-camera-photo-fixed) ];
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
           light = "prefer-light";
