@@ -42,6 +42,7 @@ _: {
     ./determinate-nix
     ./hermes-agent
     ./matrix-bridges
+    ./neodisk
     ./ncmpcpp
     ./mpv
     ./openclaw

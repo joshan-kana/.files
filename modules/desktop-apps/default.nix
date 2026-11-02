@@ -31,6 +31,12 @@ in
     };
   };
 
+  neodisk = _: {
+    home = _: {
+      home.packages = [ (if isDarwin then pkgs.neodisk-mac else pkgs.neodisk) ];
+    };
+  };
+
   bitwarden = _: {
     home = _: {
       home.packages = [ pkgs.bitwarden-desktop ];
