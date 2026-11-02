@@ -219,3 +219,23 @@ test("bounded stroke uses local coordinates without changing the traced path", (
   );
   assert.ok(segments > 30);
 });
+
+test("reduced-motion busy segment is a distinct valid open contour", () => {
+  const shown = trace.stationaryPath(points, 340, 0.12);
+  assert.match(shown, /^M [-\d.]+ [-\d.]+ L /);
+  assert.doesNotMatch(shown, /Z\s*$/);
+  assert.ok(shown.length < trace.stationaryPath(points, 340, 1).length);
+  assert.equal(
+    shown,
+    trace.stationaryPath(points, 340, 0.12),
+    "reduced motion must not repaint with time",
+  );
+  assert.equal(trace.stationaryPath([], 0), "");
+  const vertices = [...shown.matchAll(/[ML] (-?[\d.]+) (-?[\d.]+)/g)];
+  assert.ok(vertices.length > 4 && vertices.length < 100);
+  for (const point of vertices) {
+    assert.ok(
+      Number.isFinite(Number(point[1])) && Number.isFinite(Number(point[2])),
+    );
+  }
+});
