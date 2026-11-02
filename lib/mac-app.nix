@@ -13,6 +13,7 @@
   unpacker ? prev.undmg,
   autoUpdate ? true,
   updateUrl ? null,
+  updateGroup ? null,
   updateScript ? [
     "${prev.python3}/bin/python3"
     "${../scripts/update-cask.py}"
@@ -41,7 +42,8 @@ prev.stdenvNoCC.mkDerivation {
   // prev.lib.optionalAttrs (updateScript == null) {
     updateFilename = "overlays/${updateDir}/default.nix";
   }
-  // prev.lib.optionalAttrs (updateUrl != null) { inherit updateUrl; };
+  // prev.lib.optionalAttrs (updateUrl != null) { inherit updateUrl; }
+  // prev.lib.optionalAttrs (updateGroup != null) { inherit updateGroup; };
   nativeBuildInputs = [ unpacker ];
   sourceRoot = ".";
   dontBuild = true;

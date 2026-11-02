@@ -501,6 +501,12 @@
         inherit semanticScopeOptions themedNixosConfigurations themedDarwinConfigurations;
         schemaRegistry = (import ./lib/schemas { inherit inputs lib; }).registry;
         updateablePackages = forAllSystems (system: builtins.attrNames (updatePackagesFor system));
+        updateGroups = forAllSystems (
+          system:
+          lib.filterAttrs (_: group: group != null) (
+            lib.mapAttrs (_: package: package.passthru.updateGroup or null) (updatePackagesFor system)
+          )
+        );
         routinePackageUpdates = forAllSystems (
           system:
           lib.filter (name: (updatePackagesFor system).${name}.passthru.autoUpdate) (

@@ -63,6 +63,23 @@ update_package() {
     nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
+  group="$(nix eval --raw ".#packages.$system.$1.passthru.updateGroup" 2>/dev/null || true)"
+  if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
+    # One upstream release can publish different archives and hashes per platform.
+    while IFS=$'\t' read -r sibling_system sibling; do
+      [[ "$sibling_system/$sibling" == "$system/$1" ]] && continue
+      sibling_filename="$(nix eval --raw ".#packages.$sibling_system.$sibling.passthru.updateFilename" 2>/dev/null || true)"
+      sibling_args=()
+      [[ -z "$sibling_filename" ]] || sibling_args=(--override-filename "$sibling_filename")
+      nix-update --flake --system "$sibling_system" "${sibling_args[@]}" --version skip "$sibling"
+    done < <(
+      nix eval --json .#lib.updateGroups |
+        jq -r --arg group "$group" '
+          to_entries[] | .key as $system | .value | to_entries[]
+          | select(.value == $group) | [$system, .key] | @tsv
+        '
+    )
+  fi
   if [[ "$source_before" == "$source_after" ]]; then
     if [[ "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
       echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
