@@ -767,7 +767,7 @@ test("clock reappears with the closing hub morph rather than a binary timer swit
   assert.match(shell, /clockReveal: resizeOverlay\.open/);
 });
 
-test("the inactive frame operation trace cannot paint the corner placeholder", () => {
+test("frame pulse is only painted during active reduced-motion loading", () => {
   const qml = fs.readFileSync(
     path.join(
       __dirname,
@@ -777,12 +777,10 @@ test("the inactive frame operation trace cannot paint the corner placeholder", (
   );
   assert.match(
     qml,
-    /strokeColor: output\.exposed && output\.busyHere && !frame\.motion\.enabled \? Qt\.rgba\([\s\S]*?\) : "transparent"/,
+    /OutlinePulse\s*\{[\s\S]*?active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
   );
-  assert.match(
-    qml,
-    /path: output\.exposed && output\.busyHere && !frame\.motion\.enabled \? \(OutlineTrace\.stationaryPath\(output\.geometry\.points, output\.geometry\.length, 0\.10\)/,
-  );
+  assert.match(qml, /contourPath: output\.geometry\.inner/);
+  assert.doesNotMatch(qml, /stationaryPath/);
 });
 
 test("motion-enabled frame loading uses the shared tapered glowing tracer", () => {
@@ -806,10 +804,7 @@ test("motion-enabled frame loading uses the shared tapered glowing tracer", () =
     qml,
     /visible: output\.exposed && output\.busyHere && frame\.motion\.enabled/,
   );
-  assert.match(
-    qml,
-    /strokeColor: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
-  );
+  assert.match(qml, /OutlinePulse\s*\{/);
 });
 
 test("the hub's content reveal follows its surface without leaving visible clipped fragments", () => {
@@ -894,26 +889,36 @@ test("moving full-screen loading trace uses a bounded Canvas texture", () => {
   assert.doesNotMatch(qml, /id: busyTrace\s+anchors\.fill: parent/);
 });
 
-test("motion-off loading remains visibly distinct without animation work", () => {
+test("reduced-motion loading softly pulses the entire outline on both surfaces", () => {
   const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
   const frame = fs.readFileSync(path.join(root, "DesktopFrame.qml"), "utf8");
   const outline = fs.readFileSync(
     path.join(root, "LoadingOutline.qml"),
     "utf8",
   );
+  const pulse = fs.readFileSync(path.join(root, "OutlinePulse.qml"), "utf8");
   assert.match(
     frame,
-    /OutlineTrace\.stationaryPath\(output\.geometry\.points, output\.geometry\.length, 0\.10\)/,
+    /OutlinePulse\s*\{[\s\S]*?active: output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
   );
+  assert.match(frame, /contourPath: output\.geometry\.inner/);
   assert.match(
-    frame,
-    /output\.exposed && output\.busyHere && !frame\.motion\.enabled/,
+    outline,
+    /OutlinePulse\s*\{[\s\S]*?active: outline\.active && !outline\.motionEnabled/,
   );
   assert.match(
     outline,
-    /OutlineTrace\.stationaryPath\(outline\.contour, outline\.perimeter, outline\.segmentFraction\)/,
+    /contourPath: outline\.surface\.buildPath\(outline\.inset\)/,
   );
+  assert.match(pulse, /SequentialAnimation on intensity/);
+  assert.match(pulse, /running: pulse\.active/);
+  assert.match(pulse, /loops: Animation\.Infinite/);
+  assert.equal((pulse.match(/duration: 1800/g) || []).length, 2);
+  assert.match(pulse, /opacity: pulse\.intensity/);
+  assert.match(pulse, /strokeWidth: pulse\.lineWidth \* 4/);
+  assert.match(pulse, /strokeWidth: pulse\.lineWidth\s*\n/);
+  assert.match(pulse, /path: pulse\.contourPath/);
+  assert.doesNotMatch(pulse, /Canvas|requestPaint/);
   assert.match(outline, /visible: outline\.active && outline\.motionEnabled/);
   assert.match(outline, /running: outline\.active && outline\.motionEnabled/);
-  assert.doesNotMatch(frame, /dashOffset: -frame\.progress/);
 });

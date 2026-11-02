@@ -134,19 +134,14 @@ Variants {
                         path: output.geometry.inner || "M 0 0 L 0.01 0 L 0 0.01 Z"
                     }
                 }
-                ShapePath {
-                    fillColor: "transparent"
-                    // An unused PathSvg keeps a tiny valid placeholder path.
-                    // Never paint its stroke when no operation is running.
-                    strokeColor: output.exposed && output.busyHere && !frame.motion.enabled ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, 0.90) : "transparent"
-                    strokeWidth: 2
-                    joinStyle: ShapePath.RoundJoin
-                    capStyle: ShapePath.RoundCap
-                    strokeStyle: ShapePath.SolidLine
-                    PathSvg {
-                        path: output.exposed && output.busyHere && !frame.motion.enabled ? (OutlineTrace.stationaryPath(output.geometry.points, output.geometry.length, 0.10) || "M 0 0 L 0.01 0 L 0 0.01 Z") : "M 0 0 L 0.01 0 L 0 0.01 Z"
-                    }
-                }
+            }
+
+            OutlinePulse {
+                anchors.fill: parent
+                active: output.exposed && output.busyHere && !frame.motion.enabled
+                contourPath: output.geometry.inner
+                highlightColor: frame.theme.accent
+                lineWidth: 2
             }
 
             Canvas {
