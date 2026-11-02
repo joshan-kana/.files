@@ -35,7 +35,9 @@ ShellRoot {
         runtime: runtime
         expansionGlassExposed: expansionState.hasCurrent || expansionHost.closing
         modalGlassExposed: modalHost.contentVisible
-        notificationGlassExposed: notifications.popupVisible || notificationPopup.closing
+        // Popup ownership includes closing cards until their exit completes.
+        // NotificationPopup has no separate closing property.
+        notificationGlassExposed: notifications.popupVisible
         osdGlassExposed: osd.visible || osdPopup.closing
     }
 
