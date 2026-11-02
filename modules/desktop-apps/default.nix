@@ -147,6 +147,14 @@ in
     };
   };
 
+  squirreldisk = _: {
+    home =
+      _:
+      lib.optionalAttrs (isDarwin || isLinux) {
+        home.packages = [ (if isDarwin then pkgs.squirreldisk-mac else pkgs.squirreldisk) ];
+      };
+  };
+
   libreoffice =
     _:
     (
