@@ -57,7 +57,10 @@ update_package() {
       python3 "${command[@]:1}"
     fi
   else
-    nix-update --flake --system "$system" "${url_args[@]}" --version "$mode" "$1"
+    filename="$(nix eval --raw ".#packages.$system.$1.passthru.updateFilename" 2>/dev/null || true)"
+    filename_args=()
+    [[ -z "$filename" ]] || filename_args=(--override-filename "$filename")
+    nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   if [[ "$source_before" == "$source_after" ]]; then
