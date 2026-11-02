@@ -107,9 +107,11 @@ QtObject {
     readonly property int controlsDetailWidth: 1120
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
-    readonly property int barHeight: 70
-    readonly property int barInsetTop: 12
-    readonly property int barInsetBottom: 8
+    // The visible islands are vertically centred inside the reserved bar.
+    readonly property int barIslandHeight: 50
+    readonly property int barInsetTop: 16
+    readonly property int barInsetBottom: barInsetTop
+    readonly property int barHeight: barIslandHeight + barInsetTop + barInsetBottom
     readonly property real squircleExponent: runtime.squircleExponent
 
     // Use the palette's own luminance rather than a separate dark/light flag:
