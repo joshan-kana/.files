@@ -431,8 +431,9 @@ in
               }:
               let
                 colors = config.lib.stylix.colors.withHashtag;
+                themeFlakeSubdirectory = "modules/theme";
                 configuredTheme =
-                  if configurationFlakeSubdirectory == "themes" then
+                  if configurationFlakeSubdirectory == themeFlakeSubdirectory then
                     lib.removePrefix "${configurationName}-" configurationOutputName
                   else
                     themeRegistry.default;
@@ -480,6 +481,9 @@ in
                   text = ''
                     configuredTheme=${lib.escapeShellArg configuredTheme}
                     repoPath=${lib.escapeShellArg osConfig.dotfiles.paths.repoPath}
+                    # A nested path flake loses access to its parent source.
+                    # The root-source dir URL preserves the full locked flake.
+                    themeFlakeRef="path:$repoPath?dir=${themeFlakeSubdirectory}"
                     manifest=${lib.escapeShellArg (toString themeManifest)}
                     expectedUser=${lib.escapeShellArg osConfig.dotfiles.users.primary.name}
                     operationDir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/theme-operation"
@@ -561,11 +565,11 @@ in
                         trap finish_operation EXIT
                         set_phase building
                         printf 'Building %s...\n' "$selected"
-                        ${lib.getExe pkgs.nh} os build "$repoPath/themes" --hostname "${configurationName}-$selected" --diff never
+                        ${lib.getExe pkgs.nh} os build "$themeFlakeRef" --hostname "${configurationName}-$selected" --diff never
                         set_phase authorizing
                         printf 'Requesting permission to activate %s...\n' "$selected"
                         set_phase activating
-                        ${lib.getExe pkgs.nh} os switch "$repoPath/themes" --hostname "${configurationName}-$selected" --diff never
+                        ${lib.getExe pkgs.nh} os switch "$themeFlakeRef" --hostname "${configurationName}-$selected" --diff never
                         printf 'Activated %s.\n' "$selected"
                         ;;
                       *)
