@@ -19,6 +19,7 @@ _: {
           inherit homepage license;
           unpacker = prev.unzip;
           updateScript = null;
+          updateGroup = "neodisk";
           updateUrl = "https://github.com/tkslucas/Neodisk";
           url =
             r: "https://github.com/tkslucas/Neodisk/releases/download/v${r.version}/Neodisk-${r.version}.zip";
@@ -47,7 +48,10 @@ _: {
                   else
                     "sha256-RIEvy3NbTUUMh6Q4f92sr7q/KtIQ40rU2jXjwZrKAzE=";
               };
-              passthru.autoUpdate = true;
+              passthru = {
+                autoUpdate = true;
+                updateGroup = "neodisk";
+              };
               appimageContents = prev.appimageTools.extract { inherit pname version src; };
               extraInstallCommands = ''
                 install -Dm444 "${appimageContents}/com.lucastakayasu.Neodisk.desktop" "$out/share/applications/com.lucastakayasu.Neodisk.desktop"
