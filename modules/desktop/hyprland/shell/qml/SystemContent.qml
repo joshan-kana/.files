@@ -21,12 +21,14 @@ FocusScope {
     required property bool wallpaperSpectrumEnabled
     required property bool musicReactiveEnabled
     required property bool barVisible
+    required property bool frameVisible
     required property bool windowTransparencyEnabled
     required property bool shellGlassEnabled
 
     signal wallpaperSpectrumToggleRequested
     signal musicReactiveToggleRequested
     signal barToggleRequested
+    signal frameToggleRequested
     signal windowTransparencyToggleRequested
     signal shellGlassToggleRequested
     signal restoreDefaultsRequested
@@ -653,6 +655,33 @@ FocusScope {
             spacing: root.theme.spacing2
 
             Row {
+                id: controlsClock
+                visible: true
+                width: parent.width
+                height: 30
+                spacing: root.theme.spacing2
+                SystemClock {
+                    id: controlsDateTime
+                    precision: SystemClock.Minutes
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Qt.formatDateTime(controlsDateTime.date, "ddd d MMM yyyy")
+                    color: root.theme.textMuted
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(12)
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Qt.formatDateTime(controlsDateTime.date, "h:mm AP")
+                    color: root.theme.textStrong
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontSize(16)
+                    font.weight: Font.Bold
+                }
+            }
+
+            Row {
                 id: controlsHeading
                 width: parent.width
                 height: 40
@@ -930,10 +959,10 @@ FocusScope {
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
                 spacing: root.theme.spacing2
-                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 4
+                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 3
 
                 function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 8 - Math.floor(index / columns) * columns);
+                    const itemsInRow = Math.min(columns, 9 - Math.floor(index / columns) * columns);
                     return (width - spacing * (itemsInRow - 1)) / itemsInRow;
                 }
 
@@ -1012,6 +1041,20 @@ FocusScope {
                     runtime: root.runtime
                     theme: root.theme
                     motion: root.motion
+                    icon: root.frameVisible ? "󰏗" : "󰏖"
+                    title: root.frameVisible ? "Frame visible" : "Frame hidden"
+                    shortcut: "SHIFT+V"
+                    active: root.frameVisible
+                    activeColor: root.theme.roleColor("display")
+                    onActivated: root.frameToggleRequested()
+                }
+
+                QuickSettingChip {
+                    width: visualModeStrip.cellWidth(6)
+                    height: 78
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
                     icon: root.motion.enabled ? "󰐊" : "󰏤"
                     title: root.motion.enabled ? "Animations" : "Reduced motion"
                     shortcut: "R"
@@ -1021,7 +1064,7 @@ FocusScope {
                 }
 
                 AdjustableSetting {
-                    width: visualModeStrip.cellWidth(6)
+                    width: visualModeStrip.cellWidth(7)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -1042,7 +1085,7 @@ FocusScope {
                     onIncreaseRequested: root.nightLight.cooler()
                 }
                 QuickSettingChip {
-                    width: visualModeStrip.cellWidth(7)
+                    width: visualModeStrip.cellWidth(8)
                     height: 78
                     runtime: root.runtime
                     theme: root.theme
@@ -1998,6 +2041,9 @@ FocusScope {
                     event.accepted = true;
                 } else if (event.key === Qt.Key_N && (event.modifiers & Qt.ShiftModifier)) {
                     root.musicReactiveToggleRequested();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_V && (event.modifiers & Qt.ShiftModifier)) {
+                    root.frameToggleRequested();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_B && (event.modifiers & Qt.ShiftModifier)) {
                     root.barToggleRequested();
