@@ -153,10 +153,18 @@ Variants {
 
             Canvas {
                 id: busyTrace
-                anchors.fill: parent
+                readonly property var bounds: output.exposed && output.busyHere && frame.motion.enabled ? OutlineTrace.traceBounds(output.geometry.points, output.geometry.length, frame.progress, 0.10, 24, drawing.width, drawing.height) : null
+                x: bounds ? bounds.x : 0
+                y: bounds ? bounds.y : 0
+                width: bounds ? bounds.width : 1
+                height: bounds ? bounds.height : 1
                 visible: output.exposed && output.busyHere && frame.motion.enabled
                 antialiasing: true
-                onPaint: OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.theme.accent, 2, width, height)
+                onPaint: {
+                    if (bounds)
+                        OutlineTrace.paint(getContext("2d"), output.geometry.points, output.geometry.length, frame.progress, 0.10, frame.theme.accent, 2, width, height, bounds.x, bounds.y, bounds);
+                }
+                onBoundsChanged: requestPaint()
                 Connections {
                     target: frame
                     function onProgressChanged() {

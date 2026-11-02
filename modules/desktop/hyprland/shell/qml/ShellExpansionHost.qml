@@ -217,10 +217,12 @@ PanelWindow {
             geometryUpdate.restart();
         }
     }
-    // Only frameless + barless mode floats at its final size. A connected
-    // frame grows from the edge even when the persistent bar is disabled.
-    readonly property real targetWidth: !frameVisible && !barVisible ? Math.max(contentWidth, expansionState.originWidth) : contentExpanded ? Math.max(expansionState.originWidth, contentWidth) : expansionState.originWidth
-    readonly property real targetHeight: !frameVisible && !barVisible ? Math.max(contentHeight, expansionState.originHeight) : contentExpanded ? Math.max(expansionState.originHeight, contentHeight) : expansionState.originHeight
+    // With neither frame nor bar, the floating hub opens at its natural size.
+    // That shortcut must NOT apply while closing: it prevented the normal
+    // width/height animations from receiving a smaller target at all.
+    readonly property bool floatingOpen: !frameVisible && !barVisible && !closing
+    readonly property real targetWidth: floatingOpen || contentExpanded ? Math.max(contentWidth, expansionState.originWidth) : expansionState.originWidth
+    readonly property real targetHeight: floatingOpen || contentExpanded ? Math.max(contentHeight, expansionState.originHeight) : expansionState.originHeight
     // Keep the layer as small as the hub's compositor-safe viewport.
     // A fullscreen transparent backing needlessly multiplies blur work
     // when Frosted Glass is enabled, especially on high-DPI displays.

@@ -794,10 +794,13 @@ test("motion-enabled frame loading uses the shared tapered glowing tracer", () =
     "utf8",
   );
   assert.match(qml, /import "OutlineTrace\.js" as OutlineTrace/);
-  assert.match(qml, /Canvas\s*\{[\s\S]*?onPaint: OutlineTrace\.paint/);
   assert.match(
     qml,
-    /            Canvas\s*\{[\s\S]*?onPaint: OutlineTrace\.paint/,
+    /Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
+  );
+  assert.match(
+    qml,
+    /            Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
   );
   assert.match(
     qml,
@@ -840,4 +843,50 @@ test("the hub's content reveal follows its surface without leaving visible clipp
     /id: scopedHelp\s+opacity: shellSurface\.contentReveal/,
   );
   assert.match(qml, /fillColor: host\.theme\.background/);
+});
+
+test("barless frameless hub has a real close-morph target", () => {
+  const source = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/ShellExpansionHost.qml",
+    ),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /floatingOpen: !frameVisible && !barVisible && !closing/,
+  );
+  assert.match(
+    source,
+    /targetWidth: floatingOpen \|\| contentExpanded \? Math\.max\(contentWidth, expansionState\.originWidth\) : expansionState\.originWidth/,
+  );
+  assert.match(
+    source,
+    /targetHeight: floatingOpen \|\| contentExpanded \? Math\.max\(contentHeight, expansionState\.originHeight\) : expansionState\.originHeight/,
+  );
+  const size = (framed, bar, closing, expanded, value, origin) =>
+    (!framed && !bar && !closing) || expanded
+      ? Math.max(value, origin)
+      : origin;
+  assert.equal(size(false, false, false, true, 900, 40), 900);
+  assert.equal(size(false, false, true, false, 900, 40), 40);
+  assert.equal(size(false, true, true, false, 900, 50), 50);
+  assert.equal(size(true, false, true, false, 900, 50), 50);
+  assert.equal(size(true, true, true, false, 900, 50), 50);
+});
+
+test("moving full-screen loading trace uses a bounded Canvas texture", () => {
+  const qml = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/DesktopFrame.qml",
+    ),
+    "utf8",
+  );
+  assert.match(qml, /OutlineTrace\.traceBounds\(output\.geometry\.points/);
+  assert.match(qml, /width: bounds \? bounds\.width : 1/);
+  assert.match(qml, /height: bounds \? bounds\.height : 1/);
+  assert.match(qml, /onBoundsChanged: requestPaint\(\)/);
+  assert.doesNotMatch(qml, /id: busyTrace\s+anchors\.fill: parent/);
 });
