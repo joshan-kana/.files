@@ -52,21 +52,39 @@ function contour(width, height, inset, surface) {
 
 function atDistance(points, length, distance) {
   const offset = ((distance % length) + length) % length;
-  for (let i = 1; i < points.length; ++i) {
-    const next = points[i];
-    if (offset <= next.at) {
-      const prev = points[i - 1];
-      const fraction =
-        (offset - prev.at) / Math.max(0.00001, next.at - prev.at);
-      return {
-        x: prev.x + (next.x - prev.x) * fraction,
-        y: prev.y + (next.y - prev.y) * fraction,
-      };
-    }
+  // Cumulative path positions are sorted: binary search avoids scanning the
+  // complete monitor frame for each sample at every animation tick.
+  let lo = 1;
+  let hi = points.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].at < offset) lo = mid + 1;
+    else hi = mid - 1;
   }
-  return points[0] || { x: 0, y: 0 };
+  if (lo < points.length) {
+    const next = points[lo];
+    const prev = points[lo - 1];
+    const t = (offset - prev.at) / Math.max(0.00001, next.at - prev.at);
+    return {
+      x: prev.x + (next.x - prev.x) * t,
+      y: prev.y + (next.y - prev.y) * t,
+    };
+  }
+  // Frame geometry closes with a final segment from the last vertex to the
+  // first. Interpolate it instead of teleporting the trace through the corner.
+  const last = points[points.length - 1];
+  const first = points[0];
+  const closing = Math.max(0.00001, length - last.at);
+  const t = Math.max(0, Math.min(1, (offset - last.at) / closing));
+  return {
+    x: last.x + (first.x - last.x) * t,
+    y: last.y + (first.y - last.y) * t,
+  };
 }
 
+// A tapered head is built from short strokes along the actual squircle path.
+// Two passes share these samples: a wide translucent halo and a crisp core.
+// The tail falls away smoothly instead of ending in a blunt dash.
 function paint(
   ctx,
   points,
@@ -79,25 +97,57 @@ function paint(
   height,
 ) {
   ctx.clearRect(0, 0, width, height);
-  if (points.length < 2) return;
+  if (points.length < 2 || length <= 0) return;
 
-  const start = length * (circuit % 1);
-  const end = start + length * fraction;
-  const first = atDistance(points, length, start);
-  const last = atDistance(points, length, end);
-  ctx.beginPath();
-  ctx.moveTo(first.x, first.y);
-  for (let cycle = 0; cycle <= 1; ++cycle) {
-    for (let i = 1; i < points.length; ++i) {
-      const point = points[i];
-      const position = point.at + cycle * length;
-      if (position > start && position < end) ctx.lineTo(point.x, point.y);
+  const head = length * (((circuit % 1) + 1) % 1);
+  const span = length * fraction;
+  // Preserve each actual contour vertex (particularly the small concave
+  // shoulders), then subdivide long straights. Uniform sparse sampling draws
+  // diagonal shortcuts through tight corners as the highlight travels.
+  const tail = head - span;
+  const positions = [tail, head];
+  const maxStep = 7;
+  for (let at = tail + maxStep; at < head; at += maxStep) positions.push(at);
+  for (
+    let lap = Math.floor(tail / length);
+    lap <= Math.ceil(head / length);
+    lap++
+  ) {
+    for (const point of points) {
+      const at = lap * length + point.at;
+      if (at > tail && at < head) positions.push(at);
     }
   }
-  ctx.lineTo(last.x, last.y);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.stroke();
+  positions.sort((a, b) => a - b);
+  const samples = [];
+  for (const at of positions) {
+    if (samples.length && at - samples[samples.length - 1].at < 0.0001)
+      continue;
+    const point = atDistance(points, length, at);
+    samples.push({ x: point.x, y: point.y, at });
+  }
+
+  const rgb = `${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}`;
+  for (const layer of [
+    { scale: 7, alpha: 0.025 },
+    { scale: 4.5, alpha: 0.045 },
+    { scale: 2.5, alpha: 0.075 },
+    { scale: 1, alpha: 0.88 },
+  ]) {
+    for (let i = 0; i < samples.length - 1; i++) {
+      const strength = ((samples[i].at + samples[i + 1].at) / 2 - tail) / span;
+      const taper = 0.1 + 0.9 * strength * strength;
+      const alpha = layer.alpha * strength * strength;
+      ctx.beginPath();
+      ctx.moveTo(samples[i].x, samples[i].y);
+      ctx.lineTo(samples[i + 1].x, samples[i + 1].y);
+      ctx.strokeStyle = `rgba(${rgb}, ${alpha})`;
+      ctx.lineWidth = lineWidth * taper * layer.scale;
+      // Short contour segments should not accumulate luminous blobs where
+      // their ends meet. Only the crisp foreground has rounded endpoints.
+      ctx.lineCap = layer.scale === 1 ? "round" : "butt";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
+  }
 }
