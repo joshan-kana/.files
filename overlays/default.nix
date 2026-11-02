@@ -4,6 +4,7 @@ _: {
   imports = [
     ./bottles
     ./brave
+    ./breeze-icons
     ./comin
     ./configarr
     ./cosmic-noir-icons

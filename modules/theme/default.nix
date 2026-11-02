@@ -382,12 +382,14 @@ in
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     {
       stylix.targets.qt.platform = "kde";
     }
     // lib.optionalAttrs isLinux {
+      home.packages = [ (lib.hiPrio pkgs.breeze-camera-photo-fixed) ];
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (
         {
           light = "prefer-light";
