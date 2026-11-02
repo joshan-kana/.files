@@ -11,8 +11,8 @@ _: {
             {
               token = "chatgpt";
               release = {
-                version = "26.1027.30824";
-                hash = "sha256-eQGLzcwUGQLZoOYZUOwgf3GVGUHbQWX4oNwtyPDcyIM=";
+                version = "26.1027.61615";
+                hash = "sha256-oi6B/55S5/MAbGV/8gBsA0mCh2paigArv5wA+/gwfyM=";
               };
               pname = "chatgpt-mac";
               appName = "ChatGPT.app";
