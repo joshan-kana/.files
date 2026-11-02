@@ -3,6 +3,9 @@ import QtQuick.Shapes
 
 Item {
     id: root
+    SquircleGeometry {
+        id: geometry
+    }
 
     default property alias contentData: content.data
 
@@ -38,15 +41,7 @@ Item {
     // and leave very long first/last segments. Reparameterise the quarter arc
     // so samples are distributed much more evenly around the visible curve.
     function cornerProgress(progress: real): real {
-        if (progress <= 0)
-            return 0;
-        if (progress >= 1)
-            return 1;
-
-        const power = exponent / 2;
-        const leading = Math.pow(progress, power);
-        const trailing = Math.pow(1 - progress, power);
-        return leading / (leading + trailing);
+        return geometry.progress(progress, exponent);
     }
 
     function buildCorner(cx: real, cy: real, radius: real, start: real, end: real): string {
@@ -54,11 +49,8 @@ Item {
         for (let i = 1; i <= cornerSamples; i++) {
             const progress = cornerProgress(i / cornerSamples);
             const t = start + (end - start) * progress;
-            const c = Math.cos(t);
-            const s = Math.sin(t);
-            const px = cx + radius * Math.sign(c) * Math.pow(Math.abs(c), 2 / exponent);
-            const py = cy + radius * Math.sign(s) * Math.pow(Math.abs(s), 2 / exponent);
-            points += " L " + point(px) + " " + point(py);
+            const vertex = geometry.cornerPoint(cx, cy, radius, t, exponent);
+            points += " L " + point(vertex.x) + " " + point(vertex.y);
         }
         return points;
     }
