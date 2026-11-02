@@ -102,6 +102,9 @@ QtObject {
     readonly property int radiusSmall: 14
     readonly property int radiusMedium: 25
     readonly property int radiusIsland: 22
+    // Reserve the largest Controls detail viewport once. Switching gallery
+    // layouts must not resize the Wayland backing layer during its morph.
+    readonly property int controlsDetailWidth: 1120
     readonly property int radiusLarge: 42
     readonly property int radiusPanel: 62
     readonly property int barHeight: 70
