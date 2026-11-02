@@ -558,41 +558,54 @@ test("nearby wells preserve a visible top bridge between their shoulder arcs", (
   );
 });
 
-test("bar island bounds fit entirely inside the shared frame recess", () => {
-  const thickness = 26,
-    rounding = 62,
-    inset = rounding + 8;
-  const screenOffset = thickness;
-  const islandX = screenOffset + inset;
-  const islandY = thickness;
-  const islandHeight = 38;
-  const indicatorHeight = 34;
-  const indicatorTop = islandY + (islandHeight - indicatorHeight) / 2;
-  assert.ok(islandX >= thickness + rounding + 3);
-  assert.ok(indicatorTop >= thickness);
-  assert.ok(indicatorTop + indicatorHeight <= islandY + islandHeight);
-  check(
-    contour(
-      2560,
-      1440,
-      thickness,
-      rounding,
-      4.5,
-      [
-        {
-          x: islandX,
-          y: islandY,
-          width: 66,
-          height: islandHeight,
-          visible: true,
-        },
-      ],
-      null,
-      [],
-      null,
+test("end islands preserve complete contours beyond both outer corner tangents", () => {
+  const thickness = 26;
+  const radius = 62;
+  const inset = thickness + radius + 24;
+  const height = 50;
+  const width = 2560;
+  const endWidth = 230;
+  const islands = [
+    { x: inset, y: thickness, width: 66, height, visible: true },
+    {
+      x: width - inset - endWidth,
+      y: thickness,
+      width: endWidth,
+      height,
+      visible: true,
+    },
+  ];
+  const shape = contour(width, 1440, thickness, radius, 4.5, islands, null, []);
+  check(shape, width, 1440);
+  const outerTangent = thickness + radius;
+  const leftShoulder = inset - outerTangent;
+  assert.ok(leftShoulder >= 20, "workspace must clear the full outer radius");
+  assert.ok(
+    shape.points.some(
+      (p) => p.x > outerTangent && p.x < inset && p.y > thickness,
     ),
-    2560,
-    1440,
+  );
+  assert.ok(
+    shape.points.some(
+      (p) =>
+        p.x > width - inset && p.x < width - outerTangent && p.y > thickness,
+    ),
+  );
+  assert.ok(
+    shape.points.some(
+      (p) =>
+        p.x > inset &&
+        p.x < inset + 66 &&
+        Math.abs(p.y - (thickness + height)) < 0.01,
+    ),
+  );
+  assert.ok(
+    shape.points.some(
+      (p) =>
+        p.x > width - inset - endWidth &&
+        p.x < width - inset &&
+        Math.abs(p.y - (thickness + height)) < 0.01,
+    ),
   );
 });
 
@@ -634,7 +647,7 @@ test("bar and media controls use shared island height and inset", () => {
   const selectionInset = Number(
     theme.match(/property int barSelectionInset: (\d+)/)?.[1],
   );
-  assert.equal(islandHeight, 38);
+  assert.equal(islandHeight, 50);
   assert.ok(selectionInset >= 5);
   assert.ok(2 * selectionInset < islandHeight);
   assert.equal(
@@ -706,6 +719,52 @@ test("frame-mode transitions animate the shared contour and island layout", () =
     fs.readFileSync(path.join(root, "FrameGeometry.js"), "utf8"),
     /squircle\.cornerPoint/,
   );
+});
+
+test("bar reserves equal vertical space and frame joins start at measured screen bounds", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const theme = fs.readFileSync(path.join(root, "Theme.qml"), "utf8");
+  const bar = fs.readFileSync(path.join(root, "AmbientBar.qml"), "utf8");
+  const host = fs.readFileSync(
+    path.join(root, "ShellExpansionHost.qml"),
+    "utf8",
+  );
+  const system = fs.readFileSync(path.join(root, "SystemIsland.qml"), "utf8");
+  assert.match(theme, /property int barInsetBottom: barInsetTop/);
+  assert.match(
+    theme,
+    /property int barHeight: barIslandHeight \+ barInsetTop \+ barInsetBottom/,
+  );
+  assert.match(
+    theme,
+    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing5/,
+  );
+  assert.match(
+    bar,
+    /screenOffset: Math\.max\(0, \(modelData\.width - bar\.width\) \/ 2\)/,
+  );
+  assert.match(host, /topOffset: frameVisible \? theme\.frameThickness/);
+  assert.match(
+    system,
+    /height: 38\s+anchors\.verticalCenter: parent\.verticalCenter/,
+  );
+});
+
+test("clock reappears with the closing hub morph rather than a binary timer switch", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const bar = fs.readFileSync(path.join(root, "AmbientBar.qml"), "utf8");
+  const host = fs.readFileSync(
+    path.join(root, "ShellExpansionHost.qml"),
+    "utf8",
+  );
+  const shell = fs.readFileSync(path.join(root, "shell.qml"), "utf8");
+  assert.match(host, /readonly property real clockReveal:/);
+  assert.match(host, /shellSurface\.width\) \/ span/);
+  assert.match(
+    bar,
+    /visible: bars\.clockReveal > 0\.001\s+opacity: bars\.clockReveal/,
+  );
+  assert.match(shell, /clockReveal: resizeOverlay\.open/);
 });
 
 test("the inactive frame operation trace cannot paint the corner placeholder", () => {

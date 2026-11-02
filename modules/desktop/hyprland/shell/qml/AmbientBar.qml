@@ -19,6 +19,7 @@ Variants {
 
     property bool shown: true
     property bool controlsExpanded: false
+    property real clockReveal: 1
     property bool frameVisible: false
 
     onShownChanged: {
@@ -414,7 +415,8 @@ Variants {
                 // The hub immediately takes ownership of the centred island.
                 // An independent fade would draw clock text over its opening
                 // squircle, while the shared contour is already expanding.
-                visible: !bars.controlsExpanded
+                visible: bars.clockReveal > 0.001
+                opacity: bars.clockReveal
 
                 width: Math.min(parent.width, Math.max(206, clockRow.implicitWidth + bars.theme.spacing4 * 2))
                 height: bars.theme.barIslandHeight

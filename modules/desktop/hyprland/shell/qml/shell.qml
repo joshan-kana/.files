@@ -286,6 +286,7 @@ ShellRoot {
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.
         controlsExpanded: expansionState.hasCurrent || expansionHost.closing || resizeOverlay.open || resizeOverlay.closing
+        clockReveal: resizeOverlay.open || resizeOverlay.closing ? 0 : expansionHost.clockReveal
         shown: appearance.barVisible
         frameVisible: appearance.frameVisible
         runtime: runtime

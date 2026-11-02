@@ -38,8 +38,20 @@ PanelWindow {
             height: shellSurface.height,
             visible: (expansionState.hasCurrent || closing) && shellSurface.opacity > 0.01
         })
-    readonly property real topOffset: frameEnabled || barVisible ? theme.barInsetTop : theme.spacing4
+    readonly property real topOffset: frameVisible ? theme.frameThickness : barVisible ? theme.barInsetTop : theme.spacing4
     readonly property bool frameVisible: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
+    // The bar clock returns as the hub retracts into its source island,
+    // rather than appearing abruptly when closeTimer completes.
+    readonly property real clockReveal: {
+        if (expansionState.hasCurrent)
+            return 0;
+        if (!closing)
+            return 1;
+        const span = Math.max(1, Math.max(contentWidth, expansionState.originWidth) - expansionState.originWidth);
+        const progress = Math.max(0, Math.min(1, (Math.max(contentWidth, expansionState.originWidth) - shellSurface.width) / span));
+        const reveal = Math.max(0, Math.min(1, (progress - 0.55) / 0.45));
+        return reveal * reveal * (3 - 2 * reveal);
+    }
     property bool keyboardFocusReady: false
 
     // Precreate each hub view before its first invocation, including Media and

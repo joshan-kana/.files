@@ -114,11 +114,11 @@ QtObject {
     readonly property int barHeight: barIslandHeight + barInsetTop + barInsetBottom
     readonly property int frameThickness: 26
     readonly property int frameRounding: radiusPanel
-    // The compositor already reserves frameThickness outside the bar.
-    // Offset its first island just beyond the frame's outer squircle corner.
-    readonly property int frameIslandInset: frameRounding + spacing4
+    // End islands must leave room for both the full outer frame corner and
+    // their own inverted shoulder, including the compositor frame inset.
+    readonly property int frameIslandInset: frameThickness + frameRounding + spacing5
     readonly property int frameIslandGap: radiusIsland * 2 + spacing2
-    readonly property int barSelectionInset: 6
+    readonly property int barSelectionInset: 8
     readonly property real squircleExponent: runtime.squircleExponent
 
     // Use the palette's own luminance rather than a separate dark/light flag:

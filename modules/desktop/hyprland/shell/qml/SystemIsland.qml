@@ -80,6 +80,7 @@ Item {
             Text {
                 width: 38
                 height: 38
+                anchors.verticalCenter: parent.verticalCenter
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: island.system.networkConnected ? (island.system.wifiConnected ? "󰤨" : "󰈀") : "󰖪"
@@ -128,6 +129,7 @@ Item {
                 visible: !island.compact
                 width: 24
                 height: 38
+                anchors.verticalCenter: parent.verticalCenter
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: "󰅀"
