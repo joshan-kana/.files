@@ -8,13 +8,13 @@ _: {
         license = prev.lib.licenses.agpl3Only;
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        squirreldisk-mac = import ../../lib/mac-app.nix { inherit prev; } {
+        squirreldisk = import ../../lib/mac-app.nix { inherit prev; } {
           token = "squirreldisk";
           release = {
             inherit version;
             hash = "sha256-E84YnLYNGzx8KYPFqWGNbJoOoJeIyKTQUCkO9Z+Jfgo=";
           };
-          pname = "squirreldisk-mac";
+          pname = "squirreldisk";
           appName = "SquirrelDisk.app";
           inherit homepage license;
           updateScript = null;

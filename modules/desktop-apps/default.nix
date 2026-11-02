@@ -151,7 +151,7 @@ in
     home =
       _:
       lib.optionalAttrs (isDarwin || isLinux) {
-        home.packages = [ (if isDarwin then pkgs.squirreldisk-mac else pkgs.squirreldisk) ];
+        home.packages = [ pkgs.squirreldisk ];
       };
   };
 
