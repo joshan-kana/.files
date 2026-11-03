@@ -38,16 +38,16 @@ _: {
             neodisk = prev.stdenv.mkDerivation {
               pname = "neodisk";
               inherit version;
-              src = prev.fetchurl {
-                url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-${
-                  if prev.stdenv.hostPlatform.isAarch64 then "aarch64" else "x86_64"
-                }.tar.gz";
-                hash =
-                  if prev.stdenv.hostPlatform.isAarch64 then
-                    "sha256-Ad2ClJoNzLeqfN73kHi+ah6Agl8KkUlluMVy30O1drQ="
-                  else
-                    "sha256-L4LUIZ7MLGoho6aWsdgo2zPFGv1DEJpFoSe/nS/nsHk=";
-              };
+              src = prev.fetchurl (
+                prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-linux") {
+                  url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-aarch64.tar.gz";
+                  hash = "sha256-Ad2ClJoNzLeqfN73kHi+ah6Agl8KkUlluMVy30O1drQ=";
+                }
+                // prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "x86_64-linux") {
+                  url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-x86_64.tar.gz";
+                  hash = "sha256-L4LUIZ7MLGoho6aWsdgo2zPFGv1DEJpFoSe/nS/nsHk=";
+                }
+              );
               sourceRoot = ".";
               nativeBuildInputs = with prev; [
                 autoPatchelfHook
