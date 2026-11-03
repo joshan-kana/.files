@@ -20,6 +20,7 @@ PanelWindow {
     property Component activityComponent: null
     property bool contentExpanded: false
     property bool closing: false
+    property int transitionEpoch: 0
     // One shared visibility track for Controls and every detail gallery.
     property real chromeOpacity: expansionState.hasCurrent && contentExpanded ? 1 : 0
     Behavior on chromeOpacity {
@@ -388,6 +389,7 @@ PanelWindow {
         target: host.expansionState
 
         function onHasCurrentChanged(): void {
+            const epoch = ++host.transitionEpoch;
             host.keyboardFocusReady = false;
             if (host.expansionState.hasCurrent) {
                 if (!host.closing)
@@ -396,7 +398,10 @@ PanelWindow {
                 host.closing = false;
                 host.themeTerminalActive = false;
                 host.contentExpanded = false;
-                Qt.callLater(() => host.contentExpanded = true);
+                Qt.callLater(() => {
+                    if (host.transitionEpoch === epoch && host.expansionState.hasCurrent)
+                        host.contentExpanded = true;
+                });
             } else if (host.visible) {
                 host.closing = true;
                 host.contentExpanded = false;
