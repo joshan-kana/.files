@@ -94,9 +94,7 @@ const state = {
   health: null,
   areas: {},
   roomIcons: {},
-  areaIconsLoaded: false,
   deviceRegistry: {},
-  deviceRegistryLoaded: false,
   showReadings: false,
   mediaFilter: "All",
   room: "All",
@@ -108,7 +106,6 @@ const state = {
   users: null,
   quick: false,
   search: "",
-  areasLoaded: false,
   error: "",
   busy: false,
   help: false,
@@ -1574,6 +1571,20 @@ function syncHomeEvents() {
     state.haError = "";
     queueHomeRender();
   });
+  stream.addEventListener("metadata", (message) => {
+    if (homeEvents !== stream) return;
+    const metadata = JSON.parse(message.data);
+    state.areas = metadata.areas || {};
+    state.deviceRegistry = metadata.devices || {};
+    state.roomIcons = metadata.roomIcons || {};
+    queueHomeRender();
+  });
+  stream.addEventListener("metadata-error", () => {
+    if (homeEvents !== stream) return;
+    // State controls still work if an account cannot read a registry.
+    // The next connection or registry event can recover the metadata.
+    toast("Home Assistant room and device details are unavailable", true);
+  });
   stream.addEventListener("status", (message) => {
     if (homeEvents !== stream) return;
     const status = JSON.parse(message.data);
@@ -1596,58 +1607,6 @@ function syncHomeEvents() {
 async function refreshPage(page) {
   syncHomeEvents();
   const jobs = [];
-  if (
-    (page === "home" || page === "overview") &&
-    has("home") &&
-    state.me.credentials.homeassistant &&
-    !state.areasLoaded
-  ) {
-    state.areasLoaded = true;
-    jobs.push(
-      api("/api/ha/areas")
-        .then((v) => {
-          state.areas = v || {};
-        })
-        .catch(() => {
-          state.areas = {};
-        }),
-    );
-  }
-  if (
-    (page === "home" || page === "overview") &&
-    has("home") &&
-    state.me.credentials.homeassistant &&
-    !state.areaIconsLoaded
-  ) {
-    state.areaIconsLoaded = true;
-    jobs.push(
-      api("/api/ha/room-icons")
-        .then((icons) => {
-          state.roomIcons = icons || {};
-        })
-        .catch(() => {
-          state.areaIconsLoaded = false;
-        }),
-    );
-  }
-  if (
-    (page === "home" || page === "overview") &&
-    has("home") &&
-    state.me.credentials.homeassistant &&
-    !state.deviceRegistryLoaded
-  ) {
-    state.deviceRegistryLoaded = true;
-    jobs.push(
-      api("/api/ha/devices")
-        .then((v) => {
-          state.deviceRegistry = v || {};
-        })
-        .catch(() => {
-          state.deviceRegistry = {};
-          state.deviceRegistryLoaded = false;
-        }),
-    );
-  }
   if ((page === "media" || page === "overview") && has("media"))
     for (const service of ["sonarr", "radarr"])
       if (state.me.credentials[service])
@@ -2008,6 +1967,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.refresh) {
+    stopHomeEvents();
     refreshPage(state.page);
     return;
   }
@@ -2152,13 +2112,12 @@ document.addEventListener("submit", async (e) => {
       token = new FormData(f).get("token");
     try {
       await api("/api/credentials/" + service, "PUT", { token });
+      stopHomeEvents();
       state.me.credentials[service] = true;
       toast("Connection saved");
       state.entities = null;
       state.areas = {};
-      state.areasLoaded = false;
       state.deviceRegistry = {};
-      state.deviceRegistryLoaded = false;
       state.arr = {};
       render();
     } catch (err) {

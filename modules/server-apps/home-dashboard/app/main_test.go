@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -80,7 +79,7 @@ func TestPermissionsAndSessionRevocation(t *testing.T) {
 	guestCookie := s.token(user)
 	adminCookie := s.token(admin)
 	status(t, req(s, "GET", "/api/ha/entities", nil, guestCookie, ""), 403)
-	status(t, req(s, "GET", "/api/ha/areas", nil, guestCookie, ""), 403)
+	status(t, req(s, "GET", "/api/ha/events", nil, guestCookie, ""), 403)
 	status(t, req(s, "GET", "/api/users", nil, guestCookie, ""), 403)
 	status(t, req(s, "POST", "/api/ha/action", map[string]any{"entity": "light.room", "action": "toggle"}, guestCookie, "http://example.test"), 403)
 	status(t, req(s, "GET", "/api/catalog", nil, guestCookie, ""), 200)
@@ -329,16 +328,6 @@ func TestDeviceRegistryAndExpandedControlActions(t *testing.T) {
 	defer func() { upstreams["homeassistant"] = previous }()
 	calls := []string{}
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/template" {
-			var request struct {
-				Template string `json:"template"`
-			}
-			json.NewDecoder(r.Body).Decode(&request)
-			if strings.Contains(request.Template, "ns.items") {
-				w.Write([]byte(`[{"entity_id":"light.bambu_chamber","id":"physical-printer","name":"Bambu P2S","room":"Study","model":"P2S"},{"entity_id":"sensor.bambu_temperature","id":"physical-printer","name":"Bambu P2S","room":"Study","model":"P2S"},{"entity_id":"script.untrusted","id":"hidden","name":"Hidden"}]`))
-			}
-			return
-		}
 		calls = append(calls, r.URL.Path)
 		w.Write([]byte(`[]`))
 	}))
@@ -348,19 +337,26 @@ func TestDeviceRegistryAndExpandedControlActions(t *testing.T) {
 	alice := addUser(s, "alice", false, map[string]bool{"home": true})
 	alice.Credentials["homeassistant"] = s.encrypt("personal-token")
 	bobby := addUser(s, "bobby", false, map[string]bool{"media": true})
-	status(t, req(s, "GET", "/api/ha/devices", nil, s.token(bobby), ""), 403)
-	out := req(s, "GET", "/api/ha/devices", nil, s.token(alice), "")
-	status(t, out, 200)
-	var registry map[string]struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-		Room string `json:"room"`
-	}
-	if err := json.Unmarshal(out.Body.Bytes(), &registry); err != nil {
-		t.Fatal(err)
-	}
-	if len(registry) != 2 || registry["light.bambu_chamber"].ID != registry["sensor.bambu_temperature"].ID || registry["light.bambu_chamber"].Name != "Bambu P2S" {
-		t.Fatalf("device grouping failed: %+v", registry)
+	status(t, req(s, "GET", "/api/ha/events", nil, s.token(bobby), ""), 403)
+	registry := buildHomeRegistryMetadata(
+		map[string]homeEntity{
+			"light.bambu_chamber":      {EntityID: "light.bambu_chamber"},
+			"sensor.bambu_temperature": {EntityID: "sensor.bambu_temperature"},
+		},
+		haRegistryData{
+			Entities: haDisplayRegistry{Entities: []haDisplayEntry{
+				{EntityID: "light.bambu_chamber", DeviceID: "physical-printer", AreaID: "study"},
+				{EntityID: "sensor.bambu_temperature", DeviceID: "physical-printer"},
+				{EntityID: "script.untrusted", DeviceID: "hidden"},
+			}},
+			Devices: []haDeviceEntry{{ID: "physical-printer", Name: "Bambu P2S", Model: "P2S", AreaID: "study"}},
+			Areas:   []haAreaEntry{{AreaID: "study", Name: "Study"}},
+		},
+	)
+	if len(registry.Devices) != 2 ||
+		registry.Devices["light.bambu_chamber"].ID != registry.Devices["sensor.bambu_temperature"].ID ||
+		registry.Devices["light.bambu_chamber"].Name != "Bambu P2S" {
+		t.Fatalf("device grouping failed: %+v", registry.Devices)
 	}
 	for _, input := range []map[string]any{
 		{"entity": "button.bambu_resume", "action": "press"},
@@ -446,62 +442,30 @@ func TestFanAndLightCapabilityActions(t *testing.T) {
 	}
 }
 
-func TestHomeAreaIconsViaAuthenticatedRegistry(t *testing.T) {
-	previous := upstreams["homeassistant"]
-	defer func() { upstreams["homeassistant"] = previous }()
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/websocket" {
-			t.Errorf("unexpected API %s", r.URL.Path)
-			return
-		}
-		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		defer conn.Close()
-		conn.WriteJSON(map[string]any{"type": "auth_required"})
-		var msg map[string]any
-		if err := conn.ReadJSON(&msg); err != nil {
-			t.Error(err)
-			return
-		}
-		if msg["type"] != "auth" || msg["access_token"] != "personal-key" {
-			t.Error("invalid upstream auth")
-			return
-		}
-		conn.WriteJSON(map[string]any{"type": "auth_ok"})
-		if err := conn.ReadJSON(&msg); err != nil {
-			t.Error(err)
-			return
-		}
-		if msg["type"] != "config/area_registry/list" {
-			t.Error("wrong area registry command")
-		}
-		conn.WriteJSON(map[string]any{"id": 1, "type": "result", "success": true, "result": []any{
-			map[string]any{"name": "Bedroom", "icon": "mdi:bed-king"},
-			map[string]any{"name": "Study", "icon": "mdi:chair-rolling"},
-			map[string]any{"name": "No Icon", "icon": nil},
-		}})
-	}))
-	defer backend.Close()
-	upstreams["homeassistant"] = backend.URL
-	s := testServer(t)
-	alice := addUser(s, "alice", false, map[string]bool{"home": true})
-	alice.Credentials["homeassistant"] = s.encrypt("personal-key")
-	bob := addUser(s, "bob", false, map[string]bool{"media": true})
-	status(t, req(s, "GET", "/api/ha/room-icons", nil, s.token(bob), ""), 403)
-	out := req(s, "GET", "/api/ha/room-icons", nil, s.token(alice), "")
-	status(t, out, 200)
-	var icons map[string]string
-	if err := json.Unmarshal(out.Body.Bytes(), &icons); err != nil {
-		t.Fatal(err)
+func TestHomeRegistryAreaIconsForReadableDevices(t *testing.T) {
+	registry := buildHomeRegistryMetadata(
+		map[string]homeEntity{
+			"fan.bedroom":  {EntityID: "fan.bedroom"},
+			"light.office": {EntityID: "light.office"},
+		},
+		haRegistryData{
+			Entities: haDisplayRegistry{Entities: []haDisplayEntry{
+				{EntityID: "fan.bedroom", AreaID: "bedroom"},
+				{EntityID: "light.office", AreaID: "office"},
+				{EntityID: "light.private", AreaID: "hidden"},
+			}},
+			Areas: []haAreaEntry{
+				{AreaID: "bedroom", Name: "Bedroom", Icon: "mdi:bed-king"},
+				{AreaID: "office", Name: "Study", Icon: "mdi:chair-rolling"},
+				{AreaID: "hidden", Name: "Private", Icon: "mdi:lock"},
+			},
+		},
+	)
+	if len(registry.RoomIcons) != 2 || registry.RoomIcons["Bedroom"] != "mdi:bed-king" || registry.RoomIcons["Study"] != "mdi:chair-rolling" {
+		t.Fatalf("unexpected area icons: %+v", registry.RoomIcons)
 	}
-	if len(icons) != 2 || icons["Bedroom"] != "mdi:bed-king" || icons["Study"] != "mdi:chair-rolling" {
-		t.Fatalf("icons not from HA registry: %+v", icons)
-	}
-	if strings.Contains(out.Body.String(), "personal-key") {
-		t.Fatal("upstream token leaked")
+	if _, exists := registry.RoomIcons["Private"]; exists {
+		t.Fatal("area for an unreadable entity was disclosed")
 	}
 }
 
