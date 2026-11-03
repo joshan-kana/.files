@@ -37,12 +37,14 @@ ShellRoot {
     AppearancePreferences {
         id: appearance
         runtime: runtime
+        frameGlassExposed: desktopFrame.glassExposed
         expansionGlassExposed: expansionState.hasCurrent || expansionHost.closing
         modalGlassExposed: modalHost.contentVisible
         // Popup ownership includes closing cards until their exit completes.
         // NotificationPopup has no separate closing property.
         notificationGlassExposed: notifications.popupVisible
         osdGlassExposed: osd.visible || osdPopup.closing
+        resizeGlassExposed: resizeOverlay.open || resizeOverlay.closing
     }
 
     RuntimeConfig {
@@ -268,6 +270,7 @@ ShellRoot {
     }
 
     DesktopFrame {
+        id: desktopFrame
         theme: root.themeRef
         motion: root.motionRef
         enabled: appearance.frameVisible

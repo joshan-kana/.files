@@ -19,6 +19,12 @@ Variants {
     required property Motion motion
     property bool enabled: true
     property bool barVisible: true
+    // Only blur the shared frame while at least one screen exposes it.
+    // Fullscreen clients hide the frame without destroying its Wayland layer.
+    readonly property bool glassExposed: enabled && Quickshell.screens.some(screen => {
+        const monitor = Hyprland.monitorFor(screen);
+        return !(monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false);
+    })
     property var islands: ({})
     property var hub: null
     property var hubScreen: null
@@ -34,7 +40,7 @@ Variants {
     readonly property real rounding: theme.frameRounding
     // Music changes the shared contour's hue, never its width or opacity.
     // Theme.blend returns an opaque colour, so restore the border's alpha.
-    readonly property color reactiveTint: theme.musicReactiveEnabled && motion.enabled ? theme.blend(theme.subtleBorder, theme.blend(theme.accent, theme.positive, theme.musicReactiveTreble * 0.85), Math.min(0.46, theme.musicReactiveEnergy * 0.25 + theme.musicReactiveBeat * 0.21)) : theme.subtleBorder
+    readonly property color reactiveTint: theme.musicReactiveWash > 0 ? theme.blend(theme.subtleBorder, theme.musicReactiveHue, theme.musicReactiveWash * 0.75) : theme.subtleBorder
     readonly property color reactiveBorder: Qt.rgba(reactiveTint.r, reactiveTint.g, reactiveTint.b, theme.subtleBorder.a)
     property real progress: 0
 
@@ -109,7 +115,9 @@ Variants {
 
                 ShapePath {
                     fillRule: Qt.OddEvenFill
-                    fillColor: frame.theme.background
+                    // Keep content opaque, but let the compositor sample the
+                    // wallpaper through the shared frame's actual silhouette.
+                    fillColor: Qt.rgba(frame.theme.musicReactiveBackground.r, frame.theme.musicReactiveBackground.g, frame.theme.musicReactiveBackground.b, frame.theme.shellGlassEnabled ? frame.theme.glassOpacity : 1)
                     strokeWidth: -1
                     PathSvg {
                         path: output.geometry.fill || "M 0 0 L 0.01 0 L 0 0.01 Z"

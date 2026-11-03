@@ -40,31 +40,65 @@ test("compact bar islands receive reactive styling without independent connected
   }
 });
 
-test("reactive shell keeps all existing outline widths and colours unchanged", () => {
+test("one acoustic wash paints connected frame, hub and independent islands", () => {
+  const theme = qml("Theme.qml");
+  assert.match(
+    theme,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.13,/,
+  );
+  assert.match(
+    theme,
+    /musicReactiveBackground: musicReactiveWash > 0 \? blend\(background, musicReactiveHue, musicReactiveWash\) : background/,
+  );
   const frame = qml("DesktopFrame.qml");
-  assert.match(frame, /strokeColor: frame\.reactiveBorder/);
-  assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
   assert.match(
     frame,
-    /reactiveTint: theme\.musicReactiveEnabled && motion\.enabled/,
+    /fillColor: Qt\.rgba\(frame\.theme\.musicReactiveBackground\.r,/,
   );
+  assert.match(frame, /strokeColor: frame\.reactiveBorder/);
+  assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
+  assert.match(frame, /reactiveTint: theme\.musicReactiveWash > 0/);
   assert.match(
     frame,
     /reactiveBorder: Qt\.rgba\(reactiveTint\.r, reactiveTint\.g, reactiveTint\.b, theme\.subtleBorder\.a\)/,
   );
-  assert.doesNotMatch(frame, /strokeWidth:.*musicReactive/);
-  const surface = qml("ShellSurface.qml");
   assert.match(
-    surface,
+    qml("ShellExpansionHost.qml"),
+    /fillColor: host\.theme\.musicReactiveBackground/,
+  );
+  for (const file of ["NowPlayingIsland.qml", "SystemIsland.qml"]) {
+    assert.match(qml(file), /fillColor: theme\.musicReactiveBackground/);
+  }
+  // The four other bar islands supply their own background, so all must
+  // consume the shared wash instead of falling back to the static
+  // theme background. Shared frame mode owns the outline, not the fill.
+  const bar = qml("AmbientBar.qml");
+  const fills = bar.match(/fillColor: theme\.musicReactiveBackground/g) || [];
+  assert.equal(fills.length, 4);
+  assert.doesNotMatch(
+    bar,
+    /fillColor: bars\.frameVisible \? "transparent" : theme\.background/,
+  );
+});
+
+test("silent reactive surfaces are the original unraised connected silhouettes", () => {
+  const source = qml("ShellSurface.qml");
+  assert.match(
+    source,
+    /return frameConnected \? "transparent" : musicActive && theme\.musicReactiveWash > 0/,
+  );
+  assert.match(source, /lightColor: luminousColor/);
+  assert.match(source, /lightStrength: luminous \?/);
+  assert.doesNotMatch(source, /musicGlow|lightSpread: musicActive|musicLight/);
+  assert.match(
+    source,
     /borderWidth: frameConnected \? 0 : luminous \|\| outlined \? theme\.borderThin : 0/,
   );
-  assert.match(surface, /borderColor: frameConnected \? "transparent"/);
+  assert.match(source, /borderColor: frameConnected \? "transparent"/);
   assert.doesNotMatch(
-    surface,
+    source,
     /borderWidth:.*musicActive|borderColor:.*musicActive/,
   );
-  assert.match(surface, /return musicActive \? theme\.blend\(base, musicLight/);
-  assert.match(surface, /lightColor: musicActive \? musicLight/);
 });
 
 test("reactive audio uses continuous event-driven values instead of quantized brightness bands", () => {
@@ -77,17 +111,35 @@ test("reactive audio uses continuous event-driven values instead of quantized br
     reactive,
     /function onSequenceChanged\(\): void \{\s*reactive\.updateAudio\(\)/,
   );
-  assert.match(reactive, /sustain = clamp\(/);
-  assert.match(reactive, /treble = clamp\(/);
+  assert.match(reactive, /sustain = presence \* clamp\(/);
+  assert.match(reactive, /treble = presence \* clamp\(/);
   assert.match(reactive, /elapsed \* 15/);
 });
 
-test("music-lit superellipses use smooth cubic contours and a bounded glow", () => {
+test("reactive audio returns to exact zero on silence and connection loss", () => {
+  const reactive = qml("MusicReactiveState.qml");
+  assert.match(
+    reactive,
+    /loudness = Math\.max\(spectrum\.rms, spectrum\.peak \* 0\.35\)/,
+  );
+  assert.match(reactive, /!spectrum\.connected \|\| loudness <= 0\.003/);
+  assert.match(
+    reactive,
+    /const presence = clamp\(\(loudness - 0\.003\) \/ 0\.025\)/,
+  );
+  for (const field of ["sustain", "beatPulse", "treble"])
+    assert.match(reactive, new RegExp(`${field} = presence \\*`));
+  assert.match(
+    reactive,
+    /onConnectedChanged\(\): void \{\s*if \(\!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
+  );
+});
+
+test("surface curves remain cubic, and only ordinary hover may use a radial light", () => {
   const curve = qml("SquircleSurface.qml");
   const surface = qml("ShellSurface.qml");
   assert.match(curve, /function buildCorner\([\s\S]*?return " C " \+/);
   assert.doesNotMatch(curve, /cornerSamples/);
   assert.match(curve, /centerRadius: .*root\.lightSpread/);
-  assert.match(surface, /musicGlow: Math\.min\(0\.30,/);
-  assert.match(surface, /lightSpread: musicActive \? 0\.62 : 1/);
+  assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive/);
 });
