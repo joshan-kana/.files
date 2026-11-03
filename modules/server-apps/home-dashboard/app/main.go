@@ -52,6 +52,8 @@ type User struct {
 	Pages           map[string]bool   `json:"pages"`
 	Credentials     map[string]string `json:"credentials"`
 	Version         int               `json:"version"`
+	AppFavorites    []string          `json:"app_favorites,omitempty"`
+	AppVisits       map[string]int    `json:"app_visits,omitempty"`
 	Favorites       []string          `json:"favorites,omitempty"`
 	Rooms           map[string]string `json:"rooms,omitempty"`
 	Hand            string            `json:"hand,omitempty"`
@@ -252,6 +254,11 @@ func (s *Server) session(r *http.Request) *User {
 		copy.Pages[k] = v
 	}
 	copy.Favorites = append([]string(nil), u.Favorites...)
+	copy.AppFavorites = append([]string(nil), u.AppFavorites...)
+	copy.AppVisits = map[string]int{}
+	for k, v := range u.AppVisits {
+		copy.AppVisits[k] = v
+	}
 	copy.Rooms = map[string]string{}
 	for k, v := range u.Rooms {
 		copy.Rooms[k] = v
@@ -323,8 +330,30 @@ func (s *Server) me(u *User) any {
 			creds[k] = u.Credentials[k] != ""
 		}
 	}
-	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents), "favorites": append([]string{}, u.Favorites...), "rooms": u.Rooms, "hand": appearance(u.Hand, []string{"right", "left"}), "show_unavailable": u.ShowUnavailable}
+	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents), "favorites": append([]string{}, u.Favorites...), "app_favorites": append([]string{}, u.AppFavorites...), "app_visits": nonNilVisits(u.AppVisits), "rooms": u.Rooms, "hand": appearance(u.Hand, []string{"right", "left"}), "show_unavailable": u.ShowUnavailable}
 }
+func nonNilVisits(visits map[string]int) map[string]int {
+	if visits == nil {
+		return map[string]int{}
+	}
+	return visits
+}
+func deployedApp(id string) bool {
+	configured, exists := os.LookupEnv("DASHBOARD_ENABLED_APPS")
+	if !exists {
+		return true
+	}
+	return slices.Contains(strings.Split(configured, ","), id)
+}
+func visibleApp(u *User, id string) bool {
+	for _, app := range catalog {
+		if app.ID == id && deployedApp(id) && (allowed(u, "apps") || allowed(u, app.Page)) {
+			return true
+		}
+	}
+	return false
+}
+
 func csrf(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -433,11 +462,76 @@ func (s *Server) handler() http.Handler {
 		}
 		entries := []map[string]string{}
 		for _, a := range catalog {
-			if allowed(u, "apps") || allowed(u, a.Page) {
+			if deployedApp(a.ID) && (allowed(u, "apps") || allowed(u, a.Page)) {
 				entries = append(entries, map[string]string{"id": a.ID, "name": a.Name, "category": a.Category, "url": a.URL, "page": a.Page})
 			}
 		}
 		jsonResponse(w, 200, entries)
+	})
+	mux.HandleFunc("PUT /api/profile/apps", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if u == nil {
+			failure(w, 401, "Not signed in")
+			return
+		}
+		var in struct {
+			Favorites []string
+		}
+		if bodyJSON(r, &in) != nil || len(in.Favorites) > 64 {
+			failure(w, 400, "Invalid application preferences")
+			return
+		}
+		seen := map[string]bool{}
+		for _, id := range in.Favorites {
+			if !visibleApp(u, id) || seen[id] {
+				failure(w, 400, "Invalid application favorite")
+				return
+			}
+			seen[id] = true
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		target := s.data.Users[u.Name]
+		if target == nil || !target.Enabled {
+			failure(w, 401, "Account unavailable")
+			return
+		}
+		previous := target.AppFavorites
+		target.AppFavorites = append([]string{}, in.Favorites...)
+		if err := s.save(); err != nil {
+			target.AppFavorites = previous
+			failure(w, 500, "Could not save application preferences")
+			return
+		}
+		jsonResponse(w, 200, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/apps/{id}/launch", func(w http.ResponseWriter, r *http.Request) {
+		u := s.session(r)
+		if !visibleApp(u, r.PathValue("id")) {
+			failure(w, 403, "Access denied")
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		target := s.data.Users[u.Name]
+		if target == nil || !target.Enabled {
+			failure(w, 401, "Account unavailable")
+			return
+		}
+		if target.AppVisits == nil {
+			target.AppVisits = map[string]int{}
+		}
+		id := r.PathValue("id")
+		before := target.AppVisits[id]
+		if before < 10000 {
+			target.AppVisits[id]++
+		}
+		if err := s.save(); err != nil {
+			target.AppVisits[id] = before
+			failure(w, 500, "Could not save recent activity")
+			return
+		}
+		jsonResponse(w, 200, map[string]int{"launches": target.AppVisits[id]})
 	})
 	mux.HandleFunc("GET /api/ha/events", s.serveHomeEvents)
 	mux.HandleFunc("GET /api/ha/entities", func(w http.ResponseWriter, r *http.Request) {
