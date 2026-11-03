@@ -1953,8 +1953,13 @@ document.addEventListener("click", async (e) => {
   }
   if (target.dataset.room) {
     state.room = target.dataset.room;
-    state.roomPicker = false;
-    render();
+    if (state.roomPicker) closeOverlay();
+    else {
+      render();
+      [...document.querySelectorAll("[data-room]")]
+        .find((item) => item.dataset.room === state.room)
+        ?.focus({ preventScroll: true });
+    }
     return;
   }
   if (target.dataset.appCategory) {
@@ -1963,18 +1968,22 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.open === "rooms") {
+    rememberOverlayOrigin(target);
     state.device = null;
     state.quick = false;
     state.roomPicker = true;
     render();
+    focusOverlay();
     return;
   }
   if (target.dataset.device) {
+    rememberOverlayOrigin(target);
     state.device = target.dataset.device;
     state.showReadings = false;
     state.roomPicker = false;
     state.quick = false;
     render();
+    focusOverlay();
     if (state.keyboardMode && desktopKeyboard())
       document
         .querySelector(
@@ -2162,21 +2171,26 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.open === "help") {
+    rememberOverlayOrigin(target);
     state.quick = false;
     state.device = null;
     state.roomPicker = false;
     state.help = true;
     render();
+    focusOverlay();
     return;
   }
   if (target.dataset.open === "quick") {
+    rememberOverlayOrigin(target);
     state.device = null;
     state.roomPicker = false;
     state.quick = true;
     render();
+    focusOverlay();
     return;
   }
   if (target.dataset.open === "search") {
+    rememberOverlayOrigin(target);
     state.device = null;
     state.roomPicker = false;
     state.quick = false;
@@ -2187,11 +2201,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.close || (target.dataset.dismiss && e.target === target)) {
-    state.quick = false;
-    state.roomPicker = false;
-    state.device = null;
-    state.help = false;
-    render();
+    closeOverlay();
     return;
   }
   if (target.dataset.entity) {
@@ -2668,7 +2678,51 @@ function roomCycle(delta) {
   state.keyboardTarget = "";
   render();
 }
+let overlayReturnTarget = null;
+function rememberOverlayOrigin(target = document.activeElement) {
+  if (!target) return;
+  for (const kind of ["device", "open", "room"]) {
+    const value = target.dataset?.[kind];
+    if (!value) continue;
+    const matching = [
+      ...document.querySelectorAll("[data-" + kind + "]"),
+    ].filter((element) => element.dataset[kind] === value);
+    overlayReturnTarget = { kind, value, position: matching.indexOf(target) };
+    return;
+  }
+  overlayReturnTarget = { id: target.id || "" };
+}
+function focusOverlay() {
+  document
+    .querySelector(".overlay [role=dialog]")
+    ?.querySelector(
+      "button:not([disabled]),input:not([disabled]),select:not([disabled])",
+    )
+    ?.focus({ preventScroll: true });
+}
+function closeOverlay() {
+  state.quick = false;
+  state.roomPicker = false;
+  state.device = null;
+  state.help = false;
+  render();
+  if (!overlayReturnTarget) return;
+  let target;
+  if (overlayReturnTarget.kind) {
+    const { kind, value, position } = overlayReturnTarget;
+    const matching = [
+      ...document.querySelectorAll("[data-" + kind + "]"),
+    ].filter((element) => element.dataset[kind] === value);
+    target = matching[Math.max(0, position)] || matching[0];
+  } else if (overlayReturnTarget.id) {
+    target = document.getElementById(overlayReturnTarget.id);
+  }
+  if (!target) target = document.querySelector(".kbd-search");
+  target?.focus({ preventScroll: true });
+  overlayReturnTarget = null;
+}
 function commandSearch() {
+  rememberOverlayOrigin();
   state.quick = false;
   state.device = null;
   state.roomPicker = false;
@@ -2692,11 +2746,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (document.querySelector(".overlay")) {
       e.preventDefault();
-      state.quick = false;
-      state.roomPicker = false;
-      state.device = null;
-      state.help = false;
-      render();
+      closeOverlay();
     } else if (desktopKeyboard()) {
       const card = currentCard();
       if (card && document.activeElement !== card.querySelector(".tile-open")) {
@@ -2705,6 +2755,28 @@ document.addEventListener("keydown", (e) => {
       } else {
         document.activeElement?.blur?.();
         state.keyboardTarget = "";
+      }
+    }
+    return;
+  }
+  if (key === "tab" && document.querySelector(".overlay")) {
+    const dialog = document.querySelector(".overlay [role=dialog]");
+    const focusable = [
+      ...(dialog?.querySelectorAll(
+        "button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href]",
+      ) || []),
+    ].filter((item) => item.getClientRects().length);
+    if (focusable.length) {
+      const index = focusable.indexOf(document.activeElement);
+      if (
+        index < 0 ||
+        (!e.shiftKey && index === focusable.length - 1) ||
+        (e.shiftKey && index === 0)
+      ) {
+        e.preventDefault();
+        focusable[e.shiftKey ? focusable.length - 1 : 0].focus({
+          preventScroll: true,
+        });
       }
     }
     return;

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -169,5 +170,52 @@ func TestArrPushRefreshAndPermissionIsolation(t *testing.T) {
 	}
 	if negotiated.Load() != 1 || sockets.Load() != 1 || queueReads.Load() != 2 {
 		t.Fatalf("unexpected connection/request count: negotiated=%d sockets=%d queueReads=%d", negotiated.Load(), sockets.Load(), queueReads.Load())
+	}
+}
+
+// TestLiveArrReadOnly connects only to already configured personal media
+// credentials; it neither changes an upstream library nor discloses API keys.
+func TestLiveArrReadOnly(t *testing.T) {
+	dir := os.Getenv("HAVEN_LIVE_DATA_DIR")
+	if dir == "" {
+		t.Skip("live data directory not selected")
+	}
+	s, err := newServer(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var attempts int
+	for _, u := range s.data.Users {
+		if !u.Enabled || !hasPage(u, "media") {
+			continue
+		}
+		for _, service := range []string{"sonarr", "radarr"} {
+			if u.Credentials[service] == "" {
+				continue
+			}
+			token, err := s.decrypt(u.Credentials[service])
+			if err != nil {
+				t.Fatal("saved media credentials could not be decrypted")
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			start := time.Now()
+			conn, err := arrSignalRConnect(ctx, upstreams[service], token)
+			if err != nil {
+				cancel()
+				t.Fatalf("%s SignalR subscription failed: %v", service, err)
+			}
+			queue, err := s.fetchArrQueue(u, service)
+			conn.Close()
+			cancel()
+			if err != nil {
+				t.Fatalf("%s queue read failed: %v", service, err)
+			}
+			attempts++
+			t.Logf("%s: authenticated SignalR handshake and %d queue records in %s",
+				service, len(queue.Records), time.Since(start).Round(time.Millisecond))
+		}
+	}
+	if attempts == 0 {
+		t.Skip("no configured personal Sonarr/Radarr credentials")
 	}
 }
