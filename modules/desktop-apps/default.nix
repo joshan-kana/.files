@@ -148,11 +148,9 @@ in
   };
 
   squirreldisk = _: {
-    home =
-      _:
-      lib.optionalAttrs (isDarwin || isLinux) {
-        home.packages = [ pkgs.squirreldisk ];
-      };
+    home = _: {
+      home.packages = [ pkgs.squirreldisk ];
+    };
   };
 
   libreoffice =

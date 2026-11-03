@@ -49,6 +49,7 @@ _: {
                   ];
                   buildInputs = with prev; [
                     alsa-lib
+                    stdenv.cc.cc.lib
                     libxkbcommon
                     wayland
                     libGL
@@ -79,23 +80,44 @@ _: {
                   };
                 }
               else
-                prev.appimageTools.wrapType2 rec {
+                prev.stdenv.mkDerivation {
                   pname = "squirreldisk";
                   inherit version;
                   src = prev.fetchurl {
-                    url = "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-x86_64.AppImage";
-                    hash = "sha256-rSROPmdpwKuah/1NydQrIAqepU6i+3m9NwKcn6ugJmg=";
+                    url = "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-Linux-x86_64.tar.gz";
+                    hash = "sha256-RcDrnc1m9QXVuqRsmUhyd7zlG2J766oOeHfOqqahvH0=";
                   };
+                  nativeBuildInputs = with prev; [
+                    autoPatchelfHook
+                    makeWrapper
+                  ];
+                  buildInputs = with prev; [
+                    alsa-lib
+                    stdenv.cc.cc.lib
+                    libxkbcommon
+                    wayland
+                    libGL
+                    vulkan-loader
+                  ];
+                  installPhase = ''
+                    runHook preInstall
+                    install -Dm755 squirreldisk "$out/bin/squirreldisk"
+                    install -Dm644 squirreldisk.desktop "$out/share/applications/squirreldisk.desktop"
+                    install -Dm644 squirreldisk.png "$out/share/icons/hicolor/256x256/apps/squirreldisk.png"
+                    wrapProgram "$out/bin/squirreldisk" --prefix LD_LIBRARY_PATH : ${
+                      prev.lib.makeLibraryPath [
+                        prev.libGL
+                        prev.libxkbcommon
+                        prev.wayland
+                        prev.vulkan-loader
+                      ]
+                    }
+                    runHook postInstall
+                  '';
                   passthru = {
                     autoUpdate = true;
                     updateGroup = "squirreldisk";
                   };
-                  appimageContents = prev.appimageTools.extract { inherit pname version src; };
-                  extraInstallCommands = ''
-                    install -Dm444 "${appimageContents}/squirreldisk.desktop" "$out/share/applications/squirreldisk.desktop"
-                    mkdir -p "$out/share/icons"
-                    cp -R "${appimageContents}/usr/share/icons/hicolor" "$out/share/icons/"
-                  '';
                   meta = {
                     inherit homepage license;
                     platforms = [ "x86_64-linux" ];
