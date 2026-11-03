@@ -64,33 +64,61 @@ function contour(
     .filter((item) => item.right - item.left > 5 && item.bottom > top + 5)
     .sort((a, b) => a.left - b.left);
 
-  // Merge only actual intersecting surfaces (for example a hub expanding
-  // over an island). Neighbouring status islands must retain independent
-  // squircle shoulders, even when their visible gap is narrow.
+  // The union of overlapping notches has a *stepped* bottom envelope.
+  // A tall gallery can intersect the neighbouring short media island, but
+  // must not extend its depth underneath that entire island.
   const merged = [];
   for (const notch of topNotches) {
     const last = merged[merged.length - 1];
     if (last && notch.left <= last.right) {
       last.right = Math.max(last.right, notch.right);
-      last.bottom = Math.max(last.bottom, notch.bottom);
+      last.sources.push(notch);
       last.hovered = last.hovered || notch.hovered;
       last.pressed = last.pressed || notch.pressed;
     } else {
       merged.push({
         left: notch.left,
         right: notch.right,
-        bottom: notch.bottom,
         hovered: notch.hovered,
         pressed: notch.pressed,
+        sources: [notch],
       });
     }
   }
+  for (const notch of merged) {
+    if (notch.sources.length === 1) {
+      notch.sections = [notch.sources[0]];
+      continue;
+    }
+    const boundaries = [];
+    for (const source of notch.sources)
+      boundaries.push(source.left, source.right);
+    boundaries.sort((a, b) => a - b);
+    const sections = [];
+    for (let j = 1; j < boundaries.length; j++) {
+      const left = boundaries[j - 1];
+      const right = boundaries[j];
+      if (right <= left) continue;
+      let bottom = -Infinity;
+      for (const source of notch.sources) {
+        if (source.left < right && source.right > left)
+          bottom = Math.max(bottom, source.bottom);
+      }
+      if (!Number.isFinite(bottom)) continue;
+      const previous = sections[sections.length - 1];
+      if (previous && Math.abs(previous.bottom - bottom) < 0.01)
+        previous.right = right;
+      else sections.push({ left, right, bottom });
+    }
+    notch.sections = sections;
+  }
 
   const points = [];
+  const pathCommands = [];
   const hoverPaths = [];
   const pressedPaths = [];
   let length = 0;
-  function add(x, y) {
+  function add(x, y, path = true) {
     const point = {
       x: Math.round(x * 10000) / 10000,
       y: Math.round(y * 10000) / 10000,
@@ -98,26 +126,45 @@ function contour(
     const previous = points[points.length - 1];
     if (previous)
       length += Math.hypot(point.x - previous.x, point.y - previous.y);
+    if (path) pathCommands.push(`${previous ? "L" : "M"}${point.x} ${point.y}`);
     points.push({ x: point.x, y: point.y, at: length });
   }
   function corner(cx, cy, r, start, end) {
     if (r <= 0) return;
-    // Reuse the same progress distribution and corner-point construction as
-    // SquircleSurface. Matching the exponent alone produces visibly different
-    // sampling at small shoulder and inverted corners.
+    // Keep dense samples for accurate loading-trace arc lengths, but draw each
+    // quarter as one fitted cubic. Recreating hundreds of ShapePath segments
+    // during a hub morph would otherwise repeatedly retessellate the frame.
     const samples = Math.max(8, Math.min(20, Math.ceil(r * 0.7)));
     for (let i = 1; i <= samples; i++) {
       const t =
         start + (end - start) * squircle.progress(i / samples, shapeExponent);
       const vertex = squircle.cornerPoint(cx, cy, r, t, shapeExponent);
-      add(vertex.x, vertex.y);
+      add(vertex.x, vertex.y, false);
     }
+    // Match the diagonal of the superellipse and the exact tangent direction
+    // at both ends, including reversed concave shoulders.
+    const direction = Math.sign(end - start);
+    const handle = (r * (Math.pow(2, -1 / shapeExponent) - 0.5)) / 0.375;
+    const first = squircle.cornerPoint(cx, cy, r, start, shapeExponent);
+    const last = points[points.length - 1];
+    const control1 = {
+      x: first.x - direction * handle * Math.sin(start),
+      y: first.y + direction * handle * Math.cos(start),
+    };
+    const control2 = {
+      x: last.x + direction * handle * Math.sin(end),
+      y: last.y - direction * handle * Math.cos(end),
+    };
+    const rounded = (value) => Math.round(value * 10000) / 10000;
+    pathCommands.push(
+      `C${rounded(control1.x)} ${rounded(control1.y)} ${rounded(control2.x)} ${rounded(control2.y)} ${last.x} ${last.y}`,
+    );
   }
 
   add(left + outerRadius, top);
   for (let i = 0; i < merged.length; i++) {
     const notch = merged[i];
-    const startPoint = points.length;
+    const startCommand = pathCommands.length;
     const next = merged[i + 1];
     const preceding = i ? merged[i - 1].right : left + outerRadius;
     const following = next ? next.left : right - outerRadius;
@@ -127,24 +174,39 @@ function contour(
     // neighbour must not square off the left edge of the same island.
     // Keep a straight bridge between neighbouring wells, while outer frame
     // corners can devote more of their clearance to the shoulder.
-    const shoulderLimit = Math.min(radius * 0.65, (notch.bottom - top) * 0.45);
+    const sections = notch.sections;
+    const first = sections[0];
+    const last = sections[sections.length - 1];
     const leftShoulder = Math.max(
       0,
-      Math.min(shoulderLimit, leftSpace * (i === 0 ? 0.8 : 0.32)),
+      Math.min(
+        radius * 0.65,
+        (first.bottom - top) * 0.45,
+        leftSpace * (i === 0 ? 0.8 : 0.32),
+      ),
     );
     const rightShoulder = Math.max(
       0,
       Math.min(
-        shoulderLimit,
+        radius * 0.65,
+        (last.bottom - top) * 0.45,
         rightSpace * (i === merged.length - 1 ? 0.8 : 0.32),
       ),
     );
-    const r = Math.max(
+    const leftRadius = Math.max(
       0,
       Math.min(
         radius * 0.78,
-        (notch.right - notch.left) / 2,
-        (notch.bottom - top) / 2,
+        (first.right - first.left) / 2,
+        (first.bottom - top) / 2,
+      ),
+    );
+    const rightRadius = Math.max(
+      0,
+      Math.min(
+        radius * 0.78,
+        (last.right - last.left) / 2,
+        (last.bottom - top) / 2,
       ),
     );
     add(notch.left - leftShoulder, top);
@@ -155,10 +217,72 @@ function contour(
       -Math.PI / 2,
       0,
     );
-    add(notch.left, notch.bottom - r);
-    corner(notch.left + r, notch.bottom - r, r, Math.PI, Math.PI / 2);
-    add(notch.right - r, notch.bottom);
-    corner(notch.right - r, notch.bottom - r, r, Math.PI / 2, 0);
+    add(notch.left, first.bottom - leftRadius);
+    corner(
+      notch.left + leftRadius,
+      first.bottom - leftRadius,
+      leftRadius,
+      Math.PI,
+      Math.PI / 2,
+    );
+
+    for (let j = 1; j < sections.length; j++) {
+      const previous = sections[j - 1];
+      const current = sections[j];
+      const boundary = current.left;
+      const stepRadius = Math.max(
+        0,
+        Math.min(
+          radius * 0.65,
+          (previous.right - previous.left) / 3,
+          (current.right - current.left) / 3,
+          Math.abs(current.bottom - previous.bottom) / 3,
+        ),
+      );
+      add(boundary - stepRadius, previous.bottom);
+      if (current.bottom > previous.bottom) {
+        // Shallow island -> deep gallery, with two connected inside corners.
+        corner(
+          boundary - stepRadius,
+          previous.bottom + stepRadius,
+          stepRadius,
+          -Math.PI / 2,
+          0,
+        );
+        add(boundary, current.bottom - stepRadius);
+        corner(
+          boundary + stepRadius,
+          current.bottom - stepRadius,
+          stepRadius,
+          Math.PI,
+          Math.PI / 2,
+        );
+      } else {
+        corner(
+          boundary - stepRadius,
+          previous.bottom - stepRadius,
+          stepRadius,
+          Math.PI / 2,
+          0,
+        );
+        add(boundary, current.bottom + stepRadius);
+        corner(
+          boundary + stepRadius,
+          current.bottom + stepRadius,
+          stepRadius,
+          Math.PI,
+          1.5 * Math.PI,
+        );
+      }
+    }
+    add(notch.right - rightRadius, last.bottom);
+    corner(
+      notch.right - rightRadius,
+      last.bottom - rightRadius,
+      rightRadius,
+      Math.PI / 2,
+      0,
+    );
     add(notch.right, top + rightShoulder);
     corner(
       notch.right + rightShoulder,
@@ -170,12 +294,11 @@ function contour(
     // Hover must follow exactly the composited concave boundary. Painting
     // another rounded rectangle inside the bar creates phantom pill corners.
     if (notch.hovered || notch.pressed) {
-      const segment = points.slice(startPoint);
+      const segment = pathCommands.slice(startCommand);
       const fillPath =
         segment
-          .map(
-            (point, index) =>
-              (index === 0 ? "M" : "L") + point.x + " " + point.y,
+          .map((command, index) =>
+            index === 0 ? command.replace(/^L/, "M") : command,
           )
           .join(" ") + " Z";
       (notch.pressed ? pressedPaths : hoverPaths).push(fillPath);
@@ -345,10 +468,7 @@ function contour(
     Math.PI,
     Math.PI * 1.5,
   );
-  const inner =
-    points
-      .map((point, i) => (i ? "L" : "M") + point.x + " " + point.y)
-      .join(" ") + " Z";
+  const inner = pathCommands.join(" ") + " Z";
   // Odd-even fill removes the desktop interior rather than painting over
   // clients. The inner path is reused for both the border and busy trace.
   return {
