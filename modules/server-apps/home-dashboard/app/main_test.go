@@ -485,6 +485,12 @@ func TestUnavailableVisibilityPreferencePerAccount(t *testing.T) {
 	if !reloaded.data.Users["alice"].ShowUnavailable || reloaded.data.Users["bob"].ShowUnavailable {
 		t.Fatal("visibility setting not persisted")
 	}
+	session := req(reloaded, "GET", "/api/session", nil, s.token(alice), "")
+	status(t, session, 200)
+	var account map[string]any
+	if err := json.Unmarshal(session.Body.Bytes(), &account); err != nil || account["show_unavailable"] != true {
+		t.Fatal("visibility setting was not restored to the browser session")
+	}
 	payload["show_unavailable"] = false
 	status(t, req(s, "PUT", "/api/profile/home", payload, s.token(alice), "http://example.test"), 200)
 	if alice.ShowUnavailable {
