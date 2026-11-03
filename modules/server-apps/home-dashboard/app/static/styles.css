@@ -3193,8 +3193,8 @@ svg {
 .home-grid.compact-board {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  grid-auto-flow: dense;
-  grid-auto-rows: 6px;
+  grid-auto-flow: row;
+  grid-auto-rows: auto;
   gap: 10px;
   align-items: start;
   padding: 0 0 120px;
@@ -3771,41 +3771,5 @@ svg {
 @media (min-width: 900px) and (max-width: 1150px) {
   .home-grid.compact-board {
     grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  }
-}
-
-/* CSS multicolumn layout naturally packs variable-height controls without gaps or overlaps. */
-.home-grid.compact-board {
-  display: block;
-  columns: 5 200px;
-  column-gap: 10px;
-  padding-bottom: 120px;
-}
-.home-grid.compact-board .control-card,
-.home-grid.compact-board
-  :is(.control-card--fan, .control-card--light, .control-card--appliance) {
-  display: inline-flex;
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  margin: 0 0 10px;
-  break-inside: avoid;
-  page-break-inside: avoid;
-  grid-column: auto;
-  grid-row: auto;
-  vertical-align: top;
-}
-.home-grid.compact-board > .empty {
-  display: block;
-  break-inside: avoid;
-}
-@media (max-width: 899px) {
-  .home-grid.compact-board {
-    columns: 2;
-    column-gap: 8px;
-    padding-bottom: 145px;
-  }
-  .home-grid.compact-board .control-card {
-    margin-bottom: 8px;
   }
 }
