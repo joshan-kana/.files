@@ -19,12 +19,9 @@ Item {
     // glow overlay. The native squircle path stays authoritative.
     property color lightColor: "transparent"
     property real lightStrength: 0
+    property real lightSpread: 1
     property real shadowStrength: 0
     property real shadowOffset: 3
-    // Match arc detail to its size instead of tessellating tiny controls
-    // into the same number of segments as large panels.
-    readonly property int cornerSamples: Math.max(8, Math.min(20, Math.ceil(cornerRadius * 0.7)))
-
     // A zero-sized surface has no contour yet. Keep SVG parsing valid while
     // its first frame or animated size is being measured.
     // PathSvg requires drawable geometry even before the first layout pass.
@@ -45,14 +42,17 @@ Item {
     }
 
     function buildCorner(cx: real, cy: real, radius: real, start: real, end: real): string {
-        let points = "";
-        for (let i = 1; i <= cornerSamples; i++) {
-            const progress = cornerProgress(i / cornerSamples);
-            const t = start + (end - start) * progress;
-            const vertex = geometry.cornerPoint(cx, cy, radius, t, exponent);
-            points += " L " + point(vertex.x) + " " + point(vertex.y);
-        }
-        return points;
+        // Native cubic curves eliminate the faceted line segments that become
+        // especially obvious when music modulates the glow along the rim.
+        const direction = Math.sign(end - start);
+        const handle = radius * (Math.pow(2, -1 / exponent) - 0.5) / 0.375;
+        const first = geometry.cornerPoint(cx, cy, radius, start, exponent);
+        const last = geometry.cornerPoint(cx, cy, radius, end, exponent);
+        const x1 = first.x - direction * handle * Math.sin(start);
+        const y1 = first.y + direction * handle * Math.cos(start);
+        const x2 = last.x + direction * handle * Math.sin(end);
+        const y2 = last.y - direction * handle * Math.cos(end);
+        return " C " + point(x1) + " " + point(y1) + " " + point(x2) + " " + point(y2) + " " + point(last.x) + " " + point(last.y);
     }
 
     function buildPath(inset: real): string {
@@ -147,7 +147,7 @@ Item {
             fillGradient: RadialGradient {
                 centerX: root.width * 0.15
                 centerY: root.height * -0.16
-                centerRadius: Math.max(root.width * 0.9, root.height * 2)
+                centerRadius: Math.max(root.width * 0.9, root.height * 2) * root.lightSpread
                 focalX: centerX
                 focalY: centerY
 
