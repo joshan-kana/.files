@@ -412,7 +412,10 @@ FocusScope {
                     trayMenu.openFor(item);
             }
         } else if (requestedView === "controls" || requestedView.length === 0) {
+            const leavingDetail = detailsVisible;
             closeDetails();
+            if (leavingDetail)
+                keyboardFocus.forceActiveFocus();
         }
     }
 
