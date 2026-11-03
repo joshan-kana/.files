@@ -36,6 +36,7 @@ _: {
     ./prusaslicer
     ./qmk-toolbox
     ./reaper
+    ./squirreldisk
     ./seerr
     ./vial
     ./determinate-nix

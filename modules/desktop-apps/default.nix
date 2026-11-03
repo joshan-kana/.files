@@ -147,6 +147,12 @@ in
     };
   };
 
+  squirreldisk = _: {
+    home = _: {
+      home.packages = [ pkgs.squirreldisk ];
+    };
+  };
+
   libreoffice =
     _:
     (
