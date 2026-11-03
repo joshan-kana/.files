@@ -76,18 +76,47 @@ in
     };
   };
 
-  firefox = _: {
-    home = _: {
-      programs.firefox =
-        lib.optionalAttrs isDarwin {
-          package = pkgs.firefox-bin;
-          configPath = "Library/Application Support/Firefox";
+  firefox =
+    _:
+    let
+      disableSafeModeKey = "1";
+    in
+    {
+      home =
+        _:
+        {
+          # Keep the startup modifier override available to shell-launched browsers.
+          home.sessionVariables.MOZ_DISABLE_SAFE_MODE_KEY = disableSafeModeKey;
+          programs.firefox =
+            lib.optionalAttrs isDarwin {
+              package = pkgs.firefox-bin;
+              configPath = "Library/Application Support/Firefox";
+            }
+            // lib.optionalAttrs isLinux {
+              configPath = ".mozilla/firefox";
+            };
         }
-        // lib.optionalAttrs isLinux {
-          configPath = ".mozilla/firefox";
+        // lib.optionalAttrs isDarwin {
+          # The graphical login environment does not inherit shell variables.
+          launchd.agents.disableFirefoxSafeModeKey = {
+            enable = true;
+            config = {
+              Label = "com.joshankana.disable-firefox-safe-mode-key";
+              ProgramArguments = [
+                "/bin/launchctl"
+                "setenv"
+                "MOZ_DISABLE_SAFE_MODE_KEY"
+                disableSafeModeKey
+              ];
+              RunAtLoad = true;
+            };
+          };
         };
+    }
+    // lib.optionalAttrs isLinux {
+      # Set the variable for graphical sessions launched by the display manager.
+      environment.sessionVariables.MOZ_DISABLE_SAFE_MODE_KEY = disableSafeModeKey;
     };
-  };
 
   floorp = _: { };
 
