@@ -104,44 +104,38 @@ require("blink.cmp").setup({
 	completion = { documentation = { auto_show = true } },
 	fuzzy = { implementation = "rust", prebuilt_binaries = { download = false } },
 	sources = {
+		-- Blink uses buffer words only when its LSP and path sources fall back.
 		default = { "lsp", "path", "snippets", "buffer" },
-		per_filetype = { nix = { "lsp", "path" } },
-		providers = {
-			lsp = {
-				transform_items = function(_, items)
-					if vim.bo.filetype ~= "nix" then
-						return items
-					end
-					local seen, unique = {}, {}
-					for _, item in ipairs(items) do
-						-- Nixd option examples and defaults contain full values. Keep the
-						-- option name and its documentation without inserting sample data.
-						local option = item.filterText or item.label
-						local insertion = item.textEdit and item.textEdit.newText or item.insertText
-						if
-							item.client_name == "nixd"
-							and item.insertTextFormat == 2
-							and type(insertion) == "string"
-							and insertion:sub(1, #option + 3) == option .. " = "
-						then
-							-- Preserve the server's replacement range, not its example value.
-							if item.textEdit then
-								item.textEdit.newText = option
-							end
-							item.insertText = option
-							item.insertTextFormat = 1
+		transform_items = function(_, items)
+			local seen, unique = {}, {}
+			for _, item in ipairs(items) do
+				if item.source_id == "lsp" then
+					local name = item.filterText or item.label
+					local insertion = item.textEdit and item.textEdit.newText or item.insertText
+					-- An option-name completion should not insert the language server's
+					-- full sample assignment. Explicit snippet completions are unaffected.
+					if
+						item.insertTextFormat == 2
+						and type(name) == "string"
+						and type(insertion) == "string"
+						and insertion:sub(1, #name + 3) == name .. " = "
+					then
+						if item.textEdit then
+							item.textEdit.newText = name
 						end
-						local replacement = item.textEdit and item.textEdit.newText or item.insertText or item.label
-						local key = item.label .. "\0" .. replacement .. "\0" .. tostring(item.kind)
-						if not seen[key] then
-							seen[key] = true
-							table.insert(unique, item)
-						end
+						item.insertText = name
+						item.insertTextFormat = 1
 					end
-					return unique
-				end,
-			},
-		},
+				end
+				local replacement = item.textEdit and item.textEdit.newText or item.insertText or item.label
+				local key = table.concat({ item.label, item.detail or "", replacement, tostring(item.kind) }, "\0")
+				if not seen[key] then
+					seen[key] = true
+					table.insert(unique, item)
+				end
+			end
+			return unique
+		end,
 	},
 })
 
