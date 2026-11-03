@@ -10,6 +10,7 @@ _: {
     ./gh-dash
     ./gtksourceview
     ./nh
+    ./nixd
     ./ollama
     ./polkit
     ./nixos-options-doc
