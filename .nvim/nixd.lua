@@ -38,9 +38,7 @@ function M.setup(root)
 	vim.lsp.config("nixd", {
 		root_dir = function(bufnr, on_dir)
 			local path = vim.api.nvim_buf_get_name(bufnr)
-			if vim.fs.relpath(root, path) then
-				on_dir(nil)
-			else
+			if not vim.fs.relpath(root, path) then
 				on_dir(vim.fs.root(bufnr, markers))
 			end
 		end,

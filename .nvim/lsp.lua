@@ -9,6 +9,8 @@ function M.setup()
 	end
 	vim.g.editorLspDiscoveryActive = true
 
+	vim.lsp.config("clangd", { cmd = { "clangd", "--function-arg-placeholders=0" } })
+
 	local allowed = vim.env.NVIM_PROJECT_LSP_PATH or vim.g.editorLspPath or ""
 	local function provided_by_project(command)
 		for directory in allowed:gmatch("[^:]+") do

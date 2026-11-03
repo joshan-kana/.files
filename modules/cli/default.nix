@@ -595,7 +595,8 @@ in
 
   starship = _args: {
     home = args: {
-      programs.starship = (starshipConfig args).programs.starship // {
+      programs.starship = {
+        settings = (starshipConfig args).programs.starship.settings;
         enableZshIntegration = true;
       };
     };
@@ -673,11 +674,20 @@ in
           git
           jujutsu
           nixd
+          clang-tools
+          rust-analyzer
+          go
+          gopls
+          typescript-language-server
           lua-language-server
           basedpyright
           bash-language-server
           yaml-language-server
           vscode-langservers-extracted
+          marksman
+          taplo
+          csharp-ls
+          lemminx
         ];
       in
       {

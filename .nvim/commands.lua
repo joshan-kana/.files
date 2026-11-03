@@ -2,9 +2,21 @@ local vim = assert(_G.vim)
 local M = {}
 
 local function run(root, title, args, modifies_files)
-	if modifies_files and #vim.fn.getbufinfo({ bufloaded = 1, bufmodified = 1 }) > 0 then
-		vim.notify("Save modified buffers before running " .. title, vim.log.levels.WARN)
-		return
+	if modifies_files then
+		local virtual_buffers = {}
+		local keeper = package.loaded["otter.keeper"]
+		for _, raft in pairs(keeper and keeper.rafts or {}) do
+			for _, bufnr in pairs(raft.buffers or {}) do
+				virtual_buffers[bufnr] = true
+			end
+		end
+		local dirty_files = vim.tbl_filter(function(buffer)
+			return vim.bo[buffer.bufnr].buftype == "" and not virtual_buffers[buffer.bufnr]
+		end, vim.fn.getbufinfo({ bufloaded = 1, bufmodified = 1 }))
+		if #dirty_files > 0 then
+			vim.notify("Save modified files before running " .. title, vim.log.levels.WARN)
+			return
+		end
 	end
 	vim.system(
 		args,

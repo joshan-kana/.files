@@ -145,10 +145,12 @@ require("blink.cmp").setup({
 vim.api.nvim_create_user_command("Format", function()
 	if vim.fn.exists(":ProjectFormat") == 2 then
 		vim.cmd.ProjectFormat()
+	elseif #vim.lsp.get_clients({ bufnr = 0, method = "textDocument/formatting" }) > 0 then
+		vim.lsp.buf.format({ async = true })
 	else
-		vim.notify("No project formatter is configured", vim.log.levels.WARN)
+		vim.notify("No formatter is available for this file", vim.log.levels.WARN)
 	end
-end, { desc = "Format using the project's formatter" })
+end, { desc = "Format the project or current file" })
 
 require("editor.embedded").setup()
 
