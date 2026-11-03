@@ -91,7 +91,7 @@ PanelWindow {
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
         frameConnected: popup.frameConnected
-        fillColor: popup.frameConnected && !popup.theme.shellGlassEnabled ? "transparent" : popup.theme.groupBase
+        fillColor: popup.theme.groupBase
         borderColor: popup.theme.subtleBorder
         borderWidth: popup.frameConnected ? 0 : popup.theme.borderThin
 
