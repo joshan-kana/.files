@@ -1462,25 +1462,140 @@ function move(page) {
   render();
   refreshPage(page);
 }
-async function refreshPage(page) {
-  const jobs = [];
-  if (
-    (page === "home" || page === "overview") &&
+let homeEvents = null;
+let homeRenderScheduled = false;
+let homeControlActive = false;
+let homeRenderDeferred = false;
+function queueHomeRender() {
+  if (homeControlActive) {
+    homeRenderDeferred = true;
+    return;
+  }
+  if (homeRenderScheduled) return;
+  homeRenderScheduled = true;
+  requestAnimationFrame(() => {
+    homeRenderScheduled = false;
+    if (homeControlActive) {
+      homeRenderDeferred = true;
+      return;
+    }
+    renderHomeEvent();
+  });
+}
+function settleHomeControl() {
+  if (!homeControlActive) return;
+  homeControlActive = false;
+  if (homeRenderDeferred) {
+    homeRenderDeferred = false;
+    queueHomeRender();
+  }
+}
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (
+      e.target.matches(
+        ".home-grid input[type=range], .device-sheet input[type=range]",
+      )
+    )
+      homeControlActive = true;
+  },
+  true,
+);
+document.addEventListener("pointerup", settleHomeControl, true);
+document.addEventListener("pointercancel", settleHomeControl, true);
+document.addEventListener("keyup", settleHomeControl, true);
+function stopHomeEvents() {
+  if (homeEvents) homeEvents.close();
+  homeEvents = null;
+}
+function renderHomeEvent() {
+  const active = document.activeElement;
+  const card = active?.closest("[data-card-id]");
+  const key = card?.dataset.cardId;
+  const controls = card
+    ? [...card.querySelectorAll("button, input, select")]
+    : [];
+  const controlIndex = active && card ? controls.indexOf(active) : -1;
+  const sheet = document.querySelector(".device-sheet");
+  const sheetScroll = sheet?.scrollTop;
+  const sheetControl =
+    active && sheet?.contains(active)
+      ? [...sheet.querySelectorAll("button, input, select")].indexOf(active)
+      : -1;
+  render();
+  if (key && controlIndex >= 0) {
+    document.querySelectorAll("[data-card-id]").forEach((item) => {
+      if (item.dataset.cardId === key) {
+        item
+          .querySelectorAll("button, input, select")
+          [controlIndex]?.focus({ preventScroll: true });
+      }
+    });
+  }
+  const currentSheet = document.querySelector(".device-sheet");
+  if (currentSheet && sheetScroll != null) currentSheet.scrollTop = sheetScroll;
+  if (currentSheet && sheetControl >= 0)
+    currentSheet
+      .querySelectorAll("button, input, select")
+      [sheetControl]?.focus({ preventScroll: true });
+}
+function syncHomeEvents() {
+  const needed =
+    state.me?.credentials.homeassistant &&
     has("home") &&
-    state.me.credentials.homeassistant
-  )
-    jobs.push(
-      api("/api/ha/entities")
-        .then((v) => {
-          reconcileFanFeedback(v);
-          state.entities = v;
-          state.haError = "";
-        })
-        .catch((e) => {
-          state.haError = e.message;
-          state.entities = [];
-        }),
+    (state.page === "home" || state.page === "overview") &&
+    !document.hidden;
+  if (!needed) {
+    stopHomeEvents();
+    return;
+  }
+  if (homeEvents) return;
+  const stream = new EventSource("/api/ha/events");
+  homeEvents = stream;
+  stream.addEventListener("snapshot", (message) => {
+    if (homeEvents !== stream) return;
+    const data = JSON.parse(message.data);
+    state.entities = data.entities || [];
+    reconcileFanFeedback(state.entities);
+    state.haError = "";
+    queueHomeRender();
+  });
+  stream.addEventListener("delta", (message) => {
+    if (homeEvents !== stream) return;
+    const data = JSON.parse(message.data);
+    const entities = new Map(
+      (state.entities || []).map((entity) => [entity.entity_id, entity]),
     );
+    for (const id of data.removed || []) entities.delete(id);
+    for (const item of data.changes || []) entities.set(item.entity_id, item);
+    state.entities = [...entities.values()];
+    reconcileFanFeedback(state.entities);
+    state.haError = "";
+    queueHomeRender();
+  });
+  stream.addEventListener("status", (message) => {
+    if (homeEvents !== stream) return;
+    const status = JSON.parse(message.data);
+    if (status.state === "unauthorized") {
+      stopHomeEvents();
+      state.haError = "Access to Home Assistant has changed";
+    } else {
+      state.haError = "Home Assistant connection unavailable";
+    }
+    state.entities = [];
+    queueHomeRender();
+  });
+  stream.onerror = () => {
+    if (homeEvents !== stream) return;
+    state.haError = "Reconnecting to Home Assistant";
+    state.entities = [];
+    queueHomeRender();
+  };
+}
+async function refreshPage(page) {
+  syncHomeEvents();
+  const jobs = [];
   if (
     (page === "home" || page === "overview") &&
     has("home") &&
@@ -1886,7 +2001,6 @@ document.addEventListener("click", async (e) => {
       const v = state.entities.find((d) => d.entity_id === entity);
       if (v) v.state = v.state === "on" ? "off" : "on";
       render();
-      setTimeout(() => refreshPage(state.page), 750);
     } catch (err) {
       toast(err.message, true);
       target.disabled = false;
@@ -1900,6 +2014,7 @@ document.addEventListener("click", async (e) => {
   if (target.dataset.logout) {
     try {
       await api("/api/logout", "POST");
+      stopHomeEvents();
       state.me = null;
       state.quick = false;
       state.fanFeedback = {};
@@ -2520,14 +2635,9 @@ window.addEventListener("hashchange", () => {
     move(location.hash.slice(1));
 });
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && state.me) refreshPage(state.page);
+  if (state.me) {
+    syncHomeEvents();
+    if (!document.hidden) refreshPage(state.page);
+  }
 });
-setInterval(() => {
-  if (
-    !document.hidden &&
-    state.me &&
-    ["overview", "home", "media"].includes(state.page)
-  )
-    refreshPage(state.page);
-}, 20000);
 init();

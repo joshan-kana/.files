@@ -439,6 +439,7 @@ func (s *Server) handler() http.Handler {
 		}
 		jsonResponse(w, 200, entries)
 	})
+	mux.HandleFunc("GET /api/ha/events", s.serveHomeEvents)
 	mux.HandleFunc("GET /api/ha/entities", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
 		if !hasPage(u, "home") {
