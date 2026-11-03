@@ -91,6 +91,25 @@ func TestHomeStreamAccessAndLiveEvents(t *testing.T) {
 			t.Errorf("unexpected subscription: %+v", sub)
 			return
 		}
+		// Registry lists and notifications share the same upstream socket.
+		// The state stream must continue working when metadata is unavailable.
+		for i := 0; i < 6; i++ {
+			var metadata struct {
+				ID   int    `json:"id"`
+				Type string `json:"type"`
+			}
+			if err := conn.ReadJSON(&metadata); err != nil {
+				t.Error(err)
+				return
+			}
+			var data any
+			if metadata.Type == "config/entity_registry/list_for_display" {
+				data = map[string]any{"entities": []any{}}
+			} else if metadata.Type == "config/device_registry/list" || metadata.Type == "config/area_registry/list" {
+				data = []any{}
+			}
+			conn.WriteJSON(map[string]any{"id": metadata.ID, "type": "result", "success": true, "result": data})
+		}
 		conn.WriteJSON(map[string]any{"id": 1, "type": "result", "success": true})
 		conn.WriteJSON(map[string]any{"id": 1, "type": "event", "event": map[string]any{"a": map[string]any{"fan.bedroom": map[string]any{"s": "off", "a": map[string]any{"percentage": 0}}}}})
 		conn.WriteJSON(map[string]any{"id": 1, "type": "event", "event": map[string]any{"c": map[string]any{"fan.bedroom": map[string]any{"+": map[string]any{"s": "on", "a": map[string]any{"percentage": 66}}}}}})
@@ -146,9 +165,13 @@ func TestHomeStreamAccessAndLiveEvents(t *testing.T) {
 	}
 	reader := bufio.NewScanner(res.Body)
 	var events []string
+	eventType := ""
 	for reader.Scan() {
 		line := reader.Text()
-		if strings.HasPrefix(line, "data: ") {
+		if strings.HasPrefix(line, "event: ") {
+			eventType = strings.TrimPrefix(line, "event: ")
+		}
+		if strings.HasPrefix(line, "data: ") && (eventType == "snapshot" || eventType == "delta") {
 			var data map[string]json.RawMessage
 			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &data); err != nil {
 				t.Fatal(err)
@@ -310,12 +333,31 @@ func TestHomeEventsLiveReadOnly(t *testing.T) {
 	var streamEntities struct {
 		Entities []homeEntity `json:"entities"`
 	}
+	var metadata homeRegistryMetadata
+	eventType := ""
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "data: ") {
-			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &streamEntities); err != nil {
+		if strings.HasPrefix(line, "event: ") {
+			eventType = strings.TrimPrefix(line, "event: ")
+			continue
+		}
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+		data := []byte(strings.TrimPrefix(line, "data: "))
+		switch eventType {
+		case "snapshot":
+			if err := json.Unmarshal(data, &streamEntities); err != nil {
 				t.Fatal(err)
 			}
+		case "metadata":
+			if err := json.Unmarshal(data, &metadata); err != nil {
+				t.Fatal(err)
+			}
+		case "metadata-error":
+			t.Fatal("Home Assistant registry access failed")
+		}
+		if len(streamEntities.Entities) > 0 && metadata.Areas != nil {
 			break
 		}
 	}
@@ -325,5 +367,23 @@ func TestHomeEventsLiveReadOnly(t *testing.T) {
 	if len(streamEntities.Entities) != len(states) {
 		t.Fatalf("SSE snapshot has %d entities, upstream subscription had %d", len(streamEntities.Entities), len(states))
 	}
-	t.Logf("Authenticated Haven SSE: %d permitted entities; initial end-to-end snapshot %s", len(streamEntities.Entities), time.Since(start).Round(time.Millisecond))
+	if metadata.Areas == nil {
+		t.Fatal("no registry metadata delivered through Haven SSE")
+	}
+	readable := make(map[string]bool, len(streamEntities.Entities))
+	for _, entity := range streamEntities.Entities {
+		readable[entity.EntityID] = true
+	}
+	for id := range metadata.Devices {
+		if !readable[id] {
+			t.Fatal("registry sent metadata for an unreadable entity")
+		}
+	}
+	for id := range metadata.Areas {
+		if !readable[id] {
+			t.Fatal("registry sent area for an unreadable entity")
+		}
+	}
+	t.Logf("Authenticated Haven SSE: %d readable entities, %d device bindings, %d room assignments, %d area icons; initial metadata in %s",
+		len(streamEntities.Entities), len(metadata.Devices), len(metadata.Areas), len(metadata.RoomIcons), time.Since(start).Round(time.Millisecond))
 }

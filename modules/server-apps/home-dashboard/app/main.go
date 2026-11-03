@@ -28,8 +28,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 //go:embed static/*
@@ -468,84 +466,6 @@ func (s *Server) handler() http.Handler {
 		}
 		jsonResponse(w, 200, results)
 	})
-	mux.HandleFunc("GET /api/ha/areas", func(w http.ResponseWriter, r *http.Request) {
-		u := s.session(r)
-		if !hasPage(u, "home") {
-			failure(w, 403, "Access denied")
-			return
-		}
-		// Home Assistant resolves the actual area registry, including device-derived areas.
-		// When a template is unavailable, rooms remain manually assignable per account.
-		template := `{% set ns = namespace(items=[]) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor','button','number','select','media_player'] %}{% set room = area_name(e.entity_id) %}{% if room %}{% set ns.items = ns.items + [{'entity_id': e.entity_id, 'room': room}] %}{% endif %}{% endfor %}{{ ns.items | tojson }}`
-		body, _ := json.Marshal(map[string]string{"template": template})
-		result, err := s.request(u, "homeassistant", "POST", "/api/template", body)
-		if err != nil {
-			jsonResponse(w, 200, map[string]string{})
-			return
-		}
-		var rooms []struct {
-			EntityID string `json:"entity_id"`
-			Room     string `json:"room"`
-		}
-		if json.Unmarshal(result, &rooms) != nil {
-			jsonResponse(w, 200, map[string]string{})
-			return
-		}
-		filtered := map[string]string{}
-		for _, entry := range rooms {
-			if entityPattern.MatchString(entry.EntityID) && len(entry.Room) <= 60 {
-				filtered[entry.EntityID] = entry.Room
-			}
-		}
-		jsonResponse(w, 200, filtered)
-	})
-	mux.HandleFunc("GET /api/ha/devices", func(w http.ResponseWriter, r *http.Request) {
-		u := s.session(r)
-		if !hasPage(u, "home") {
-			failure(w, 403, "Access denied")
-			return
-		}
-		// Resolve Home Assistant's actual entity-to-device relationships. The result
-		// contains only display metadata and never exposes the upstream token.
-		const template = `{% set ns = namespace(items=[]) %}{% for e in states if e.domain in ['light','switch','fan','input_boolean','climate','cover','scene','sensor','binary_sensor','button','number','select','media_player'] %}{% set id = device_id(e.entity_id) %}{% if id %}{% set name = device_name(id) or id %}{% set room = area_name(e.entity_id) or '' %}{% set model = device_attr(id, 'model') or '' %}{% set ns.items = ns.items + [{'entity_id': e.entity_id, 'id': id, 'name': name, 'room': room, 'model': model}] %}{% endif %}{% endfor %}{{ ns.items | tojson }}`
-		body, _ := json.Marshal(map[string]string{"template": template})
-		result, err := s.request(u, "homeassistant", "POST", "/api/template", body)
-		if err != nil {
-			failure(w, 502, "Home Assistant device registry unavailable")
-			return
-		}
-		var raw []struct {
-			EntityID string `json:"entity_id"`
-			ID       string `json:"id"`
-			Name     string `json:"name"`
-			Room     string `json:"room"`
-			Model    string `json:"model"`
-		}
-		if json.Unmarshal(result, &raw) != nil {
-			failure(w, 502, "Invalid device registry response")
-			return
-		}
-		filtered := make(map[string]any)
-		for _, device := range raw {
-			if entityPattern.MatchString(device.EntityID) && len(device.ID) <= 128 && len(device.Name) <= 128 && len(device.Room) <= 80 && len(device.Model) <= 128 {
-				filtered[device.EntityID] = map[string]string{"id": device.ID, "name": device.Name, "room": device.Room, "model": device.Model}
-			}
-		}
-		jsonResponse(w, 200, filtered)
-	})
-	mux.HandleFunc("GET /api/ha/room-icons", func(w http.ResponseWriter, r *http.Request) {
-		u := s.session(r)
-		if !hasPage(u, "home") {
-			failure(w, 403, "Access denied")
-			return
-		}
-		icons, err := s.homeAreaIcons(u)
-		if err != nil {
-			failure(w, 502, "Home Assistant area icons unavailable")
-			return
-		}
-		jsonResponse(w, 200, icons)
-	})
 	mux.HandleFunc("PUT /api/profile/home", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
 		if !hasPage(u, "home") {
@@ -983,71 +903,6 @@ func validPages(p map[string]bool) bool {
 }
 func (s *Server) fetch(u *User, service, path string) ([]byte, error) {
 	return s.request(u, service, "GET", path, nil)
-}
-
-// Home Assistant exposes area icons through its authenticated area registry,
-// not the read-only template API. Fetch them server-side without revealing tokens.
-func (s *Server) homeAreaIcons(u *User) (map[string]string, error) {
-	secret, err := s.decrypt(u.Credentials["homeassistant"])
-	if err != nil || secret == "" {
-		return nil, errors.New("Home Assistant not connected")
-	}
-	endpoint, err := url.Parse(upstreams["homeassistant"])
-	if err != nil {
-		return nil, err
-	}
-	if endpoint.Scheme == "http" {
-		endpoint.Scheme = "ws"
-	} else if endpoint.Scheme == "https" {
-		endpoint.Scheme = "wss"
-	} else {
-		return nil, errors.New("invalid Home Assistant endpoint")
-	}
-	endpoint.Path = "/api/websocket"
-	endpoint.RawQuery = ""
-	conn, _, err := (&websocket.Dialer{HandshakeTimeout: 4 * time.Second}).Dial(endpoint.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	conn.SetReadLimit(1024 * 1024)
-	if err = conn.SetReadDeadline(time.Now().Add(6 * time.Second)); err != nil {
-		return nil, err
-	}
-	var msg struct {
-		Type    string          `json:"type"`
-		Success bool            `json:"success"`
-		Result  json.RawMessage `json:"result"`
-	}
-	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "auth_required" {
-		return nil, errors.New("invalid Home Assistant authentication handshake")
-	}
-	if err = conn.WriteJSON(map[string]string{"type": "auth", "access_token": secret}); err != nil {
-		return nil, err
-	}
-	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "auth_ok" {
-		return nil, errors.New("Home Assistant authentication failed")
-	}
-	if err = conn.WriteJSON(map[string]any{"id": 1, "type": "config/area_registry/list"}); err != nil {
-		return nil, err
-	}
-	if err = conn.ReadJSON(&msg); err != nil || msg.Type != "result" || !msg.Success {
-		return nil, errors.New("Home Assistant area registry failed")
-	}
-	var areas []struct {
-		Name string `json:"name"`
-		Icon string `json:"icon"`
-	}
-	if err = json.Unmarshal(msg.Result, &areas); err != nil {
-		return nil, err
-	}
-	result := map[string]string{}
-	for _, area := range areas {
-		if len(area.Name) > 0 && len(area.Name) <= 80 && len(area.Icon) > 4 && len(area.Icon) <= 80 && strings.HasPrefix(area.Icon, "mdi:") {
-			result[area.Name] = area.Icon
-		}
-	}
-	return result, nil
 }
 
 func (s *Server) request(u *User, service, verb, path string, body []byte) ([]byte, error) {
