@@ -3773,3 +3773,42 @@ svg {
     grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
   }
 }
+
+/* Application shortcuts retain native link behavior; pinning is a separate
+   keyboard- and touch-accessible action. */
+.app-entry {
+  position: relative;
+  min-width: 0;
+}
+.app-entry .app-card {
+  width: 100%;
+  height: 100%;
+  padding-right: 58px;
+}
+.app-pin {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--pane);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.app-pin:hover,
+.app-pin.selected {
+  color: var(--mint);
+  border-color: var(--mint);
+}
+.app-pin svg {
+  width: 19px;
+  height: 19px;
+}
+.app-pin:focus-visible {
+  outline: 2px solid var(--tone-cool);
+  outline-offset: 2px;
+}

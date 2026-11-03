@@ -12,6 +12,100 @@ let
   pkg = pkgs.callPackage ./package.nix { };
   listenPort = 8443;
   certDir = "${server.secretsDir}/internal-tls";
+  enabledScopes = config.dotfiles.resolvedScopes.serverApps;
+  enabledAppSpecs = [
+    {
+      id = "ha";
+      enabled = enabledScopes.homeAssistant.enable;
+    }
+    {
+      id = "jellyfin";
+      enabled = enabledScopes.jellyfin.enable;
+    }
+    {
+      id = "sonarr";
+      enabled = enabledScopes.servarr.sonarr.enable;
+    }
+    {
+      id = "radarr";
+      enabled = enabledScopes.servarr.radarr.enable;
+    }
+    {
+      id = "prowlarr";
+      enabled = enabledScopes.servarr.prowlarr.enable;
+    }
+    {
+      id = "bazarr";
+      enabled = enabledScopes.servarr.bazarr.enable;
+    }
+    {
+      id = "transmission";
+      enabled = enabledScopes.servarr.transmission.enable;
+    }
+    {
+      id = "seerr";
+      enabled = enabledScopes.servarr.seerr.enable;
+    }
+    {
+      id = "streamystats";
+      enabled = enabledScopes.servarr.streamystats.enable;
+    }
+    {
+      id = "immich";
+      enabled = enabledScopes.immich.enable;
+    }
+    {
+      id = "paperless";
+      enabled = enabledScopes.paperless.enable;
+    }
+    {
+      id = "n8n";
+      enabled = enabledScopes.n8n.enable;
+    }
+    {
+      id = "openwebui";
+      enabled = enabledScopes.openWebui.enable;
+    }
+    {
+      id = "computer";
+      enabled = enabledScopes.openWebui.computer.enable;
+    }
+    {
+      id = "openclaw";
+      enabled = enabledScopes.openclaw.enable;
+    }
+    {
+      id = "gitea";
+      enabled = enabledScopes.gitea.enable;
+    }
+    {
+      id = "gerrit";
+      enabled = enabledScopes.gerrit.enable;
+    }
+    {
+      id = "onedev";
+      enabled = enabledScopes.onedev.enable;
+    }
+    {
+      id = "agentmail";
+      enabled = enabledScopes.agentTools.agentMail.enable;
+    }
+    {
+      id = "adguard";
+      enabled = config.services.adguardhome.enable;
+    }
+    {
+      id = "technitium";
+      enabled = config.services.technitium-dns-server.enable;
+    }
+    {
+      id = "ntfy";
+      enabled = enabledScopes.ntfy.enable;
+    }
+  ];
+  enabledApps = lib.concatStringsSep "," (
+    lib.concatMap (app: lib.optional app.enabled app.id) enabledAppSpecs
+  );
 in
 {
   users.groups.home-dashboard = { };
@@ -28,6 +122,7 @@ in
     environment = {
       DASHBOARD_LISTEN = "127.0.0.1:8777";
       DASHBOARD_DATA_DIR = stateDir;
+      DASHBOARD_ENABLED_APPS = enabledApps;
       DASHBOARD_PUBLIC_ORIGIN = "https://nixos-server.home:${toString listenPort}";
     };
     serviceConfig = {
