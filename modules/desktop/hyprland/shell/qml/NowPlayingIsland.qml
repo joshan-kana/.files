@@ -57,7 +57,7 @@ Item {
         exponent: Math.min(4, theme.squircleExponent)
         elevated: false
         outlined: false
-        fillColor: island.frameConnected ? "transparent" : theme.background
+        fillColor: theme.musicReactiveBackground
 
         // One uninterrupted hover shape, shared by the two pointer targets.
         // Neither target draws its own partial-width highlight.

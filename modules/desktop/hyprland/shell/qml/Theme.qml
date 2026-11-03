@@ -92,6 +92,9 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
+    readonly property color musicReactiveHue: blend(accent, positive, Math.min(0.65, musicReactiveTreble * 0.65))
+    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.13, musicReactiveEnergy * 0.085 + musicReactiveBeat * 0.045) : 0
+    readonly property color musicReactiveBackground: musicReactiveWash > 0 ? blend(background, musicReactiveHue, musicReactiveWash) : background
 
     readonly property real textScale: runtime.textScale
 
