@@ -77,16 +77,34 @@ in
   };
 
   firefox = _: {
-    home = _: {
-      programs.firefox =
-        lib.optionalAttrs isDarwin {
-          package = pkgs.firefox-bin;
-          configPath = "Library/Application Support/Firefox";
-        }
-        // lib.optionalAttrs isLinux {
-          configPath = ".mozilla/firefox";
+    home =
+      _:
+      {
+        programs.firefox =
+          lib.optionalAttrs isDarwin {
+            package = pkgs.firefox-bin;
+            configPath = "Library/Application Support/Firefox";
+          }
+          // lib.optionalAttrs isLinux {
+            configPath = ".mozilla/firefox";
+          };
+      }
+      // lib.optionalAttrs isDarwin {
+        # Suppress the macOS Option-key shortcut without disabling Troubleshoot Mode.
+        launchd.agents.disableFirefoxSafeModeKey = {
+          enable = true;
+          config = {
+            Label = "com.joshankana.disable-firefox-safe-mode-key";
+            ProgramArguments = [
+              "/bin/launchctl"
+              "setenv"
+              "MOZ_DISABLE_SAFE_MODE_KEY"
+              "1"
+            ];
+            RunAtLoad = true;
+          };
         };
-    };
+      };
   };
 
   floorp = _: { };
