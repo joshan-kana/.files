@@ -13,9 +13,13 @@ QtObject {
 
     property var bands: []
     property var targetBands: []
+    // Reuse alternating output buffers. Each published frame has a different
+    // identity so QML bindings are notified without allocating a new array.
+    property var frameA: []
+    property var frameB: []
     property bool interpolating: false
     property bool decaying: false
-    readonly property bool hasEnergy: bands.some(value => value > 0.002)
+    property bool hasEnergy: false
     property real rms: 0
     property real peak: 0
     property real sub: 0
@@ -39,6 +43,7 @@ QtObject {
         if (bands.length !== next.length) {
             bands = next;
             targetBands = next;
+            hasEnergy = next.some(value => value > 0.002);
             interpolating = false;
             return;
         }
@@ -62,27 +67,38 @@ QtObject {
 
         // Preserve the last audio frame as it settles after the socket closes.
         // The shorter live interpolation remains unchanged while playing.
-        const values = [];
+        const values = bands === frameA ? frameB : frameA;
+        values.length = targetBands.length;
         let maxDifference = 0;
+        let energy = false;
         const bassEnd = targetBands.length * Math.log(250 / Math.max(1, lowHz)) / Math.log(Math.max(2, highHz / Math.max(1, lowHz)));
+        // Five easing coefficients per display frame, not one exponential for
+        // every FFT band. These are identical to the previous per-band rates.
+        const bassAttack = 1 - Math.exp(-delta * 320);
+        const bassRelease = 1 - Math.exp(-delta * 110);
+        const highAttack = 1 - Math.exp(-delta * 120);
+        const highRelease = 1 - Math.exp(-delta * 45);
+        const decay = decaying ? 1 - Math.exp(-delta * 10) : 0;
         for (let i = 0; i < targetBands.length; i++) {
-            const lowBand = i <= bassEnd;
-            // Kick transients should arrive immediately and fall cleanly.
-            // Higher bands retain a softer but still responsive decay.
-            const rate = decaying ? 10 : lowBand ? (targetBands[i] > bands[i] ? 320 : 110) : (targetBands[i] > bands[i] ? 120 : 45);
-            const blend = 1 - Math.exp(-delta * rate);
-            const value = bands[i] + (targetBands[i] - bands[i]) * blend;
-            values.push(value);
-            maxDifference = Math.max(maxDifference, Math.abs(targetBands[i] - value));
+            const current = bands[i];
+            const target = targetBands[i];
+            const blend = decaying ? decay : i <= bassEnd ? (target > current ? bassAttack : bassRelease) : (target > current ? highAttack : highRelease);
+            const value = current + (target - current) * blend;
+            values[i] = value;
+            energy = energy || value > 0.002;
+            maxDifference = Math.max(maxDifference, Math.abs(target - value));
         }
 
-        bands = maxDifference < 0.002 ? targetBands : values;
-        if (maxDifference < 0.002) {
+        const settled = maxDifference < 0.002;
+        bands = settled ? targetBands : values;
+        hasEnergy = settled ? targetBands.some(value => value > 0.002) : energy;
+        if (settled) {
             interpolating = false;
             if (decaying) {
                 decaying = false;
                 bands = [];
                 targetBands = [];
+                hasEnergy = false;
             }
         }
     }
@@ -163,6 +179,7 @@ QtObject {
             if (!decaying) {
                 bands = [];
                 targetBands = [];
+                hasEnergy = false;
             }
             rms = 0;
             peak = 0;
