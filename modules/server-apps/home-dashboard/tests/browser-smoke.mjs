@@ -103,6 +103,24 @@ const session = {
   accent: "mint",
   show_unavailable: false,
 };
+if (process.env.HAVEN_SMOKE_STRESS) {
+  for (let index = 0; index < 250; index++) {
+    const entityID = "switch.simulated_" + String(index).padStart(3, "0");
+    const area = index % 2 ? "Bedroom" : "Lounge";
+    entities.push({
+      entity_id: entityID,
+      state: "off",
+      attributes: { friendly_name: "Simulated switch " + index },
+    });
+    metadata.areas[entityID] = area;
+    metadata.devices[entityID] = {
+      id: "simulated-" + index,
+      name: "Simulated switch " + index,
+      room: area,
+      model: "Virtual fixture",
+    };
+  }
+}
 const fileNames = {
   "/": "index.html",
   "/app.js": "app.js",
@@ -212,7 +230,9 @@ const server = http.createServer((req, res) => {
     if (name === "app.js")
       res.end(
         fs.readFileSync(path.join(root, name), "utf8") +
-          "\nwindow.__havenSim={state,move,homeDevices};",
+          "\nwindow.__havenSim={state,move,homeDevices};" +
+          "\nconst __originalTile=homeTile;window.__tileRenders=0;homeTile=function(device){window.__tileRenders++;return __originalTile(device);};" +
+          "\nconst __originalRender=renderHomeEvent;window.__renderDurations=[];renderHomeEvent=function(...args){const start=performance.now();const result=__originalRender(...args);window.__renderDurations.push(performance.now()-start);return result;};",
       );
     else fs.createReadStream(path.join(root, name)).pipe(res);
     return;
@@ -297,9 +317,16 @@ try {
   await call("Page.navigate", {
     url: "http://127.0.0.1:" + server.address().port + "/#home",
   });
-  await sleep(600);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const loaded = await evaljs(
+      'document.querySelectorAll("#home-grid [data-card-id]").length',
+    );
+    if (loaded >= 3) break;
+    await sleep(100);
+  }
+  await sleep(120);
   const first = await evaljs(
-    '(()=>{const cards=[...document.querySelectorAll("#home-grid [data-card-id]")];const fan=cards.find(c=>c.textContent.includes("Bedroom fan"));window.__unchangedCard=cards.find(c=>c.textContent.includes("Lounge fan"));window.__shell=document.querySelector(".sidebar");fan?.querySelectorAll("button[data-ha-percentage]")[1]?.focus();return {page:window.__havenSim.state.page,cards:cards.length,fanOff:fan?.querySelectorAll("[data-ha-percentage]").length,selected:fan?.querySelector("[data-ha-percentage].active")?.dataset.haPercentage,overflow:document.documentElement.scrollWidth>innerWidth}})()',
+    '(()=>{const cards=[...document.querySelectorAll("#home-grid [data-card-id]")];const fan=cards.find(c=>c.textContent.includes("Bedroom fan"));window.__unchangedCard=cards.find(c=>c.textContent.includes("Lounge fan"));window.__shell=document.querySelector(".sidebar");fan?.querySelectorAll("button[data-ha-percentage]")[1]?.focus();return {page:window.__havenSim.state.page,cards:cards.length,fanOff:fan?.querySelectorAll("[data-ha-percentage]").length,selected:fan?.querySelector("[data-ha-percentage].active")?.dataset.haPercentage,renders:window.__tileRenders,overflow:document.documentElement.scrollWidth>innerWidth}})()',
   );
   if (
     first.page !== "home" ||
@@ -323,13 +350,14 @@ try {
   }
   await sleep(1300);
   const second = await evaljs(
-    '(()=>{const card=[...document.querySelectorAll("#home-grid [data-card-id]")].find(c=>c.textContent.includes("Bedroom fan"));return {changed:window.__havenSim.state.entities.find(x=>x.entity_id==="fan.bedroom").attributes.percentage,unchanged:window.__unchangedCard?.isConnected,identical:window.__unchangedCard===[...document.querySelectorAll("#home-grid [data-card-id]")].find(c=>c.textContent.includes("Lounge fan")),shellSame:window.__shell===document.querySelector(".sidebar"),focused:document.activeElement?.dataset.haPercentage,overflow:document.documentElement.scrollWidth>innerWidth}})()',
+    '(()=>{const card=[...document.querySelectorAll("#home-grid [data-card-id]")].find(c=>c.textContent.includes("Bedroom fan"));return {changed:window.__havenSim.state.entities.find(x=>x.entity_id==="fan.bedroom").attributes.percentage,unchanged:window.__unchangedCard?.isConnected,identical:window.__unchangedCard===[...document.querySelectorAll("#home-grid [data-card-id]")].find(c=>c.textContent.includes("Lounge fan")),shellSame:window.__shell===document.querySelector(".sidebar"),focused:document.activeElement?.dataset.haPercentage,renders:window.__tileRenders,renderMs:window.__renderDurations.at(-1),overflow:document.documentElement.scrollWidth>innerWidth}})()',
   );
   if (
     second.changed !== 66 ||
     !second.identical ||
     !second.shellSame ||
     second.focused !== "33" ||
+    second.renders - first.renders > 2 ||
     second.overflow
   )
     throw Error("targeted update failed " + JSON.stringify(second));
@@ -440,6 +468,17 @@ try {
     throw Error("desktop search shortcut did not focus device search");
   await press("Escape", "Escape", 27);
   await evaljs("document.activeElement?.blur()");
+  const opened = await evaljs(
+    '(()=>{const opener=document.querySelector(".home-tile .tile-open");opener?.click();return {open:!!document.querySelector(".overlay [role=dialog]"),focused:document.querySelector(".overlay [role=dialog]")?.contains(document.activeElement)}})()',
+  );
+  if (!opened.open || !opened.focused)
+    throw Error("device details did not focus the modal dialog");
+  await press("Escape", "Escape", 27);
+  const returned = await evaljs(
+    '({closed:!document.querySelector(".overlay"),focused:document.activeElement?.matches(".home-tile .tile-open")})',
+  );
+  if (!returned.closed || !returned.focused)
+    throw Error("Escape did not restore focus to the device tile");
 
   if (process.env.HAVEN_SMOKE_SCREENSHOTS) {
     const shot = await call("Page.captureScreenshot", {
