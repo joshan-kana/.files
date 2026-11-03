@@ -229,7 +229,7 @@ Variants {
                 exponent: Math.min(4, theme.squircleExponent)
                 elevated: false
                 outlined: false
-                fillColor: bars.frameVisible ? "transparent" : theme.background
+                fillColor: theme.musicReactiveBackground
 
                 HoverHandler {
                     id: workspaceHover
@@ -436,7 +436,7 @@ Variants {
                 exponent: Math.min(4, theme.squircleExponent)
                 elevated: false
                 outlined: false
-                fillColor: bars.frameVisible ? "transparent" : theme.background
+                fillColor: theme.musicReactiveBackground
 
                 Row {
                     id: clockRow
@@ -512,7 +512,7 @@ Variants {
                 cornerRadius: bars.theme.radiusIsland
                 elevated: false
                 outlined: false
-                fillColor: bars.frameVisible ? "transparent" : theme.background
+                fillColor: theme.musicReactiveBackground
 
                 Row {
                     id: notificationRow
@@ -581,7 +581,7 @@ Variants {
                 cornerRadius: bars.theme.radiusIsland
                 elevated: false
                 outlined: false
-                fillColor: bars.frameVisible ? "transparent" : theme.background
+                fillColor: theme.musicReactiveBackground
 
                 Row {
                     id: recordingContent

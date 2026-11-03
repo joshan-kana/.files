@@ -33,6 +33,14 @@ QtObject {
         lastUpdateMs = now;
         const follow = alpha => 1 - Math.pow(1 - alpha, elapsed * 15);
 
+        // Silence must be identical to reactive mode being disabled. A
+        // connected analyser is not itself evidence of audible input.
+        const loudness = Math.max(spectrum.rms, spectrum.peak * 0.35);
+        if (!spectrum.connected || loudness <= 0.003) {
+            reset();
+            return;
+        }
+        const presence = clamp((loudness - 0.003) / 0.025);
         const bass = clamp(spectrum.sub * 0.78 + spectrum.bass * 0.22);
         const peak = clamp(spectrum.peak);
         if (!baselineReady) {
@@ -54,9 +62,9 @@ QtObject {
 
         // Reserve most of the intensity range for actual musical variation.
         // Bass-heavy tracks no longer pin the whole interface to maximum glow.
-        sustain = clamp(0.10 + bass * 0.16 + relativeBass * 0.43 + Math.sqrt(clamp(spectrum.mid)) * 0.10);
-        beatPulse = clamp(Math.max(attack, beatPulse * Math.pow(0.52, elapsed * 15)));
-        treble = clamp(Math.sqrt(clamp(spectrum.high)));
+        sustain = presence * clamp(0.10 + bass * 0.16 + relativeBass * 0.43 + Math.sqrt(clamp(spectrum.mid)) * 0.10);
+        beatPulse = presence * clamp(Math.max(attack, beatPulse * Math.pow(0.52, elapsed * 15)));
+        treble = presence * clamp(Math.sqrt(clamp(spectrum.high)));
     }
 
     function reset(): void {
@@ -81,6 +89,10 @@ QtObject {
         target: reactive.spectrum
         function onSequenceChanged(): void {
             reactive.updateAudio();
+        }
+        function onConnectedChanged(): void {
+            if (!reactive.spectrum.connected)
+                reactive.reset();
         }
     }
 }

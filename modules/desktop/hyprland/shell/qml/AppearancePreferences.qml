@@ -36,16 +36,25 @@ QtObject {
 
     // Preloaded panels retain their Wayland layers while closed, but an
     // invisible surface must not force compositor blur of the live wallpaper.
+    property bool frameGlassExposed: false
     property bool expansionGlassExposed: false
     property bool modalGlassExposed: false
     property bool notificationGlassExposed: false
     property bool osdGlassExposed: false
+    property bool resizeGlassExposed: false
 
+    // The frame and connected islands occupy separate Wayland layers.
+    // Both need masked blur; neither is a substitute for the other.
     onBarVisibleChanged: applyGlassRule("linux-desktop-shell-glass", "^linux-desktop-bar$", barVisible)
+    onFrameGlassExposedChanged: {
+        applyGlassRule("linux-desktop-shell-glass-frame", "^linux-desktop-frame$", frameGlassExposed);
+        applyGlassRule("linux-desktop-shell-glass", "^linux-desktop-bar$", barVisible);
+    }
     onExpansionGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-expansion", "^linux-desktop-expansion$", expansionGlassExposed)
     onModalGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-modal", "^linux-desktop-modal$", modalGlassExposed)
     onNotificationGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed)
     onOsdGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed)
+    onResizeGlassExposedChanged: applyGlassRule("linux-desktop-shell-glass-resize", "^linux-desktop-resize-controls$", resizeGlassExposed)
 
     function resetToDeclared(): void {
         const defaults = {
@@ -153,10 +162,12 @@ QtObject {
         // Only visible layers need backdrop blur. Preloaded modal and hub
         // surfaces keep their fast first-open path without idle blur passes.
         applyGlassRule("linux-desktop-shell-glass", "^linux-desktop-bar$", barVisible);
+        applyGlassRule("linux-desktop-shell-glass-frame", "^linux-desktop-frame$", frameGlassExposed);
         applyGlassRule("linux-desktop-shell-glass-expansion", "^linux-desktop-expansion$", expansionGlassExposed);
         applyGlassRule("linux-desktop-shell-glass-modal", "^linux-desktop-modal$", modalGlassExposed);
         applyGlassRule("linux-desktop-shell-glass-notification", "^linux-desktop-notification-popup$", notificationGlassExposed);
         applyGlassRule("linux-desktop-shell-glass-osd", "^linux-desktop-osd$", osdGlassExposed);
+        applyGlassRule("linux-desktop-shell-glass-resize", "^linux-desktop-resize-controls$", resizeGlassExposed);
     }
 
     function toggleShellGlass(): void {

@@ -150,8 +150,8 @@ PanelWindow {
             motion: popup.motion
             surfaceLayer: ShellSurface.Pane
             cornerRadius: theme.radiusPanel
-            fillColor: popup.frameConnected ? "transparent" : popup.theme.paneBase
-            glassAllowed: !popup.frameConnected
+            frameConnected: popup.frameConnected
+            fillColor: popup.frameConnected && !popup.theme.shellGlassEnabled ? "transparent" : popup.theme.paneBase
             borderColor: toast.notification && toast.notification.urgency === NotificationUrgency.Critical ? Qt.rgba(popup.theme.critical.r, popup.theme.critical.g, popup.theme.critical.b, 0.58) : popup.theme.subtleBorder
             borderWidth: popup.frameConnected ? 0 : popup.theme.borderFocus
 

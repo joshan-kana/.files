@@ -134,8 +134,8 @@ PanelWindow {
         ShellSurface {
             anchors.fill: parent
             theme: overlay.theme
-            fillColor: overlay.frameConnected ? "transparent" : overlay.theme.panelBase
-            glassAllowed: !overlay.frameConnected
+            frameConnected: overlay.frameConnected
+            fillColor: overlay.frameConnected && !overlay.theme.shellGlassEnabled ? "transparent" : overlay.theme.panelBase
             borderWidth: overlay.frameConnected ? 0 : overlay.theme.borderFocus
             motion: overlay.motion
             surfaceLayer: ShellSurface.Pane
