@@ -28,7 +28,10 @@ SquircleSurface {
 
     // Change fill alpha, not the Item opacity: children, icons and text stay
     // fully legible while the compositor blurs only the shaped backdrop.
-    fillOpacity: frameConnected && !theme.shellGlassEnabled ? theme.musicReactiveWash : !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? 0.58 : 0.74
+    // The connected frame owns the glass/tint for attached surfaces. A
+    // second translucent fill here would darken it and blur the same backdrop
+    // twice. Detached surfaces continue to paint and blur themselves.
+    fillOpacity: frameConnected ? 0 : !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? 0.58 : 0.74
 
     Behavior on fillOpacity {
         Anim {
@@ -76,7 +79,7 @@ SquircleSurface {
                 base = theme.layer1;
                 break;
             }
-        return frameConnected ? "transparent" : musicActive && theme.musicReactiveWash > 0 ? theme.blend(base, theme.musicReactiveHue, theme.musicReactiveWash) : base;
+        return musicActive && theme.musicReactiveWash > 0 ? theme.blend(base, theme.musicReactiveHue, theme.musicReactiveWash) : base;
     }
     borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     // Audio only modulates the fill and soft light. Borders keep their

@@ -165,6 +165,7 @@ QtObject {
     readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.06))
     readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, dark ? 0.12 : 0.17)
+    readonly property color glassContourBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, dark ? 0.22 : 0.25)
     readonly property color layer0: background
     readonly property color layer1: paneBase
     readonly property color layer2: groupBase

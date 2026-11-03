@@ -32,15 +32,13 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
   );
 });
 
-test("the connected hub keeps the same glass fill without an opaque override", () => {
+test("connected hub borrows a single glass material from the shared contour", () => {
   const hub = qml("ShellExpansionHost.qml");
   const surface = qml("ShellSurface.qml");
   assert.match(hub, /fillColor: host\.theme\.musicReactiveBackground/);
+  assert.match(hub, /frameConnected: host\.frameVisible/);
   assert.doesNotMatch(hub, /glassAllowed: !host\.frameVisible/);
-  assert.match(
-    surface,
-    /fillOpacity: frameConnected && !theme\.shellGlassEnabled \? theme\.musicReactiveWash/,
-  );
+  assert.match(surface, /fillOpacity: frameConnected \? 0 : !glassAllowed/);
   assert.match(
     surface,
     /surfaceLayer === ShellSurface\.Pane \? theme\.glassOpacity/,
@@ -59,11 +57,7 @@ test("all connected popups keep glass available in both frame modes", () => {
   ]) {
     const src = qml(file);
     assert.match(src, new RegExp(`frameConnected: ${owner}\\.frameConnected`));
-    assert.ok(
-      src.includes(
-        `fillColor: ${owner}.frameConnected && !${owner}.theme.shellGlassEnabled ? "transparent" : ${owner}.theme.${base}`,
-      ),
-    );
+    assert.ok(src.includes(`fillColor: ${owner}.theme.${base}`));
     assert.doesNotMatch(src, /glassAllowed: !.*frameConnected/);
   }
   const prefs = qml("AppearancePreferences.qml");
@@ -76,4 +70,31 @@ test("all connected popups keep glass available in both frame modes", () => {
     shell,
     /resizeGlassExposed: resizeOverlay\.open \|\| resizeOverlay\.closing/,
   );
+});
+
+// The frame already contains all attached top, side and bottom notch wells;
+// compositing another translucent pane would reduce transmission to (1-a)^2.
+test("connected panes do not double-tint the frame, but detached glass still works", () => {
+  const surface = qml("ShellSurface.qml");
+  const host = qml("ShellExpansionHost.qml");
+  assert.match(surface, /fillOpacity: frameConnected \? 0 : !glassAllowed/);
+  assert.match(
+    surface,
+    /surfaceLayer === ShellSurface\.Pane \? theme\.glassOpacity/,
+  );
+  assert.match(host, /frameConnected: host\.frameVisible/);
+  assert.match(surface, /Behavior on fillOpacity/);
+  assert.doesNotMatch(
+    surface,
+    /fillOpacity: frameConnected && !theme\.shellGlassEnabled/,
+  );
+  for (const file of [
+    "NotificationPopup.qml",
+    "OsdPopup.qml",
+    "ResizeOverlay.qml",
+  ])
+    assert.doesNotMatch(
+      qml(file),
+      /frameConnected && !.*shellGlassEnabled \? "transparent"/,
+    );
 });

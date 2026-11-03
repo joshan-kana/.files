@@ -38,10 +38,10 @@ Variants {
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness
     readonly property real rounding: theme.frameRounding
-    // Music changes the shared contour's hue, never its width or opacity.
-    // Theme.blend returns an opaque colour, so restore the border's alpha.
+    // The one-pixel contour needs contrast against translucent wallpaper glass.
+    // Music affects only its hue; the alpha follows the underlying material.
     readonly property color reactiveTint: theme.musicReactiveWash > 0 ? theme.blend(theme.subtleBorder, theme.musicReactiveHue, theme.musicReactiveWash * 0.75) : theme.subtleBorder
-    readonly property color reactiveBorder: Qt.rgba(reactiveTint.r, reactiveTint.g, reactiveTint.b, theme.subtleBorder.a)
+    readonly property color reactiveBorder: Qt.rgba(reactiveTint.r, reactiveTint.g, reactiveTint.b, theme.shellGlassEnabled ? theme.glassContourBorder.a : theme.subtleBorder.a)
     property real progress: 0
 
     NumberAnimation on progress {
