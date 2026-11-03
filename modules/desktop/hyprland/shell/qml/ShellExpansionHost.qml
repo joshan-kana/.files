@@ -448,11 +448,12 @@ PanelWindow {
         theme: host.theme
         motion: host.motion
         surfaceLayer: ShellSurface.Pane
+        frameConnected: host.frameVisible
         // The same background colour in both modes prevents a visible dark
         // flash when the connected frame is toggled around an open panel.
         // The frame outline and this attached surface share one background.
-        // Keep its fill across frame toggles so the fade cannot expose an
-        // empty, flickering rectangle between the two Wayland layers.
+        // Its fill fades with the frame connection, so the frame alone owns
+        // the tint and blur once the contour joins up.
         fillColor: host.theme.musicReactiveBackground
         luminous: false
         luminousColor: host.theme.textStrong
