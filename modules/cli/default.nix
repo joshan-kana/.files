@@ -676,6 +676,8 @@ in
           nixd
           clang-tools
           rust-analyzer
+          cargo
+          rustc
           go
           gopls
           typescript-language-server
