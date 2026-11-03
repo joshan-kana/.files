@@ -26,6 +26,10 @@ ShellRoot {
     readonly property bool wallpaperSpectrumEnabled: appearance.wallpaperSpectrumEnabled
     readonly property bool musicReactiveEnabled: appearance.musicReactiveEnabled
 
+    // A saved appearance preference is not a reason to animate invisible UI.
+    // Demand comes from the actual shared shell surfaces that can be seen.
+    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (ambientBar.shown || expansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || osd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
+
     function toggleBar(): void {
         appearance.toggleBar();
     }
@@ -48,7 +52,7 @@ ShellRoot {
     Theme {
         id: theme
         runtime: runtime
-        musicReactiveEnabled: root.musicReactiveEnabled
+        musicReactiveEnabled: root.musicReactiveSurfaceVisible && motion.enabled
         shellGlassEnabled: appearance.shellGlassEnabled
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
@@ -247,13 +251,13 @@ ShellRoot {
     SpectrumState {
         id: spectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || (motion.enabled && root.musicReactiveEnabled)
+        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || (motion.enabled && root.musicReactiveSurfaceVisible)
     }
 
     MusicReactiveState {
         id: reactive
         spectrum: root.spectrumRef
-        enabled: root.musicReactiveEnabled && motion.enabled
+        enabled: root.musicReactiveSurfaceVisible && motion.enabled
     }
 
     WallpaperSpectrum {
@@ -277,7 +281,7 @@ ShellRoot {
         osdScreen: osdPopup.screen
         resize: resizeOverlay.frameBounds
         resizeScreen: resizeOverlay.screen
-        busy: expansionHost.loadingOperationVisible
+        busy: !!expansionHost.loadingOperationVisible
         busyScreen: expansionState.screen
     }
 
