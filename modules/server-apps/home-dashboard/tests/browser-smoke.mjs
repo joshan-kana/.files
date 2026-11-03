@@ -136,6 +136,18 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(p === "/api/session" ? session : []));
     return;
   }
+  if (p === "/api/profile/home") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      const preferences = JSON.parse(body);
+      session.hand = preferences.hand;
+      session.show_unavailable = preferences.show_unavailable;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
   if (p === "/api/ha/action") {
     let data = "";
     req.on("data", (x) => (data += x));
@@ -490,6 +502,26 @@ try {
       Buffer.from(shot.data, "base64"),
     );
   }
+  await call("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+    screenWidth: 390,
+    screenHeight: 844,
+  });
+  await evaljs('window.__havenSim.move("settings")');
+  await evaljs('document.querySelectorAll("button[data-hand]")[1].click()');
+  await sleep(100);
+  await evaljs('window.__havenSim.move("home")');
+  await sleep(250);
+  const oneHand = await evaljs(
+    '(()=>{const rect=document.querySelector(".home-thumb-dock")?.getBoundingClientRect();return {hand:document.documentElement.dataset.hand,left:rect?.left,overflow:document.documentElement.scrollWidth>innerWidth}})()',
+  );
+  if (oneHand.hand !== "left" || oneHand.left >= 195 || oneHand.overflow)
+    throw Error(
+      "left-hand thumb controls unusable: " + JSON.stringify(oneHand),
+    );
   for (const p of [
     "/api/ha/areas",
     "/api/ha/devices",
@@ -514,6 +546,7 @@ try {
         media,
         narrow,
         desktop,
+        oneHand,
         requests: logs.requests,
         opened: logs.streams,
         closed: logs.closed,
