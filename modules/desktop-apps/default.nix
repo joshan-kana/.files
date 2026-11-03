@@ -8,7 +8,6 @@
 
 let
   inherit (lib.systems.elaborate system) isDarwin isLinux;
-  disableSafeModeKey = "1";
 in
 {
   home =
@@ -79,6 +78,9 @@ in
 
   firefox =
     _:
+    let
+      disableSafeModeKey = "1";
+    in
     {
       home =
         _:
