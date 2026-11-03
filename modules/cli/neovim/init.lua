@@ -117,14 +117,17 @@ require("blink.cmp").setup({
 						-- Nixd option examples and defaults contain full values. Keep the
 						-- option name and its documentation without inserting sample data.
 						local option = item.filterText or item.label
+						local insertion = item.textEdit and item.textEdit.newText or item.insertText
 						if
 							item.client_name == "nixd"
 							and item.insertTextFormat == 2
-							and not item.textEdit
-							and item.insertText
-							and item.insertText:sub(1, #option + 3) == option .. " = "
+							and type(insertion) == "string"
+							and insertion:sub(1, #option + 3) == option .. " = "
 						then
-							item.label = option
+							-- Preserve the server's replacement range, not its example value.
+							if item.textEdit then
+								item.textEdit.newText = option
+							end
 							item.insertText = option
 							item.insertTextFormat = 1
 						end
