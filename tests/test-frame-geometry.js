@@ -223,7 +223,7 @@ test("connected island hover fills the exact top contour, never an independent p
     null,
   );
   check(active, w, h);
-  assert.match(active.hoverFill, /^M[\d.]+ [\d.]+ L/);
+  assert.match(active.hoverFill, /^M[\d.]+ [\d.]+ C/);
   assert.equal(inactive.hoverFill, "");
   assert.equal(active.inner, inactive.inner);
   assert.ok(active.hoverFill.includes("Z"));
@@ -921,4 +921,36 @@ test("reduced-motion loading softly pulses the entire outline on both surfaces",
   assert.doesNotMatch(pulse, /Canvas|requestPaint/);
   assert.match(outline, /visible: outline\.active && outline\.motionEnabled/);
   assert.match(outline, /running: outline\.active && outline\.motionEnabled/);
+});
+
+test("expanded gallery preserves the shallow media island before their joined contour", () => {
+  const media = { x: 190, y: 12, width: 410, height: 48, visible: true };
+  const gallery = { x: 590, y: 12, width: 790, height: 490, visible: true };
+  const frame = contour(1920, 1080, 26, 62, 4.5, [media], gallery, []);
+  check(frame, 1920, 1080);
+  const outerRight = frame.points.findIndex(
+    (point) => point.x >= 1832 && point.y <= 26,
+  );
+  const topContour = frame.points.slice(0, outerRight);
+  assert.ok(
+    topContour.some(
+      (point) => point.x > 540 && point.x < 570 && Math.abs(point.y - 60) < 1,
+    ),
+  );
+  assert.ok(
+    topContour
+      .filter((point) => point.x > 200 && point.x < 540)
+      .every((point) => point.y <= 62),
+    "gallery must not extend deep under the media island",
+  );
+  assert.ok(
+    topContour.some(
+      (point) => point.x >= 600 && point.x <= 650 && point.y > 470,
+    ),
+    "gallery must still retain its full height",
+  );
+  assert.ok(
+    frame.inner.includes("C"),
+    "joined corners must retain their continuous cubics",
+  );
 });
