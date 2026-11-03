@@ -222,10 +222,11 @@ Item {
     }
 
     function closeView(): void {
+        if (!open)
+            return;
         open = false;
         statusText = "";
         statusError = false;
-        keyboardRequested();
     }
 
     function moveHalfPage(direction: int): void {
