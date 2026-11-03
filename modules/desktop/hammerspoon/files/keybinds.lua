@@ -98,7 +98,7 @@ local bindings = {
 		mods = "meh",
 		key = "a",
 		fn = function()
-			app_switcher.open("Zen")
+			app_switcher.open("Zen", "app.zen-browser.zen")
 		end,
 		section = "APPS",
 		desc = "Zen Browser",

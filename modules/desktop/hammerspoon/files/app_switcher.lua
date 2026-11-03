@@ -39,16 +39,34 @@ local function focusNewWindow(pid, existing, space, attempts)
 	end
 end
 
-function M.open(name)
+local function launchOrFocus(name, bundleID)
+	local launched
+	if bundleID then
+		launched = hs.application.launchOrFocusByBundleID(bundleID)
+	else
+		launched = hs.application.launchOrFocus(name)
+	end
+	if not launched then
+		ui.error("Could not launch " .. name)
+	end
+end
+
+function M.open(name, bundleID)
 	if not newWindowMode then
-		hs.application.launchOrFocus(name)
+		launchOrFocus(name, bundleID)
 		return
 	end
 
-	local app = hs.application.find(name, true) or hs.application.find(name)
+	local app = (bundleID and hs.application.find(bundleID, true)) or hs.application.find(name, true)
+	if not app then
+		local candidate = hs.application.find(name)
+		if candidate and type(candidate.bundleID) == "function" then
+			app = candidate
+		end
+	end
 	if not app then
 		-- First launch already creates a window on the active Space.
-		hs.application.launchOrFocus(name)
+		launchOrFocus(name, bundleID)
 		return
 	end
 
