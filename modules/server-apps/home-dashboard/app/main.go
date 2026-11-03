@@ -61,11 +61,13 @@ type Database struct {
 	Users map[string]*User `json:"users"`
 }
 type Server struct {
-	mu     sync.Mutex
-	data   Database
-	dir    string
-	key    []byte
-	client *http.Client
+	mu         sync.Mutex
+	data       Database
+	dir        string
+	key        []byte
+	client     *http.Client
+	streamMu   sync.Mutex
+	streamHubs map[string]*streamHub
 }
 
 func random(n int) []byte {
@@ -321,7 +323,7 @@ func (s *Server) me(u *User) any {
 			creds[k] = u.Credentials[k] != ""
 		}
 	}
-	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents), "favorites": append([]string{}, u.Favorites...), "rooms": u.Rooms, "hand": appearance(u.Hand, []string{"right", "left"})}
+	return map[string]any{"name": u.Name, "admin": u.Admin, "pages": enabled, "credentials": creds, "theme": appearance(u.Theme, availableThemes), "accent": appearance(u.Accent, availableAccents), "favorites": append([]string{}, u.Favorites...), "rooms": u.Rooms, "hand": appearance(u.Hand, []string{"right", "left"}), "show_unavailable": u.ShowUnavailable}
 }
 func csrf(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
@@ -618,6 +620,7 @@ func (s *Server) handler() http.Handler {
 		}
 		jsonResponse(w, 200, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("GET /api/arr/events/{service}", s.serveArrEvents)
 	mux.HandleFunc("GET /api/arr/{service}", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
 		if !hasPage(u, "media") {
@@ -629,28 +632,12 @@ func (s *Server) handler() http.Handler {
 			failure(w, 404, "Not found")
 			return
 		}
-		b, err := s.fetch(u, service, "/api/v3/queue?page=1&pageSize=50&includeUnknownSeriesItems=true")
+		queue, err := s.fetchArrQueue(u, service)
 		if err != nil {
 			failure(w, 502, err.Error())
 			return
 		}
-		var raw struct {
-			TotalRecords int `json:"totalRecords"`
-			Records      []struct {
-				ID           int     `json:"id"`
-				Title        string  `json:"title"`
-				Status       string  `json:"status"`
-				Sizeleft     float64 `json:"sizeleft"`
-				Size         float64 `json:"size"`
-				Timeleft     string  `json:"timeleft"`
-				ErrorMessage string  `json:"errorMessage"`
-			} `json:"records"`
-		}
-		if json.Unmarshal(b, &raw) != nil {
-			failure(w, 502, "Invalid Arr response")
-			return
-		}
-		jsonResponse(w, 200, raw)
+		jsonResponse(w, 200, queue)
 	})
 	mux.HandleFunc("GET /api/credentials", func(w http.ResponseWriter, r *http.Request) {
 		u := s.session(r)
