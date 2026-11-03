@@ -595,8 +595,7 @@ in
 
   starship = _args: {
     home = args: {
-      programs.starship = {
-        settings = (starshipConfig args).programs.starship.settings;
+      programs.starship = (starshipConfig args).programs.starship // {
         enableZshIntegration = true;
       };
     };
