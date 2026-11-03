@@ -179,86 +179,59 @@ func sendHomeEvent(w http.ResponseWriter, flush http.Flusher, event string, data
 	return nil
 }
 
-func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
-	user := s.session(r)
-	if !hasPage(user, "home") {
-		failure(w, http.StatusForbidden, "Access denied")
-		return
+func (s *Server) pumpHomeEvents(ctx context.Context, secret string, emit func(string, any)) {
+	send := func(kind string, data any) error {
+		emit(kind, data)
+		return nil
 	}
-	secret, err := s.decrypt(user.Credentials["homeassistant"])
-	if err != nil || secret == "" {
-		failure(w, http.StatusConflict, "Home Assistant not connected")
-		return
-	}
+	defer func() {
+		if ctx.Err() == nil {
+			emit("status", map[string]string{"state": "offline"})
+		}
+	}()
 	address, err := homeSocketURL(upstreams["homeassistant"])
 	if err != nil {
-		failure(w, http.StatusBadGateway, "Home Assistant unavailable")
 		return
 	}
-	flush, ok := w.(http.Flusher)
-	if !ok {
-		failure(w, http.StatusInternalServerError, "Streaming unavailable")
-		return
-	}
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
 	conn, _, err := (&websocket.Dialer{HandshakeTimeout: 5 * time.Second}).DialContext(ctx, address, nil)
 	if err != nil {
-		failure(w, http.StatusBadGateway, "Home Assistant unavailable")
 		return
 	}
 	defer conn.Close()
+	socketDone := make(chan struct{})
+	defer close(socketDone)
+	go func() {
+		select {
+		case <-ctx.Done():
+			conn.Close()
+		case <-socketDone:
+		}
+	}()
 	conn.SetReadLimit(16 << 20)
 	conn.SetReadDeadline(time.Now().Add(8 * time.Second))
 	var handshake homeWSMessage
 	if err := conn.ReadJSON(&handshake); err != nil || handshake.Type != "auth_required" {
-		failure(w, http.StatusBadGateway, "Home Assistant authentication unavailable")
 		return
 	}
 	if err := conn.WriteJSON(map[string]string{"type": "auth", "access_token": secret}); err != nil {
-		failure(w, http.StatusBadGateway, "Home Assistant authentication unavailable")
 		return
 	}
 	if err := conn.ReadJSON(&handshake); err != nil || handshake.Type != "auth_ok" {
-		failure(w, http.StatusBadGateway, "Home Assistant authentication failed")
 		return
 	}
 	if err := conn.WriteJSON(map[string]any{"id": 1, "type": "subscribe_entities"}); err != nil {
-		failure(w, http.StatusBadGateway, "Home Assistant subscription unavailable")
 		return
 	}
 	nextID := 2
 	pendingRegistry, err := requestHomeRegistry(conn, &nextID)
 	if err != nil {
-		failure(w, http.StatusBadGateway, "Home Assistant metadata unavailable")
 		return
 	}
-	// Registry notifications invalidate metadata. They are intentionally
-	// separate from state events; a user lacking permission to subscribe can
-	// still receive the initial registry snapshot.
-	for id, event := range []string{
-		"entity_registry_updated",
-		"device_registry_updated",
-		"area_registry_updated",
-	} {
-		if err := conn.WriteJSON(map[string]any{
-			"id": id + 5, "type": "subscribe_events", "event_type": event,
-		}); err != nil {
-			failure(w, http.StatusBadGateway, "Home Assistant registry notifications unavailable")
+	for id, event := range []string{"entity_registry_updated", "device_registry_updated", "area_registry_updated"} {
+		if err := conn.WriteJSON(map[string]any{"id": id + 5, "type": "subscribe_events", "event_type": event}); err != nil {
 			return
 		}
 	}
-
-	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Connection", "keep-alive")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "retry: 5000\n\n")
-	flush.Flush()
-
 	conn.SetReadDeadline(time.Now().Add(70 * time.Second))
 	conn.SetPongHandler(func(string) error {
 		return conn.SetReadDeadline(time.Now().Add(70 * time.Second))
@@ -297,26 +270,18 @@ func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	publishRegistry := func() bool {
-		return sendHomeEvent(w, flush, "metadata", buildHomeRegistryMetadata(states, registry)) == nil
+		return send("metadata", buildHomeRegistryMetadata(states, registry)) == nil
 	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			if !hasPage(s.session(r), "home") {
-				sendHomeEvent(w, flush, "status", map[string]string{"state": "unauthorized"})
-				return
-			}
 			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(2*time.Second)); err != nil {
 				return
 			}
-			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
-				return
-			}
-			flush.Flush()
 		case <-readErrors:
-			sendHomeEvent(w, flush, "status", map[string]string{"state": "offline"})
+			send("status", map[string]string{"state": "offline"})
 			return
 		case <-refreshCh:
 			refreshCh = nil
@@ -329,10 +294,6 @@ func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case msg := <-messages:
-			if !hasPage(s.session(r), "home") {
-				sendHomeEvent(w, flush, "status", map[string]string{"state": "unauthorized"})
-				return
-			}
 			if matched, complete := pendingRegistry.receive(msg); matched {
 				if complete {
 					if !pendingRegistry.failed {
@@ -342,7 +303,7 @@ func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
 							return
 						}
 					} else if !registryReady {
-						if sendHomeEvent(w, flush, "metadata-error", map[string]string{"state": "unavailable"}) != nil {
+						if send("metadata-error", map[string]string{"state": "unavailable"}) != nil {
 							return
 						}
 					}
@@ -376,7 +337,7 @@ func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
 			}
 			if msg.Type == "result" {
 				if !msg.Success {
-					sendHomeEvent(w, flush, "status", map[string]string{"state": "unavailable"})
+					send("status", map[string]string{"state": "unavailable"})
 					return
 				}
 				continue
@@ -386,20 +347,20 @@ func (s *Server) serveHomeEvents(w http.ResponseWriter, r *http.Request) {
 			}
 			var event homeStateEvent
 			if err := json.Unmarshal(msg.Event, &event); err != nil {
-				sendHomeEvent(w, flush, "status", map[string]string{"state": "invalid"})
+				send("status", map[string]string{"state": "invalid"})
 				return
 			}
 			changes, removed := applyHomeStateEvent(states, event)
 			if !initialised {
 				initialised = true
-				if sendHomeEvent(w, flush, "snapshot", map[string]any{"entities": homeStateSnapshot(states)}) != nil {
+				if send("snapshot", map[string]any{"entities": homeStateSnapshot(states)}) != nil {
 					return
 				}
 				if registryReady && !publishRegistry() {
 					return
 				}
 			} else if len(changes) != 0 || len(removed) != 0 {
-				if sendHomeEvent(w, flush, "delta", map[string]any{"changes": changes, "removed": removed}) != nil {
+				if send("delta", map[string]any{"changes": changes, "removed": removed}) != nil {
 					return
 				}
 				// New and removed entities can change the visible area/device

@@ -103,6 +103,8 @@ const state = {
   roomPicker: false,
   appCategory: "All",
   arr: {},
+  arrProblems: {},
+  arrStatus: {},
   users: null,
   quick: false,
   search: "",
@@ -319,12 +321,19 @@ function shell() {
     (state.help ? helpSheet() : "");
 }
 function render() {
+  homeTileCache.clear();
+  homeRoomCache = "";
   if (!state.me) {
     auth();
     return;
   }
   activePage();
   shell();
+  if (state.page === "home" && state.entities && !state.haError) {
+    for (const device of homeItems())
+      homeTileCache.set(device.id, homeTile(device));
+    homeRoomCache = roomPills();
+  }
   if (
     state.keyboardMode &&
     state.keyboardTarget &&
@@ -722,13 +731,17 @@ function inlineFan(e) {
   const attrs = fanAttributes(e),
     current = Number(attrs.percentage ?? 0);
   const supports = Number(attrs.supported_features || 0);
-  const levels = supports & 1 ? fanLevels(e) : [];
   const modes =
     supports & 8 && Array.isArray(attrs.preset_modes)
       ? attrs.preset_modes.filter((m) => typeof m === "string")
       : [];
-  return `<div class="card-fan-status"><span>${svg("wind")} ${e.state === "on" ? Math.round(current) + "%" : "Off"}</span><small>${esc(attrs.preset_mode || "")}</small></div>
-    <div class="card-fan-speeds" role="group" aria-label="Fan speed">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${esc(e.entity_id)}" aria-pressed="${Math.abs(n - current) <= 2}" aria-label="Speed ${i + 1}, ${n}%">${i + 1}</button>`).join("")}</div>
+  const speed = !fanHasSpeed(e)
+    ? ""
+    : fanDiscrete(e)
+      ? `<div class="card-fan-speeds" role="group" aria-label="Fan speed">${fanSpeedButtons(e)}</div>`
+      : `<label class="card-light-range"><span>Speed <output>${e.state === "on" ? Math.round(current) : 0}%</output></span><input type="range" min="0" max="100" step="${Math.max(1, Number(e.attributes?.percentage_step || 1))}" value="${e.state === "on" ? current : 0}" data-control="fan_percentage" data-entity-id="${esc(e.entity_id)}" aria-label="Fan speed, zero to turn off"></label>`;
+  return `<div class="card-fan-status"><span>${svg("wind")} ${e.state === "on" && current > 0 ? Math.round(current) + "%" : "Off"}</span><small>${esc(attrs.preset_mode || "")}</small></div>
+    ${speed}
     <div class="card-fan-extras">${modes.length ? `<select data-ha-preset-select="${esc(e.entity_id)}" aria-label="Fan mode">${modes.map((m) => `<option value="${esc(m)}" ${m === attrs.preset_mode ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>` : ""}${supports & 2 ? `<button class="card-oscillation ${attrs.oscillating ? "active" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${esc(e.entity_id)}" aria-label="Toggle fan oscillation" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")}</button>` : ""}</div>`;
 }
 function inlineLight(e) {
@@ -807,11 +820,11 @@ function inlineComplex(d) {
 function homeTile(d) {
   const main = d.primary,
     kind = d.kind;
-  const power = ["light", "fan", "switch", "input_boolean"].includes(
-    domainOf(main),
-  )
-    ? main
-    : null;
+  const power =
+    ["light", "fan", "switch", "input_boolean"].includes(domainOf(main)) &&
+    !(domainOf(main) === "fan" && fanHasSpeed(main))
+      ? main
+      : null;
   const complex = kind === "mixed" || d.controls.length > 6;
   const style = complex
     ? "appliance"
@@ -916,6 +929,30 @@ function fanLevels(e) {
     Math.round(((index + 1) * 100) / count),
   );
 }
+function fanHasSpeed(e) {
+  return Boolean(Number(e.attributes?.supported_features || 0) & 1);
+}
+function fanDiscrete(e) {
+  return fanHasSpeed(e) && fanLevels(e).length <= 5;
+}
+function fanSpeedButtons(e, detailed = false) {
+  const levels = [0, ...fanLevels(e)];
+  const current = Number(fanAttributes(e).percentage || 0);
+  const stopped = e.state !== "on" || current === 0;
+  const entity = esc(e.entity_id);
+  return levels
+    .map((percentage, index) => {
+      const selected =
+        percentage === 0
+          ? stopped
+          : !stopped && Math.abs(percentage - current) <= 2;
+      return `<button class="fan-speed ${selected ? "active" : ""}" data-ha-percentage="${percentage}"
+      data-ha-entity="${entity}" aria-pressed="${selected}"
+      aria-label="${percentage === 0 ? "Turn fan off" : "Fan speed " + index + ", " + percentage + "%"}"
+      ${isUnavailable(e) ? "disabled" : ""}>${detailed ? "<strong>" : ""}${percentage === 0 ? "Off" : index}${detailed ? "</strong><small>" + (percentage === 0 ? "Stop" : percentage + "%") + "</small>" : ""}</button>`;
+    })
+    .join("");
+}
 function fanAttributes(e) {
   const pending = state.fanFeedback[e.entity_id];
   if (!pending) return e.attributes || {};
@@ -934,7 +971,8 @@ function reconcileFanFeedback(entities) {
       const match =
         reported &&
         (field === "percentage"
-          ? Math.abs(Number(reported[field]) - update.value) <= 2
+          ? (update.value === 0 && current.get(entity)?.state === "off") ||
+            Math.abs(Number(reported[field]) - update.value) <= 2
           : reported[field] === update.value);
       if (
         match ||
@@ -951,15 +989,22 @@ function reconcileFanFeedback(entities) {
 function fanPanel(e) {
   const id = esc(e.entity_id),
     attrs = fanAttributes(e);
-  const current = Number(attrs.percentage || 0),
-    levels = fanLevels(e);
+  const current = Number(attrs.percentage || 0);
   const modes = Array.isArray(attrs.preset_modes)
     ? attrs.preset_modes.filter((v) => typeof v === "string")
     : [];
   const supports = Number(attrs.supported_features || 0);
   const speed =
     supports & 1
-      ? `<div class="control-block"><div class="control-heading"><strong>Fan speed</strong><span>${current > 0 ? Math.round(current) + "%" : "Off"}</span></div><div class="fan-speeds" role="group" aria-label="Fan speed">${levels.map((n, i) => `<button class="fan-speed ${Math.abs(n - current) <= 2 ? "active" : ""}" data-ha-percentage="${n}" data-ha-entity="${id}" aria-pressed="${Math.abs(n - current) <= 2}"><strong>${i + 1}</strong><small>${n}%</small></button>`).join("")}</div></div>`
+      ? `<div class="control-block"><div class="control-heading"><strong>Fan speed</strong><span>${current > 0 ? Math.round(current) + "%" : "Off"}</span></div>${
+          fanDiscrete(e)
+            ? `${
+                fanDiscrete(e)
+                  ? `<div class="fan-speeds" role="group" aria-label="Fan speed">${fanSpeedButtons(e, true)}</div>`
+                  : `<input type="range" min="0" max="100" step="${Math.max(1, Number(e.attributes?.percentage_step || 1))}" value="${current}" data-control="fan_percentage" data-entity-id="${id}" aria-label="Fan speed, zero to turn off">`
+              }`
+            : `<input type="range" min="0" max="100" step="${Math.max(1, Number(e.attributes?.percentage_step || 1))}" value="${current}" data-control="fan_percentage" data-entity-id="${id}" aria-label="Fan speed, zero for off">`
+        }</div>`
       : "";
   const presets =
     supports & 8 && modes.length
@@ -969,11 +1014,11 @@ function fanPanel(e) {
     supports & 2
       ? `<div class="control-block"><div class="control-heading"><strong>Horizontal oscillation</strong><span>${attrs.oscillating ? "On" : "Off"}</span></div><button class="control-switch ${attrs.oscillating ? "on" : ""}" data-ha-oscillate="${!attrs.oscillating}" data-ha-entity="${id}" aria-label="Toggle horizontal oscillation" aria-pressed="${Boolean(attrs.oscillating)}">${svg("sliders")} ${attrs.oscillating ? "Oscillating" : "Start oscillation"}</button></div>`
       : "";
-  const on = e.state === "on";
+  const on = e.state === "on" && current > 0;
   return `<div class="capability-panel tone-climate" data-fan-entity="${id}"><div class="fan-hero">
     <div class="fan-gauge" style="--fan-percent:${on ? current : 0}%"><span>${svg("wind")}</span></div>
     <div class="fan-state"><strong>${on ? "Fan running" : "Fan off"}</strong><small>${on ? Math.round(current) + "% · " + esc(attrs.preset_mode || "normal") : "Ready to start"}</small></div>
-    <button class="control-switch ${on ? "on" : ""}" data-entity="${id}" aria-label="Turn fan ${on ? "off" : "on"}" aria-pressed="${on}">${svg("power")}</button>
+    ${fanHasSpeed(e) ? "" : `<button class="control-switch ${on ? "on" : ""}" data-entity="${id}" aria-label="Turn fan ${on ? "off" : "on"}" aria-pressed="${on}">${svg("power")}</button>`}
   </div>${speed}${presets}${oscillation}</div>`;
 }
 function lightPanel(e) {
@@ -1506,36 +1551,146 @@ function stopHomeEvents() {
   if (homeEvents) homeEvents.close();
   homeEvents = null;
 }
-function renderHomeEvent() {
+const homeTileCache = new Map();
+let homeRoomCache = "";
+function focusPosition(scope) {
   const active = document.activeElement;
-  const card = active?.closest("[data-card-id]");
-  const key = card?.dataset.cardId;
-  const controls = card
-    ? [...card.querySelectorAll("button, input, select")]
-    : [];
-  const controlIndex = active && card ? controls.indexOf(active) : -1;
-  const sheet = document.querySelector(".device-sheet");
-  const sheetScroll = sheet?.scrollTop;
-  const sheetControl =
-    active && sheet?.contains(active)
-      ? [...sheet.querySelectorAll("button, input, select")].indexOf(active)
-      : -1;
-  render();
-  if (key && controlIndex >= 0) {
-    document.querySelectorAll("[data-card-id]").forEach((item) => {
-      if (item.dataset.cardId === key) {
-        item
-          .querySelectorAll("button, input, select")
-          [controlIndex]?.focus({ preventScroll: true });
-      }
-    });
+  if (!scope || !scope.contains(active)) return -1;
+  return [...scope.querySelectorAll("button,input,select,a[href]")].indexOf(
+    active,
+  );
+}
+function restorePosition(scope, index) {
+  if (scope && index >= 0)
+    scope
+      .querySelectorAll("button,input,select,a[href]")
+      [index]?.focus({ preventScroll: true });
+}
+function renderHomeEvent() {
+  if (!state.me) return;
+  const contentNode = document.getElementById("page-content");
+  if (!contentNode) return;
+  if (state.page !== "home" || !state.entities || state.haError) {
+    // Overview and error states are small; only the page content changes.
+    // Sidebar, top navigation and their focus are never rebuilt for an event.
+    const focused = focusPosition(contentNode);
+    contentNode.innerHTML = content();
+    restorePosition(contentNode, focused);
+    homeTileCache.clear();
+    homeRoomCache = "";
+    return;
   }
-  const currentSheet = document.querySelector(".device-sheet");
-  if (currentSheet && sheetScroll != null) currentSheet.scrollTop = sheetScroll;
-  if (currentSheet && sheetControl >= 0)
-    currentSheet
-      .querySelectorAll("button, input, select")
-      [sheetControl]?.focus({ preventScroll: true });
+  const grid = document.getElementById("home-grid");
+  if (!grid) {
+    contentNode.innerHTML = home();
+    homeTileCache.clear();
+    for (const device of homeItems())
+      homeTileCache.set(device.id, homeTile(device));
+    homeRoomCache = roomPills();
+    return;
+  }
+  const previousFocus = document.activeElement?.closest("[data-card-id]");
+  const focusedID = previousFocus?.dataset.cardId;
+  const focusedIndex = focusPosition(previousFocus);
+  const previousCards = new Map(
+    [...grid.querySelectorAll(":scope > [data-card-id]")].map((card) => [
+      card.dataset.cardId,
+      card,
+    ]),
+  );
+  const desired = homeItems();
+  const keep = new Set();
+  let last = null;
+  if (desired.length && grid.querySelector(".empty"))
+    grid.querySelector(".empty").remove();
+  for (const device of desired) {
+    const id = device.id;
+    const markup = homeTile(device);
+    const previous = previousCards.get(id);
+    let card = previous;
+    if (!card || homeTileCache.get(id) !== markup) {
+      const template = document.createElement("template");
+      template.innerHTML = markup;
+      card = template.content.firstElementChild;
+      if (previous) previous.replaceWith(card);
+    }
+    if (last === null) {
+      if (grid.firstElementChild !== card) grid.prepend(card);
+    } else if (last.nextElementSibling !== card) {
+      last.after(card);
+    }
+    keep.add(id);
+    homeTileCache.set(id, markup);
+    last = card;
+  }
+  for (const [id, card] of previousCards) {
+    if (!keep.has(id)) card.remove();
+  }
+  for (const id of [...homeTileCache.keys()]) {
+    if (!keep.has(id)) homeTileCache.delete(id);
+  }
+  if (!desired.length && !grid.firstElementChild)
+    grid.innerHTML = empty("No matching devices", "search");
+  else if (desired.length && grid.querySelector(".empty"))
+    grid.querySelector(".empty").remove();
+  if (focusedID) {
+    const card = [...grid.querySelectorAll(":scope > [data-card-id]")].find(
+      (item) => item.dataset.cardId === focusedID,
+    );
+    if (card && !card.contains(document.activeElement))
+      restorePosition(card, focusedIndex);
+  }
+  const count = document.getElementById("home-count");
+  if (count) count.textContent = desired.length + " devices";
+  const all = homeDevices();
+  const active = all.filter((d) =>
+    d.controls.some((e) => e.state === "on"),
+  ).length;
+  const status = document.querySelector(".home-status");
+  if (status)
+    status.innerHTML =
+      '<span class="status-dot"></span>' +
+      active +
+      ' active devices <span class="status-sep">·</span> ' +
+      all.length +
+      ' devices <span class="status-sep">·</span> ' +
+      homeRooms().length +
+      " rooms";
+  const pills = document.querySelector(".room-pills");
+  const pillHTML = roomPills();
+  if (pills && homeRoomCache !== pillHTML) {
+    const activeRoom = document.activeElement?.dataset.room;
+    pills.innerHTML = pillHTML;
+    homeRoomCache = pillHTML;
+    if (activeRoom)
+      [...pills.querySelectorAll("[data-room]")]
+        .find((button) => button.dataset.room === activeRoom)
+        ?.focus({ preventScroll: true });
+  }
+  const sheet = document.querySelector(".device-sheet");
+  if (
+    sheet &&
+    state.device &&
+    !document.activeElement?.matches(".device-sheet input,.device-sheet select")
+  ) {
+    const previousScroll = sheet.scrollTop;
+    const focused = focusPosition(sheet);
+    const updated = deviceSheet();
+    if (updated) {
+      const template = document.createElement("template");
+      template.innerHTML = updated;
+      const current = template.content.firstElementChild;
+      sheet.closest(".overlay")?.replaceWith(current);
+      const currentSheet = current.querySelector(".device-sheet");
+      if (currentSheet) {
+        currentSheet.scrollTop = previousScroll;
+        restorePosition(currentSheet, focused);
+      }
+    } else {
+      sheet.closest(".overlay")?.remove();
+      state.device = null;
+    }
+  }
 }
 function syncHomeEvents() {
   const needed =
@@ -1604,22 +1759,118 @@ function syncHomeEvents() {
     queueHomeRender();
   };
 }
-async function refreshPage(page) {
+const arrStreams = new Map();
+function stopArrStreams() {
+  for (const stream of arrStreams.values()) stream.close();
+  arrStreams.clear();
+}
+function updateArrProblem(service, message) {
+  if (message) state.arrProblems[service] = message;
+  else delete state.arrProblems[service];
+  state.arrError = Object.values(state.arrProblems).join(" · ");
+}
+function queueMediaRender() {
+  if (!state.me || !["media", "overview"].includes(state.page)) return;
+  if (mediaRenderScheduled) return;
+  mediaRenderScheduled = true;
+  requestAnimationFrame(() => {
+    mediaRenderScheduled = false;
+    if (!state.me || !["media", "overview"].includes(state.page)) return;
+    const target = document.getElementById("page-content");
+    if (!target) return;
+    if (state.page === "overview") {
+      const current = target.querySelector(".overview-metrics");
+      const template = document.createElement("template");
+      template.innerHTML = overview();
+      const updated = template.content.querySelector(".overview-metrics");
+      if (current && updated) current.replaceWith(updated);
+      return;
+    }
+    const template = document.createElement("template");
+    template.innerHTML = media();
+    const currentSummary = target.querySelector(".media-spotlight");
+    const updatedSummary = template.content.querySelector(".media-spotlight");
+    if (currentSummary && updatedSummary)
+      currentSummary.replaceWith(updatedSummary);
+    const currentActivity = target.querySelector(".media-activity");
+    const updatedActivity = template.content.querySelector(".media-activity");
+    const activeTab = currentActivity?.contains(document.activeElement)
+      ? document.activeElement?.dataset.mediaFilter
+      : null;
+    if (currentActivity && updatedActivity) {
+      currentActivity.replaceWith(updatedActivity);
+      if (activeTab) {
+        [...updatedActivity.querySelectorAll("[data-media-filter]")]
+          .find((button) => button.dataset.mediaFilter === activeTab)
+          ?.focus({ preventScroll: true });
+      }
+    }
+  });
+}
+let mediaRenderScheduled = false;
+function syncArrStreams() {
+  const visible =
+    state.me &&
+    has("media") &&
+    ["media", "overview"].includes(state.page) &&
+    !document.hidden;
+  for (const service of ["sonarr", "radarr"]) {
+    const needed = visible && state.me.credentials[service];
+    const existing = arrStreams.get(service);
+    if (!needed) {
+      if (existing) existing.close();
+      arrStreams.delete(service);
+      continue;
+    }
+    if (existing) continue;
+    const stream = new EventSource("/api/arr/events/" + service);
+    arrStreams.set(service, stream);
+    state.arrStatus[service] = "connecting";
+    stream.addEventListener("queue", (message) => {
+      if (arrStreams.get(service) !== stream) return;
+      state.arr[service] = JSON.parse(message.data);
+      state.arrStatus[service] = "live";
+      updateArrProblem(service, "");
+      queueMediaRender();
+    });
+    stream.addEventListener("status", (message) => {
+      if (arrStreams.get(service) !== stream) return;
+      const status = JSON.parse(message.data).state;
+      if (status === "unauthorized") {
+        stream.close();
+        arrStreams.delete(service);
+      }
+      state.arrStatus[service] = "offline";
+      updateArrProblem(
+        service,
+        service +
+          " updates unavailable" +
+          (status === "unauthorized" ? ": access changed" : ""),
+      );
+      queueMediaRender();
+    });
+    stream.onerror = () => {
+      if (arrStreams.get(service) !== stream) return;
+      state.arrStatus[service] = "reconnecting";
+      updateArrProblem(service, service + " is reconnecting");
+      queueMediaRender();
+    };
+  }
+}
+async function refreshPage(page, manual = false) {
   syncHomeEvents();
+  syncArrStreams();
   const jobs = [];
-  if ((page === "media" || page === "overview") && has("media"))
+  if (manual && ["media", "overview"].includes(page) && has("media"))
     for (const service of ["sonarr", "radarr"])
       if (state.me.credentials[service])
         jobs.push(
           api("/api/arr/" + service)
-            .then((v) => {
-              state.arr[service] = v;
-              state.arrError = "";
+            .then((value) => {
+              state.arr[service] = value;
+              updateArrProblem(service, "");
             })
-            .catch((e) => {
-              state.arrError = e.message;
-              state.arr[service] = { records: [] };
-            }),
+            .catch((error) => updateArrProblem(service, error.message)),
         );
   if (page === "admin" && state.me.admin)
     jobs.push(
@@ -1818,7 +2069,7 @@ document.addEventListener("click", async (e) => {
         : "haOscillate";
     const focusValue = target.dataset[focusKey];
     const scroll = document.querySelector(".device-sheet")?.scrollTop;
-    render();
+    renderHomeEvent();
     const sheet = document.querySelector(".device-sheet");
     if (sheet && scroll != null) sheet.scrollTop = scroll;
     [...(sheet?.querySelectorAll("button") || [])]
@@ -1832,18 +2083,13 @@ document.addEventListener("click", async (e) => {
       await api("/api/ha/action", "POST", body);
       if (state.fanFeedback[entity]?.[field]?.sequence !== sequence) return;
       state.fanFeedback[entity][field].acknowledged = true;
-      // Reads may initially report the old speed; the pending selection survives them.
-      refreshPage("home");
-      for (const delay of [1200, 3500, 7200]) {
-        setTimeout(() => {
-          if (
-            state.me &&
-            state.page === "home" &&
-            state.fanFeedback[entity]?.[field]?.sequence === sequence
-          )
-            refreshPage("home");
-        }, delay);
-      }
+      queueHomeRender();
+      setTimeout(() => {
+        if (state.fanFeedback[entity]?.[field]?.sequence === sequence) {
+          reconcileFanFeedback(state.entities || []);
+          queueHomeRender();
+        }
+      }, 7500);
     } catch (err) {
       if (state.fanFeedback[entity]?.[field]?.sequence === sequence) {
         if (previous?.acknowledged && Date.now() - previous.startedAt < 7000)
@@ -1852,7 +2098,7 @@ document.addEventListener("click", async (e) => {
         if (!Object.keys(state.fanFeedback[entity]).length)
           delete state.fanFeedback[entity];
         const scroll = document.querySelector(".device-sheet")?.scrollTop;
-        render();
+        renderHomeEvent();
         const sheet = document.querySelector(".device-sheet");
         if (sheet && scroll != null) sheet.scrollTop = scroll;
         toast(err.message, true);
@@ -1959,7 +2205,7 @@ document.addEventListener("click", async (e) => {
       });
       const v = state.entities.find((d) => d.entity_id === entity);
       if (v) v.state = v.state === "on" ? "off" : "on";
-      render();
+      renderHomeEvent();
     } catch (err) {
       toast(err.message, true);
       target.disabled = false;
@@ -1967,14 +2213,15 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (target.dataset.refresh) {
-    stopHomeEvents();
-    refreshPage(state.page);
+    if (state.page === "home" || state.page === "overview") stopHomeEvents();
+    refreshPage(state.page, true);
     return;
   }
   if (target.dataset.logout) {
     try {
       await api("/api/logout", "POST");
       stopHomeEvents();
+      stopArrStreams();
       state.me = null;
       state.quick = false;
       state.fanFeedback = {};
@@ -1992,8 +2239,11 @@ document.addEventListener("click", async (e) => {
         token: "",
       });
       state.me.credentials[target.dataset.disconnect] = false;
+      stopHomeEvents();
+      stopArrStreams();
       toast("Connection removed");
       render();
+      refreshPage(state.page);
     } catch (err) {
       toast(err.message, true);
     }
@@ -2113,6 +2363,7 @@ document.addEventListener("submit", async (e) => {
     try {
       await api("/api/credentials/" + service, "PUT", { token });
       stopHomeEvents();
+      stopArrStreams();
       state.me.credentials[service] = true;
       toast("Connection saved");
       state.entities = null;
@@ -2319,7 +2570,10 @@ document.addEventListener("change", async (e) => {
   if (!e.target.dataset.control) return;
   const input = e.target;
   input.disabled = true;
-  const action = input.dataset.control;
+  const action =
+    input.dataset.control === "fan_percentage"
+      ? "percentage"
+      : input.dataset.control;
   try {
     await api("/api/ha/action", "POST", {
       entity: input.dataset.entityId,
@@ -2331,7 +2585,6 @@ document.addEventListener("change", async (e) => {
           : "percentage"]: Number(input.value),
     });
     toast("Setting updated");
-    refreshPage("home");
   } catch (err) {
     toast(err.message, true);
   } finally {
@@ -2523,7 +2776,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (key === "r") {
     e.preventDefault();
-    refreshPage(state.page);
+    refreshPage(state.page, true);
     return;
   }
   if (state.page === "home") {
@@ -2560,6 +2813,18 @@ document.addEventListener("keydown", (e) => {
       if (power) {
         e.preventDefault();
         power.click();
+      } else {
+        const off = card.querySelector('[data-ha-percentage="0"]');
+        const first = card.querySelector(
+          '[data-ha-percentage]:not([data-ha-percentage="0"])',
+        );
+        if (off && first) {
+          e.preventDefault();
+          const entity = state.entities?.find(
+            (item) => item.entity_id === off.dataset.haEntity,
+          );
+          (entity?.state === "on" ? off : first).click();
+        }
       }
       return;
     }
@@ -2596,6 +2861,7 @@ window.addEventListener("hashchange", () => {
 document.addEventListener("visibilitychange", () => {
   if (state.me) {
     syncHomeEvents();
+    syncArrStreams();
     if (!document.hidden) refreshPage(state.page);
   }
 });
