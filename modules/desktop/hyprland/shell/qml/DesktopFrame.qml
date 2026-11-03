@@ -32,8 +32,10 @@ Variants {
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness
     readonly property real rounding: theme.frameRounding
-    // Connected islands share one consistently weighted outline. Their
-    // internal surfaces carry audio tint and soft light; the frame stays quiet.
+    // Music changes the shared contour's hue, never its width or opacity.
+    // Theme.blend returns an opaque colour, so restore the border's alpha.
+    readonly property color reactiveTint: theme.musicReactiveEnabled && motion.enabled ? theme.blend(theme.subtleBorder, theme.blend(theme.accent, theme.positive, theme.musicReactiveTreble * 0.85), Math.min(0.46, theme.musicReactiveEnergy * 0.25 + theme.musicReactiveBeat * 0.21)) : theme.subtleBorder
+    readonly property color reactiveBorder: Qt.rgba(reactiveTint.r, reactiveTint.g, reactiveTint.b, theme.subtleBorder.a)
     property real progress: 0
 
     NumberAnimation on progress {
@@ -129,7 +131,7 @@ Variants {
                 }
                 ShapePath {
                     fillColor: "transparent"
-                    strokeColor: frame.theme.subtleBorder
+                    strokeColor: frame.reactiveBorder
                     strokeWidth: frame.theme.borderThin
                     joinStyle: ShapePath.RoundJoin
                     PathSvg {
