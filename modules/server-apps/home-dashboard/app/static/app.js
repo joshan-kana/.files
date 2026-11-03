@@ -648,17 +648,17 @@ function deviceKind(d) {
 function homeRoom(d) {
   return d.room;
 }
-function homeRooms() {
+function homeRooms(devices = null) {
   return [
     ...new Set(
-      homeDevices()
+      (devices || homeDevices())
         .map((d) => d.room)
         .filter((r) => r !== "Unassigned"),
     ),
   ].sort((a, b) => a.localeCompare(b));
 }
-function homeItems() {
-  let items = homeDevices();
+function homeItems(devices = null) {
+  let items = devices || homeDevices();
   if (state.room === "Favorites") items = items.filter((d) => d.favourite);
   else if (state.room === "Sensors")
     items = items.filter((d) => !d.controls.length);
@@ -869,8 +869,14 @@ function homeTile(d) {
     ${last ? `<div class="card-caption">${esc(last)}</div>` : ""}
   </article>`;
 }
-function roomPills() {
-  const rooms = ["All", "Favorites", ...homeRooms(), "Unassigned", "Sensors"];
+function roomPills(devices = null) {
+  const rooms = [
+    "All",
+    "Favorites",
+    ...homeRooms(devices),
+    "Unassigned",
+    "Sensors",
+  ];
   return rooms
     .map(
       (room) =>
@@ -1508,7 +1514,14 @@ let homeEvents = null;
 let homeRenderScheduled = false;
 let homeControlActive = false;
 let homeRenderDeferred = false;
-function queueHomeRender() {
+const homeDirtyEntities = new Set();
+let homeFullRender = true;
+function queueHomeRender(changes) {
+  if (Array.isArray(changes) && !homeFullRender) {
+    for (const id of changes) homeDirtyEntities.add(id);
+  } else {
+    homeFullRender = true;
+  }
   if (homeControlActive) {
     homeRenderDeferred = true;
     return;
@@ -1521,7 +1534,10 @@ function queueHomeRender() {
       homeRenderDeferred = true;
       return;
     }
-    renderHomeEvent();
+    const dirty = homeFullRender ? null : new Set(homeDirtyEntities);
+    homeFullRender = false;
+    homeDirtyEntities.clear();
+    renderHomeEvent(dirty);
   });
 }
 function settleHomeControl() {
@@ -1566,7 +1582,7 @@ function restorePosition(scope, index) {
       .querySelectorAll("button,input,select,a[href]")
       [index]?.focus({ preventScroll: true });
 }
-function renderHomeEvent() {
+function renderHomeEvent(dirtyEntities = null) {
   if (!state.me) return;
   const contentNode = document.getElementById("page-content");
   if (!contentNode) return;
@@ -1598,17 +1614,22 @@ function renderHomeEvent() {
       card,
     ]),
   );
-  const desired = homeItems();
+  const all = homeDevices();
+  const desired = homeItems(all);
   const keep = new Set();
   let last = null;
   if (desired.length && grid.querySelector(".empty"))
     grid.querySelector(".empty").remove();
   for (const device of desired) {
     const id = device.id;
-    const markup = homeTile(device);
     const previous = previousCards.get(id);
+    const update =
+      !previous ||
+      dirtyEntities === null ||
+      device.entities.some((entity) => dirtyEntities.has(entity.entity_id));
+    const markup = update ? homeTile(device) : null;
     let card = previous;
-    if (!card || homeTileCache.get(id) !== markup) {
+    if (markup !== null && (!card || homeTileCache.get(id) !== markup)) {
       const template = document.createElement("template");
       template.innerHTML = markup;
       card = template.content.firstElementChild;
@@ -1620,7 +1641,7 @@ function renderHomeEvent() {
       last.after(card);
     }
     keep.add(id);
-    homeTileCache.set(id, markup);
+    if (markup !== null) homeTileCache.set(id, markup);
     last = card;
   }
   for (const [id, card] of previousCards) {
@@ -1642,7 +1663,6 @@ function renderHomeEvent() {
   }
   const count = document.getElementById("home-count");
   if (count) count.textContent = desired.length + " devices";
-  const all = homeDevices();
   const active = all.filter((d) =>
     d.controls.some((e) => e.state === "on"),
   ).length;
@@ -1654,10 +1674,10 @@ function renderHomeEvent() {
       ' active devices <span class="status-sep">·</span> ' +
       all.length +
       ' devices <span class="status-sep">·</span> ' +
-      homeRooms().length +
+      homeRooms(all).length +
       " rooms";
   const pills = document.querySelector(".room-pills");
-  const pillHTML = roomPills();
+  const pillHTML = roomPills(all);
   if (pills && homeRoomCache !== pillHTML) {
     const activeRoom = document.activeElement?.dataset.room;
     pills.innerHTML = pillHTML;
@@ -1719,12 +1739,20 @@ function syncHomeEvents() {
     const entities = new Map(
       (state.entities || []).map((entity) => [entity.entity_id, entity]),
     );
-    for (const id of data.removed || []) entities.delete(id);
-    for (const item of data.changes || []) entities.set(item.entity_id, item);
+    const changed = data.changes || [];
+    const removed = data.removed || [];
+    const regroup =
+      removed.length > 0 ||
+      changed.some((entity) => {
+        const previous = entities.get(entity.entity_id);
+        return !previous || isUnavailable(previous) !== isUnavailable(entity);
+      });
+    for (const id of removed) entities.delete(id);
+    for (const item of changed) entities.set(item.entity_id, item);
     state.entities = [...entities.values()];
     reconcileFanFeedback(state.entities);
     state.haError = "";
-    queueHomeRender();
+    queueHomeRender(regroup ? null : changed.map((entity) => entity.entity_id));
   });
   stream.addEventListener("metadata", (message) => {
     if (homeEvents !== stream) return;
