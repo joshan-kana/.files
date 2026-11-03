@@ -3,11 +3,13 @@ local ui = require("ui")
 local yabai = require("yabai_utils")
 
 local M = {}
-local newWindowMode = false
+local NEW_WINDOW_MODE_SETTING = "hs_app_switcher_new_window_mode"
+local newWindowMode = hs.settings.get(NEW_WINDOW_MODE_SETTING) == true
 local newWindowMenus = { "New Window", "New Finder Window", "New OS Window" }
 
 function M.toggleMode()
 	newWindowMode = not newWindowMode
+	hs.settings.set(NEW_WINDOW_MODE_SETTING, newWindowMode)
 	ui.mode("New-window mode", newWindowMode, newWindowMode and "Create on current Space" or "Switch to existing apps")
 end
 

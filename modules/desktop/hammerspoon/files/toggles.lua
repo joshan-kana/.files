@@ -42,15 +42,44 @@ end tell
 end
 
 --- Toggle yabai mouse_follows_focus.
-function M.mouseFollowsFocus()
-	local output = y.exec("config mouse_follows_focus")
-	-- yabai outputs just "on" or "off" (no key name, just the value)
-	local current = (output or ""):match("^%s*on%s*$") and true or false
-	local newState = not current
-	local stateStr = newState and "on" or "off"
+local MOUSE_FOLLOWS_FOCUS_SETTING = "hs_mouse_follows_focus"
 
-	y.exec("config mouse_follows_focus " .. stateStr)
-	ui.mode("Mouse follows focus", newState)
+local function setMouseFollowsFocus(enabled)
+	return y.ok("config mouse_follows_focus " .. (enabled and "on" or "off"))
+end
+
+function M.mouseFollowsFocus()
+	local output, ok = y.exec("config mouse_follows_focus")
+	local current = ok and (output or ""):match("^%s*(%a+)%s*$") or nil
+	if current ~= "on" and current ~= "off" then
+		ui.error("Could not read yabai mouse focus setting")
+		return
+	end
+
+	local enabled = current ~= "on"
+	if not setMouseFollowsFocus(enabled) then
+		ui.error("Could not change yabai mouse focus setting")
+		return
+	end
+	hs.settings.set(MOUSE_FOLLOWS_FOCUS_SETTING, enabled)
+	ui.mode("Mouse follows focus", enabled)
+end
+
+-- Restore only an explicitly chosen override; otherwise keep the yabai default.
+-- Retry briefly because Hammerspoon can start before yabai at login.
+local savedMouseFollowsFocus = hs.settings.get(MOUSE_FOLLOWS_FOCUS_SETTING)
+if type(savedMouseFollowsFocus) == "boolean" then
+	local attempts = 0
+	local function restore()
+		if hs.settings.get(MOUSE_FOLLOWS_FOCUS_SETTING) ~= savedMouseFollowsFocus then
+			return
+		end
+		attempts = attempts + 1
+		if not setMouseFollowsFocus(savedMouseFollowsFocus) and attempts < 10 then
+			hs.timer.doAfter(0.5, restore)
+		end
+	end
+	hs.timer.doAfter(0.5, restore)
 end
 
 --- Power lock.

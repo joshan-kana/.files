@@ -52,6 +52,7 @@ end
 
 -- Sticky Hyper mode
 -- hyper+tab toggles a modal in which bare keys act as hyper bindings.
+local STICKY_HYPER_SETTING = "hs_sticky_hyper_enabled"
 local stickyHyper = hs.hotkey.modal.new()
 
 function stickyHyper:entered()
@@ -65,6 +66,7 @@ end
 
 local function toggleStickyHyper()
 	stickyHyper[stickyHyper._active and "exit" or "enter"](stickyHyper)
+	hs.settings.set(STICKY_HYPER_SETTING, stickyHyper._active == true)
 end
 
 -- Bind everything from keybinds.lua.
@@ -91,6 +93,10 @@ for _, b in ipairs(bindings) do
 			end
 		end
 	end
+end
+
+if hs.settings.get(STICKY_HYPER_SETTING) == true then
+	stickyHyper:enter()
 end
 
 require("space_stash").start()

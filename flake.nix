@@ -609,6 +609,12 @@
           ) self.nixosConfigurations) pkgs.emptyFile;
           docs = self.packages.${system}.docs;
           repo-quality = treefmt.config.build.check self;
+          hammerspoon-preferences =
+            pkgs.runCommand "hammerspoon-preferences-tests" { nativeBuildInputs = [ pkgs.lua5_4 ]; }
+              ''
+                lua ${./tests/hammerspoon-persistence.lua} ${./modules/desktop/hammerspoon/files}
+                touch "$out"
+              '';
           git-attributes =
             assert lib.assertMsg (
               builtins.readFile ./.gitattributes == gitAttributesText
