@@ -497,3 +497,60 @@ func TestUnavailableVisibilityPreferencePerAccount(t *testing.T) {
 		t.Fatal("cannot hide unavailable entities again")
 	}
 }
+
+func TestApplicationPreferencesAndLaunchesPerAccount(t *testing.T) {
+	s := testServer(t)
+	alice := addUser(s, "alice", false, map[string]bool{"apps": true})
+	bob := addUser(s, "bob", false, map[string]bool{"media": true})
+	own := s.token(alice)
+	other := s.token(bob)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich", "paperless"}}, own, "http://example.test"), 200)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich", "immich"}}, own, "http://example.test"), 400)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"hidden-service"}}, own, "http://example.test"), 400)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich"}}, other, "http://example.test"), 400)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"sonarr"}}, other, "http://example.test"), 200)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich"}}, own, "https://not-your-home.example"), 403)
+	status(t, req(s, "POST", "/api/apps/immich/launch", nil, own, "http://example.test"), 200)
+	status(t, req(s, "POST", "/api/apps/immich/launch", nil, own, "http://example.test"), 200)
+	status(t, req(s, "POST", "/api/apps/immich/launch", nil, other, "http://example.test"), 403)
+	status(t, req(s, "POST", "/api/apps/fake/launch", nil, own, "http://example.test"), 403)
+	reloaded, err := newServer(s.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reloaded.data.Users["alice"].AppFavorites) != 2 ||
+		reloaded.data.Users["alice"].AppFavorites[0] != "immich" ||
+		reloaded.data.Users["alice"].AppVisits["immich"] != 2 ||
+		reloaded.data.Users["bob"].AppVisits["immich"] != 0 ||
+		len(reloaded.data.Users["bob"].AppFavorites) != 1 {
+		t.Fatal("application preferences leaked or failed to persist")
+	}
+	session := req(reloaded, "GET", "/api/session", nil, own, "")
+	status(t, session, 200)
+	var me struct {
+		Favorites []string       `json:"app_favorites"`
+		Visits    map[string]int `json:"app_visits"`
+	}
+	if err := json.Unmarshal(session.Body.Bytes(), &me); err != nil || len(me.Favorites) != 2 || me.Visits["immich"] != 2 {
+		t.Fatal("application preferences missing from restored session")
+	}
+}
+
+func TestApplicationCatalogRespectsDeployedServices(t *testing.T) {
+	t.Setenv("DASHBOARD_ENABLED_APPS", "ha,sonarr")
+	s := testServer(t)
+	member := addUser(s, "member", false, map[string]bool{"apps": true})
+	token := s.token(member)
+	list := req(s, "GET", "/api/catalog", nil, token, "")
+	status(t, list, 200)
+	var items []catalogItem
+	if err := json.Unmarshal(list.Body.Bytes(), &items); err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || items[0].ID != "ha" || items[1].ID != "sonarr" {
+		t.Fatalf("non-deployed services were exposed: %+v", items)
+	}
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"immich"}}, token, "http://example.test"), 400)
+	status(t, req(s, "POST", "/api/apps/immich/launch", nil, token, "http://example.test"), 403)
+	status(t, req(s, "PUT", "/api/profile/apps", map[string]any{"favorites": []string{"ha"}}, token, "http://example.test"), 200)
+}

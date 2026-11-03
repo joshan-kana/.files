@@ -102,7 +102,32 @@ const session = {
   theme: "carbon",
   accent: "mint",
   show_unavailable: false,
+  app_favorites: [],
+  app_visits: {},
 };
+const mockCatalog = [
+  {
+    id: "jellyfin",
+    name: "Jellyfin",
+    category: "Media",
+    url: "http://127.0.0.1:65534",
+    page: "media",
+  },
+  {
+    id: "immich",
+    name: "Immich",
+    category: "Photos",
+    url: "http://127.0.0.1:65534",
+    page: "apps",
+  },
+  {
+    id: "paperless",
+    name: "Paperless",
+    category: "Documents",
+    url: "http://127.0.0.1:65534",
+    page: "apps",
+  },
+];
 if (process.env.HAVEN_SMOKE_STRESS) {
   for (let index = 0; index < 250; index++) {
     const entityID = "switch.simulated_" + String(index).padStart(3, "0");
@@ -133,7 +158,24 @@ const server = http.createServer((req, res) => {
   logs.requests[p] = (logs.requests[p] || 0) + 1;
   if (p === "/api/session" || p === "/api/catalog") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(p === "/api/session" ? session : []));
+    res.end(JSON.stringify(p === "/api/session" ? session : mockCatalog));
+    return;
+  }
+  if (p === "/api/profile/apps") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      session.app_favorites = JSON.parse(body).favorites;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+  if (p.startsWith("/api/apps/") && p.endsWith("/launch")) {
+    const id = p.split("/")[3];
+    session.app_visits[id] = (session.app_visits[id] || 0) + 1;
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ launches: session.app_visits[id] }));
     return;
   }
   if (p === "/api/profile/home") {
@@ -502,6 +544,28 @@ try {
       Buffer.from(shot.data, "base64"),
     );
   }
+  await evaljs('window.__havenSim.move("apps")');
+  await evaljs(
+    'document.querySelector("[data-app-favorite=paperless]")?.click()',
+  );
+  await sleep(100);
+  const appFav = await evaljs(
+    '({favorite:window.__havenSim.state.me.app_favorites.includes("paperless"),first:document.querySelector("#apps-results [data-app-launch]")?.dataset.appLaunch})',
+  );
+  if (!appFav.favorite || appFav.first !== "paperless")
+    throw Error("app favourite sorting failed: " + JSON.stringify(appFav));
+  await evaljs(
+    '(()=>{const link=document.querySelector("[data-app-launch=immich]");link.addEventListener("click",e=>e.preventDefault(),{once:true});link.click()})()',
+  );
+  await sleep(90);
+  await evaljs('window.__havenSim.move("overview")');
+  const appOverview = await evaljs(
+    '({first:document.querySelector("#page-content [data-app-launch]")?.dataset.appLaunch,visit:window.__havenSim.state.me.app_visits.immich})',
+  );
+  if (appOverview.first !== "paperless" || appOverview.visit !== 1)
+    throw Error(
+      "overview app activity sorting failed: " + JSON.stringify(appOverview),
+    );
   await call("Emulation.setDeviceMetricsOverride", {
     width: 390,
     height: 844,
@@ -547,6 +611,8 @@ try {
         narrow,
         desktop,
         oneHand,
+        appFav,
+        appOverview,
         requests: logs.requests,
         opened: logs.streams,
         closed: logs.closed,

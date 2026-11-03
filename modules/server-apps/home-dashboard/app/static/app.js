@@ -517,7 +517,7 @@ function overview() {
     '<div class="section-bar"><h2>Your services</h2>' +
     linkPage("apps", "See all") +
     "</div>" +
-    serviceCards(state.catalog.slice(0, 6)) +
+    serviceCards(sortedApps(state.catalog).slice(0, 6)) +
     (has("home")
       ? '<div class="section-bar"><h2>Home controls</h2>' +
         linkPage("home", "Open Smart Home") +
@@ -1281,6 +1281,22 @@ function appTone(category) {
     }[category] || "other"
   );
 }
+function sortedApps(items) {
+  const favourites = state.me?.app_favorites || [];
+  const visits = state.me?.app_visits || {};
+  return [...items].sort((a, b) => {
+    const aRank = favourites.indexOf(a.id);
+    const bRank = favourites.indexOf(b.id);
+    if (aRank >= 0 || bRank >= 0) {
+      if (aRank < 0) return 1;
+      if (bRank < 0) return -1;
+      return aRank - bRank;
+    }
+    return (
+      (visits[b.id] || 0) - (visits[a.id] || 0) || a.name.localeCompare(b.name)
+    );
+  });
+}
 function serviceRow(a) {
   let host;
   try {
@@ -1288,23 +1304,37 @@ function serviceRow(a) {
   } catch {
     host = "";
   }
-  return `<a class="service-card app-card tone-${appTone(a.category)}" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(a.name)}">
-    <span class="app-symbol">${svg(logoFor(a))}</span><span class="app-info"><strong>${esc(a.name)}</strong><small>${esc(a.category)}</small><span class="app-host">${esc(host)}</span></span><span class="app-link">${svg("external")}</span></a>`;
+  const favourite = (state.me?.app_favorites || []).includes(a.id);
+  return `<div class="app-entry"><a class="service-card app-card tone-${appTone(a.category)}"
+    href="${esc(a.url)}" target="_blank" rel="noopener noreferrer"
+    aria-label="Open ${esc(a.name)}" data-app-launch="${esc(a.id)}">
+    <span class="app-symbol">${svg(logoFor(a))}</span>
+    <span class="app-info"><strong>${esc(a.name)}</strong><small>${esc(a.category)}</small>
+    <span class="app-host">${esc(host)}</span></span></a>
+    <button class="app-pin ${favourite ? "selected" : ""}" type="button"
+      data-app-favorite="${esc(a.id)}" aria-pressed="${favourite}"
+      aria-label="${favourite ? "Remove " + esc(a.name) + " from favourites" : "Favourite " + esc(a.name)}"
+      title="${favourite ? "Unpin" : "Pin"} ${esc(a.name)}">${svg("spark")}</button></div>`;
 }
 function serviceCards(items) {
   return `<div class="apps-grid">${items.length ? items.map(serviceRow).join("") : empty("No applications match this filter.", "search")}</div>`;
 }
 function appCategories() {
-  return ["All", ...new Set(state.catalog.map((a) => a.category))];
+  return ["All", "Favorites", ...new Set(state.catalog.map((a) => a.category))];
 }
 function appMatches() {
-  return state.catalog.filter(
-    (a) =>
-      (state.appCategory === "All" || a.category === state.appCategory) &&
-      (!state.search ||
-        [a.name, a.category, a.url].some((part) =>
-          part.toLowerCase().includes(state.search.toLowerCase()),
-        )),
+  return sortedApps(
+    state.catalog.filter(
+      (a) =>
+        (state.appCategory === "All" ||
+          (state.appCategory === "Favorites" &&
+            (state.me?.app_favorites || []).includes(a.id)) ||
+          a.category === state.appCategory) &&
+        (!state.search ||
+          [a.name, a.category, a.url].some((part) =>
+            part.toLowerCase().includes(state.search.toLowerCase()),
+          )),
+    ),
   );
 }
 function applications() {
@@ -1958,9 +1988,41 @@ async function toggleHomeFavorite(id) {
     toast(err.message, true);
   }
 }
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a[data-app-launch]");
+  if (!link || !state.me) return;
+  const id = link.dataset.appLaunch;
+  if (!state.catalog.some((app) => app.id === id)) return;
+  if (!state.me.app_visits) state.me.app_visits = {};
+  state.me.app_visits[id] = (state.me.app_visits[id] || 0) + 1;
+  api("/api/apps/" + encodeURIComponent(id) + "/launch", "POST").catch(
+    () => {},
+  );
+});
 document.addEventListener("click", async (e) => {
   const target = e.target.closest("button,[data-dismiss],a[data-page]");
   if (!target) return;
+  if (target.dataset.appFavorite) {
+    const id = target.dataset.appFavorite;
+    const previous = [...(state.me.app_favorites || [])];
+    state.me.app_favorites = previous.includes(id)
+      ? previous.filter((item) => item !== id)
+      : [...previous, id];
+    render();
+    [...document.querySelectorAll("[data-app-favorite]")]
+      .find((item) => item.dataset.appFavorite === id)
+      ?.focus({ preventScroll: true });
+    try {
+      await api("/api/profile/apps", "PUT", {
+        favorites: state.me.app_favorites,
+      });
+    } catch (error) {
+      state.me.app_favorites = previous;
+      render();
+      toast(error.message, true);
+    }
+    return;
+  }
   if (target.dataset.unavailable) {
     const previous = Boolean(state.me.show_unavailable);
     state.me.show_unavailable = !previous;

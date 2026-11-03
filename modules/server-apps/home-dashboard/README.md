@@ -20,6 +20,12 @@ On first launch, Haven creates a one-time setup token in its protected state dir
 
 Administrators can create, disable, and manage individual Haven accounts and page permissions. Each person connects their own Home Assistant, Sonarr, and Radarr credentials in Settings. Credentials are encrypted server-side, never sent back to browsers, and do not grant greater access than the corresponding upstream account.
 
+## Application shortcuts
+
+The NixOS service passes a list of enabled applications into Haven from the resolved declarative scopes and service options. Haven only lists those enabled applications that the signed-in account is permitted to access; a disabled service is not offered as a launcher. The application retains a small set of known service names, destinations, and categories rather than probing private interfaces.
+
+Each account can pin applications in the launcher. Pinned applications appear first on the Applications page and in the Overview, followed by frequently opened applications. Launch counts and pinned application IDs are persisted alongside that account's other preferences and are not shared with other accounts.
+
 ## Live updates
 
 Home Assistant supplies state snapshots, state changes, and registry updates via an authenticated WebSocket subscription. Haven reconstructs entity state and exposes permission-filtered events to connected browsers.
