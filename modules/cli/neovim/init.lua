@@ -80,7 +80,10 @@ snacks.setup({
 	indent = { enabled = true, animate = { enabled = false } },
 	input = { enabled = true },
 	notifier = { enabled = true },
-	picker = { enabled = true },
+	picker = {
+		enabled = true,
+		win = { input = { keys = { ["<Esc>"] = { "close", mode = { "n", "i" } } } } },
+	},
 	quickfile = { enabled = true },
 	scope = { enabled = true },
 	scroll = { enabled = false },
@@ -90,7 +93,7 @@ snacks.setup({
 })
 
 require("blink.cmp").setup({
-	keymap = { preset = "default" },
+	keymap = { preset = "super-tab" },
 	cmdline = {
 		keymap = {
 			preset = "cmdline",

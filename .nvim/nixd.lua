@@ -115,8 +115,7 @@ function M.setup(root)
 		for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
 			if client.name == name then
 				attached = true
-			end
-			if client.name:match("^nixd:") then
+			elseif client.name:match("^nixd:") then
 				detach_client(bufnr, client)
 			end
 		end
