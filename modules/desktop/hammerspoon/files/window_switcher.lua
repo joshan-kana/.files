@@ -119,10 +119,20 @@ local function ensureReleaseWatcher()
 	releaseWatcher = hs.eventtap
 		.new({
 			hs.eventtap.event.types.flagsChanged,
+			hs.eventtap.event.types.keyDown,
 		}, function(event)
-			if active and not event:getFlags()[holdModifier] then
+			if not active then
+				return false
+			end
+
+			local cancel = event:getType() == hs.eventtap.event.types.keyDown
+			if cancel and event:getKeyCode() ~= hs.keycodes.map.escape then
+				return false
+			end
+
+			if cancel or not event:getFlags()[holdModifier] then
 				local ok, err = xpcall(function()
-					close(true)
+					close(not cancel)
 				end, debug.traceback)
 
 				if not ok then
@@ -135,7 +145,7 @@ local function ensureReleaseWatcher()
 				end
 			end
 
-			return false
+			return cancel
 		end)
 		:start()
 end
