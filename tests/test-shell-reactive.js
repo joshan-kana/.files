@@ -14,7 +14,7 @@ test("compact bar islands receive reactive styling without independent connected
   assert.match(surface, /property bool frameConnected: false/);
   assert.match(surface, /musicActive:.*\(reactiveSurface \|\|/);
   assert.match(surface, /borderWidth: frameConnected \? 0 :/);
-  assert.match(surface, /borderColor: musicActive && !frameConnected/);
+  assert.match(surface, /borderColor: frameConnected \? "transparent"/);
   const bar = qml("AmbientBar.qml");
   for (const island of [
     "workspaceIsland",
@@ -37,18 +37,15 @@ test("compact bar islands receive reactive styling without independent connected
   }
 });
 
-test("shared frame colour responds to native spectrum values without changing geometry", () => {
+test("reactive shell never increases existing outline weight", () => {
   const frame = qml("DesktopFrame.qml");
-  assert.match(
-    frame,
-    /readonly property color reactiveBorder: theme\.musicReactiveEnabled && motion\.enabled/,
-  );
-  for (const signal of [
-    "musicReactiveEnergy",
-    "musicReactiveBeat",
-    "musicReactiveTreble",
-  ])
-    assert.ok(frame.includes(`theme.${signal}`));
-  assert.match(frame, /strokeColor: frame\.reactiveBorder/);
-  assert.match(frame, /strokeWidth: frame\.theme\.borderFocus \* 1\.5/);
+  assert.match(frame, /strokeColor: frame\.theme\.subtleBorder/);
+  assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
+  assert.doesNotMatch(frame, /reactiveBorder|strokeWidth:.*musicReactive/);
+  const surface = qml("ShellSurface.qml");
+  assert.match(surface, /borderWidth: frameConnected \? 0 : luminous \|\| outlined \? theme\.borderThin : 0/);
+  assert.match(surface, /borderColor: frameConnected \? "transparent"/);
+  assert.doesNotMatch(surface, /borderWidth:.*musicActive|borderColor:.*musicActive/);
+  assert.match(surface, /return musicActive \? theme\.blend\(base, musicLight/);
+  assert.match(surface, /lightColor: musicActive \? musicLight/);
 });
