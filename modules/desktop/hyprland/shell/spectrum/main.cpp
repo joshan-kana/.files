@@ -10,8 +10,10 @@
 #include <csignal>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -287,9 +289,11 @@ private:
 
 class SocketPublisher {
 public:
-  SocketPublisher(Analyzer &analyzer, int eventFd, std::string socketPath)
+  SocketPublisher(Analyzer &analyzer, int eventFd, std::string socketPath,
+                  std::function<void(bool)> onSubscription)
       : analyzer_(analyzer), eventFd_(eventFd),
-        socketPath_(std::move(socketPath)) {}
+        socketPath_(std::move(socketPath)),
+        onSubscription_(std::move(onSubscription)) {}
 
   ~SocketPublisher() { stop(); }
 
@@ -356,10 +360,24 @@ public:
     }
 
     ::unlink(socketPath_.c_str());
-    analyzer_.setClientCount(0);
+    updateSubscribers();
   }
 
 private:
+  void updateSubscribers() {
+    if (clientCount_ == clients_.size())
+      return;
+
+    clientCount_ = clients_.size();
+    analyzer_.setClientCount(clientCount_);
+    // Only a 0-to-1 or 1-to-0 transition changes the PipeWire stream's
+    // scheduling state. The socket thread never calls PipeWire directly.
+    if ((clientCount_ > 0) != captureRequested_) {
+      captureRequested_ = clientCount_ > 0;
+      onSubscription_(captureRequested_);
+    }
+  }
+
   std::string frame() {
     const auto bands = analyzer_.bands();
 
@@ -400,7 +418,7 @@ private:
       clients_.push_back(client);
     }
 
-    analyzer_.setClientCount(clients_.size());
+    updateSubscribers();
   }
 
   void publishFrame() {
@@ -432,23 +450,44 @@ private:
       it = clients_.erase(it);
     }
 
-    analyzer_.setClientCount(clients_.size());
+    updateSubscribers();
   }
 
   void run() {
+    std::vector<pollfd> fds;
+    fds.reserve(8);
     while (running_.load(std::memory_order_acquire)) {
-      pollfd fds[2] = {
-          {listenFd_, POLLIN, 0},
-          {eventFd_, POLLIN, 0},
-      };
+      fds.clear();
+      fds.push_back({listenFd_, POLLIN, 0});
+      fds.push_back({eventFd_, POLLIN, 0});
+      // When capture is suspended there are no audio frames to send, so the
+      // publisher must also observe peer hangups to suspend the final client.
+      std::transform(clients_.begin(), clients_.end(), std::back_inserter(fds),
+                     [](int client) -> pollfd {
+                       return {client, static_cast<short>(POLLHUP | POLLERR),
+                               0};
+                     });
 
-      const int result = ::poll(fds, 2, -1);
+      const int result = ::poll(fds.data(), fds.size(), -1);
       if (result < 0) {
         if (errno == EINTR)
           continue;
         std::cerr << "spectrum: poll failed: " << std::strerror(errno) << '\n';
         break;
       }
+
+      // Remove disconnected clients before processing an audio event. A
+      // closed reader must not keep an otherwise idle capture stream alive.
+      for (std::size_t i = fds.size(); i-- > 2;) {
+        if ((fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) == 0)
+          continue;
+        const auto it = std::find(clients_.begin(), clients_.end(), fds[i].fd);
+        if (it != clients_.end()) {
+          ::close(*it);
+          clients_.erase(it);
+        }
+      }
+      updateSubscribers();
 
       if (fds[0].revents & POLLIN)
         acceptClients();
@@ -462,6 +501,9 @@ private:
   std::string socketPath_;
   int listenFd_ = -1;
   std::vector<int> clients_;
+  std::size_t clientCount_ = 0;
+  bool captureRequested_ = false;
+  std::function<void(bool)> onSubscription_;
   std::atomic<bool> running_{false};
   std::thread thread_;
 };
@@ -472,7 +514,26 @@ struct App {
   spa_hook listener{};
   Analyzer *analyzer = nullptr;
   uint32_t channels = 2;
+  std::atomic<bool> captureRequested{false};
+  bool captureActive = false;
+  spa_source *captureChangeEvent = nullptr;
 };
+
+void onCaptureDemand(void *userdata, uint64_t) {
+  auto *app = static_cast<App *>(userdata);
+  const bool requested = app->captureRequested.load(std::memory_order_acquire);
+  if (requested == app->captureActive || app->stream == nullptr)
+    return;
+
+  const int result = pw_stream_set_active(app->stream, requested);
+  if (result < 0) {
+    std::cerr << "spectrum: unable to change capture state: "
+              << spa_strerror(result) << '\n';
+    return;
+  }
+
+  app->captureActive = requested;
+}
 
 pw_main_loop *gLoop = nullptr;
 
@@ -551,19 +612,12 @@ int main() {
   }
 
   Analyzer analyzer(eventFd);
-  SocketPublisher publisher(analyzer, eventFd, socketPath);
-  if (!publisher.start()) {
-    ::close(eventFd);
-    return 1;
-  }
-
   pw_init(nullptr, nullptr);
 
   App app;
   app.loop = pw_main_loop_new(nullptr);
   if (!app.loop) {
     std::cerr << "spectrum: failed to create PipeWire main loop\n";
-    publisher.stop();
     ::close(eventFd);
     pw_deinit();
     return 1;
@@ -580,14 +634,30 @@ int main() {
       PW_KEY_MEDIA_ROLE, "Music", PW_KEY_STREAM_CAPTURE_SINK, "true",
       PW_KEY_STREAM_MONITOR, "true", PW_KEY_NODE_LATENCY, "128/48000", nullptr);
 
-  app.stream = pw_stream_new_simple(pw_main_loop_get_loop(app.loop),
-                                    "linux-desktop-spectrum", properties,
+  pw_loop *loop = pw_main_loop_get_loop(app.loop);
+  // Schedule all stream activation changes on the PipeWire main loop.
+  // The socket thread signals only on subscriber-count transitions.
+  app.captureChangeEvent = pw_loop_add_event(loop, onCaptureDemand, &app);
+  if (!app.captureChangeEvent) {
+    std::cerr << "spectrum: unable to create capture demand event\n";
+    pw_main_loop_destroy(app.loop);
+    ::close(eventFd);
+    pw_deinit();
+    return 1;
+  }
+
+  SocketPublisher publisher(analyzer, eventFd, socketPath, [&](bool active) {
+    app.captureRequested.store(active, std::memory_order_release);
+    pw_loop_signal_event(loop, app.captureChangeEvent);
+  });
+
+  app.stream = pw_stream_new_simple(loop, "linux-desktop-spectrum", properties,
                                     &kStreamEvents, &app);
 
   if (!app.stream) {
     std::cerr << "spectrum: failed to create PipeWire stream\n";
+    pw_loop_destroy_source(loop, app.captureChangeEvent);
     pw_main_loop_destroy(app.loop);
-    publisher.stop();
     ::close(eventFd);
     pw_deinit();
     return 1;
@@ -604,17 +674,26 @@ int main() {
 
   const int result = pw_stream_connect(
       app.stream, PW_DIRECTION_INPUT, PW_ID_ANY,
-      static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT |
-                                   PW_STREAM_FLAG_MAP_BUFFERS |
-                                   PW_STREAM_FLAG_RT_PROCESS),
+      static_cast<pw_stream_flags>(
+          PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE |
+          PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
       params, 1);
 
   if (result < 0) {
     std::cerr << "spectrum: stream connect failed: " << spa_strerror(result)
               << '\n';
     pw_stream_destroy(app.stream);
+    pw_loop_destroy_source(loop, app.captureChangeEvent);
     pw_main_loop_destroy(app.loop);
-    publisher.stop();
+    ::close(eventFd);
+    pw_deinit();
+    return 1;
+  }
+
+  if (!publisher.start()) {
+    pw_stream_destroy(app.stream);
+    pw_loop_destroy_source(loop, app.captureChangeEvent);
+    pw_main_loop_destroy(app.loop);
     ::close(eventFd);
     pw_deinit();
     return 1;
@@ -623,10 +702,13 @@ int main() {
   std::cerr << "spectrum: listening on " << socketPath << '\n';
   pw_main_loop_run(app.loop);
 
+  // Join the publisher before destroying its event target. No socket thread
+  // may signal the PipeWire loop after this point.
+  publisher.stop();
   gLoop = nullptr;
   pw_stream_destroy(app.stream);
+  pw_loop_destroy_source(loop, app.captureChangeEvent);
   pw_main_loop_destroy(app.loop);
-  publisher.stop();
   ::close(eventFd);
   pw_deinit();
   return 0;
