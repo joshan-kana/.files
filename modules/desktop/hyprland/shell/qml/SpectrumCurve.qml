@@ -11,8 +11,15 @@ Item {
     readonly property color curveColor: theme.spectrumColor(0.68)
 
     readonly property var geometry: {
+        // Inactive prewarmed media views should not rebuild SVG paths while
+        // another panel owns the screen. The live view retains full fidelity.
+        if (!root.enabled || !root.visible || root.opacity <= 0 || !spectrum.hasEnergy)
+            return {
+                outline: "",
+                filled: ""
+            };
         const values = spectrum.bands || [];
-        if (values.length < 2 || !spectrum.hasEnergy)
+        if (values.length < 2)
             return {
                 outline: "",
                 filled: ""
