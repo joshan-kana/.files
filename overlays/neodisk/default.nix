@@ -35,29 +35,49 @@ _: {
             ]
           )
           {
-            neodisk = prev.appimageTools.wrapType2 rec {
+            neodisk = prev.stdenv.mkDerivation {
               pname = "neodisk";
               inherit version;
               src = prev.fetchurl {
-                url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/Neodisk-${version}-${
+                url = "https://github.com/tkslucas/Neodisk/releases/download/v${version}/neodisk-${version}-linux-${
                   if prev.stdenv.hostPlatform.isAarch64 then "aarch64" else "x86_64"
-                }.AppImage";
+                }.tar.gz";
                 hash =
                   if prev.stdenv.hostPlatform.isAarch64 then
-                    "sha256-CS9eDeX3Z1vDYso/ECG7y2SMAhz93eR47YR6WoKBLOo="
+                    "sha256-Ad2ClJoNzLeqfN73kHi+ah6Agl8KkUlluMVy30O1drQ="
                   else
-                    "sha256-RIEvy3NbTUUMh6Q4f92sr7q/KtIQ40rU2jXjwZrKAzE=";
+                    "sha256-L4LUIZ7MLGoho6aWsdgo2zPFGv1DEJpFoSe/nS/nsHk=";
               };
+              sourceRoot = ".";
+              nativeBuildInputs = with prev; [
+                autoPatchelfHook
+                wrapGAppsHook4
+              ];
+              buildInputs = with prev; [
+                zstd
+                gtk4
+                libadwaita
+                stdenv.cc.cc.lib
+                pango
+                glib
+                harfbuzz
+                cairo
+                gdk-pixbuf
+                vulkan-loader
+                graphene
+              ];
+              installPhase = ''
+                runHook preInstall
+                mkdir -p "$out"
+                cp -R bin share "$out/"
+                substituteInPlace "$out/share/applications/com.lucastakayasu.Neodisk.desktop" \
+                  --replace-fail /usr/local/bin/neodisk neodisk
+                runHook postInstall
+              '';
               passthru = {
                 autoUpdate = true;
                 updateGroup = "neodisk";
               };
-              appimageContents = prev.appimageTools.extract { inherit pname version src; };
-              extraInstallCommands = ''
-                install -Dm444 "${appimageContents}/com.lucastakayasu.Neodisk.desktop" "$out/share/applications/com.lucastakayasu.Neodisk.desktop"
-                mkdir -p "$out/share/icons"
-                cp -R "${appimageContents}/usr/share/icons/hicolor" "$out/share/icons/"
-              '';
               meta = {
                 inherit homepage license;
                 platforms = [
