@@ -86,11 +86,10 @@ SquircleSurface {
         // brighten its rim. This stays behind content and keeps text legible.
         return musicActive ? theme.blend(base, musicLight, musicBass * 0.22 + musicBeat * 0.11) : base;
     }
-    borderColor: musicActive && !frameConnected ? Qt.rgba(musicLight.r, musicLight.g, musicLight.b, Math.min(0.72, musicBass * 0.47 + musicBeat * 0.36)) : frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
-    // Changing ShapePath stroke width each FFT update re-tessellates the
-    // native superellipse. The geometry changes once per toggle, never on
-    // music samples; its colour and luminance carry the modulation.
-    borderWidth: frameConnected ? 0 : musicActive || luminous || outlined ? theme.borderThin : 0
+    // Audio only modulates the fill and soft light. Borders keep their
+    // ordinary colour and width, including surfaces with no outline.
+    borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
+    borderWidth: frameConnected ? 0 : luminous || outlined ? theme.borderThin : 0
 
     Behavior on fillColor {
         enabled: !root.musicActive
