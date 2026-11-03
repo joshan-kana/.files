@@ -22,7 +22,7 @@ let
     init.defaultBranch = "main";
     pull.rebase = true;
     rerere.enabled = true;
-    rerere.autoUpdate = false;
+    rerere.autoUpdate = true;
     commit.verbose = true;
   };
   gitSigningFormat = "openpgp";
