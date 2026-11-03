@@ -44,7 +44,10 @@ SquircleSurface {
     readonly property real musicBass: musicActive ? theme.musicReactiveEnergy : 0
     readonly property real musicBeat: musicActive ? theme.musicReactiveBeat : 0
     readonly property real musicTreble: musicActive ? theme.musicReactiveTreble : 0
-    readonly property real musicGlow: musicBass * 0.55 + musicBeat * 0.38
+    // Keep the music tint inside a soft local falloff rather than washing the
+    // whole panel with a low-bit-depth alpha ramp.
+    readonly property real musicGlow: Math.min(0.30, musicBass * 0.18 + musicBeat * 0.12)
+    lightSpread: musicActive ? 0.62 : 1
     readonly property color musicLight: theme.blend(theme.accent, theme.positive, musicTreble * 0.85)
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
@@ -86,9 +89,9 @@ SquircleSurface {
         // brighten its rim. This stays behind content and keeps text legible.
         return musicActive ? theme.blend(base, musicLight, musicBass * 0.22 + musicBeat * 0.11) : base;
     }
+    borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     // Audio only modulates the fill and soft light. Borders keep their
     // ordinary colour and width, including surfaces with no outline.
-    borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     borderWidth: frameConnected ? 0 : luminous || outlined ? theme.borderThin : 0
 
     Behavior on fillColor {
