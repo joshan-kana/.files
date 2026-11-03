@@ -31,7 +31,7 @@ Item {
         exponent: Math.min(4, theme.squircleExponent)
         elevated: false
         outlined: false
-        fillColor: island.frameConnected ? "transparent" : theme.background
+        fillColor: theme.musicReactiveBackground
 
         Row {
             id: statusRow

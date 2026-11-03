@@ -90,8 +90,8 @@ PanelWindow {
         motion: popup.motion
         surfaceLayer: ShellSurface.Pane
         cornerRadius: theme.radiusLarge
-        fillColor: popup.frameConnected ? "transparent" : popup.theme.groupBase
-        glassAllowed: !popup.frameConnected
+        frameConnected: popup.frameConnected
+        fillColor: popup.frameConnected && !popup.theme.shellGlassEnabled ? "transparent" : popup.theme.groupBase
         borderColor: popup.theme.subtleBorder
         borderWidth: popup.frameConnected ? 0 : popup.theme.borderThin
 
