@@ -102,8 +102,44 @@ require("blink.cmp").setup({
 		completion = { menu = { auto_show = true } },
 	},
 	completion = { documentation = { auto_show = true } },
-	fuzzy = { implementation = "lua" },
-	sources = { default = { "lsp", "path", "snippets", "buffer" } },
+	fuzzy = { implementation = "rust", prebuilt_binaries = { download = false } },
+	sources = {
+		default = { "lsp", "path", "snippets", "buffer" },
+		per_filetype = { nix = { "lsp", "path" } },
+		providers = {
+			lsp = {
+				transform_items = function(_, items)
+					if vim.bo.filetype ~= "nix" then
+						return items
+					end
+					local seen, unique = {}, {}
+					for _, item in ipairs(items) do
+						-- Nixd option examples and defaults contain full values. Keep the
+						-- option name and its documentation without inserting sample data.
+						local option = item.filterText or item.label
+						if
+							item.client_name == "nixd"
+							and item.insertTextFormat == 2
+							and not item.textEdit
+							and item.insertText
+							and item.insertText:sub(1, #option + 3) == option .. " = "
+						then
+							item.label = option
+							item.insertText = option
+							item.insertTextFormat = 1
+						end
+						local replacement = item.textEdit and item.textEdit.newText or item.insertText or item.label
+						local key = item.label .. "\0" .. replacement .. "\0" .. tostring(item.kind)
+						if not seen[key] then
+							seen[key] = true
+							table.insert(unique, item)
+						end
+					end
+					return unique
+				end,
+			},
+		},
+	},
 })
 
 vim.api.nvim_create_user_command("Format", function()
