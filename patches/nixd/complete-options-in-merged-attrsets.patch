@@ -1,0 +1,30 @@
+diff --git a/lib/Controller/AST.cpp b/lib/Controller/AST.cpp
+--- a/lib/Controller/AST.cpp
++++ b/lib/Controller/AST.cpp
+@@ -1,6 +1,8 @@
+ #include "AST.h"
+ 
+ #include "nixd/Protocol/AttrSet.h"
++
++#include <nixf/Basic/Nodes/Op.h>
+ 
+ #include <unordered_set>
+ 
+@@ -58,6 +60,17 @@
+   if (!Up)
+     return;
+ 
++  // Both operands of `//` contribute to the same resulting attrset.
++  // Follow an operand through the update expression so option completion
++  // retains the path of the binding that contains the merged value.
++  if (Up->kind() == Node::NK_ExprBinOp) {
++    const auto &BinOp = static_cast<const nixf::ExprBinOp &>(*Up);
++    if (BinOp.op().op() == nixf::tok::tok_op_update &&
++        (BinOp.lhs() == &N || BinOp.rhs() == &N))
++      getValueAttrPath(*Up, PM, Path);
++    return;
++  }
++
+   // Only attrs can "nest something"
+   if (Up->kind() != Node::NK_ExprAttrs)
+     return;

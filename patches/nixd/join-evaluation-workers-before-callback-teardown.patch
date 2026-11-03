@@ -1,0 +1,18 @@
+diff --git a/include/nixd/Controller/Controller.h b/include/nixd/Controller/Controller.h
+--- a/include/nixd/Controller/Controller.h
++++ b/include/nixd/Controller/Controller.h
+@@ -254,7 +254,13 @@
+   Controller(std::unique_ptr<lspserver::InboundPort> In,
+              std::unique_ptr<lspserver::OutboundPort> Out);
+ 
+-  ~Controller() override { Pool.join(); }
++  ~Controller() override {
++    Pool.join();
++    // Worker replies may still invoke progress callbacks. Join workers before
++    // the callbacks are destroyed by the normal member destruction sequence.
++    Options.clear();
++    NixpkgsEval.reset();
++  }
+ 
+   bool isReadyToEval() { return Eval && Eval->ready(); }
+ };
