@@ -174,7 +174,14 @@ require("lualine").setup({
 		lualine_a = { "mode" },
 		lualine_b = { "branch" },
 		lualine_c = { { "filename", path = 1 } },
-		lualine_x = { profiles.status, "diagnostics", "filetype" },
+		lualine_x = {
+			function()
+				return vim.b.nix_context and ("Nix: " .. vim.b.nix_context) or ""
+			end,
+			profiles.status,
+			"diagnostics",
+			"filetype",
+		},
 		lualine_y = { "progress" },
 		lualine_z = { "location" },
 	},
@@ -199,6 +206,13 @@ key("n", "<leader>cg", picker.lsp_definitions, { desc = "Go to definition" })
 key("n", "<leader>cR", picker.lsp_references, { desc = "Find references" })
 key("n", "<leader>ci", picker.lsp_implementations, { desc = "Find implementations" })
 key("n", "<leader>ch", vim.lsp.buf.hover, { desc = "Hover documentation" })
+key("n", "<leader>co", function()
+	if vim.fn.exists(":NixContext") == 2 then
+		vim.cmd.NixContext()
+	else
+		vim.notify("No Nix configuration picker in this project", vim.log.levels.INFO)
+	end
+end, { desc = "Select Nix configuration" })
 key("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code actions" })
 key("n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename symbol" })
 key("n", "<leader>cf", "<cmd>Format<cr>", { desc = "Format project" })

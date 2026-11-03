@@ -19,6 +19,10 @@ local function project_module(name)
 	return assert(loadfile(root .. "/.nvim/" .. name .. ".lua"))()
 end
 
+vim.g.editorProjectNixd = vim.fn.executable("nixd") == 1
 project_module("lsp").setup()
+if vim.g.editorProjectNixd then
+	project_module("nixd").setup(root)
+end
 project_module("embedded").setup()
 project_module("commands").setup(root)
