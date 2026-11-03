@@ -14,6 +14,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var errArrUnauthorized = errors.New("Arr integration authorization rejected")
+
 type arrQueue struct {
 	TotalRecords int `json:"totalRecords"`
 	Records      []struct {
@@ -73,6 +75,9 @@ func arrSignalRConnect(ctx context.Context, base, token string) (*websocket.Conn
 		return nil, errors.New("Arr SignalR negotiation unavailable")
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, errArrUnauthorized
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("Arr SignalR negotiation rejected")
 	}
@@ -149,7 +154,11 @@ func arrSignalRNotification(frame []byte) bool {
 func (s *Server) pumpArrEvents(ctx context.Context, u *User, service, secret string, emit func(string, any)) {
 	conn, err := arrSignalRConnect(ctx, upstreams[service], secret)
 	if err != nil {
-		emit("status", map[string]string{"state": "unavailable"})
+		if errors.Is(err, errArrUnauthorized) {
+			emit("status", map[string]string{"state": "unauthorized"})
+		} else {
+			emit("status", map[string]string{"state": "unavailable"})
+		}
 		return
 	}
 	defer conn.Close()
@@ -300,9 +309,15 @@ func (s *Server) serveArrEvents(w http.ResponseWriter, r *http.Request) {
 			if err := sendHomeEvent(w, flush, message.kind, message.data); err != nil {
 				return
 			}
-			if message.kind == "status" && string(message.data) != "" {
-				// A disconnected upstream will be re-established by EventSource.
-				return
+			if message.kind == "status" {
+				var status struct {
+					State string `json:"state"`
+				}
+				if json.Unmarshal(message.data, &status) == nil &&
+					(status.State == "offline" || status.State == "unavailable" || status.State == "unauthorized") {
+					// A disconnected upstream is re-established by EventSource.
+					return
+				}
 			}
 		}
 	}
