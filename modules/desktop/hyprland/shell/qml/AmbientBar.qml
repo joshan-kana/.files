@@ -114,7 +114,6 @@ Variants {
         onFrameBlendChanged: Qt.callLater(publishOrigins)
         onScreenOffsetChanged: Qt.callLater(publishOrigins)
         onFullscreenChanged: Qt.callLater(publishOrigins)
-        property bool workspacePressed: false
 
         function publishOrigins(): void {
             if (!barContent || !mediaIsland || !systemIsland)
@@ -130,8 +129,8 @@ Variants {
                         y: barContent.y + item.y,
                         width: item.width,
                         height: item.height,
-                        hovered: item === workspaceIsland ? workspaceHover.hovered : item === mediaIsland ? mediaIsland.frameHover : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? systemIsland.frameHover : false,
-                        pressed: item === workspaceIsland ? workspacePressed : item === mediaIsland ? mediaIsland.framePressed : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? systemIsland.framePressed : false,
+                        hovered: item === workspaceIsland || item === mediaIsland ? false : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? systemIsland.frameHover : false,
+                        pressed: item === workspaceIsland || item === mediaIsland ? false : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? systemIsland.framePressed : false,
                         visible: true
                     })));
         }
@@ -231,23 +230,6 @@ Variants {
                 outlined: false
                 fillColor: theme.musicReactiveBackground
 
-                HoverHandler {
-                    id: workspaceHover
-                    onHoveredChanged: Qt.callLater(bar.publishOrigins)
-                }
-                StateLayer {
-                    theme: bars.theme
-                    motion: bars.motion
-                    cornerRadius: bars.theme.radiusIsland
-                    exponent: Math.min(4, bars.theme.squircleExponent)
-                    manualHover: workspaceHover.hovered
-                    showHover: !bars.frameVisible
-                    onActivated: {
-                        if (bar.hyprMonitor && bar.hyprMonitor.activeWorkspace)
-                            bar.hyprMonitor.activeWorkspace.activate();
-                    }
-                }
-
                 Item {
                     id: workspaceTrack
                     z: 1
@@ -342,6 +324,7 @@ Variants {
                                 height: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
 
                                 Text {
+                                    z: 1
                                     anchors.centerIn: parent
                                     text: workspace.number
                                     // Make the ink follow the sliding pill,
@@ -357,22 +340,15 @@ Variants {
                                     }
                                 }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onPressed: {
-                                        bar.workspacePressed = true;
-                                        bar.publishOrigins();
-                                    }
-                                    onReleased: {
-                                        bar.workspacePressed = false;
-                                        bar.publishOrigins();
-                                    }
-                                    onCanceled: {
-                                        bar.workspacePressed = false;
-                                        bar.publishOrigins();
-                                    }
-                                    onClicked: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
+                                StateLayer {
+                                    theme: bars.theme
+                                    motion: bars.motion
+                                    cornerRadius: bars.theme.radiusSmall
+                                    exponent: Math.min(4, bars.theme.squircleExponent)
+                                    stateColor: bars.theme.textStrong
+                                    Accessible.role: Accessible.Button
+                                    Accessible.name: "Switch to workspace " + workspace.number
+                                    onActivated: Hyprland.dispatch('hl.dsp.focus({ workspace = "' + workspace.number + '" })')
                                 }
                             }
                         }
@@ -382,8 +358,6 @@ Variants {
 
             NowPlayingIsland {
                 id: mediaIsland
-                onFrameHoverChanged: Qt.callLater(bar.publishOrigins)
-                onFramePressedChanged: bar.publishOrigins()
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onHeightChanged: Qt.callLater(bar.publishOrigins)
                 onVisibleChanged: Qt.callLater(bar.publishOrigins)
