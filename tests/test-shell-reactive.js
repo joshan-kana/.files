@@ -60,7 +60,7 @@ test("one acoustic wash paints connected frame, hub and independent islands", ()
   assert.match(frame, /reactiveTint: theme\.musicReactiveWash > 0/);
   assert.match(
     frame,
-    /reactiveBorder: Qt\.rgba\(reactiveTint\.r, reactiveTint\.g, reactiveTint\.b, theme\.subtleBorder\.a\)/,
+    /reactiveBorder: Qt\.rgba\(reactiveTint\.r, reactiveTint\.g, reactiveTint\.b, theme\.shellGlassEnabled \? theme\.glassContourBorder\.a : theme\.subtleBorder\.a\)/,
   );
   assert.match(
     qml("ShellExpansionHost.qml"),
@@ -83,10 +83,7 @@ test("one acoustic wash paints connected frame, hub and independent islands", ()
 
 test("silent reactive surfaces are the original unraised connected silhouettes", () => {
   const source = qml("ShellSurface.qml");
-  assert.match(
-    source,
-    /return frameConnected \? "transparent" : musicActive && theme\.musicReactiveWash > 0/,
-  );
+  assert.match(source, /return musicActive && theme\.musicReactiveWash > 0/);
   assert.match(source, /lightColor: luminousColor/);
   assert.match(source, /lightStrength: luminous \?/);
   assert.doesNotMatch(source, /musicGlow|lightSpread: musicActive|musicLight/);

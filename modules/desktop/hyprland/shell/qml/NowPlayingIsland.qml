@@ -13,8 +13,6 @@ Item {
 
     // Leave the centered clock island unobstructed on narrow logical screens.
     property bool frameConnected: false
-    readonly property bool frameHover: mainHitArea.containsMouse || playbackHitArea.containsMouse
-    readonly property bool framePressed: mainHitArea.pressed || playbackHitArea.pressed
     property real maximumWidth: 458
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
     height: theme.barIslandHeight
@@ -59,19 +57,27 @@ Item {
         outlined: false
         fillColor: theme.musicReactiveBackground
 
-        // One uninterrupted hover shape, shared by the two pointer targets.
-        // Neither target draws its own partial-width highlight.
-        StateLayer {
-            theme: island.theme
-            motion: island.motion
-            cornerRadius: theme.radiusIsland
-            exponent: Math.min(4, theme.squircleExponent)
-            stateColor: island.theme.textStrong
-            acceptedButtons: Qt.NoButton
-            hoverEnabled: false
-            manualHover: island.frameHover
-            showHover: !island.frameConnected
-            manualPress: mainHitArea.pressed || playbackHitArea.pressed
+        // Each clickable region paints its own state. The connected frame
+        // contributes the shared background, not an island-wide hover pill.
+        Item {
+            anchors {
+                left: parent.left
+                right: playbackZone.left
+                top: parent.top
+                bottom: parent.bottom
+            }
+
+            StateLayer {
+                theme: island.theme
+                motion: island.motion
+                cornerRadius: island.theme.radiusSmall
+                exponent: Math.min(4, island.theme.squircleExponent)
+                stateColor: island.theme.textStrong
+                acceptedButtons: Qt.NoButton
+                hoverEnabled: false
+                manualHover: mainHitArea.containsMouse
+                manualPress: mainHitArea.pressed
+            }
         }
 
         Item {
@@ -179,6 +185,18 @@ Item {
             width: 54
             height: parent.height
             anchors.right: parent.right
+
+            StateLayer {
+                theme: island.theme
+                motion: island.motion
+                cornerRadius: island.theme.radiusSmall
+                exponent: Math.min(4, island.theme.squircleExponent)
+                stateColor: island.theme.textStrong
+                acceptedButtons: Qt.NoButton
+                hoverEnabled: false
+                manualHover: playbackHitArea.containsMouse
+                manualPress: playbackHitArea.pressed
+            }
 
             ShellSurface {
                 id: state
