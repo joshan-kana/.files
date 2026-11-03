@@ -453,8 +453,7 @@ PanelWindow {
         // The frame outline and this attached surface share one background.
         // Keep its fill across frame toggles so the fade cannot expose an
         // empty, flickering rectangle between the two Wayland layers.
-        fillColor: host.theme.background
-        glassAllowed: !host.frameVisible
+        fillColor: host.theme.musicReactiveBackground
         luminous: false
         luminousColor: host.theme.textStrong
         lightIntensity: 0.22

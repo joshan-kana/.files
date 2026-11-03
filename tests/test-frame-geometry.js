@@ -840,7 +840,7 @@ test("the hub's content reveal follows its surface without leaving visible clipp
     qml,
     /id: scopedHelp\s+opacity: shellSurface\.contentReveal/,
   );
-  assert.match(qml, /fillColor: host\.theme\.background/);
+  assert.match(qml, /fillColor: host\.theme\.musicReactiveBackground/);
 });
 
 test("barless frameless hub has a real close-morph target", () => {

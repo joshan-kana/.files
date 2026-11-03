@@ -28,7 +28,7 @@ SquircleSurface {
 
     // Change fill alpha, not the Item opacity: children, icons and text stay
     // fully legible while the compositor blurs only the shaped backdrop.
-    fillOpacity: !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? 0.58 : 0.74
+    fillOpacity: frameConnected && !theme.shellGlassEnabled ? theme.musicReactiveWash : !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? 0.58 : 0.74
 
     Behavior on fillOpacity {
         Anim {
@@ -37,28 +37,19 @@ SquircleSurface {
         }
     }
 
-    // Shape tessellation is not free. React only on large structural
-    // surfaces; updating every control and its SVG gradient at audio cadence
-    // starves the QML scene graph and destroys frame pacing.
+    // All panels consume one shared audio colour. Connected islands remain
+    // transparent so their common silhouette is drawn by DesktopFrame.
     readonly property bool musicActive: theme.musicReactiveEnabled && motion.enabled && (reactiveSurface || (surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
-    readonly property real musicBass: musicActive ? theme.musicReactiveEnergy : 0
-    readonly property real musicBeat: musicActive ? theme.musicReactiveBeat : 0
-    readonly property real musicTreble: musicActive ? theme.musicReactiveTreble : 0
-    // Keep the music tint inside a soft local falloff rather than washing the
-    // whole panel with a low-bit-depth alpha ramp.
-    readonly property real musicGlow: Math.min(0.30, musicBass * 0.18 + musicBeat * 0.12)
-    lightSpread: musicActive ? 0.62 : 1
-    readonly property color musicLight: theme.blend(theme.accent, theme.positive, musicTreble * 0.85)
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
 
     exponent: theme.squircleExponent
-    lightColor: musicActive ? musicLight : luminousColor
-    lightStrength: Math.min(0.92, (luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0) + musicGlow)
-
+    // Radial gradients on narrow islands looked like independent discs.
+    // Audio changes the actual fill rather than adding isolated spotlights.
+    lightColor: luminousColor
+    lightStrength: luminous ? (hovered ? 0.25 : 0.145) * lightIntensity : 0
     Behavior on lightStrength {
-        enabled: !root.musicActive
         NumberAnimation {
             duration: root.motion.effectsFast
             easing.type: root.motion.effectsType
@@ -85,9 +76,7 @@ SquircleSurface {
                 base = theme.layer1;
                 break;
             }
-        // A sustained 808 colours the whole surface; transient attacks
-        // brighten its rim. This stays behind content and keeps text legible.
-        return musicActive ? theme.blend(base, musicLight, musicBass * 0.22 + musicBeat * 0.11) : base;
+        return frameConnected ? "transparent" : musicActive && theme.musicReactiveWash > 0 ? theme.blend(base, theme.musicReactiveHue, theme.musicReactiveWash) : base;
     }
     borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     // Audio only modulates the fill and soft light. Borders keep their
