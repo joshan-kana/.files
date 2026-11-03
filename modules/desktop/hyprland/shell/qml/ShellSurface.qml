@@ -21,6 +21,10 @@ SquircleSurface {
     property real lightIntensity: 1
     property bool elevated: false
     property bool glassAllowed: true
+    // Compact bar islands share the same music treatment as larger panes.
+    // Their connected outline is painted by DesktopFrame, not by each island.
+    property bool reactiveSurface: false
+    property bool frameConnected: false
 
     // Change fill alpha, not the Item opacity: children, icons and text stay
     // fully legible while the compositor blurs only the shaped backdrop.
@@ -36,7 +40,7 @@ SquircleSurface {
     // Shape tessellation is not free. React only on large structural
     // surfaces; updating every control and its SVG gradient at audio cadence
     // starves the QML scene graph and destroys frame pacing.
-    readonly property bool musicActive: theme.musicReactiveEnabled && motion.enabled && ((surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
+    readonly property bool musicActive: theme.musicReactiveEnabled && motion.enabled && (reactiveSurface || (surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
     readonly property real musicBass: musicActive ? theme.musicReactiveEnergy : 0
     readonly property real musicBeat: musicActive ? theme.musicReactiveBeat : 0
     readonly property real musicTreble: musicActive ? theme.musicReactiveTreble : 0
@@ -82,11 +86,11 @@ SquircleSurface {
         // brighten its rim. This stays behind content and keeps text legible.
         return musicActive ? theme.blend(base, musicLight, musicBass * 0.22 + musicBeat * 0.11) : base;
     }
-    borderColor: musicActive ? Qt.rgba(musicLight.r, musicLight.g, musicLight.b, Math.min(0.72, musicBass * 0.47 + musicBeat * 0.36)) : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
+    borderColor: musicActive && !frameConnected ? Qt.rgba(musicLight.r, musicLight.g, musicLight.b, Math.min(0.72, musicBass * 0.47 + musicBeat * 0.36)) : frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     // Changing ShapePath stroke width each FFT update re-tessellates the
     // native superellipse. The geometry changes once per toggle, never on
     // music samples; its colour and luminance carry the modulation.
-    borderWidth: musicActive ? theme.borderThin : luminous || outlined ? theme.borderThin : 0
+    borderWidth: frameConnected ? 0 : musicActive || luminous || outlined ? theme.borderThin : 0
 
     Behavior on fillColor {
         enabled: !root.musicActive
