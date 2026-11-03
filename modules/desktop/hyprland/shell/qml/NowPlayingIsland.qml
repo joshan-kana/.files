@@ -47,6 +47,8 @@ Item {
 
     ShellSurface {
         anchors.fill: parent
+        reactiveSurface: true
+        frameConnected: island.frameConnected
 
         theme: island.theme
         motion: island.motion

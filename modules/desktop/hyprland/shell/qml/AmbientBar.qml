@@ -207,6 +207,8 @@ Variants {
 
             ShellSurface {
                 id: workspaceIsland
+                reactiveSurface: true
+                frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
@@ -407,6 +409,8 @@ Variants {
 
             ShellSurface {
                 id: clockIsland
+                reactiveSurface: true
+                frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
@@ -484,6 +488,8 @@ Variants {
 
             ShellSurface {
                 id: notificationIsland
+                reactiveSurface: true
+                frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
@@ -554,6 +560,8 @@ Variants {
 
             ShellSurface {
                 id: recordingIsland
+                reactiveSurface: true
+                frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
