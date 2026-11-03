@@ -32,9 +32,8 @@ Variants {
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness
     readonly property real rounding: theme.frameRounding
-    // The only border for connected bar islands is this continuous frame.
-    // Modulate its colour, never its geometry, at native audio sample events.
-    readonly property color reactiveBorder: theme.musicReactiveEnabled && motion.enabled ? theme.blend(theme.subtleBorder, theme.blend(theme.accent, theme.positive, theme.musicReactiveTreble * 0.85), Math.min(0.85, theme.musicReactiveEnergy * 0.55 + theme.musicReactiveBeat * 0.45)) : theme.subtleBorder
+    // Connected islands share one consistently weighted outline. Their
+    // internal surfaces carry audio tint and soft light; the frame stays quiet.
     property real progress: 0
 
     NumberAnimation on progress {
@@ -130,8 +129,8 @@ Variants {
                 }
                 ShapePath {
                     fillColor: "transparent"
-                    strokeColor: frame.reactiveBorder
-                    strokeWidth: frame.theme.borderFocus * 1.5
+                    strokeColor: frame.theme.subtleBorder
+                    strokeWidth: frame.theme.borderThin
                     joinStyle: ShapePath.RoundJoin
                     PathSvg {
                         path: output.geometry.inner || "M 0 0 L 0.01 0 L 0 0.01 Z"
