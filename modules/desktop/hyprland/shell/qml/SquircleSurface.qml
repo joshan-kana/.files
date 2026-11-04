@@ -22,6 +22,9 @@ Item {
     property color reactiveGradientLow: "transparent"
     property color reactiveGradientMid: "transparent"
     property color reactiveGradientHigh: "transparent"
+    property real reactiveGradientPhase: 0
+    property real reactiveGradientMovement: 0
+    property real reactiveGradientKick: 0
     property color borderColor: "transparent"
     property real borderWidth: 0
     property real cornerRadius: 28
@@ -69,7 +72,10 @@ Item {
     function buildPath(inset: real): string {
         // Reactive geometry can briefly be unmeasured while a popup is
         // constructed. Never serialize NaN/Infinity into an SVG path.
-        if (![width, height, inset, cornerRadius, exponent].every(Number.isFinite))
+        // Initial path bindings can run before the helper QtObject has
+        // published its QML methods. Keep the fallback SVG until layout
+        // changes instead of emitting transient method-not-found warnings.
+        if (typeof geometry.cornerPoint !== "function" || ![width, height, inset, cornerRadius, exponent].every(Number.isFinite))
             return "";
         const innerWidth = width - inset * 2;
         const innerHeight = height - inset * 2;
@@ -146,6 +152,9 @@ Item {
         gradientLowColor: root.reactiveGradientLow
         gradientMidColor: root.reactiveGradientMid
         gradientHighColor: root.reactiveGradientHigh
+        gradientPhase: root.reactiveGradientPhase
+        gradientMovement: root.reactiveGradientMovement
+        gradientKick: root.reactiveGradientKick
         cornerRadius: root.cornerRadius
         exponent: root.exponent
         lightColor: root.lightColor
