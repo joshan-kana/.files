@@ -68,6 +68,8 @@ PanelWindow {
     readonly property bool loadingOperationVisible: themeOperationVisible || wallpaperOperationVisible || captureEditorRequestVisible || maintenanceOperationVisible
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
+    readonly property bool tabShortcutsEnabled: expansionState.hasCurrent && !detailVisible && !helpVisible && !(systemContent && (systemContent.resetConfirmPending || systemContent.audioChooserOpen))
+    readonly property string escapeHintLabel: systemContent && systemContent.resetConfirmPending ? "Cancel" : helpVisible || detailVisible || (systemContent && systemContent.audioChooserOpen) ? "Back" : "Close"
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
@@ -188,13 +190,13 @@ PanelWindow {
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
     readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing5 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
         measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 * 2 + theme.spacing4 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing5 + theme.spacing4 * 2;
     }
 
     Timer {
@@ -345,14 +347,14 @@ PanelWindow {
     Shortcut {
         sequence: "I"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && !host.detailVisible && !host.helpVisible
+        enabled: host.tabShortcutsEnabled
         onActivated: host.cycleTab(-1)
     }
 
     Shortcut {
         sequence: "O"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && !host.detailVisible && !host.helpVisible
+        enabled: host.tabShortcutsEnabled
         onActivated: host.cycleTab(1)
     }
 
@@ -534,35 +536,34 @@ PanelWindow {
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
-                bottomMargin: host.theme.spacing3
+                bottomMargin: host.theme.spacing5
             }
             spacing: host.theme.spacing1
 
             // Tab/back/scroll navigation belongs in the shared footer, while
             // action mnemonics stay on controls. Centre the group as one line;
             // optional scrolling gets a separate, non-crowded second line.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 4 - host.theme.fontKeyHint * 2)
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.theme.spacing5 - host.theme.fontKeyHint * 2)
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: host.theme.keyHintGroupGap
 
                 Repeater {
-                    model: [
-                        {
-                            shortcut: "I",
-                            label: "Previous"
-                        },
-                        {
-                            shortcut: "O",
-                            label: "Next"
-                        },
-                    ].concat(host.detailVisible ? [] : [
+                    model: (host.tabShortcutsEnabled ? [
+                            {
+                                shortcut: "I",
+                                label: "Previous"
+                            },
+                            {
+                                shortcut: "O",
+                                label: "Next"
+                            }
+                        ] : []).concat([
                         {
                             shortcut: "ESC",
-                            label: "Close"
-                        }
-                    ]).concat([
+                            label: host.escapeHintLabel
+                        },
                         {
                             shortcut: "SHIFT+ESC",
                             label: "Close all"
@@ -574,6 +575,7 @@ PanelWindow {
                         label: modelData.label
                         runtime: host.runtime
                         theme: host.theme
+                        compact: true
                     }
                 }
             }
