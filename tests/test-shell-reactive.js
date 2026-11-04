@@ -79,7 +79,7 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   assert.match(theme, /const stops = \[critical, accent, accentTertiary\]/);
   assert.match(
     theme,
-    /musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0\.002 \? Math\.min\(0\.88,/,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.18,/,
   );
   assert.match(
     theme,
@@ -114,12 +114,12 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
     theme,
     /reactiveFrameColor\(position: real, illuminated: bool\)/,
   );
-  assert.match(theme, /const levels = musicReactiveBands/);
+  assert.match(theme, /const harmonic =/);
   assert.match(
     theme,
-    /const local = Math\.max\(0, Math\.min\(1, levels\[index\] \|\| 0\)\)/,
+    /const impulse = Math\.max\(0, Math\.min\(1, musicReactiveImpulses\[index\] \|\| 0\)\)/,
   );
-  assert.match(theme, /const strength = Math\.min\(0\.96,/);
+  assert.match(theme, /const strength = Math\.max\(0, Math\.min\(0\.94,/);
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
   assert.match(
@@ -206,7 +206,7 @@ test("reactive audio retains one event-driven pipeline and independently detects
   );
 });
 
-test("silence and disconnect reset every reactive field", () => {
+test("silence decays and disconnect releases before resetting every reactive field", () => {
   const reactive = qml("MusicReactiveState.qml");
   for (const value of [
     "sustain",
@@ -218,9 +218,15 @@ test("silence and disconnect reset every reactive field", () => {
     "motionAmount",
   ])
     assert.match(reactive, new RegExp(value + " = 0;"));
+  assert.match(reactive, /running: reactive\.releasing && reactive\.enabled/);
+  assert.match(reactive, /interval: 16/);
   assert.match(
     reactive,
-    /onConnectedChanged\(\): void \{\s*if \(!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
+    /Math\.max\(\.\.\.reactive\.spectrumLevels, \.\.\.reactive\.impulseLevels\) < 0\.001/,
+  );
+  assert.match(
+    reactive,
+    /onConnectedChanged\(\): void \{\s*if \(\(!reactive\.spectrum \|\| !reactive\.spectrum\.connected\) && reactive\.enabled\)\s*reactive\.releasing = true/,
   );
 });
 
@@ -266,6 +272,7 @@ test("surface curves remain cubic, and only ordinary hover may use a radial ligh
 });
 
 test("native squircle receives the same live FFT zones without an independent animation phase", () => {
+  const root = qml("shell.qml");
   const native = fs.readFileSync(
     path.join(
       __dirname,
@@ -276,6 +283,11 @@ test("native squircle receives the same live FFT zones without an independent an
   const squircle = qml("SquircleSurface.qml");
   const surface = qml("ShellSurface.qml");
   assert.match(native, /QVariantList gradientBands MEMBER gradientBands_/);
+  assert.match(
+    native,
+    /QVariantList gradientImpulses MEMBER gradientImpulses_/,
+  );
+  assert.match(root, /musicReactiveImpulses: reactive\.impulseLevels/);
   assert.match(native, /NOTIFY gradientMotionChanged/);
   assert.match(native, /const float bandPosition = position \* 8/);
   assert.match(native, /const float level = levels\[size_t\(leftBand\)\]/);

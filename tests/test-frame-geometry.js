@@ -784,7 +784,7 @@ test("bar reserves equal vertical space and frame joins start at measured screen
   );
   assert.match(
     theme,
-    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing3/,
+    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing1/,
   );
   assert.match(
     bar,
@@ -1019,20 +1019,23 @@ test("attached status islands approach the outer frame corner without clipping t
   );
   assert.match(
     theme,
-    /frameIslandInset: frameThickness \+ frameRounding \+ spacing3/,
+    /frameIslandInset: frameThickness \+ frameRounding \+ spacing1/,
   );
   assert.match(
     bar,
-    /leftMargin: bars\.theme\.spacing3 \+ \(bars\.theme\.frameIslandInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
+    /leftMargin: bars\.theme\.spacing3 \+ \(bar\.frameLocalInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
   );
   assert.match(
     bar,
-    /rightMargin: bars\.theme\.spacing3 \+ \(bars\.theme\.frameIslandInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
+    /rightMargin: bars\.theme\.spacing3 \+ \(bar\.frameLocalInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
   );
   // FrameGeometry clips notches at thickness + cornerRadius + 3px.
-  const sideInset = 26 + 62 + 12;
-  assert.ok(sideInset > 26 + 62 + 3);
-  assert.ok(sideInset < 26 + 62 + 24);
+  const sideInset = 26 + 62 + 4;
+  assert.ok(sideInset > 26 + 62 + 3, "notch must clear the outer corner clip");
+  assert.ok(
+    sideInset < 26 + 62 + 12,
+    "move islands outward relative to the previous layout",
+  );
   for (const width of [800, 1280, 1920, 3840]) {
     assert.ok(width - 2 * sideInset >= 600);
   }
@@ -1052,4 +1055,126 @@ test("connected hub footer limit remains tied to the contour with no mesh-only r
   );
   assert.match(s, /hubBottomLimit\(width, height, thickness, radius\)/);
   assert.doesNotMatch(s, /renderPoints|native.*paint|GPU render contour/);
+});
+
+test("symmetric frame-on status insets approach the maximum safe corner clearance", () => {
+  const theme = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/qml/Theme.qml"),
+    "utf8",
+  );
+  const bar = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/AmbientBar.qml",
+    ),
+    "utf8",
+  );
+  const edge = 26 + 62;
+  const clippingMargin = 3;
+  const inset = edge + 4;
+  assert.ok(inset > edge + clippingMargin);
+  // Previously the bar's 26px frame reservation was counted twice.
+  assert.equal(
+    26 + edge + 12 - inset,
+    34,
+    "34px more horizontal room on each end than the previous PR",
+  );
+  assert.ok(
+    theme.includes(
+      "frameIslandInset: frameThickness + frameRounding + spacing1",
+    ),
+  );
+  assert.match(
+    bar,
+    /frameLocalInset: Math\.max\(0, bars\.theme\.frameIslandInset - screenOffset\)/,
+  );
+  assert.ok(
+    bar.includes(
+      "leftMargin: bars.theme.spacing3 + (bar.frameLocalInset - bars.theme.spacing3) * bar.frameBlend",
+    ),
+  );
+  assert.ok(
+    bar.includes(
+      "rightMargin: bars.theme.spacing3 + (bar.frameLocalInset - bars.theme.spacing3) * bar.frameBlend",
+    ),
+  );
+});
+
+test("outward status-island positions retain full curved hover and press contours on every screen width", () => {
+  for (const width of [800, 1280, 1920, 3840]) {
+    const inset = 26 + 62 + 4;
+    const left = {
+      x: inset,
+      y: 26,
+      width: 155,
+      height: 50,
+      visible: true,
+      hovered: true,
+    };
+    const right = {
+      x: width - inset - 180,
+      y: 26,
+      width: 180,
+      height: 50,
+      visible: true,
+      pressed: true,
+    };
+    const result = contour(width, 1080, 26, 62, 4.5, [left, right], null, []);
+    check(result, width, 1080);
+    assert.match(
+      result.hoverFill,
+      /^M/,
+      "left status hover must use a real curved notch",
+    );
+    assert.match(
+      result.pressedFill,
+      /^M/,
+      "right status press must use a real curved notch",
+    );
+    assert.ok(
+      result.points.some(
+        (point) => Math.abs(point.x - left.x) < 0.02 && point.y >= left.y,
+      ),
+      "left notch starts at its actual hit area, not a clipped fake corner",
+    );
+    assert.ok(
+      result.points.some(
+        (point) =>
+          Math.abs(point.x - (right.x + right.width)) < 0.02 &&
+          point.y >= right.y,
+      ),
+      "right notch ends at its actual hit area, without clipping its corner",
+    );
+  }
+});
+
+test("bar reservation is subtracted exactly once from the outer island positions", () => {
+  const bar = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/AmbientBar.qml",
+    ),
+    "utf8",
+  );
+  assert.match(
+    bar,
+    /screenOffset: Math\.max\(0, \(modelData\.width - bar\.width\) \/ 2\)/,
+  );
+  assert.match(
+    bar,
+    /frameLocalInset: Math\.max\(0, bars\.theme\.frameIslandInset - screenOffset\)/,
+  );
+  for (const screenOffset of [0, 8, 20, 26, 32]) {
+    const frameThickness = 26,
+      cornerRadius = 62,
+      safety = 4;
+    const target = frameThickness + cornerRadius + safety;
+    const local = Math.max(0, target - screenOffset);
+    assert.equal(
+      screenOffset + local,
+      target,
+      "bar hit regions and shared frame contour must agree in screen coordinates",
+    );
+    assert.ok(target > frameThickness + cornerRadius + 3);
+  }
 });

@@ -12,6 +12,8 @@ ShellSurface {
     property string icon: ""
     property string shortcut: ""
     property bool active: false
+    property bool keyboardSelected: false
+    signal sliderActivated
     property color roleAccent: theme.accent
 
     signal toggleRequested
@@ -31,10 +33,10 @@ ShellSurface {
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: active ? theme.radiusLarge : theme.radiusMedium
-    outlined: active
-    luminous: active
+    outlined: active || keyboardSelected
+    luminous: active || keyboardSelected
     luminousColor: roleAccent
-    borderColor: active ? roleAccent : "transparent"
+    borderColor: active || keyboardSelected ? roleAccent : "transparent"
     hovered: toggleArea.containsMouse
     fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
@@ -88,11 +90,11 @@ ShellSurface {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
-                shortcut: setting.shortcut
+                shortcut: setting.keyboardSelected ? "H/L" : setting.shortcut
                 compact: true
                 runtime: setting.runtime
                 theme: setting.theme
-                emphasized: setting.active
+                emphasized: setting.active || setting.keyboardSelected
                 emphasisColor: setting.roleAccent
             }
         }
@@ -114,7 +116,7 @@ ShellSurface {
             }
             Text {
                 id: opacityLabel
-                text: Math.round(setting.opacityValue * 100) + "% opacity"
+                text: Math.round(setting.opacityValue * 100) + "%"
                 color: setting.active ? setting.roleAccent : setting.theme.textMuted
                 font.family: setting.runtime.fontMono
                 font.pixelSize: setting.theme.fontSize(9)
@@ -133,6 +135,7 @@ ShellSurface {
             trackHeight: 6
             handleSize: 16
             accentColor: setting.roleAccent
+            onInteractionStarted: setting.sliderActivated()
             onValueRequested: next => setting.opacityRequested(next)
         }
     }
