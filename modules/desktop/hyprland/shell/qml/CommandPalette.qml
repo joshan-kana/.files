@@ -1439,9 +1439,9 @@ Item {
                         results.currentIndex = Math.min(displayedModel.values.length - 1, results.currentIndex + 1);
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                         results.currentIndex = Math.max(0, results.currentIndex - 1);
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
                         const rows = Math.max(1, Math.floor(results.height / (57 + results.spacing) / 2));
-                        results.currentIndex = Math.max(0, Math.min(displayedModel.values.length - 1, results.currentIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                        results.currentIndex = Math.max(0, Math.min(displayedModel.values.length - 1, results.currentIndex + ((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? rows : -rows)));
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         palette.launchCurrent((event.modifiers & Qt.ShiftModifier) !== 0);
                     } else {

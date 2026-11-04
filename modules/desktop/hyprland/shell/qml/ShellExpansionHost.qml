@@ -68,6 +68,9 @@ PanelWindow {
     readonly property bool loadingOperationVisible: themeOperationVisible || wallpaperOperationVisible || captureEditorRequestVisible || maintenanceOperationVisible
     readonly property MediaContent mediaContent: expansionState.currentName === "media" ? loadedContent as MediaContent : null
     readonly property bool helpVisible: systemContent ? systemContent.helpOpen : (mediaContent ? mediaContent.helpOpen : false)
+    // Hub scrolling is a fallback only for views without their own paging
+    // owner. Calendar, Activity, and open details consume PageUp/Down locally.
+    readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
     readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
     readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
@@ -326,29 +329,47 @@ PanelWindow {
     Shortcut {
         sequence: "PgDown"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && contentViewport.contentHeight > contentViewport.height
+        enabled: host.hostPageShortcutsEnabled && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(1)
     }
 
     Shortcut {
         sequence: "PgUp"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent && contentViewport.contentHeight > contentViewport.height
+        enabled: host.hostPageShortcutsEnabled && contentViewport.contentHeight > contentViewport.height
+        onActivated: host.pageContent(-1)
+    }
+
+    // I/O cycle the three hub destinations; nested detail views keep their
+    // own text and action shortcuts (including I for network details and O for clips).
+    Shortcut {
+        sequence: "I"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent && !host.detailVisible && !host.helpVisible
+        onActivated: host.cycleTab(-1)
+    }
+
+    Shortcut {
+        sequence: "O"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.hasCurrent && !host.detailVisible && !host.helpVisible
+        onActivated: host.cycleTab(1)
+    }
+
+    // The Controls root keeps U/D half-page navigation as well as PageUp/Down.
+    // Never intercept D in the captures detail, where it requests deletion.
+    Shortcut {
+        sequence: "U"
+        context: Qt.ApplicationShortcut
+        enabled: host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible && contentViewport.contentHeight > contentViewport.height
         onActivated: host.pageContent(-1)
     }
 
     Shortcut {
-        sequence: "Z"
+        sequence: "D"
         context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent
-        onActivated: host.cycleTab(1)
-    }
-
-    Shortcut {
-        sequence: "Shift+Z"
-        context: Qt.ApplicationShortcut
-        enabled: host.expansionState.hasCurrent
-        onActivated: host.cycleTab(-1)
+        enabled: host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible && contentViewport.contentHeight > contentViewport.height
+        onActivated: host.pageContent(1)
     }
 
     // Focus only the expansion surface at first. Hyprland may otherwise
@@ -525,12 +546,12 @@ PanelWindow {
                 Repeater {
                     model: [
                         {
-                            shortcut: "Z",
-                            label: "Next"
+                            shortcut: "I",
+                            label: "Previous"
                         },
                         {
-                            shortcut: "SHIFT+Z",
-                            label: "Previous"
+                            shortcut: "O",
+                            label: "Next"
                         },
                     ].concat(host.detailVisible ? [] : [
                         {
@@ -557,6 +578,14 @@ PanelWindow {
                 visible: hubFooter.scrollHintsVisible
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: host.theme.spacing2
+                KeyChord {
+                    visible: host.expansionState.currentName === "system" && !host.detailVisible
+                    anchors.verticalCenter: parent.verticalCenter
+                    shortcut: "U/D"
+                    fontFamily: host.runtime.fontMono
+                    textColor: host.theme.textStrong
+                    fontSize: host.theme.fontKeyHint
+                }
                 KeyChord {
                     anchors.verticalCenter: parent.verticalCenter
                     shortcut: "PGUP/PGDN"
