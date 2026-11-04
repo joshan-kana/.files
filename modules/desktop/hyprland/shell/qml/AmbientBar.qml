@@ -100,6 +100,10 @@ Variants {
         // A compositor reservation reduces the bar panel's usable width.
         // Restore its real screen-space inset, instead of assuming its size.
         readonly property real screenOffset: Math.max(0, (modelData.width - bar.width) / 2)
+        // frameIslandInset is a *screen-space* contour limit. Layer-shell's
+        // frame reservation already consumes screenOffset on each side;
+        // subtract it before applying the inset inside this bar window.
+        readonly property real frameLocalInset: Math.max(0, bars.theme.frameIslandInset - screenOffset)
         // Animate the *island layout* alongside the shared frame's outline.
         // Hyprland still owns reserved space immediately; this interpolates
         // only internal QML margins, so window gaps remain compositor-driven.
@@ -227,8 +231,8 @@ Variants {
                 // The bar's compositor reservation accounts for frameThickness.
                 // Keep island hit targets beyond the outer squircle's shoulder
                 // without adding that reservation to their local coordinates.
-                leftMargin: bars.theme.spacing3 + (bars.theme.frameIslandInset - bars.theme.spacing3) * bar.frameBlend
-                rightMargin: bars.theme.spacing3 + (bars.theme.frameIslandInset - bars.theme.spacing3) * bar.frameBlend
+                leftMargin: bars.theme.spacing3 + (bar.frameLocalInset - bars.theme.spacing3) * bar.frameBlend
+                rightMargin: bars.theme.spacing3 + (bar.frameLocalInset - bars.theme.spacing3) * bar.frameBlend
                 // The inner contour begins at frameThickness, so controls
                 // must never begin above it. Keep the actual hit regions,
                 // blue workspace selection and icon row within the recess.
