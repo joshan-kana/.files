@@ -158,7 +158,14 @@ in
           pkgs.contour
           pkgs.contour.terminfo
         ]
-        ++ lib.optionals isDarwin [ pkgs.ncurses ];
+        ++ lib.optionals isDarwin [
+          (pkgs.runCommand "contour-ncurses-tools" { } ''
+            mkdir -p "$out/bin"
+            for name in clear infocmp reset tput; do
+              ln -s "${pkgs.ncurses}/bin/$name" "$out/bin/$name"
+            done
+          '')
+        ];
 
         xdg.configFile."contour/contour.yml".source =
           if isDarwin then
