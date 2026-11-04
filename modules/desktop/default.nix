@@ -1,7 +1,7 @@
 { lib, system, ... }:
 
 let
-  inherit (lib.systems.elaborate system) isLinux;
+  inherit (lib.systems.elaborate system) isDarwin isLinux;
 in
 lib.optionalAttrs isLinux {
   # Shared graphical-session infrastructure. Applications, audio, and
@@ -31,4 +31,10 @@ lib.optionalAttrs isLinux {
     Optional GNOME desktop session.
   */
   gnome = import ./gnome;
+}
+// lib.optionalAttrs isDarwin {
+  /**
+    Karabiner-Elements keyboard remapping on macOS.
+  */
+  karabinerElements = import ./karabiner;
 }

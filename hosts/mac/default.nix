@@ -162,12 +162,6 @@
   desktop = extendScope moduleRegistry.desktop {
     hammerspoon = import ../../modules/desktop/hammerspoon;
 
-    karabinerElements = _: {
-      # Karabiner 15+ uses SMAppService; the nix-darwin service still
-      # installs LaunchAgents from the removed pre-15 package layout.
-      homebrew.casks = [ "karabiner-elements" ];
-    };
-
     raycast = _: {
       homebrew.casks = [ "raycast" ];
     };
