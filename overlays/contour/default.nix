@@ -1,51 +1,40 @@
-let
-  contourModule =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    let
-      inherit (config.programs) contour;
-      inherit (lib)
-        mkEnableOption
-        mkIf
-        mkOption
-        mkPackageOption
-        ;
-      yamlFormat = pkgs.formats.yaml { };
-    in
-    {
-      options.programs.contour = {
-        enable = mkEnableOption "Contour terminal emulator";
+{
+  home-manager.sharedModules = [
+    (
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      {
+        options.programs.contour = {
+          enable = lib.mkEnableOption "Contour terminal emulator";
 
-        package = mkPackageOption pkgs "contour" { };
+          package = lib.mkPackageOption pkgs "contour" { };
 
-        settings = mkOption {
-          inherit (yamlFormat) type;
-          default = { };
-          description = "Contour settings written to contour.yml.";
+          settings = lib.mkOption {
+            inherit ((pkgs.formats.yaml { })) type;
+            default = { };
+            description = "Contour settings written to contour.yml.";
+          };
         };
-      };
 
-      config = lib.mkMerge [
-        (mkIf contour.enable {
+        config = lib.mkIf config.programs.contour.enable {
           home.packages = [
-            contour.package
-            contour.package.terminfo
+            config.programs.contour.package
+            config.programs.contour.package.terminfo
           ];
 
-          xdg.configFile."contour/contour.yml".source = yamlFormat.generate "contour.yml" contour.settings;
-        })
-        (mkIf (contour.enable && pkgs.stdenv.hostPlatform.isDarwin) {
+          xdg.configFile."contour/contour.yml".source =
+            (pkgs.formats.yaml { }).generate "contour.yml"
+              config.programs.contour.settings;
+
           programs.contour.settings.input_mapping = lib.mkBefore (
             builtins.fromJSON (builtins.readFile ./bindings.json)
           );
-        })
-      ];
-    };
-in
-{
-  home-manager.sharedModules = [ contourModule ];
+        };
+      }
+    )
+  ];
 }
