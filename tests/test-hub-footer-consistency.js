@@ -80,6 +80,21 @@ test("footer inset and panel height agree for both measured and live geometry", 
   assert.match(host, /scrollBudget: .*host\.theme\.spacing5/);
 });
 
+test("footer uses the Controls surface material without a second glass layer", () => {
+  const host = source("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /id: footerSurface[\s\S]*?color: host\.theme\.expressiveSurface/,
+  );
+  assert.match(
+    host,
+    /id: footerSurface[\s\S]*?opacity: shellSurface\.contentReveal/,
+  );
+  assert.match(host, /id: footerHints/);
+  assert.match(host, /id: footerScrollHints/);
+  assert.doesNotMatch(host, /ShellSurface \{\s*id: footerSurface/);
+});
+
 test("keycap material and compact footer presentation use the shared theme", () => {
   const hint = source("KeyHint.qml");
   const host = source("ShellExpansionHost.qml");
