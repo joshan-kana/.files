@@ -72,6 +72,10 @@ PanelWindow {
         return reveal * reveal * (3 - 2 * reveal);
     }
     property bool keyboardFocusReady: false
+    // Hyprland returns focus to workspace clients on a workspace change,
+    // even if a persistent layer-shell popup is still visible.
+    property bool restoringWorkspaceFocus: false
+    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2
 
     // Precreate each hub view before its first invocation, including Media and
     // Weather. No destination evicts another or constructs on the keypress.
@@ -91,7 +95,7 @@ PanelWindow {
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
-    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
+    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.transparencyOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
     readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
 
@@ -208,13 +212,13 @@ PanelWindow {
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
     readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing6 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + footerBottomClearance + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
         measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing6 + theme.spacing4 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + footerBottomClearance + theme.spacing4 * 2;
     }
 
     Timer {
@@ -393,6 +397,52 @@ PanelWindow {
         onActivated: host.pageContent(1)
     }
 
+    function restoreKeyboardAfterWorkspace(): void {
+        if (!expansionState.hasCurrent || themeTerminalActive)
+            return;
+        focusGrabLost.stop();
+        restoringWorkspaceFocus = true;
+        keyboardFocusReady = false;
+        // Release and reacquire the compositor's keyboard grab AFTER the
+        // workspace switch; re-focusing a QML child alone cannot restore a
+        // Wayland keyboard focus that Hyprland moved to a workspace client.
+        workspaceFocusRestart.restart();
+    }
+
+    Timer {
+        id: focusGrabLost
+        interval: 170
+        repeat: false
+        onTriggered: {
+            if (host.expansionState.hasCurrent && !host.restoringWorkspaceFocus && !host.themeTerminalActive)
+                host.expansionState.close();
+        }
+    }
+
+    Timer {
+        id: workspaceFocusRestart
+        interval: 35
+        repeat: false
+        onTriggered: {
+            if (!host.expansionState.hasCurrent || host.themeTerminalActive) {
+                host.restoringWorkspaceFocus = false;
+                return;
+            }
+            host.restoringWorkspaceFocus = false;
+            Qt.callLater(() => {
+                if (host.expansionState.hasCurrent && host.loadedContent)
+                    host.loadedContent.forceActiveFocus();
+            });
+        }
+    }
+
+    Connections {
+        target: Hyprland
+        function onFocusedWorkspaceChanged(): void {
+            host.restoreKeyboardAfterWorkspace();
+        }
+    }
+
     // Focus only the expansion surface at first. Hyprland may otherwise
     // select the non-keyboard-focusable bar when a grab initially registers
     // multiple committed surfaces. Admit the bar after this window acquires
@@ -407,11 +457,11 @@ PanelWindow {
     }
 
     HyprlandFocusGrab {
-        active: host.expansionState.hasCurrent && host.backingWindowVisible && !host.themeTerminalActive
+        active: host.expansionState.hasCurrent && host.backingWindowVisible && !host.themeTerminalActive && !host.restoringWorkspaceFocus
         windows: host.keyboardFocusReady && host.barVisible ? [host].concat(host.barWindows) : [host]
         onCleared: {
-            if (!host.themeTerminalActive)
-                host.expansionState.close();
+            if (!host.themeTerminalActive && !host.restoringWorkspaceFocus)
+                focusGrabLost.restart();
         }
     }
 
@@ -446,6 +496,11 @@ PanelWindow {
         function onHasCurrentChanged(): void {
             const epoch = ++host.transitionEpoch;
             host.keyboardFocusReady = false;
+            if (!host.expansionState.hasCurrent) {
+                workspaceFocusRestart.stop();
+                focusGrabLost.stop();
+                host.restoringWorkspaceFocus = false;
+            }
             if (host.expansionState.hasCurrent) {
                 const reversingClose = host.closing;
                 closeTimer.stop();
@@ -581,7 +636,7 @@ PanelWindow {
             opacity: shellSurface.contentReveal
             x: hubFooter.x + (hubFooter.width - width) / 2
             y: hubFooter.y - host.theme.spacing2
-            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
+            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, controlsAudioHints.visible ? controlsAudioHints.width : 0, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
             height: hubFooter.height + host.theme.spacing2 * 2
             radius: host.theme.radiusMedium
             color: host.theme.expressiveSurface
@@ -597,15 +652,49 @@ PanelWindow {
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
-                bottomMargin: host.theme.spacing6
+                // The footer is anchored to the stable content layout, which
+                // may exceed the clipped animated silhouette. Compensate
+                // that overflow so the material background, not merely the
+                // text baseline, always clears the *visible* bottom contour.
+                bottomMargin: host.footerBottomClearance + Math.max(0, shellSurface.contentLayoutHeight - shellSurface.height)
             }
             spacing: host.theme.spacing1
 
-            // Tab/back/scroll navigation belongs in the shared footer, while
-            // action mnemonics stay on controls. Centre the group as one line;
-            // optional scrolling gets a separate, non-crowded second line.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.theme.spacing6 - host.theme.fontKeyHint * 2)
+            // The audio shortcut legend belongs to the shared footer, not
+            // the last item of the Controls scroll region. Keep it visible as
+            // users scroll, with the same KeyHint tokens as every other view.
+            // The budget excludes the fixed footer rows, not the conditional
+            // scroll hint row itself, avoiding a circular height binding.
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight - (controlsAudioHints.visible ? controlsAudioHints.implicitHeight + host.theme.spacing1 : 0))
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
+
+            KeyHintStrip {
+                id: controlsAudioHints
+                visible: host.expansionState.hasCurrent && host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible
+                width: Math.max(1, Math.min(520, hubFooter.width - host.theme.spacing4 * 2))
+                anchors.horizontalCenter: parent.horizontalCenter
+                runtime: host.runtime
+                theme: host.theme
+                hints: [
+                    {
+                        shortcut: "J/K",
+                        label: "Select audio"
+                    },
+                    {
+                        shortcut: "H/L",
+                        label: "Level"
+                    },
+                    {
+                        shortcut: "M",
+                        label: "Mute"
+                    },
+                    {
+                        shortcut: "X",
+                        label: "Mic"
+                    }
+                ]
+            }
+
             Row {
                 id: footerHints
                 anchors.horizontalCenter: parent.horizontalCenter
