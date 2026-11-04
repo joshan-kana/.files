@@ -162,7 +162,76 @@
   desktop = extendScope moduleRegistry.desktop {
     hammerspoon = import ../../modules/desktop/hammerspoon;
 
-    karabinerElements = import ../../modules/desktop/karabiner;
+    karabinerElements = _: {
+      services.karabiner-elements.enable = true;
+
+      home =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        let
+          json = pkgs.formats.json { };
+          settings = import ./karabiner/settings.nix;
+          presets = import ./karabiner/presets.nix;
+          renderedPresets = lib.mapAttrs (
+            name: preset: json.generate "karabiner-${name}.json" preset
+          ) presets;
+          legacyPresets = {
+            "1713685863" = "caps-lock-hyper";
+            "1723885166" = "return-control";
+            "1725464730" = "option-navigation";
+            "1725465261" = "control-navigation";
+            "1727264752" = "spacebar-control";
+            mouse_mode = "mouse-mode";
+          };
+        in
+        {
+          home.activation.karabinerSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+            lib.hm.generators.mkImpureConfigMerger {
+              inherit pkgs;
+              format = "json";
+              empty = "{}";
+              jqOperation = "$dynamic * $static";
+              path = "${config.xdg.configHome}/karabiner/karabiner.json";
+              staticSettings = json.generate "karabiner-settings.json" settings;
+              mode = "600";
+            }
+          );
+
+          home.activation.karabinerPresetMigration = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+            lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                old: current:
+                let
+                  legacy = "${config.xdg.configHome}/karabiner/assets/complex_modifications/${old}.json";
+                in
+                ''
+                  if [[ -f ${lib.escapeShellArg legacy} ]] &&
+                     ${pkgs.diffutils}/bin/cmp -s \
+                       <(${pkgs.jq}/bin/jq -S . ${lib.escapeShellArg legacy}) \
+                       <(${pkgs.jq}/bin/jq -S . ${renderedPresets.${current}}); then
+                    if [[ -v DRY_RUN ]]; then
+                      echo "Would remove obsolete Karabiner preset: ${old}.json"
+                    else
+                      /bin/rm -f -- ${lib.escapeShellArg legacy}
+                    fi
+                  fi
+                ''
+              ) legacyPresets
+            )
+          );
+
+          xdg.configFile = lib.mapAttrs' (
+            name: source:
+            lib.nameValuePair "karabiner/assets/complex_modifications/${name}.json" {
+              inherit source;
+            }
+          ) renderedPresets;
+        };
+    };
 
     raycast = _: {
       homebrew.casks = [ "raycast" ];
