@@ -440,6 +440,10 @@ PanelWindow {
         y: 0
         width: Math.min(host.viewportWidth, host.targetWidth)
         height: Math.min(host.viewportHeight, host.targetHeight)
+        // The clipping silhouette morphs, but the content is laid out at
+        // its destination size rather than reflowing on every frame.
+        contentLayoutWidth: Math.max(1, Math.min(host.viewportWidth, Math.max(host.contentWidth, host.expansionState.originWidth)))
+        contentLayoutHeight: Math.max(1, Math.min(host.viewportHeight, Math.max(host.contentHeight, host.expansionState.originHeight)))
         clip: true
         // Keep the backing surface visible until the closing geometry finishes.
         opacity: host.expansionState.hasCurrent || host.closing ? 1 : 0
