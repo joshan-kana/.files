@@ -11,7 +11,11 @@
 
   fileSystems."/" = {
     device = "/dev/disk/by-label/ROOT";
-    fsType = "ext4";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd"
+      "noatime"
+    ];
   };
 
   fileSystems."/boot" = {
@@ -24,6 +28,13 @@
   };
 
   hardware.graphics.enable = true;
+
+  swapDevices = [ ];
+
+  zramSwap = {
+    enable = true;
+    memoryPercent = 100;
+  };
 
   networking.useDHCP = lib.mkDefault true;
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
