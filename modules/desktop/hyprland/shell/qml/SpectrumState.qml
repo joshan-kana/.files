@@ -157,7 +157,6 @@ QtObject {
                 onRead: message => {
                     try {
                         const frame = JSON.parse(message);
-                        spectrum.sequence = frame.seq || 0;
                         spectrum.sampleRate = frame.rate || 0;
                         spectrum.lowHz = frame.lowHz || 20;
                         spectrum.highHz = frame.highHz || 20000;
@@ -168,6 +167,7 @@ QtObject {
                         spectrum.mid = frame.mid || 0;
                         spectrum.high = frame.high || 0;
                         spectrum.updateBands(frame.bands);
+                        spectrum.sequence = frame.seq || 0;
                     } catch (error) {
                         console.warn("spectrum: invalid frame:", error);
                     }

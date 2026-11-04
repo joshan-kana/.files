@@ -520,7 +520,7 @@ in
     action = global "linux-desktop:media-seek-backward";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
-    description = "Seek backward 10 seconds";
+    description = "Seek backward by configured interval";
     label = "[";
   })
   (mk {
@@ -529,7 +529,7 @@ in
     action = global "linux-desktop:media-seek-forward";
     flags.repeating = true;
     section = "AUDIO & MEDIA";
-    description = "Seek forward 10 seconds";
+    description = "Seek forward by configured interval";
     label = "]";
   })
   (mk {

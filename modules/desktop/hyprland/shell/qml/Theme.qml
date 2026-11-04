@@ -88,19 +88,22 @@ QtObject {
     // music-reactive treatment. Theme remains the only visual style owner.
     property bool musicReactiveEnabled: false
     property bool shellGlassEnabled: false
-    readonly property real glassOpacity: 0.70
+    property real glassOpacity: 0.70
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
-    // Share the spectrum's red/blue/cyan ramp with the shell, without
-    // creating per-frame colour arrays or a second audio signal pipeline.
-    // Music changes tint strength; the palette stays anchored to bass/treble.
-    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.42, musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) : 0
-    function reactiveColor(base: color, position: real): color {
-        return musicReactiveWash > 0 ? blend(base, spectrumColor(position), musicReactiveWash) : base;
-    }
-    function reactiveFrameColor(position: real): color {
-        const tinted = reactiveColor(background, position);
+    // Presence sets a stable colour field; kicks alter its position rather
+    // than brightening the entire screen. Mids and treble shape the motion.
+    property real musicReactiveFlow: 0
+    property real musicReactiveMovement: 0
+    property real musicReactiveKick: 0
+    readonly property real musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0.002 ? Math.min(0.42, musicReactiveEnergy * 0.45 + 0.11) : 0
+
+    // Recompute frame colour stops only when music starts or finishes.
+    // Live movement uses numeric gradient endpoints; per-packet QColor
+    // replacements in the Qt Shape renderer retained GPU/heap resources.
+    function reactiveFrameColor(position: real, illuminated: bool): color {
+        const tinted = illuminated ? blend(background, spectrumColor(position), 0.34) : background;
         return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
     }
 
@@ -127,7 +130,10 @@ QtObject {
     readonly property int frameRounding: radiusPanel
     // End islands must leave room for both the full outer frame corner and
     // their own inverted shoulder, including the compositor frame inset.
-    readonly property int frameIslandInset: frameThickness + frameRounding + spacing5
+    // The shared contour begins its outer corner at frameThickness +
+    // frameRounding. Keep 12px for the inverted shoulder, without the
+    // former 24px of excess inset at either end of the status row.
+    readonly property int frameIslandInset: frameThickness + frameRounding + spacing3
     readonly property int frameIslandGap: radiusIsland * 2 + spacing2
     readonly property int barSelectionInset: 8
     readonly property real squircleExponent: runtime.squircleExponent
