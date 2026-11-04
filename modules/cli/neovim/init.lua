@@ -93,11 +93,19 @@ snacks.setup({
 })
 
 require("blink.cmp").setup({
-	keymap = { preset = "super-tab" },
+	keymap = {
+		preset = "enter",
+		["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+		["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+		["<Esc>"] = { "cancel", "fallback" },
+	},
 	cmdline = {
 		keymap = {
 			preset = "cmdline",
-			["<Tab>"] = { "accept", "fallback" },
+			["<Tab>"] = { "select_next", "fallback" },
+			["<S-Tab>"] = { "select_prev", "fallback" },
+			["<CR>"] = { "accept", "fallback" },
+			["<Esc>"] = { "cancel", "fallback" },
 			["<Up>"] = { "insert_prev", "fallback" },
 			["<Down>"] = { "insert_next", "fallback" },
 			["<Right>"] = false,
