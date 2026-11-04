@@ -15,7 +15,7 @@ QtObject {
     property real body: 0
     property real presence: 0
     property real motionAmount: 0
-    property real flowPhase: 0
+    property var spectrumLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0]
     property real bassBaseline: 0
     property real peakBaseline: 0
     property real rmsBaseline: 0
@@ -57,7 +57,7 @@ QtObject {
         body = 0;
         presence = 0;
         motionAmount = 0;
-        flowPhase = 0;
+        spectrumLevels = [0, 0, 0, 0, 0, 0, 0, 0, 0];
         bassBaseline = 0;
         peakBaseline = 0;
         rmsBaseline = 0;

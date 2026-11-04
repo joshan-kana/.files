@@ -22,7 +22,7 @@ Item {
     property color reactiveGradientLow: "transparent"
     property color reactiveGradientMid: "transparent"
     property color reactiveGradientHigh: "transparent"
-    property real reactiveGradientPhase: 0
+    property var reactiveGradientBands: []
     property real reactiveGradientMovement: 0
     property real reactiveGradientKick: 0
     property color borderColor: "transparent"
@@ -152,7 +152,7 @@ Item {
         gradientLowColor: root.reactiveGradientLow
         gradientMidColor: root.reactiveGradientMid
         gradientHighColor: root.reactiveGradientHigh
-        gradientPhase: root.reactiveGradientPhase
+        gradientBands: root.reactiveGradientBands
         gradientMovement: root.reactiveGradientMovement
         gradientKick: root.reactiveGradientKick
         cornerRadius: root.cornerRadius

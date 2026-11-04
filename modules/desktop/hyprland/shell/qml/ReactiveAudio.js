@@ -46,6 +46,13 @@ function advanceAudio(state, frame, seconds) {
     attack = 0,
     punchBins = 0,
     attackBins = 0;
+  // Nine log-frequency zones map directly onto the frame's nine fixed
+  // gradient stops. Each zone tracks local content and attacks; no periodic
+  // phase or wall-clock animation can make a steady note appear rhythmic.
+  const totals = Array(9).fill(0);
+  const peaks = Array(9).fill(0);
+  const rises = Array(9).fill(0);
+  const counts = Array(9).fill(0);
   const lower = Math.max(1, frame.lowHz || 20);
   const upper = Math.max(lower + 1, frame.highHz || 20000);
   const logSpan = Math.log(upper / lower);
@@ -54,6 +61,11 @@ function advanceAudio(state, frame, seconds) {
     const value = Math.sqrt(clamp(bands[i]));
     const rise = Math.max(0, value - (previous[i] || 0));
     previous[i] = value;
+    const zone = hz < 60 ? 0 : Math.min(8, 1 + Math.floor(Math.log2(hz / 60)));
+    totals[zone] += value;
+    peaks[zone] = Math.max(peaks[zone], value);
+    rises[zone] += rise;
+    counts[zone]++;
     if (hz >= 60 && hz < 250) {
       punch += rise;
       ++punchBins;
@@ -109,7 +121,7 @@ function advanceAudio(state, frame, seconds) {
     state.presence,
     present,
     dt,
-    present > state.presence ? 7 : 2.5,
+    present > state.presence ? 7 : 10,
   );
 
   // Sustained low frequencies preserve a subtle foundation, never an
@@ -117,14 +129,38 @@ function advanceAudio(state, frame, seconds) {
   const foundation =
     state.presence *
     (0.42 + 0.1 * Math.sqrt(sub) + 0.13 * Math.sqrt(bass) + 0.22 * state.body);
-  state.sustain = approach(state.sustain, foundation, dt, 4);
+  state.sustain = approach(
+    state.sustain,
+    foundation,
+    dt,
+    present > 0.01 ? 4 : 14,
+  );
   state.beatPulse = state.kick;
   state.motionAmount = clamp(
-    0.17 + state.body * 0.35 + state.treble * 0.17 + state.kick * 0.31,
+    state.body * 0.35 + state.treble * 0.22 + state.kick * 0.35,
   );
-  state.flowPhase =
-    (state.flowPhase +
-      dt *
-        (0.49 + 0.21 * state.body + 0.28 * state.treble + 1.8 * state.kick)) %
-    (2 * Math.PI);
+
+  // A held 808 supplies warm foundation, but it cannot animate the other
+  // eight zones. Emphasize actual attacks in 60 Hz and higher bands.
+  const scales = [0.23, 0.95, 1.08, 1.22, 1.32, 1.38, 1.42, 1.45, 1.48];
+  const previousLevels = state.spectrumLevels || [];
+  const levels = Array(9);
+  for (let zone = 0; zone < levels.length; zone++) {
+    const count = Math.max(1, counts[zone]);
+    const mean = totals[zone] / count;
+    const transient = rises[zone] / count;
+    const target =
+      present *
+      clamp(
+        scales[zone] * (0.55 * mean + 0.45 * peaks[zone] + 1.6 * transient),
+      );
+    const previousLevel = previousLevels[zone] || 0;
+    levels[zone] = approach(
+      previousLevel,
+      target,
+      dt,
+      target > previousLevel ? 34 : 13,
+    );
+  }
+  state.spectrumLevels = levels;
 }
