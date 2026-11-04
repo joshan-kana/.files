@@ -38,3 +38,13 @@ test("session widget and global keybind use the same lock command", () => {
   );
   assert.match(qml, /lockScreen\.lockSession\(\)/);
 });
+
+test("Home Manager switches preserve an active session lock without starting a new one", () => {
+  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n        \};/);
+  assert.ok(lock, "the existing on-demand lock service is retained");
+  assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
+  assert.match(lock[1], /Restart = "no"/);
+  assert.doesNotMatch(lock[1], /X-RestartIfChanged/);
+  assert.doesNotMatch(lock[1], /Install\.WantedBy/);
+  assert.match(nix, /exec systemctl --user start linux-desktop-lock\.service/);
+});
