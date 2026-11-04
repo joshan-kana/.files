@@ -128,8 +128,6 @@ in
     home =
       { config, ... }:
       {
-        imports = [ ./contour ];
-
         programs.contour = {
           enable = true;
           settings = {
@@ -157,7 +155,7 @@ in
             };
           }
           // lib.optionalAttrs isDarwin {
-            input_mapping = builtins.fromJSON (builtins.readFile ./contour/bindings.json) ++ [
+            input_mapping = [
               {
                 mods = [ "Super" ];
                 key = "A";
