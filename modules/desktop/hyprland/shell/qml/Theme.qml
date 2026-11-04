@@ -92,36 +92,25 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
-    // Presence sets a stable colour field; kicks alter its position rather
-    // than brightening the entire screen. Mids and treble shape the motion.
-    property real musicReactiveFlow: 0
+    // Each fixed spectrum stop responds to its own live frequency region,
+    // from sub-bass at the left to treble at the right. No free-running
+    // oscillator: if the input holds steady, the gradient holds steady too.
+    property var musicReactiveBands: [0, 0, 0, 0, 0, 0, 0, 0, 0]
     property real musicReactiveMovement: 0
     property real musicReactiveKick: 0
-    readonly property real musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0.002 ? Math.min(0.42, musicReactiveEnergy * 0.45 + 0.11) : 0
+    readonly property real musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0.002 ? Math.min(0.88, musicReactiveEnergy * 0.65 + 0.36) : 0
 
-    // Recompute frame colour stops only when music starts or finishes.
-    // Live movement uses numeric gradient endpoints; per-packet QColor
-    // replacements in the Qt Shape renderer retained GPU/heap resources.
     function reactiveFrameColor(position: real, illuminated: bool): color {
-        const tinted = illuminated ? blend(background, spectrumColor(position), 0.34) : background;
-        return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
-    }
-
-    // Shape's curved odd-even fill owns the clipping. Colour stops, unlike
-    // gradient endpoint coordinates, invalidate the Qt Shape brush reliably.
-    // Audio deforms the sampled red-blue-cyan field spatially, rather than
-    // producing a global brightness flash.
-    function reactiveFrameMotionColor(position: real, illuminated: bool): color {
         if (!illuminated)
             return Qt.rgba(background.r, background.g, background.b, shellGlassEnabled ? glassOpacity : 1);
-        const movement = Math.max(0, Math.min(1, musicReactiveMovement));
-        const kick = Math.max(0, Math.min(1, musicReactiveKick));
-        const phase = musicReactiveFlow;
-        const wave = 0.21 * movement * Math.sin(phase + position * 5.6);
-        const detail = 0.055 * movement * Math.sin(phase * 0.7 - position * 9.2);
-        const impulse = 0.12 * kick * Math.sin(phase + position * 4.5);
-        const sampled = Math.max(0, Math.min(1, position + wave + detail + impulse));
-        const tinted = blend(background, spectrumColor(sampled), 0.34);
+
+        const levels = musicReactiveBands;
+        const index = Math.max(0, Math.min(8, Math.round(position * 8)));
+        const local = Math.max(0, Math.min(1, levels[index] || 0));
+        // Kicks sharpen the 60–240 Hz neighbourhood, not the full gradient.
+        const kick = musicReactiveKick * Math.exp(-Math.pow((position - 0.18) / 0.14, 2));
+        const strength = Math.min(0.96, 0.29 + 0.78 * Math.sqrt(local) + 0.3 * kick);
+        const tinted = blend(background, spectrumColor(position), strength);
         return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
     }
 

@@ -79,11 +79,11 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   assert.match(theme, /const stops = \[critical, accent, accentTertiary\]/);
   assert.match(
     theme,
-    /musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0\.002 \? Math\.min\(0\.42,/,
+    /musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0\.002 \? Math\.min\(0\.88,/,
   );
   assert.match(
     theme,
-    /const tinted = illuminated \? blend\(background, spectrumColor\(position\), 0\.34\) : background/,
+    /const tinted = blend\(background, spectrumColor\(position\), strength\)/,
   );
   assert.match(
     theme,
@@ -107,14 +107,19 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   ])
     assert.ok(
       frame.includes(
-        "reactiveFrameMotionColor(" + point + ", output.reactiveActive)",
+        "reactiveFrameColor(" + point + ", output.reactiveActive)",
       ),
     );
   assert.match(
     theme,
-    /reactiveFrameMotionColor\(position: real, illuminated: bool\)/,
+    /reactiveFrameColor\(position: real, illuminated: bool\)/,
   );
-  assert.match(theme, /const wave = 0\.21 \* movement \* Math\.sin/);
+  assert.match(theme, /const levels = musicReactiveBands/);
+  assert.match(
+    theme,
+    /const local = Math\.max\(0, Math\.min\(1, levels\[index\] \|\| 0\)\)/,
+  );
+  assert.match(theme, /const strength = Math\.min\(0\.96,/);
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
   assert.match(
@@ -211,7 +216,6 @@ test("silence and disconnect reset every reactive field", () => {
     "body",
     "presence",
     "motionAmount",
-    "flowPhase",
   ])
     assert.match(reactive, new RegExp(value + " = 0;"));
   assert.match(
@@ -230,7 +234,8 @@ test("closed hub and hidden bar still keep the visible frame reactive", () => {
   assert.match(frame, /glassExposed: enabled && Quickshell\.screens\.some/);
   assert.match(root, /active: .*root\.musicReactiveSurfaceVisible/);
   assert.match(root, /enabled: root\.musicReactiveSurfaceVisible/);
-  assert.match(root, /musicReactiveFlow: reactive\.flowPhase/);
+  assert.match(root, /musicReactiveBands: reactive\.spectrumLevels/);
+  assert.match(root, /musicReactiveBandLevels\(\): string/);
   for (const current of [
     { frame: true, bar: false, hub: false, expected: true },
     { frame: true, bar: true, hub: false, expected: true },
@@ -260,7 +265,7 @@ test("surface curves remain cubic, and only ordinary hover may use a radial ligh
   assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive/);
 });
 
-test("animated reactive flow updates native geometry with numeric state, not QML QColor allocations", () => {
+test("native squircle receives the same live FFT zones without an independent animation phase", () => {
   const native = fs.readFileSync(
     path.join(
       __dirname,
@@ -270,30 +275,35 @@ test("animated reactive flow updates native geometry with numeric state, not QML
   );
   const squircle = qml("SquircleSurface.qml");
   const surface = qml("ShellSurface.qml");
-  for (const prop of ["gradientPhase", "gradientMovement", "gradientKick"]) {
-    assert.ok(native.includes("double " + prop + " MEMBER"));
-    assert.match(native, /NOTIFY gradientMotionChanged/);
-  }
-  assert.match(native, /const float wave =/);
-  assert.match(native, /const float detail =/);
-  assert.match(native, /const float impulse =/);
-  assert.ok(
-    native.includes("position = std::clamp(position + wave + detail + impulse"),
+  assert.match(native, /QVariantList gradientBands MEMBER gradientBands_/);
+  assert.match(native, /NOTIFY gradientMotionChanged/);
+  assert.match(native, /const float bandPosition = position \* 8/);
+  assert.match(native, /const float level = levels\[size_t\(leftBand\)\]/);
+  assert.match(native, /const float localStrength =/);
+  assert.doesNotMatch(
+    native,
+    /gradientPhase|std::sin\(gradientPhase|class FrameRibbonItem|class FrameFillItem/,
   );
-  for (const prop of ["Phase", "Movement", "Kick"]) {
-    assert.ok(
-      squircle.includes("gradient" + prop + ": root.reactiveGradient" + prop),
+  assert.match(squircle, /gradientBands: root\.reactiveGradientBands/);
+  assert.match(
+    surface,
+    /reactiveGradientBands: musicActive \? theme\.musicReactiveBands : \[\]/,
+  );
+  for (const name of ["Movement", "Kick"]) {
+    assert.match(
+      squircle,
+      new RegExp("gradient" + name + ": root.reactiveGradient" + name),
     );
-    assert.ok(
-      surface.includes(
+    assert.match(
+      surface,
+      new RegExp(
         "reactiveGradient" +
-          prop +
-          ": musicActive ? theme.musicReactive" +
-          (prop === "Phase" ? "Flow" : prop),
+          name +
+          ": musicActive \\? theme.musicReactive" +
+          name,
       ),
     );
   }
-  assert.doesNotMatch(surface, /theme\.flowingSpectrumColor/);
 });
 
 test("connected frame animates only its own clipped fill and never draws separate geometry over windows", () => {
@@ -307,10 +317,7 @@ test("connected frame animates only its own clipped fill and never draws separat
   );
   assert.match(frame, /fillRule: Qt\.OddEvenFill/);
   assert.match(frame, /path: output\.geometry\.fill/);
-  assert.match(
-    frame,
-    /reactiveFrameMotionColor\(0\.5, output\.reactiveActive\)/,
-  );
+  assert.match(frame, /reactiveFrameColor\(0\.5, output\.reactiveActive\)/);
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.doesNotMatch(
     frame,
@@ -321,41 +328,33 @@ test("connected frame animates only its own clipped fill and never draws separat
   assert.doesNotMatch(frame, /Math\.sin\(frame\.theme\.musicReactiveFlow\)/);
 });
 
-test("reactive music continues when UI animations are disabled", () => {
+test("spectrum-driven rendering ignores the UI motion preference", () => {
   const root = qml("shell.qml");
   const surface = qml("ShellSurface.qml");
   const frame = qml("DesktopFrame.qml");
-  for (const [value, binding] of [
-    ["Flow", "flowPhase"],
+  assert.match(root, /musicReactiveBands: reactive\.spectrumLevels/);
+  assert.match(
+    surface,
+    /reactiveGradientBands: musicActive \? theme\.musicReactiveBands : \[\]/,
+  );
+  for (const [name, binding] of [
     ["Movement", "motionAmount"],
     ["Kick", "kick"],
   ]) {
     assert.match(
       root,
-      new RegExp("musicReactive" + value + ": reactive\\." + binding),
+      new RegExp("musicReactive" + name + ": reactive\\." + binding),
     );
     assert.doesNotMatch(
       root,
-      new RegExp("musicReactive" + value + ": motion\\.enabled"),
-    );
-    assert.match(
-      surface,
-      new RegExp(
-        "reactiveGradient" +
-          (value === "Flow" ? "Phase" : value) +
-          ": musicActive \\? theme\\.musicReactive" +
-          value,
-      ),
+      new RegExp("musicReactive" + name + ": motion\\.enabled"),
     );
   }
   assert.doesNotMatch(
     frame,
     /output\.reactiveActive && frame\.motion\.enabled/,
   );
-  assert.match(
-    frame,
-    /reactiveFrameMotionColor\(0\.5, output\.reactiveActive\)/,
-  );
+  assert.match(frame, /reactiveFrameColor\(0\.5, output\.reactiveActive\)/);
   assert.doesNotMatch(frame, /FrameRibbonItem|FrameFillItem/);
   // Motion preference still gates UI tween durations, not DSP movement.
   assert.match(
