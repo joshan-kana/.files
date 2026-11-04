@@ -11,7 +11,7 @@ _: {
     let
       settings = {
         global = {
-          check_for_updates_on_startup = false;
+          check_for_updates = false;
           show_in_menu_bar = false;
         };
         profiles = [
