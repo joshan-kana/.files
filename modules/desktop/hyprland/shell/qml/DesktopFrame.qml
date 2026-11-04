@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Shapes
-import LinuxDesktop.Visuals 1.0
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -61,10 +60,6 @@ Variants {
         readonly property var monitor: Hyprland.monitorFor(modelData)
         readonly property bool fullscreen: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
         readonly property bool exposed: frame.enabled && !fullscreen
-        // Concentrate the spectrum ramp around the central hub width. The
-        // frame remains one continuous fill while connected and detached
-        // hubs present the same left-to-right colour sequence.
-        readonly property real gradientInset: Math.max(0.005, Math.min(0.45, (modelData.width - frame.theme.controlsDetailWidth) / (2 * Math.max(1, modelData.width))))
         readonly property bool reactiveActive: frame.theme.musicReactiveEnabled && frame.theme.musicReactiveWash > 0.02
         readonly property bool busyHere: frame.busy && (!frame.busyScreen || frame.busyScreen === modelData)
         SquircleGeometry {
@@ -117,72 +112,7 @@ Variants {
                 }
             }
 
-            // Retain the precise odd-even frame silhouette and existing
-            // static red-blue-cyan wash. Only the narrow contour ribbon is
-            // animated; no Shape brush is rebuilt on each audio packet.
             Shape {
-                id: frameBackground
-                visible: frameOutline.visible
-                opacity: frameOutline.opacity
-                anchors.fill: parent
-                antialiasing: true
-                preferredRendererType: Shape.CurveRenderer
-
-                ShapePath {
-                    fillRule: Qt.OddEvenFill
-                    strokeWidth: -1
-                    fillGradient: LinearGradient {
-                        x1: 0
-                        y1: 0
-                        x2: drawing.width
-                        y2: 0
-                        GradientStop {
-                            position: 0
-                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: output.gradientInset
-                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 0.5
-                            color: frame.theme.reactiveFrameColor(0.5, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 1 - output.gradientInset
-                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 1
-                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
-                        }
-                    }
-                    PathSvg {
-                        path: output.geometry.fill || "M 0 0 L 0.01 0 L 0 0.01 Z"
-                    }
-                }
-            }
-
-            // Scene-graph colours move only along the actual contour.
-            // Never triangulate concave notches to the outer screen corners:
-            // those long diagonals can cover ordinary desktop windows.
-            FrameRibbonItem {
-                anchors.fill: parent
-                visible: output.reactiveActive && frameOutline.visible
-                opacity: frameOutline.opacity
-                contourPoints: output.geometry.renderPoints || []
-                ribbonWidth: frame.theme.frameThickness * 1.4
-                reactive: output.reactiveActive
-                gradientLowColor: frame.theme.spectrumColor(0)
-                gradientMidColor: frame.theme.spectrumColor(0.5)
-                gradientHighColor: frame.theme.spectrumColor(1)
-                gradientPhase: frame.theme.musicReactiveFlow
-                gradientMovement: frame.theme.musicReactiveMovement
-                gradientKick: frame.theme.musicReactiveKick
-            }
-
-            Shape {
-                id: frameOutline
                 // Keep the backing layer and drawn contour alive while the
                 // frame fades. Toggling Shape.visible discarded its geometry
                 // instantly and made bar islands jump between visual modes.
@@ -201,6 +131,60 @@ Variants {
                 antialiasing: true
                 preferredRendererType: Shape.CurveRenderer
 
+                ShapePath {
+                    fillRule: Qt.OddEvenFill
+                    // Keep content opaque, but let the compositor sample the
+                    // wallpaper through the shared frame's actual silhouette.
+                    strokeWidth: -1
+                    fillGradient: LinearGradient {
+                        // The frame is already correctly clipped by this
+                        // odd-even path. Animate existing stop colours, not
+                        // separate meshes that can cross its inside boundary.
+                        x1: 0
+                        y1: 0
+                        x2: drawing.width
+                        y2: 0
+                        GradientStop {
+                            position: 0
+                            color: frame.theme.reactiveFrameMotionColor(0, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.125
+                            color: frame.theme.reactiveFrameMotionColor(0.125, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.25
+                            color: frame.theme.reactiveFrameMotionColor(0.25, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.375
+                            color: frame.theme.reactiveFrameMotionColor(0.375, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.5
+                            color: frame.theme.reactiveFrameMotionColor(0.5, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.625
+                            color: frame.theme.reactiveFrameMotionColor(0.625, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.75
+                            color: frame.theme.reactiveFrameMotionColor(0.75, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 0.875
+                            color: frame.theme.reactiveFrameMotionColor(0.875, output.reactiveActive)
+                        }
+                        GradientStop {
+                            position: 1
+                            color: frame.theme.reactiveFrameMotionColor(1, output.reactiveActive)
+                        }
+                    }
+                    PathSvg {
+                        path: output.geometry.fill || "M 0 0 L 0.01 0 L 0 0.01 Z"
+                    }
+                }
                 ShapePath {
                     fillColor: Qt.rgba(frame.theme.textStrong.r, frame.theme.textStrong.g, frame.theme.textStrong.b, 0.075)
                     strokeWidth: -1
