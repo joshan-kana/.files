@@ -664,15 +664,58 @@ in
   };
 
   neovim = _args: {
-    home = args: {
-      home.shellAliases.v = "nvim";
-      programs.neovim = (neovimConfig args).programs.neovim // {
-        extraConfig = ''
-          autocmd BufRead * autocmd FileType <buffer> ++once
-          \ if &ft !~# 'commit\|rebase' && line("'\"") > 1 && line("'\"") <= line("$") | exe 'normal! g`"' | endif
-        '';
+    home =
+      args:
+      let
+        editorTools = with pkgs; [
+          fd
+          ripgrep
+          git
+          jujutsu
+          nixd
+          clang-tools
+          rust-analyzer
+          cargo
+          rustc
+          go
+          gopls
+          typescript-language-server
+          lua-language-server
+          basedpyright
+          bash-language-server
+          yaml-language-server
+          vscode-langservers-extracted
+          marksman
+          taplo
+          csharp-ls
+          lemminx
+        ];
+      in
+      {
+        home.shellAliases.v = "nvim";
+        programs.neovim = (neovimConfig args).programs.neovim // {
+          extraPackages = editorTools;
+          plugins = with pkgs.vimPlugins; [
+            snacks-nvim
+            blink-cmp
+            which-key-nvim
+            lualine-nvim
+            nvim-lspconfig
+            otter-nvim
+            nvim-treesitter.withAllGrammars
+          ];
+          initLua = ''
+            vim.g.editorLspPath = "${lib.makeBinPath editorTools}"
+          ''
+          + builtins.readFile ./neovim/init.lua;
+        };
+        xdg.configFile."nvim/lua/editor/profiles.lua".source = ./neovim/profiles.lua;
+        xdg.configFile."nvim/lua/editor/guide.lua".source = ./neovim/guide.lua;
+        xdg.configFile."nvim/lua/editor/lsp.lua".source = ../../.nvim/lsp.lua;
+        xdg.configFile."nvim/language-aliases.json".source = ../../.nvim/language-aliases.json;
+        xdg.configFile."nvim/lua/editor/embedded.lua".source = ../../.nvim/embedded.lua;
+        xdg.configFile."nvim/queries/nix/injections.scm".source = ../../.nvim/queries/nix/injections.scm;
       };
-    };
   };
 
   mpv = _: {

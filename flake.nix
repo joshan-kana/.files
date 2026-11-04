@@ -528,6 +528,16 @@
         let
           pkgs = pkgsFor system;
           treefmt = treefmtFor system;
+          neovimGrammarPackage = pkgs.vimPlugins.nvim-treesitter.withAllGrammars;
+          neovimGrammarRuntime = pkgs.buildEnv {
+            name = "neovim-grammar-runtime";
+            paths = [ neovimGrammarPackage ] ++ neovimGrammarPackage.passthru.dependencies;
+          };
+          neovimRuntime = [
+            pkgs.vimPlugins.otter-nvim
+            pkgs.vimPlugins.nvim-lspconfig
+            neovimGrammarRuntime
+          ];
           preCommit = preCommitFor system;
           docsCommands = docsCommandsFor system;
           repoOptionsFzf = pkgs.writeShellApplication {
@@ -557,6 +567,17 @@
               nixfmt
               nixd
               nil
+              lua-language-server
+              basedpyright
+              bash-language-server
+              yaml-language-server
+              vscode-langservers-extracted
+              marksman
+              typescript-language-server
+              typescript
+              csharp-ls
+              taplo
+              lemminx
               statix
               deadnix
               nixdoc
@@ -577,11 +598,17 @@
         {
           default = pkgs.mkShell {
             packages = commonTools;
+            NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
+            NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
+            NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };
 
           vscode = pkgs.mkShell {
             packages = commonTools ++ lib.optionals (vscodePkg != null) [ vscodePkg ];
+            NVIM_PROJECT_RUNTIMEPATH = lib.concatStringsSep "," (map toString neovimRuntime);
+            NVIM_PROJECT_LSP_PATH = lib.makeBinPath commonTools;
+            NVIM_PROJECT_SYSTEM = system;
             inherit (preCommit) shellHook;
           };
         }
