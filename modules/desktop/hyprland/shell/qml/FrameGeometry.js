@@ -61,6 +61,7 @@ function contour(
       bottom: Math.min(bottom - outerRadius - 3, item.y + item.height),
       hovered: Boolean(item.hovered),
       pressed: Boolean(item.pressed),
+      interactionGroup: item.interactionGroup || "",
     }))
     .filter((item) => item.right - item.left > 5 && item.bottom > top + 5)
     .sort((a, b) => a.left - b.left);
@@ -233,6 +234,7 @@ function contour(
       Math.PI,
       Math.PI / 2,
     );
+    const leftPathEnd = pathCommands.length;
 
     for (let j = 1; j < sections.length; j++) {
       const previous = sections[j - 1];
@@ -283,6 +285,7 @@ function contour(
         );
       }
     }
+    const rightPathStart = pathCommands.length;
     add(notch.right - rightRadius, last.bottom);
     corner(
       notch.right - rightRadius,
@@ -299,9 +302,61 @@ function contour(
       Math.PI,
       1.5 * Math.PI,
     );
-    // Hover must follow exactly the composited concave boundary. Painting
-    // another rounded rectangle inside the bar creates phantom pill corners.
-    if (notch.hovered || notch.pressed) {
+    // Hover uses the exact concave frame contour, not a separate rounded
+    // rectangle. The media island has two adjacent click targets: divide
+    // their shared notch at the true hit boundary without rounding it twice.
+    const [firstSource, secondSource] = notch.sources;
+    const divided =
+      notch.sources.length === 2 &&
+      firstSource.interactionGroup === "media" &&
+      secondSource.interactionGroup === "media" &&
+      Math.abs(firstSource.right - secondSource.left) < 0.01 &&
+      Math.abs(firstSource.bottom - secondSource.bottom) < 0.01;
+    if (divided) {
+      const divider = firstSource.right;
+      const leftPart = pathCommands
+        .slice(startCommand, leftPathEnd)
+        .map((command, index) =>
+          index === 0 ? command.replace(/^L/, "M") : command,
+        )
+        .join(" ");
+      const rightPart = pathCommands.slice(rightPathStart).join(" ");
+      const regions = [
+        {
+          source: firstSource,
+          path:
+            leftPart +
+            " L" +
+            divider +
+            " " +
+            first.bottom +
+            " L" +
+            divider +
+            " " +
+            top +
+            " Z",
+        },
+        {
+          source: secondSource,
+          path:
+            "M" +
+            divider +
+            " " +
+            top +
+            " L" +
+            divider +
+            " " +
+            last.bottom +
+            " " +
+            rightPart +
+            " Z",
+        },
+      ];
+      for (const region of regions) {
+        if (region.source.hovered || region.source.pressed)
+          (region.source.pressed ? pressedPaths : hoverPaths).push(region.path);
+      }
+    } else if (notch.hovered || notch.pressed) {
       const segment = pathCommands.slice(startCommand);
       const fillPath =
         segment

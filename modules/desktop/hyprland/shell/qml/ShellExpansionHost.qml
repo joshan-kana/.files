@@ -21,6 +21,19 @@ PanelWindow {
     property bool contentExpanded: false
     property bool closing: false
     property int transitionEpoch: 0
+    // The measured center island remains the single docking target for all
+    // hub pages, regardless of the island that originally opened the page.
+    property var dockOrigin: ({
+            center: 0,
+            width: 0,
+            height: 0
+        })
+    property real closeWidth: 0
+    property real closeHeight: 0
+    property real closeStartWidth: 0
+    property real closeStartHeight: 0
+    property real closeLayoutWidth: 0
+    property real closeLayoutHeight: 0
     // One shared visibility track for Controls and every detail gallery.
     property real chromeOpacity: expansionState.hasCurrent && contentExpanded ? 1 : 0
     Behavior on chromeOpacity {
@@ -41,16 +54,21 @@ PanelWindow {
         })
     readonly property real topOffset: frameVisible ? theme.frameThickness : barVisible ? theme.barInsetTop : theme.spacing4
     readonly property bool frameVisible: frameEnabled && !(Hyprland.monitorFor(screen)?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false)
-    // The bar clock returns as the hub retracts into its source island,
-    // rather than appearing abruptly when closeTimer completes.
+    // The clock's reveal is driven by the actual contraction, not the
+    // outgoing page's implicitWidth (Activity and Now Playing differ).
     readonly property real clockReveal: {
+        if (!barVisible)
+            return 0;
         if (expansionState.hasCurrent)
             return 0;
         if (!closing)
             return 1;
-        const span = Math.max(1, Math.max(contentWidth, expansionState.originWidth) - expansionState.originWidth);
-        const progress = Math.max(0, Math.min(1, (Math.max(contentWidth, expansionState.originWidth) - shellSurface.width) / span));
-        const reveal = Math.max(0, Math.min(1, (progress - 0.55) / 0.45));
+        const widthSpan = Math.max(1, closeStartWidth - closeWidth);
+        const heightSpan = Math.max(1, closeStartHeight - closeHeight);
+        const widthProgress = Math.max(0, Math.min(1, (closeStartWidth - shellSurface.width) / widthSpan));
+        const heightProgress = Math.max(0, Math.min(1, (closeStartHeight - shellSurface.height) / heightSpan));
+        const progress = Math.min(widthProgress, heightProgress);
+        const reveal = Math.max(0, Math.min(1, (progress - 0.65) / 0.35));
         return reveal * reveal * (3 - 2 * reveal);
     }
     property bool keyboardFocusReady: false
@@ -190,13 +208,13 @@ PanelWindow {
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
     readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing5 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing6 + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
         measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing5 + theme.spacing4 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + theme.spacing6 + theme.spacing4 * 2;
     }
 
     Timer {
@@ -225,12 +243,12 @@ PanelWindow {
             geometryUpdate.restart();
         }
     }
-    // With neither frame nor bar, the floating hub opens at its natural size.
-    // That shortcut must NOT apply while closing: it prevented the normal
-    // width/height animations from receiving a smaller target at all.
-    readonly property bool floatingOpen: !frameVisible && !barVisible && !closing
-    readonly property real targetWidth: floatingOpen || contentExpanded ? Math.max(contentWidth, expansionState.originWidth) : expansionState.originWidth
-    readonly property real targetHeight: floatingOpen || contentExpanded ? Math.max(contentHeight, expansionState.originHeight) : expansionState.originHeight
+    // One terminal silhouette per visual mode. Never derive the closing
+    // endpoint from the outgoing tab's dimensions or its original trigger.
+    readonly property real compactWidth: barVisible ? Math.max(1, dockOrigin.width || expansionState.originWidth || 40) : frameVisible ? Math.max(64, theme.radiusPanel * 2) : 64
+    readonly property real compactHeight: barVisible ? Math.max(1, dockOrigin.height || expansionState.originHeight || 40) : frameVisible ? Math.max(2, theme.frameThickness * 0.6) : 32
+    readonly property real targetWidth: contentExpanded ? Math.max(contentWidth, expansionState.originWidth) : closing ? closeWidth : barVisible ? Math.max(1, expansionState.originWidth) : compactWidth
+    readonly property real targetHeight: contentExpanded ? Math.max(contentHeight, expansionState.originHeight) : closing ? closeHeight : barVisible ? Math.max(1, expansionState.originHeight) : compactHeight
     // Keep the layer as small as the hub's compositor-safe viewport.
     // A fullscreen transparent backing needlessly multiplies blur work
     // when Frosted Glass is enabled, especially on high-DPI displays.
@@ -244,9 +262,10 @@ PanelWindow {
     readonly property real originHalfWidth: Math.min(viewportWidth / 2, Math.max(1, expansionState.originWidth / 2))
     readonly property real localOriginCenter: screen ? expansionState.originCenter - (screen.width - viewportWidth) / 2 : viewportWidth / 2
     readonly property real boundedOriginCenter: Math.max(originHalfWidth, Math.min(viewportWidth - originHalfWidth, localOriginCenter))
-    // The visible close morph must shrink in place, not simultaneously drift
-    // toward the bar island. Reset its source centre only after fading out.
-    property real animatedSurfaceCenter: contentExpanded || closing ? viewportWidth / 2 : boundedOriginCenter
+    // Floating modes have no clickable source island to drift toward. The
+    // center also remains fixed during close, so the width/height easing does
+    // not compete with horizontal translation.
+    property real animatedSurfaceCenter: contentExpanded || closing || !barVisible ? viewportWidth / 2 : boundedOriginCenter
 
     Behavior on animatedSurfaceCenter {
         enabled: host.contentExpanded || host.closing
@@ -396,16 +415,29 @@ PanelWindow {
         }
     }
 
+    function finishCloseIfSettled(): void {
+        if (expansionState.hasCurrent || !closing)
+            return;
+        // QML animations may be interrupted by rendering stalls or mode
+        // changes. Check the actual silhouette before releasing the frame.
+        const widthGoal = Math.min(viewportWidth, closeWidth);
+        const heightGoal = Math.min(viewportHeight, closeHeight);
+        if (Math.abs(shellSurface.width - widthGoal) > 0.75 || Math.abs(shellSurface.height - heightGoal) > 0.75) {
+            closeTimer.interval = 16;
+            closeTimer.restart();
+            return;
+        }
+        closing = false;
+        expansionState.finishClose();
+        measuredContentWidth = 0;
+        measuredContentHeight = 0;
+    }
+
     Timer {
         id: closeTimer
         interval: host.motion.morph
         repeat: false
-        onTriggered: {
-            host.closing = false;
-            host.expansionState.finishClose();
-            host.measuredContentWidth = 0;
-            host.measuredContentHeight = 0;
-        }
+        onTriggered: host.finishCloseIfSettled()
     }
 
     Connections {
@@ -415,19 +447,32 @@ PanelWindow {
             const epoch = ++host.transitionEpoch;
             host.keyboardFocusReady = false;
             if (host.expansionState.hasCurrent) {
-                if (!host.closing)
-                    geometryUpdate.restart();
+                const reversingClose = host.closing;
                 closeTimer.stop();
                 host.closing = false;
                 host.themeTerminalActive = false;
-                host.contentExpanded = false;
-                Qt.callLater(() => {
-                    if (host.transitionEpoch === epoch && host.expansionState.hasCurrent)
-                        host.contentExpanded = true;
-                });
+                // Reversals expand directly from the geometry on screen;
+                // toggling through the compact target introduces a snap.
+                host.contentExpanded = reversingClose;
+                if (!reversingClose) {
+                    geometryUpdate.restart();
+                    Qt.callLater(() => {
+                        if (host.transitionEpoch === epoch && host.expansionState.hasCurrent)
+                            host.contentExpanded = true;
+                    });
+                }
             } else if (host.visible) {
+                host.closeStartWidth = shellSurface.width;
+                host.closeStartHeight = shellSurface.height;
+                host.closeLayoutWidth = shellSurface.contentLayoutWidth;
+                host.closeLayoutHeight = shellSurface.contentLayoutHeight;
+                // Freeze these endpoint dimensions before content can change
+                // while the exit geometry is already in flight.
+                host.closeWidth = Math.max(1, host.compactWidth);
+                host.closeHeight = Math.max(1, host.compactHeight);
                 host.closing = true;
                 host.contentExpanded = false;
+                closeTimer.interval = host.motion.morph;
                 closeTimer.restart();
             }
         }
@@ -444,11 +489,11 @@ PanelWindow {
         height: Math.min(host.viewportHeight, host.targetHeight)
         // The clipping silhouette morphs, but the content is laid out at
         // its destination size rather than reflowing on every frame.
-        contentLayoutWidth: Math.max(1, Math.min(host.viewportWidth, Math.max(host.contentWidth, host.expansionState.originWidth)))
-        contentLayoutHeight: Math.max(1, Math.min(host.viewportHeight, Math.max(host.contentHeight, host.expansionState.originHeight)))
+        contentLayoutWidth: Math.max(1, Math.min(host.viewportWidth, host.closing ? host.closeLayoutWidth : Math.max(host.contentWidth, host.expansionState.originWidth)))
+        contentLayoutHeight: Math.max(1, Math.min(host.viewportHeight, host.closing ? host.closeLayoutHeight : Math.max(host.contentHeight, host.expansionState.originHeight)))
         clip: true
         // Keep the backing surface visible until the closing geometry finishes.
-        opacity: host.expansionState.hasCurrent || host.closing ? 1 : 0
+        opacity: host.expansionState.hasCurrent || (host.closing && (host.frameVisible || host.barVisible)) ? 1 : host.closing ? Math.max(0, Math.min(1, (width - host.closeWidth) / Math.max(1, host.closeStartWidth - host.closeWidth) * 2)) : 0
 
         Behavior on width {
             NumberAnimation {
@@ -489,7 +534,7 @@ PanelWindow {
         // The old double-offset silhouette produced grey corner blobs on
         // light backgrounds. The panel already has a continuous contour.
         shadowStrength: 0
-        cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, host.expansionState.originHeight / 2)
+        cornerRadius: host.contentExpanded ? host.theme.radiusPanel : Math.min(host.theme.radiusPanel, (host.closing ? host.closeHeight : host.barVisible ? host.expansionState.originHeight : host.compactHeight) / 2)
         borderColor: Qt.rgba(host.theme.textStrong.r, host.theme.textStrong.g, host.theme.textStrong.b, 0.14)
         borderWidth: host.frameVisible ? 0 : host.theme.borderThin
 
@@ -506,7 +551,7 @@ PanelWindow {
         // The prewarmed page grows with the viewport, including Themes and
         // Wallpaper. Do not wait until the outer squircle is nearly full size.
         readonly property real contentReveal: {
-            const fraction = Math.min(width / Math.max(1, host.contentWidth), height / Math.max(1, host.contentHeight));
+            const fraction = Math.min(width / Math.max(1, host.closing ? host.closeLayoutWidth : host.contentWidth), height / Math.max(1, host.closing ? host.closeLayoutHeight : host.contentHeight));
             return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.18) / 0.72));
         }
 
@@ -552,14 +597,14 @@ PanelWindow {
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
-                bottomMargin: host.theme.spacing5
+                bottomMargin: host.theme.spacing6
             }
             spacing: host.theme.spacing1
 
             // Tab/back/scroll navigation belongs in the shared footer, while
             // action mnemonics stay on controls. Centre the group as one line;
             // optional scrolling gets a separate, non-crowded second line.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.theme.spacing5 - host.theme.fontKeyHint * 2)
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.theme.spacing6 - host.theme.fontKeyHint * 2)
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
             Row {
                 id: footerHints
@@ -647,7 +692,10 @@ PanelWindow {
             contentWidth: width
             contentHeight: Math.max(height, host.activeLoader ? host.activeLoader.height * host.activeLoader.scale : 0)
             boundsBehavior: Flickable.StopAtBounds
-            interactive: contentHeight > height
+            // Nested detail galleries and the Activity/Calendar pages own
+            // their own scrolling. The host Flickable must not steal their
+            // mouse grabs or cancel hover while the pointer crosses tiles.
+            interactive: contentHeight > height && !host.detailVisible && host.expansionState.currentName !== "activity" && host.expansionState.currentName !== "calendar"
 
             Loader {
                 id: contentLoaderA

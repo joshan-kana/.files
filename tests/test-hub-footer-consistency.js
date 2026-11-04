@@ -67,17 +67,17 @@ test("footer inset and panel height agree for both measured and live geometry", 
   const host = source("ShellExpansionHost.qml");
   assert.match(
     host,
-    /id: hubFooter[\s\S]*?bottomMargin: host\.theme\.spacing5/,
+    /id: hubFooter[\s\S]*?bottomMargin: host\.theme\.spacing6/,
   );
   assert.match(
     host,
-    /contentHeight:.*theme\.spacing3 \+ theme\.spacing5 \+ theme\.spacing4 \* 2/,
+    /contentHeight:.*theme\.spacing3 \+ theme\.spacing6 \+ theme\.spacing4 \* 2/,
   );
   assert.match(
     host,
-    /measuredContentHeight = .*theme\.spacing3 \+ theme\.spacing5 \+ theme\.spacing4 \* 2/,
+    /measuredContentHeight = .*theme\.spacing3 \+ theme\.spacing6 \+ theme\.spacing4 \* 2/,
   );
-  assert.match(host, /scrollBudget: .*host\.theme\.spacing5/);
+  assert.match(host, /scrollBudget: .*host\.theme\.spacing6/);
 });
 
 test("footer uses the Controls surface material without a second glass layer", () => {
