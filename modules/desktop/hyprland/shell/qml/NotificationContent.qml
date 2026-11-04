@@ -285,11 +285,11 @@ FocusScope {
             theme: center.theme
             hints: [
                 {
-                    shortcut: "J/K",
+                    shortcut: "J/K · ARROWS",
                     label: "Navigate"
                 },
                 {
-                    shortcut: "H/L",
+                    shortcut: "H/L · ARROWS",
                     label: "Groups"
                 },
                 {
@@ -483,10 +483,10 @@ FocusScope {
                 } else if (event.key === Qt.Key_M) {
                     center.notificationState.toggleRead(center.selectedNotification());
                     event.accepted = true;
-                } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
                     const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
                     const steps = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                    center.selectGroup((event.key === Qt.Key_D ? 1 : -1) * steps);
+                    center.selectGroup(((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? 1 : -1) * steps);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_E) {
                     if (center.notificationState.captureKind(center.selectedNotification()))
