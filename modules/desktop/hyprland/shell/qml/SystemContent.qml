@@ -103,6 +103,7 @@ FocusScope {
                 node: node
             })))
     readonly property int microphoneAudioIndex: 1 + Math.min(2, system.audioApplicationStreams.length)
+    readonly property bool audioChooserOpen: outputQuick.chooserOpen || inputQuick.chooserOpen
 
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
