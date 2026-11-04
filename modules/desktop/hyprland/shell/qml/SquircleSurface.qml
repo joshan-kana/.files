@@ -9,6 +9,10 @@ Item {
     }
 
     default property alias contentData: content.data
+    // A morphing outer contour must not force its children to relayout.
+    // Other surfaces default to their ordinary live width and height.
+    property real contentLayoutWidth: width
+    property real contentLayoutHeight: height
 
     property color fillColor: "transparent"
     property real fillOpacity: 1
@@ -157,6 +161,9 @@ Item {
     }
     Item {
         id: content
-        anchors.fill: parent
+        width: root.contentLayoutWidth
+        height: root.contentLayoutHeight
+        x: (root.width - width) / 2
+        y: 0
     }
 }
