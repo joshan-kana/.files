@@ -1,17 +1,23 @@
 # Installation guide for `nixos-utm`
 
-`nixos-utm` is an AArch64 NixOS desktop guest running under the UTM QEMU backend. It uses the shared Hyprland and Quickshell configuration so rendering and frame pacing can be compared with the Parallels guest.
+`nixos-utm` is an AArch64 NixOS desktop guest running under the UTM QEMU backend. It uses the shared Hyprland desktop profile so rendering and frame pacing can be compared with the Parallels guest. Validate optional shell components against the version actually checked out.
 
 ## VM configuration
 
 Create a **Virtualize → Linux** VM in UTM with an AArch64 NixOS installer ISO and the following devices:
 
 - **4 CPU cores**, **8 GiB RAM**, and a sparse **64 GiB VirtIO disk**.
-- UEFI firmware and a VirtIO network interface using shared networking.
+- UEFI firmware and a VirtIO network interface. Use **Shared** networking with an entitled UTM release, or **Emulated** networking with an unsigned developer build.
 - Btrfs root with zstd compression, plus 100% of guest RAM allocated as compressed zram swap (no disk-backed swap).
 - A **VirtIO GPU (GPU Supported)** display, backed by `virtio-gpu-gl-pci` where available.
 
 Keep the renderer, display resolution, refresh rate and guest configuration consistent when comparing builds. Vulkan support through Venus depends on UTM's host renderer as well as the Linux guest drivers.
+
+Unsigned macOS builds cannot use the `vmnet-shared` interface without the
+required entitlements. For QEMU Emulated networking, forward TCP
+`127.0.0.1:2222` on the host to port `22` in the guest to access SSH from
+the Mac. The guest's emulated `10.0.2.x` address is not directly reachable
+from the host. Keep the forwarded listener bound to loopback.
 
 Load the generated target environment in the installer shell before using shared installation commands:
 
@@ -131,10 +137,21 @@ glxinfo -B
 vulkaninfo --summary
 ```
 
-Check Zink in a separate process instead of forcing it on Hyprland:
+Run `glxinfo` within a graphical session. For an SSH-only check, isolate the
+VirtIO Vulkan driver and inspect Zink's EGL device-platform renderer:
 
 ```sh
-MESA_LOADER_DRIVER_OVERRIDE=zink glxinfo -B
+VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/virtio_icd.aarch64.json \
+  vulkaninfo --summary
+
+VK_DRIVER_FILES=/run/opengl-driver/share/vulkan/icd.d/virtio_icd.aarch64.json \
+  MESA_LOADER_DRIVER_OVERRIDE=zink eglinfo -B
 ```
 
-Treat `llvmpipe` or another software renderer as a failed hardware-acceleration test. Validate Hyprland, Quickshell, window resizing, transparency and Vulkan/OpenGL workloads in a live desktop session. Compare idle CPU/GPU use, memory, frame pacing and visual correctness against an otherwise identical, unmodified UTM build.
+An SSH-only `eglinfo` run may report errors for unavailable window-system
+platforms even when its device-platform Zink context succeeds. Inspect the
+reported renderer and version; `llvmpipe` is software rendering, not GPU
+acceleration. Validate Hyprland, installed shell components, window resizing,
+transparency and Vulkan/OpenGL workloads in a live desktop session. Compare
+idle CPU/GPU use, memory, frame pacing and visual correctness against an
+otherwise identical, unmodified UTM build.
