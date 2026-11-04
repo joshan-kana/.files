@@ -32,33 +32,41 @@ test("workspace pointer feedback belongs to each workspace cell", () => {
   );
   assert.doesNotMatch(bar, /id: workspaceHover/);
   assert.doesNotMatch(bar, /workspacePressed/);
+  assert.match(bar, /interactionGroup: "media"/);
+  assert.doesNotMatch(bar, /\.flatMap\(/);
+  assert.match(bar, /islands\.push\(/);
+  assert.match(bar, /hovered: item.mainHover,\s+pressed: item.mainPressed/);
   assert.match(
     bar,
-    /hovered: item === workspaceIsland \|\| item === mediaIsland \? false/,
+    /hovered: item.playbackHover,\s+pressed: item.playbackPressed/,
   );
-  assert.match(
-    bar,
-    /pressed: item === workspaceIsland \|\| item === mediaIsland \? false/,
-  );
+  assert.match(bar, /pressed: item === workspaceIsland \? false/);
 });
 
-test("the media island has separate visual feedback for main and playback targets", () => {
-  const bar = qml("NowPlayingIsland.qml");
+test("media click zones share one clipped contour in detached mode", () => {
+  const media = qml("NowPlayingIsland.qml");
+  assert.match(media, /id: mainHighlight[\s\S]*?clip: true/);
+  assert.match(media, /id: playbackHighlight[\s\S]*?clip: true/);
+  assert.match(media, /x: -mainHighlight\.width/);
   assert.match(
-    bar,
-    /right: playbackZone\.left[\s\S]*?manualHover: mainHitArea\.containsMouse[\s\S]*?manualPress: mainHitArea\.pressed/,
+    media,
+    /fillOpacity: island\.frameConnected \? 0 : island\.mainPressed/,
   );
   assert.match(
-    bar,
-    /id: playbackZone[\s\S]*?manualHover: playbackHitArea\.containsMouse[\s\S]*?manualPress: playbackHitArea\.pressed/,
+    media,
+    /fillOpacity: island\.frameConnected \? 0 : island\.playbackPressed/,
   );
+  assert.match(media, /leftMargin: island\.theme\.spacing2/);
   assert.match(
-    bar,
+    media,
     /id: playbackHitArea[\s\S]*?onClicked: island\.media\.togglePlaying\(\)/,
   );
-  assert.match(bar, /id: mainHitArea[\s\S]*?onClicked: island\.activated\(\)/);
-  assert.doesNotMatch(bar, /manualHover: island\.frameHover/);
-  assert.doesNotMatch(bar, /readonly property bool frameHover:/);
+  assert.match(
+    media,
+    /id: mainHitArea[\s\S]*?onClicked: island\.activated\(\)/,
+  );
+  assert.doesNotMatch(media, /manualHover: mainHitArea\.containsMouse/);
+  assert.doesNotMatch(media, /manualHover: playbackHitArea\.containsMouse/);
 });
 
 test("a bar island with one action still forwards its shared contour state", () => {
