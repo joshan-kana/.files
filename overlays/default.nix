@@ -40,6 +40,7 @@ _: {
     ./linear
     ./libreoffice
     ./linux-desktop-spectrum
+    ./linux-desktop-visuals
     ./notion
     ./open-webui
     ./open-webui-mac

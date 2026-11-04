@@ -271,6 +271,8 @@
                   ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
                     "-I"
                     "${pkgs.quickshell}/lib/qt-6/qml"
+                    "-I"
+                    "${pkgs.linux-desktop-visuals}/lib/qt-6/qml"
                   ];
                 priority = 2;
               };
@@ -301,6 +303,7 @@
                   "*.hpp"
                 ];
                 options = [
+                  "--library=qt"
                   "--enable=warning,style,performance,portability"
                   "--error-exitcode=1"
                   "--quiet"
