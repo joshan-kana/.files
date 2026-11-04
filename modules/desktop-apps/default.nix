@@ -126,71 +126,95 @@ in
 
   contour = _: {
     home =
-      _:
-      let
-        configFile = (pkgs.formats.yaml { }).generate "contour.yml" {
-          gui_config_locked = true;
-          default_profile = "main";
-          tab_bar_visibility = "Never";
-          renderer.backend = "auto";
+      { config, ... }:
+      {
+        imports = [ ./contour ];
 
-          profiles.main = {
-            show_title_bar = false;
-            wm_class = "contour";
-            cursor = {
-              shape = "block";
-              blinking = false;
+        programs.contour = {
+          enable = true;
+          settings = {
+            gui_config_locked = true;
+            default_profile = "main";
+            tab_bar_visibility = "Never";
+            renderer.backend = "auto";
+
+            profiles.main = {
+              show_title_bar = false;
+              wm_class = "contour";
+              cursor = {
+                shape = "block";
+                blinking = false;
+              };
+              normal_mode.cursor.shape = "block";
+              visual_mode.cursor.shape = "block";
+              cursor_motion_animation_duration = 75;
+              screen_transition = "fade";
+              screen_transition_duration = 150;
+              smooth_scrolling = true;
+              momentum_scrolling = true;
+              status_line.display = "none";
+              scrollbar.position = "Hidden";
             };
-            normal_mode.cursor.shape = "block";
-            visual_mode.cursor.shape = "block";
-            cursor_motion_animation_duration = 75;
-            screen_transition = "fade";
-            screen_transition_duration = 150;
-            smooth_scrolling = true;
-            momentum_scrolling = true;
-            status_line.display = "none";
-            scrollbar.position = "Hidden";
+          }
+          // lib.optionalAttrs isDarwin {
+            input_mapping = builtins.fromJSON (builtins.readFile ./contour/bindings.json) ++ [
+              {
+                mods = [ "Super" ];
+                key = "A";
+                action = "SelectAll";
+              }
+              {
+                mods = [ "Super" ];
+                key = "C";
+                action = "CopySelection";
+              }
+              {
+                mods = [ "Super" ];
+                key = "V";
+                action = "PasteClipboard";
+              }
+              {
+                mods = [ "Super" ];
+                key = "LeftArrow";
+                action = "SendChars";
+                chars = "\\x1b[H";
+              }
+              {
+                mods = [ "Super" ];
+                key = "RightArrow";
+                action = "SendChars";
+                chars = "\\x1b[F";
+              }
+              {
+                mods = [ "Super" ];
+                key = "UpArrow";
+                action = "ScrollToTop";
+              }
+              {
+                mods = [ "Super" ];
+                key = "DownArrow";
+                action = "ScrollToBottom";
+              }
+              {
+                mods = [ "Alt" ];
+                key = "LeftArrow";
+                action = "SendChars";
+                chars = "\\x1bb";
+              }
+              {
+                mods = [ "Alt" ];
+                key = "RightArrow";
+                action = "SendChars";
+                chars = "\\x1bf";
+              }
+            ];
           };
         };
-      in
-      {
-        home.packages = [
-          pkgs.contour
-          pkgs.contour.terminfo
-        ]
-        ++ lib.optionals isDarwin [
-          (pkgs.runCommand "contour-ncurses-tools" { } ''
-            mkdir -p "$out/bin"
-            for name in clear infocmp reset tput; do
-              ln -s "${pkgs.ncurses}/bin/$name" "$out/bin/$name"
-            done
-          '')
-        ];
 
-        xdg.configFile."contour/contour.yml".source =
-          if isDarwin then
-            pkgs.runCommand "contour.yml"
-              {
-                nativeBuildInputs = [
-                  pkgs.contour
-                  pkgs.yq-go
-                ];
-              }
-              ''
-                export HOME="$TMPDIR"
-                contour generate config to "$TMPDIR/defaults.yml"
-                export CONTOUR_DEFAULTS="$TMPDIR/defaults.yml"
-                cp ${configFile} "$out"
-                yq -i '
-                  .input_mapping = load(strenv(CONTOUR_DEFAULTS)).input_mapping + [
-                    {"mods": ["Super"], "key": "A", "action": "SelectAll"},
-                    {"mods": ["Super"], "key": "C", "action": "CopySelection"},
-                    {"mods": ["Super"], "key": "V", "action": "PasteClipboard"}
-                  ]
-                ' "$out"
-              ''
-          else
-            configFile;
+        home.sessionPath = lib.optionals isDarwin [ "${pkgs.ncurses}/bin" ];
+        home.sessionVariables = lib.optionalAttrs isDarwin {
+          TERMINFO_DIRS = "${pkgs.contour.terminfo}/share/terminfo:${config.home.profileDirectory}/share/terminfo:/usr/share/terminfo";
+        };
       };
   };
 
