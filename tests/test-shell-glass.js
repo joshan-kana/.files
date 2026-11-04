@@ -13,8 +13,11 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
   const shell = qml("shell.qml");
   const preferences = qml("AppearancePreferences.qml");
   assert.match(frame, /glassExposed: enabled && Quickshell\.screens\.some\(/);
-  assert.match(frame, /FrameRibbonItem \{/);
-  assert.match(frame, /reactiveFrameColor\(0\.5, output\.reactiveActive\)/);
+  assert.match(frame, /fillGradient: LinearGradient \{/);
+  assert.match(
+    frame,
+    /reactiveFrameMotionColor\(0\.5, output\.reactiveActive\)/,
+  );
   assert.match(qml("Theme.qml"), /shellGlassEnabled \? glassOpacity : 1/);
   assert.match(shell, /frameGlassExposed: desktopFrame\.glassExposed/);
   assert.match(shell, /DesktopFrame \{\s*id: desktopFrame/);

@@ -107,6 +107,24 @@ QtObject {
         return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
     }
 
+    // Shape's curved odd-even fill owns the clipping. Colour stops, unlike
+    // gradient endpoint coordinates, invalidate the Qt Shape brush reliably.
+    // Audio deforms the sampled red-blue-cyan field spatially, rather than
+    // producing a global brightness flash.
+    function reactiveFrameMotionColor(position: real, illuminated: bool): color {
+        if (!illuminated)
+            return Qt.rgba(background.r, background.g, background.b, shellGlassEnabled ? glassOpacity : 1);
+        const movement = Math.max(0, Math.min(1, musicReactiveMovement));
+        const kick = Math.max(0, Math.min(1, musicReactiveKick));
+        const phase = musicReactiveFlow;
+        const wave = 0.21 * movement * Math.sin(phase + position * 5.6);
+        const detail = 0.055 * movement * Math.sin(phase * 0.7 - position * 9.2);
+        const impulse = 0.12 * kick * Math.sin(phase + position * 4.5);
+        const sampled = Math.max(0, Math.min(1, position + wave + detail + impulse));
+        const tinted = blend(background, spectrumColor(sampled), 0.34);
+        return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
+    }
+
     readonly property real textScale: runtime.textScale
 
     function fontSize(size: real): int {
