@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import LinuxDesktop.Visuals 1.0
 
 Item {
     id: root
@@ -125,50 +126,23 @@ Item {
         }
     }
 
+    // The static fill and changing luminous wash share one persistent scene
+    // graph geometry, leaving shadows and the original vector outline intact.
+    SquircleFillItem {
+        anchors.fill: parent
+        fillColor: root.fillColor
+        fillOpacity: root.fillOpacity
+        cornerRadius: root.cornerRadius
+        exponent: root.exponent
+        lightColor: root.lightColor
+        lightStrength: root.lightStrength
+        lightSpread: root.lightSpread
+    }
+
     Shape {
         anchors.fill: parent
         antialiasing: true
         preferredRendererType: Shape.CurveRenderer
-
-        ShapePath {
-            fillColor: Qt.rgba(root.fillColor.r, root.fillColor.g, root.fillColor.b, root.fillColor.a * root.fillOpacity)
-            strokeColor: "transparent"
-            strokeWidth: 0
-
-            PathSvg {
-                path: root.fillPathData
-            }
-        }
-
-        ShapePath {
-            fillColor: "transparent"
-            strokeColor: "transparent"
-            strokeWidth: 0
-            fillGradient: RadialGradient {
-                centerX: root.width * 0.15
-                centerY: root.height * -0.16
-                centerRadius: Math.max(root.width * 0.9, root.height * 2) * root.lightSpread
-                focalX: centerX
-                focalY: centerY
-
-                GradientStop {
-                    position: 0
-                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength)
-                }
-                GradientStop {
-                    position: 0.44
-                    color: Qt.rgba(root.lightColor.r, root.lightColor.g, root.lightColor.b, root.lightStrength * 0.28)
-                }
-                GradientStop {
-                    position: 1
-                    color: "transparent"
-                }
-            }
-
-            PathSvg {
-                path: root.fillPathData
-            }
-        }
 
         ShapePath {
             fillColor: "transparent"
