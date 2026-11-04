@@ -28,7 +28,7 @@ function qmlFunction(name) {
   assert.equal(depth, 0);
   return new Function(
     "state",
-    "frameTime",
+    name === "updateBands" ? "values" : "frameTime",
     `with (state) { ${source.slice(start, end - 1)} }`,
   );
 }
@@ -92,6 +92,7 @@ test("interpolation preserves 120 Hz attack, release, decay and energy values", 
         lowHz: 20,
         highHz: 20000,
         hasEnergy: true,
+        smoothingSilence: false,
       };
       const reference = {
         bands: initial.slice(),
@@ -142,7 +143,7 @@ test("active animation reuses two buffers without producing identical frame iden
   assert.equal(state.frameB.length, 96);
 });
 
-test("prewarmed visualizers suspend hidden work without changing displayed band counts", () => {
+test("native bars consume one shared full-resolution target without per-bar QML bindings", () => {
   const bars = fs.readFileSync(
     path.join(
       __dirname,
@@ -157,15 +158,63 @@ test("prewarmed visualizers suspend hidden work without changing displayed band 
     ),
     "utf8",
   );
-  assert.match(bars, /rendering: enabled && visible && opacity > 0/);
-  assert.match(bars, /if \(!rendering\)\s*return \[\];/);
-  assert.match(bars, /const values = spectrum\.bands;/);
-  assert.match(
-    bars,
-    /Math\.pow\(Math\.max\(0, Math\.min\(1, peak\)\), 0\.88\)/,
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
   );
+
+  assert.match(bars, /import LinuxDesktop\.Visuals 1\.0/);
+  assert.match(bars, /SpectrumBarsItem\s*\{/);
+  assert.match(bars, /targetBands: root\.spectrum\.targetBands/);
+  assert.match(bars, /edges: root\.bandEdges/);
+  assert.match(bars, /decaying: root\.spectrum\.decaying/);
+  assert.doesNotMatch(bars, /\bRepeater\s*\{/);
+  assert.match(native, /QSGGeometryNode/);
+  assert.match(native, /QQuickWindow::frameSwapped/);
+  for (const rate of [320, 110, 120, 45, 10])
+    assert.match(native, new RegExp("-delta \\* " + rate + "\\b"));
+  assert.match(curve, /onNeedsInterpolationChanged: syncInterpolation\(\)/);
+  assert.match(curve, /spectrum\.curveSubscribers/);
   assert.match(
     curve,
     /!root\.enabled \|\| !root\.visible \|\| root\.opacity <= 0/,
   );
+});
+
+test("bar-only audio updates leave QML interpolation idle while maintaining full targets", () => {
+  const update = qmlFunction("updateBands");
+  const state = {
+    bands: [],
+    targetBands: [],
+    hasEnergy: false,
+    interpolating: false,
+    decaying: false,
+    smoothingSilence: false,
+    curveSubscribers: 0,
+  };
+  const first = seededBands(96, 11);
+  const second = seededBands(96, 13);
+  update(state, first);
+  assert.equal(state.bands, first);
+  assert.equal(state.targetBands, first);
+  assert.equal(state.hasEnergy, true);
+  update(state, second);
+  assert.equal(
+    state.bands,
+    first,
+    "native bar frames must not invalidate QML bands",
+  );
+  assert.equal(state.targetBands, second);
+  assert.equal(state.interpolating, false);
+  update(state, Array(96).fill(0));
+  assert.equal(
+    state.bands,
+    second,
+    "silent release begins from the latest audio data",
+  );
+  assert.equal(state.smoothingSilence, true);
+  assert.equal(state.interpolating, true);
 });
