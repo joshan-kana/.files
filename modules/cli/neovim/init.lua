@@ -163,6 +163,7 @@ which_key.add({
 	{ "<leader>g", group = "Version control" },
 	{ "<leader>t", group = "Terminal" },
 	{ "<leader>u", group = "View" },
+	{ "<leader>w", group = "Windows" },
 })
 
 local profiles = require("editor.profiles")
@@ -196,6 +197,18 @@ require("editor.lsp").setup()
 
 local key = vim.keymap.set
 local picker = snacks.picker
+for _, direction in ipairs({
+	{ "h", "Left", "left" },
+	{ "j", "Down", "below" },
+	{ "k", "Up", "above" },
+	{ "l", "Right", "right" },
+}) do
+	local action = "<C-w>" .. direction[1]
+	local description = "Focus split " .. direction[3]
+	key("n", "<leader>w" .. direction[1], action, { desc = description })
+	key("n", "<leader>w<" .. direction[2] .. ">", action, { desc = description })
+end
+key("n", "<leader>ww", "<C-w>w", { desc = "Cycle splits" })
 key("n", "<leader>ff", picker.files, { desc = "Find files" })
 key("n", "<leader>fg", picker.grep, { desc = "Search project" })
 key("n", "<leader>fw", picker.grep_word, { desc = "Find word under cursor" })
