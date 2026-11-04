@@ -528,6 +528,22 @@ PanelWindow {
             onTabRequested: destination => host.navigate(destination)
         }
 
+        // The same raised material as Controls groups keeps footer key hints
+        // readable without leaving them on the darker frame backing. This is
+        // a static fill, not another blurred or animated layer.
+        Rectangle {
+            id: footerSurface
+            opacity: shellSurface.contentReveal
+            x: hubFooter.x + (hubFooter.width - width) / 2
+            y: hubFooter.y - host.theme.spacing2
+            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
+            height: hubFooter.height + host.theme.spacing2 * 2
+            radius: host.theme.radiusMedium
+            color: host.theme.expressiveSurface
+            border.width: host.theme.borderThin
+            border.color: host.theme.subtleBorder
+        }
+
         Column {
             id: hubFooter
             opacity: shellSurface.contentReveal
@@ -546,6 +562,7 @@ PanelWindow {
             readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.theme.spacing5 - host.theme.fontKeyHint * 2)
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
             Row {
+                id: footerHints
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: host.theme.keyHintGroupGap
 
@@ -581,6 +598,7 @@ PanelWindow {
             }
 
             Row {
+                id: footerScrollHints
                 visible: hubFooter.scrollHintsVisible
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: host.theme.spacing2
