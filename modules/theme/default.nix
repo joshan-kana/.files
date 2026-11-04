@@ -657,6 +657,55 @@ in
       };
     };
     desktopApps = {
+      contour = {
+        home =
+          { config, ... }:
+          let
+            colors = config.lib.stylix.colors.withHashtag;
+          in
+          {
+            xdg.configFile."contour/profiles/main.yml".source =
+              (pkgs.formats.yaml { }).generate "contour-theme-profile.yml"
+                {
+                  font = {
+                    size = config.stylix.fonts.sizes.terminal;
+                    regular.family = config.stylix.fonts.monospace.name;
+                  };
+                  colors = "stylix";
+                };
+
+            xdg.configFile."contour/colorschemes/stylix.yml".source =
+              (pkgs.formats.yaml { }).generate "contour-stylix.yml"
+                {
+                  default = {
+                    background = colors.base00;
+                    foreground = colors.base05;
+                    bright_foreground = colors.base07;
+                    dimmed_foreground = colors.base03;
+                  };
+                  normal = {
+                    black = colors.base00;
+                    red = colors.base08;
+                    green = colors.base0B;
+                    yellow = colors.base0A;
+                    blue = colors.base0D;
+                    magenta = colors.base0E;
+                    cyan = colors.base0C;
+                    white = colors.base05;
+                  };
+                  bright = {
+                    black = colors.base03;
+                    red = colors.base08;
+                    green = colors.base0B;
+                    yellow = colors.base0A;
+                    blue = colors.base0D;
+                    magenta = colors.base0E;
+                    cyan = colors.base0C;
+                    white = colors.base07;
+                  };
+                };
+          };
+      };
       chromium = lib.optionalAttrs isLinux {
         programs.chromium.initialPrefs.extensions.theme.system_theme = 2; # Qt
       };

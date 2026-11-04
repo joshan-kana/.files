@@ -8,7 +8,6 @@
 let
   xwaylandEnabled = true;
   terminal = config.dotfiles.defaults.terminal;
-  terminalClass = if terminal == "contour" then "org.contourterminal.Contour" else terminal;
 in
 {
   programs.hyprland = {
@@ -269,7 +268,7 @@ in
               disable_hyprland_logo = true;
               disable_splash_rendering = true;
               enable_swallow = true;
-              swallow_regex = "^(${lib.escapeRegex terminalClass})$";
+              swallow_regex = "^(${lib.escapeRegex terminal})$";
               focus_on_activate = true;
             };
           };
