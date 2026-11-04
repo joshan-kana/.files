@@ -60,7 +60,7 @@ Item {
         exponent: Math.min(4, theme.squircleExponent)
         elevated: false
         outlined: false
-        fillColor: theme.musicReactiveBackground
+        fillColor: theme.background
 
         // Split the interaction fill at the real click boundary, not at two
         // independently rounded pills. Each half is a clipped view of the

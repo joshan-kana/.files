@@ -31,7 +31,7 @@ Item {
         exponent: Math.min(4, theme.squircleExponent)
         elevated: false
         outlined: false
-        fillColor: theme.musicReactiveBackground
+        fillColor: theme.background
 
         Row {
             id: statusRow

@@ -92,9 +92,17 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
-    readonly property color musicReactiveHue: blend(accent, positive, Math.min(0.65, musicReactiveTreble * 0.65))
-    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.13, musicReactiveEnergy * 0.085 + musicReactiveBeat * 0.045) : 0
-    readonly property color musicReactiveBackground: musicReactiveWash > 0 ? blend(background, musicReactiveHue, musicReactiveWash) : background
+    // Share the spectrum's red/blue/cyan ramp with the shell, without
+    // creating per-frame colour arrays or a second audio signal pipeline.
+    // Music changes tint strength; the palette stays anchored to bass/treble.
+    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.42, musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) : 0
+    function reactiveColor(base: color, position: real): color {
+        return musicReactiveWash > 0 ? blend(base, spectrumColor(position), musicReactiveWash) : base;
+    }
+    function reactiveFrameColor(position: real): color {
+        const tinted = reactiveColor(background, position);
+        return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
+    }
 
     readonly property real textScale: runtime.textScale
 

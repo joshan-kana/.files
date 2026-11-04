@@ -13,10 +13,9 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
   const shell = qml("shell.qml");
   const preferences = qml("AppearancePreferences.qml");
   assert.match(frame, /glassExposed: enabled && Quickshell\.screens\.some\(/);
-  assert.match(
-    frame,
-    /fillColor: Qt\.rgba\(frame\.theme\.musicReactiveBackground\.r,[^\n]+frame\.theme\.shellGlassEnabled \? frame\.theme\.glassOpacity : 1\)/,
-  );
+  assert.match(frame, /fillGradient: LinearGradient \{/);
+  assert.match(frame, /reactiveFrameColor\(0\.5\)/);
+  assert.match(qml("Theme.qml"), /shellGlassEnabled \? glassOpacity : 1/);
   assert.match(shell, /frameGlassExposed: desktopFrame\.glassExposed/);
   assert.match(shell, /DesktopFrame \{\s*id: desktopFrame/);
   assert.match(preferences, /property bool frameGlassExposed: false/);
@@ -35,7 +34,7 @@ test("frosted glass blurs the active connected frame as one visible layer", () =
 test("connected hub borrows a single glass material from the shared contour", () => {
   const hub = qml("ShellExpansionHost.qml");
   const surface = qml("ShellSurface.qml");
-  assert.match(hub, /fillColor: host\.theme\.musicReactiveBackground/);
+  assert.match(hub, /fillColor: host\.theme\.background/);
   assert.match(hub, /frameConnected: host\.frameVisible/);
   assert.doesNotMatch(hub, /glassAllowed: !host\.frameVisible/);
   assert.match(surface, /fillOpacity: frameConnected \? 0 : !glassAllowed/);
