@@ -1717,11 +1717,11 @@ in
             Description = "Hyprland desktop session lock";
             PartOf = [ "hyprland-session.target" ];
             After = [ "hyprland-session.target" ];
+            X-SwitchMethod = "keep-old";
           };
 
           Service = {
             ExecStart = lib.getExe lockServiceLauncher;
-            X-RestartIfChanged = false;
             Restart = "no";
           };
         };
