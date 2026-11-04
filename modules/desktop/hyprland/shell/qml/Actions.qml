@@ -119,11 +119,11 @@ QtObject {
     }
 
     function mediaSeekForward(): void {
-        mediaState.seek(10);
+        mediaState.seekStep(1);
     }
 
     function mediaSeekBackward(): void {
-        mediaState.seek(-10);
+        mediaState.seekStep(-1);
     }
 
     function mediaToggleShuffle(): void {

@@ -64,6 +64,7 @@ Variants {
         // frame remains one continuous fill while connected and detached
         // hubs present the same left-to-right colour sequence.
         readonly property real gradientInset: Math.max(0.005, Math.min(0.45, (modelData.width - frame.theme.controlsDetailWidth) / (2 * Math.max(1, modelData.width))))
+        readonly property bool reactiveActive: frame.theme.musicReactiveEnabled && frame.theme.musicReactiveWash > 0.02
         readonly property bool busyHere: frame.busy && (!frame.busyScreen || frame.busyScreen === modelData)
         SquircleGeometry {
             id: squircleGeometry
@@ -140,29 +141,32 @@ Variants {
                     // wallpaper through the shared frame's actual silhouette.
                     strokeWidth: -1
                     fillGradient: LinearGradient {
-                        x1: 0
+                        // Only numeric endpoints move with the audio
+                        // envelope. Stable stop colours prevent an expensive
+                        // Shape gradient resource rebuild every audio frame.
+                        x1: output.reactiveActive && frame.motion.enabled ? -drawing.width * 0.09 * frame.theme.musicReactiveMovement * Math.sin(frame.theme.musicReactiveFlow) : 0
                         y1: 0
-                        x2: drawing.width
+                        x2: output.reactiveActive && frame.motion.enabled ? drawing.width * (1 + 0.09 * frame.theme.musicReactiveMovement * Math.cos(frame.theme.musicReactiveFlow)) : drawing.width
                         y2: 0
                         GradientStop {
                             position: 0
-                            color: frame.theme.reactiveFrameColor(0)
+                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
                         }
                         GradientStop {
                             position: output.gradientInset
-                            color: frame.theme.reactiveFrameColor(0)
+                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.5
-                            color: frame.theme.reactiveFrameColor(0.5)
+                            color: frame.theme.reactiveFrameColor(0.5, output.reactiveActive)
                         }
                         GradientStop {
                             position: 1 - output.gradientInset
-                            color: frame.theme.reactiveFrameColor(1)
+                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
                         }
                         GradientStop {
                             position: 1
-                            color: frame.theme.reactiveFrameColor(1)
+                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
                         }
                     }
                     PathSvg {

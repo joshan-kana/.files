@@ -4,6 +4,9 @@ import Quickshell.Services.Mpris
 QtObject {
     id: media
 
+    required property AppearancePreferences appearance
+    readonly property int seekSeconds: appearance.mediaSeekSeconds
+
     readonly property var players: Mpris.players.values
     property string preferredPlayerId: ""
     readonly property var player: selectPlayer()
@@ -108,6 +111,14 @@ QtObject {
     function seek(seconds: real): void {
         if (available && player.canSeek)
             player.seek(seconds);
+    }
+
+    function seekStep(direction: int): void {
+        seek(direction * seekSeconds);
+    }
+
+    function adjustSeekStep(direction: int): void {
+        appearance.adjustMediaSeek(direction);
     }
 
     function seekTo(seconds: real): void {

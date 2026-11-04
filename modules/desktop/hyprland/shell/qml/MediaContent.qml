@@ -25,7 +25,11 @@ FocusScope {
         },
         {
             key: "H/L · ←/→",
-            action: "Seek five seconds"
+            action: "Seek " + media.seekSeconds + " seconds"
+        },
+        {
+            key: "- / +",
+            action: "Seek interval · " + media.seekSeconds + "s"
         },
         {
             key: ", / .",
@@ -528,6 +532,43 @@ FocusScope {
             }
 
             ShellAction {
+                width: 76
+                height: 42
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                compact: true
+                horizontalCompact: true
+                title: "− SEEK"
+                shortcut: "-"
+                enabled: content.media.seekSeconds > 5
+                onActivated: content.media.adjustSeekStep(-1)
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: content.media.seekSeconds + "s"
+                color: content.theme.textStrong
+                font.family: content.runtime.fontMono
+                font.pixelSize: content.theme.fontSize(12)
+                font.weight: Font.DemiBold
+            }
+
+            ShellAction {
+                width: 76
+                height: 42
+                runtime: content.runtime
+                theme: content.theme
+                motion: content.motion
+                compact: true
+                horizontalCompact: true
+                title: "+ SEEK"
+                shortcut: "+"
+                enabled: content.media.seekSeconds < 60
+                onActivated: content.media.adjustSeekStep(1)
+            }
+
+            ShellAction {
                 width: 42
                 height: 42
                 runtime: content.runtime
@@ -593,11 +634,17 @@ FocusScope {
                 } else if (event.key === Qt.Key_P) {
                     content.media.cyclePlayer();
                     event.accepted = true;
+                } else if (event.key === Qt.Key_Minus || event.key === Qt.Key_Underscore) {
+                    content.media.adjustSeekStep(-1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal) {
+                    content.media.adjustSeekStep(1);
+                    event.accepted = true;
                 } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                    content.media.seek(-5);
+                    content.media.seekStep(-1);
                     event.accepted = true;
                 } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                    content.media.seek(5);
+                    content.media.seekStep(1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Comma) {
                     content.media.previous();
