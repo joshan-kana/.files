@@ -1,10 +1,11 @@
-# Central registry for package definitions, version pins, and compatibility patches.
-# Add a package's overlay here rather than importing it from a host or feature module.
+# Central registry for package overlays and their companion configuration modules.
+# Register shared integrations here rather than importing them from individual hosts.
 _: {
   imports = [
     ./bottles
     ./brave
     ./comin
+    ./contour
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
