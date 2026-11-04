@@ -5,28 +5,34 @@
   ...
 }:
 let
-  cfg = config.programs.contour;
-  yaml = pkgs.formats.yaml { };
+  inherit (config.programs) contour;
+  inherit (lib)
+    mkEnableOption
+    mkIf
+    mkOption
+    mkPackageOption
+    ;
+  yamlFormat = pkgs.formats.yaml { };
 in
 {
   options.programs.contour = {
-    enable = lib.mkEnableOption "Contour terminal emulator";
+    enable = mkEnableOption "Contour terminal emulator";
 
-    package = lib.mkPackageOption pkgs "contour" { };
+    package = mkPackageOption pkgs "contour" { };
 
-    settings = lib.mkOption {
-      inherit (yaml) type;
+    settings = mkOption {
+      inherit (yamlFormat) type;
       default = { };
       description = "Contour settings written to contour.yml.";
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = mkIf contour.enable {
     home.packages = [
-      cfg.package
-      cfg.package.terminfo
+      contour.package
+      contour.package.terminfo
     ];
 
-    xdg.configFile."contour/contour.yml".source = yaml.generate "contour.yml" cfg.settings;
+    xdg.configFile."contour/contour.yml".source = yamlFormat.generate "contour.yml" contour.settings;
   };
 }
