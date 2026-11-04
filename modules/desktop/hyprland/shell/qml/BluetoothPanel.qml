@@ -413,7 +413,7 @@ Item {
             anchors.centerIn: parent
             visible: panel.adapterAvailable && panel.system.bluetoothEnabled && panel.devices.length === 0
             width: parent.width
-            text: panel.system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS D TO SCAN"
+            text: panel.system.bluetoothDiscovering ? "SCANNING // NO DEVICES YET" : "NO DEVICES // PRESS SHIFT+D TO SCAN"
             horizontalAlignment: Text.AlignHCenter
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
@@ -463,7 +463,7 @@ Item {
                     label: "Radio"
                 },
                 {
-                    shortcut: "D",
+                    shortcut: "SHIFT+D",
                     label: "Scan"
                 },
                 {

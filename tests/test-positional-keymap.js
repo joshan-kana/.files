@@ -191,3 +191,60 @@ test("capture confirmation uses Enter, never Space", () => {
   assert.match(source, /shortcut: "ENTER"/);
   assert.match(source, /event\.key === Qt\.Key_E\)/);
 });
+
+test("Controls media card advertises the key that actually opens Now Playing", () => {
+  const controls = qml("SystemContent.qml");
+  assert.match(
+    controls,
+    /Accessible\.name: "Open full media player"[\s\S]*?onActivated: root\.mediaRequested\(\)[\s\S]*?text: "N"/,
+  );
+  assert.match(
+    controls,
+    /event\.key === Qt\.Key_N\)\s*\{\s*root\.mediaRequested\(\)/,
+  );
+});
+
+test("audio device and mixer hints match the Controls keyboard dispatcher", () => {
+  const quick = qml("AudioQuickSection.qml");
+  const controls = qml("SystemContent.qml");
+  assert.match(
+    quick,
+    /id: inlineDevices[\s\S]*?shortcut: quick\.selectedAudioIndex === quick\.baseIndex \? "P" : ""/,
+  );
+  assert.match(quick, /id: deviceLink[\s\S]*?shortcut: "P"/);
+  assert.match(quick, /id: inlineMixer[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(quick, /id: mixerLink[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(
+    controls,
+    /shifted && event\.key === Qt\.Key_M\)\s*\{\s*root\.openMixer\(\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === Qt\.Key_P\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
+  );
+});
+
+test("Bluetooth scanning hints never advertise paging's plain D key", () => {
+  const bluetooth = qml("BluetoothPanel.qml");
+  const controls = qml("SystemContent.qml");
+  assert.match(bluetooth, /shortcut: "SHIFT\+D",\s*label: "Scan"/);
+  assert.match(bluetooth, /NO DEVICES \/\/ PRESS SHIFT\+D TO SCAN/);
+  assert.match(
+    controls,
+    /event\.key === Qt\.Key_D && \(event\.modifiers & Qt\.ShiftModifier\)\)\s*\{\s*bluetoothPanel\.invoke\("toggleDiscovery"\)/,
+  );
+  assert.match(
+    controls,
+    /event\.key === Qt\.Key_D && !\(event\.modifiers & Qt\.ShiftModifier\)/,
+  );
+});
+
+test("capture status messages and button hints agree that Enter confirms", () => {
+  const source = qml("ScreenshotPicker.qml");
+  assert.doesNotMatch(source, /SPACE TO (CONFIRM|RECORD|CAPTURE)/);
+  assert.match(source, /ENTER TO CONFIRM/);
+  assert.match(source, /ENTER TO RECORD/);
+  assert.match(source, /ENTER TO CAPTURE/);
+  assert.match(source, /shortcut: "ENTER"/);
+  assert.match(source, /picker\.capture\(""/);
+});

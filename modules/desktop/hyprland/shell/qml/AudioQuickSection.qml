@@ -139,8 +139,8 @@ Column {
 
         IconShortcutAction {
             id: inlineDevices
-            // D acts on the keyboard-selected row; never show it twice.
-            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "D" : ""
+            // The selected audio row owns the device-picker key hint.
+            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "P" : ""
             width: 44
             height: 66
             anchors.verticalCenter: parent.verticalCenter
@@ -156,7 +156,7 @@ Column {
 
         IconShortcutAction {
             id: inlineMixer
-            shortcut: "A"
+            shortcut: "SHIFT+M"
             visible: quick.showMixer
             width: quick.showMixer ? 44 : 0
             height: 66
@@ -210,7 +210,7 @@ Column {
             motion: quick.motion
             compact: true
             title: "Device"
-            shortcut: "D"
+            shortcut: "P"
             enabled: quick.devices.length > 0
             active: quick.chooserOpen
             onActivated: quick.toggleDeviceChooser()
@@ -226,7 +226,7 @@ Column {
             motion: quick.motion
             compact: true
             title: "Mixer"
-            shortcut: "A"
+            shortcut: "SHIFT+M"
             onActivated: quick.mixerRequested()
         }
     }
