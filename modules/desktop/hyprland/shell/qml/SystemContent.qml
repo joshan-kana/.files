@@ -123,7 +123,7 @@ FocusScope {
     readonly property string helpTitle: recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
     readonly property var helpBindings: recordingsPanel.open ? [
         {
-            key: "J/K · U/D",
+            key: "J/K · U/⇧D · PGUP/PGDN",
             action: "Select clip / half-page"
         },
         {
@@ -148,11 +148,11 @@ FocusScope {
         }
     ] : wallpaperPanel.open ? [
         {
-            key: "H/J/K/L",
+            key: "H/J/K/L · ARROWS",
             action: "Choose thumbnail"
         },
         {
-            key: "U/D",
+            key: "U/D · PGUP/PGDN",
             action: "Page selection"
         },
         {
@@ -177,7 +177,7 @@ FocusScope {
         }
     ] : mixerOpen ? [
         {
-            key: "J/K · U/D",
+            key: "J/K · U/D · PGUP/PGDN",
             action: "Select stream / half page"
         },
         {
@@ -207,7 +207,7 @@ FocusScope {
         }
     ] : bluetoothPanel.open ? [
         {
-            key: "J/K · U/D",
+            key: "J/K · U/D · PGUP/PGDN",
             action: "Select device"
         },
         {
@@ -228,7 +228,7 @@ FocusScope {
         }
     ] : (networkPanel.open ? [
             {
-                key: "J/K · U/D",
+                key: "J/K · U/D · PGUP/PGDN",
                 action: "Select network"
             },
             {
@@ -249,7 +249,7 @@ FocusScope {
             }
         ] : (themePanel.open ? [
                 {
-                    key: "J/K · U/D",
+                    key: "J/K · U/D · PGUP/PGDN",
                     action: "Select theme"
                 },
                 {
@@ -275,7 +275,7 @@ FocusScope {
                     }
                 ] : (trayMenu.open ? [
                         {
-                            key: "J/K · U/D",
+                            key: "J/K · U/D · PGUP/PGDN",
                             action: "Select item"
                         },
                         {
@@ -289,59 +289,59 @@ FocusScope {
                     ] : [
                         {
                             key: "J/K · ↑/↓",
-                            action: "Select output, microphone or application"
+                            action: "Select audio stream"
                         },
                         {
                             key: "H/L · ←/→",
                             action: "Adjust selected audio level"
                         },
                         {
-                            key: "M / X",
-                            action: "Selected audio mute / microphone mute"
+                            key: "U/D · PGUP/PGDN",
+                            action: "Scroll Controls"
                         },
                         {
-                            key: "N/B/Y/W/P/G",
-                            action: "Open the labelled tile"
+                            key: "M / X / P",
+                            action: "Mute stream / mute mic / choose device"
                         },
                         {
-                            key: "V / A",
-                            action: "Media details / application mixer"
+                            key: "Q/W/E/F/G/R/C",
+                            action: "Open corresponding system control"
+                        },
+                        {
+                            key: "N / SHIFT+M",
+                            action: "Now Playing / application mixer"
+                        },
+                        {
+                            key: "A / S / V",
+                            action: "Alerts / stay awake / power profile"
                         },
                         {
                             key: "SPACE / , / .",
                             action: "Play-pause / previous / next media"
                         },
                         {
+                            key: "Z / B / SHIFT+P",
+                            action: "Shuffle / repeat / choose player"
+                        },
+                        {
                             key: "SHIFT+H/L",
-                            action: "Seek media backward / forward five seconds"
+                            action: "Seek backward / forward five seconds"
                         },
                         {
-                            key: "S / SHIFT+R / SHIFT+P",
-                            action: "MPRIS shuffle / repeat / choose player"
+                            key: "SHIFT+F/G/D/R/A/S/E",
+                            action: "Spectrum / reactive / transparency / glass / bar / frame / motion"
                         },
                         {
-                            key: "Q / I / R",
-                            action: "Toggle Notifications / Stay awake / Motion"
-                        },
-                        {
-                            key: "SHIFT+G/N/B/O/F",
-                            action: "Wallpaper spectrum / Reactive shell / Bar / Window transparency / Frosted glass"
+                            key: "SHIFT+C · ENTER",
+                            action: "Restore defaults, then confirm"
                         },
                         {
                             key: "T / - (⇧T) / +",
                             action: "Night Light / warmer / cooler"
                         },
                         {
-                            key: "O",
-                            action: "Cycle available power profiles"
-                        },
-                        {
-                            key: "[ / ]",
-                            action: "Previous / next tray app"
-                        },
-                        {
-                            key: "ENTER",
-                            action: "Open tray item"
+                            key: "[ / ] · ENTER",
+                            action: "Select / activate tray app"
                         },
                         {
                             key: "ESC",
@@ -709,7 +709,7 @@ FocusScope {
                     horizontalCompact: true
                     icon: "󰏘"
                     title: "Themes"
-                    shortcut: "Y"
+                    shortcut: "E"
                     onActivated: root.openTheme()
                 }
                 ShellAction {
@@ -741,7 +741,7 @@ FocusScope {
                     horizontalCompact: true
                     icon: "󰐥"
                     title: "Session"
-                    shortcut: "P"
+                    shortcut: "Q"
                     onActivated: root.openSession()
                 }
 
@@ -811,7 +811,7 @@ FocusScope {
                     detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
                     status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
                     glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
-                    shortcut: "N"
+                    shortcut: "F"
                     connected: root.system.networkConnected
                     pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
                     failed: networkPanel.open && networkPanel.statusError
@@ -829,7 +829,7 @@ FocusScope {
                     detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
                     status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
                     glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
-                    shortcut: "B"
+                    shortcut: "G"
                     connected: root.system.bluetoothEnabled
                     scanning: root.system.bluetoothDiscovering
                     pending: root.system.bluetoothDevices.some(device => device && device.pairing)
@@ -879,7 +879,7 @@ FocusScope {
                     motion: root.motion
                     icon: root.notificationState.silent ? "󰂛" : "󰂚"
                     title: root.notificationState.silent ? "Silent" : "Alerts"
-                    shortcut: "Q"
+                    shortcut: "A"
                     active: root.notificationState.silent
                     activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
                     onActivated: root.notificationState.toggleSilent()
@@ -893,7 +893,7 @@ FocusScope {
                     motion: root.motion
                     icon: root.system.idleInhibited ? "󰅶" : "󰒲"
                     title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                    shortcut: "I"
+                    shortcut: "S"
                     active: root.system.idleInhibited
                     activeColor: root.theme.roleColor("warmth")
                     onActivated: root.system.toggleIdleInhibited()
@@ -907,7 +907,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰍛"
                     title: "Resources"
-                    shortcut: "G"
+                    shortcut: "R"
                     activeColor: root.theme.roleColor("resources")
                     onActivated: root.openResources()
                 }
@@ -920,7 +920,7 @@ FocusScope {
                     motion: root.motion
                     icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
                     title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                    shortcut: "O"
+                    shortcut: "V"
                     enabled: root.powerProfile.available && !root.powerProfile.applying
                     active: root.powerProfile.current === "power-saver"
                     activeColor: root.theme.powerProfileColor(root.powerProfile.current)
@@ -981,7 +981,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰸉"
                     title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
-                    shortcut: "SHIFT+G"
+                    shortcut: "SHIFT+F"
                     active: root.wallpaperSpectrumEnabled
                     activeColor: root.theme.roleColor("workspace")
                     onActivated: root.wallpaperSpectrumToggleRequested()
@@ -995,7 +995,7 @@ FocusScope {
                     motion: root.motion
                     icon: "♫"
                     title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
-                    shortcut: "SHIFT+N"
+                    shortcut: "SHIFT+G"
                     active: root.musicReactiveEnabled
                     activeColor: root.theme.roleColor("audio")
                     onActivated: root.musicReactiveToggleRequested()
@@ -1009,7 +1009,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰍹"
                     title: root.windowTransparencyEnabled ? "Windows translucent" : "Windows solid"
-                    shortcut: "SHIFT+O"
+                    shortcut: "SHIFT+D"
                     active: root.windowTransparencyEnabled
                     activeColor: root.theme.roleColor("display")
                     onActivated: root.windowTransparencyToggleRequested()
@@ -1023,7 +1023,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰊠"
                     title: root.shellGlassEnabled ? "Frosted glass" : "Glass off"
-                    shortcut: "SHIFT+F"
+                    shortcut: "SHIFT+R"
                     active: root.shellGlassEnabled
                     activeColor: root.theme.roleColor("connectivity")
                     onActivated: root.shellGlassToggleRequested()
@@ -1037,7 +1037,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰀻"
                     title: root.barVisible ? "Bar visible" : "Bar hidden"
-                    shortcut: "SHIFT+B"
+                    shortcut: "SHIFT+A"
                     active: !root.barVisible
                     activeColor: root.theme.roleColor("positive")
                     onActivated: root.barToggleRequested()
@@ -1050,7 +1050,7 @@ FocusScope {
                     motion: root.motion
                     icon: root.frameVisible ? "󰏗" : "󰏖"
                     title: root.frameVisible ? "Frame visible" : "Frame hidden"
-                    shortcut: "SHIFT+V"
+                    shortcut: "SHIFT+S"
                     active: root.frameVisible
                     activeColor: root.theme.roleColor("display")
                     onActivated: root.frameToggleRequested()
@@ -1064,7 +1064,7 @@ FocusScope {
                     motion: root.motion
                     icon: root.motion.enabled ? "󰐊" : "󰏤"
                     title: root.motion.enabled ? "Animations" : "Reduced motion"
-                    shortcut: "R"
+                    shortcut: "SHIFT+E"
                     active: !root.motion.enabled
                     activeColor: root.theme.roleColor("warning")
                     onActivated: root.motion.toggle()
@@ -1099,7 +1099,7 @@ FocusScope {
                     motion: root.motion
                     icon: "󰑓"
                     title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                    shortcut: "SHIFT+D"
+                    shortcut: "SHIFT+C"
                     active: root.resetConfirmPending
                     enabled: !root.resetRunning
                     activeColor: root.theme.roleColor("warning")
@@ -1393,7 +1393,7 @@ FocusScope {
                                     horizontalCompact: true
                                     icon: "󰒝"
                                     title: root.media.shuffled ? "ON" : "OFF"
-                                    shortcut: "S"
+                                    shortcut: "Z"
                                     active: root.media.shuffled
                                     enabled: root.media.shuffleAvailable
                                     onActivated: root.media.toggleShuffle()
@@ -1408,7 +1408,7 @@ FocusScope {
                                     horizontalCompact: true
                                     icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
                                     title: root.media.repeatLabel
-                                    shortcut: "⇧R"
+                                    shortcut: "B"
                                     active: root.media.repeatState !== 0
                                     enabled: root.media.repeatAvailable
                                     onActivated: root.media.toggleRepeat()
@@ -1694,7 +1694,7 @@ FocusScope {
                 if (root.resetConfirmPending) {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                         root.startDefaultReset();
-                    else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)))
+                    else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_C && (event.modifiers & Qt.ShiftModifier)))
                         root.resetConfirmPending = false;
                     event.accepted = true;
                     return;
@@ -1769,8 +1769,8 @@ FocusScope {
                     } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
                         wallpaperPanel.invoke("moveGrid", 0, 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
-                        wallpaperPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
+                        wallpaperPanel.invoke("moveHalfPage", (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_M) {
                         wallpaperPanel.invoke("cycleOutput");
@@ -1798,9 +1798,9 @@ FocusScope {
                         recordingsPanel.invoke("moveSelection", 1);
                     } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
                         recordingsPanel.invoke("moveSelection", -1);
-                    } else if (event.key === Qt.Key_U) {
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) {
                         recordingsPanel.invoke("moveSelection", -4);
-                    } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
+                    } else if (event.key === Qt.Key_PageDown || (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier))) {
                         recordingsPanel.invoke("moveSelection", 4);
                     } else if (event.key === Qt.Key_D) {
                         recordingsPanel.invoke("requestDelete");
@@ -1843,8 +1843,8 @@ FocusScope {
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         bluetoothPanel.invoke("moveSelection", 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        bluetoothPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        bluetoothPanel.invoke("moveHalfPage", (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         bluetoothPanel.invoke("activateSelected");
@@ -1909,8 +1909,8 @@ FocusScope {
                     } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
                         themePanel.invoke("moveGrid", 1, 0);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        themePanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        themePanel.invoke("moveHalfPage", (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_X && themePanel.operationRunning) {
                         themePanel.invoke("cancelOperation");
@@ -1939,8 +1939,8 @@ FocusScope {
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         networkPanel.invoke("moveSelection", 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        networkPanel.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        networkPanel.invoke("moveHalfPage", (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         networkPanel.invoke("activateSelected");
@@ -1981,8 +1981,8 @@ FocusScope {
                     } else if ((event.key === Qt.Key_Down || event.key === Qt.Key_J)) {
                         trayMenu.invoke("moveSelection", 1);
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_U || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
-                        trayMenu.invoke("moveHalfPage", event.key === Qt.Key_U ? -1 : 1);
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown || (event.key === Qt.Key_D && !(event.modifiers & Qt.ShiftModifier))) {
+                        trayMenu.invoke("moveHalfPage", (event.key === Qt.Key_U || event.key === Qt.Key_PageUp) ? -1 : 1);
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || (event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
                         trayMenu.invoke("activateSelected");
@@ -1992,137 +1992,98 @@ FocusScope {
                     return;
                 }
 
+                const shifted = !!(event.modifiers & Qt.ShiftModifier);
                 if (event.key === Qt.Key_Escape) {
                     root.closeRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_H && (event.modifiers & Qt.ShiftModifier)) {
-                    root.media.seek(-5);
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_L && (event.modifiers & Qt.ShiftModifier)) {
-                    root.media.seek(5);
-                    event.accepted = true;
-                } else if ((event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                    root.adjustSelectedAudio(-0.05);
-                    event.accepted = true;
-                } else if ((event.key === Qt.Key_Right || event.key === Qt.Key_L)) {
-                    root.adjustSelectedAudio(0.05);
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_M) {
-                    root.muteSelectedAudio();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_X) {
-                    root.system.toggleMicrophoneMute();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Q) {
-                    root.notificationState.toggleSilent();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_I) {
-                    root.system.toggleIdleInhibited();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_R && (event.modifiers & Qt.ShiftModifier)) {
-                    root.media.toggleRepeat();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_R) {
-                    root.motion.toggle();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_T && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
-                    if (event.modifiers & Qt.ShiftModifier)
-                        root.nightLight.warmer();
-                    else
-                        root.nightLight.toggle();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Minus && event.modifiers === Qt.NoModifier) {
-                    root.nightLight.warmer();
-                    event.accepted = true;
-                } else if ((event.key === Qt.Key_Plus || (event.key === Qt.Key_Equal && (event.modifiers & Qt.ShiftModifier))) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
-                    root.nightLight.cooler();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_F && (event.modifiers & Qt.ShiftModifier)) {
-                    root.shellGlassToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_O && (event.modifiers & Qt.ShiftModifier)) {
-                    root.windowTransparencyToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_O && root.powerProfile.available) {
-                    root.powerProfile.cycle();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_N && (event.modifiers & Qt.ShiftModifier)) {
-                    root.musicReactiveToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_V && (event.modifiers & Qt.ShiftModifier)) {
-                    root.frameToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_B && (event.modifiers & Qt.ShiftModifier)) {
-                    root.barToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_G && (event.modifiers & Qt.ShiftModifier)) {
-                    root.wallpaperSpectrumToggleRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_N) {
-                    root.openNetwork();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_B) {
-                    root.openBluetooth();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_W) {
-                    root.openWallpaper();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Y) {
-                    root.openTheme();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ShiftModifier)) {
-                    root.media.cyclePlayer();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_P) {
-                    root.openSession();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_C) {
-                    root.openRecordings();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_G) {
-                    root.openResources();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_S) {
-                    root.media.toggleShuffle();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Space) {
-                    root.media.togglePlaying();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Comma) {
-                    root.media.previous();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Period) {
-                    root.media.next();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_V) {
-                    root.mediaRequested();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_A) {
-                    root.openMixer();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_D && (event.modifiers & Qt.ShiftModifier)) {
+                } else if (shifted && event.key === Qt.Key_C) {
                     root.resetConfirmPending = true;
                     root.resetStatus = "";
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_D) {
-                    root.toggleSelectedAudioDeviceChooser();
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                } else if (shifted && event.key === Qt.Key_F) {
+                    root.wallpaperSpectrumToggleRequested();
+                } else if (shifted && event.key === Qt.Key_G) {
+                    root.musicReactiveToggleRequested();
+                } else if (shifted && event.key === Qt.Key_D) {
+                    root.windowTransparencyToggleRequested();
+                } else if (shifted && event.key === Qt.Key_R) {
+                    root.shellGlassToggleRequested();
+                } else if (shifted && event.key === Qt.Key_A) {
+                    root.barToggleRequested();
+                } else if (shifted && event.key === Qt.Key_S) {
+                    root.frameToggleRequested();
+                } else if (shifted && event.key === Qt.Key_E) {
+                    root.motion.toggle();
+                } else if (shifted && event.key === Qt.Key_M) {
+                    root.openMixer();
+                } else if (shifted && event.key === Qt.Key_P) {
+                    root.media.cyclePlayer();
+                } else if (shifted && event.key === Qt.Key_T) {
+                    root.nightLight.warmer();
+                } else if (shifted && event.key === Qt.Key_H) {
+                    root.media.seek(-5);
+                } else if (shifted && event.key === Qt.Key_L) {
+                    root.media.seek(5);
+                } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                    root.adjustSelectedAudio(-0.05);
+                } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                    root.adjustSelectedAudio(0.05);
+                } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
                     root.moveAudioSelection(-1);
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
                     root.moveAudioSelection(1);
-                    event.accepted = true;
+                } else if (event.key === Qt.Key_Q) {
+                    root.openSession();
+                } else if (event.key === Qt.Key_W) {
+                    root.openWallpaper();
+                } else if (event.key === Qt.Key_E) {
+                    root.openTheme();
+                } else if (event.key === Qt.Key_R) {
+                    root.openResources();
+                } else if (event.key === Qt.Key_F) {
+                    root.openNetwork();
+                } else if (event.key === Qt.Key_G) {
+                    root.openBluetooth();
+                } else if (event.key === Qt.Key_A) {
+                    root.notificationState.toggleSilent();
+                } else if (event.key === Qt.Key_S) {
+                    root.system.toggleIdleInhibited();
+                } else if (event.key === Qt.Key_C) {
+                    root.openRecordings();
+                } else if (event.key === Qt.Key_V && root.powerProfile.available) {
+                    root.powerProfile.cycle();
+                } else if (event.key === Qt.Key_N) {
+                    root.mediaRequested();
+                } else if (event.key === Qt.Key_M) {
+                    root.muteSelectedAudio();
+                } else if (event.key === Qt.Key_Z) {
+                    root.media.toggleShuffle();
+                } else if (event.key === Qt.Key_B) {
+                    root.media.toggleRepeat();
+                } else if (event.key === Qt.Key_X) {
+                    root.system.toggleMicrophoneMute();
+                } else if (event.key === Qt.Key_P) {
+                    root.toggleSelectedAudioDeviceChooser();
+                } else if (event.key === Qt.Key_T) {
+                    root.nightLight.toggle();
+                } else if (event.key === Qt.Key_Minus && event.modifiers === Qt.NoModifier) {
+                    root.nightLight.warmer();
+                } else if ((event.key === Qt.Key_Plus || (event.key === Qt.Key_Equal && shifted)) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                    root.nightLight.cooler();
+                } else if (event.key === Qt.Key_Space) {
+                    root.media.togglePlaying();
+                } else if (event.key === Qt.Key_Comma) {
+                    root.media.previous();
+                } else if (event.key === Qt.Key_Period) {
+                    root.media.next();
                 } else if (event.key === Qt.Key_BracketLeft && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex - 1 + root.system.trayCount) % root.system.trayCount;
-                    event.accepted = true;
                 } else if (event.key === Qt.Key_BracketRight && root.system.trayCount > 0) {
                     root.trayIndex = (root.trayIndex + 1) % root.system.trayCount;
-                    event.accepted = true;
                 } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.system.trayCount > 0) {
                     root.activateTrayItem();
-                    event.accepted = true;
+                } else {
+                    return;
                 }
+                event.accepted = true;
             }
         }
     }

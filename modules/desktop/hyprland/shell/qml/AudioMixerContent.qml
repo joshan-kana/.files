@@ -273,15 +273,15 @@ FocusScope {
         theme: mixer.theme
         hints: [
             {
-                shortcut: "J/K",
+                shortcut: "J/K · ARROWS",
                 label: "Select"
             },
             {
-                shortcut: "U/D",
+                shortcut: "U/D · PGUP/PGDN",
                 label: "Page"
             },
             {
-                shortcut: "H/L",
+                shortcut: "H/L · ARROWS",
                 label: "Volume"
             },
             {
@@ -300,18 +300,16 @@ FocusScope {
     function handleKey(key: int): bool {
         if (!active)
             return false;
-        if (key === Qt.Key_A)
-            return true;
         if (key === Qt.Key_Escape) {
             closeRequested();
         } else if (key === Qt.Key_Up || key === Qt.Key_K) {
             selectedIndex = Math.max(0, selectedIndex - 1);
         } else if (key === Qt.Key_Down || key === Qt.Key_J) {
             selectedIndex = Math.min(Math.max(0, streams.length - 1), selectedIndex + 1);
-        } else if (key === Qt.Key_U || key === Qt.Key_D) {
+        } else if (key === Qt.Key_U || key === Qt.Key_PageUp || key === Qt.Key_D || key === Qt.Key_PageDown) {
             const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
             const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-            selectedIndex = Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + (key === Qt.Key_D ? rows : -rows)));
+            selectedIndex = Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows)));
         } else if (key === Qt.Key_Left || key === Qt.Key_H) {
             adjustSelected(-0.05);
         } else if (key === Qt.Key_Right || key === Qt.Key_L) {

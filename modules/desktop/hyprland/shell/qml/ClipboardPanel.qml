@@ -412,10 +412,10 @@ Item {
                         panel.selectedIndex = Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + 1);
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
                         panel.selectedIndex = Math.max(0, panel.selectedIndex - 1);
-                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_D) {
+                    } else if (event.key === Qt.Key_U || event.key === Qt.Key_PageUp || event.key === Qt.Key_D || event.key === Qt.Key_PageDown) {
                         const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 62;
                         const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + (event.key === Qt.Key_D ? rows : -rows)));
+                        panel.selectedIndex = Math.max(0, Math.min(panel.filteredEntries.length - 1, panel.selectedIndex + ((event.key === Qt.Key_D || event.key === Qt.Key_PageDown) ? rows : -rows)));
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         panel.activateSelected();
                     } else {
@@ -649,7 +649,7 @@ Item {
                         label: search.activeFocus ? "Navigate" : "Move"
                     },
                     {
-                        shortcut: "U/D",
+                        shortcut: "U/D · PGUP/PGDN",
                         label: "Half page",
                         visible: !search.activeFocus
                     },
