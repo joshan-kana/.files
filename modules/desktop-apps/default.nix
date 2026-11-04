@@ -152,6 +152,10 @@ in
               momentum_scrolling = true;
               status_line.display = "none";
               scrollbar.position = "Hidden";
+            }
+            // lib.optionalAttrs isDarwin {
+              shell = lib.getExe pkgs.zsh;
+              arguments = [ "-l" ];
             };
           }
           // lib.optionalAttrs isDarwin {
@@ -170,6 +174,14 @@ in
                 mods = [ "Super" ];
                 key = "V";
                 action = "PasteClipboard";
+              }
+              {
+                mods = [
+                  "Super"
+                  "Shift"
+                ];
+                key = "W";
+                action = "CloseTab";
               }
               {
                 mods = [ "Super" ];
