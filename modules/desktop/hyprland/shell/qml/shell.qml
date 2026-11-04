@@ -195,6 +195,7 @@ ShellRoot {
         motion: motion
         frameEnabled: appearance.frameVisible
         barVisible: appearance.barVisible
+        dockOrigin: ambientBar.originFor(expansionState.screen || Quickshell.screens[0], "system")
         expansionState: expansionState
         barWindows: ambientBar.instances
         mediaComponent: mediaExpansionComponent
@@ -292,7 +293,8 @@ ShellRoot {
         id: ambientBar
         // The expanding hub consumes the clock island throughout the whole
         // opening and closing transition, not only while Controls is active.
-        controlsExpanded: expansionState.hasCurrent || expansionHost.closing || resizeOverlay.open || resizeOverlay.closing
+        // Let the clock join the frame while the hub finishes retracting.
+        controlsExpanded: expansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing
         clockReveal: resizeOverlay.open || resizeOverlay.closing ? 0 : expansionHost.clockReveal
         shown: appearance.barVisible
         frameVisible: appearance.frameVisible

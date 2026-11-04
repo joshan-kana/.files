@@ -806,7 +806,10 @@ test("clock reappears with the closing hub morph rather than a binary timer swit
   );
   const shell = fs.readFileSync(path.join(root, "shell.qml"), "utf8");
   assert.match(host, /readonly property real clockReveal:/);
-  assert.match(host, /shellSurface\.width\) \/ span/);
+  assert.match(
+    host,
+    /const progress = Math\.min\(widthProgress, heightProgress\)/,
+  );
   assert.match(
     bar,
     /visible: bars\.clockReveal > 0\.001\s+opacity: bars\.clockReveal/,
@@ -890,7 +893,7 @@ test("the hub's content reveal follows its surface without leaving visible clipp
   assert.match(qml, /fillColor: host\.theme\.musicReactiveBackground/);
 });
 
-test("barless frameless hub has a real close-morph target", () => {
+test("all hub visual modes have stable terminal dimensions", () => {
   const source = fs.readFileSync(
     path.join(
       __dirname,
@@ -898,27 +901,27 @@ test("barless frameless hub has a real close-morph target", () => {
     ),
     "utf8",
   );
+  assert.match(source, /compactWidth: barVisible \?/);
+  assert.match(source, /compactHeight: barVisible \?/);
   assert.match(
     source,
-    /floatingOpen: !frameVisible && !barVisible && !closing/,
+    /targetWidth: contentExpanded \? Math\.max\(contentWidth, expansionState\.originWidth\) : closing \? closeWidth : barVisible \? Math\.max\(1, expansionState\.originWidth\) : compactWidth/,
   );
   assert.match(
     source,
-    /targetWidth: floatingOpen \|\| contentExpanded \? Math\.max\(contentWidth, expansionState\.originWidth\) : expansionState\.originWidth/,
+    /targetHeight: contentExpanded \? Math\.max\(contentHeight, expansionState\.originHeight\) : closing \? closeHeight : barVisible \? Math\.max\(1, expansionState\.originHeight\) : compactHeight/,
   );
+  assert.match(source, /host\.closeWidth = Math\.max\(1, host\.compactWidth\)/);
   assert.match(
     source,
-    /targetHeight: floatingOpen \|\| contentExpanded \? Math\.max\(contentHeight, expansionState\.originHeight\) : expansionState\.originHeight/,
+    /host\.closeHeight = Math\.max\(1, host\.compactHeight\)/,
   );
-  const size = (framed, bar, closing, expanded, value, origin) =>
-    (!framed && !bar && !closing) || expanded
-      ? Math.max(value, origin)
-      : origin;
-  assert.equal(size(false, false, false, true, 900, 40), 900);
-  assert.equal(size(false, false, true, false, 900, 40), 40);
-  assert.equal(size(false, true, true, false, 900, 50), 50);
-  assert.equal(size(true, false, true, false, 900, 50), 50);
-  assert.equal(size(true, true, true, false, 900, 50), 50);
+  const terminal = (frame, bar, dockWidth, frameRadius) =>
+    bar ? dockWidth : frame ? Math.max(64, frameRadius * 2) : 64;
+  assert.equal(terminal(false, false, 206, 28), 64);
+  assert.equal(terminal(false, true, 206, 28), 206);
+  assert.equal(terminal(true, false, 206, 28), 64);
+  assert.equal(terminal(true, true, 206, 28), 206);
 });
 
 test("moving full-screen loading trace uses a bounded Canvas texture", () => {
