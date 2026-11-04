@@ -67,7 +67,7 @@ test("footer inset and panel height agree for both measured and live geometry", 
   const host = source("ShellExpansionHost.qml");
   assert.match(
     host,
-    /id: hubFooter[\s\S]*?bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
+    /id: hubFooter[\s\S]*?y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
   );
   assert.match(
     host,
@@ -124,14 +124,14 @@ test("footer background retains physical clearance even when content is taller t
   );
   assert.match(
     host,
-    /bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
+    /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
   );
   // The painted background extends spacing2 below the footer content.
   assert.match(host, /y: hubFooter\.y - host\.theme\.spacing2/);
   assert.match(host, /height: hubFooter\.height \+ host\.theme\.spacing2 \* 2/);
   const baseInset = 32 + 8;
   for (const overflow of [0, 10, 45, 120]) {
-    const paintedClearance = baseInset + overflow - overflow - 8;
+    const paintedClearance = baseInset - 8;
     assert.equal(paintedClearance, 32);
   }
 });
@@ -171,14 +171,60 @@ test("Controls reserves its own lower frame clearance without moving other panel
   const host = source("ShellExpansionHost.qml");
   assert.match(
     host,
-    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2 \+ \(expansionState\.currentName === "system" && !detailVisible \? theme\.spacing4 : 0\)/,
+    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
   );
   assert.match(
     host,
-    /bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
+    /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
   );
   assert.match(
     host,
     /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "system" && !host\.detailVisible \? host\.theme\.spacing4 : 0\)/,
   );
+});
+
+test("navigation footer has one visible-surface inset for every panel", () => {
+  const host = source("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
+  );
+  assert.doesNotMatch(
+    host,
+    /bottom: parent\.bottom[\s\S]{0,450}contentLayoutHeight - shellSurface\.height/,
+  );
+  assert.match(host, /id: contentViewport[\s\S]*?bottom: hubFooter\.top/);
+  assert.match(
+    host,
+    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
+  );
+});
+
+test("connected footer clears the actual rounded frame contour rather than the backing rectangle", () => {
+  const host = source("ShellExpansionHost.qml");
+  const geometry = source("FrameGeometry.js");
+  assert.match(host, /import "FrameGeometry\.js" as FrameGeometry/);
+  assert.match(
+    host,
+    /visibleFooterBottom: frameVisible && screen \? Math\.max\(1, Math\.min\(shellSurface\.height, FrameGeometry\.hubBottomLimit\(screen\.width, screen\.height, theme\.frameThickness, theme\.frameRounding\) - topOffset\)\) : shellSurface\.height/,
+  );
+  assert.match(
+    host,
+    /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
+  );
+  assert.match(
+    geometry,
+    /function hubBottomLimit\(width, height, thickness, radius\)/,
+  );
+  assert.match(
+    geometry,
+    /bottom: Math\.min\(\s*hubBottomLimit\(width, height, thickness, radius\),\s*item\.y \+ item\.height,?\s*\)/,
+  );
+  // 1440px logical display, 26px frame, 62px rounding and 26px top offset:
+  // the visible hub stops at 1349 and the 1353px backing box at 1379.
+  const visible = 1440 - 26 - 62 - 3;
+  const overflow = 26 + 1353 - visible;
+  assert.equal(visible, 1349);
+  assert.equal(overflow, 30);
+  assert.equal(40 - 8, 32);
 });

@@ -91,11 +91,16 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   );
   assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
   assert.doesNotMatch(theme, /musicReactiveHue|musicReactiveBackground/);
-  assert.match(frame, /fillGradient: LinearGradient \{/);
-  assert.match(frame, /x2: output\.reactiveActive/);
-  assert.match(frame, /gradientInset: Math\.max\(0\.005,/);
-  assert.match(frame, /position: output\.gradientInset/);
-  assert.match(frame, /position: 1 - output\.gradientInset/);
+  assert.match(frame, /FrameRibbonItem \{/);
+  assert.match(frame, /contourPoints: output\.geometry\.renderPoints/);
+  assert.match(frame, /gradientPhase: frame\.theme\.musicReactiveFlow/);
+  assert.match(frame, /gradientMovement: frame\.theme\.musicReactiveMovement/);
+  assert.match(frame, /gradientKick: frame\.theme\.musicReactiveKick/);
+  assert.match(frame, /id: frameBackground/);
+  assert.match(frame, /fillGradient: LinearGradient/);
+  assert.match(frame, /x1: 0/);
+  assert.match(frame, /x2: drawing\.width/);
+
   for (const point of ["0", "0.5", "1"])
     assert.ok(
       frame.includes(
@@ -283,20 +288,35 @@ test("animated reactive flow updates native geometry with numeric state, not QML
   assert.doesNotMatch(surface, /theme\.flowingSpectrumColor/);
 });
 
-test("connected frame keeps static colour stops during audio and varies only numeric gradient endpoints", () => {
+test("connected frame moves a native vertex-colour fill without cached Shape gradient endpoints", () => {
   const frame = qml("DesktopFrame.qml");
   const theme = qml("Theme.qml");
-  assert.match(frame, /readonly property bool reactiveActive:/);
-  assert.match(frame, /x1: output\.reactiveActive \?/);
-  assert.match(frame, /x2: output\.reactiveActive \?/);
-  assert.match(frame, /Math\.sin\(frame\.theme\.musicReactiveFlow\)/);
-  assert.match(frame, /Math\.cos\(frame\.theme\.musicReactiveFlow\)/);
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+  assert.match(frame, /FrameRibbonItem \{/);
+  assert.match(frame, /contourPoints: output\.geometry\.renderPoints/);
+  assert.match(frame, /gradientPhase: frame\.theme\.musicReactiveFlow/);
+  assert.match(frame, /gradientMovement: frame\.theme\.musicReactiveMovement/);
+  assert.match(frame, /gradientKick: frame\.theme\.musicReactiveKick/);
+  assert.match(frame, /id: frameBackground/);
+  assert.match(frame, /fillGradient: LinearGradient/);
+  assert.match(frame, /x1: 0/);
+  assert.match(frame, /x2: drawing\.width/);
+
+  assert.match(native, /class FrameRibbonItem : public QQuickItem/);
+  assert.match(native, /qmlRegisterType<FrameRibbonItem>/);
+  assert.match(native, /qPremultiply\(colorAt\(p\.x\(\)\)\.rgba\(\)\)/);
+  assert.match(native, /const float wave = 0\.18f \* movement/);
+  assert.match(native, /const float impulse = 0\.12f \* kick/);
   assert.match(
     theme,
     /reactiveFrameColor\(position: real, illuminated: bool\)/,
   );
-  assert.doesNotMatch(frame, /reactiveFrameColor\([0-9.]+\)/);
-  assert.doesNotMatch(frame, /flowingSpectrumColor/);
 });
 
 test("reactive music continues when UI animations are disabled", () => {
@@ -330,11 +350,58 @@ test("reactive music continues when UI animations are disabled", () => {
     frame,
     /output\.reactiveActive && frame\.motion\.enabled/,
   );
-  assert.match(frame, /x1: output\.reactiveActive \?/);
-  assert.match(frame, /x2: output\.reactiveActive \?/);
+  assert.match(frame, /gradientPhase: frame\.theme\.musicReactiveFlow/);
+  assert.match(frame, /gradientMovement: frame\.theme\.musicReactiveMovement/);
   // Motion preference still gates UI tween durations, not DSP movement.
   assert.match(
     qml("Motion.qml"),
     /readonly property int morph: enabled \? 240 : 0/,
   );
+});
+
+test("the reactive frame ribbon cannot draw diagonal wedges across clients", () => {
+  const frame = qml("DesktopFrame.qml");
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+  assert.match(
+    frame,
+    /id: frameBackground[\s\S]*?fillGradient: LinearGradient/,
+  );
+  assert.match(
+    frame,
+    /FrameRibbonItem \{[\s\S]*?ribbonWidth: frame\.theme\.frameThickness \* 1\.4/,
+  );
+  assert.match(
+    frame,
+    /id: frameOutline[\s\S]*?strokeColor: frame\.reactiveBorder/,
+  );
+  assert.match(
+    native,
+    /const QPointF normal\(tangent\.y\(\) \/ length, -tangent\.x\(\) \/ length\)/,
+  );
+  assert.match(native, /ribbon\.push_back\(\{p, p \+ normal \* band\}\)/);
+  assert.match(native, /const int vertexCount = int\(ribbon\.size\(\)\) \* 6/);
+  assert.doesNotMatch(native, /outerCorners|cornerSide|QPointF\(w, h\)/);
+});
+
+test("connected frame declares each delegate property once", () => {
+  const frame = qml("DesktopFrame.qml");
+  const head = frame.slice(
+    frame.indexOf("delegate: Scope {"),
+    frame.indexOf("SquircleGeometry {"),
+  );
+  const properties = [
+    ...head.matchAll(/readonly property (?:bool|real|var|color) (\w+):/g),
+  ].map((match) => match[1]);
+  assert.equal(
+    properties.length,
+    new Set(properties).size,
+    "Duplicate QML delegate property",
+  );
+  assert.equal(properties.filter((name) => name === "gradientInset").length, 1);
 });

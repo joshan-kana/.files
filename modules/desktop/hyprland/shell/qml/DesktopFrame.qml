@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Shapes
+import LinuxDesktop.Visuals 1.0
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -116,37 +117,24 @@ Variants {
                 }
             }
 
+            // Retain the precise odd-even frame silhouette and existing
+            // static red-blue-cyan wash. Only the narrow contour ribbon is
+            // animated; no Shape brush is rebuilt on each audio packet.
             Shape {
-                // Keep the backing layer and drawn contour alive while the
-                // frame fades. Toggling Shape.visible discarded its geometry
-                // instantly and made bar islands jump between visual modes.
-                // After the fade finishes, remove the hidden Shape from the
-                // scene graph without ever recreating the Wayland surface.
-                visible: opacity > 0
-                opacity: output.exposed ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: frame.motion.morph
-                        easing.type: frame.motion.morphType
-                        easing.bezierCurve: frame.motion.morphCurve
-                    }
-                }
+                id: frameBackground
+                visible: frameOutline.visible
+                opacity: frameOutline.opacity
                 anchors.fill: parent
                 antialiasing: true
                 preferredRendererType: Shape.CurveRenderer
 
                 ShapePath {
                     fillRule: Qt.OddEvenFill
-                    // Keep content opaque, but let the compositor sample the
-                    // wallpaper through the shared frame's actual silhouette.
                     strokeWidth: -1
                     fillGradient: LinearGradient {
-                        // Only numeric endpoints move with the audio
-                        // envelope. Stable stop colours prevent an expensive
-                        // Shape gradient resource rebuild every audio frame.
-                        x1: output.reactiveActive ? -drawing.width * 0.09 * frame.theme.musicReactiveMovement * Math.sin(frame.theme.musicReactiveFlow) : 0
+                        x1: 0
                         y1: 0
-                        x2: output.reactiveActive ? drawing.width * (1 + 0.09 * frame.theme.musicReactiveMovement * Math.cos(frame.theme.musicReactiveFlow)) : drawing.width
+                        x2: drawing.width
                         y2: 0
                         GradientStop {
                             position: 0
@@ -173,6 +161,46 @@ Variants {
                         path: output.geometry.fill || "M 0 0 L 0.01 0 L 0 0.01 Z"
                     }
                 }
+            }
+
+            // Scene-graph colours move only along the actual contour.
+            // Never triangulate concave notches to the outer screen corners:
+            // those long diagonals can cover ordinary desktop windows.
+            FrameRibbonItem {
+                anchors.fill: parent
+                visible: output.reactiveActive && frameOutline.visible
+                opacity: frameOutline.opacity
+                contourPoints: output.geometry.renderPoints || []
+                ribbonWidth: frame.theme.frameThickness * 1.4
+                reactive: output.reactiveActive
+                gradientLowColor: frame.theme.spectrumColor(0)
+                gradientMidColor: frame.theme.spectrumColor(0.5)
+                gradientHighColor: frame.theme.spectrumColor(1)
+                gradientPhase: frame.theme.musicReactiveFlow
+                gradientMovement: frame.theme.musicReactiveMovement
+                gradientKick: frame.theme.musicReactiveKick
+            }
+
+            Shape {
+                id: frameOutline
+                // Keep the backing layer and drawn contour alive while the
+                // frame fades. Toggling Shape.visible discarded its geometry
+                // instantly and made bar islands jump between visual modes.
+                // After the fade finishes, remove the hidden Shape from the
+                // scene graph without ever recreating the Wayland surface.
+                visible: opacity > 0
+                opacity: output.exposed ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: frame.motion.morph
+                        easing.type: frame.motion.morphType
+                        easing.bezierCurve: frame.motion.morphCurve
+                    }
+                }
+                anchors.fill: parent
+                antialiasing: true
+                preferredRendererType: Shape.CurveRenderer
+
                 ShapePath {
                     fillColor: Qt.rgba(frame.theme.textStrong.r, frame.theme.textStrong.g, frame.theme.textStrong.b, 0.075)
                     strokeWidth: -1

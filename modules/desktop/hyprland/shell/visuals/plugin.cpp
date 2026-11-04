@@ -509,8 +509,184 @@ private:
   double cornerRadius_ = 28, exponent_ = 4.5;
 };
 
+// A narrow reactive vertex-colour ribbon follows the existing frame contour.
+// The ordinary Qt Shape retains the full odd-even fill and precise cubic
+// border. Avoid triangulating the whole concave annulus to the screen edges:
+// that can produce diagonal wedges over desktop clients.
+class FrameRibbonItem : public QQuickItem {
+  Q_OBJECT
+  QML_NAMED_ELEMENT(FrameRibbonItem)
+  Q_PROPERTY(
+      QVariantList contourPoints MEMBER contourPoints_ NOTIFY contourChanged)
+  Q_PROPERTY(
+      QColor gradientLowColor MEMBER gradientLowColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      QColor gradientMidColor MEMBER gradientMidColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      QColor gradientHighColor MEMBER gradientHighColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(bool reactive MEMBER reactive_ NOTIFY gradientChanged)
+  Q_PROPERTY(double ribbonWidth MEMBER ribbonWidth_ NOTIFY geometryChanged)
+  Q_PROPERTY(double gradientPhase MEMBER gradientPhase_ NOTIFY motionChanged)
+  Q_PROPERTY(
+      double gradientMovement MEMBER gradientMovement_ NOTIFY motionChanged)
+  Q_PROPERTY(double gradientKick MEMBER gradientKick_ NOTIFY motionChanged)
+
+public:
+  explicit FrameRibbonItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
+    setFlag(ItemHasContents, true);
+    connect(this, &FrameRibbonItem::contourChanged, this, &QQuickItem::update);
+    connect(this, &FrameRibbonItem::geometryChanged, this, &QQuickItem::update);
+    connect(this, &FrameRibbonItem::gradientChanged, this, &QQuickItem::update);
+    connect(this, &FrameRibbonItem::motionChanged, this, &QQuickItem::update);
+    connect(this, &QQuickItem::widthChanged, this, &QQuickItem::update);
+    connect(this, &QQuickItem::heightChanged, this, &QQuickItem::update);
+  }
+
+signals:
+  void contourChanged();
+  void geometryChanged();
+  void gradientChanged();
+  void motionChanged();
+
+protected:
+  QSGNode *updatePaintNode(QSGNode *old, UpdatePaintNodeData *) override {
+    const float w = float(width()), h = float(height());
+    if (w < 2 || h < 2 || contourPoints_.size() < 4) {
+      delete old;
+      return nullptr;
+    }
+
+    std::vector<QPointF> contour;
+    contour.reserve(size_t(contourPoints_.size()) + 256);
+    for (const QVariant &value : contourPoints_) {
+      const auto point = value.toMap();
+      const double x = point.value(QStringLiteral("x")).toDouble();
+      const double y = point.value(QStringLiteral("y")).toDouble();
+      if (std::isfinite(x) && std::isfinite(y))
+        contour.emplace_back(x, y);
+    }
+    if (contour.size() < 4) {
+      delete old;
+      return nullptr;
+    }
+
+    // Reconstruct only straight subdivisions, not the JS contour curves.
+    // The already sampled cubic vertices stay authoritative; extra points
+    // ensure the sine-displaced spectrum is smooth across long frame spans.
+    std::vector<QPointF> inner;
+    inner.reserve(contour.size() + 400);
+    for (size_t i = 0; i < contour.size(); ++i) {
+      const auto &a = contour[i], &b = contour[(i + 1) % contour.size()];
+      inner.push_back(a);
+      const int subdivisions = std::min(
+          128, int(std::ceil(std::hypot(b.x() - a.x(), b.y() - a.y()) / 36.0)));
+      for (int j = 1; j < subdivisions; ++j) {
+        const double t = double(j) / subdivisions;
+        inner.push_back(a + (b - a) * t);
+      }
+    }
+
+    if (inner.size() > 1 &&
+        std::hypot(inner.front().x() - inner.back().x(),
+                   inner.front().y() - inner.back().y()) < 0.001)
+      inner.pop_back();
+
+    struct RibbonPoint {
+      QPointF inner;
+      QPointF outer;
+    };
+    std::vector<RibbonPoint> ribbon;
+    ribbon.reserve(inner.size());
+    const double band = std::max(1.0, ribbonWidth_);
+    for (size_t i = 0; i < inner.size(); ++i) {
+      const QPointF &p = inner[i];
+      const QPointF tangent = inner[(i + 1) % inner.size()] -
+                              inner[(i + inner.size() - 1) % inner.size()];
+      const double length =
+          std::max(0.00001, std::hypot(tangent.x(), tangent.y()));
+      // The shared contour runs clockwise, so this normal points outward
+      // into the frame fill, never diagonally across the desktop interior.
+      const QPointF normal(tangent.y() / length, -tangent.x() / length);
+      ribbon.push_back({p, p + normal * band});
+    }
+
+    auto *node = static_cast<QSGGeometryNode *>(old);
+    if (!node) {
+      node = new QSGGeometryNode;
+      auto *geometry =
+          new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), 0);
+      geometry->setDrawingMode(QSGGeometry::DrawTriangles);
+      node->setGeometry(geometry);
+      node->setFlag(QSGNode::OwnsGeometry);
+      node->setMaterial(new QSGVertexColorMaterial);
+      node->setFlag(QSGNode::OwnsMaterial);
+    }
+
+    const int vertexCount = int(ribbon.size()) * 6;
+    auto *geometry = node->geometry();
+    if (geometry->vertexCount() != vertexCount)
+      geometry->allocate(vertexCount);
+    auto *vertices = geometry->vertexDataAsColoredPoint2D();
+    int vertex = 0;
+
+    auto colorAt = [&](double x) {
+      float position = std::clamp(float(x / w), 0.0f, 1.0f);
+      if (reactive_) {
+        const float movement = std::clamp(float(gradientMovement_), 0.0f, 1.0f);
+        const float kick = std::clamp(float(gradientKick_), 0.0f, 1.0f);
+        const float phase = float(gradientPhase_);
+        // The colour ramp spans the complete frame, not just a central
+        // strip with frozen red/cyan plateaus at either side.
+        const float wave = 0.18f * movement * std::sin(phase + position * 5.8f);
+        const float detail =
+            0.07f * movement * std::sin(phase * 0.73f - position * 9.0f);
+        const float impulse = 0.12f * kick * std::sin(phase + position * 4.4f);
+        position = std::clamp(position + wave + detail + impulse, 0.0f, 1.0f);
+      }
+      const QColor &low =
+          position < 0.5f ? gradientLowColor_ : gradientMidColor_;
+      const QColor &high =
+          position < 0.5f ? gradientMidColor_ : gradientHighColor_;
+      const float t = position < 0.5f ? position * 2 : (position - 0.5f) * 2;
+      const auto mix = [t](float a, float b) { return a + (b - a) * t; };
+      QColor color;
+      color.setRgbF(mix(low.redF(), high.redF()),
+                    mix(low.greenF(), high.greenF()),
+                    mix(low.blueF(), high.blueF()),
+                    0.44f * mix(low.alphaF(), high.alphaF()));
+      return color;
+    };
+    auto emitPoint = [&](const QPointF &p) {
+      const QRgb rgba = qPremultiply(colorAt(p.x()).rgba());
+      vertices[vertex++].set(float(p.x()), float(p.y()), qRed(rgba),
+                             qGreen(rgba), qBlue(rgba), qAlpha(rgba));
+    };
+    auto triangle = [&](const QPointF &a, const QPointF &b, const QPointF &c) {
+      emitPoint(a);
+      emitPoint(b);
+      emitPoint(c);
+    };
+    for (size_t i = 0; i < ribbon.size(); ++i) {
+      const RibbonPoint &a = ribbon[i], &b = ribbon[(i + 1) % ribbon.size()];
+      triangle(a.inner, a.outer, b.inner);
+      triangle(b.inner, a.outer, b.outer);
+    }
+    node->markDirty(QSGNode::DirtyGeometry);
+    return node;
+  }
+
+private:
+  QVariantList contourPoints_;
+  QColor gradientLowColor_{Qt::transparent}, gradientMidColor_{Qt::transparent},
+      gradientHighColor_{Qt::transparent};
+  bool reactive_ = false;
+  double ribbonWidth_ = 36;
+  double gradientPhase_ = 0, gradientMovement_ = 0, gradientKick_ = 0;
+};
+
 void VisualsPlugin::registerTypes(const char *uri) {
   qmlRegisterType<SpectrumBarsItem>(uri, 1, 0, "SpectrumBarsItem");
   qmlRegisterType<SquircleFillItem>(uri, 1, 0, "SquircleFillItem");
+  qmlRegisterType<FrameRibbonItem>(uri, 1, 0, "FrameRibbonItem");
 }
 #include "plugin.moc"

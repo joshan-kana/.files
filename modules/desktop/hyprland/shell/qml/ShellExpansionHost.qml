@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "FrameGeometry.js" as FrameGeometry
 
 PanelWindow {
     id: host
@@ -75,9 +76,12 @@ PanelWindow {
     // Hyprland returns focus to workspace clients on a workspace change,
     // even if a persistent layer-shell popup is still visible.
     property bool restoringWorkspaceFocus: false
-    // Taller Controls rows need an extra visible frame inset below the global
-    // footer. Other panels retain their existing balanced vertical spacing.
-    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2 + (expansionState.currentName === "system" && !detailVisible ? theme.spacing4 : 0)
+    // The same visual bottom inset for every hub tab. Controls may exceed
+    // the viewport, but that must scroll its content, not move navigation.
+    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2
+    // A tall connected hub is clipped at the frame's rounded bottom corner.
+    // The footer must clear that contour, not the unclipped backing rectangle.
+    readonly property real visibleFooterBottom: frameVisible && screen ? Math.max(1, Math.min(shellSurface.height, FrameGeometry.hubBottomLimit(screen.width, screen.height, theme.frameThickness, theme.frameRounding) - topOffset)) : shellSurface.height
 
     // Precreate each hub view before its first invocation, including Media and
     // Weather. No destination evicts another or constructs on the keypress.
@@ -651,15 +655,12 @@ PanelWindow {
             opacity: shellSurface.contentReveal
             width: Math.max(1, parent.width - host.theme.spacing3 * 2)
             height: implicitHeight
-            anchors {
-                bottom: parent.bottom
-                horizontalCenter: parent.horizontalCenter
-                // The footer is anchored to the stable content layout, which
-                // may exceed the clipped animated silhouette. Compensate
-                // that overflow so the material background, not merely the
-                // text baseline, always clears the *visible* bottom contour.
-                bottomMargin: host.footerBottomClearance + Math.max(0, shellSurface.contentLayoutHeight - shellSurface.height)
-            }
+            anchors.horizontalCenter: parent.horizontalCenter
+            // Anchor to the *painted* silhouette, never the cached content
+            // layout: Controls can exceed the screen and get clipped. The
+            // navigation pill needs exactly the same visible bottom gap as
+            // the shorter Home, Now Playing and Activity panels.
+            y: Math.max(0, host.visibleFooterBottom - height - host.footerBottomClearance)
             spacing: host.theme.spacing1
 
             // Global navigation lives here; local widget hints remain
