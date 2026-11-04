@@ -384,6 +384,7 @@ in
     {
       home = _: {
         home.packages = [
+          pkgs.jjui
           prView
           review
           tuicrReview
@@ -706,6 +707,7 @@ in
           ];
           initLua = ''
             vim.g.editorLspPath = "${lib.makeBinPath editorTools}"
+            vim.g.editorJjui = "${lib.getExe pkgs.jjui}"
           ''
           + builtins.readFile ./neovim/init.lua;
         };
