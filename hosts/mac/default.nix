@@ -245,10 +245,6 @@
       home = _: { home.packages = [ pkgs.chatgpt-mac ]; };
     };
 
-    codexApp = _: {
-      homebrew.casks = [ "codex-app" ];
-    };
-
     googleChrome = _: {
       homebrew.casks = [ "google-chrome" ];
     };
