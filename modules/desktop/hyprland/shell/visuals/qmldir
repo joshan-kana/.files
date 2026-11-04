@@ -1,2 +1,3 @@
 module LinuxDesktop.Visuals
 plugin linux-desktop-visuals
+typeinfo plugins.qmltypes

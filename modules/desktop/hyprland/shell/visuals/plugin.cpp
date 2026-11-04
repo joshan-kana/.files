@@ -6,6 +6,7 @@
 #include <QSGGeometryNode>
 #include <QSGVertexColorMaterial>
 #include <QVariantList>
+#include <QtQmlIntegration/qqmlintegration.h>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -22,11 +23,12 @@ public:
 
 class SpectrumBarsItem : public QQuickItem {
   Q_OBJECT
+  QML_NAMED_ELEMENT(SpectrumBarsItem)
   Q_PROPERTY(QVariantList targetBands READ targetBands WRITE setTargetBands
                  NOTIFY targetBandsChanged)
   Q_PROPERTY(QVariantList edges READ edges WRITE setEdges NOTIFY edgesChanged)
-  Q_PROPERTY(
-      QVariantList palette READ palette WRITE setPalette NOTIFY paletteChanged)
+  Q_PROPERTY(QVariantList barColors READ barColors WRITE setBarColors NOTIFY
+                 barColorsChanged)
   Q_PROPERTY(double lowHz READ lowHz WRITE setLowHz NOTIFY lowHzChanged)
   Q_PROPERTY(double highHz READ highHz WRITE setHighHz NOTIFY highHzChanged)
   Q_PROPERTY(
@@ -49,7 +51,7 @@ public:
   }
   QVariantList targetBands() const { return targetBands_; }
   QVariantList edges() const { return edges_; }
-  QVariantList palette() const { return palette_; }
+  QVariantList barColors() const { return barColors_; }
   double lowHz() const { return lowHz_; }
   double highHz() const { return highHz_; }
   bool decaying() const { return decaying_; }
@@ -69,11 +71,11 @@ public:
     emit edgesChanged();
     update();
   }
-  void setPalette(const QVariantList &v) {
-    if (palette_ == v)
+  void setBarColors(const QVariantList &v) {
+    if (barColors_ == v)
       return;
-    palette_ = v;
-    emit paletteChanged();
+    barColors_ = v;
+    emit barColorsChanged();
     update();
   }
   void setLowHz(double v) {
@@ -101,7 +103,7 @@ public:
 signals:
   void targetBandsChanged();
   void edgesChanged();
-  void paletteChanged();
+  void barColorsChanged();
   void lowHzChanged();
   void highHzChanged();
   void decayingChanged();
@@ -109,7 +111,7 @@ signals:
 protected:
   QSGNode *updatePaintNode(QSGNode *old, UpdatePaintNodeData *) override {
     constexpr int kSteps = 6, kCorners = 4, kSegments = kSteps * kCorners;
-    const int count = std::min(int(edges_.size()) - 1, int(palette_.size()));
+    const int count = std::min(int(edges_.size()) - 1, int(barColors_.size()));
     const int binCount = targetBands_.size();
     if (count < 1 || binCount < 2 || width() <= 0 || height() <= 0) {
       delete old;
@@ -201,7 +203,7 @@ protected:
       const float level = levels[i];
       if (level <= 0.003f)
         continue;
-      const QColor c = palette_[i].value<QColor>();
+      const QColor c = barColors_[i].value<QColor>();
       const float bh = std::max(2.0f, level * h),
                   x = (i + 0.5f) * w / count - bw / 2.0f, y = h - bh;
       const float r = std::min({bw / 2.0f, bh / 2.0f, 3.0f});
@@ -228,7 +230,7 @@ protected:
   }
 
 private:
-  QVariantList targetBands_, edges_, palette_;
+  QVariantList targetBands_, edges_, barColors_;
   std::vector<float> current_;
   double lowHz_ = 20.0, highHz_ = 20000.0;
   bool decaying_ = false;

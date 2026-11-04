@@ -27,7 +27,7 @@ Item {
     // The scene graph owns frame-to-frame interpolation and batched geometry.
     // These colors and frequency boundaries change only with the theme,
     // display scale or bar count, not with every audio sample.
-    readonly property var palette: {
+    readonly property var barColors: {
         const colors = [];
         for (let i = 0; i < count; i++)
             colors.push(theme.spectrumColor((i + 0.5) / count));
@@ -39,7 +39,7 @@ Item {
         visible: root.rendering
         targetBands: root.spectrum.targetBands
         edges: root.bandEdges
-        palette: root.palette
+        barColors: root.barColors
         lowHz: root.spectrum.lowHz
         highHz: root.spectrum.highHz
         decaying: root.spectrum.decaying
