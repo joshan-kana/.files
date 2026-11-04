@@ -1,3 +1,17 @@
+// The connected top notch cannot descend into the rounded bottom corners.
+// Share this limit with Controls footer layout so the visible gap is measured
+// to the actual frame contour instead of the larger backing surface.
+function hubBottomLimit(width, height, thickness, radius) {
+  const edge = Math.max(1, Math.min(thickness, width / 5, height / 5));
+  const innerWidth = Math.max(0, width - edge * 2);
+  const innerHeight = Math.max(0, height - edge * 2);
+  const outerRadius = Math.max(
+    0,
+    Math.min(radius, innerWidth / 2, innerHeight / 2),
+  );
+  return height - edge - outerRadius - 3;
+}
+
 // Shared contour for the monitor border and every attached shell surface.
 // All coordinates are logical Wayland pixels. Geometry is computed only from
 // actual QML bounds; no compositor gap values or screen size are assumed.
@@ -28,6 +42,7 @@ function contour(
       pressedFill: "",
       length: 0,
       points: [],
+      renderPoints: [],
     };
 
   const shapeExponent = Math.max(2, Math.min(12, Number(exponent) || 4.5));
@@ -58,7 +73,10 @@ function contour(
     .map((item) => ({
       left: Math.max(left + outerRadius + 3, item.x),
       right: Math.min(right - outerRadius - 3, item.x + item.width),
-      bottom: Math.min(bottom - outerRadius - 3, item.y + item.height),
+      bottom: Math.min(
+        hubBottomLimit(width, height, thickness, radius),
+        item.y + item.height,
+      ),
       hovered: Boolean(item.hovered),
       pressed: Boolean(item.pressed),
       interactionGroup: item.interactionGroup || "",
@@ -116,11 +134,13 @@ function contour(
   }
 
   const points = [];
+  // GPU render contour remains detailed while the idle loading trace is sparse.
+  const renderPoints = [];
   const pathCommands = [];
   const hoverPaths = [];
   const pressedPaths = [];
   let length = 0;
-  function add(x, y, path = true) {
+  function add(x, y, path = true, render = true) {
     const point = {
       x: Math.round(x * 10000) / 10000,
       y: Math.round(y * 10000) / 10000,
@@ -130,6 +150,7 @@ function contour(
       length += Math.hypot(point.x - previous.x, point.y - previous.y);
     if (path) pathCommands.push(`${previous ? "L" : "M"}${point.x} ${point.y}`);
     points.push({ x: point.x, y: point.y, at: length });
+    if (render) renderPoints.push({ x: point.x, y: point.y });
   }
   function corner(cx, cy, r, start, end) {
     if (r <= 0) return;
@@ -137,18 +158,17 @@ function contour(
     // quarter as one fitted cubic. Recreating hundreds of ShapePath segments
     // during a hub morph would otherwise repeatedly retessellate the frame.
     const samples = Math.max(8, Math.min(20, Math.ceil(r * 0.7)));
-    if (traceEnabled) {
-      for (let i = 1; i <= samples; i++) {
-        const t =
-          start + (end - start) * squircle.progress(i / samples, shapeExponent);
-        const vertex = squircle.cornerPoint(cx, cy, r, t, shapeExponent);
-        add(vertex.x, vertex.y, false);
-      }
-    } else {
-      // The full cubic boundary is still drawn. Detailed arc-length samples
-      // are only required by the active loading trace.
-      const vertex = squircle.cornerPoint(cx, cy, r, end, shapeExponent);
-      add(vertex.x, vertex.y, false);
+    // The frame's GPU mesh always needs the curved boundary, even when
+    // loading trace samples are skipped. Paint geometry is event-driven.
+    for (let i = 1; i <= samples; i++) {
+      const t =
+        start + (end - start) * squircle.progress(i / samples, shapeExponent);
+      const vertex = squircle.cornerPoint(cx, cy, r, t, shapeExponent);
+      renderPoints.push({
+        x: Math.round(vertex.x * 10000) / 10000,
+        y: Math.round(vertex.y * 10000) / 10000,
+      });
+      if (traceEnabled || i === samples) add(vertex.x, vertex.y, false, false);
     }
     // Match the diagonal of the superellipse and the exact tangent direction
     // at both ends, including reversed concave shoulders.
@@ -546,5 +566,6 @@ function contour(
         points[0].y - points[points.length - 1].y,
       ),
     points,
+    renderPoints,
   };
 }
