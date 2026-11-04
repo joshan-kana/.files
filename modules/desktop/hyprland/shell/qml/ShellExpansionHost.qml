@@ -75,7 +75,9 @@ PanelWindow {
     // Hyprland returns focus to workspace clients on a workspace change,
     // even if a persistent layer-shell popup is still visible.
     property bool restoringWorkspaceFocus: false
-    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2
+    // Taller Controls rows need an extra visible frame inset below the global
+    // footer. Other panels retain their existing balanced vertical spacing.
+    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2 + (expansionState.currentName === "system" && !detailVisible ? theme.spacing4 : 0)
 
     // Precreate each hub view before its first invocation, including Media and
     // Weather. No destination evicts another or constructs on the keypress.
@@ -95,7 +97,7 @@ PanelWindow {
     // Hub scrolling is a fallback only for views without their own paging
     // owner. Calendar, Activity, and open details consume PageUp/Down locally.
     readonly property bool hostPageShortcutsEnabled: expansionState.hasCurrent && !helpVisible && (expansionState.currentName === "weather" || expansionState.currentName === "media" || (expansionState.currentName === "system" && !detailVisible))
-    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.transparencyOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
+    readonly property bool detailVisible: !!systemContent && (systemContent.trayMenuOpen || systemContent.networkOpen || systemContent.bluetoothOpen || systemContent.themeOpen || systemContent.wallpaperOpen || systemContent.sessionOpen || systemContent.resourcesOpen || systemContent.recordingsOpen || systemContent.mixerOpen)
     readonly property string helpCaption: systemContent ? systemContent.helpTitle : "Now Playing controls"
     readonly property var helpKeys: systemContent ? systemContent.helpBindings : (mediaContent ? mediaContent.helpBindings : [])
 
@@ -636,7 +638,7 @@ PanelWindow {
             opacity: shellSurface.contentReveal
             x: hubFooter.x + (hubFooter.width - width) / 2
             y: hubFooter.y - host.theme.spacing2
-            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, controlsAudioHints.visible ? controlsAudioHints.width : 0, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
+            width: Math.min(hubFooter.width, Math.max(1, Math.max(footerHints.implicitWidth, hubFooter.scrollHintsVisible ? footerScrollHints.implicitWidth : 0) + host.theme.spacing4 * 2))
             height: hubFooter.height + host.theme.spacing2 * 2
             radius: host.theme.radiusMedium
             color: host.theme.expressiveSurface
@@ -660,40 +662,10 @@ PanelWindow {
             }
             spacing: host.theme.spacing1
 
-            // The audio shortcut legend belongs to the shared footer, not
-            // the last item of the Controls scroll region. Keep it visible as
-            // users scroll, with the same KeyHint tokens as every other view.
-            // The budget excludes the fixed footer rows, not the conditional
-            // scroll hint row itself, avoiding a circular height binding.
-            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight - (controlsAudioHints.visible ? controlsAudioHints.implicitHeight + host.theme.spacing1 : 0))
+            // Global navigation lives here; local widget hints remain
+            // next to their controls in each view.
+            readonly property real scrollBudget: Math.max(1, host.viewportHeight - tabs.implicitHeight - host.theme.spacing4 * 2 - host.theme.spacing3 * 3 - host.footerBottomClearance - footerHints.implicitHeight)
             readonly property bool scrollHintsVisible: host.loadedContent && host.loadedContent.implicitHeight > scrollBudget
-
-            KeyHintStrip {
-                id: controlsAudioHints
-                visible: host.expansionState.hasCurrent && host.expansionState.currentName === "system" && !host.detailVisible && !host.helpVisible
-                width: Math.max(1, Math.min(520, hubFooter.width - host.theme.spacing4 * 2))
-                anchors.horizontalCenter: parent.horizontalCenter
-                runtime: host.runtime
-                theme: host.theme
-                hints: [
-                    {
-                        shortcut: "J/K",
-                        label: "Select audio"
-                    },
-                    {
-                        shortcut: "H/L",
-                        label: "Level"
-                    },
-                    {
-                        shortcut: "M",
-                        label: "Mute"
-                    },
-                    {
-                        shortcut: "X",
-                        label: "Mic"
-                    }
-                ]
-            }
 
             Row {
                 id: footerHints
@@ -772,7 +744,9 @@ PanelWindow {
                 topMargin: host.theme.spacing3
                 leftMargin: host.theme.spacing4
                 rightMargin: host.theme.spacing4
-                bottomMargin: host.theme.spacing3
+                // Keep Controls content comfortably separated from global
+                // navigation, including when the tray is the last row.
+                bottomMargin: host.theme.spacing3 + (host.expansionState.currentName === "system" && !host.detailVisible ? host.theme.spacing4 : 0)
             }
             clip: true
             // Retain the last two views while the hub is open, so returning to

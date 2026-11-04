@@ -60,9 +60,9 @@ ShellRoot {
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
-        musicReactiveFlow: motion.enabled ? reactive.flowPhase : 0
-        musicReactiveMovement: motion.enabled ? reactive.motionAmount : 0
-        musicReactiveKick: motion.enabled ? reactive.kick : 0
+        musicReactiveFlow: reactive.flowPhase
+        musicReactiveMovement: reactive.motionAmount
+        musicReactiveKick: reactive.kick
     }
 
     Motion {
@@ -1437,6 +1437,16 @@ ShellRoot {
 
         function musicReactiveBeatLevel(): real {
             return reactive.beatPulse;
+        }
+
+        // Expose the actual rendered motion values so spectrum diagnostics
+        // can distinguish a silent source from disabled visual movement.
+        function musicReactiveFlowPhase(): real {
+            return theme.musicReactiveFlow;
+        }
+
+        function musicReactiveMovementLevel(): real {
+            return theme.musicReactiveMovement;
         }
 
         function wallpaperSpectrumOn(): bool {
