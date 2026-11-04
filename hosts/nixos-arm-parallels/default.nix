@@ -26,10 +26,6 @@
     (moduleRegistry.profiles { inherit lib; }).desktop.arm
   ];
 
-  dotfiles = {
-    defaults.terminal = "alacritty";
-  };
-
   hardware = import ./hardware.nix;
 
   users.users.${config.dotfiles.users.primary.name}.openssh.authorizedKeys.keys = [
