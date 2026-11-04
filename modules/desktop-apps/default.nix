@@ -127,44 +127,38 @@ in
   contour = _: {
     home =
       { config, ... }:
-      lib.mkMerge [
-        {
-          programs.contour = {
-            enable = true;
-            settings = {
-              gui_config_locked = true;
-              default_profile = "main";
-              tab_bar_visibility = "Never";
-              renderer.backend = "auto";
+      {
+        programs.contour = {
+          enable = true;
+          settings = {
+            gui_config_locked = true;
+            default_profile = "main";
+            tab_bar_visibility = "Never";
+            renderer.backend = "auto";
 
-              profiles.main = {
-                initial_working_directory = config.home.homeDirectory;
-                show_title_bar = false;
-                wm_class = "contour";
-                cursor = {
-                  shape = "block";
-                  blinking = false;
-                };
-                normal_mode.cursor.shape = "block";
-                visual_mode.cursor.shape = "block";
-                cursor_motion_animation_duration = 75;
-                screen_transition = "fade";
-                screen_transition_duration = 150;
-                smooth_scrolling = true;
-                momentum_scrolling = true;
-                status_line.display = "none";
-                scrollbar.position = "Hidden";
-              };
-            };
-          };
-        }
-        (lib.mkIf isDarwin {
-          programs.contour.settings = {
             profiles.main = {
+              initial_working_directory = config.home.homeDirectory;
+              show_title_bar = false;
+              wm_class = "contour";
+              cursor = {
+                shape = "block";
+                blinking = false;
+              };
+              normal_mode.cursor.shape = "block";
+              visual_mode.cursor.shape = "block";
+              cursor_motion_animation_duration = 75;
+              screen_transition = "fade";
+              screen_transition_duration = 150;
+              smooth_scrolling = true;
+              momentum_scrolling = true;
+              status_line.display = "none";
+              scrollbar.position = "Hidden";
+            }
+            // lib.optionalAttrs isDarwin {
               shell = lib.getExe pkgs.zsh;
               arguments = [ "-l" ];
             };
-            input_mapping = [
+            input_mapping = lib.optionals isDarwin [
               {
                 mods = [ "Super" ];
                 key = "A";
@@ -224,11 +218,12 @@ in
               }
             ];
           };
-
-          home.sessionPath = [ "${pkgs.ncurses}/bin" ];
-          home.sessionVariables.TERMINFO_DIRS = "${pkgs.contour.terminfo}/share/terminfo:${config.home.profileDirectory}/share/terminfo:/usr/share/terminfo";
-        })
-      ];
+        };
+      }
+      // lib.optionalAttrs isDarwin {
+        home.sessionPath = [ "${pkgs.ncurses}/bin" ];
+        home.sessionVariables.TERMINFO_DIRS = "${pkgs.contour.terminfo}/share/terminfo:${config.home.profileDirectory}/share/terminfo:/usr/share/terminfo";
+      };
   };
 
   alacritty = _: {
