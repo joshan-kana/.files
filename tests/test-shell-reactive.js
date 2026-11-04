@@ -8,6 +8,30 @@ const qml = (file) =>
     "utf8",
   );
 
+test("native squircle fill retains outlines while reusing premultiplied scene-graph geometry", () => {
+  const surface = qml("SquircleSurface.qml");
+  const renderer = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+
+  assert.match(surface, /import LinuxDesktop\.Visuals 1\.0/);
+  assert.match(surface, /SquircleFillItem\s*\{/);
+  assert.match(surface, /lightStrength: root\.lightStrength/);
+  assert.match(surface, /PathSvg\s*\{\s*path: root\.borderPathData/);
+  assert.match(surface, /path: root\.fillPathData/);
+  assert.doesNotMatch(surface, /fillGradient: RadialGradient/);
+
+  assert.match(renderer, /class SquircleFillItem : public QQuickItem/);
+  assert.match(renderer, /QSGGeometryNode/);
+  assert.match(renderer, /geometry->vertexCount\(\) != triangles \* 3/);
+  assert.match(renderer, /qPremultiply\(color\.rgba\(\)\)/);
+  assert.match(renderer, /baseAlpha <= 0\.00001f && lightAlpha <= 0\.00001f/);
+});
+
 test("compact bar islands receive reactive styling without independent connected borders", () => {
   const surface = qml("ShellSurface.qml");
   assert.match(surface, /property bool reactiveSurface: false/);
@@ -137,6 +161,17 @@ test("surface curves remain cubic, and only ordinary hover may use a radial ligh
   const surface = qml("ShellSurface.qml");
   assert.match(curve, /function buildCorner\([\s\S]*?return " C " \+/);
   assert.doesNotMatch(curve, /cornerSamples/);
-  assert.match(curve, /centerRadius: .*root\.lightSpread/);
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+  assert.match(native, /const QPointF lightCenter\(w \* 0\.15, h \* -0\.16\)/);
+  assert.match(
+    native,
+    /std::max\(w \* 0\.9f, h \* 2\.0f\) \* float\(lightSpread_\)/,
+  );
   assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive/);
 });

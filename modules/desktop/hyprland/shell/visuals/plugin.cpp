@@ -238,7 +238,221 @@ private:
   QMetaObject::Connection frameConnection_;
   std::atomic<bool> animating_{false};
 };
+
+// Scene-graph-owned squircle fill. Stable vertex storage replaces multiple
+// dynamically tessellated ShapePaths during a morph while retaining the SVG
+// contour's cubic approximation and the existing radial light treatment.
+class SquircleFillItem : public QQuickItem {
+  Q_OBJECT
+  QML_NAMED_ELEMENT(SquircleFillItem)
+  Q_PROPERTY(QColor fillColor MEMBER fillColor_ NOTIFY fillColorChanged)
+  Q_PROPERTY(double fillOpacity MEMBER fillOpacity_ NOTIFY fillOpacityChanged)
+  Q_PROPERTY(QColor lightColor MEMBER lightColor_ NOTIFY lightColorChanged)
+  Q_PROPERTY(
+      double lightStrength MEMBER lightStrength_ NOTIFY lightStrengthChanged)
+  Q_PROPERTY(double lightSpread MEMBER lightSpread_ NOTIFY lightSpreadChanged)
+  Q_PROPERTY(
+      double cornerRadius MEMBER cornerRadius_ NOTIFY cornerRadiusChanged)
+  Q_PROPERTY(double exponent MEMBER exponent_ NOTIFY exponentChanged)
+
+public:
+  explicit SquircleFillItem(QQuickItem *parent = nullptr) : QQuickItem(parent) {
+    setFlag(ItemHasContents, true);
+    connect(this, &SquircleFillItem::fillColorChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::fillOpacityChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::lightColorChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::lightStrengthChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::lightSpreadChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::cornerRadiusChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::exponentChanged, this,
+            &QQuickItem::update);
+  }
+
+signals:
+  void fillColorChanged();
+  void fillOpacityChanged();
+  void lightColorChanged();
+  void lightStrengthChanged();
+  void lightSpreadChanged();
+  void cornerRadiusChanged();
+  void exponentChanged();
+
+protected:
+  QSGNode *updatePaintNode(QSGNode *old, UpdatePaintNodeData *) override {
+    constexpr int kCurveSteps = 12;
+    const float w = float(width()), h = float(height());
+    const float r =
+        std::min({std::max(0.0f, float(cornerRadius_)), w / 2, h / 2});
+    const float baseAlpha =
+        float(fillColor_.alphaF() * std::clamp(fillOpacity_, 0.0, 1.0));
+    const float lightAlpha =
+        float(lightColor_.alphaF() * std::clamp(lightStrength_, 0.0, 1.0));
+    if (w <= 0 || h <= 0 || r <= 0 ||
+        (baseAlpha <= 0.00001f && lightAlpha <= 0.00001f)) {
+      delete old;
+      return nullptr;
+    }
+
+    const float power = std::clamp(float(exponent_), 2.0f, 12.0f);
+    constexpr float pi = 3.14159265358979323846f;
+    const float handle = r * (std::pow(2.0f, -1.0f / power) - 0.5f) / 0.375f;
+    auto cornerPoint = [power, r](float cx, float cy, float angle) {
+      const float c = std::cos(angle), s = std::sin(angle);
+      return QPointF(
+          cx + r * std::copysign(std::pow(std::abs(c), 2 / power), c),
+          cy + r * std::copysign(std::pow(std::abs(s), 2 / power), s));
+    };
+    std::vector<QPointF> contour;
+    contour.reserve(4 * (kCurveSteps + 1));
+    const std::array<std::array<float, 4>, 4> corners = {{
+        {w - r, r, -pi / 2, 0},
+        {w - r, h - r, 0, pi / 2},
+        {r, h - r, pi / 2, pi},
+        {r, r, pi, pi * 1.5f},
+    }};
+    for (const auto &corner : corners) {
+      const float cx = corner[0], cy = corner[1];
+      const float start = corner[2], end = corner[3];
+      const QPointF first = cornerPoint(cx, cy, start);
+      const QPointF last = cornerPoint(cx, cy, end);
+      const QPointF a(first.x() - handle * std::sin(start),
+                      first.y() + handle * std::cos(start));
+      const QPointF b(last.x() + handle * std::sin(end),
+                      last.y() - handle * std::cos(end));
+      contour.push_back(first);
+      for (int j = 1; j <= kCurveSteps; ++j) {
+        const float t = float(j) / kCurveSteps;
+        const float u = 1 - t;
+        contour.push_back(first * (u * u * u) + a * (3 * u * u * t) +
+                          b * (3 * u * t * t) + last * (t * t * t));
+      }
+    }
+
+    auto *node = static_cast<QSGGeometryNode *>(old);
+    if (!node) {
+      node = new QSGGeometryNode;
+      auto *geometry =
+          new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), 0);
+      geometry->setDrawingMode(QSGGeometry::DrawTriangles);
+      node->setGeometry(geometry);
+      node->setFlag(QSGNode::OwnsGeometry);
+      node->setMaterial(new QSGVertexColorMaterial);
+      node->setFlag(QSGNode::OwnsMaterial);
+    }
+
+    const int steps = lightStrength_ > 0.0001 ? 8 : 1;
+    const int segments = int(contour.size());
+    const int triangles = segments * (1 + (steps - 1) * 2 + 2);
+    auto *geometry = node->geometry();
+    if (geometry->vertexCount() != triangles * 3)
+      geometry->allocate(triangles * 3);
+    auto *vertices = geometry->vertexDataAsColoredPoint2D();
+    int position = 0;
+    const QPointF center(w * 0.5, h * 0.5);
+    const float radius =
+        std::max(0.001f, std::max(w * 0.9f, h * 2.0f) * float(lightSpread_));
+    const QPointF lightCenter(w * 0.15, h * -0.16);
+    auto colorAt = [&](const QPointF &point) {
+      const double distance =
+          std::hypot(point.x() - lightCenter.x(), point.y() - lightCenter.y());
+      const double t = std::clamp(distance / radius, 0.0, 1.0);
+      const double intensity =
+          t < 0.44 ? 1 - 0.72 * t / 0.44 : 0.28 * (1 - (t - 0.44) / 0.56);
+      const double lightAlpha =
+          lightColor_.alphaF() * lightStrength_ * intensity;
+      const double baseWeight = baseAlpha * (1 - lightAlpha);
+      const double alpha = lightAlpha + baseWeight;
+      if (alpha < 0.00001)
+        return QColor(Qt::transparent);
+      QColor color;
+      color.setRgbF(
+          (lightColor_.redF() * lightAlpha + fillColor_.redF() * baseWeight) /
+              alpha,
+          (lightColor_.greenF() * lightAlpha +
+           fillColor_.greenF() * baseWeight) /
+              alpha,
+          (lightColor_.blueF() * lightAlpha + fillColor_.blueF() * baseWeight) /
+              alpha,
+          alpha);
+      return color;
+    };
+    auto add = [&](const QPointF &point, const QColor &color) {
+      // Scene-graph vertex colours use premultiplied alpha; sending straight
+      // RGB would brighten translucent surfaces over their background.
+      const QRgb rgba = qPremultiply(color.rgba());
+      vertices[position++].set(float(point.x()), float(point.y()), qRed(rgba),
+                               qGreen(rgba), qBlue(rgba), qAlpha(rgba));
+    };
+    auto triangle = [&](const QPointF &a, const QPointF &b, const QPointF &c,
+                        const QColor &ca, const QColor &cb, const QColor &cc) {
+      add(a, ca);
+      add(b, cb);
+      add(c, cc);
+    };
+
+    std::vector<QPointF> inner;
+    std::vector<QPointF> outer;
+    inner.reserve(contour.size());
+    outer.reserve(contour.size());
+    for (int i = 0; i < segments; ++i) {
+      const QPointF before = contour[(i + segments - 1) % segments];
+      const QPointF after = contour[(i + 1) % segments];
+      const QPointF tangent = after - before;
+      const double length =
+          std::max(0.00001, std::hypot(tangent.x(), tangent.y()));
+      const QPointF normal(tangent.y() / length, -tangent.x() / length);
+      inner.push_back(contour[i] - normal * 0.5);
+      outer.push_back(contour[i] + normal * 0.5);
+    }
+
+    const QColor middleColor = colorAt(center);
+    for (int i = 0; i < segments; ++i) {
+      const int next = (i + 1) % segments;
+      const QPointF edge0 = inner[i], edge1 = inner[next];
+      for (int radial = 0; radial < steps; ++radial) {
+        const float t0 = float(radial) / steps;
+        const float t1 = float(radial + 1) / steps;
+        const QPointF a = center + (edge0 - center) * t0;
+        const QPointF b = center + (edge1 - center) * t0;
+        const QPointF c = center + (edge0 - center) * t1;
+        const QPointF d = center + (edge1 - center) * t1;
+        const QColor ca = radial == 0 ? middleColor : colorAt(a);
+        const QColor cb = radial == 0 ? middleColor : colorAt(b);
+        const QColor cc = colorAt(c);
+        const QColor cd = colorAt(d);
+        if (radial == 0)
+          triangle(a, c, d, ca, cc, cd);
+        else {
+          triangle(a, c, b, ca, cc, cb);
+          triangle(b, c, d, cb, cc, cd);
+        }
+      }
+      const QColor inside0 = colorAt(edge0), inside1 = colorAt(edge1);
+      QColor outside0 = inside0, outside1 = inside1;
+      outside0.setAlpha(0);
+      outside1.setAlpha(0);
+      triangle(edge0, outer[i], edge1, inside0, outside0, inside1);
+      triangle(edge1, outer[i], outer[next], inside1, outside0, outside1);
+    }
+    node->markDirty(QSGNode::DirtyGeometry);
+    return node;
+  }
+
+private:
+  QColor fillColor_{Qt::transparent}, lightColor_{Qt::transparent};
+  double fillOpacity_ = 1;
+  double lightStrength_ = 0, lightSpread_ = 1;
+  double cornerRadius_ = 28, exponent_ = 4.5;
+};
+
 void VisualsPlugin::registerTypes(const char *uri) {
   qmlRegisterType<SpectrumBarsItem>(uri, 1, 0, "SpectrumBarsItem");
+  qmlRegisterType<SquircleFillItem>(uri, 1, 0, "SquircleFillItem");
 }
 #include "plugin.moc"
