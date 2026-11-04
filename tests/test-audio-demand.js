@@ -14,6 +14,7 @@ test("reactive styling is driven by observed shell surfaces, not a saved toggle 
     /readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && \(/,
   );
   for (const surface of [
+    "desktopFrame.glassExposed",
     "ambientBar.shown",
     "expansionState.hasCurrent",
     "expansionHost.closing",
@@ -31,19 +32,16 @@ test("reactive styling is driven by observed shell surfaces, not a saved toggle 
   }
   assert.match(
     shell,
-    /musicReactiveEnabled: root\.musicReactiveSurfaceVisible && motion\.enabled/,
+    /musicReactiveEnabled: root\.musicReactiveSurfaceVisible/,
   );
-  assert.match(
-    shell,
-    /enabled: root\.musicReactiveSurfaceVisible && motion\.enabled/,
-  );
+  assert.match(shell, /enabled: root\.musicReactiveSurfaceVisible/);
 });
 
 test("FFT remains active for visible media and wallpaper even when reactive styling is sleeping", () => {
   assert.match(shell, /active: \(media\.playing && ambientBar\.shown\)/);
   assert.match(
     shell,
-    /\|\| root\.wallpaperSpectrumEnabled \|\| \(motion\.enabled && root\.musicReactiveSurfaceVisible\)/,
+    /\|\| root\.wallpaperSpectrumEnabled \|\| root\.musicReactiveSurfaceVisible/,
   );
   assert.match(
     shell,

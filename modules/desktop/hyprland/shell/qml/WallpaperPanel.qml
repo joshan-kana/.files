@@ -30,7 +30,6 @@ Item {
     property bool resetPending: false
 
     readonly property var filteredEntries: entries.filter(path => path.toLowerCase().includes(searchText.toLowerCase()))
-    property string selectedOutput: ""
     property string currentRequestOutput: ""
     property bool currentRefreshPending: false
     readonly property string hostOutput: {
@@ -45,10 +44,20 @@ Item {
         }
         return choices;
     }
-    readonly property string outputName: outputChoices.includes(selectedOutput) ? selectedOutput : outputChoices.includes(hostOutput) ? hostOutput : "all"
-    readonly property string outputLabel: outputName === "all" ? "All displays" : outputName
+    // An unset preference preserves the first-use behavior (this monitor).
+    // Once chosen, the saved target owns the setting across panel reloads
+    // and Quickshell restarts. A disconnected monitor stays selected instead
+    // of silently redirecting wallpaper application to another output.
+    readonly property string outputName: appearance.wallpaperTargetOutput.length > 0 ? appearance.wallpaperTargetOutput : hostOutput
+    readonly property bool outputAvailable: outputName === "all" || outputChoices.includes(outputName)
+    readonly property string outputLabel: outputName === "all" ? "All displays" : outputName + (outputAvailable ? "" : " (disconnected)")
     onOutputNameChanged: {
-        if (open && !busy)
+        currentPath = "";
+        if (open && !busy && outputAvailable)
+            refreshCurrent();
+    }
+    onOutputAvailableChanged: {
+        if (open && !busy && outputAvailable)
             refreshCurrent();
     }
     readonly property bool busy: applyProcess.running || resetProcess.running || transitionPending
@@ -147,14 +156,15 @@ Item {
     }
 
     function openView(): void {
-        selectedOutput = hostOutput;
         open = true;
+        if (!outputAvailable)
+            statusText = "Selected monitor is disconnected · choose another target (M)";
     }
     function cycleOutput(): void {
         if (!open || busy || outputChoices.length < 2)
             return;
         const index = outputChoices.indexOf(outputName);
-        selectedOutput = outputChoices[(index + 1) % outputChoices.length];
+        appearance.setWallpaperTargetOutput(outputChoices[(index + 1) % outputChoices.length]);
         currentPath = "";
         statusText = "TARGET · " + outputLabel.toUpperCase();
         keyboardRequested();
@@ -174,7 +184,7 @@ Item {
     }
 
     function refreshCurrent(): void {
-        if (runtime.wallpaperLibrary.length === 0 || !open)
+        if (runtime.wallpaperLibrary.length === 0 || !open || !outputAvailable)
             return;
         if (currentProcess.running) {
             currentRefreshPending = true;
@@ -213,7 +223,7 @@ Item {
         appearance.toggleWallpaperResizeMode();
     }
     function applySelected(): void {
-        if (busy || !selectedPath() || runtime.wallpaperLibrary.length === 0)
+        if (busy || !outputAvailable || !selectedPath() || runtime.wallpaperLibrary.length === 0)
             return;
         transitionPending = true;
         applyingPath = selectedPath();
@@ -222,7 +232,7 @@ Item {
     }
 
     function resetWallpaper(): void {
-        if (runtime.wallpaperLibrary.length === 0 || resetProcess.running)
+        if (runtime.wallpaperLibrary.length === 0 || !outputAvailable || resetProcess.running)
             return;
         if (applyProcess.running) {
             resetPending = true;
@@ -309,7 +319,7 @@ Item {
                 icon: panel.outputName === "all" ? "󰍺" : "󰍹"
                 title: panel.outputLabel
                 shortcut: "M"
-                enabled: !panel.busy && panel.outputChoices.length > 1
+                enabled: !panel.busy && (panel.outputChoices.length > 1 || !panel.outputAvailable)
                 onActivated: panel.cycleOutput()
             }
 
