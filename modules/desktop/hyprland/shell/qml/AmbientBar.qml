@@ -124,15 +124,47 @@ Variants {
             bars.setOrigin(modelData, "calendar", bar.screenOffset + barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
             bars.setOrigin(modelData, "activity", bar.screenOffset + barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
             const surfaces = [workspaceIsland, mediaIsland, clockIsland, notificationIsland, recordingIsland, systemIsland];
-            bars.setFrameIslands(modelData, surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2).map(item => ({
-                        x: bar.screenOffset + barContent.x + item.x,
-                        y: barContent.y + item.y,
-                        width: item.width,
+            const islands = [];
+            for (const item of surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2)) {
+                const x = bar.screenOffset + barContent.x + item.x;
+                const y = barContent.y + item.y;
+                if (item === mediaIsland) {
+                    // Adjacent equal-depth sections preserve one frame notch,
+                    // while the hover/press contour is divided at the real
+                    // main/playback hit boundary.
+                    const mainWidth = item.width - item.playbackWidth;
+                    islands.push({
+                        x,
+                        y,
+                        width: mainWidth,
                         height: item.height,
-                        hovered: item === workspaceIsland || item === mediaIsland ? false : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? systemIsland.frameHover : false,
-                        pressed: item === workspaceIsland || item === mediaIsland ? false : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? systemIsland.framePressed : false,
+                        hovered: item.mainHover,
+                        pressed: item.mainPressed,
+                        interactionGroup: "media",
                         visible: true
-                    })));
+                    }, {
+                        x: x + mainWidth,
+                        y,
+                        width: item.playbackWidth,
+                        height: item.height,
+                        hovered: item.playbackHover,
+                        pressed: item.playbackPressed,
+                        interactionGroup: "media",
+                        visible: true
+                    });
+                    continue;
+                }
+                islands.push({
+                    x,
+                    y,
+                    width: item.width,
+                    height: item.height,
+                    hovered: item === workspaceIsland ? false : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? item.frameHover : false,
+                    pressed: item === workspaceIsland ? false : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? item.framePressed : false,
+                    visible: true
+                });
+            }
+            bars.setFrameIslands(modelData, islands);
         }
 
         Component.onCompleted: Qt.callLater(publishOrigins)
@@ -360,6 +392,10 @@ Variants {
                 id: mediaIsland
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onHeightChanged: Qt.callLater(bar.publishOrigins)
+                onMainHoverChanged: bar.publishOrigins()
+                onPlaybackHoverChanged: bar.publishOrigins()
+                onMainPressedChanged: bar.publishOrigins()
+                onPlaybackPressedChanged: bar.publishOrigins()
                 onVisibleChanged: Qt.callLater(bar.publishOrigins)
 
                 maximumWidth: Math.max(0, clockIsland.x - bars.theme.spacing3 - x)
