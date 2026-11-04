@@ -1019,6 +1019,7 @@ in
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          export QML_IMPORT_PATH="${pkgs.linux-desktop-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
           exec qs --path "${productionShellPath}" "$@"
         '';
       };
@@ -1028,6 +1029,7 @@ in
         runtimeInputs = [ pkgs.quickshell ];
         text = ''
           export LINUX_DESKTOP_RUNTIME="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
+          export QML_IMPORT_PATH="${pkgs.linux-desktop-visuals}/lib/qt-6/qml''${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
           exec qs --path ${lib.escapeShellArg developmentShellPath} "$@"
         '';
       };

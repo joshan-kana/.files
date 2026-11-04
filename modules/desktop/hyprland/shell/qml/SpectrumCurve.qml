@@ -10,6 +10,25 @@ Item {
     required property SpectrumScale frequencyScale
     readonly property color curveColor: theme.spectrumColor(0.68)
 
+    // Keep the shared QML interpolation active only while an actual curve
+    // is visible. Hidden prewarmed media pages do not drive display frames.
+    readonly property bool needsInterpolation: enabled && visible && opacity > 0 && width > 0 && height > 0
+    property bool interpolationRegistered: false
+
+    function syncInterpolation(): void {
+        if (!spectrum || needsInterpolation === interpolationRegistered)
+            return;
+        spectrum.curveSubscribers += needsInterpolation ? 1 : -1;
+        interpolationRegistered = needsInterpolation;
+    }
+
+    onNeedsInterpolationChanged: syncInterpolation()
+    Component.onCompleted: syncInterpolation()
+    Component.onDestruction: {
+        if (interpolationRegistered && spectrum)
+            spectrum.curveSubscribers--;
+    }
+
     readonly property var geometry: {
         // Inactive prewarmed media views should not rebuild SVG paths while
         // another panel owns the screen. The live view retains full fidelity.
