@@ -16,6 +16,12 @@ Item {
 
     property color fillColor: "transparent"
     property real fillOpacity: 1
+    // The native fill interpolates the same three spectrum stops at each
+    // vertex. At zero strength this is exactly the original solid fill.
+    property real reactiveGradientStrength: 0
+    property color reactiveGradientLow: "transparent"
+    property color reactiveGradientMid: "transparent"
+    property color reactiveGradientHigh: "transparent"
     property color borderColor: "transparent"
     property real borderWidth: 0
     property real cornerRadius: 28
@@ -136,6 +142,10 @@ Item {
         anchors.fill: parent
         fillColor: root.fillColor
         fillOpacity: root.fillOpacity
+        gradientStrength: root.reactiveGradientStrength
+        gradientLowColor: root.reactiveGradientLow
+        gradientMidColor: root.reactiveGradientMid
+        gradientHighColor: root.reactiveGradientHigh
         cornerRadius: root.cornerRadius
         exponent: root.exponent
         lightColor: root.lightColor

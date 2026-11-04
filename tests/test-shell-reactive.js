@@ -64,62 +64,101 @@ test("compact bar islands receive reactive styling without independent connected
   }
 });
 
-test("one acoustic wash paints connected frame, hub and independent islands", () => {
+test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette", () => {
   const theme = qml("Theme.qml");
-  assert.match(
-    theme,
-    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.13,/,
-  );
-  assert.match(
-    theme,
-    /musicReactiveBackground: musicReactiveWash > 0 \? blend\(background, musicReactiveHue, musicReactiveWash\) : background/,
-  );
   const frame = qml("DesktopFrame.qml");
-  assert.match(
-    frame,
-    /fillColor: Qt\.rgba\(frame\.theme\.musicReactiveBackground\.r,/,
+  const surface = qml("ShellSurface.qml");
+  const squircle = qml("SquircleSurface.qml");
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
   );
+  assert.match(theme, /const stops = \[critical, accent, accentTertiary\]/);
+  assert.match(
+    theme,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.42,/,
+  );
+  assert.match(
+    theme,
+    /return musicReactiveWash > 0 \? blend\(base, spectrumColor\(position\), musicReactiveWash\) : base/,
+  );
+  assert.match(theme, /reactiveFrameColor\(position: real\)/);
+  assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
+  assert.doesNotMatch(theme, /musicReactiveHue|musicReactiveBackground/);
+  assert.match(frame, /fillGradient: LinearGradient \{/);
+  assert.match(frame, /x2: drawing\.width/);
+  assert.match(frame, /gradientInset: Math\.max\(0\.005,/);
+  assert.match(frame, /position: output\.gradientInset/);
+  assert.match(frame, /position: 1 - output\.gradientInset/);
+  for (const point of ["0", "0.5", "1"])
+    assert.ok(frame.includes("reactiveFrameColor(" + point + ")"));
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
-  assert.match(frame, /reactiveTint: theme\.musicReactiveWash > 0/);
   assert.match(
-    frame,
-    /reactiveBorder: Qt\.rgba\(reactiveTint\.r, reactiveTint\.g, reactiveTint\.b, theme\.shellGlassEnabled \? theme\.glassContourBorder\.a : theme\.subtleBorder\.a\)/,
+    surface,
+    /reactiveGradientStrength: musicActive \? theme\.musicReactiveWash : 0/,
+  );
+  for (const [property, point] of [
+    ["Low", "0"],
+    ["Mid", "0.5"],
+    ["High", "1"],
+  ])
+    assert.ok(
+      surface.includes(
+        "reactiveGradient" + property + ": theme.spectrumColor(" + point + ")",
+      ),
+    );
+  assert.match(squircle, /gradientStrength: root\.reactiveGradientStrength/);
+  assert.match(
+    native,
+    /double gradientStrength MEMBER gradientStrength_ NOTIFY gradientChanged/,
   );
   assert.match(
-    qml("ShellExpansionHost.qml"),
-    /fillColor: host\.theme\.musicReactiveBackground/,
+    native,
+    /const float position = std::clamp\(float\(point\.x\(\)\) \/ w, 0\.0f, 1\.0f\)/,
   );
-  for (const file of ["NowPlayingIsland.qml", "SystemIsland.qml"]) {
-    assert.match(qml(file), /fillColor: theme\.musicReactiveBackground/);
-  }
-  // The four other bar islands supply their own background, so all must
-  // consume the shared wash instead of falling back to the static
-  // theme background. Shared frame mode owns the outline, not the fill.
-  const bar = qml("AmbientBar.qml");
-  const fills = bar.match(/fillColor: theme\.musicReactiveBackground/g) || [];
-  assert.equal(fills.length, 4);
-  assert.doesNotMatch(
-    bar,
-    /fillColor: bars\.frameVisible \? "transparent" : theme\.background/,
-  );
+  assert.match(native, /qPremultiply\(color\.rgba\(\)\)/);
+  for (const file of [
+    "NowPlayingIsland.qml",
+    "SystemIsland.qml",
+    "ShellExpansionHost.qml",
+    "AmbientBar.qml",
+  ])
+    assert.doesNotMatch(qml(file), /musicReactiveBackground/);
 });
 
-test("silent reactive surfaces are the original unraised connected silhouettes", () => {
-  const source = qml("ShellSurface.qml");
-  assert.match(source, /return musicActive && theme\.musicReactiveWash > 0/);
-  assert.match(source, /lightColor: luminousColor/);
-  assert.match(source, /lightStrength: luminous \?/);
-  assert.doesNotMatch(source, /musicGlow|lightSpread: musicActive|musicLight/);
+test("silent reactive surfaces retain the original fill, glass and outline", () => {
+  const surface = qml("ShellSurface.qml");
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
   assert.match(
-    source,
+    surface,
+    /reactiveGradientStrength: musicActive \? theme\.musicReactiveWash : 0/,
+  );
+  assert.match(surface, /return base;/);
+  assert.match(surface, /lightColor: luminousColor/);
+  assert.match(surface, /lightStrength: luminous \?/);
+  assert.match(
+    surface,
     /borderWidth: frameConnected \? 0 : luminous \|\| outlined \? theme\.borderThin : 0/,
   );
-  assert.match(source, /borderColor: frameConnected \? "transparent"/);
+  assert.match(surface, /borderColor: frameConnected \? "transparent"/);
+  assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive|musicLight/);
   assert.doesNotMatch(
-    source,
+    surface,
     /borderWidth:.*musicActive|borderColor:.*musicActive/,
   );
+  assert.match(native, /if \(gradientStrength > 0\.00001f\)/);
+  assert.match(native, /baseRed \+=/);
+  assert.match(native, /gradientStrength_ = 0/);
 });
 
 test("reactive audio uses continuous event-driven values instead of quantized brightness bands", () => {

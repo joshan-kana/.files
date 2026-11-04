@@ -40,9 +40,15 @@ SquircleSurface {
         }
     }
 
-    // All panels consume one shared audio colour. Connected islands remain
-    // transparent so their common silhouette is drawn by DesktopFrame.
+    // Every reactive pane and detached island consumes the spectrum's
+    // three-stop ramp. Connected islands stay transparent: DesktopFrame
+    // owns their shared screen-wide gradient and silhouette.
     readonly property bool musicActive: theme.musicReactiveEnabled && motion.enabled && (reactiveSurface || (surfaceLayer === ShellSurface.Pane && (elevated || width >= 300)) || (surfaceLayer === ShellSurface.Group && width >= 480))
+
+    reactiveGradientStrength: musicActive ? theme.musicReactiveWash : 0
+    reactiveGradientLow: theme.spectrumColor(0)
+    reactiveGradientMid: theme.spectrumColor(0.5)
+    reactiveGradientHigh: theme.spectrumColor(1)
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
@@ -79,7 +85,7 @@ SquircleSurface {
                 base = theme.layer1;
                 break;
             }
-        return musicActive && theme.musicReactiveWash > 0 ? theme.blend(base, theme.musicReactiveHue, theme.musicReactiveWash) : base;
+        return base;
     }
     borderColor: frameConnected ? "transparent" : luminous ? Qt.rgba(theme.textStrong.r, theme.textStrong.g, theme.textStrong.b, hovered ? 0.16 : 0.075) : (outlined ? theme.subtleBorder : "transparent")
     // Audio only modulates the fill and soft light. Borders keep their

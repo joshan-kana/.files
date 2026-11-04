@@ -38,10 +38,9 @@ Variants {
     property var busyScreen: null
     readonly property real thickness: theme.frameThickness
     readonly property real rounding: theme.frameRounding
-    // The one-pixel contour needs contrast against translucent wallpaper glass.
-    // Music affects only its hue; the alpha follows the underlying material.
-    readonly property color reactiveTint: theme.musicReactiveWash > 0 ? theme.blend(theme.subtleBorder, theme.musicReactiveHue, theme.musicReactiveWash * 0.75) : theme.subtleBorder
-    readonly property color reactiveBorder: Qt.rgba(reactiveTint.r, reactiveTint.g, reactiveTint.b, theme.shellGlassEnabled ? theme.glassContourBorder.a : theme.subtleBorder.a)
+    // Keep the one-pixel frame outline readable against wallpaper glass.
+    // Audio colours belong in the continuous surface fill, not the stroke.
+    readonly property color reactiveBorder: Qt.rgba(theme.subtleBorder.r, theme.subtleBorder.g, theme.subtleBorder.b, theme.shellGlassEnabled ? theme.glassContourBorder.a : theme.subtleBorder.a)
     property real progress: 0
 
     NumberAnimation on progress {
@@ -61,6 +60,10 @@ Variants {
         readonly property var monitor: Hyprland.monitorFor(modelData)
         readonly property bool fullscreen: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
         readonly property bool exposed: frame.enabled && !fullscreen
+        // Concentrate the spectrum ramp around the central hub width. The
+        // frame remains one continuous fill while connected and detached
+        // hubs present the same left-to-right colour sequence.
+        readonly property real gradientInset: Math.max(0.005, Math.min(0.45, (modelData.width - frame.theme.controlsDetailWidth) / (2 * Math.max(1, modelData.width))))
         readonly property bool busyHere: frame.busy && (!frame.busyScreen || frame.busyScreen === modelData)
         SquircleGeometry {
             id: squircleGeometry
@@ -135,8 +138,33 @@ Variants {
                     fillRule: Qt.OddEvenFill
                     // Keep content opaque, but let the compositor sample the
                     // wallpaper through the shared frame's actual silhouette.
-                    fillColor: Qt.rgba(frame.theme.musicReactiveBackground.r, frame.theme.musicReactiveBackground.g, frame.theme.musicReactiveBackground.b, frame.theme.shellGlassEnabled ? frame.theme.glassOpacity : 1)
                     strokeWidth: -1
+                    fillGradient: LinearGradient {
+                        x1: 0
+                        y1: 0
+                        x2: drawing.width
+                        y2: 0
+                        GradientStop {
+                            position: 0
+                            color: frame.theme.reactiveFrameColor(0)
+                        }
+                        GradientStop {
+                            position: output.gradientInset
+                            color: frame.theme.reactiveFrameColor(0)
+                        }
+                        GradientStop {
+                            position: 0.5
+                            color: frame.theme.reactiveFrameColor(0.5)
+                        }
+                        GradientStop {
+                            position: 1 - output.gradientInset
+                            color: frame.theme.reactiveFrameColor(1)
+                        }
+                        GradientStop {
+                            position: 1
+                            color: frame.theme.reactiveFrameColor(1)
+                        }
+                    }
                     PathSvg {
                         path: output.geometry.fill || "M 0 0 L 0.01 0 L 0 0.01 Z"
                     }
