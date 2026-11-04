@@ -60,7 +60,7 @@ Variants {
         readonly property var monitor: Hyprland.monitorFor(modelData)
         readonly property bool fullscreen: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
         readonly property bool exposed: frame.enabled && !fullscreen
-        readonly property bool reactiveActive: frame.theme.musicReactiveEnabled && frame.theme.musicReactiveWash > 0.02
+        readonly property bool reactiveActive: frame.theme.musicReactiveEnabled
         readonly property bool busyHere: frame.busy && (!frame.busyScreen || frame.busyScreen === modelData)
         SquircleGeometry {
             id: squircleGeometry

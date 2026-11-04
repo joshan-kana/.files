@@ -61,6 +61,7 @@ ShellRoot {
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
         musicReactiveBands: reactive.spectrumLevels
+        musicReactiveImpulses: reactive.impulseLevels
         musicReactiveMovement: reactive.motionAmount
         musicReactiveKick: reactive.kick
     }

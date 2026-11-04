@@ -1,8 +1,8 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 
-// A QuickSettingChip-sized toggle with separate bounded adjustment actions.
-// The tile toggles everywhere except its two adjustment buttons.
+// Shared Controls tile: toggle on the header, adjust by dragging the native
+// slider or via the same selected-slider keyboard workflow as transparency.
 ShellSurface {
     id: setting
     required property RuntimeConfig runtime
@@ -10,16 +10,17 @@ ShellSurface {
     required property string valueText
     property string icon: ""
     property string toggleShortcut: ""
-    property string decrementShortcut: ""
-    property string incrementShortcut: ""
     property bool active: false
     property bool canToggle: true
-    property bool canDecrease: true
-    property bool canIncrease: true
+    property bool canAdjust: true
+    property bool keyboardSelected: false
+    property real from: 2500
+    property real to: 6500
+    property real value: from
     property color roleAccent: theme.accent
     signal toggleRequested
-    signal decreaseRequested
-    signal increaseRequested
+    signal valueRequested(real value)
+    signal sliderActivated
 
     height: 78
     Accessible.role: Accessible.Button
@@ -34,10 +35,10 @@ ShellSurface {
 
     surfaceLayer: ShellSurface.Control
     cornerRadius: active ? theme.radiusLarge : theme.radiusMedium
-    outlined: active
-    luminous: active
+    outlined: active || keyboardSelected
+    luminous: active || keyboardSelected
     luminousColor: roleAccent
-    borderColor: active ? roleAccent : "transparent"
+    borderColor: active || keyboardSelected ? roleAccent : "transparent"
     hovered: toggleArea.containsMouse
     fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
@@ -47,10 +48,14 @@ ShellSurface {
         }
     }
 
-    // Behind the content, so the independent −/+ buttons consume their own
-    // pointer events and cannot accidentally toggle Night Light.
     StateLayer {
         id: toggleArea
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+        }
+        height: setting.height - 25
         theme: setting.theme
         motion: setting.motion
         disabled: !setting.canToggle
@@ -65,8 +70,8 @@ ShellSurface {
             fill: parent
             leftMargin: setting.theme.spacing2
             rightMargin: setting.theme.spacing2
-            topMargin: setting.theme.spacing2 + 2
-            bottomMargin: setting.theme.spacing2
+            topMargin: setting.theme.spacing2
+            bottomMargin: setting.theme.spacing1
         }
         spacing: setting.theme.spacing1
 
@@ -78,93 +83,62 @@ ShellSurface {
                 text: setting.icon
                 color: setting.roleAccent
                 font.family: "Symbols Nerd Font"
-                font.pixelSize: setting.theme.fontSize(20)
+                font.pixelSize: setting.theme.fontSize(19)
             }
             KeyHint {
-                visible: setting.toggleShortcut.length > 0
                 anchors {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
-                shortcut: setting.toggleShortcut
+                shortcut: setting.keyboardSelected ? "H/L" : setting.toggleShortcut
                 compact: true
                 runtime: setting.runtime
                 theme: setting.theme
-                emphasized: setting.active
+                emphasized: setting.active || setting.keyboardSelected
                 emphasisColor: setting.roleAccent
             }
         }
 
         Row {
             width: parent.width
-            height: 30
+            height: 15
             spacing: setting.theme.spacing1
-            ShellAction {
-                id: decreaseButton
-                width: 66
-                height: parent.height
-                runtime: setting.runtime
-                theme: setting.theme
-                motion: setting.motion
-                compact: true
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
-                shortcut: setting.decrementShortcut
-                icon: "−"
-                title: "Decrease temperature"
-                // Keep the hit target active at its limit so the click never
-                // falls through to the tile's toggle handler.
-                opacity: setting.canDecrease ? 1 : 0.42
-                onActivated: {
-                    if (setting.canDecrease)
-                        setting.decreaseRequested();
-                }
+            Text {
+                width: Math.max(1, parent.width - temperatureValue.implicitWidth - parent.spacing)
+                text: setting.label
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                color: setting.theme.textStrong
+                font.family: setting.runtime.fontMono
+                font.pixelSize: setting.theme.fontSize(9)
+                font.weight: setting.active ? Font.DemiBold : Font.Medium
             }
-            Column {
-                width: Math.max(1, parent.width - decreaseButton.width - increaseButton.width - parent.spacing * 2)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 0
-                Text {
-                    width: parent.width
-                    text: setting.label
-                    color: setting.theme.textStrong
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    font.family: setting.runtime.fontMono
-                    font.pixelSize: setting.theme.fontSize(9)
-                    font.weight: setting.active ? Font.DemiBold : Font.Medium
-                }
-                Text {
-                    width: parent.width
-                    text: setting.valueText
-                    color: setting.theme.textMuted
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    font.family: setting.runtime.fontMono
-                    font.pixelSize: setting.theme.fontSize(9)
-                }
+            Text {
+                id: temperatureValue
+                text: setting.valueText
+                color: setting.active ? setting.roleAccent : setting.theme.textMuted
+                font.family: setting.runtime.fontMono
+                font.pixelSize: setting.theme.fontSize(9)
+                font.weight: Font.DemiBold
             }
-            ShellAction {
-                id: increaseButton
-                width: 66
-                height: parent.height
-                runtime: setting.runtime
-                theme: setting.theme
-                motion: setting.motion
-                compact: true
-                iconOnly: true
-                iconHint: true
-                inlineIconHint: true
-                shortcut: setting.incrementShortcut
-                icon: "+"
-                title: "Increase temperature"
-                opacity: setting.canIncrease ? 1 : 0.42
-                onActivated: {
-                    if (setting.canIncrease)
-                        setting.increaseRequested();
-                }
-            }
+        }
+
+        ShellSlider {
+            width: parent.width
+            height: 19
+            theme: setting.theme
+            motion: setting.motion
+            from: setting.from
+            to: setting.to
+            value: setting.value
+            enabled: setting.canAdjust
+            trackHeight: 6
+            handleSize: 16
+            accentColor: setting.roleAccent
+            Accessible.role: Accessible.Slider
+            Accessible.name: setting.label + " " + setting.valueText
+            onInteractionStarted: setting.sliderActivated()
+            onValueRequested: next => setting.valueRequested(next)
         }
     }
 }

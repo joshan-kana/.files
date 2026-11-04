@@ -89,6 +89,11 @@ QtObject {
         queuedTemperature = target;
         temperatureDebounce.restart();
     }
+    function setTemperature(target: real): void {
+        if (!supported || !isFinite(target))
+            return;
+        adjustTemperature(Math.round(Math.max(2500, Math.min(6500, target)) / 100) * 100 - temperature);
+    }
     function warmer(): void {
         adjustTemperature(-500);
     }
