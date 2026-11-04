@@ -23,7 +23,9 @@ in
       enable = true;
       configFile.kdeglobals.General = {
         TerminalApplication = lib.mkForce terminal;
-        TerminalService = lib.mkForce "${terminal}.desktop";
+        TerminalService = lib.mkForce (
+          if terminal == "contour" then "org.contourterminal.Contour.desktop" else "${terminal}.desktop"
+        );
       };
     };
   };
