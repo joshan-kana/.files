@@ -6,7 +6,7 @@
 }:
 
 let
-  inherit ((lib.systems.elaborate system)) isDarwin;
+  inherit (lib.systems.elaborate system) isDarwin;
 
   # Karabiner 15+ replaced the launchd services managed by nix-darwin with
   # signed SMAppService components installed by the vendor's package.
@@ -59,18 +59,16 @@ in
     (
       _final: prev:
       let
-        release = {
-          version = "16.3.0";
-          hash = "sha256-GcznvtPUinIiQspoO9G65Aa2qH/tUgco0ckd7hdbdeQ=";
-        };
+        version = "16.3.0";
+        hash = "sha256-GcznvtPUinIiQspoO9G65Aa2qH/tUgco0ckd7hdbdeQ=";
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         karabiner-elements = prev.stdenvNoCC.mkDerivation {
           pname = "karabiner-elements";
-          inherit (release) version;
+          inherit version;
           src = prev.fetchurl {
-            url = "https://github.com/pqrs-org/Karabiner-Elements/releases/download/v${release.version}/Karabiner-Elements-${release.version}.dmg";
-            inherit (release) hash;
+            url = "https://github.com/pqrs-org/Karabiner-Elements/releases/download/v${version}/Karabiner-Elements-${version}.dmg";
+            inherit hash;
           };
           nativeBuildInputs = [ prev.undmg ];
           sourceRoot = ".";
@@ -101,6 +99,7 @@ in
             license = prev.lib.licenses.unlicense;
             platforms = prev.lib.platforms.darwin;
             sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
+            mainProgram = "karabiner_cli";
           };
         };
       }

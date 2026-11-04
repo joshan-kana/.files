@@ -34,7 +34,7 @@ lib.optionalAttrs isLinux {
 }
 // lib.optionalAttrs isDarwin {
   /**
-    Karabiner keyboard remapping and saved rules on macOS.
+    Karabiner-Elements keyboard remapping on macOS.
   */
   karabinerElements = import ./karabiner;
 }
