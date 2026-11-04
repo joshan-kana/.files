@@ -1,3 +1,4 @@
 module LinuxDesktop.Visuals
+import QtQuick 6.0
 plugin linux-desktop-visuals
 typeinfo plugins.qmltypes
