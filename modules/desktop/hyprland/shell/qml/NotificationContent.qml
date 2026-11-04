@@ -303,6 +303,10 @@ FocusScope {
                 {
                     shortcut: "DEL",
                     label: "Dismiss"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Close"
                 }
             ]
         }

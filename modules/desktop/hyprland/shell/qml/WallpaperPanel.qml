@@ -687,6 +687,10 @@ Item {
                 {
                     shortcut: "ENTER",
                     label: "Set"
+                },
+                {
+                    shortcut: "ESC",
+                    label: "Back"
                 }
             ]
         }
