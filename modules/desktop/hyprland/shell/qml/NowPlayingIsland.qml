@@ -13,6 +13,11 @@ Item {
 
     // Leave the centered clock island unobstructed on narrow logical screens.
     property bool frameConnected: false
+    readonly property real playbackWidth: playbackZone.width
+    readonly property bool mainHover: mainHitArea.containsMouse
+    readonly property bool playbackHover: playbackHitArea.containsMouse && media.canTogglePlaying
+    readonly property bool mainPressed: mainHitArea.pressed
+    readonly property bool playbackPressed: playbackHitArea.pressed
     property real maximumWidth: 458
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
     height: theme.barIslandHeight
@@ -57,26 +62,59 @@ Item {
         outlined: false
         fillColor: theme.musicReactiveBackground
 
-        // Each clickable region paints its own state. The connected frame
-        // contributes the shared background, not an island-wide hover pill.
+        // Split the interaction fill at the real click boundary, not at two
+        // independently rounded pills. Each half is a clipped view of the
+        // same island squircle; in connected mode DesktopFrame owns the fill.
         Item {
+            id: mainHighlight
             anchors {
                 left: parent.left
                 right: playbackZone.left
                 top: parent.top
                 bottom: parent.bottom
             }
+            clip: true
 
-            StateLayer {
-                theme: island.theme
-                motion: island.motion
-                cornerRadius: island.theme.radiusSmall
+            SquircleSurface {
+                width: island.width
+                height: island.height
+                cornerRadius: island.theme.radiusIsland
                 exponent: Math.min(4, island.theme.squircleExponent)
-                stateColor: island.theme.textStrong
-                acceptedButtons: Qt.NoButton
-                hoverEnabled: false
-                manualHover: mainHitArea.containsMouse
-                manualPress: mainHitArea.pressed
+                fillColor: island.theme.textStrong
+                fillOpacity: island.frameConnected ? 0 : island.mainPressed ? 0.16 : island.mainHover ? 0.075 : 0
+                Behavior on fillOpacity {
+                    Anim {
+                        motion: island.motion
+                        type: Anim.FastEffects
+                    }
+                }
+            }
+        }
+
+        Item {
+            id: playbackHighlight
+            anchors {
+                left: playbackZone.left
+                right: parent.right
+                top: parent.top
+                bottom: parent.bottom
+            }
+            clip: true
+
+            SquircleSurface {
+                x: -mainHighlight.width
+                width: island.width
+                height: island.height
+                cornerRadius: island.theme.radiusIsland
+                exponent: Math.min(4, island.theme.squircleExponent)
+                fillColor: island.theme.textStrong
+                fillOpacity: island.frameConnected ? 0 : island.playbackPressed ? 0.16 : island.playbackHover ? 0.075 : 0
+                Behavior on fillOpacity {
+                    Anim {
+                        motion: island.motion
+                        type: Anim.FastEffects
+                    }
+                }
             }
         }
 
@@ -87,7 +125,7 @@ Item {
             height: 30
             anchors {
                 left: parent.left
-                leftMargin: 4
+                leftMargin: island.theme.spacing2
                 verticalCenter: parent.verticalCenter
             }
 
@@ -185,18 +223,6 @@ Item {
             width: 54
             height: parent.height
             anchors.right: parent.right
-
-            StateLayer {
-                theme: island.theme
-                motion: island.motion
-                cornerRadius: island.theme.radiusSmall
-                exponent: Math.min(4, island.theme.squircleExponent)
-                stateColor: island.theme.textStrong
-                acceptedButtons: Qt.NoButton
-                hoverEnabled: false
-                manualHover: playbackHitArea.containsMouse
-                manualPress: playbackHitArea.pressed
-            }
 
             ShellSurface {
                 id: state
