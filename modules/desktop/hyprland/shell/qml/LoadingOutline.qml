@@ -32,7 +32,7 @@ Item {
         to: 1
         duration: outline.lapDuration
         loops: Animation.Infinite
-        easing.type: Easing.InOutCubic
+        easing.type: Easing.Linear
         running: outline.active && outline.motionEnabled
     }
 

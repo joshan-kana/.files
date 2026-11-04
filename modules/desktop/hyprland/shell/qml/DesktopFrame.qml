@@ -146,39 +146,39 @@ Variants {
                         y2: 0
                         GradientStop {
                             position: 0
-                            color: frame.theme.reactiveFrameMotionColor(0, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.125
-                            color: frame.theme.reactiveFrameMotionColor(0.125, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.125, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.25
-                            color: frame.theme.reactiveFrameMotionColor(0.25, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.25, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.375
-                            color: frame.theme.reactiveFrameMotionColor(0.375, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.375, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.5
-                            color: frame.theme.reactiveFrameMotionColor(0.5, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.5, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.625
-                            color: frame.theme.reactiveFrameMotionColor(0.625, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.625, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.75
-                            color: frame.theme.reactiveFrameMotionColor(0.75, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.75, output.reactiveActive)
                         }
                         GradientStop {
                             position: 0.875
-                            color: frame.theme.reactiveFrameMotionColor(0.875, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.875, output.reactiveActive)
                         }
                         GradientStop {
                             position: 1
-                            color: frame.theme.reactiveFrameMotionColor(1, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
                         }
                     }
                     PathSvg {

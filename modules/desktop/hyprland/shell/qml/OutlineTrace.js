@@ -11,7 +11,11 @@ function contour(width, height, inset, surface) {
     (right - left) / 2,
     (bottom - top) / 2,
   );
-  if (radius <= 0) return points;
+  if (!Number.isFinite(radius) || radius <= 0) return points;
+  // SquircleSurface supplies cornerProgress(), not cornerSamples. Derive
+  // tessellation from the actual radius so every quarter is traced instead
+  // of jumping over its curved corner.
+  const samples = Math.max(12, Math.min(32, Math.ceil(radius * 0.4)));
 
   function add(x, y) {
     const previous = points.length > 0 ? points[points.length - 1] : null;
@@ -21,10 +25,8 @@ function contour(width, height, inset, surface) {
     points.push({ x: x, y: y, at: at });
   }
   function corner(cx, cy, start, end) {
-    for (let i = 1; i <= surface.cornerSamples; ++i) {
-      const t =
-        start +
-        (end - start) * surface.cornerProgress(i / surface.cornerSamples);
+    for (let i = 1; i <= samples; ++i) {
+      const t = start + (end - start) * surface.cornerProgress(i / samples);
       add(
         cx +
           radius *
@@ -47,6 +49,9 @@ function contour(width, height, inset, surface) {
   corner(left + radius, bottom - radius, Math.PI / 2, Math.PI);
   add(left, top + radius);
   corner(left + radius, top + radius, Math.PI, Math.PI * 1.5);
+  // Close the distance table across the final edge. The head and tail must
+  // agree on the whole loop length, including the last corner-to-start hop.
+  add(points[0].x, points[0].y);
   return points;
 }
 
