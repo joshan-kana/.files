@@ -12,6 +12,8 @@ QtObject {
     property bool themePanelOpen: false
     property bool sessionPanelOpen: false
     property bool resourcesPanelOpen: false
+    property bool wallpaperPanelOpen: false
+    property bool recordingsPanelOpen: false
     required property ShortcutCheatsheet cheatsheet
     required property CommandPalette launcher
     required property ClipboardPanel clipboardPanel
@@ -203,6 +205,14 @@ QtObject {
 
     function showTheme(): void {
         toggleSystemDetail("theme", themePanelOpen);
+    }
+
+    function showWallpaper(): void {
+        toggleSystemDetail("wallpaper", wallpaperPanelOpen);
+    }
+
+    function showCaptures(): void {
+        toggleSystemDetail("recordings", recordingsPanelOpen);
     }
 
     function showSession(): void {

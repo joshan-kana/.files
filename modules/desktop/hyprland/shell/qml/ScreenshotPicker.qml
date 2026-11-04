@@ -525,7 +525,7 @@ Item {
                         horizontalCompact: true
                         icon: picker.selectionMode === "record" ? "󰕧" : "󰹑"
                         title: picker.selectionMode === "record" ? "START" : picker.annotateAfterCapture ? "MARKUP" : picker.copying ? "COPY" : "SAVE"
-                        shortcut: "SPACE"
+                        shortcut: "ENTER"
                         onActivated: picker.capture("")
                     }
                     ShellAction {
@@ -552,7 +552,7 @@ Item {
                         compact: true
                         horizontalCompact: true
                         title: picker.selectionMode === "record" ? picker.audioLabel : picker.frozenForCapture ? "FROZEN" : "LIVE"
-                        shortcut: picker.selectionMode === "record" ? "A" : "Z"
+                        shortcut: picker.selectionMode === "record" ? "E" : "Z"
                         onActivated: {
                             if (picker.selectionMode === "record")
                                 picker.cycleAudio();
@@ -570,11 +570,11 @@ Item {
                 theme: picker.theme
                 hints: [
                     {
-                        shortcut: "H/J/K/L",
+                        shortcut: "H/J/K/L · ARROWS",
                         label: "Move"
                     },
                     {
-                        shortcut: "SHIFT+ARROWS",
+                        shortcut: "SHIFT+HJKL/ARROWS",
                         label: "Resize"
                     },
                     {
@@ -617,14 +617,15 @@ Item {
             const step = resize ? 8 : 16;
             if (event.key === Qt.Key_Escape) {
                 picker.dismiss(true);
-            } else if (event.key === Qt.Key_Space) {
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 picker.capture("");
             } else if (event.key === Qt.Key_Tab) {
                 picker.nextMonitor();
-            } else if (event.key === Qt.Key_A && picker.selectionMode === "record") {
-                picker.cycleAudio();
-            } else if (event.key === Qt.Key_E && picker.selectionMode !== "record") {
-                picker.toggleAnnotation();
+            } else if (event.key === Qt.Key_E) {
+                if (picker.selectionMode === "record")
+                    picker.cycleAudio();
+                else
+                    picker.toggleAnnotation();
             } else if (event.key === Qt.Key_Z && picker.selectionMode !== "record") {
                 picker.toggleFreeze();
             } else if (event.key === Qt.Key_F) {

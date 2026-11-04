@@ -113,63 +113,63 @@ let
 in
 [
   (mkMeh {
-    keys = "1";
+    keys = "J";
     id = "terminal.open";
     action = app terminal;
     section = "APPS";
     description = "Terminal";
   })
   (mkMeh {
-    keys = "2";
+    keys = "U";
     action = app "spotify";
     section = "APPS";
     description = "Spotify";
   })
   (mkMeh {
-    keys = "3";
+    keys = "K";
     action = app browser;
     section = "APPS";
     description = "Browser";
   })
   (mkMeh {
-    keys = "4";
+    keys = "M";
     action = app "floorp";
     section = "APPS";
     description = "Floorp";
   })
   (mkMeh {
-    keys = "5";
+    keys = "I";
     action = app "thunderbird";
     section = "APPS";
     description = "Thunderbird";
   })
   (mkMeh {
-    keys = "6";
+    keys = "L";
     action = app "code";
     section = "APPS";
     description = "Visual Studio Code";
   })
   (mkMeh {
-    keys = "7";
+    keys = "O";
     action = app "obsidian --disable-gpu";
     section = "APPS";
     description = "Obsidian";
   })
   (mkMeh {
-    keys = "E";
+    keys = "N";
     action = app "nautilus";
     section = "APPS";
     description = "Files";
   })
   (mk {
-    keys = "SHIFT + V";
+    keys = "M";
     id = "audio.mixer";
     action = global "linux-desktop:audio-mixer";
     section = "AUDIO & MEDIA";
     description = "Application mixer";
   })
   (mkMeh {
-    keys = "V";
+    keys = "P";
     action = exec "[float] systemd-run --user --quiet --collect -- easyeffects";
     section = "AUDIO & MEDIA";
     description = "Audio effects";
@@ -182,6 +182,20 @@ in
     action = global "linux-desktop:launcher";
     section = "LAUNCHERS";
     description = "App & command launcher";
+  })
+  (mk {
+    keys = "W";
+    id = "wallpaper.toggle";
+    action = global "linux-desktop:wallpaper";
+    section = "SYSTEM";
+    description = "Wallpaper gallery";
+  })
+  (mk {
+    keys = "ALT + P";
+    id = "capture.history";
+    action = global "linux-desktop:captures";
+    section = "UTILITIES";
+    description = "Capture history";
   })
   (mk {
     keys = "C";
@@ -199,16 +213,14 @@ in
     description = "Workspaces & window overview";
   })
   (mk {
-    keys = "SUPER + SHIFT + R";
-    mainMod = false;
+    keys = "SHIFT + P";
     id = "capture.recordToggle";
     action = global "linux-desktop:record-toggle";
     section = "UTILITIES";
     description = "Screen record";
   })
   (mk {
-    keys = "SUPER + SHIFT + S";
-    mainMod = false;
+    keys = "P";
     id = "capture.region";
     action = global "linux-desktop:capture-region";
     section = "UTILITIES";
@@ -237,13 +249,13 @@ in
     description = "Toggle floating";
   })
   (mk {
-    keys = "SHIFT + P";
+    keys = "ALT + F";
     action = dispatcher "hl.dsp.window.pin()";
     section = "WINDOWS";
     description = "Pin window";
   })
   (mk {
-    keys = "CTRL + P";
+    keys = "G";
     action = dispatcher "hl.dsp.window.pseudo()";
     section = "WINDOWS";
     description = "Toggle pseudo tiling";
@@ -327,6 +339,32 @@ in
     description = "Move window right";
   })
 
+  # HJKL is the current directional layout. IJKL is also a viable
+  # positional alternative if the keyboard navigation policy changes later.
+  (mk {
+    keys = "ALT + H";
+    action = dispatcher "hl.dsp.window.resize({ x = -50, y = 0, relative = true })";
+    section = "WINDOWS";
+    description = "Shrink window width";
+  })
+  (mk {
+    keys = "ALT + J";
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = 50, relative = true })";
+    section = "WINDOWS";
+    description = "Grow window height";
+  })
+  (mk {
+    keys = "ALT + K";
+    action = dispatcher "hl.dsp.window.resize({ x = 0, y = -50, relative = true })";
+    section = "WINDOWS";
+    description = "Shrink window height";
+  })
+  (mk {
+    keys = "ALT + L";
+    action = dispatcher "hl.dsp.window.resize({ x = 50, y = 0, relative = true })";
+    section = "WINDOWS";
+    description = "Grow window width";
+  })
   (mk {
     keys = "R";
     id = "window.resizeMode";
@@ -340,7 +378,7 @@ in
 ++ map moveToWorkspace workspaceKeys
 ++ [
   (mk {
-    keys = "B";
+    keys = "SHIFT + V";
     action = dispatcher ''hl.dsp.window.move({ monitor = "+1", follow = false })'';
     section = "DISPLAY";
     description = "Move window to next display";
@@ -352,18 +390,34 @@ in
     description = "Focus next display";
   })
   (mk {
-    keys = "left";
+    keys = "ALT + V";
+    action = dispatcher ''hl.dsp.focus({ monitor = "-1" })'';
+    section = "DISPLAY";
+    description = "Focus previous display";
+  })
+  (mk {
+    keys = "SHIFT + U";
+    action = dispatcher ''hl.dsp.window.move({ workspace = "e-1", follow = false })'';
+    section = "WORKSPACES";
+    description = "Move window to previous workspace";
+  })
+  (mk {
+    keys = "SHIFT + O";
+    action = dispatcher ''hl.dsp.window.move({ workspace = "e+1", follow = false })'';
+    section = "WORKSPACES";
+    description = "Move window to next workspace";
+  })
+  (mk {
+    keys = "U";
     action = dispatcher ''hl.dsp.focus({ workspace = "e-1" })'';
     section = "WORKSPACES";
     description = "Previous workspace";
-    label = "←";
   })
   (mk {
-    keys = "right";
+    keys = "O";
     action = dispatcher ''hl.dsp.focus({ workspace = "e+1" })'';
     section = "WORKSPACES";
     description = "Next workspace";
-    label = "→";
   })
   (mk {
     keys = "E";
@@ -527,7 +581,7 @@ in
     label = "BRIGHTNESS −";
   })
   (mk {
-    keys = "O";
+    keys = "D";
     id = "notifications.toggle";
     action = global "linux-desktop:notifications";
     section = "SYSTEM";
@@ -550,20 +604,20 @@ in
     label = "CTRL + ALT + DELETE";
   })
   (mkMeh {
-    keys = "C";
+    keys = "H";
     action = app "edit-config";
     section = "SYSTEM";
     description = "Edit desktop configuration";
   })
   (mk {
-    keys = "U";
+    keys = "A";
     id = "home.toggle";
     action = global "linux-desktop:home";
     section = "SYSTEM";
     description = "Open Home tab";
   })
   (mk {
-    keys = "I";
+    keys = "S";
     id = "controls.toggle";
     action = global "linux-desktop:controls";
     section = "SYSTEM";
@@ -591,7 +645,7 @@ in
     description = "Toggle animations";
   })
   (mk {
-    keys = "SHIFT + G";
+    keys = "SHIFT + W";
     id = "media.wallpaperSpectrum";
     action = global "linux-desktop:wallpaper-spectrum";
     section = "AUDIO & MEDIA";
@@ -605,7 +659,7 @@ in
     description = "Toggle music-reactive shell";
   })
   (mk {
-    keys = "SHIFT + O";
+    keys = "ALT + Y";
     id = "window.effects.toggle";
     action = global "linux-desktop:window-effects";
     section = "WINDOWS";
