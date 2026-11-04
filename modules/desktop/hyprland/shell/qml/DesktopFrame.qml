@@ -144,9 +144,9 @@ Variants {
                         // Only numeric endpoints move with the audio
                         // envelope. Stable stop colours prevent an expensive
                         // Shape gradient resource rebuild every audio frame.
-                        x1: output.reactiveActive && frame.motion.enabled ? -drawing.width * 0.09 * frame.theme.musicReactiveMovement * Math.sin(frame.theme.musicReactiveFlow) : 0
+                        x1: output.reactiveActive ? -drawing.width * 0.09 * frame.theme.musicReactiveMovement * Math.sin(frame.theme.musicReactiveFlow) : 0
                         y1: 0
-                        x2: output.reactiveActive && frame.motion.enabled ? drawing.width * (1 + 0.09 * frame.theme.musicReactiveMovement * Math.cos(frame.theme.musicReactiveFlow)) : drawing.width
+                        x2: output.reactiveActive ? drawing.width * (1 + 0.09 * frame.theme.musicReactiveMovement * Math.cos(frame.theme.musicReactiveFlow)) : drawing.width
                         y2: 0
                         GradientStop {
                             position: 0
