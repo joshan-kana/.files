@@ -796,6 +796,8 @@ ShellRoot {
         ambientBar: ambientBar
         expansionState: expansionState
         themePanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.themeOpen
+        wallpaperPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.wallpaperOpen
+        recordingsPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.recordingsOpen
         sessionPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.sessionOpen
         resourcesPanelOpen: !!expansionHost.systemContent && expansionHost.systemContent.resourcesOpen
         cheatsheet: cheatsheet
@@ -980,6 +982,20 @@ ShellRoot {
         description: "Open theme picker"
         onPressed: actions.showTheme()
     }
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "wallpaper"
+        description: "Open wallpaper gallery"
+        onPressed: actions.showWallpaper()
+    }
+
+    GlobalShortcut {
+        appid: "linux-desktop"
+        name: "captures"
+        description: "Open capture history"
+        onPressed: actions.showCaptures()
+    }
+
     GlobalShortcut {
         appid: "linux-desktop"
         name: "colour-pick"
