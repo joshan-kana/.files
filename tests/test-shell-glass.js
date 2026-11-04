@@ -40,7 +40,7 @@ test("connected hub borrows a single glass material from the shared contour", ()
   assert.match(surface, /fillOpacity: frameConnected \? 0 : !glassAllowed/);
   assert.match(
     surface,
-    /surfaceLayer === ShellSurface\.Pane \? theme\.glassOpacity/,
+    /fillOpacity: frameConnected \? 0 : !glassAllowed[^\n]*: theme\.glassOpacity/,
   );
   assert.match(
     qml("AppearancePreferences.qml"),
@@ -79,7 +79,7 @@ test("connected panes do not double-tint the frame, but detached glass still wor
   assert.match(surface, /fillOpacity: frameConnected \? 0 : !glassAllowed/);
   assert.match(
     surface,
-    /surfaceLayer === ShellSurface\.Pane \? theme\.glassOpacity/,
+    /fillOpacity: frameConnected \? 0 : !glassAllowed[^\n]*: theme\.glassOpacity/,
   );
   assert.match(host, /frameConnected: host\.frameVisible/);
   assert.match(surface, /Behavior on fillOpacity/);

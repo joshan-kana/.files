@@ -31,7 +31,7 @@ SquircleSurface {
     // The connected frame owns the glass/tint for attached surfaces. A
     // second translucent fill here would darken it and blur the same backdrop
     // twice. Detached surfaces continue to paint and blur themselves.
-    fillOpacity: frameConnected ? 0 : !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : surfaceLayer === ShellSurface.Pane ? theme.glassOpacity : surfaceLayer === ShellSurface.Group ? Math.min(1, theme.glassOpacity * (0.58 / 0.70)) : Math.min(1, theme.glassOpacity * (0.74 / 0.70))
+    fillOpacity: frameConnected ? 0 : !glassAllowed || !theme.shellGlassEnabled || surfaceLayer === ShellSurface.Background ? 1 : theme.glassOpacity
 
     Behavior on fillOpacity {
         Anim {
@@ -49,9 +49,9 @@ SquircleSurface {
     reactiveGradientLow: theme.spectrumColor(0)
     reactiveGradientMid: theme.spectrumColor(0.5)
     reactiveGradientHigh: theme.spectrumColor(1)
-    reactiveGradientPhase: musicActive && motion.enabled ? theme.musicReactiveFlow : 0
-    reactiveGradientMovement: musicActive && motion.enabled ? theme.musicReactiveMovement : 0
-    reactiveGradientKick: musicActive && motion.enabled ? theme.musicReactiveKick : 0
+    reactiveGradientPhase: musicActive ? theme.musicReactiveFlow : 0
+    reactiveGradientMovement: musicActive ? theme.musicReactiveMovement : 0
+    reactiveGradientKick: musicActive ? theme.musicReactiveKick : 0
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
