@@ -1,5 +1,6 @@
 local vim = assert(_G.vim)
 local root = vim.fs.dirname(debug.getinfo(1, "S").source:sub(2))
+root = vim.uv.fs_realpath(root) or root
 
 -- The Nix development shell supplies optional parsers and the embedded LSP bridge.
 for runtime in (vim.env.NVIM_PROJECT_RUNTIMEPATH or ""):gmatch("[^,]+") do
