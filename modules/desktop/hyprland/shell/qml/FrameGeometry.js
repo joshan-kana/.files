@@ -13,6 +13,7 @@ function contour(
   squircle,
   bottomDock,
   topDock,
+  traceEnabled = true,
 ) {
   if (
     ![width, height, thickness, radius].every(Number.isFinite) ||
@@ -135,10 +136,17 @@ function contour(
     // quarter as one fitted cubic. Recreating hundreds of ShapePath segments
     // during a hub morph would otherwise repeatedly retessellate the frame.
     const samples = Math.max(8, Math.min(20, Math.ceil(r * 0.7)));
-    for (let i = 1; i <= samples; i++) {
-      const t =
-        start + (end - start) * squircle.progress(i / samples, shapeExponent);
-      const vertex = squircle.cornerPoint(cx, cy, r, t, shapeExponent);
+    if (traceEnabled) {
+      for (let i = 1; i <= samples; i++) {
+        const t =
+          start + (end - start) * squircle.progress(i / samples, shapeExponent);
+        const vertex = squircle.cornerPoint(cx, cy, r, t, shapeExponent);
+        add(vertex.x, vertex.y, false);
+      }
+    } else {
+      // The full cubic boundary is still drawn. Detailed arc-length samples
+      // are only required by the active loading trace.
+      const vertex = squircle.cornerPoint(cx, cy, r, end, shapeExponent);
       add(vertex.x, vertex.y, false);
     }
     // Match the diagonal of the superellipse and the exact tangent direction
