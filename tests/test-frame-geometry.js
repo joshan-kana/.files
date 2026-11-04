@@ -1037,3 +1037,64 @@ test("attached status islands approach the outer frame corner without clipping t
     assert.ok(width - 2 * sideInset >= 600);
   }
 });
+
+test("the native paint contour keeps cubic detail independently from sparse idle trace samples", () => {
+  const island = { x: 220, y: 10, width: 150, height: 65, visible: true };
+  const hub = { x: 490, y: 12, width: 870, height: 520, visible: true };
+  const traced = contour(
+    1920,
+    1080,
+    26,
+    62,
+    4.5,
+    [island],
+    hub,
+    [],
+    null,
+    null,
+    true,
+  );
+  const idle = contour(
+    1920,
+    1080,
+    26,
+    62,
+    4.5,
+    [island],
+    hub,
+    [],
+    null,
+    null,
+    false,
+  );
+  assert.equal(
+    JSON.stringify(idle.renderPoints),
+    JSON.stringify(traced.renderPoints),
+  );
+  assert.ok(idle.renderPoints.length > idle.points.length * 2);
+  assert.ok(
+    idle.renderPoints.every(
+      (p) =>
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.x >= 0 &&
+        p.x <= 1920 &&
+        p.y >= 0 &&
+        p.y <= 1080,
+    ),
+  );
+  const degenerate = contour(
+    0,
+    0,
+    26,
+    62,
+    4.5,
+    [],
+    null,
+    [],
+    null,
+    null,
+    false,
+  );
+  assert.equal(degenerate.renderPoints.length, 0);
+});
