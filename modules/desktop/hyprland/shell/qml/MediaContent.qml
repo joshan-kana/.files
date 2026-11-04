@@ -532,14 +532,14 @@ FocusScope {
             }
 
             ShellAction {
-                width: 76
+                width: 116
                 height: 42
                 runtime: content.runtime
                 theme: content.theme
                 motion: content.motion
                 compact: true
                 horizontalCompact: true
-                title: "− SEEK"
+                title: "Shorter"
                 shortcut: "-"
                 enabled: content.media.seekSeconds > 5
                 onActivated: content.media.adjustSeekStep(-1)
@@ -547,7 +547,7 @@ FocusScope {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: content.media.seekSeconds + "s"
+                text: "Seek " + content.media.seekSeconds + "s"
                 color: content.theme.textStrong
                 font.family: content.runtime.fontMono
                 font.pixelSize: content.theme.fontSize(12)
@@ -555,14 +555,14 @@ FocusScope {
             }
 
             ShellAction {
-                width: 76
+                width: 116
                 height: 42
                 runtime: content.runtime
                 theme: content.theme
                 motion: content.motion
                 compact: true
                 horizontalCompact: true
-                title: "+ SEEK"
+                title: "Longer"
                 shortcut: "+"
                 enabled: content.media.seekSeconds < 60
                 onActivated: content.media.adjustSeekStep(1)

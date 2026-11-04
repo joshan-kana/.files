@@ -99,3 +99,18 @@ test("global keybinding descriptions match the configurable seek interval", () =
     /description = "Seek (backward|forward) 10 seconds"/,
   );
 });
+
+test("Now Playing seek-step controls have readable words and enough width", () => {
+  const page = read("MediaContent.qml");
+  for (const [title, width] of [
+    ["Shorter", 116],
+    ["Longer", 116],
+  ]) {
+    assert.match(
+      page,
+      new RegExp("width: " + width + '[\\s\\S]*?title: "' + title + '"'),
+    );
+  }
+  assert.match(page, /text: "Seek " \+ content\.media\.seekSeconds \+ "s"/);
+  assert.doesNotMatch(page, /title: "[+−] SEEK"/);
+});
