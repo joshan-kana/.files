@@ -65,7 +65,25 @@ Variants {
         SquircleGeometry {
             id: squircleGeometry
         }
-        readonly property var geometry: FrameGeometry.contour(modelData ? modelData.width : 1, modelData ? modelData.height : 1, frame.thickness, frame.rounding, frame.theme.squircleExponent, frame.barVisible ? (frame.islands[modelData.name] || []) : [], frame.hubScreen === modelData ? frame.hub : null, frame.toastScreen === modelData ? frame.toast : [], squircleGeometry, frame.osdScreen === modelData ? frame.osd : null, frame.resizeScreen === modelData ? frame.resize : null)
+        // Collect reactive sources cheaply, then build the expensive shared
+        // outline once after all same-turn geometry changes have settled.
+        readonly property var geometryInputs: [modelData ? modelData.width : 1, modelData ? modelData.height : 1, frame.thickness, frame.rounding, frame.theme.squircleExponent, frame.barVisible ? (frame.islands[modelData.name] || []) : [], frame.hubScreen === modelData ? frame.hub : null, frame.toastScreen === modelData ? frame.toast : [], squircleGeometry, frame.osdScreen === modelData ? frame.osd : null, frame.resizeScreen === modelData ? frame.resize : null, output.busyHere]
+        property var geometry: ({
+                inner: "",
+                fill: "",
+                hoverFill: "",
+                pressedFill: "",
+                length: 0,
+                points: []
+            })
+
+        function rebuildGeometry(): void {
+            const args = geometryInputs;
+            output.geometry = FrameGeometry.contour(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]);
+        }
+
+        onGeometryInputsChanged: Qt.callLater(output.rebuildGeometry)
+        Component.onCompleted: output.rebuildGeometry()
 
         PanelWindow {
             id: drawing
