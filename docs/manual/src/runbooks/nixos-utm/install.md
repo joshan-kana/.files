@@ -1,64 +1,93 @@
 # Installation guide for `nixos-utm`
 
-`nixos-utm` is an ARM64 NixOS desktop guest on the Mac, running under UTM with QEMU's VirtIO GPU. It uses the shared Hyprland/Quickshell configuration so graphical rendering can be compared with the Parallels guest.
+`nixos-utm` is an AArch64 NixOS desktop guest running under the UTM QEMU backend. It uses the shared Hyprland and Quickshell configuration so rendering and frame pacing can be compared with the Parallels guest.
 
-## Guest configuration
+## VM configuration
 
-In UTM, create a **Virtualize → Linux** VM using an AArch64 NixOS installer ISO, with UEFI, a VirtIO disk, a VirtIO network interface and a VirtIO GPU display. Select the GPU-accelerated display variant when available. Keep the GPU and renderer selection consistent across before/after comparisons; Venus/Vulkan availability depends on the host renderer, not only the guest configuration.
+Create a **Virtualize → Linux** VM in UTM with an AArch64 NixOS installer ISO and the following devices:
 
-Start with 4 CPU cores, 8 GiB RAM and a sparse 64 GiB disk, adjusting to available host resources. The UTM guest has its own disk image and machine identity.
+- **4 CPU cores**, **8 GiB RAM**, and a sparse **64 GiB VirtIO disk**.
+- UEFI firmware and a VirtIO network interface using shared networking.
+- Btrfs root with zstd compression, plus 100% of guest RAM allocated as compressed zram swap (no disk-backed swap).
+- A **VirtIO GPU (GPU Supported)** display, backed by `virtio-gpu-gl-pci` where available.
 
-Use the generated target settings when this runbook is rendered:
+Keep the renderer, display resolution, refresh rate and guest configuration consistent when comparing builds. Vulkan support through Venus depends on UTM's host renderer as well as the Linux guest drivers.
+
+Load the generated target environment in the installer shell before using shared installation commands:
 
 ```sh
 {{#include ../../generated/hosts/nixos-utm.sh}}
 ```
 
-Installers can enable [temporary SSH access](../common/nixos-installer-ssh.md) after networking starts.
+If needed, enable [installer SSH](../common/nixos-installer-ssh.md). On some UTM shared networks, the gateway's DNS forwarder may not resolve public names even when routing works. Verify with `resolvectl query github.com`; if necessary, temporarily specify public resolvers for the installer connection:
+
+```sh
+sudo resolvectl dns enp0s1 1.1.1.1 8.8.8.8
+sudo resolvectl flush-caches
+```
+
+This only adjusts the live installer session; diagnose any recurring DNS issue in the installed guest separately.
+
+Before installing the full desktop closure, enable compressed zram swap in the *live installer* too. This is separate from the persistent `zramSwap` configuration applied after installation:
+
+```sh
+sudo modprobe zram
+sudo zramctl --find --algorithm zstd --size 8G
+sudo mkswap /dev/zram0
+sudo swapon /dev/zram0
+swapon --show
+```
+
+zram's configured size is the logical uncompressed swap capacity, not 8 GiB of preallocated host RAM.
 
 ## Partition and mount
 
-Inspect the selected guest disk carefully before changing it:
+Identify the **new empty guest disk** before partitioning:
 
 ```sh
 lsblk -o NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINTS
 ```
 
-For a *new, empty VirtIO disk* exposed as `/dev/vda`, the following initializes an EFI partition and an ext4 root partition. Replace device paths if UTM exposes another disk. **The partitioning command destroys any existing partition table on the selected disk.**
+The following commands assume the guest's VirtIO disk is `/dev/vda`, with no data that must be preserved. Replace device paths if UTM exposes a different disk. **The partitioning step erases the selected disk's partition table.**
 
 ```sh
 disk=/dev/vda
-sudo parted --script "$disk"   mklabel gpt   mkpart ESP fat32 1MiB 1025MiB   set 1 esp on   mkpart primary ext4 1025MiB 100%
+sudo parted --script "$disk" \
+  mklabel gpt \
+  mkpart ESP fat32 1MiB 1025MiB \
+  set 1 esp on \
+  mkpart ROOT 1025MiB 100%
+
 sudo mkfs.vfat -n BOOT /dev/vda1
-sudo mkfs.ext4 -L ROOT /dev/vda2
+sudo mkfs.btrfs -f -L ROOT /dev/vda2
+
 sudo mount /dev/disk/by-label/ROOT /mnt
 sudo mkdir -p /mnt/boot
 sudo mount /dev/disk/by-label/BOOT /mnt/boot
 ```
 
-## Install from the review branch
+{{#include ../_shared/restore-secrets-and-clone.inc}}
 
-The host remains on a review branch in `.files`, rather than `main`. In the installer, clone the repository to the target location, set `PR_NUMBER` to the current host PR number, fetch that PR, then select it before installation.
+## Install the test branch
+
+The host is intentionally maintained on an unmerged `.files` PR rather than `main`. The shared clone procedure above uses an authenticated Git SSH credential, including for the infrastructure-docs submodule. Fetch the public PR ref separately, then switch the installer checkout to it:
 
 ```sh
-sudo mkdir -p /mnt/home/joshan
-sudo git clone --recurse-submodules   https://github.com/joshan-kana/.files.git   /mnt/home/joshan/.files
-
-cd /mnt/home/joshan/.files
-utm_host_pr=<PR_NUMBER>
-sudo git fetch origin "pull/${utm_host_pr}/head:refs/heads/utm-test-host"
+cd "/mnt$DOTFILES_REPO"
+utm_host_pr=541
+sudo git fetch https://github.com/joshan-kana/.files.git \
+  "pull/$utm_host_pr/head:refs/heads/utm-test-host"
 sudo git switch utm-test-host
 
-sudo nixos-install   --option extra-experimental-features "nix-command flakes"   --flake ".#nixos-utm"
+sudo nixos-install \
+  --no-root-password \
+  --option extra-experimental-features "nix-command flakes" \
+  --flake ".#nixos-utm"
 ```
 
-The checkout is owned by root during installation. After the installed user exists, restore ownership before rebooting:
+{{#include ../_shared/finalize-bare-install.inc}}
 
-```sh
-sudo nixos-enter --root /mnt -c "chown -R joshan:users /home/joshan/.files"
-```
-
-Detach the installer ISO and restart. Change the initial console password with `passwd`, then verify the guest session and rebuild only from the checked-out test branch:
+Detach the installer ISO and reboot. Verify the guest session, and replace the initial user password. Rebuild only from the checked-out review branch:
 
 ```sh
 cd ~/.files
@@ -66,11 +95,11 @@ git status -sb
 run0 nixos-rebuild switch --flake .#nixos-utm
 ```
 
-Automatic Comin deployments are disabled for this guest. To evaluate a new review revision, fetch the branch explicitly, inspect the diff, then rebuild.
+Comin automatic deployments are disabled for this guest. To update the reviewed configuration, fetch and inspect the PR revision explicitly before rebuilding.
 
 ## Graphics validation
 
-Check the device driver and **real accelerated renderer**, not just an advertised API version:
+Record the **actual guest renderer** and hardware driver rather than relying on an advertised API version:
 
 ```sh
 lspci -nnk | grep -A 3 -Ei 'vga|display'
@@ -78,10 +107,10 @@ glxinfo -B
 vulkaninfo --summary
 ```
 
-For OpenGL over Vulkan, test Zink per process rather than forcing it on the compositor:
+Check Zink in a separate process instead of forcing it on Hyprland:
 
 ```sh
 MESA_LOADER_DRIVER_OVERRIDE=zink glxinfo -B
 ```
 
-Record `llvmpipe`/software-renderer fallbacks as a failure of GPU acceleration. For Wayland, confirm Hyprland, Quickshell, animations and GPU workloads in a live session, along with CPU, memory, idle consumption and frame pacing. Run equivalent tests on an unmodified UTM build for comparison.
+Treat `llvmpipe` or another software renderer as a failed hardware-acceleration test. Validate Hyprland, Quickshell, window resizing, transparency and Vulkan/OpenGL workloads in a live desktop session. Compare idle CPU/GPU use, memory, frame pacing and visual correctness against an otherwise identical, unmodified UTM build.
