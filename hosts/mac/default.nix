@@ -241,8 +241,8 @@
       homebrew.casks = [ "cardinal" ];
     };
 
-    googleChrome = _: {
-      homebrew.casks = [ "google-chrome" ];
+    googleChrome = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.google-chrome ]; };
     };
 
     ilokLicenseManager = _: {
