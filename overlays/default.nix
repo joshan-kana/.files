@@ -25,6 +25,7 @@ _: {
     ./bambu-studio
     ./cryptomator
     ./hammerspoon
+    ./karabiner-elements
     ./heroic
     ./iterm2
     ./jellyfin-mpv-shim
