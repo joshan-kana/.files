@@ -526,7 +526,7 @@ PanelWindow {
         // The frame outline and this attached surface share one background.
         // Its fill fades with the frame connection, so the frame alone owns
         // the tint and blur once the contour joins up.
-        fillColor: host.theme.musicReactiveBackground
+        fillColor: host.theme.background
         luminous: false
         luminousColor: host.theme.textStrong
         lightIntensity: 0.22
