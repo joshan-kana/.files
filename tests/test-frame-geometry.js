@@ -33,7 +33,7 @@ const squircle = {
   },
 };
 const contour = (...args) =>
-  context.contour(...args.slice(0, 8), squircle, args[8], args[9]);
+  context.contour(...args.slice(0, 8), squircle, args[8], args[9], args[10]);
 
 function check(result, width, height) {
   assert.ok(result.length > 0);
@@ -50,6 +50,53 @@ function check(result, width, height) {
   }
   assert.ok(result.length >= previous);
 }
+
+test("idle frame keeps exact connected contour without loading-trace sampling", () => {
+  const island = {
+    x: 220,
+    y: 10,
+    width: 150,
+    height: 65,
+    visible: true,
+    hovered: true,
+  };
+  const hub = { x: 490, y: 12, width: 870, height: 520, visible: true };
+  const dock = { x: 1560, y: 90, width: 330, height: 180, visible: true };
+  const osd = { x: 790, y: 880, width: 330, height: 72, visible: true };
+  for (const exponent of [2, 4.5, 8, 12]) {
+    const inputs = [1920, 1080, 26, 62, exponent, [island], hub, [dock], osd];
+    const traced = contour(...inputs, undefined, true);
+    const idle = contour(...inputs, undefined, false);
+    for (const key of ["inner", "fill", "hoverFill", "pressedFill"])
+      assert.equal(idle[key], traced[key], key);
+    assert.ok(idle.points.length < traced.points.length / 2);
+    assert.ok(traced.length >= idle.length);
+  }
+});
+
+test("hub morph layout remains independent of the live silhouette size", () => {
+  const root = path.join(__dirname, "../modules/desktop/hyprland/shell/qml");
+  const hub = fs.readFileSync(
+    path.join(root, "ShellExpansionHost.qml"),
+    "utf8",
+  );
+  const surface = fs.readFileSync(
+    path.join(root, "SquircleSurface.qml"),
+    "utf8",
+  );
+  const frame = fs.readFileSync(path.join(root, "DesktopFrame.qml"), "utf8");
+  assert.match(hub, /contentLayoutWidth:.*host\.contentWidth/);
+  assert.match(hub, /contentLayoutHeight:.*host\.contentHeight/);
+  assert.match(surface, /property real contentLayoutWidth: width/);
+  assert.match(surface, /property real contentLayoutHeight: height/);
+  assert.match(surface, /width: root\.contentLayoutWidth/);
+  assert.match(surface, /height: root\.contentLayoutHeight/);
+  assert.match(
+    frame,
+    /onGeometryInputsChanged: Qt\.callLater\(output\.rebuildGeometry\)/,
+  );
+  assert.match(frame, /output\.busyHere/);
+});
 
 test("frame disabled and degenerate displays have no contour", () => {
   for (const dimensions of [
