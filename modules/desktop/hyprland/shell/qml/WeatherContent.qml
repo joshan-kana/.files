@@ -39,10 +39,10 @@ FocusScope {
             } else if (event.key === Qt.Key_C || event.key === Qt.Key_Backspace) {
                 panel.calendarRequested();
                 event.accepted = true;
-            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Right) {
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_L || event.key === Qt.Key_Down || event.key === Qt.Key_Right) {
                 panel.selectedDay = Math.min(6, panel.selectedDay + 1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_K || event.key === Qt.Key_Left) {
+            } else if (event.key === Qt.Key_K || event.key === Qt.Key_H || event.key === Qt.Key_Up || event.key === Qt.Key_Left) {
                 panel.selectedDay = Math.max(0, panel.selectedDay - 1);
                 event.accepted = true;
             }
