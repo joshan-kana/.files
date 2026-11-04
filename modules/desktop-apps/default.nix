@@ -370,6 +370,11 @@ in
       home.packages = [ pkgs.beeper ];
     };
   };
+
+  chatgpt = _: {
+    home = _: { home.packages = [ pkgs.chatgpt ]; };
+  };
+
 }
 // lib.optionalAttrs isLinux {
   filelight = _: {

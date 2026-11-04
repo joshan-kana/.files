@@ -241,10 +241,6 @@
       homebrew.casks = [ "cardinal" ];
     };
 
-    chatgpt = { pkgs, ... }: {
-      home = _: { home.packages = [ pkgs.chatgpt-mac ]; };
-    };
-
     googleChrome = _: {
       homebrew.casks = [ "google-chrome" ];
     };
