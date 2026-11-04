@@ -890,7 +890,7 @@ test("the hub's content reveal follows its surface without leaving visible clipp
     qml,
     /id: scopedHelp\s+opacity: shellSurface\.contentReveal/,
   );
-  assert.match(qml, /fillColor: host\.theme\.musicReactiveBackground/);
+  assert.match(qml, /fillColor: host\.theme\.background/);
 });
 
 test("all hub visual modes have stable terminal dimensions", () => {
