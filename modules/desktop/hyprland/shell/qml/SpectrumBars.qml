@@ -35,7 +35,7 @@ Item {
     }
 
     SpectrumBarsItem {
-        anchors.fill: parent
+        anchors.fill: root
         visible: root.rendering
         targetBands: root.spectrum.targetBands
         edges: root.bandEdges
