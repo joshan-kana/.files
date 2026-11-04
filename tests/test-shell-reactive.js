@@ -79,22 +79,29 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   assert.match(theme, /const stops = \[critical, accent, accentTertiary\]/);
   assert.match(
     theme,
-    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.42,/,
+    /musicReactiveWash: musicReactiveEnabled && musicReactiveEnergy > 0\.002 \? Math\.min\(0\.42,/,
   );
   assert.match(
     theme,
-    /return musicReactiveWash > 0 \? blend\(base, spectrumColor\(position\), musicReactiveWash\) : base/,
+    /const tinted = illuminated \? blend\(background, spectrumColor\(position\), 0\.34\) : background/,
   );
-  assert.match(theme, /reactiveFrameColor\(position: real\)/);
+  assert.match(
+    theme,
+    /reactiveFrameColor\(position: real, illuminated: bool\)/,
+  );
   assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
   assert.doesNotMatch(theme, /musicReactiveHue|musicReactiveBackground/);
   assert.match(frame, /fillGradient: LinearGradient \{/);
-  assert.match(frame, /x2: drawing\.width/);
+  assert.match(frame, /x2: output\.reactiveActive && frame\.motion\.enabled/);
   assert.match(frame, /gradientInset: Math\.max\(0\.005,/);
   assert.match(frame, /position: output\.gradientInset/);
   assert.match(frame, /position: 1 - output\.gradientInset/);
   for (const point of ["0", "0.5", "1"])
-    assert.ok(frame.includes("reactiveFrameColor(" + point + ")"));
+    assert.ok(
+      frame.includes(
+        "reactiveFrameColor(" + point + ", output.reactiveActive)",
+      ),
+    );
   assert.match(frame, /strokeColor: frame\.reactiveBorder/);
   assert.match(frame, /strokeWidth: frame\.theme\.borderThin/);
   assert.match(
@@ -118,7 +125,7 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   );
   assert.match(
     native,
-    /const float position = std::clamp\(float\(point\.x\(\)\) \/ w, 0\.0f, 1\.0f\)/,
+    /float position = std::clamp\(float\(point\.x\(\)\) \/ w, 0\.0f, 1\.0f\)/,
   );
   assert.match(native, /qPremultiply\(color\.rgba\(\)\)/);
   for (const file of [
@@ -161,40 +168,68 @@ test("silent reactive surfaces retain the original fill, glass and outline", () 
   assert.match(native, /gradientStrength_ = 0/);
 });
 
-test("reactive audio uses continuous event-driven values instead of quantized brightness bands", () => {
+test("reactive audio retains one event-driven pipeline and independently detects kicks", () => {
   const reactive = qml("MusicReactiveState.qml");
-  assert.doesNotMatch(
-    reactive,
-    /function quantize|Math\.round\(clamp\(value\) \* 12\)|lastUpdateMs < 66/,
-  );
+  const analyser = qml("ReactiveAudio.js");
+  const spectrum = qml("SpectrumState.qml");
+  assert.match(reactive, /import "ReactiveAudio\.js" as ReactiveAudio/);
   assert.match(
     reactive,
     /function onSequenceChanged\(\): void \{\s*reactive\.updateAudio\(\)/,
   );
-  assert.match(reactive, /sustain = presence \* clamp\(/);
-  assert.match(reactive, /treble = presence \* clamp\(/);
-  assert.match(reactive, /elapsed \* 15/);
+  assert.match(reactive, /ReactiveAudio\.advanceAudio\(reactive,/);
+  assert.match(analyser, /hz >= 60 && hz < 250/);
+  assert.match(analyser, /hz >= 250 && hz < 2100/);
+  assert.match(analyser, /state\.sinceKick >= 0\.11/);
+  assert.match(analyser, /state\.motionAmount = clamp/);
+  assert.match(
+    spectrum,
+    /spectrum\.updateBands\(frame\.bands\);\s*spectrum\.sequence = frame\.seq/,
+  );
 });
 
-test("reactive audio returns to exact zero on silence and connection loss", () => {
+test("silence and disconnect reset every reactive field", () => {
   const reactive = qml("MusicReactiveState.qml");
+  for (const value of [
+    "sustain",
+    "beatPulse",
+    "treble",
+    "kick",
+    "body",
+    "presence",
+    "motionAmount",
+    "flowPhase",
+  ])
+    assert.match(reactive, new RegExp(value + " = 0;"));
   assert.match(
     reactive,
-    /loudness = Math\.max\(spectrum\.rms, spectrum\.peak \* 0\.35\)/,
-  );
-  assert.match(reactive, /!spectrum\.connected \|\| loudness <= 0\.003/);
-  assert.match(
-    reactive,
-    /const presence = clamp\(\(loudness - 0\.003\) \/ 0\.025\)/,
-  );
-  for (const field of ["sustain", "beatPulse", "treble"])
-    assert.match(reactive, new RegExp(`${field} = presence \\*`));
-  assert.match(
-    reactive,
-    /onConnectedChanged\(\): void \{\s*if \(\!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
+    /onConnectedChanged\(\): void \{\s*if \(!reactive\.spectrum\.connected\)\s*reactive\.reset\(\)/,
   );
 });
 
+test("closed hub and hidden bar still keep the visible frame reactive", () => {
+  const root = qml("shell.qml");
+  const frame = qml("DesktopFrame.qml");
+  assert.match(
+    root,
+    /musicReactiveSurfaceVisible: musicReactiveEnabled && \(desktopFrame\.glassExposed \|\| ambientBar\.shown/,
+  );
+  assert.match(frame, /glassExposed: enabled && Quickshell\.screens\.some/);
+  assert.match(root, /active: .*root\.musicReactiveSurfaceVisible/);
+  assert.match(root, /enabled: root\.musicReactiveSurfaceVisible/);
+  assert.match(
+    root,
+    /musicReactiveFlow: motion\.enabled \? reactive\.flowPhase : 0/,
+  );
+  for (const current of [
+    { frame: true, bar: false, hub: false, expected: true },
+    { frame: true, bar: true, hub: false, expected: true },
+    { frame: false, bar: true, hub: false, expected: true },
+    { frame: false, bar: false, hub: true, expected: true },
+    { frame: false, bar: false, hub: false, expected: false },
+  ])
+    assert.equal(current.frame || current.bar || current.hub, current.expected);
+});
 test("surface curves remain cubic, and only ordinary hover may use a radial light", () => {
   const curve = qml("SquircleSurface.qml");
   const surface = qml("ShellSurface.qml");
@@ -213,4 +248,62 @@ test("surface curves remain cubic, and only ordinary hover may use a radial ligh
     /std::max\(w \* 0\.9f, h \* 2\.0f\) \* float\(lightSpread_\)/,
   );
   assert.doesNotMatch(surface, /musicGlow|lightSpread: musicActive/);
+});
+
+test("animated reactive flow updates native geometry with numeric state, not QML QColor allocations", () => {
+  const native = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/visuals/plugin.cpp",
+    ),
+    "utf8",
+  );
+  const squircle = qml("SquircleSurface.qml");
+  const surface = qml("ShellSurface.qml");
+  for (const prop of ["gradientPhase", "gradientMovement", "gradientKick"]) {
+    assert.ok(native.includes("double " + prop + " MEMBER"));
+    assert.match(native, /NOTIFY gradientMotionChanged/);
+  }
+  assert.match(native, /const float wave =/);
+  assert.match(native, /const float detail =/);
+  assert.match(native, /const float impulse =/);
+  assert.ok(
+    native.includes("position = std::clamp(position + wave + detail + impulse"),
+  );
+  for (const prop of ["Phase", "Movement", "Kick"]) {
+    assert.ok(
+      squircle.includes("gradient" + prop + ": root.reactiveGradient" + prop),
+    );
+    assert.ok(
+      surface.includes(
+        "reactiveGradient" +
+          prop +
+          ": musicActive && motion.enabled ? theme.musicReactive" +
+          (prop === "Phase" ? "Flow" : prop),
+      ),
+    );
+  }
+  assert.doesNotMatch(surface, /theme\.flowingSpectrumColor/);
+});
+
+test("connected frame keeps static colour stops during audio and varies only numeric gradient endpoints", () => {
+  const frame = qml("DesktopFrame.qml");
+  const theme = qml("Theme.qml");
+  assert.match(frame, /readonly property bool reactiveActive:/);
+  assert.match(
+    frame,
+    /x1: output\.reactiveActive && frame\.motion\.enabled \?/,
+  );
+  assert.match(
+    frame,
+    /x2: output\.reactiveActive && frame\.motion\.enabled \?/,
+  );
+  assert.match(frame, /Math\.sin\(frame\.theme\.musicReactiveFlow\)/);
+  assert.match(frame, /Math\.cos\(frame\.theme\.musicReactiveFlow\)/);
+  assert.match(
+    theme,
+    /reactiveFrameColor\(position: real, illuminated: bool\)/,
+  );
+  assert.doesNotMatch(frame, /reactiveFrameColor\([0-9.]+\)/);
+  assert.doesNotMatch(frame, /flowingSpectrumColor/);
 });

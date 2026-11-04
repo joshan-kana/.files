@@ -784,7 +784,7 @@ test("bar reserves equal vertical space and frame joins start at measured screen
   );
   assert.match(
     theme,
-    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing5/,
+    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing3/,
   );
   assert.match(
     bar,
@@ -1003,4 +1003,37 @@ test("expanded gallery preserves the shallow media island before their joined co
     frame.inner.includes("C"),
     "joined corners must retain their continuous cubics",
   );
+});
+
+test("attached status islands approach the outer frame corner without clipping the notch", () => {
+  const theme = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/qml/Theme.qml"),
+    "utf8",
+  );
+  const bar = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../modules/desktop/hyprland/shell/qml/AmbientBar.qml",
+    ),
+    "utf8",
+  );
+  assert.match(
+    theme,
+    /frameIslandInset: frameThickness \+ frameRounding \+ spacing3/,
+  );
+  assert.match(
+    bar,
+    /leftMargin: bars\.theme\.spacing3 \+ \(bars\.theme\.frameIslandInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
+  );
+  assert.match(
+    bar,
+    /rightMargin: bars\.theme\.spacing3 \+ \(bars\.theme\.frameIslandInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
+  );
+  // FrameGeometry clips notches at thickness + cornerRadius + 3px.
+  const sideInset = 26 + 62 + 12;
+  assert.ok(sideInset > 26 + 62 + 3);
+  assert.ok(sideInset < 26 + 62 + 24);
+  for (const width of [800, 1280, 1920, 3840]) {
+    assert.ok(width - 2 * sideInset >= 600);
+  }
 });

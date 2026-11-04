@@ -28,7 +28,7 @@ ShellRoot {
 
     // A saved appearance preference is not a reason to animate invisible UI.
     // Demand comes from the actual shared shell surfaces that can be seen.
-    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (ambientBar.shown || expansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || osd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
+    readonly property bool musicReactiveSurfaceVisible: musicReactiveEnabled && (desktopFrame.glassExposed || ambientBar.shown || expansionState.hasCurrent || expansionHost.closing || modalHost.contentVisible || notifications.popupVisible || osd.visible || osdPopup.closing || resizeOverlay.open || resizeOverlay.closing)
 
     function toggleBar(): void {
         appearance.toggleBar();
@@ -54,11 +54,15 @@ ShellRoot {
     Theme {
         id: theme
         runtime: runtime
-        musicReactiveEnabled: root.musicReactiveSurfaceVisible && motion.enabled
+        musicReactiveEnabled: root.musicReactiveSurfaceVisible
         shellGlassEnabled: appearance.shellGlassEnabled
+        glassOpacity: appearance.glassOpacity
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
+        musicReactiveFlow: motion.enabled ? reactive.flowPhase : 0
+        musicReactiveMovement: motion.enabled ? reactive.motionAmount : 0
+        musicReactiveKick: motion.enabled ? reactive.kick : 0
     }
 
     Motion {
@@ -207,6 +211,7 @@ ShellRoot {
 
     MediaState {
         id: media
+        appearance: appearance
     }
 
     SystemState {
@@ -254,13 +259,13 @@ ShellRoot {
     SpectrumState {
         id: spectrum
         // No DSP client unless a visible spectrum consumer needs live audio.
-        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || (motion.enabled && root.musicReactiveSurfaceVisible)
+        active: (media.playing && ambientBar.shown) || (expansionState.hasCurrent && (expansionState.currentName === "system" || expansionState.currentName === "media")) || root.wallpaperSpectrumEnabled || root.musicReactiveSurfaceVisible
     }
 
     MusicReactiveState {
         id: reactive
         spectrum: root.spectrumRef
-        enabled: root.musicReactiveSurfaceVisible && motion.enabled
+        enabled: root.musicReactiveSurfaceVisible
     }
 
     WallpaperSpectrum {
@@ -615,14 +620,14 @@ ShellRoot {
             },
             {
                 id: "media.seekForward",
-                name: "Seek Forward 10 Seconds",
+                name: "Seek Forward " + media.seekSeconds + " Seconds",
                 description: "Seek the selected player forward",
                 icon: "media-seek-forward",
                 keywords: ["music", "media", "seek"]
             },
             {
                 id: "media.seekBackward",
-                name: "Seek Backward 10 Seconds",
+                name: "Seek Backward " + media.seekSeconds + " Seconds",
                 description: "Seek the selected player backward",
                 icon: "media-seek-backward",
                 keywords: ["music", "media", "seek"]
@@ -1057,14 +1062,14 @@ ShellRoot {
     GlobalShortcut {
         appid: "linux-desktop"
         name: "media-seek-forward"
-        description: "Seek forward ten seconds"
+        description: "Seek forward by the configured interval"
         onPressed: actions.mediaSeekForward()
     }
 
     GlobalShortcut {
         appid: "linux-desktop"
         name: "media-seek-backward"
-        description: "Seek backward ten seconds"
+        description: "Seek backward by the configured interval"
         onPressed: actions.mediaSeekBackward()
     }
 

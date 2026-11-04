@@ -28,7 +28,7 @@ Item {
                     glyph: "󰒮"
                 },
                 {
-                    label: "Seek backward five seconds",
+                    label: "Seek backward " + root.media.seekSeconds + " seconds",
                     hint: root.compact ? "SHIFT+H" : "H",
                     enabled: root.media.seekable,
                     action: "back",
@@ -42,7 +42,7 @@ Item {
                     glyph: root.media.playing ? "󰏤" : "󰐊"
                 },
                 {
-                    label: "Seek forward five seconds",
+                    label: "Seek forward " + root.media.seekSeconds + " seconds",
                     hint: root.compact ? "SHIFT+L" : "L",
                     enabled: root.media.seekable,
                     action: "forward",
@@ -79,13 +79,13 @@ Item {
                         root.media.previous();
                         break;
                     case "back":
-                        root.media.seek(-5);
+                        root.media.seekStep(-1);
                         break;
                     case "play":
                         root.media.togglePlaying();
                         break;
                     case "forward":
-                        root.media.seek(5);
+                        root.media.seekStep(1);
                         break;
                     case "next":
                         root.media.next();

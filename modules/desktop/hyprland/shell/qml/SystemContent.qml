@@ -35,7 +35,7 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
-    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
+    readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || transparencyPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
     property string resetStatus: ""
@@ -120,9 +120,27 @@ FocusScope {
     readonly property string maintenanceOperationRole: recordingsPanel.open && recordingsPanel.captureTrashRunning ? "capture" : networkPanel.open && networkPanel.profileActionRunning ? "connectivity" : ""
     readonly property bool sessionOpen: sessionPanel.open
     readonly property bool resourcesOpen: resourcesPanel.open
+    readonly property bool transparencyOpen: transparencyPanel.open
     readonly property bool recordingsOpen: recordingsPanel.open
-    readonly property string helpTitle: recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
-    readonly property var helpBindings: recordingsPanel.open ? [
+    readonly property string helpTitle: transparencyPanel.open ? "Transparency controls" : recordingsPanel.open ? "Captures" : wallpaperPanel.open ? "Wallpaper library" : mixerOpen ? "Application mixer" : resourcesPanel.open ? "Resource monitor" : (bluetoothPanel.open ? "Bluetooth controls" : (networkPanel.open ? "Network controls" : (themePanel.open ? "Theme controls" : (sessionPanel.open ? "Session controls" : (trayMenu.open ? "Tray menu controls" : "System controls")))))
+    readonly property var helpBindings: transparencyPanel.open ? [
+        {
+            key: "J/K · ↑/↓",
+            action: "Select window or glass"
+        },
+        {
+            key: "H/L · ←/→",
+            action: "Decrease / increase transparency"
+        },
+        {
+            key: "SPACE / ENTER",
+            action: "Toggle selected effect"
+        },
+        {
+            key: "ESC",
+            action: "Back to Controls"
+        }
+    ] : recordingsPanel.open ? [
         {
             key: "J/K · U/⇧D · PGUP/PGDN",
             action: "Select clip / half-page"
@@ -330,7 +348,11 @@ FocusScope {
                         },
                         {
                             key: "SHIFT+F/G/D/R/A/S/E",
-                            action: "Spectrum / reactive / transparency / glass / bar / frame / motion"
+                            action: "Spectrum / reactive / windows / glass / bar / frame / motion"
+                        },
+                        {
+                            key: "SHIFT+O",
+                            action: "Adjust window and frosted-glass transparency"
                         },
                         {
                             key: "SHIFT+C · ENTER",
@@ -359,7 +381,7 @@ FocusScope {
     signal revealContent(real top, real bottom)
 
     implicitWidth: themeOpen || wallpaperOpen ? theme.controlsDetailWidth : 710
-    implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
+    implicitHeight: transparencyPanel.open ? transparencyPanel.implicitHeight : recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
     function closeDetails(): void {
@@ -371,6 +393,7 @@ FocusScope {
         sessionPanel.closeView();
         resourcesPanel.closeView();
         recordingsPanel.closeView();
+        transparencyPanel.closeView();
         mixerOpen = false;
     }
 
@@ -388,7 +411,9 @@ FocusScope {
         if (!engaged)
             return;
 
-        if (requestedView === "theme")
+        if (requestedView === "transparency")
+            openTransparency();
+        else if (requestedView === "theme")
             openTheme();
         else if (requestedView === "session")
             openSession();
@@ -435,6 +460,7 @@ FocusScope {
         mixerView.prewarm();
         recordingsPanel.prewarm();
         resourcesPanel.prewarm();
+        transparencyPanel.prewarm();
         networkPanel.prewarm();
         bluetoothPanel.prewarm();
         wallpaperPanel.prewarm();
@@ -526,6 +552,13 @@ FocusScope {
 
     function showTheme(): void {
         openTheme();
+    }
+
+    function openTransparency(): void {
+        helpOpen = false;
+        closeDetails();
+        transparencyPanel.openView();
+        markDetail("transparency");
     }
 
     function openSession(): void {
@@ -945,8 +978,10 @@ FocusScope {
             Row {
                 width: parent.width
                 height: 36
+                spacing: root.theme.spacing2
 
                 Text {
+                    id: visualModesHeading
                     anchors.verticalCenter: parent.verticalCenter
                     text: "VISUAL MODES"
                     color: root.theme.readableRoleColor("display")
@@ -954,6 +989,25 @@ FocusScope {
                     font.pixelSize: root.theme.fontPanelEyebrow
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.1
+                }
+                Item {
+                    width: Math.max(1, parent.width - visualModesHeading.implicitWidth - opacitySettingsButton.width - parent.spacing * 2)
+                    height: 1
+                }
+                ShellAction {
+                    id: opacitySettingsButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 152
+                    height: 36
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: "󰈈"
+                    title: "Transparency"
+                    shortcut: "SHIFT+O"
+                    onActivated: root.openTransparency()
                 }
             }
 
@@ -1208,30 +1262,6 @@ FocusScope {
                         motion: root.motion
                     }
                 }
-            }
-
-            KeyHintStrip {
-                width: parent.width
-                runtime: root.runtime
-                theme: root.theme
-                hints: [
-                    {
-                        shortcut: "J/K",
-                        label: "Select audio"
-                    },
-                    {
-                        shortcut: "H/L",
-                        label: "Level"
-                    },
-                    {
-                        shortcut: "M",
-                        label: "Mute"
-                    },
-                    {
-                        shortcut: "X",
-                        label: "Mic"
-                    }
-                ]
             }
 
             Column {
@@ -1582,6 +1612,21 @@ FocusScope {
         }
 
         DeferredDetail {
+            id: transparencyPanel
+            motion: root.motion
+            anchors.fill: parent
+            sourceComponent: Component {
+                TransparencyPanel {
+                    runtime: root.runtime
+                    theme: root.theme
+                    motion: root.motion
+                    appearance: root.appearance
+                    onKeyboardRequested: keyboardFocus.forceActiveFocus()
+                }
+            }
+        }
+
+        DeferredDetail {
             id: resourcesPanel
             motion: root.motion
             anchors.fill: parent
@@ -1820,6 +1865,26 @@ FocusScope {
                     return;
                 }
 
+                if (transparencyPanel.open) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        root.backFromDetail();
+                    } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                        transparencyPanel.invoke("moveSelection", 1);
+                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                        transparencyPanel.invoke("moveSelection", -1);
+                    } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                        transparencyPanel.invoke("adjustSelected", -1);
+                    } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                        transparencyPanel.invoke("adjustSelected", 1);
+                    } else if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        transparencyPanel.invoke("toggleSelected");
+                    } else {
+                        return;
+                    }
+                    event.accepted = true;
+                    return;
+                }
+
                 if (resourcesPanel.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
@@ -1971,10 +2036,17 @@ FocusScope {
 
                 if (trayMenu.open) {
                     if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (event.key === Qt.Key_Left || event.key === Qt.Key_H)) {
-                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && trayMenu.panel && trayMenu.panel.stack.length <= 1)
-                            root.backFromDetail();
-                        else
+                        if ((event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) && trayMenu.panel && trayMenu.panel.stack.length <= 1) {
+                            // A tray menu opened inside Controls has no hub
+                            // navigation history. Dismiss it locally instead
+                            // of letting expansionState.back() close the hub.
+                            trayMenu.closeMenu();
+                            if (root.requestedView.startsWith("tray:"))
+                                root.detailRequested("controls");
+                            keyboardFocus.forceActiveFocus();
+                        } else {
                             trayMenu.invoke("goBack");
+                        }
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {
                         trayMenu.invoke("moveSelection", -1);
@@ -2003,6 +2075,8 @@ FocusScope {
                     root.wallpaperSpectrumToggleRequested();
                 } else if (shifted && event.key === Qt.Key_G) {
                     root.musicReactiveToggleRequested();
+                } else if (shifted && event.key === Qt.Key_O) {
+                    root.openTransparency();
                 } else if (shifted && event.key === Qt.Key_D) {
                     root.windowTransparencyToggleRequested();
                 } else if (shifted && event.key === Qt.Key_R) {
@@ -2020,9 +2094,9 @@ FocusScope {
                 } else if (shifted && event.key === Qt.Key_T) {
                     root.nightLight.warmer();
                 } else if (shifted && event.key === Qt.Key_H) {
-                    root.media.seek(-5);
+                    root.media.seekStep(-1);
                 } else if (shifted && event.key === Qt.Key_L) {
-                    root.media.seek(5);
+                    root.media.seekStep(1);
                 } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
                     root.adjustSelectedAudio(-0.05);
                 } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
