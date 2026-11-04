@@ -15,24 +15,33 @@ QtObject {
         category: "Appearance"
         property bool wallpaperSpectrumEnabled: false
         property string wallpaperResizeMode: "fit"
+        property string wallpaperTargetOutput: ""
         property bool musicReactiveEnabled: false
         property bool barVisible: true
         property bool frameVisible: true
         property bool windowTransparencyEnabled: false
         property bool shellGlassEnabled: false
+        property real windowOpacity: 0.82
+        property real glassOpacity: 0.70
         property string mediaVisualizerMode: "bars"
         property bool mediaLyricsVisible: false
+        property int mediaSeekSeconds: 10
     }
 
     readonly property bool wallpaperSpectrumEnabled: saved.wallpaperSpectrumEnabled
     readonly property string wallpaperResizeMode: saved.wallpaperResizeMode === "crop" ? "crop" : "fit"
+    readonly property string wallpaperTargetOutput: saved.wallpaperTargetOutput
     readonly property bool musicReactiveEnabled: saved.musicReactiveEnabled
     readonly property bool barVisible: saved.barVisible
     readonly property bool frameVisible: saved.frameVisible
     readonly property bool windowTransparencyEnabled: saved.windowTransparencyEnabled
     readonly property bool shellGlassEnabled: saved.shellGlassEnabled
+    readonly property real windowOpacity: Math.max(0.50, Math.min(1, saved.windowOpacity))
+    readonly property real glassOpacity: Math.max(0.35, Math.min(0.95, saved.glassOpacity))
     readonly property string mediaVisualizerMode: saved.mediaVisualizerMode === "curve" ? "curve" : "bars"
     readonly property bool mediaLyricsVisible: saved.mediaLyricsVisible
+    readonly property var seekIntervals: [5, 10, 15, 30, 60]
+    readonly property int mediaSeekSeconds: seekIntervals.includes(saved.mediaSeekSeconds) ? saved.mediaSeekSeconds : 10
 
     // Preloaded panels retain their Wayland layers while closed, but an
     // invisible surface must not force compositor blur of the live wallpaper.
@@ -60,21 +69,34 @@ QtObject {
         const defaults = {
             wallpaperSpectrumEnabled: false,
             wallpaperResizeMode: "fit",
+            wallpaperTargetOutput: "",
             musicReactiveEnabled: false,
             barVisible: true,
             frameVisible: true,
             windowTransparencyEnabled: false,
             shellGlassEnabled: false,
+            windowOpacity: 0.82,
+            glassOpacity: 0.70,
             mediaVisualizerMode: "bars",
-            mediaLyricsVisible: false
+            mediaLyricsVisible: false,
+            mediaSeekSeconds: 10
         };
         for (const key of Object.keys(defaults)) {
             saved[key] = defaults[key];
             saved.setValue(key, defaults[key]);
         }
         saved.sync();
+        windowOpacityApply.stop();
         applyWindowTransparency();
         applyShellGlass();
+    }
+
+    function setWallpaperTargetOutput(output: string): void {
+        if (output.length === 0 || wallpaperTargetOutput === output)
+            return;
+        saved.wallpaperTargetOutput = output;
+        saved.setValue("wallpaperTargetOutput", output);
+        saved.sync();
     }
 
     function toggleWallpaperResizeMode(): void {
@@ -130,16 +152,54 @@ QtObject {
     property Connections compositorReload: Connections {
         target: Hyprland
         function onRawEvent(event): void {
-            if (event.name === "configreloaded")
+            if (event.name === "configreloaded") {
+                appearance.applyWindowTransparency();
                 appearance.applyShellGlass();
+            }
         }
+    }
+
+    // The compositor command is coalesced while dragging, rather than
+    // launching a hyprctl process for every pointer-motion event.
+    property Timer windowOpacityApply: Timer {
+        interval: 65
+        repeat: false
+        onTriggered: appearance.applyWindowTransparency()
     }
 
     function applyWindowTransparency(): void {
         if (runtime.hyprctl.length === 0)
             return;
-        const opacity = windowTransparencyEnabled ? "0.82" : "1.0";
+        const opacity = (windowTransparencyEnabled ? windowOpacity : 1).toFixed(2);
         Quickshell.execDetached([runtime.hyprctl, "eval", "hl.config({ decoration = { active_opacity = " + opacity + ", inactive_opacity = " + opacity + " } })"]);
+    }
+
+    function setWindowOpacity(value: real): void {
+        const next = Math.round(Math.max(0.50, Math.min(1, value)) * 100) / 100;
+        if (next === windowOpacity && windowTransparencyEnabled)
+            return;
+        saved.windowOpacity = next;
+        saved.windowTransparencyEnabled = true;
+        saved.setValue("windowOpacity", next);
+        saved.setValue("windowTransparencyEnabled", true);
+        saved.sync();
+        windowOpacityApply.restart();
+    }
+
+    function setGlassOpacity(value: real): void {
+        const next = Math.round(Math.max(0.35, Math.min(0.95, value)) * 100) / 100;
+        if (next === glassOpacity && shellGlassEnabled)
+            return;
+        const wasEnabled = shellGlassEnabled;
+        saved.glassOpacity = next;
+        saved.shellGlassEnabled = true;
+        saved.setValue("glassOpacity", next);
+        saved.setValue("shellGlassEnabled", true);
+        saved.sync();
+        // Alpha is a live QML theme binding. Only a newly enabled glass mode
+        // needs Hyprland blur rules; dragging never spawns seven processes.
+        if (!wasEnabled)
+            applyShellGlass();
     }
 
     function toggleWindowTransparency(): void {
@@ -175,6 +235,16 @@ QtObject {
         saved.setValue("shellGlassEnabled", saved.shellGlassEnabled);
         saved.sync();
         applyShellGlass();
+    }
+
+    function adjustMediaSeek(direction: int): void {
+        const current = seekIntervals.indexOf(mediaSeekSeconds);
+        const index = Math.max(0, Math.min(seekIntervals.length - 1, current + direction));
+        if (index === current)
+            return;
+        saved.mediaSeekSeconds = seekIntervals[index];
+        saved.setValue("mediaSeekSeconds", saved.mediaSeekSeconds);
+        saved.sync();
     }
 
     function toggleMediaVisualizer(): void {

@@ -67,17 +67,17 @@ test("footer inset and panel height agree for both measured and live geometry", 
   const host = source("ShellExpansionHost.qml");
   assert.match(
     host,
-    /id: hubFooter[\s\S]*?bottomMargin: host\.theme\.spacing6/,
+    /id: hubFooter[\s\S]*?bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
   );
   assert.match(
     host,
-    /contentHeight:.*theme\.spacing3 \+ theme\.spacing6 \+ theme\.spacing4 \* 2/,
+    /contentHeight:.*theme\.spacing3 \+ footerBottomClearance \+ theme\.spacing4 \* 2/,
   );
   assert.match(
     host,
-    /measuredContentHeight = .*theme\.spacing3 \+ theme\.spacing6 \+ theme\.spacing4 \* 2/,
+    /measuredContentHeight = .*theme\.spacing3 \+ footerBottomClearance \+ theme\.spacing4 \* 2/,
   );
-  assert.match(host, /scrollBudget: .*host\.theme\.spacing6/);
+  assert.match(host, /scrollBudget: .*host\.footerBottomClearance/);
 });
 
 test("footer uses the Controls surface material without a second glass layer", () => {
@@ -114,4 +114,50 @@ test("local notification and wallpaper panels show their supported Escape action
   assert.match(activity, /event\.key === Qt\.Key_Escape/);
   assert.match(wallpaper, /shortcut: "ESC",\s*label: "Back"/);
   assert.match(wallpaper, /event\.key === Qt\.Key_Escape/);
+});
+
+test("footer background retains physical clearance even when content is taller than the clipped surface", () => {
+  const host = source("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
+  );
+  assert.match(
+    host,
+    /bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
+  );
+  // The painted background extends spacing2 below the footer content.
+  assert.match(host, /y: hubFooter\.y - host\.theme\.spacing2/);
+  assert.match(host, /height: hubFooter\.height \+ host\.theme\.spacing2 \* 2/);
+  const baseInset = 32 + 8;
+  for (const overflow of [0, 10, 45, 120]) {
+    const paintedClearance = baseInset + overflow - overflow - 8;
+    assert.equal(paintedClearance, 32);
+  }
+});
+
+test("Controls audio shortcuts live in the stable shared footer, not its scroll content", () => {
+  const host = source("ShellExpansionHost.qml");
+  const controls = source("SystemContent.qml");
+  assert.match(host, /id: controlsAudioHints/);
+  assert.match(
+    host,
+    /controlsAudioHints\.visible \? controlsAudioHints\.implicitHeight/,
+  );
+  assert.match(
+    host,
+    /visible: host\.expansionState\.hasCurrent && host\.expansionState\.currentName === "system" && !host\.detailVisible && !host\.helpVisible/,
+  );
+  assert.match(host, /KeyHintStrip \{\s*id: controlsAudioHints/);
+  for (const [shortcut, label] of [
+    ["J/K", "Select audio"],
+    ["H/L", "Level"],
+    ["M", "Mute"],
+    ["X", "Mic"],
+  ]) {
+    assert.ok(host.includes('shortcut: "' + shortcut + '"'));
+    assert.ok(host.includes('label: "' + label + '"'));
+  }
+  assert.doesNotMatch(controls, /label: "Select audio"/);
+  assert.match(host, /bottomMargin: host\.footerBottomClearance/);
 });

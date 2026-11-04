@@ -178,11 +178,14 @@ protected:
           *std::max_element(current_.begin() + lo, current_.begin() + hi + 1);
       levels[i] = std::pow(std::clamp(peak, 0.0f, 1.0f), 0.88f);
     }
-    const int active =
-        std::count_if(levels.begin(), levels.end(),
-                      [](float level) { return level > 0.003f; });
     QSGGeometry *g = node->geometry();
-    g->allocate(active * kSegments * 3);
+    // Keep one fixed buffer for the entire spectrum. Counting only visible
+    // bars would repeatedly reallocate this GPU-backed geometry as notes
+    // start and decay, even though the number of frequency bins never moves.
+    // Inactive bars use transparent, zero-area triangles instead.
+    const int vertexCount = count * kSegments * 3;
+    if (g->vertexCount() != vertexCount)
+      g->allocate(vertexCount);
     auto *v = g->vertexDataAsColoredPoint2D();
     static const auto dirs = [] {
       std::array<std::array<float, 2>, kSegments> a{};
@@ -201,11 +204,11 @@ protected:
     };
     for (int i = 0; i < count; ++i) {
       const float level = levels[i];
-      if (level <= 0.003f)
-        continue;
-      const QColor c = barColors_[i].value<QColor>();
-      const float bh = std::max(2.0f, level * h),
-                  x = (i + 0.5f) * w / count - bw / 2.0f, y = h - bh;
+      const bool audible = level > 0.003f;
+      const QColor c =
+          audible ? barColors_[i].value<QColor>() : QColor(Qt::transparent);
+      const float bh = audible ? std::max(2.0f, level * h) : 0.0f;
+      const float x = (i + 0.5f) * w / count - bw / 2.0f, y = h - bh;
       const float r = std::min({bw / 2.0f, bh / 2.0f, 3.0f});
       const std::array<std::array<float, 2>, 4> corners = {
           {{x + r, y + r},
@@ -255,6 +258,12 @@ class SquircleFillItem : public QQuickItem {
       QColor gradientMidColor MEMBER gradientMidColor_ NOTIFY gradientChanged)
   Q_PROPERTY(
       QColor gradientHighColor MEMBER gradientHighColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      double gradientPhase MEMBER gradientPhase_ NOTIFY gradientMotionChanged)
+  Q_PROPERTY(double gradientMovement MEMBER gradientMovement_ NOTIFY
+                 gradientMotionChanged)
+  Q_PROPERTY(
+      double gradientKick MEMBER gradientKick_ NOTIFY gradientMotionChanged)
   Q_PROPERTY(QColor lightColor MEMBER lightColor_ NOTIFY lightColorChanged)
   Q_PROPERTY(
       double lightStrength MEMBER lightStrength_ NOTIFY lightStrengthChanged)
@@ -272,6 +281,8 @@ public:
             &QQuickItem::update);
     connect(this, &SquircleFillItem::gradientChanged, this,
             &QQuickItem::update);
+    connect(this, &SquircleFillItem::gradientMotionChanged, this,
+            &QQuickItem::update);
     connect(this, &SquircleFillItem::lightColorChanged, this,
             &QQuickItem::update);
     connect(this, &SquircleFillItem::lightStrengthChanged, this,
@@ -288,6 +299,7 @@ signals:
   void fillColorChanged();
   void fillOpacityChanged();
   void gradientChanged();
+  void gradientMotionChanged();
   void lightColorChanged();
   void lightStrengthChanged();
   void lightSpreadChanged();
@@ -371,11 +383,28 @@ protected:
     const QPointF lightCenter(w * 0.15, h * -0.16);
     const float gradientStrength =
         std::clamp(float(gradientStrength_), 0.0f, 1.0f);
+    const float gradientMovement =
+        std::clamp(float(gradientMovement_), 0.0f, 1.0f);
+    const float gradientKick = std::clamp(float(gradientKick_), 0.0f, 1.0f);
+    const float gradientPhase = float(gradientPhase_);
     auto colorAt = [&](const QPointF &point) {
       float baseRed = fillColor_.redF(), baseGreen = fillColor_.greenF(),
             baseBlue = fillColor_.blueF();
       if (gradientStrength > 0.00001f) {
-        const float position = std::clamp(float(point.x()) / w, 0.0f, 1.0f);
+        float position = std::clamp(float(point.x()) / w, 0.0f, 1.0f);
+        // Vertex colours flow within the scene graph. Three static Stylix
+        // stops are retained; audio changes only small numeric state, never
+        // QML QColor objects or Shape gradient resources on every packet.
+        if (gradientMovement > 0.00001f) {
+          const float wave = 0.19f * gradientMovement *
+                             std::sin(gradientPhase + position * 3.5f);
+          const float detail = 0.025f * gradientMovement *
+                               std::sin(gradientPhase * 3.3f - position * 6.1f);
+          const float impulse =
+              0.115f * gradientKick *
+              std::sin(position * 3.4f + gradientPhase + 0.4f);
+          position = std::clamp(position + wave + detail + impulse, 0.0f, 1.0f);
+        }
         const QColor &left =
             position < 0.5f ? gradientLowColor_ : gradientMidColor_;
         const QColor &right =
@@ -475,6 +504,7 @@ private:
   QColor gradientLowColor_{Qt::transparent}, gradientMidColor_{Qt::transparent},
       gradientHighColor_{Qt::transparent};
   double fillOpacity_ = 1, gradientStrength_ = 0;
+  double gradientPhase_ = 0, gradientMovement_ = 0, gradientKick_ = 0;
   double lightStrength_ = 0, lightSpread_ = 1;
   double cornerRadius_ = 28, exponent_ = 4.5;
 };
