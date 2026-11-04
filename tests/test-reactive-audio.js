@@ -22,6 +22,8 @@ function state() {
     presence: 0,
     motionAmount: 0,
     spectrumLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    impulseLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    bandBaselines: [0, 0, 0, 0, 0, 0, 0, 0, 0],
     bassBaseline: 0,
     peakBaseline: 0,
     rmsBaseline: 0,
@@ -195,4 +197,67 @@ test("pausing playback releases FFT zones and visible tint promptly", () => {
     "base tint fades rather than lingering for five seconds",
   );
   assert.ok(s.kick < 0.01);
+});
+
+test("real kick attacks snap on within an FFT frame and release without lingering", () => {
+  const s = state();
+  settle(s);
+  const before = s.impulseLevels[1];
+  ctx.advanceAudio(s, audio(0.95), 0.01);
+  const first = s.impulseLevels[1];
+  assert.ok(
+    first - before > 0.07,
+    "the low-mid impulse must attack immediately",
+  );
+  assert.ok(s.kick > 0.14, "kick onset must punch on the same FFT frame");
+  for (let i = 0; i < 15; i++) ctx.advanceAudio(s, audio(), 0.01);
+  assert.ok(s.kick < 0.09, "kick should clear within 150 ms");
+  assert.ok(
+    s.impulseLevels[1] < first * 0.2,
+    "transient colour should clear promptly",
+  );
+});
+
+test("busy mids and treble cannot mask a new kick over continuous 808", () => {
+  const s = state();
+  const busy = audio(0, 0.95);
+  for (let i = 0; i < busy.bands.length; i++) {
+    if (bandHz(i) > 250) busy.bands[i] = 0.68;
+  }
+  busy.mid = 0.77;
+  busy.high = 0.75;
+  for (let i = 0; i < 220; i++) ctx.advanceAudio(s, busy, 0.01);
+  assert.ok(s.kick < 0.001, "steady, busy music is not a kick");
+  const attack = audio(0.94, 0.95);
+  attack.mid = 0.84;
+  attack.high = 0.75;
+  for (let i = 0; i < attack.bands.length; i++) {
+    if (bandHz(i) > 250) attack.bands[i] = 0.78;
+  }
+  ctx.advanceAudio(s, attack, 0.01);
+  assert.ok(s.kick > 0.14, "kick onset must survive a busy mix");
+  assert.ok(
+    s.impulseLevels[1] > 0.1,
+    "low-mid kick remains visible over loud mids",
+  );
+});
+
+test("reactive release converges continuously without a five-second presence tail", () => {
+  const s = state();
+  settle(s);
+  const silence = audio();
+  for (const key of ["rms", "peak", "sub", "bass", "mid", "high"])
+    silence[key] = 0;
+  silence.bands.fill(0);
+  const energies = [];
+  for (let i = 0; i < 55; i++) {
+    ctx.advanceAudio(s, silence, 0.01);
+    energies.push(s.sustain);
+  }
+  assert.ok(
+    energies.every((v, i) => i === 0 || v <= energies[i - 1] + 1e-7),
+    "sustained wash must decay without a final threshold cut",
+  );
+  assert.ok(Math.max(...s.impulseLevels) < 0.001);
+  assert.ok(s.sustain < 0.0001);
 });

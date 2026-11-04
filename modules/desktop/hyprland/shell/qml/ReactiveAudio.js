@@ -99,7 +99,9 @@ function advanceAudio(state, frame, seconds) {
       ? score
       : 0;
   if (onset > 0) state.sinceKick = 0;
-  state.kick = approach(state.kick, onset, dt, onset > state.kick ? 58 : 5.2);
+  // A detected attack reaches its peak in the same analyser frame. It is
+  // independent of sustained 808 levels and decays in roughly 140 ms.
+  state.kick = Math.max(clamp(onset * 1.9), approach(state.kick, 0, dt, 22));
 
   const bodyTarget =
     present *
@@ -109,42 +111,50 @@ function advanceAudio(state, frame, seconds) {
     state.body,
     bodyTarget,
     dt,
-    bodyTarget > state.body ? 8 : 3.4,
+    bodyTarget > state.body ? 38 : 15,
   );
   state.treble = approach(
     state.treble,
     detailTarget,
     dt,
-    detailTarget > state.treble ? 11 : 5,
+    detailTarget > state.treble ? 42 : 18,
   );
   state.presence = approach(
     state.presence,
     present,
     dt,
-    present > state.presence ? 7 : 10,
+    present > state.presence ? 32 : 25,
   );
 
-  // Sustained low frequencies preserve a subtle foundation, never an
-  // illumination pulse. Kicks accelerate the flow without lifting alpha.
+  // The steady foundation controls only a faint ambient tint. It never
+  // drives a traveling phase or a global brightness pulse.
   const foundation =
     state.presence *
-    (0.42 + 0.1 * Math.sqrt(sub) + 0.13 * Math.sqrt(bass) + 0.22 * state.body);
+    (0.14 +
+      0.055 * Math.sqrt(sub) +
+      0.075 * Math.sqrt(bass) +
+      0.1 * state.body);
   state.sustain = approach(
     state.sustain,
     foundation,
     dt,
-    present > 0.01 ? 4 : 14,
+    present > 0.01 ? 30 : 24,
   );
   state.beatPulse = state.kick;
   state.motionAmount = clamp(
     state.body * 0.35 + state.treble * 0.22 + state.kick * 0.35,
   );
 
-  // A held 808 supplies warm foundation, but it cannot animate the other
-  // eight zones. Emphasize actual attacks in 60 Hz and higher bands.
+  // A held 808 supplies only a faint base. Each band also has a separate
+  // adaptive transient baseline, making a new kick stand out even over
+  // continuous 808, loud mids, and busy treble. No oscillator is involved.
   const scales = [0.23, 0.95, 1.08, 1.22, 1.32, 1.38, 1.42, 1.45, 1.48];
   const previousLevels = state.spectrumLevels || [];
+  const previousImpulses = state.impulseLevels || [];
+  const previousBaselines = state.bandBaselines || [];
   const levels = Array(9);
+  const impulses = Array(9);
+  const baselines = Array(9);
   for (let zone = 0; zone < levels.length; zone++) {
     const count = Math.max(1, counts[zone]);
     const mean = totals[zone] / count;
@@ -159,8 +169,29 @@ function advanceAudio(state, frame, seconds) {
       previousLevel,
       target,
       dt,
-      target > previousLevel ? 34 : 13,
+      target > previousLevel ? 65 : 18,
     );
+
+    const reference = previousBaselines[zone] || 0;
+    const relative = Math.max(0, target - reference);
+    // Absolute rises count even if sustained levels are already high.
+    // Higher bands contribute their own events without masking the kick.
+    const attackTarget =
+      present *
+      clamp(
+        transient * (zone === 0 ? 0.4 : 6.5) +
+          relative * (zone === 0 ? 0.12 : 1.7),
+      );
+    const previousImpulse = previousImpulses[zone] || 0;
+    impulses[zone] = approach(
+      previousImpulse,
+      attackTarget,
+      dt,
+      attackTarget > previousImpulse ? 100 : 24,
+    );
+    baselines[zone] = approach(reference, target, dt, 1.9);
   }
   state.spectrumLevels = levels;
+  state.impulseLevels = impulses;
+  state.bandBaselines = baselines;
 }

@@ -73,14 +73,14 @@ test("opacity sliders live in visual-mode tiles with normal keyhints, not a sepa
   assert.match(setting, /StateLayer \{/);
   assert.match(setting, /ShellSlider \{/);
   assert.match(setting, /KeyHint \{/);
-  assert.match(setting, /shortcut: setting\.shortcut/);
+  assert.match(
+    setting,
+    /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.shortcut/,
+  );
   assert.match(setting, /from: 0\.20/);
   assert.match(setting, /to: 1/);
   assert.match(setting, /value: setting\.opacityValue/);
-  assert.match(
-    setting,
-    /Math\.round\(setting\.opacityValue \* 100\) \+ "% opacity"/,
-  );
+  assert.match(setting, /Math\.round\(setting\.opacityValue \* 100\) \+ "%"/);
   assert.match(
     setting,
     /onValueRequested: next => setting\.opacityRequested\(next\)/,

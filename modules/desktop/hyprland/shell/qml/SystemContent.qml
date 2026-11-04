@@ -87,6 +87,46 @@ FocusScope {
     property bool helpOpen: false
     property int trayIndex: 0
     property int selectedAudioIndex: 0
+    // One Controls-wide slider selection mode. Tab cycles only available
+    // sliders; H/L and arrows edit the selected value without stealing the
+    // existing audio keys outside this mode.
+    property string selectedSlider: ""
+    readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass"], nightLight.supported ? ["nightLight"] : [])
+
+    function selectSlider(target: string): void {
+        selectedSlider = target;
+        keyboardFocus.forceActiveFocus();
+    }
+
+    function cycleSlider(direction: int): void {
+        const targets = sliderTargets;
+        if (!targets.length)
+            return;
+        const index = targets.indexOf(selectedSlider);
+        selectedSlider = targets[(index < 0 ? (direction > 0 ? 0 : targets.length - 1) : (index + direction + targets.length) % targets.length)];
+    }
+
+    function adjustSlider(direction: int): void {
+        if (selectedSlider === "brightness" && brightness.supported)
+            brightness.adjust(direction * 5);
+        else if (selectedSlider === "windows")
+            appearance.setWindowOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.windowOpacity + direction * 0.05) * 100) / 100)));
+        else if (selectedSlider === "glass")
+            appearance.setGlassOpacity(Math.max(0.20, Math.min(1, Math.round((appearance.glassOpacity + direction * 0.05) * 100) / 100)));
+        else if (selectedSlider === "nightLight" && nightLight.supported)
+            nightLight.adjustTemperature(direction * 200);
+    }
+
+    function activateSlider(): void {
+        if (selectedSlider === "windows")
+            windowTransparencyToggleRequested();
+        else if (selectedSlider === "glass")
+            shellGlassToggleRequested();
+        else if (selectedSlider === "nightLight")
+            nightLight.toggle();
+        else if (selectedSlider === "brightness")
+            brightness.refresh();
+    }
     readonly property var quickAudioTargets: [
         {
             kind: "output"
@@ -297,6 +337,14 @@ FocusScope {
                             action: "Adjust selected audio level"
                         },
                         {
+                            key: "TAB / SHIFT+TAB",
+                            action: "Select display, window, glass or Night Light slider"
+                        },
+                        {
+                            key: "H/L · ←/→ · ENTER · ESC",
+                            action: "H/L adjust, J/K select, Enter toggle, Esc leave slider"
+                        },
+                        {
                             key: "U/D · PGUP/PGDN",
                             action: "Scroll Controls"
                         },
@@ -339,6 +387,10 @@ FocusScope {
                         {
                             key: "T / - (⇧T) / +",
                             action: "Night Light / warmer / cooler"
+                        },
+                        {
+                            key: "BRIGHTNESS UP/DOWN",
+                            action: "Hardware display brightness and volume-style OSD"
                         },
                         {
                             key: "[ / ] · ENTER",
@@ -457,11 +509,13 @@ FocusScope {
         if (engaged) {
             trayIndex = Math.max(0, Math.min(trayIndex, Math.max(0, system.trayCount - 1)));
             helpOpen = false;
+            selectedSlider = "";
             keyboardFocus.forceActiveFocus();
             nightLight.refresh();
             requestedViewTimer.restart();
         } else {
             helpOpen = false;
+            selectedSlider = "";
             closeDetails();
         }
     }
@@ -764,7 +818,6 @@ FocusScope {
             ShellSurface {
                 width: parent.width
                 height: 84
-                visible: root.brightness.supported
                 theme: root.theme
                 motion: root.motion
                 surfaceLayer: ShellSurface.Group
@@ -777,18 +830,36 @@ FocusScope {
                     }
                     runtime: root.runtime
                     theme: root.theme
-                    title: "Display  " + root.brightness.percent + "%"
-                    detail: root.brightness.device
+                    title: root.brightness.supported ? "Display  " + root.brightness.percent + "%" : "Display brightness"
+                    detail: root.brightness.supported ? root.brightness.device : "No hardware backlight"
 
-                    ShellSlider {
+                    Row {
                         width: parent.width
-                        theme: root.theme
-                        motion: root.motion
-                        value: root.brightness.percent / 100
-                        interactive: false
-                        accentColor: theme.positive
-                        trackHeight: 8
-                        handleSize: 0
+                        spacing: root.theme.spacing2
+                        ShellSlider {
+                            width: Math.max(1, parent.width - (root.selectedSlider === "brightness" ? brightnessHint.implicitWidth + parent.spacing : 0))
+                            theme: root.theme
+                            motion: root.motion
+                            from: 1
+                            to: 100
+                            value: root.brightness.percent
+                            enabled: root.brightness.supported
+                            accentColor: theme.positive
+                            trackHeight: 8
+                            handleSize: 16
+                            onInteractionStarted: root.selectSlider("brightness")
+                            onValueRequested: next => root.brightness.setPercent(next)
+                        }
+                        KeyHint {
+                            id: brightnessHint
+                            visible: root.selectedSlider === "brightness"
+                            shortcut: "H/L"
+                            compact: true
+                            runtime: root.runtime
+                            theme: root.theme
+                            emphasized: true
+                            emphasisColor: root.theme.positive
+                        }
                     }
                 }
             }
@@ -955,6 +1026,20 @@ FocusScope {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.1
                 }
+                Item {
+                    width: Math.max(0, parent.width - parent.children[0].width - sliderSelectionHint.implicitWidth)
+                    height: 1
+                }
+                KeyHint {
+                    id: sliderSelectionHint
+                    anchors.verticalCenter: parent.verticalCenter
+                    shortcut: "TAB"
+                    label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
+                    compact: true
+                    runtime: root.runtime
+                    theme: root.theme
+                    emphasized: root.selectedSlider.length > 0
+                }
             }
 
             Item {
@@ -967,10 +1052,11 @@ FocusScope {
                 x: root.theme.spacing2
                 width: Math.max(1, parent.width - root.theme.spacing2 * 2)
                 spacing: root.theme.spacing2
-                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 ? 2 : 3
+                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 || root.theme.textScale >= 1.3 ? 2 : width < 680 ? 3 : 5
 
                 function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 9 - Math.floor(index / columns) * columns);
+                    const row = Math.floor(index / columns);
+                    const itemsInRow = Math.min(columns, 9 - row * columns);
                     return (width - spacing * (itemsInRow - 1)) / itemsInRow;
                 }
 
@@ -1013,6 +1099,8 @@ FocusScope {
                     opacityValue: root.appearance.windowOpacity
                     shortcut: "SHIFT+D"
                     active: root.windowTransparencyEnabled
+                    keyboardSelected: root.selectedSlider === "windows"
+                    onSliderActivated: root.selectSlider("windows")
                     roleAccent: root.theme.roleColor("display")
                     onToggleRequested: root.windowTransparencyToggleRequested()
                     onOpacityRequested: value => root.appearance.setWindowOpacity(value)
@@ -1029,6 +1117,8 @@ FocusScope {
                     opacityValue: root.appearance.glassOpacity
                     shortcut: "SHIFT+R"
                     active: root.shellGlassEnabled
+                    keyboardSelected: root.selectedSlider === "glass"
+                    onSliderActivated: root.selectSlider("glass")
                     roleAccent: root.theme.roleColor("connectivity")
                     onToggleRequested: root.shellGlassToggleRequested()
                     onOpacityRequested: value => root.appearance.setGlassOpacity(value)
@@ -1084,17 +1174,18 @@ FocusScope {
                     icon: root.nightLight.active ? "󰖔" : "󰖙"
                     label: "Night Light"
                     valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
+                    keyboardSelected: root.selectedSlider === "nightLight"
+                    onSliderActivated: root.selectSlider("nightLight")
+                    value: root.nightLight.temperature
+                    from: 2500
+                    to: 6500
+                    onValueRequested: value => root.nightLight.setTemperature(value)
                     toggleShortcut: "T"
-                    decrementShortcut: "-"
-                    incrementShortcut: "+"
                     roleAccent: root.theme.roleColor("warmth")
                     active: root.nightLight.active
                     canToggle: root.nightLight.supported && !root.nightLight.busy
-                    canDecrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature > 2500
-                    canIncrease: root.nightLight.supported && !root.nightLight.busy && root.nightLight.temperature < 6500
+                    canAdjust: root.nightLight.supported
                     onToggleRequested: root.nightLight.toggle()
-                    onDecreaseRequested: root.nightLight.warmer()
-                    onIncreaseRequested: root.nightLight.cooler()
                 }
                 QuickSettingChip {
                     width: visualModeStrip.cellWidth(8)
@@ -2005,6 +2096,34 @@ FocusScope {
                 }
 
                 const shifted = !!(event.modifiers & Qt.ShiftModifier);
+                if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                    root.cycleSlider(event.key === Qt.Key_Backtab || shifted ? -1 : 1);
+                    event.accepted = true;
+                    return;
+                }
+                if (root.selectedSlider.length > 0) {
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                        root.selectedSlider = "";
+                    } else if (!shifted && (event.key === Qt.Key_K || event.key === Qt.Key_Up)) {
+                        root.cycleSlider(-1);
+                    } else if (!shifted && (event.key === Qt.Key_J || event.key === Qt.Key_Down)) {
+                        root.cycleSlider(1);
+                    } else if (!shifted && (event.key === Qt.Key_H || event.key === Qt.Key_Left)) {
+                        root.adjustSlider(-1);
+                    } else if (!shifted && (event.key === Qt.Key_L || event.key === Qt.Key_Right)) {
+                        root.adjustSlider(1);
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        root.activateSlider();
+                    } else {
+                        // Other direct-action shortcuts keep their normal
+                        // semantics; only editing keys belong to the slider.
+                        root.selectedSlider = "";
+                    }
+                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || (!shifted && (event.key === Qt.Key_H || event.key === Qt.Key_Left || event.key === Qt.Key_L || event.key === Qt.Key_Right || event.key === Qt.Key_K || event.key === Qt.Key_Up || event.key === Qt.Key_J || event.key === Qt.Key_Down)) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        event.accepted = true;
+                        return;
+                    }
+                }
                 if (event.key === Qt.Key_Escape) {
                     root.closeRequested();
                 } else if (shifted && event.key === Qt.Key_C) {
