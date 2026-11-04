@@ -12,8 +12,6 @@
     backups
     ;
 
-  imports = [ ../../modules/desktop/karabiner/service.nix ];
-
   dotfiles.users.primary.homeRoot = "/Users";
 
   nix = editScope moduleRegistry.nix {
