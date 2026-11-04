@@ -2,25 +2,133 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-        chatgpt-mac =
-          import ../../lib/mac-app.nix
-            {
-              inherit prev;
-            }
-            {
-              token = "chatgpt";
-              release = {
-                version = "26.1027.61615";
-                hash = "sha256-oi6B/55S5/MAbGV/8gBsA0mCh2paigArv5wA+/gwfyM=";
-              };
-              pname = "chatgpt-mac";
-              appName = "ChatGPT.app";
-              homepage = "https://chatgpt.com/";
-              license = prev.lib.licenses.unfree;
-              url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
-              unpacker = prev.unzip;
-            };
+      let
+        inherit (prev) lib;
+        system = prev.stdenv.hostPlatform.system;
+        release = {
+          version = "26.1029.61003";
+          hash = "sha256-Q975gJnpSDfwe5dr6YE4JRhZrliDHQV9VIPosgkGqaQ=";
+        };
+        linuxHashes = {
+          x86_64 = "sha256-BayLVMODb2+Z5PGtuLZsHwqg7W191es25JdqAdM2uYY=";
+          aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
+        };
+        inherit (release) version;
+        updateScript = [
+          "${prev.python3}/bin/python3"
+          "${../../scripts/update-cask.py}"
+          "chatgpt"
+        ];
+        isDarwin = system == "aarch64-darwin";
+        isLinux = builtins.elem system [
+          "aarch64-linux"
+          "x86_64-linux"
+        ];
+        linuxArch = if system == "aarch64-linux" then "aarch64" else "x86_64";
+      in
+      lib.optionalAttrs isDarwin {
+        chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
+          token = "chatgpt";
+          inherit release;
+          pname = "chatgpt";
+          appName = "ChatGPT.app";
+          homepage = "https://chatgpt.com/";
+          license = lib.licenses.unfree;
+          url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
+          unpacker = prev.unzip;
+          autoUpdate = true;
+          updateGroup = "chatgpt";
+          inherit updateScript;
+        };
+      }
+      // lib.optionalAttrs isLinux {
+        chatgpt = prev.stdenv.mkDerivation {
+          pname = "chatgpt";
+          inherit version;
+          src = prev.fetchurl {
+            url = "https://persistent.oaistatic.com/codex-app-prod/linux/arch/${version}/${linuxArch}/chatgpt-bin-${version}-1-${linuxArch}.pkg.tar.zst";
+            hash = linuxHashes.${linuxArch};
+          };
+          sourceRoot = ".";
+          nativeBuildInputs = with prev; [
+            autoPatchelfHook
+            zstd
+          ];
+          dontWrapQtApps = true;
+          buildInputs = with prev; [
+            alsa-lib
+            at-spi2-atk
+            atk
+            cairo
+            cups
+            dbus
+            expat
+            gdk-pixbuf
+            glib
+            gtk3
+            libdrm
+            libGL
+            libnotify
+            libsecret
+            libusb1
+            libxkbcommon
+            libx11
+            libxcb
+            libxcomposite
+            libxdamage
+            libxext
+            libxfixes
+            libxrandr
+            mesa
+            nspr
+            nss
+            openssl
+            pango
+            qt6.qtbase
+            systemd
+            tpm2-tss
+            stdenv.cc.cc.lib
+          ];
+          # Unused Qt 5, musl, and Android compatibility binaries are bundled upstream.
+          autoPatchelfIgnoreMissingDeps = [
+            "libQt5Core.so.5"
+            "libQt5Gui.so.5"
+            "libQt5Widgets.so.5"
+            "libc.musl-x86_64.so.1"
+            "libc.musl-aarch64.so.1"
+            "liblog.so"
+            "libc++_shared.so"
+          ];
+          unpackPhase = ''
+            runHook preUnpack
+            tar --use-compress-program=unzstd -xf "$src"
+            runHook postUnpack
+          '';
+          installPhase = ''
+            runHook preInstall
+            mkdir -p "$out/lib" "$out/bin" "$out/share/applications" "$out/share/pixmaps"
+            cp -a usr/lib/chatgpt "$out/lib/"
+            ln -s ../lib/chatgpt/codex-launcher "$out/bin/chatgpt"
+            cp usr/share/applications/chatgpt.desktop "$out/share/applications/"
+            cp usr/share/pixmaps/chatgpt.png "$out/share/pixmaps/"
+            runHook postInstall
+          '';
+          passthru = {
+            autoUpdate = true;
+            updateGroup = "chatgpt";
+            inherit updateScript;
+          };
+          meta = {
+            homepage = "https://chatgpt.com/";
+            license = lib.licenses.unfree;
+            platforms = [
+              "aarch64-linux"
+              "x86_64-linux"
+            ];
+            sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+            mainProgram = "chatgpt";
+          };
+        };
       }
     )
   ];

@@ -81,7 +81,8 @@ update_package() {
   if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
     # One upstream release can publish different archives and hashes per platform.
     while IFS=$'\t' read -r sibling_system sibling; do
-      [[ "$sibling_system/$sibling" == "$system/$1" ]] && continue
+      # Update scripts may change a shared version without rehashing this platform.
+      [[ "$sibling_system/$sibling" == "$system/$1" && -z "${recipe:-}" ]] && continue
       sibling_filename="$(nix eval --raw ".#packages.$sibling_system.$sibling.passthru.updateFilename" 2>/dev/null || true)"
       sibling_args=()
       [[ -z "$sibling_filename" ]] || sibling_args=(--override-filename "$sibling_filename")
