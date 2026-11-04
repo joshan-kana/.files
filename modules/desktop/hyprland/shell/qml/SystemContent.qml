@@ -1278,7 +1278,7 @@ FocusScope {
                             margins: root.theme.spacing3
                         }
                         z: 1
-                        text: "V"
+                        text: "N"
                         visible: root.media.available
                         color: root.theme.textMuted
                         font.family: root.runtime.fontMono

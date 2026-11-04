@@ -220,7 +220,7 @@ Item {
 
     function toggleAnnotation(): void {
         annotateAfterCapture = !annotateAfterCapture;
-        statusText = annotateAfterCapture ? "ANNOTATE AFTER CAPTURE · SPACE TO CONFIRM" : "CAPTURE ONLY · SPACE TO CONFIRM";
+        statusText = annotateAfterCapture ? "ANNOTATE AFTER CAPTURE · ENTER TO CONFIRM" : "CAPTURE ONLY · ENTER TO CONFIRM";
     }
 
     function capture(action: string): void {
@@ -458,7 +458,7 @@ Item {
             picker.dragging = false;
             picker.endX = picker.clamp(mouse.x, 0, picker.width);
             picker.endY = picker.clamp(mouse.y, 0, picker.height);
-            picker.statusText = picker.selectionMode === "record" ? "REGION READY · SPACE TO RECORD" : (picker.annotateAfterCapture ? "REGION READY · SPACE TO CAPTURE + MARKUP" : "REGION READY · SPACE TO CAPTURE");
+            picker.statusText = picker.selectionMode === "record" ? "REGION READY · ENTER TO RECORD" : (picker.annotateAfterCapture ? "REGION READY · ENTER TO CAPTURE + MARKUP" : "REGION READY · ENTER TO CAPTURE");
             keyboard.forceActiveFocus();
         }
     }
