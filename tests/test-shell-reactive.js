@@ -92,7 +92,7 @@ test("the reactive shell shares the spectrum's three-stop red-blue-cyan palette"
   assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
   assert.doesNotMatch(theme, /musicReactiveHue|musicReactiveBackground/);
   assert.match(frame, /fillGradient: LinearGradient \{/);
-  assert.match(frame, /x2: output\.reactiveActive && frame\.motion\.enabled/);
+  assert.match(frame, /x2: output\.reactiveActive/);
   assert.match(frame, /gradientInset: Math\.max\(0\.005,/);
   assert.match(frame, /position: output\.gradientInset/);
   assert.match(frame, /position: 1 - output\.gradientInset/);
@@ -217,10 +217,7 @@ test("closed hub and hidden bar still keep the visible frame reactive", () => {
   assert.match(frame, /glassExposed: enabled && Quickshell\.screens\.some/);
   assert.match(root, /active: .*root\.musicReactiveSurfaceVisible/);
   assert.match(root, /enabled: root\.musicReactiveSurfaceVisible/);
-  assert.match(
-    root,
-    /musicReactiveFlow: motion\.enabled \? reactive\.flowPhase : 0/,
-  );
+  assert.match(root, /musicReactiveFlow: reactive\.flowPhase/);
   for (const current of [
     { frame: true, bar: false, hub: false, expected: true },
     { frame: true, bar: true, hub: false, expected: true },
@@ -278,7 +275,7 @@ test("animated reactive flow updates native geometry with numeric state, not QML
       surface.includes(
         "reactiveGradient" +
           prop +
-          ": musicActive && motion.enabled ? theme.musicReactive" +
+          ": musicActive ? theme.musicReactive" +
           (prop === "Phase" ? "Flow" : prop),
       ),
     );
@@ -290,14 +287,8 @@ test("connected frame keeps static colour stops during audio and varies only num
   const frame = qml("DesktopFrame.qml");
   const theme = qml("Theme.qml");
   assert.match(frame, /readonly property bool reactiveActive:/);
-  assert.match(
-    frame,
-    /x1: output\.reactiveActive && frame\.motion\.enabled \?/,
-  );
-  assert.match(
-    frame,
-    /x2: output\.reactiveActive && frame\.motion\.enabled \?/,
-  );
+  assert.match(frame, /x1: output\.reactiveActive \?/);
+  assert.match(frame, /x2: output\.reactiveActive \?/);
   assert.match(frame, /Math\.sin\(frame\.theme\.musicReactiveFlow\)/);
   assert.match(frame, /Math\.cos\(frame\.theme\.musicReactiveFlow\)/);
   assert.match(
@@ -306,4 +297,44 @@ test("connected frame keeps static colour stops during audio and varies only num
   );
   assert.doesNotMatch(frame, /reactiveFrameColor\([0-9.]+\)/);
   assert.doesNotMatch(frame, /flowingSpectrumColor/);
+});
+
+test("reactive music continues when UI animations are disabled", () => {
+  const root = qml("shell.qml");
+  const surface = qml("ShellSurface.qml");
+  const frame = qml("DesktopFrame.qml");
+  for (const [value, binding] of [
+    ["Flow", "flowPhase"],
+    ["Movement", "motionAmount"],
+    ["Kick", "kick"],
+  ]) {
+    assert.match(
+      root,
+      new RegExp("musicReactive" + value + ": reactive\\." + binding),
+    );
+    assert.doesNotMatch(
+      root,
+      new RegExp("musicReactive" + value + ": motion\\.enabled"),
+    );
+    assert.match(
+      surface,
+      new RegExp(
+        "reactiveGradient" +
+          (value === "Flow" ? "Phase" : value) +
+          ": musicActive \\? theme\\.musicReactive" +
+          value,
+      ),
+    );
+  }
+  assert.doesNotMatch(
+    frame,
+    /output\.reactiveActive && frame\.motion\.enabled/,
+  );
+  assert.match(frame, /x1: output\.reactiveActive \?/);
+  assert.match(frame, /x2: output\.reactiveActive \?/);
+  // Motion preference still gates UI tween durations, not DSP movement.
+  assert.match(
+    qml("Motion.qml"),
+    /readonly property int morph: enabled \? 240 : 0/,
+  );
 });

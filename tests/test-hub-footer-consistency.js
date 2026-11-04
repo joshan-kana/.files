@@ -136,28 +136,49 @@ test("footer background retains physical clearance even when content is taller t
   }
 });
 
-test("Controls audio shortcuts live in the stable shared footer, not its scroll content", () => {
+test("Controls audio hints stay inside the audio widget, never in the global footer", () => {
   const host = source("ShellExpansionHost.qml");
   const controls = source("SystemContent.qml");
-  assert.match(host, /id: controlsAudioHints/);
+  assert.doesNotMatch(
+    host,
+    /controlsAudioHints|Select audio|label: "Mute"|label: "Mic"/,
+  );
+  assert.match(host, /id: hubFooter[\s\S]*?id: footerHints/);
   assert.match(
     host,
-    /controlsAudioHints\.visible \? controlsAudioHints\.implicitHeight/,
+    /shortcut: "I"[\s\S]*?shortcut: "O"[\s\S]*?shortcut: "ESC"[\s\S]*?shortcut: "SHIFT\+ESC"/,
   );
   assert.match(
-    host,
-    /visible: host\.expansionState\.hasCurrent && host\.expansionState\.currentName === "system" && !host\.detailVisible && !host\.helpVisible/,
+    controls,
+    /id: audioStack[\s\S]*?KeyHintStrip \{[\s\S]*?label: "Select audio"/,
   );
-  assert.match(host, /KeyHintStrip \{\s*id: controlsAudioHints/);
   for (const [shortcut, label] of [
     ["J/K", "Select audio"],
     ["H/L", "Level"],
     ["M", "Mute"],
     ["X", "Mic"],
   ]) {
-    assert.ok(host.includes('shortcut: "' + shortcut + '"'));
-    assert.ok(host.includes('label: "' + label + '"'));
+    assert.ok(controls.includes('shortcut: "' + shortcut + '"'));
+    assert.ok(controls.includes('label: "' + label + '"'));
   }
-  assert.doesNotMatch(controls, /label: "Select audio"/);
-  assert.match(host, /bottomMargin: host\.footerBottomClearance/);
+  assert.match(
+    host,
+    /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "system" && !host\.detailVisible \? host\.theme\.spacing4 : 0\)/,
+  );
+});
+
+test("Controls reserves its own lower frame clearance without moving other panels", () => {
+  const host = source("ShellExpansionHost.qml");
+  assert.match(
+    host,
+    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2 \+ \(expansionState\.currentName === "system" && !detailVisible \? theme\.spacing4 : 0\)/,
+  );
+  assert.match(
+    host,
+    /bottomMargin: host\.footerBottomClearance \+ Math\.max\(0, shellSurface\.contentLayoutHeight - shellSurface\.height\)/,
+  );
+  assert.match(
+    host,
+    /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "system" && !host\.detailVisible \? host\.theme\.spacing4 : 0\)/,
+  );
 });

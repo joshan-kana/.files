@@ -36,8 +36,8 @@ QtObject {
     readonly property bool frameVisible: saved.frameVisible
     readonly property bool windowTransparencyEnabled: saved.windowTransparencyEnabled
     readonly property bool shellGlassEnabled: saved.shellGlassEnabled
-    readonly property real windowOpacity: Math.max(0.50, Math.min(1, saved.windowOpacity))
-    readonly property real glassOpacity: Math.max(0.35, Math.min(0.95, saved.glassOpacity))
+    readonly property real windowOpacity: Math.max(0.20, Math.min(1, saved.windowOpacity))
+    readonly property real glassOpacity: Math.max(0.20, Math.min(1, saved.glassOpacity))
     readonly property string mediaVisualizerMode: saved.mediaVisualizerMode === "curve" ? "curve" : "bars"
     readonly property bool mediaLyricsVisible: saved.mediaLyricsVisible
     readonly property var seekIntervals: [5, 10, 15, 30, 60]
@@ -175,7 +175,7 @@ QtObject {
     }
 
     function setWindowOpacity(value: real): void {
-        const next = Math.round(Math.max(0.50, Math.min(1, value)) * 100) / 100;
+        const next = Math.round(Math.max(0.20, Math.min(1, value)) * 100) / 100;
         if (next === windowOpacity && windowTransparencyEnabled)
             return;
         saved.windowOpacity = next;
@@ -187,7 +187,7 @@ QtObject {
     }
 
     function setGlassOpacity(value: real): void {
-        const next = Math.round(Math.max(0.35, Math.min(0.95, value)) * 100) / 100;
+        const next = Math.round(Math.max(0.20, Math.min(1, value)) * 100) / 100;
         if (next === glassOpacity && shellGlassEnabled)
             return;
         const wasEnabled = shellGlassEnabled;
