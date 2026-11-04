@@ -247,6 +247,14 @@ class SquircleFillItem : public QQuickItem {
   QML_NAMED_ELEMENT(SquircleFillItem)
   Q_PROPERTY(QColor fillColor MEMBER fillColor_ NOTIFY fillColorChanged)
   Q_PROPERTY(double fillOpacity MEMBER fillOpacity_ NOTIFY fillOpacityChanged)
+  Q_PROPERTY(
+      double gradientStrength MEMBER gradientStrength_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      QColor gradientLowColor MEMBER gradientLowColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      QColor gradientMidColor MEMBER gradientMidColor_ NOTIFY gradientChanged)
+  Q_PROPERTY(
+      QColor gradientHighColor MEMBER gradientHighColor_ NOTIFY gradientChanged)
   Q_PROPERTY(QColor lightColor MEMBER lightColor_ NOTIFY lightColorChanged)
   Q_PROPERTY(
       double lightStrength MEMBER lightStrength_ NOTIFY lightStrengthChanged)
@@ -261,6 +269,8 @@ public:
     connect(this, &SquircleFillItem::fillColorChanged, this,
             &QQuickItem::update);
     connect(this, &SquircleFillItem::fillOpacityChanged, this,
+            &QQuickItem::update);
+    connect(this, &SquircleFillItem::gradientChanged, this,
             &QQuickItem::update);
     connect(this, &SquircleFillItem::lightColorChanged, this,
             &QQuickItem::update);
@@ -277,6 +287,7 @@ public:
 signals:
   void fillColorChanged();
   void fillOpacityChanged();
+  void gradientChanged();
   void lightColorChanged();
   void lightStrengthChanged();
   void lightSpreadChanged();
@@ -358,7 +369,26 @@ protected:
     const float radius =
         std::max(0.001f, std::max(w * 0.9f, h * 2.0f) * float(lightSpread_));
     const QPointF lightCenter(w * 0.15, h * -0.16);
+    const float gradientStrength =
+        std::clamp(float(gradientStrength_), 0.0f, 1.0f);
     auto colorAt = [&](const QPointF &point) {
+      float baseRed = fillColor_.redF(), baseGreen = fillColor_.greenF(),
+            baseBlue = fillColor_.blueF();
+      if (gradientStrength > 0.00001f) {
+        const float position = std::clamp(float(point.x()) / w, 0.0f, 1.0f);
+        const QColor &left =
+            position < 0.5f ? gradientLowColor_ : gradientMidColor_;
+        const QColor &right =
+            position < 0.5f ? gradientMidColor_ : gradientHighColor_;
+        const float t = position < 0.5f ? position * 2 : (position - 0.5f) * 2;
+        const auto mix = [t](float a, float b) { return a + (b - a) * t; };
+        baseRed +=
+            (mix(left.redF(), right.redF()) - baseRed) * gradientStrength;
+        baseGreen +=
+            (mix(left.greenF(), right.greenF()) - baseGreen) * gradientStrength;
+        baseBlue +=
+            (mix(left.blueF(), right.blueF()) - baseBlue) * gradientStrength;
+      }
       const double distance =
           std::hypot(point.x() - lightCenter.x(), point.y() - lightCenter.y());
       const double t = std::clamp(distance / radius, 0.0, 1.0);
@@ -372,13 +402,9 @@ protected:
         return QColor(Qt::transparent);
       QColor color;
       color.setRgbF(
-          (lightColor_.redF() * lightAlpha + fillColor_.redF() * baseWeight) /
-              alpha,
-          (lightColor_.greenF() * lightAlpha +
-           fillColor_.greenF() * baseWeight) /
-              alpha,
-          (lightColor_.blueF() * lightAlpha + fillColor_.blueF() * baseWeight) /
-              alpha,
+          (lightColor_.redF() * lightAlpha + baseRed * baseWeight) / alpha,
+          (lightColor_.greenF() * lightAlpha + baseGreen * baseWeight) / alpha,
+          (lightColor_.blueF() * lightAlpha + baseBlue * baseWeight) / alpha,
           alpha);
       return color;
     };
@@ -446,7 +472,9 @@ protected:
 
 private:
   QColor fillColor_{Qt::transparent}, lightColor_{Qt::transparent};
-  double fillOpacity_ = 1;
+  QColor gradientLowColor_{Qt::transparent}, gradientMidColor_{Qt::transparent},
+      gradientHighColor_{Qt::transparent};
+  double fillOpacity_ = 1, gradientStrength_ = 0;
   double lightStrength_ = 0, lightSpread_ = 1;
   double cornerRadius_ = 28, exponent_ = 4.5;
 };

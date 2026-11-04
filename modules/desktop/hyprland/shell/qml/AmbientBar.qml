@@ -260,7 +260,7 @@ Variants {
                 exponent: Math.min(4, theme.squircleExponent)
                 elevated: false
                 outlined: false
-                fillColor: theme.musicReactiveBackground
+                fillColor: theme.background
 
                 Item {
                     id: workspaceTrack
@@ -446,7 +446,7 @@ Variants {
                 exponent: Math.min(4, theme.squircleExponent)
                 elevated: false
                 outlined: false
-                fillColor: theme.musicReactiveBackground
+                fillColor: theme.background
 
                 Row {
                     id: clockRow
@@ -522,7 +522,7 @@ Variants {
                 cornerRadius: bars.theme.radiusIsland
                 elevated: false
                 outlined: false
-                fillColor: theme.musicReactiveBackground
+                fillColor: theme.background
 
                 Row {
                     id: notificationRow
@@ -591,7 +591,7 @@ Variants {
                 cornerRadius: bars.theme.radiusIsland
                 elevated: false
                 outlined: false
-                fillColor: theme.musicReactiveBackground
+                fillColor: theme.background
 
                 Row {
                     id: recordingContent
