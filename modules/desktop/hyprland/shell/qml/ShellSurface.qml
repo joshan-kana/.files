@@ -49,7 +49,7 @@ SquircleSurface {
     reactiveGradientLow: theme.spectrumColor(0)
     reactiveGradientMid: theme.spectrumColor(0.5)
     reactiveGradientHigh: theme.spectrumColor(1)
-    reactiveGradientPhase: musicActive ? theme.musicReactiveFlow : 0
+    reactiveGradientBands: musicActive ? theme.musicReactiveBands : []
     reactiveGradientMovement: musicActive ? theme.musicReactiveMovement : 0
     reactiveGradientKick: musicActive ? theme.musicReactiveKick : 0
 

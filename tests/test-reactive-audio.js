@@ -21,7 +21,7 @@ function state() {
     body: 0,
     presence: 0,
     motionAmount: 0,
-    flowPhase: 0,
+    spectrumLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0],
     bassBaseline: 0,
     peakBaseline: 0,
     rmsBaseline: 0,
@@ -73,7 +73,7 @@ test("continuous high-energy 808 establishes colour without false kick retrigger
   assert.ok(s.sustain > 0.1, "steady 808 should preserve colour presence");
   assert.ok(s.sustain < 0.7, "bass alone should not saturate the colour field");
   assert.ok(s.kick < 0.001, "unvarying 808 should not trigger kicks");
-  const start = s.flowPhase,
+  const start = [...s.spectrumLevels],
     old = s.sustain;
   for (let i = 0; i < 150; i++) ctx.advanceAudio(s, audio(), 0.01);
   assert.ok(s.kick < 0.001, "sustained 808 must not flash");
@@ -81,7 +81,10 @@ test("continuous high-energy 808 establishes colour without false kick retrigger
     Math.abs(s.sustain - old) < 0.01,
     "sustained bass should not pump intensity",
   );
-  assert.notEqual(s.flowPhase, start, "ambient colour flow continues smoothly");
+  assert.ok(
+    start.every((level, i) => Math.abs(level - s.spectrumLevels[i]) < 0.00001),
+    "identical steady FFT frames must not produce perpetual visual motion",
+  );
 });
 test("kicks remain detectable on top of loud 808s, including at half-second intervals", () => {
   const s = state();
@@ -132,4 +135,64 @@ test("treble and melody change motion without increasing kick or the bass founda
   assert.ok(s.motionAmount > 0.3);
   assert.ok(s.kick < 0.08);
   assert.ok(Math.abs(s.kick - first) < 0.08);
+});
+
+test("musical onsets change only relevant zones, then settle without drifting", () => {
+  const s = state();
+  settle(s);
+  const baseline = [...s.spectrumLevels];
+  for (let i = 0; i < 3; i++) ctx.advanceAudio(s, audio(0.95), 0.01);
+  const attack = [...s.spectrumLevels];
+  assert.ok(attack[1] > baseline[1] + 0.07, "kick must animate low-mid band");
+  assert.ok(
+    attack[3] > baseline[3] + 0.04,
+    "transient should reach punch range",
+  );
+  assert.ok(
+    attack[1] - baseline[1] > attack[0] - baseline[0],
+    "sustained 808 must not dominate the kick",
+  );
+  settle(s);
+  const stable = [...s.spectrumLevels];
+  settle(s);
+  assert.ok(
+    stable.every((v, i) => Math.abs(v - s.spectrumLevels[i]) < 0.00001),
+    "no fake motion after the audio has stabilised",
+  );
+});
+
+test("notes in higher bands animate blue and cyan without lifting the sub-bass", () => {
+  const s = state();
+  settle(s);
+  const before = [...s.spectrumLevels];
+  const frame = audio();
+  frame.high = 0.68;
+  frame.mid = 0.53;
+  for (let i = 0; i < frame.bands.length; i++) {
+    const hz = bandHz(i);
+    if (hz > 800 && hz < 5000) frame.bands[i] = 0.82;
+  }
+  for (let i = 0; i < 5; i++) ctx.advanceAudio(s, frame, 0.01);
+  assert.ok(s.spectrumLevels[5] > before[5] + 0.2);
+  assert.ok(s.spectrumLevels[6] > before[6] + 0.2);
+  assert.ok(Math.abs(s.spectrumLevels[0] - before[0]) < 0.01);
+});
+
+test("pausing playback releases FFT zones and visible tint promptly", () => {
+  const s = state();
+  settle(s);
+  const silent = audio();
+  for (const key of ["rms", "peak", "sub", "bass", "mid", "high"])
+    silent[key] = 0;
+  silent.bands.fill(0);
+  for (let i = 0; i < 55; i++) ctx.advanceAudio(s, silent, 0.01);
+  assert.ok(
+    Math.max(...s.spectrumLevels) < 0.01,
+    "spectral glow fades in under a second",
+  );
+  assert.ok(
+    s.sustain < 0.01,
+    "base tint fades rather than lingering for five seconds",
+  );
+  assert.ok(s.kick < 0.01);
 });

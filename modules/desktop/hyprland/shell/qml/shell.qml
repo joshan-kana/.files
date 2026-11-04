@@ -60,7 +60,7 @@ ShellRoot {
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
-        musicReactiveFlow: reactive.flowPhase
+        musicReactiveBands: reactive.spectrumLevels
         musicReactiveMovement: reactive.motionAmount
         musicReactiveKick: reactive.kick
     }
@@ -1439,10 +1439,10 @@ ShellRoot {
             return reactive.beatPulse;
         }
 
-        // Expose the actual rendered motion values so spectrum diagnostics
-        // can distinguish a silent source from disabled visual movement.
-        function musicReactiveFlowPhase(): real {
-            return theme.musicReactiveFlow;
+        // Read the actual nine rendered frequency envelopes. Unlike a
+        // ticking animation phase, unchanged bands mean an unchanged image.
+        function musicReactiveBandLevels(): string {
+            return JSON.stringify(reactive.spectrumLevels);
         }
 
         function musicReactiveMovementLevel(): real {
