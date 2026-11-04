@@ -26,7 +26,10 @@ sudo resolvectl dns enp0s1 1.1.1.1 8.8.8.8
 sudo resolvectl flush-caches
 ```
 
-This only adjusts the live installer session; diagnose any recurring DNS issue in the installed guest separately.
+This only adjusts the live installer session. Public DNS may not resolve the
+private `.home` zone used by the build cache, so ensure both `github.com` and
+`nixos-server.home` resolve before installing. Use a LAN resolver if needed;
+diagnose any recurring DNS issue in the installed guest separately.
 
 Before installing the full desktop closure, enable compressed zram swap in the *live installer* too. This is separate from the persistent `zramSwap` configuration applied after installation:
 
@@ -70,6 +73,14 @@ sudo mount /dev/disk/by-label/BOOT /mnt/boot
 
 ## Install the test branch
 
+The installer must use the target's evaluated binary caches, including Attic,
+instead of the installation image's defaults. Attic is readable without a
+client token on the private network. The installed Linux `attic-client` watcher
+also publishes new paths; that separate operation requires a host-scoped
+push token at `$USER_SECRETS_DIR/attic-token`. Stage it outside Git at
+`/mnt$USER_SECRETS_DIR/attic-token` with mode `0600` before first boot if
+publishing is enabled. The finalization step below corrects ownership.
+
 The host is intentionally maintained on an unmerged `.files` PR rather than `main`. The shared clone procedure above uses an authenticated Git SSH credential, including for the infrastructure-docs submodule. Fetch the public PR ref separately, then switch the installer checkout to it:
 
 ```sh
@@ -79,9 +90,22 @@ sudo git fetch https://github.com/joshan-kana/.files.git \
   "pull/$utm_host_pr/head:refs/heads/utm-test-host"
 sudo git switch utm-test-host
 
+substituters="$(
+  sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
+    .#nixosConfigurations.nixos-utm \
+    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.substituters)'
+)"
+trusted_public_keys="$(
+  sudo nix --extra-experimental-features "nix-command flakes" eval --raw \
+    .#nixosConfigurations.nixos-utm \
+    --apply 'cfg: builtins.concatStringsSep " " (cfg.pkgs.lib.unique cfg.config.nix.settings.trusted-public-keys)'
+)"
+
 sudo nixos-install \
   --no-root-password \
   --option extra-experimental-features "nix-command flakes" \
+  --option extra-substituters "$substituters" \
+  --option extra-trusted-public-keys "$trusted_public_keys" \
   --flake ".#nixos-utm"
 ```
 
