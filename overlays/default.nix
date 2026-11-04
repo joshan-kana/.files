@@ -30,6 +30,7 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./linux-desktop-spectrum
+    ./linux-desktop-visuals
     ./notion
     ./open-webui
     ./open-webui-mac
