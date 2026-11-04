@@ -260,6 +260,8 @@ class SquircleFillItem : public QQuickItem {
       QColor gradientHighColor MEMBER gradientHighColor_ NOTIFY gradientChanged)
   Q_PROPERTY(QVariantList gradientBands MEMBER gradientBands_ NOTIFY
                  gradientMotionChanged)
+  Q_PROPERTY(QVariantList gradientImpulses MEMBER gradientImpulses_ NOTIFY
+                 gradientMotionChanged)
   Q_PROPERTY(double gradientMovement MEMBER gradientMovement_ NOTIFY
                  gradientMotionChanged)
   Q_PROPERTY(
@@ -394,9 +396,14 @@ protected:
     const float gradientStrength =
         std::clamp(float(gradientStrength_), 0.0f, 1.0f);
     const float gradientKick = std::clamp(float(gradientKick_), 0.0f, 1.0f);
-    std::array<float, 9> levels{};
-    for (int i = 0; i < 9 && i < gradientBands_.size(); ++i)
-      levels[size_t(i)] = std::clamp(gradientBands_[i].toFloat(), 0.0f, 1.0f);
+    std::array<float, 9> levels{}, impulses{};
+    for (int i = 0; i < 9; ++i) {
+      if (i < gradientBands_.size())
+        levels[size_t(i)] = std::clamp(gradientBands_[i].toFloat(), 0.0f, 1.0f);
+      if (i < gradientImpulses_.size())
+        impulses[size_t(i)] =
+            std::clamp(gradientImpulses_[i].toFloat(), 0.0f, 1.0f);
+    }
     auto colorAt = [&](const QPointF &point) {
       float baseRed = fillColor_.redF(), baseGreen = fillColor_.greenF(),
             baseBlue = fillColor_.blueF();
@@ -411,13 +418,17 @@ protected:
         const float fraction = bandPosition - leftBand;
         const float level = levels[size_t(leftBand)] * (1 - fraction) +
                             levels[size_t(rightBand)] * fraction;
-        const float kickDistance = (position - 0.18f) / 0.14f;
+        const float impulse = impulses[size_t(leftBand)] * (1 - fraction) +
+                              impulses[size_t(rightBand)] * fraction;
+        const float kickDistance = (position - 0.19f) / 0.16f;
         const float kick =
             gradientKick * std::exp(-kickDistance * kickDistance);
+        // Identical audio-driven spectral language to the connected frame.
+        // The existing squircle mesh remains clipped and unchanged.
         const float localStrength =
-            std::clamp(gradientStrength * (0.36f + 0.72f * std::sqrt(level)) +
-                           0.26f * kick,
-                       0.0f, 1.0f);
+            std::clamp(gradientStrength * (0.4f + 0.4f * level) +
+                           0.68f * std::pow(impulse, 0.82f) + 0.78f * kick,
+                       0.0f, 0.94f);
         const QColor &left =
             position < 0.5f ? gradientLowColor_ : gradientMidColor_;
         const QColor &right =
@@ -516,7 +527,7 @@ private:
   QColor gradientLowColor_{Qt::transparent}, gradientMidColor_{Qt::transparent},
       gradientHighColor_{Qt::transparent};
   double fillOpacity_ = 1, gradientStrength_ = 0;
-  QVariantList gradientBands_;
+  QVariantList gradientBands_, gradientImpulses_;
   double gradientMovement_ = 0, gradientKick_ = 0;
   double lightStrength_ = 0, lightSpread_ = 1;
   double cornerRadius_ = 28, exponent_ = 4.5;
