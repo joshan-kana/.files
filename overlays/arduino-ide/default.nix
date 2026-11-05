@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         arduino-ide-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "arduino-ide";
+              cask = "arduino-ide";
               release = {
                 version = "2.3.10";
                 hash = "sha256-iBGGDch4K2zWuwB26SFSVYSfQEsbnm84Bp/cT1xDZI4=";

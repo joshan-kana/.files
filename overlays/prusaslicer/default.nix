@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         prusa-slicer =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "prusaslicer";
+              cask = "prusaslicer";
               release = {
                 version = "2.9.6";
                 hash = "sha256-lP17ip+HyWMeHHFzmxWxhPxfTAzqvWkHLxx48imk/kA=";

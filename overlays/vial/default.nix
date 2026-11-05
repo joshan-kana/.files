@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         vial-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "vial";
+              cask = "vial";
               release = {
                 version = "0.7.5";
                 hash = "sha256-tijbEfjfAS+q/M7vfes2tUghtQfUyXAzb4WlbIAOiHY=";

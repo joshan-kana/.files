@@ -43,8 +43,14 @@ _: {
               passthru.autoUpdate = true;
               passthru.updateScript = [
                 "${python3}/bin/python3"
-                "${../../scripts/update-binary-release.py}"
+                "${../../scripts/update-github-release.py}"
                 "openai-tunnel-client"
+                "--repository"
+                "openai/tunnel-client"
+                "--asset-pattern"
+                "tunnel-client-runtime-v{version}-{asset}.zip"
+                "--checksums"
+                "SHA256SUMS.txt"
               ];
               unpackPhase = ":";
               installPhase = ''

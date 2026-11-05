@@ -27,8 +27,8 @@ _: {
         linuxArch = if system == "aarch64-linux" then "aarch64" else "x86_64";
       in
       lib.optionalAttrs isDarwin {
-        chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
-          token = "chatgpt";
+        chatgpt = import ../../lib/cask-app.nix { inherit prev; } {
+          cask = "chatgpt";
           inherit release;
           pname = "chatgpt";
           appName = "ChatGPT.app";

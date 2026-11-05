@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         open-webui-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "open-webui";
+              cask = "open-webui";
               updateDir = "open-webui-mac";
               release = {
                 version = "0.0.20";

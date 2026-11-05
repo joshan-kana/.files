@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         cryptomator-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "cryptomator";
+              cask = "cryptomator";
               release = {
                 version = "1.19.6";
                 hash = "sha256-/fyO9QsQusoQeLep7fQE4zA2PIo6QP2in4bdXToKCwI=";

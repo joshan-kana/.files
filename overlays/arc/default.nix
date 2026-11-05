@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         arc-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "arc";
+              cask = "arc";
               release = {
                 version = "1.171.0,89666";
                 hash = "sha256-73GOq7IH5dQrwJdaCxcMgclN4PpoTCwznx9rOEY+Y0s=";

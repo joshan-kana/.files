@@ -1,49 +1,21 @@
+{ prev }:
 {
-  prev,
-}:
-{
-  token,
-  updateDir ? token,
-  release,
   pname,
+  release,
   url,
   appName,
   homepage,
   license,
   unpacker ? prev.undmg,
-  autoUpdate ? true,
-  updateUrl ? null,
-  updateGroup ? null,
-  updateScript ? [
-    "${prev.python3}/bin/python3"
-    "${../scripts/update-cask.py}"
-    token
-  ]
-  ++ prev.lib.optional (updateDir != token) updateDir,
+  passthru ? { },
 }:
-let
-  versions = prev.lib.splitString "," release.version;
-  metadata = {
-    version = builtins.head versions;
-    inherit versions;
-  };
-in
 prev.stdenvNoCC.mkDerivation {
-  inherit pname;
-  inherit (metadata) version;
+  inherit pname passthru;
+  inherit (release) version;
   src = prev.fetchurl {
-    url = url metadata;
+    url = url release;
     inherit (release) hash;
   };
-  passthru = {
-    inherit autoUpdate;
-  }
-  // prev.lib.optionalAttrs (updateScript != null) { inherit updateScript; }
-  // prev.lib.optionalAttrs (updateScript == null) {
-    updateFilename = "overlays/${updateDir}/default.nix";
-  }
-  // prev.lib.optionalAttrs (updateUrl != null) { inherit updateUrl; }
-  // prev.lib.optionalAttrs (updateGroup != null) { inherit updateGroup; };
   nativeBuildInputs = [ unpacker ];
   sourceRoot = ".";
   dontBuild = true;

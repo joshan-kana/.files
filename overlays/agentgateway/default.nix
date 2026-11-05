@@ -43,8 +43,14 @@ _: {
               passthru.autoUpdate = true;
               passthru.updateScript = [
                 "${python3}/bin/python3"
-                "${../../scripts/update-binary-release.py}"
+                "${../../scripts/update-github-release.py}"
                 "agentgateway"
+                "--repository"
+                "agentgateway/agentgateway"
+                "--asset-pattern"
+                "agentgateway-{asset}"
+                "--checksum-suffix"
+                ".sha256"
               ];
               installPhase = ''
                 runHook preInstall

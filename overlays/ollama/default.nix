@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && prev.stdenv.hostPlatform.isAarch64) {
         ollama =
-          (import ../../lib/mac-app.nix
+          (import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "ollama-app";
+              cask = "ollama-app";
               updateDir = "ollama";
               release = {
                 version = "0.40.13";

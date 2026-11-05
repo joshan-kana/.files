@@ -4,12 +4,12 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         heroic-mac =
-          import ../../lib/mac-app.nix
+          import ../../lib/cask-app.nix
             {
               inherit prev;
             }
             {
-              token = "heroic";
+              cask = "heroic";
               release = {
                 version = "2.22.4";
                 hash = "sha256-KdVHakvxrqTdPJByU6SboyciI7QgxbrIxymVs2tXzYk=";
