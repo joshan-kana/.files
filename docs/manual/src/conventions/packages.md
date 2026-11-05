@@ -28,8 +28,8 @@ Do not preserve a fork or compatibility pin merely because it already exists.
 
 ## Update policy
 
-Stock nixpkgs packages and patches to stock derivations follow the nixpkgs lock update. Independently maintained flake packages follow their locked inputs. Independently packaged source or binary releases use immutable versions and hashes, with standard updating where possible; resolve mutable release metadata during updates rather than evaluation.
+Stock nixpkgs packages and patches to stock derivations follow the nixpkgs lock update. Packages sourced from flake inputs follow those locked inputs, without a separate source-version pin. Downstream dependency hashes are refreshed independently of source revisions when an override is necessary. Independently packaged source or binary releases use immutable versions and hashes, with standard updating where possible; resolve mutable release metadata during updates rather than evaluation.
 
-Declare `passthru.autoUpdate = true` for independently updateable packages that are safe to update routinely, or `false` when updates require explicit selection. Omit the metadata when independent package updates do not apply. Keep update policy with package metadata, not in host-specific lists or another version database.
+Declare `passthru.autoUpdate = true` for package-owned release or dependency hashes that are safe to refresh routinely, or `false` when they require explicit selection. Omit the metadata when there is no separately maintained package update. Keep update policy with package metadata, not in host-specific lists or another version database.
 
 Updates must fail without replacing a working lock or pin. Validate a proposed replacement on relevant architectures, including launch behavior or patch application where needed. Compatibility exceptions are removed only after the normal package is verified.
