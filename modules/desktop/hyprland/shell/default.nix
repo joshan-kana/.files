@@ -171,8 +171,11 @@ in
           exec 9>"''${XDG_RUNTIME_DIR:?}/linux-desktop-wallpaper.lock"
           flock -n 9 || exit 0
 
-          runtime="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/runtime.json"
-          wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$runtime")"
+          # The default wallpaper belongs to the evaluated Stylix theme, not
+          # the runtime shortcuts/tools config. Restore saved display overrides
+          # independently of a custom default so video selections survive boot.
+          theme="''${XDG_CONFIG_HOME:-$HOME/.config}/linux-desktop/theme.json"
+          wallpaper="$(jq -er '.wallpaper | select(type == "string" and length > 0)' "$theme")"
 
           if [ ! -f "$wallpaper" ]; then
             printf 'Wallpaper does not exist: %s\n' "$wallpaper" >&2
@@ -202,6 +205,13 @@ in
                 { IFS= read -r resize && IFS= read -r image; } < "$entry" || continue
                 [ -f "$image" ] || continue
                 output="$(basename "$entry" .wall)"
+                # A saved display selection identical to the all-display
+                # selection needs no second image or video layer. In
+                # particular, do not decode the same mp4 twice at login.
+                if [ "$output" != all ] && [ -f "$state_dir/all.wall" ] && cmp -s "$entry" "$state_dir/all.wall"; then
+                  systemctl --user stop --no-block "linux-desktop-wallpaper-video@$output.service" || true
+                  continue
+                fi
                 args=()
                 [ "$output" = all ] || args=(--outputs "$output")
                 case "''${image,,}" in
@@ -1568,7 +1578,7 @@ in
 
       systemd.user.paths.linux-desktop-wallpaper-image = {
         Unit.Description = "Reload wallpaper when the selected theme changes";
-        Path.PathChanged = "%h/.config/linux-desktop/runtime.json";
+        Path.PathChanged = "%h/.config/linux-desktop/theme.json";
         Install.WantedBy = [ "hyprland-session.target" ];
       };
 
