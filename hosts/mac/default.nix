@@ -251,8 +251,8 @@
       homebrew.casks = [ "izotope-product-portal" ];
     };
 
-    kicad = _: {
-      homebrew.casks = [ "kicad" ];
+    kicad = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.kicad ]; };
     };
 
     krita = { pkgs, ... }: {

@@ -30,6 +30,7 @@ _: {
     ./cryptomator
     ./hammerspoon
     ./karabiner-elements
+    ./kicad
     ./krita
     ./heroic
     ./iterm2
