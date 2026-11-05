@@ -10,7 +10,7 @@ _: {
             }
             {
               cask = "open-webui";
-              updateDir = "open-webui-mac";
+              updateFile = "overlays/open-webui-mac/default.nix";
               release = {
                 version = "0.0.20";
                 hash = "sha256-RU/ukQyHIWi3X5i/Z2r00Vsh38xrQ6Jt+tyUvZ7xC5c=";

@@ -10,7 +10,7 @@ _: {
             }
             {
               cask = "ollama-app";
-              updateDir = "ollama";
+              updateFile = "overlays/ollama/default.nix";
               release = {
                 version = "0.40.13";
                 hash = "sha256-2jGJ+HA00iS+sHCNd7lRgLwDhy9uJp1ZvYiKIWBVxYo=";

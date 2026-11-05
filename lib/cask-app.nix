@@ -1,14 +1,14 @@
 { prev }:
 {
   cask,
-  updateDir ? cask,
+  updateFile ? "overlays/${cask}/default.nix",
   autoUpdate ? true,
   updateGroup ? null,
   updateScript ? [
     "${prev.python3}/bin/python3"
     "${../scripts/update-cask.py}"
     cask
-    updateDir
+    updateFile
   ],
   release,
   ...
@@ -19,7 +19,7 @@ in
 import ./mac-app.nix { inherit prev; } (
   builtins.removeAttrs args [
     "cask"
-    "updateDir"
+    "updateFile"
     "autoUpdate"
     "updateGroup"
     "updateScript"
@@ -31,6 +31,7 @@ import ./mac-app.nix { inherit prev; } (
     };
     passthru = {
       inherit autoUpdate updateScript;
+      updateFilename = updateFile;
     }
     // prev.lib.optionalAttrs (updateGroup != null) { inherit updateGroup; };
   }

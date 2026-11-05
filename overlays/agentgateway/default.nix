@@ -14,7 +14,6 @@ _: {
               stdenvNoCC,
               lib,
               fetchurl,
-              python3,
             }:
             let
               version = "1.7.0";
@@ -41,17 +40,7 @@ _: {
               };
               dontUnpack = true;
               passthru.autoUpdate = true;
-              passthru.updateScript = [
-                "${python3}/bin/python3"
-                "${../../scripts/update-github-release.py}"
-                "agentgateway"
-                "--repository"
-                "agentgateway/agentgateway"
-                "--asset-pattern"
-                "agentgateway-{asset}"
-                "--checksum-suffix"
-                ".sha256"
-              ];
+              passthru.updateGroup = "agentgateway";
               installPhase = ''
                 runHook preInstall
                 mkdir -p "$out/bin"

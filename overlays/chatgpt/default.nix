@@ -18,6 +18,7 @@ _: {
           "${prev.python3}/bin/python3"
           "${../../scripts/update-cask.py}"
           "chatgpt"
+          "overlays/chatgpt/default.nix"
         ];
         isDarwin = system == "aarch64-darwin";
         isLinux = builtins.elem system [
