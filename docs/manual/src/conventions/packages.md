@@ -15,6 +15,8 @@ Put independent package definitions, patches, and source pins under `overlays/<p
 
 Consumers use `pkgs.<name>` and own service settings, application behavior, and platform enablement. Small launch wrappers and generated configuration need not become independent packages.
 
+Reusable artifact builders handle installation and packaging; release discovery and update policy are selected separately according to the source. Keep provider-specific update behavior out of general package builders.
+
 ## nixpkgs compatibility exceptions
 
 Prefer a narrow override of the existing nixpkgs derivation over replacing it. A stale release, missing capability, upstream regression, or build failure may justify an exception.
