@@ -20,7 +20,7 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: title
 
-    scale: press.pressed ? 0.94 : press.containsMouse ? 1.018 : 1
+    scale: press.pressed ? 0.94 : press.pointerHovered ? 1.018 : 1
     Behavior on scale {
         Anim {
             motion: chip.motion
@@ -39,7 +39,7 @@ Item {
         luminousColor: chip.activeColor
         outlined: chip.active
         borderColor: chip.active ? chip.activeColor : "transparent"
-        hovered: press.containsMouse
+        hovered: press.pointerHovered
         fillColor: chip.active ? chip.theme.blend(chip.theme.controlBase, chip.activeColor, chip.theme.dark ? 0.12 : 0.08) : chip.theme.expressiveSurfaceStrong
 
         Behavior on cornerRadius {

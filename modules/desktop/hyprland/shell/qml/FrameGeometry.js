@@ -427,6 +427,8 @@ function contour(
       left: Math.max(left + outerRadius + 3, item.x),
       top: Math.max(top + outerRadius + 3, item.y),
       bottom: Math.min(bottom - outerRadius - 3, item.y + item.height),
+      hovered: Boolean(item.hovered),
+      pressed: Boolean(item.pressed),
     }))
     .filter((item) => item.left < right - 6 && item.bottom > item.top + 6)
     .sort((a, b) => a.top - b.top);
@@ -436,11 +438,15 @@ function contour(
     if (last && notch.top <= last.bottom + 3) {
       last.left = Math.min(last.left, notch.left);
       last.bottom = Math.max(last.bottom, notch.bottom);
+      last.hovered = last.hovered || notch.hovered;
+      last.pressed = last.pressed || notch.pressed;
     } else {
       mergedDocks.push({
         left: notch.left,
         top: notch.top,
         bottom: notch.bottom,
+        hovered: notch.hovered,
+        pressed: notch.pressed,
       });
     }
   }
@@ -467,6 +473,7 @@ function contour(
         (dock.bottom - dock.top) / 2,
       ),
     );
+    const dockStartCommand = pathCommands.length;
     add(right, dock.top - shoulder);
     corner(right - shoulder, dock.top - shoulder, shoulder, 0, Math.PI / 2);
     add(dock.left + r, dock.top);
@@ -475,6 +482,16 @@ function contour(
     corner(dock.left + r, dock.bottom - r, r, Math.PI, Math.PI / 2);
     add(right - shoulder, dock.bottom);
     corner(right - shoulder, dock.bottom + shoulder, shoulder, -Math.PI / 2, 0);
+    if (dock.hovered || dock.pressed) {
+      const fillPath =
+        pathCommands
+          .slice(dockStartCommand)
+          .map((command, index) =>
+            index === 0 ? command.replace(/^L/, "M") : command,
+          )
+          .join(" ") + " Z";
+      (dock.pressed ? pressedPaths : hoverPaths).push(fillPath);
+    }
   }
 
   add(right, bottom - outerRadius);
