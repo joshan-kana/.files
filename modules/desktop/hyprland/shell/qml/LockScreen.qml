@@ -17,6 +17,10 @@ WlSessionLock {
     property bool statusError: false
     property bool authRevealed: false
 
+    // Distinguish an authenticated unlock from the transient unlocked state
+    // while the Wayland session lock is being acquired.
+    signal unlockAuthorized
+
     property PamContext pamContext: PamContext {
         config: "linux-desktop"
 
@@ -46,6 +50,7 @@ WlSessionLock {
                 lock.statusText = "";
                 lock.statusError = false;
                 lock.locked = false;
+                lock.unlockAuthorized();
                 return;
             }
 
