@@ -9,7 +9,6 @@ _: {
               inherit prev;
             }
             {
-              token = "notion";
               release = {
                 version = "7.41.1";
                 hash = "sha256-wUBajZ+ibKuNDSIQWfhIw5vs6wRJAmdT1QH6JhenLlA=";
@@ -18,6 +17,10 @@ _: {
               appName = "Notion.app";
               homepage = "https://www.notion.so";
               license = prev.lib.licenses.unfree;
+              passthru = {
+                autoUpdate = false;
+                updateFilename = "overlays/notion/default.nix";
+              };
               url = r: "https://desktop-release.notion-static.com/Notion-${r.version}-arm64.dmg";
             };
       }

@@ -9,7 +9,6 @@ _: {
               inherit prev;
             }
             {
-              token = "prusaslicer";
               release = {
                 version = "2.9.6";
                 hash = "sha256-lP17ip+HyWMeHHFzmxWxhPxfTAzqvWkHLxx48imk/kA=";
@@ -18,6 +17,13 @@ _: {
               appName = "PrusaSlicer.app";
               homepage = "https://github.com/prusa3d/PrusaSlicer";
               license = prev.lib.licenses.agpl3Only;
+              passthru = {
+                autoUpdate = true;
+                updateUrl = "https://github.com/prusa3d/PrusaSlicer";
+                updateGithubReleases = true;
+                updateRegex = "version_(.*)";
+                updateFilename = "overlays/prusaslicer/default.nix";
+              };
               url =
                 r:
                 "https://github.com/prusa3d/PrusaSlicer/releases/download/version_${r.version}/PrusaSlicer-${r.version}.dmg";

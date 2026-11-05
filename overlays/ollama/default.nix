@@ -9,8 +9,6 @@ _: {
               inherit prev;
             }
             {
-              token = "ollama-app";
-              updateDir = "ollama";
               release = {
                 version = "0.40.13";
                 hash = "sha256-2jGJ+HA00iS+sHCNd7lRgLwDhy9uJp1ZvYiKIWBVxYo=";
@@ -19,6 +17,12 @@ _: {
               appName = "Ollama.app";
               homepage = "https://ollama.com/";
               license = prev.lib.licenses.mit;
+              passthru = {
+                autoUpdate = true;
+                updateUrl = "https://github.com/ollama/ollama";
+                updateGithubReleases = true;
+                updateFilename = "overlays/ollama/default.nix";
+              };
               url = r: "https://github.com/ollama/ollama/releases/download/v${r.version}/Ollama-darwin.zip";
               unpacker = prev.unzip;
             }

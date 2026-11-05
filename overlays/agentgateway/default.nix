@@ -3,18 +3,19 @@ _: {
     (
       final: prev:
       prev.lib.optionalAttrs
-        (builtins.elem prev.stdenv.hostPlatform.system [
-          "aarch64-darwin"
-          "aarch64-linux"
-          "x86_64-linux"
-        ])
+        (
+          prev.stdenv.hostPlatform.isDarwin
+          || builtins.elem prev.stdenv.hostPlatform.system [
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+        )
         {
           agentgateway = final.callPackage (
             {
               stdenvNoCC,
               lib,
               fetchurl,
-              python3,
             }:
             let
               version = "1.7.0";
@@ -41,11 +42,7 @@ _: {
               };
               dontUnpack = true;
               passthru.autoUpdate = true;
-              passthru.updateScript = [
-                "${python3}/bin/python3"
-                "${../../scripts/update-binary-release.py}"
-                "agentgateway"
-              ];
+              passthru.updateGroup = "agentgateway";
               installPhase = ''
                 runHook preInstall
                 mkdir -p "$out/bin"

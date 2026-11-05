@@ -26,7 +26,10 @@ update_package() {
       builtins.mapAttrs (system: names:
         builtins.listToAttrs (map (name: {
           inherit name;
-          value = flake.packages.${system}.${name}.passthru.updateGroup or null;
+          value = {
+            group = flake.packages.${system}.${name}.passthru.updateGroup or null;
+            flakeSource = (flake.packages.${system}.${name}.src._type or null) == "flake";
+          };
         }) names)
       ) flake.lib.updateablePackages
     ')"
@@ -54,30 +57,46 @@ update_package() {
   source_before="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   diff_before="$(git diff --binary -- overlays)"
   mode="$(nix eval --raw ".#packages.$system.$1.passthru.updateMode" 2>/dev/null || echo stable)"
+  source_args=()
+  if [[ "$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name].flakeSource' <<<"$package_metadata")" == true ]]; then
+    mode=skip
+    source_args=(--no-src)
+  fi
   url="$(nix eval --raw ".#packages.$system.$1.passthru.updateUrl" 2>/dev/null || true)"
   url_args=()
   [[ -z "$url" ]] || url_args=(--url "$url")
+  release_args=()
+  if [[ "$(nix eval --json ".#packages.$system.$1.passthru.updateGithubReleases" 2>/dev/null || true)" == true ]]; then
+    release_args=(--use-github-releases)
+  fi
+  regex="$(nix eval --raw ".#packages.$system.$1.passthru.updateRegex" 2>/dev/null || true)"
+  [[ -z "$regex" ]] || release_args+=(--version-regex "$regex")
   if recipe="$(nix eval --json ".#packages.$system.$1.passthru.updateScript" 2>/dev/null)"; then
     if [[ "$system" == "$native" ]]; then
       nix-update --flake --system "$system" --use-update-script "$1"
     else
       mapfile -t command < <(jq -r '.[]' <<<"$recipe")
-      # The package declares its updater; execute it with native Python rather
-      # than asking Nix to run a foreign-platform development shell.
-      [[ "${#command[@]}" -ge 3 && -f "${command[1]}" ]] || {
-        echo "No portable updater for $1 on $system" >&2
+      if ((${#command[@]} == 0)); then
+        echo "Missing declared updater for $1 on $system" >&2
         exit 1
-      }
-      python3 "${command[@]:1}"
+      fi
+      # Run the declared updater with its native executable on the current host.
+      # A foreign-platform store executable cannot be launched directly.
+      executable="${command[0]##*/}"
+      if ! command -v "$executable" >/dev/null; then
+        echo "No native $executable available for updating $1 on $system" >&2
+        exit 1
+      fi
+      "$executable" "${command[@]:1}"
     fi
   else
     filename="$(nix eval --raw ".#packages.$system.$1.passthru.updateFilename" 2>/dev/null || true)"
     filename_args=()
     [[ -z "$filename" ]] || filename_args=(--override-filename "$filename")
-    nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" --version "$mode" "$1"
+    nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" "${release_args[@]}" "${source_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
-  group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name] // empty' <<<"$package_metadata")"
+  group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name].group // empty' <<<"$package_metadata")"
   if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
     # One upstream release can publish different archives and hashes per platform.
     while IFS=$'\t' read -r sibling_system sibling; do
@@ -90,20 +109,21 @@ update_package() {
     done < <(
       jq -r --arg group "$group" '
         to_entries[] | .key as $system | .value | to_entries[]
-        | select(.value == $group) | [$system, .key] | @tsv
+        | select(.value.group == $group) | [$system, .key] | @tsv
       ' <<<"$package_metadata"
     )
   fi
-  if [[ "$source_before" == "$source_after" ]]; then
-    if [[ "$diff_before" != "$(git diff --binary -- overlays)" ]]; then
-      echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
-      exit 1
+  diff_after="$(git diff --binary -- overlays)"
+  if [[ "$source_before" == "$source_after" && "$mode" != skip && "$diff_before" != "$diff_after" ]]; then
+    echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
+    exit 1
+  fi
+  if [[ "$source_before" != "$source_after" || "$diff_before" != "$diff_after" ]]; then
+    if [[ "$system" == "$native" ]]; then
+      nix build --no-link ".#packages.$system.$1"
+    else
+      echo "Updated $1 for $system; native build validation remains required on that platform"
     fi
-  elif [[ "$system" == "$native" ]]; then
-    # Do not rebuild unchanged packages just to check for newer releases.
-    nix build --no-link ".#packages.$system.$1"
-  else
-    echo "Updated $1 for $system; native build validation remains required on that platform"
   fi
 
 }
@@ -173,11 +193,6 @@ if ((${#inputs[@]})); then
   nix flake update "${inputs[@]}"
 fi
 
-if ((${#inputs[@]} || ${#schemas[@]})); then
-  [[ ${schemas[0]-} == "*" ]] && schemas=()
-  update-schemas "${schemas[@]}"
-fi
-
 if ((${#containers[@]})); then
   [[ ${containers[0]} == "*" ]] && containers=()
   update-container-lock "${containers[@]}"
@@ -205,6 +220,11 @@ if ((${#packages[@]})); then
       update_package "${choice#*/}" "${choice%%/*}"
     done
   fi
+fi
+
+if ((${#inputs[@]} || ${#schemas[@]})); then
+  [[ ${schemas[0]-} == "*" ]] && schemas=()
+  update-schemas "${schemas[@]}"
 fi
 
 nix flake check --all-systems --no-build --no-update-lock-file

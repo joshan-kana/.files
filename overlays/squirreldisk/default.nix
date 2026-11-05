@@ -9,7 +9,6 @@ _: {
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         squirreldisk = import ../../lib/mac-app.nix { inherit prev; } {
-          token = "squirreldisk";
           release = {
             inherit version;
             hash = "sha256-E84YnLYNGzx8KYPFqWGNbJoOoJeIyKTQUCkO9Z+Jfgo=";
@@ -17,9 +16,12 @@ _: {
           pname = "squirreldisk";
           appName = "SquirrelDisk.app";
           inherit homepage license;
-          updateScript = null;
-          updateGroup = "squirreldisk";
-          updateUrl = "https://github.com/adileo/squirreldisk";
+          passthru = {
+            autoUpdate = true;
+            updateGroup = "squirreldisk";
+            updateFilename = "overlays/squirreldisk/default.nix";
+            updateUrl = "https://github.com/adileo/squirreldisk";
+          };
           url =
             _: "https://github.com/adileo/squirreldisk/releases/download/v${version}/SquirrelDisk-macOS.dmg";
         };

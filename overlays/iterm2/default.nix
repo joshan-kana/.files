@@ -9,7 +9,6 @@ _: {
               inherit prev;
             }
             {
-              token = "iterm2";
               release = {
                 version = "3.7.6";
                 hash = "sha256-u2EC6fV7vkGXm6fHscJdQRLppcIUJgbuzL4Y3H7gcG8=";
@@ -18,6 +17,10 @@ _: {
               appName = "iTerm.app";
               homepage = "https://iterm2.com";
               license = prev.lib.licenses.gpl2Only;
+              passthru = {
+                autoUpdate = false;
+                updateFilename = "overlays/iterm2/default.nix";
+              };
               url =
                 r:
                 "https://iterm2.com/downloads/stable/iTerm2-${

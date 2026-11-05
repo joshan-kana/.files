@@ -43,16 +43,9 @@ in
     };
   };
 
-  warp =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.warp-terminal ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "warp" ];
-      }
-    );
+  warp = _: {
+    home = _: { home.packages = [ pkgs.warp-terminal ]; };
+  };
 
   mullvad =
     _:
@@ -149,18 +142,9 @@ in
     };
   };
 
-  gimp =
-    _:
-    {
-      home =
-        _:
-        lib.optionalAttrs isLinux {
-          home.packages = [ pkgs.gimp ];
-        };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "gimp" ];
-    };
+  gimp = _: {
+    home = _: { home.packages = [ pkgs.gimp ]; };
+  };
 
   githubDesktop = _: {
     home =
@@ -188,16 +172,9 @@ in
     };
   };
 
-  libreoffice =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.libreoffice ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "libreoffice" ];
-      }
-    );
+  libreoffice = _: {
+    home = _: { home.packages = [ pkgs.libreoffice ]; };
+  };
 
   sunshine =
     _:

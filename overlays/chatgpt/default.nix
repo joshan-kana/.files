@@ -14,12 +14,7 @@ _: {
           aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
         };
         inherit (release) version;
-        updateScript = [
-          "${prev.python3}/bin/python3"
-          "${../../scripts/update-cask.py}"
-          "chatgpt"
-        ];
-        isDarwin = system == "aarch64-darwin";
+        isDarwin = prev.stdenv.hostPlatform.isDarwin;
         isLinux = builtins.elem system [
           "aarch64-linux"
           "x86_64-linux"
@@ -28,17 +23,18 @@ _: {
       in
       lib.optionalAttrs isDarwin {
         chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
-          token = "chatgpt";
           inherit release;
           pname = "chatgpt";
           appName = "ChatGPT.app";
           homepage = "https://chatgpt.com/";
           license = lib.licenses.unfree;
+          passthru = {
+            autoUpdate = false;
+            updateGroup = "chatgpt";
+            updateFilename = "overlays/chatgpt/default.nix";
+          };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
           unpacker = prev.unzip;
-          autoUpdate = true;
-          updateGroup = "chatgpt";
-          inherit updateScript;
         };
       }
       // lib.optionalAttrs isLinux {
@@ -114,9 +110,7 @@ _: {
             runHook postInstall
           '';
           passthru = {
-            autoUpdate = true;
             updateGroup = "chatgpt";
-            inherit updateScript;
           };
           meta = {
             homepage = "https://chatgpt.com/";

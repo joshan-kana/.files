@@ -14,7 +14,6 @@ _: {
               stdenvNoCC,
               fetchurl,
               unzip,
-              python3,
             }:
             let
               version = "0.0.19";
@@ -41,11 +40,7 @@ _: {
               };
               nativeBuildInputs = [ unzip ];
               passthru.autoUpdate = true;
-              passthru.updateScript = [
-                "${python3}/bin/python3"
-                "${../../scripts/update-binary-release.py}"
-                "openai-tunnel-client"
-              ];
+              passthru.updateGroup = "openai-tunnel-client";
               unpackPhase = ":";
               installPhase = ''
                 mkdir -p "$out/bin"

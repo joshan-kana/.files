@@ -8,6 +8,7 @@ _: {
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
+    ./gimp
     ./gtksourceview
     ./nh
     ./nixd
@@ -17,8 +18,11 @@ _: {
     ./tuicr
     ./technitium-roaming
     ./webhook
+    ./warp
     ./arc
+    ./raycast
     ./agentgateway
+    ./aldente
     ./arduino-ide
     ./chatgpt
     ./chatgpt-shell-mcp
@@ -26,10 +30,13 @@ _: {
     ./cryptomator
     ./hammerspoon
     ./karabiner-elements
+    ./kicad
+    ./krita
     ./heroic
     ./iterm2
     ./jellyfin-mpv-shim
     ./linear
+    ./libreoffice
     ./notion
     ./open-webui
     ./open-webui-mac

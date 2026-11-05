@@ -9,7 +9,6 @@ _: {
       in
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         neodisk = import ../../lib/mac-app.nix { inherit prev; } {
-          token = "neodisk";
           release = {
             inherit version;
             hash = "sha256-70EpqemxTJDCI0BFRgc9OIThCuWVWIiOr/QZd0+ljvc=";
@@ -18,9 +17,12 @@ _: {
           appName = "Neodisk.app";
           inherit homepage license;
           unpacker = prev.unzip;
-          updateScript = null;
-          updateGroup = "neodisk";
-          updateUrl = "https://github.com/tkslucas/Neodisk";
+          passthru = {
+            autoUpdate = true;
+            updateGroup = "neodisk";
+            updateFilename = "overlays/neodisk/default.nix";
+            updateUrl = "https://github.com/tkslucas/Neodisk";
+          };
           url =
             r: "https://github.com/tkslucas/Neodisk/releases/download/v${r.version}/Neodisk-${r.version}.zip";
         };
