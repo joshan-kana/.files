@@ -2,14 +2,13 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
         linear-mac =
-          import ../../lib/cask-app.nix
+          import ../../lib/mac-app.nix
             {
               inherit prev;
             }
             {
-              cask = "linear";
               release = {
                 version = "1.32.8";
                 hash = "sha256-CNQrkXvEQGgjHUep4Urp/awsqV+mtFHoEPzaD3Vu1KM=";
@@ -18,6 +17,10 @@ _: {
               appName = "Linear.app";
               homepage = "https://linear.app";
               license = prev.lib.licenses.unfree;
+              passthru = {
+                autoUpdate = false;
+                updateFilename = "overlays/linear/default.nix";
+              };
               url = r: "https://releases.linear.app/Linear-${r.version}-universal.dmg";
             };
       }

@@ -36,7 +36,7 @@ prev.stdenvNoCC.mkDerivation (
     '';
     meta = {
       inherit homepage license;
-      platforms = prev.lib.platforms.darwin;
+      platforms = [ "aarch64-darwin" ];
       sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
     };
   }

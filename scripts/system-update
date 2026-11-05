@@ -65,6 +65,12 @@ update_package() {
   url="$(nix eval --raw ".#packages.$system.$1.passthru.updateUrl" 2>/dev/null || true)"
   url_args=()
   [[ -z "$url" ]] || url_args=(--url "$url")
+  release_args=()
+  if [[ "$(nix eval --json ".#packages.$system.$1.passthru.updateGithubReleases" 2>/dev/null || true)" == true ]]; then
+    release_args=(--use-github-releases)
+  fi
+  regex="$(nix eval --raw ".#packages.$system.$1.passthru.updateRegex" 2>/dev/null || true)"
+  [[ -z "$regex" ]] || release_args+=(--version-regex "$regex")
   if recipe="$(nix eval --json ".#packages.$system.$1.passthru.updateScript" 2>/dev/null)"; then
     if [[ "$system" == "$native" ]]; then
       nix-update --flake --system "$system" --use-update-script "$1"
@@ -87,7 +93,7 @@ update_package() {
     filename="$(nix eval --raw ".#packages.$system.$1.passthru.updateFilename" 2>/dev/null || true)"
     filename_args=()
     [[ -z "$filename" ]] || filename_args=(--override-filename "$filename")
-    nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" "${source_args[@]}" --version "$mode" "$1"
+    nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" "${release_args[@]}" "${source_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name].group // empty' <<<"$package_metadata")"

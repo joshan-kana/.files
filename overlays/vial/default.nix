@@ -2,14 +2,13 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
         vial-mac =
-          import ../../lib/cask-app.nix
+          import ../../lib/mac-app.nix
             {
               inherit prev;
             }
             {
-              cask = "vial";
               release = {
                 version = "0.7.5";
                 hash = "sha256-tijbEfjfAS+q/M7vfes2tUghtQfUyXAzb4WlbIAOiHY=";
@@ -18,6 +17,12 @@ _: {
               appName = "Vial.app";
               homepage = "https://get.vial.today";
               license = prev.lib.licenses.gpl2Only;
+              passthru = {
+                autoUpdate = true;
+                updateUrl = "https://github.com/vial-kb/vial-gui";
+                updateGithubReleases = true;
+                updateFilename = "overlays/vial/default.nix";
+              };
               url =
                 r: "https://github.com/vial-kb/vial-gui/releases/download/v${r.version}/Vial-v${r.version}.dmg";
               unpacker = prev._7zz;

@@ -4,7 +4,6 @@ let
     version = "3.2.8";
     hashes = {
       aarch64-darwin = "sha256-BkBKN1EGt2E7o6FMfY2afL4YubnisgULty8xYsvPw5U=";
-      x86_64-darwin = "sha256-d0ZIeYXXFDsZBpJQC1jVMXts6RamD4E5p2317qHpINs=";
       x86_64-linux = "sha256-i0PcI+WKG2as6d1tTV9+hTLzOY5hCflaHsC2rQNqolA=";
       aarch64-linux = "sha256-P9YdvEC3YPeAb/wEwp3A2TAht5m50OaXdXHEQl0DI7A=";
     };
@@ -14,11 +13,11 @@ in
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (builtins.elem prev.stdenv.hostPlatform.system prev.lib.platforms.darwin) {
-        gimp = import ../../lib/cask-app.nix { inherit prev; } {
-          cask = "gimp";
-          updateGroup = "gimp";
-          inherit release;
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+        gimp = import ../../lib/mac-app.nix { inherit prev; } {
+          release = release // {
+            hash = release.hashes.aarch64-darwin;
+          };
           pname = "gimp";
           appName = "GIMP.app";
           homepage = "https://www.gimp.org";
@@ -27,6 +26,10 @@ in
           unpackCmd = ''
             7zz x -sns- -snld20 -y "$curSrc"
           '';
+          passthru = {
+            autoUpdate = false;
+            updateFilename = "overlays/gimp/default.nix";
+          };
           url =
             r:
             "https://download.gimp.org/gimp/v${prev.lib.versions.majorMinor r.version}/macos/gimp-${r.version}-${

@@ -4,21 +4,25 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs (prev.stdenv.hostPlatform.isDarwin && prev.stdenv.hostPlatform.isAarch64) {
         ollama =
-          (import ../../lib/cask-app.nix
+          (import ../../lib/mac-app.nix
             {
               inherit prev;
             }
             {
-              cask = "ollama-app";
-              updateFile = "overlays/ollama/default.nix";
               release = {
-                version = "0.40.13";
-                hash = "sha256-2jGJ+HA00iS+sHCNd7lRgLwDhy9uJp1ZvYiKIWBVxYo=";
+                version = "0.40.14";
+                hash = "sha256-kEc4b7aBH1T8mLEs5P6kKm7lzp4bvAyBlkmfNHBUvLU=";
               };
               pname = "ollama";
               appName = "Ollama.app";
               homepage = "https://ollama.com/";
               license = prev.lib.licenses.mit;
+              passthru = {
+                autoUpdate = true;
+                updateUrl = "https://github.com/ollama/ollama";
+                updateGithubReleases = true;
+                updateFilename = "overlays/ollama/default.nix";
+              };
               url = r: "https://github.com/ollama/ollama/releases/download/v${r.version}/Ollama-darwin.zip";
               unpacker = prev.unzip;
             }

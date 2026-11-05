@@ -2,21 +2,21 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (builtins.elem prev.stdenv.hostPlatform.system prev.lib.platforms.darwin) {
-        libreoffice = import ../../lib/cask-app.nix { inherit prev; } {
-          cask = "libreoffice";
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+        libreoffice = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
             version = "26.8.2";
-            hashes = {
-              aarch64-darwin = "sha256-nyT+g6se1cles99YARnzKTL3E+V3/urAK/YZ+wB0m1U=";
-              x86_64-darwin = "sha256-CvBid5zBf2+FKRiyQkx0X33S0g1R1/uKCSXrkuwEF6c=";
-            };
+            hash = "sha256-nyT+g6se1cles99YARnzKTL3E+V3/urAK/YZ+wB0m1U=";
           };
           pname = "libreoffice";
           appName = "LibreOffice.app";
           homepage = "https://www.libreoffice.org";
           license = prev.lib.licenses.mpl20;
           unpacker = prev._7zz;
+          passthru = {
+            autoUpdate = false;
+            updateFilename = "overlays/libreoffice/default.nix";
+          };
           url =
             r:
             "https://download.documentfoundation.org/libreoffice/stable/${r.version}/mac/${

@@ -9,7 +9,7 @@ in
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
         kicad = prev.stdenvNoCC.mkDerivation {
           pname = "kicad";
           inherit (release) version;
@@ -36,18 +36,14 @@ in
           passthru = {
             autoUpdate = true;
             updateFilename = "overlays/kicad/default.nix";
-            updateScript = [
-              "${prev.python3}/bin/python3"
-              "${../../scripts/update-cask.py}"
-              "kicad"
-              "overlays/kicad/default.nix"
-            ];
+            updateUrl = "https://github.com/KiCad/kicad-source-mirror";
+            updateGithubReleases = true;
           };
           meta = {
             homepage = "https://www.kicad.org";
             description = "Electronics design automation suite";
             license = prev.lib.licenses.gpl3Plus;
-            platforms = prev.lib.platforms.darwin;
+            platforms = [ "aarch64-darwin" ];
             sourceProvenance = [ prev.lib.sourceTypes.binaryNativeCode ];
           };
         };

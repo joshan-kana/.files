@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh package-owned macOS release pins from upstream cask metadata."""
+"""Manually refresh a pinned upstream release from optional Homebrew cask metadata."""
 
 import argparse
 import base64
@@ -13,7 +13,7 @@ from urllib.request import urlopen
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("cask", help="Homebrew cask token")
 parser.add_argument("file", help="Package overlay to update")
-parser.add_argument("--arch-hashes", action="store_true", help="Refresh hashes for both Darwin architectures")
+parser.add_argument("--arch-hashes", action="store_true", help="Refresh declared Linux and Apple Silicon hashes")
 args = parser.parse_args()
 if not re.fullmatch(r"[a-z][a-z0-9-]*", args.cask):
     parser.error("Cask token must be lowercase")
@@ -38,12 +38,6 @@ def sri(value):
 
 source = target.read_text()
 if args.arch_hashes:
-    # Cask variations provide Intel archives for the supported macOS releases.
-    variations = {
-        (value.get("version") or version, value["sha256"])
-        for key, value in release.get("variations", {}).items()
-        if not key.startswith("arm64_") and not key.endswith("_linux") and isinstance(value.get("sha256"), str)
-    }
     block_pattern = r"(hashes = \{)([^{}]*)(\};)"
     blocks = list(re.finditer(block_pattern, source, re.S))
     if len(blocks) != 1:
@@ -51,10 +45,6 @@ if args.arch_hashes:
     block = blocks[0]
     body = block[2]
     hashes = {"aarch64-darwin": sri(digest)}
-    if re.search(r"\bx86_64-darwin\s*=", body):
-        if len(variations) != 1 or next(iter(variations))[0] != version:
-            sys.exit("Intel cask release differs from Apple Silicon; cannot update a shared version")
-        hashes["x86_64-darwin"] = sri(next(iter(variations))[1])
     for system, variation in (("x86_64-linux", "x86_64_linux"), ("aarch64-linux", "arm64_linux")):
         if re.search(r"\b" + re.escape(system) + r"\s*=", body):
             variant = release.get("variations", {}).get(variation, {})
@@ -85,8 +75,18 @@ if args.arch_hashes:
             count=1,
         )
 else:
-    pattern = r'(release = \{\s*version = ")[^"]+(";\s*hash = ")[^"]+(";\s*\};)'
-    updated, count = re.subn(pattern, lambda m: m[1] + version + m[2] + sri(digest) + m[3], source, count=1)
+    release_version, _, release_build = version.partition(",")
+    pattern = r'(release = \{\s*version = ")[^"]+(";)(\s*build = ")[^"]+(";)?(\s*hash = ")[^"]+(";\s*\};)'
+    if release_build:
+        updated, count = re.subn(
+            pattern,
+            lambda m: m[1] + release_version + m[2] + m[3] + release_build + m[4] + m[5] + sri(digest) + m[6],
+            source,
+            count=1,
+        )
+    else:
+        pattern = r'(release = \{\s*version = ")[^"]+(";\s*hash = ")[^"]+(";\s*\};)'
+        updated, count = re.subn(pattern, lambda m: m[1] + version + m[2] + sri(digest) + m[3], source, count=1)
 if count != 1:
     sys.exit(f"Missing pinned release metadata in {target}")
 if updated != source:
