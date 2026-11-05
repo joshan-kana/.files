@@ -149,18 +149,9 @@ in
     };
   };
 
-  gimp =
-    _:
-    {
-      home =
-        _:
-        lib.optionalAttrs isLinux {
-          home.packages = [ pkgs.gimp ];
-        };
-    }
-    // lib.optionalAttrs isDarwin {
-      homebrew.casks = [ "gimp" ];
-    };
+  gimp = _: {
+    home = _: { home.packages = [ pkgs.gimp ]; };
+  };
 
   githubDesktop = _: {
     home =
@@ -188,16 +179,9 @@ in
     };
   };
 
-  libreoffice =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.libreoffice ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "libreoffice" ];
-      }
-    );
+  libreoffice = _: {
+    home = _: { home.packages = [ pkgs.libreoffice ]; };
+  };
 
   sunshine =
     _:
@@ -268,16 +252,9 @@ in
       };
     };
 
-  vlc =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.vlc ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "vlc" ];
-      }
-    );
+  vlc = _: {
+    home = _: { home.packages = [ pkgs.vlc ]; };
+  };
 
   mopidy = _: {
     home = _: {

@@ -162,14 +162,14 @@
   desktop = extendScope moduleRegistry.desktop {
     hammerspoon = import ../../modules/desktop/hammerspoon;
 
-    raycast = _: {
-      homebrew.casks = [ "raycast" ];
+    raycast = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.raycast ]; };
     };
 
     yabai = import ../../modules/desktop/yabai;
 
-    aldente = _: {
-      homebrew.casks = [ "aldente" ];
+    aldente = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.aldente ]; };
     };
 
     homerow = _: {
@@ -255,8 +255,8 @@
       homebrew.casks = [ "kicad" ];
     };
 
-    krita = _: {
-      homebrew.casks = [ "krita" ];
+    krita = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.krita ]; };
     };
 
     microsoftOfficeSuite = _: {

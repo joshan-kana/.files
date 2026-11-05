@@ -9,7 +9,8 @@
     "${../scripts/update-cask.py}"
     cask
     updateFile
-  ],
+  ]
+  ++ prev.lib.optional (release ? hashes) "--arch-hashes",
   release,
   ...
 }@args:
@@ -25,9 +26,10 @@ import ./mac-app.nix { inherit prev; } (
     "updateScript"
   ]
   // {
-    release = release // {
+    release = builtins.removeAttrs release [ "hashes" ] // {
       version = builtins.head versions;
       inherit versions;
+      hash = if release ? hashes then release.hashes.${prev.stdenv.hostPlatform.system} else release.hash;
     };
     passthru = {
       inherit autoUpdate updateScript;
