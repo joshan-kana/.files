@@ -14,7 +14,7 @@ _: {
           aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
         };
         inherit (release) version;
-        isDarwin = system == "aarch64-darwin";
+        isDarwin = prev.stdenv.hostPlatform.isDarwin;
         isLinux = builtins.elem system [
           "aarch64-linux"
           "x86_64-linux"

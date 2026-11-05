@@ -2,11 +2,11 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         aldente = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "1.40.1";
-            hash = "sha256-y+P0fxsIud5XYMr0a0llpuyAsf+LXwQ6foO5UrAGyiM=";
+            version = "1.39.4";
+            hash = "sha256-smNK5H9fhg+nX1vgqa6JsTbbtRQAOADtJWhz9DeqcBs=";
           };
           pname = "aldente";
           appName = "AlDente.app";

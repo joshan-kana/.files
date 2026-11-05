@@ -2,11 +2,11 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         libreoffice = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "26.8.2";
-            hash = "sha256-nyT+g6se1cles99YARnzKTL3E+V3/urAK/YZ+wB0m1U=";
+            version = "26.8.0.3";
+            hash = "sha256-iFjYBY2k+GL0dVlIaBTmXvwnKU2mfF5LtWsAax7ln4k=";
           };
           pname = "libreoffice";
           appName = "LibreOffice.app";
@@ -19,7 +19,7 @@ _: {
           };
           url =
             r:
-            "https://download.documentfoundation.org/libreoffice/stable/${r.version}/mac/${
+            "https://downloadarchive.documentfoundation.org/libreoffice/old/${r.version}/mac/${
               if prev.stdenv.hostPlatform.isAarch64 then "aarch64" else "x86_64"
             }/LibreOffice_${r.version}_MacOS_${
               if prev.stdenv.hostPlatform.isAarch64 then "aarch64" else "x86-64"

@@ -13,7 +13,7 @@ in
       let
         system = prev.stdenv.hostPlatform.system;
       in
-      prev.lib.optionalAttrs (system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         bambu-studio = import ../../lib/mac-app.nix { inherit prev; } {
           inherit release;
           pname = "bambu-studio";

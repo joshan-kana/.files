@@ -2,7 +2,7 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         prusa-slicer =
           import ../../lib/mac-app.nix
             {
@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "2.9.7";
-                hash = "sha256-9zX51SeCPRWdmsHo+Ezht06lcecF5w5yO+5UbQcNtgs=";
+                version = "2.9.6";
+                hash = "sha256-lP17ip+HyWMeHHFzmxWxhPxfTAzqvWkHLxx48imk/kA=";
               };
               pname = "prusa-slicer";
               appName = "PrusaSlicer.app";

@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "0.40.14";
-                hash = "sha256-kEc4b7aBH1T8mLEs5P6kKm7lzp4bvAyBlkmfNHBUvLU=";
+                version = "0.40.13";
+                hash = "sha256-2jGJ+HA00iS+sHCNd7lRgLwDhy9uJp1ZvYiKIWBVxYo=";
               };
               pname = "ollama";
               appName = "Ollama.app";

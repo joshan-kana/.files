@@ -3,11 +3,13 @@ _: {
     (
       final: prev:
       prev.lib.optionalAttrs
-        (builtins.elem prev.stdenv.hostPlatform.system [
-          "aarch64-darwin"
-          "aarch64-linux"
-          "x86_64-linux"
-        ])
+        (
+          prev.stdenv.hostPlatform.isDarwin
+          || builtins.elem prev.stdenv.hostPlatform.system [
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+        )
         {
           agentgateway = final.callPackage (
             {

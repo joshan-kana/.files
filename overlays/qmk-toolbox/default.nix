@@ -2,7 +2,7 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         qmk-toolbox-mac =
           import ../../lib/mac-app.nix
             {

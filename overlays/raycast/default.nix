@@ -2,7 +2,7 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (builtins.elem prev.stdenv.hostPlatform.system [ "aarch64-darwin" ]) {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         raycast = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
             version = "2.11.1.0";

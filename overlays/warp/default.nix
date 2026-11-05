@@ -18,11 +18,13 @@ in
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
       in
       prev.lib.optionalAttrs
-        (builtins.elem system [
-          "aarch64-darwin"
-          "x86_64-linux"
-          "aarch64-linux"
-        ])
+        (
+          isDarwin
+          || builtins.elem system [
+            "x86_64-linux"
+            "aarch64-linux"
+          ]
+        )
         {
           warp-terminal = prev.warp-terminal.overrideAttrs (old: {
             inherit (release) version;

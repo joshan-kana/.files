@@ -2,11 +2,11 @@ _: {
   nixpkgs.overlays = [
     (
       _final: prev:
-      prev.lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         krita = import ../../lib/mac-app.nix { inherit prev; } {
           release = {
-            version = "5.3.4.1";
-            hash = "sha256-Ux4mHaH9jVxGjPzU7r0W6e32qzIOiUBtKHXy5DwRSN4=";
+            version = "5.3.4";
+            hash = "sha256-jmZTnji4vs/TEJOncBFEw0DBeJNwt14Qo3AzInOSddc=";
           };
           pname = "krita";
           appName = "krita.app";

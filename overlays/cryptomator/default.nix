@@ -23,7 +23,7 @@ in
           updateFilename = "overlays/cryptomator/default.nix";
         };
       in
-      prev.lib.optionalAttrs (system == "aarch64-darwin") {
+      prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
         cryptomator-mac = import ../../lib/mac-app.nix { inherit prev; } {
           inherit release;
           pname = "cryptomator-mac";

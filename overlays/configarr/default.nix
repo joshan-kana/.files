@@ -46,7 +46,7 @@ in
               src = inputs.configarr;
               inherit (old) version;
               pnpmDeps = old.pnpmDeps.override {
-                hash = "sha256-rp8UefwTC2iPIze0Y4OHNtSBtz0gdVWJQaOJ1sMszIA=";
+                hash = "sha256-58Q5OHorGHQ1YYP0R1xWGExeRP5yONW4vlyP6GEaVSQ=";
               };
               passthru = (old.passthru or { }) // {
                 autoUpdate = true;
