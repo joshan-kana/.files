@@ -1444,6 +1444,10 @@ ShellRoot {
             return expansionState.hasCurrent && expansionState.currentName === "system";
         }
 
+        function controlsSelectedSlider(): string {
+            return expansionState.currentName === "system" && expansionHost.systemContent ? expansionHost.systemContent.selectedSlider : "";
+        }
+
         function volumePercent(): int {
             return system.volumePercent;
         }
