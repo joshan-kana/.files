@@ -53,7 +53,7 @@ function contour(
     0,
     Math.min(radius, (right - left) / 2, (bottom - top) / 2),
   );
-  const topNotches = (islands || [])
+  const topSources = (islands || [])
     .concat(hub && hub.visible ? [hub] : [])
     .concat(
       (Array.isArray(topDock) ? topDock : [topDock]).filter(
@@ -67,10 +67,29 @@ function contour(
         [item.x, item.y, item.width, item.height].every(Number.isFinite) &&
         item.width > 1 &&
         item.height > 1,
-    )
+    );
+  // Reserve a genuine curved bridge from each outer corner into its nearest
+  // attached island. The full-size panel corner cannot coexist with a more
+  // outward island at the same top-edge coordinates; clamping the notch to it
+  // creates the tiny, visibly square shoulders seen at both ends of the bar.
+  const firstEdge = Math.min(right, ...topSources.map((item) => item.x));
+  const lastEdge = Math.max(
+    left,
+    ...topSources.map((item) => item.x + item.width),
+  );
+  const cornerClearance = Math.min(20, Math.max(8, (right - left) / 20));
+  const topLeftRadius = Math.min(
+    outerRadius,
+    Math.max(14, firstEdge - left - cornerClearance),
+  );
+  const topRightRadius = Math.min(
+    outerRadius,
+    Math.max(14, right - lastEdge - cornerClearance),
+  );
+  const topNotches = topSources
     .map((item) => ({
-      left: Math.max(left + outerRadius + 3, item.x),
-      right: Math.min(right - outerRadius - 3, item.x + item.width),
+      left: Math.max(left + topLeftRadius + 3, item.x),
+      right: Math.min(right - topRightRadius - 3, item.x + item.width),
       bottom: Math.min(
         hubBottomLimit(width, height, thickness, radius),
         item.y + item.height,
@@ -186,19 +205,21 @@ function contour(
     );
   }
 
-  add(left + outerRadius, top);
+  add(left + topLeftRadius, top);
   for (let i = 0; i < merged.length; i++) {
     const notch = merged[i];
     const startCommand = pathCommands.length;
     const next = merged[i + 1];
-    const preceding = i ? merged[i - 1].right : left + outerRadius;
-    const following = next ? next.left : right - outerRadius;
+    const preceding = i ? merged[i - 1].right : left + topLeftRadius;
+    const following = next ? next.left : right - topRightRadius;
     const leftSpace = notch.left - preceding;
     const rightSpace = following - notch.right;
     // The two shoulders have independent space constraints: a narrow right
     // neighbour must not square off the left edge of the same island.
-    // Keep a straight bridge between neighbouring wells, while outer frame
-    // corners can devote more of their clearance to the shoulder.
+    // Keep a straight bridge between neighbouring wells. At the two screen
+    // edges, consume the entire small corner-to-island gap with the curved
+    // shoulder: a residual straight stub produced a visible hairline beside
+    // the workspace and right-hand status islands.
     const sections = notch.sections;
     const first = sections[0];
     const last = sections[sections.length - 1];
@@ -207,7 +228,7 @@ function contour(
       Math.min(
         radius * 0.65,
         (first.bottom - top) * 0.45,
-        leftSpace * (i === 0 ? 0.8 : 0.32),
+        leftSpace * (i === 0 ? 1 : 0.32),
       ),
     );
     const rightShoulder = Math.max(
@@ -215,7 +236,7 @@ function contour(
       Math.min(
         radius * 0.65,
         (last.bottom - top) * 0.45,
-        rightSpace * (i === merged.length - 1 ? 0.8 : 0.32),
+        rightSpace * (i === merged.length - 1 ? 1 : 0.32),
       ),
     );
     const leftRadius = Math.max(
@@ -383,8 +404,14 @@ function contour(
       (notch.pressed ? pressedPaths : hoverPaths).push(fillPath);
     }
   }
-  add(right - outerRadius, top);
-  corner(right - outerRadius, top + outerRadius, outerRadius, -Math.PI / 2, 0);
+  add(right - topRightRadius, top);
+  corner(
+    right - topRightRadius,
+    top + topRightRadius,
+    topRightRadius,
+    -Math.PI / 2,
+    0,
+  );
 
   // Overlapping right-edge panels contribute one continuous envelope.
   const docks = (Array.isArray(toast) ? toast : [toast])
@@ -539,11 +566,14 @@ function contour(
     Math.PI / 2,
     Math.PI,
   );
-  add(left, top + outerRadius);
+  // Close on the exact first point of the adaptive top-left corner. Using
+  // outerRadius here closes with a stray horizontal line over the workspace
+  // island whenever its outward position requires a smaller top radius.
+  add(left, top + topLeftRadius);
   corner(
-    left + outerRadius,
-    top + outerRadius,
-    outerRadius,
+    left + topLeftRadius,
+    top + topLeftRadius,
+    topLeftRadius,
     Math.PI,
     Math.PI * 1.5,
   );

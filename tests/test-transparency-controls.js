@@ -61,7 +61,7 @@ test("frosted-glass percentage maps directly to actual pane alpha", () => {
     /fillOpacity: frameConnected \? 0 : !glassAllowed \|\| !theme\.shellGlassEnabled \|\| surfaceLayer === ShellSurface\.Background \? 1 : theme\.glassOpacity/,
   );
   assert.doesNotMatch(surface, /theme\.glassOpacity \* \(/);
-  assert.match(frame, /reactiveFrameColor\(0\.5, output\.reactiveActive\)/);
+  assert.match(frame, /reactiveFrameColor\(0\.5\)/);
   assert.match(theme, /shellGlassEnabled \? glassOpacity : 1/);
 });
 

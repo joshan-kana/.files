@@ -92,36 +92,16 @@ QtObject {
     property real musicReactiveEnergy: 0
     property real musicReactiveBeat: 0
     property real musicReactiveTreble: 0
-    // Each fixed spectrum stop responds to its own live frequency region,
-    // from sub-bass at the left to treble at the right. No free-running
-    // oscillator: if the input holds steady, the gradient holds steady too.
-    property var musicReactiveBands: [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    property var musicReactiveImpulses: [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    property real musicReactiveMovement: 0
-    property real musicReactiveKick: 0
-
-    // No on/off threshold or brightness floor. Every contribution converges
-    // smoothly to zero when the analyser goes silent.
-    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.18, musicReactiveEnergy * 0.13) : 0
-
-    function reactiveFrameColor(position: real, illuminated: bool): color {
-        const alpha = shellGlassEnabled ? glassOpacity : 1;
-        if (!illuminated)
-            return Qt.rgba(background.r, background.g, background.b, alpha);
-
-        const index = Math.max(0, Math.min(8, Math.round(position * 8)));
-        const harmonic = Math.max(0, Math.min(1, musicReactiveBands[index] || 0));
-        const impulse = Math.max(0, Math.min(1, musicReactiveImpulses[index] || 0));
-        const kick = musicReactiveKick * Math.exp(-Math.pow((position - 0.19) / 0.16, 2));
-
-        // A quiet warm/cool ambience with localized, short-lived aurora
-        // highlights. A kick can still punch through high mid/treble content
-        // because its contribution is independent of the other bands.
-        const ambient = musicReactiveEnergy * (0.045 + 0.065 * harmonic);
-        const highlight = 0.68 * Math.pow(impulse, 0.82) + 0.78 * kick;
-        const strength = Math.max(0, Math.min(0.94, ambient + highlight));
-        const tinted = blend(background, spectrumColor(position), strength);
-        return Qt.rgba(tinted.r, tinted.g, tinted.b, alpha);
+    // Share the spectrum's red/blue/cyan ramp with the shell, without
+    // creating per-frame colour arrays or a second audio signal pipeline.
+    // Music changes tint strength; the palette stays anchored to bass/treble.
+    readonly property real musicReactiveWash: musicReactiveEnabled ? Math.min(0.42, musicReactiveEnergy * 0.58 + musicReactiveBeat * 0.14) : 0
+    function reactiveColor(base: color, position: real): color {
+        return musicReactiveWash > 0 ? blend(base, spectrumColor(position), musicReactiveWash) : base;
+    }
+    function reactiveFrameColor(position: real): color {
+        const tinted = reactiveColor(background, position);
+        return Qt.rgba(tinted.r, tinted.g, tinted.b, shellGlassEnabled ? glassOpacity : 1);
     }
 
     readonly property real textScale: runtime.textScale
@@ -144,11 +124,14 @@ QtObject {
     readonly property int barInsetBottom: barInsetTop
     readonly property int barHeight: barIslandHeight + barInsetTop + barInsetBottom
     readonly property int frameThickness: 26
-    readonly property int frameRounding: radiusPanel
-    // Bring the end islands near the original screen edges without letting
-    // their notches clip the frame's outer corner (+3 logical pixels).
-    // Keep the frame-off bar inset and internal island gaps unchanged.
-    readonly property int frameIslandInset: frameThickness + frameRounding + spacing1
+    // Use the same large squircle family as the rest of the shell. The
+    // bigger panel radius made the monitor outline look excessively bulbous.
+    readonly property int frameRounding: radiusLarge
+    // End islands sit inside the frame edge, with just enough room for the
+    // frame and a rounded outer shoulder. The joined contour adapts its top
+    // corners to this real inset rather than clipping the island against a
+    // second, full-size panel corner.
+    readonly property int frameIslandInset: frameThickness + radiusIsland * 2 + spacing1
     readonly property int frameIslandGap: radiusIsland * 2 + spacing2
     readonly property int barSelectionInset: 8
     readonly property real squircleExponent: runtime.squircleExponent
