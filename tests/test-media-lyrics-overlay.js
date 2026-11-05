@@ -53,28 +53,20 @@ test("curve outline and fill share the existing spectrum gradient stops", () => 
   assert.match(curve, /x2: root\.width/);
 });
 
-test("local lyrics hint sits in the gap below the clipped spectrum, not across its edge", () => {
+test("lyrics omit redundant local status labels while preserving frequency markers", () => {
   const media = qml("MediaContent.qml");
   const lyrics = qml("MediaLyrics.qml");
-  const footer = media.split("id: lyricsFooter")[1].split("id: transport")[0];
-  assert.ok(footer);
-  assert.match(footer, /top: spectrumSlot\.bottom/);
-  assert.match(
-    footer,
-    /topMargin: Math\.max\(0, \(transport\.anchors\.topMargin - implicitHeight\) \/ 2\)/,
-  );
-  assert.match(footer, /visible: content\.engaged && content\.lyricsVisible/);
-  assert.match(footer, /LOCAL FILES ONLY/);
-  assert.doesNotMatch(lyrics, /LOCAL FILES ONLY|id: footer/);
-  assert.match(
+  assert.doesNotMatch(media, /id: lyricsFooter|LOCAL FILES ONLY/);
+  assert.doesNotMatch(
     lyrics,
-    /height: parent\.height - heading\.height - parent\.spacing/,
+    /SYNCHRONISED LYRICS|LOCAL FILES ONLY|id: heading/,
   );
-  // Keep the help line between the visualizer edge and the seek controls.
-  for (const gap of [12, 24]) {
-    for (const textHeight of [9, 10, 11, 12]) {
-      const offset = Math.max(0, (gap - textHeight) / 2);
-      assert.ok(offset + textHeight <= gap, `footer fits ${gap}px slot`);
-    }
-  }
+  assert.match(lyrics, /No local track · Lyrics are never fetched online/);
+  assert.match(lyrics, /height: parent.height/);
+  assert.match(media, /id: frequencyLabels[\s\S]*?visible: true/);
+  assert.match(media, /id: frequencyLabels[\s\S]*?z: 1/);
+  assert.match(
+    media,
+    /visible: content.visualizerMode === "curve" \|\| opacity > 0.01/,
+  );
 });

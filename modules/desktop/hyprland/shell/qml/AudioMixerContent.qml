@@ -151,32 +151,23 @@ FocusScope {
                         font.weight: Font.DemiBold
                     }
 
-                    ShellSurface {
+                    IconShortcutAction {
                         id: muteButton
                         anchors.verticalCenter: parent.verticalCenter
                         width: 48
-                        height: 30
+                        height: 36
+                        runtime: mixer.runtime
                         theme: mixer.theme
                         motion: mixer.motion
-                        cornerRadius: mixer.theme.radiusSmall
-                        surfaceLayer: ShellSurface.Control
-                        selected: !!streamRow.stream?.audio?.muted
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: streamRow.stream?.audio?.muted ? "󰝟" : "󰕾"
-                            color: streamRow.stream?.audio?.muted ? mixer.theme.warning : mixer.theme.textStrong
-                            font.family: "Symbols Nerd Font"
-                            font.pixelSize: mixer.theme.fontSize(15)
-                        }
-                        StateLayer {
-                            theme: mixer.theme
-                            motion: mixer.motion
-                            cornerRadius: mixer.theme.radiusSmall
-                            onActivated: {
-                                mixer.selectedIndex = streamRow.index;
-                                mixer.system.toggleStreamMute(streamRow.stream);
-                            }
+                        icon: streamRow.stream?.audio?.muted ? "󰝟" : "󰕾"
+                        title: "Mute application"
+                        active: !!streamRow.stream?.audio?.muted
+                        activeColor: mixer.theme.warning
+                        enabled: !!streamRow.stream?.audio
+                        shortcut: streamRow.chosen ? "M" : ""
+                        onActivated: {
+                            mixer.selectedIndex = streamRow.index;
+                            mixer.system.toggleStreamMute(streamRow.stream);
                         }
                     }
                 }
@@ -283,10 +274,6 @@ FocusScope {
             {
                 shortcut: "H/L · ARROWS",
                 label: "Volume"
-            },
-            {
-                shortcut: "M",
-                label: "Mute"
             },
             {
                 shortcut: "ESC",
