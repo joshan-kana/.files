@@ -60,7 +60,10 @@ Variants {
         readonly property var monitor: Hyprland.monitorFor(modelData)
         readonly property bool fullscreen: monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
         readonly property bool exposed: frame.enabled && !fullscreen
-        readonly property bool reactiveActive: frame.theme.musicReactiveEnabled
+
+        // The first spectrum-shell gradient concentrated its transition
+        // around the centre hub instead of assigning every FFT band a stop.
+        readonly property real gradientInset: Math.max(0.005, Math.min(0.45, (modelData.width - frame.theme.controlsDetailWidth) / (2 * Math.max(1, modelData.width))))
         readonly property bool busyHere: frame.busy && (!frame.busyScreen || frame.busyScreen === modelData)
         SquircleGeometry {
             id: squircleGeometry
@@ -137,48 +140,29 @@ Variants {
                     // wallpaper through the shared frame's actual silhouette.
                     strokeWidth: -1
                     fillGradient: LinearGradient {
-                        // The frame is already correctly clipped by this
-                        // odd-even path. Animate existing stop colours, not
-                        // separate meshes that can cross its inside boundary.
                         x1: 0
                         y1: 0
                         x2: drawing.width
                         y2: 0
                         GradientStop {
                             position: 0
-                            color: frame.theme.reactiveFrameColor(0, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0)
                         }
                         GradientStop {
-                            position: 0.125
-                            color: frame.theme.reactiveFrameColor(0.125, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 0.25
-                            color: frame.theme.reactiveFrameColor(0.25, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 0.375
-                            color: frame.theme.reactiveFrameColor(0.375, output.reactiveActive)
+                            position: output.gradientInset
+                            color: frame.theme.reactiveFrameColor(0)
                         }
                         GradientStop {
                             position: 0.5
-                            color: frame.theme.reactiveFrameColor(0.5, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(0.5)
                         }
                         GradientStop {
-                            position: 0.625
-                            color: frame.theme.reactiveFrameColor(0.625, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 0.75
-                            color: frame.theme.reactiveFrameColor(0.75, output.reactiveActive)
-                        }
-                        GradientStop {
-                            position: 0.875
-                            color: frame.theme.reactiveFrameColor(0.875, output.reactiveActive)
+                            position: 1 - output.gradientInset
+                            color: frame.theme.reactiveFrameColor(1)
                         }
                         GradientStop {
                             position: 1
-                            color: frame.theme.reactiveFrameColor(1, output.reactiveActive)
+                            color: frame.theme.reactiveFrameColor(1)
                         }
                     }
                     PathSvg {

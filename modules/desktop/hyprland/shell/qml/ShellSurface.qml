@@ -49,10 +49,6 @@ SquircleSurface {
     reactiveGradientLow: theme.spectrumColor(0)
     reactiveGradientMid: theme.spectrumColor(0.5)
     reactiveGradientHigh: theme.spectrumColor(1)
-    reactiveGradientBands: musicActive ? theme.musicReactiveBands : []
-    reactiveGradientImpulses: musicActive ? theme.musicReactiveImpulses : []
-    reactiveGradientMovement: musicActive ? theme.musicReactiveMovement : 0
-    reactiveGradientKick: musicActive ? theme.musicReactiveKick : 0
 
     shadowStrength: elevated ? (theme.dark ? 0.25 : 0.16) : 0
     shadowOffset: elevated ? 3 : 0
