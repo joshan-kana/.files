@@ -48,3 +48,19 @@ test("Home Manager switches preserve an active session lock without starting a n
   assert.doesNotMatch(lock[1], /Install\.WantedBy/);
   assert.match(nix, /exec systemctl --user start linux-desktop-lock\.service/);
 });
+
+test("successful unlock stops the on-demand lock service so another lock can start", () => {
+  assert.match(nix, /exec systemctl --user start linux-desktop-lock\.service/);
+  assert.match(qml, /armed = true;\s*lockScreen\.lockSession\(\)/);
+  assert.match(qml, /if \(!lockScreen\.locked\)\s*stopLockService\(\)/);
+  assert.match(qml, /function stopLockService\(\): void/);
+  assert.match(qml, /if \(root\.armed && !lockScreen\.locked\)/);
+  assert.match(qml, /armed = false;/);
+  assert.match(qml, /root\.stopLockService\(\)/);
+  assert.match(
+    qml,
+    /Quickshell\.execDetached\(\["systemctl", "--user", "stop", "--no-block", "linux-desktop-lock\.service"\]\)/,
+  );
+  assert.doesNotMatch(qml, /Qt\.quit\(\)/);
+  assert.doesNotMatch(qml, /runtime\.lockSession, "unlocked"/);
+});
