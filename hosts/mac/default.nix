@@ -172,16 +172,16 @@
       home = _: { home.packages = [ pkgs.aldente ]; };
     };
 
-    homerow = _: {
-      homebrew.casks = [ "homerow" ];
+    homerow = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.homerow ]; };
     };
 
-    jordanbairdIce = _: {
-      homebrew.casks = [ "jordanbaird-ice" ];
+    jordanbairdIce = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.ice-bar ]; };
     };
 
-    linearmouse = _: {
-      homebrew.casks = [ "linearmouse" ];
+    linearmouse = { pkgs, ... }: {
+      home = _: { home.packages = [ pkgs.linearmouse ]; };
     };
 
     logiOptions = _: {
