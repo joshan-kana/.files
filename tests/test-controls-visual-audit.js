@@ -147,3 +147,35 @@ test("the final Visual Modes row spans the full width with four tiles, not a pha
   }
   assert.ok(cellWidth(5, 5, 670, 8) > cellWidth(0, 5, 670, 8));
 });
+
+test("reverse Backtab navigation remains owned by Controls when Night Light is selected", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(controls, /Keys.onShortcutOverride: event =>/);
+  assert.match(controls, /Keys.onBacktabPressed: event =>/);
+  assert.match(
+    controls,
+    /sliderNavigationEnabled: engaged && !resetConfirmPending/,
+  );
+  assert.match(controls, /if \(root\.sliderNavigationEnabled\) \{/);
+  assert.match(controls, /root\.cycleSlider\(-1\)/);
+  assert.match(
+    controls,
+    /if \(root\.sliderNavigationEnabled && event\.key === Qt\.Key_Tab\) \{/,
+  );
+  const source = controls.match(
+    /function cycleSlider\(direction: int\): void \{([\s\S]*?)\n    \}/,
+  );
+  assert.ok(source);
+  const cycle = new Function(
+    "sliderTargets",
+    "selectedSlider",
+    "direction",
+    source[1] + "\nreturn selectedSlider;",
+  );
+  const targets = ["windows", "glass", "nightLight"];
+  assert.equal(cycle(targets, "", 1), "windows");
+  assert.equal(cycle(targets, "windows", 1), "glass");
+  assert.equal(cycle(targets, "glass", 1), "nightLight");
+  assert.equal(cycle(targets, "nightLight", -1), "glass");
+  assert.equal(cycle(targets, "glass", -1), "windows");
+});

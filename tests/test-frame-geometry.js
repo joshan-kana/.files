@@ -527,14 +527,14 @@ test("top and bottom outer corners use one shared squircle radius", () => {
     4.5,
     [
       {
-        x: thickness + radius + 16,
+        x: thickness + radius + 24,
         y: thickness,
         width: 66,
         height: 38,
         visible: true,
       },
       {
-        x: w - thickness - radius - 16 - 220,
+        x: w - thickness - radius - 24 - 220,
         y: thickness,
         width: 220,
         height: 38,
@@ -784,7 +784,7 @@ test("bar reserves equal vertical space and frame joins start at measured screen
   );
   assert.match(
     theme,
-    /property int frameIslandInset: frameThickness \+ frameRounding \+ spacing1/,
+    /property int frameIslandInset: frameThickness \+ radiusIsland \* 2 \+ spacing1/,
   );
   assert.match(
     bar,
@@ -1019,7 +1019,7 @@ test("attached status islands approach the outer frame corner without clipping t
   );
   assert.match(
     theme,
-    /frameIslandInset: frameThickness \+ frameRounding \+ spacing1/,
+    /frameIslandInset: frameThickness \+ radiusIsland \* 2 \+ spacing1/,
   );
   assert.match(
     bar,
@@ -1029,13 +1029,14 @@ test("attached status islands approach the outer frame corner without clipping t
     bar,
     /rightMargin: bars\.theme\.spacing3 \+ \(bar\.frameLocalInset - bars\.theme\.spacing3\) \* bar\.frameBlend/,
   );
-  // FrameGeometry clips notches at thickness + cornerRadius + 3px.
-  const sideInset = 26 + 62 + 4;
-  assert.ok(sideInset > 26 + 62 + 3, "notch must clear the outer corner clip");
+  // The first and last islands have room for a curved shoulder without
+  // being constrained by the previous full-size panel corner.
+  const sideInset = 26 + 22 * 2 + 4;
   assert.ok(
-    sideInset < 26 + 62 + 12,
-    "move islands outward relative to the previous layout",
+    sideInset < 26 + 62 + 4,
+    "move islands outward from the previous layout",
   );
+  assert.ok(sideInset > 26 + 22, "retain clearance inside the frame");
   for (const width of [800, 1280, 1920, 3840]) {
     assert.ok(width - 2 * sideInset >= 600);
   }
@@ -1069,19 +1070,16 @@ test("symmetric frame-on status insets approach the maximum safe corner clearanc
     ),
     "utf8",
   );
-  const edge = 26 + 62;
-  const clippingMargin = 3;
-  const inset = edge + 4;
-  assert.ok(inset > edge + clippingMargin);
-  // Previously the bar's 26px frame reservation was counted twice.
+  const inset = 26 + 22 * 2 + 4;
+  assert.equal(26 + 62 + 4 - inset, 18, "gain another 18px on both edges");
   assert.equal(
-    26 + edge + 12 - inset,
-    34,
-    "34px more horizontal room on each end than the previous PR",
+    inset - 26,
+    48,
+    "bar coordinates exclude compositor frame reservation",
   );
   assert.ok(
     theme.includes(
-      "frameIslandInset: frameThickness + frameRounding + spacing1",
+      "frameIslandInset: frameThickness + radiusIsland * 2 + spacing1",
     ),
   );
   assert.match(
@@ -1102,7 +1100,7 @@ test("symmetric frame-on status insets approach the maximum safe corner clearanc
 
 test("outward status-island positions retain full curved hover and press contours on every screen width", () => {
   for (const width of [800, 1280, 1920, 3840]) {
-    const inset = 26 + 62 + 4;
+    const inset = 26 + 22 * 2 + 4;
     const left = {
       x: inset,
       y: 26,
@@ -1177,4 +1175,102 @@ test("bar reservation is subtracted exactly once from the outer island positions
     );
     assert.ok(target > frameThickness + cornerRadius + 3);
   }
+});
+
+test("outward end islands keep a broad curved shoulder instead of being clipped by the panel corner", () => {
+  for (const width of [800, 1280, 1920, 3840]) {
+    const inset = 26 + 22 * 2 + 4;
+    const result = contour(
+      width,
+      1080,
+      26,
+      62,
+      4.5,
+      [
+        {
+          x: inset,
+          y: 26,
+          width: 155,
+          height: 50,
+          visible: true,
+          hovered: true,
+        },
+        {
+          x: width - inset - 180,
+          y: 26,
+          width: 180,
+          height: 50,
+          visible: true,
+          pressed: true,
+        },
+      ],
+      null,
+      [],
+    );
+    check(result, width, 1080);
+    // The top corner and the outer island shoulder each get a real arc,
+    // rather than the previous 2.4px tangent at x=92.
+    assert.equal(result.points[0].x, 26 + 28);
+    assert.ok(
+      result.points.some((p) => Math.abs(p.x - inset) < 0.01 && p.y > 40),
+    );
+    assert.ok(
+      result.points.some(
+        (p) => Math.abs(p.x - (width - inset)) < 0.01 && p.y > 40,
+      ),
+    );
+    assert.match(result.inner, /C/);
+    assert.match(result.hoverFill, /C/);
+    assert.match(result.pressedFill, /C/);
+  }
+});
+
+test("frame outline uses the shell large radius instead of the oversized panel radius", () => {
+  const theme = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/qml/Theme.qml"),
+    "utf8",
+  );
+  assert.match(theme, /frameRounding: radiusLarge/);
+  assert.match(theme, /radiusLarge: 42/);
+  assert.match(theme, /radiusPanel: 62/);
+  const frame = contour(2560, 1440, 26, 42, 4.5, [], null, []);
+  check(frame, 2560, 1440);
+  assert.equal(frame.points[0].x, 26 + 42);
+  assert.ok(
+    frame.points.some(
+      (p) =>
+        Math.abs(p.x - 26) < 0.001 && Math.abs(p.y - (1440 - 26 - 42)) < 0.001,
+    ),
+  );
+});
+
+test("outer island shoulders join the monitor corner without a stray top-edge line", () => {
+  const width = 2560;
+  const inset = 26 + 22 * 2 + 4;
+  const frame = contour(
+    width,
+    1440,
+    26,
+    42,
+    4.5,
+    [
+      { x: inset, y: 26, width: 155, height: 50, visible: true },
+      { x: width - inset - 180, y: 26, width: 180, height: 50, visible: true },
+    ],
+    null,
+    [],
+  );
+  check(frame, width, 1440);
+  const start = frame.points[0];
+  const end = frame.points[frame.points.length - 1];
+  assert.equal(start.x, 54);
+  assert.equal(start.y, 26);
+  // An open 34px closing chord rendered as a thin horizontal stroke beside
+  // the workspace selector. The contour must close at its exact first point.
+  assert.deepEqual({ x: end.x, y: end.y }, { x: start.x, y: start.y });
+  // With the near-edge shoulder exactly filling the 20px gap, the first
+  // contour command cannot draw the horizontal 4px stub seen previously.
+  assert.match(frame.inner, /^M54 26 L54 26 C/);
+  assert.match(frame.inner, /C[^M]*L2506 26 C/);
+  assert.doesNotMatch(frame.inner, /^M54 26 L58 26 C/);
 });

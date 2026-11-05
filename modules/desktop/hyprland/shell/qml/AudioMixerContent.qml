@@ -154,7 +154,7 @@ FocusScope {
                     ShellSurface {
                         id: muteButton
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 46
+                        width: 48
                         height: 30
                         theme: mixer.theme
                         motion: mixer.motion
