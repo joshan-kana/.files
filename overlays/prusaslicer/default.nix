@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "2.9.6";
-                hash = "sha256-lP17ip+HyWMeHHFzmxWxhPxfTAzqvWkHLxx48imk/kA=";
+                version = "2.9.7";
+                hash = "sha256-9zX51SeCPRWdmsHo+Ezht06lcecF5w5yO+5UbQcNtgs=";
               };
               pname = "prusa-slicer";
               appName = "PrusaSlicer.app";

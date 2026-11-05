@@ -10,8 +10,8 @@ _: {
             }
             {
               release = {
-                version = "0.0.20";
-                hash = "sha256-RU/ukQyHIWi3X5i/Z2r00Vsh38xrQ6Jt+tyUvZ7xC5c=";
+                version = "0.1.4";
+                hash = "sha256-kSZQE0Vcxpn5StxNj5EWfKQRp3D/iOHgeSwZtQwrSvM=";
               };
               pname = "open-webui-mac";
               appName = "Open WebUI.app";
