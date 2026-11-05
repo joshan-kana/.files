@@ -319,7 +319,8 @@ FocusScope {
                     id: frequencyLabels
 
                     height: 18
-                    visible: !content.lyricsVisible
+                    visible: true
+                    z: 1
                     anchors {
                         right: parent.right
                         bottom: parent.bottom
@@ -370,23 +371,6 @@ FocusScope {
                     }
                 }
             }
-        }
-
-        // Lyrics sit above the spectrum, but the local-file hint belongs in
-        // the reserved gap underneath its clipped canvas. Keep the transport
-        // anchored to spectrumSlot rather than moving the playback controls.
-        Text {
-            id: lyricsFooter
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                top: spectrumSlot.bottom
-                topMargin: Math.max(0, (transport.anchors.topMargin - implicitHeight) / 2)
-            }
-            visible: content.engaged && content.lyricsVisible
-            text: "Y  TOGGLE LYRICS  ·  LOCAL FILES ONLY"
-            color: content.theme.textMuted
-            font.family: content.runtime.fontMono
-            font.pixelSize: content.theme.fontSize(9)
         }
 
         Column {

@@ -13,6 +13,37 @@ MouseArea {
     property bool manualPress: false
     property bool heldPress: false
     readonly property bool visualPressed: pressed || manualPress || heldPress
+    // Passive hover tracks the whole component even when a child receives
+    // mouse events. The original MouseArea.containsMouse can briefly drop as
+    // the pointer crosses interactive descendants, flickering shared tiles.
+    property bool pointerHovered: false
+    function updatePointerHover(): void {
+        if (containsMouse || hoverHandler.hovered) {
+            hoverExit.stop();
+            pointerHovered = true;
+        } else {
+            hoverExit.restart();
+        }
+    }
+    onContainsMouseChanged: updatePointerHover()
+    onEnabledChanged: {
+        if (!enabled) {
+            hoverExit.stop();
+            pointerHovered = false;
+        } else {
+            updatePointerHover();
+        }
+    }
+    HoverHandler {
+        id: hoverHandler
+        enabled: root.enabled
+        onHoveredChanged: root.updatePointerHover()
+    }
+    Timer {
+        id: hoverExit
+        interval: 55
+        onTriggered: root.pointerHovered = root.enabled && (root.containsMouse || hoverHandler.hovered)
+    }
     property bool showHover: true
     property color stateColor: selected ? theme.accent : theme.textStrong
     property real hoverOpacity: 0.10
@@ -97,26 +128,44 @@ MouseArea {
         easing.bezierCurve: root.motion.effectsCurve
     }
 
+    // The native fill is triangulated around a centre point. On translucent
+    // hover/press feedback the triangle boundaries can leave straight seams,
+    // especially through narrow mute buttons and wide network rows. Render
+    // this interaction-only overlay as one shaped path using the same shared
+    // squircle contour; ordinary surfaces keep the native fast fill.
     SquircleSurface {
         id: hoverSurface
         anchors.fill: parent
         cornerRadius: root.cornerRadius
         exponent: root.exponent
-        fillColor: root.stateColor
+        fillColor: "transparent"
+    }
+    Shape {
+        anchors.fill: parent
+        antialiasing: true
+        preferredRendererType: Shape.CurveRenderer
+        visible: opacity > 0
         opacity: {
             if (!root.showHover)
                 return 0;
             if (root.visualPressed)
                 return root.pressOpacity;
-            if (root.showHover && (root.containsMouse || root.manualHover))
+            if (root.pointerHovered || root.manualHover)
                 return root.hoverOpacity;
             return 0;
         }
-
         Behavior on opacity {
             Anim {
                 motion: root.motion
                 type: Anim.FastEffects
+            }
+        }
+        ShapePath {
+            fillColor: root.stateColor
+            strokeColor: "transparent"
+            strokeWidth: -1
+            PathSvg {
+                path: hoverSurface.fillPathData
             }
         }
     }

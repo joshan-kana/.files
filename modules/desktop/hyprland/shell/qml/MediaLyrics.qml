@@ -48,20 +48,9 @@ Item {
         spacing: root.theme.spacing2
         visible: root.active
 
-        Text {
-            id: heading
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "LOCAL · SYNCHRONISED LYRICS"
-            color: root.theme.readableRoleColor("media")
-            font.family: root.runtime.fontMono
-            font.pixelSize: root.theme.fontSize(9)
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.3
-        }
-
         Item {
             width: parent.width
-            height: parent.height - heading.height - parent.spacing
+            height: parent.height
             clip: true
 
             ListView {

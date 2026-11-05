@@ -163,7 +163,7 @@ Variants {
                     y,
                     width: item.width,
                     height: item.height,
-                    hovered: item === workspaceIsland ? false : item === clockIsland ? clockPress.containsMouse : item === notificationIsland ? notificationPress.containsMouse : item === recordingIsland ? recordingPress.containsMouse : item === systemIsland ? item.frameHover : false,
+                    hovered: item === workspaceIsland ? false : item === clockIsland ? clockPress.pointerHovered : item === notificationIsland ? notificationPress.pointerHovered : item === recordingIsland ? recordingPress.pointerHovered : item === systemIsland ? item.frameHover : false,
                     pressed: item === workspaceIsland ? false : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? item.framePressed : false,
                     visible: true
                 });
