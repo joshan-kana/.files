@@ -91,6 +91,7 @@ FocusScope {
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
+    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass"], nightLight.supported ? ["nightLight"] : [])
 
     function selectSlider(target: string): void {
@@ -1786,6 +1787,19 @@ FocusScope {
             anchors.fill: parent
             focus: root.engaged
 
+            // Qt may consume Backtab for focus traversal before onPressed.
+            // Keep the Controls slider submap on its owning FocusScope.
+            Keys.onShortcutOverride: event => {
+                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab))
+                    event.accepted = true;
+            }
+            Keys.onBacktabPressed: event => {
+                if (root.sliderNavigationEnabled) {
+                    root.cycleSlider(-1);
+                    event.accepted = true;
+                }
+            }
+
             Keys.onPressed: event => {
                 if (root.resetConfirmPending) {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
@@ -2096,8 +2110,8 @@ FocusScope {
                 }
 
                 const shifted = !!(event.modifiers & Qt.ShiftModifier);
-                if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                    root.cycleSlider(event.key === Qt.Key_Backtab || shifted ? -1 : 1);
+                if (root.sliderNavigationEnabled && event.key === Qt.Key_Tab) {
+                    root.cycleSlider(shifted ? -1 : 1);
                     event.accepted = true;
                     return;
                 }
