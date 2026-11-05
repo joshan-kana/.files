@@ -11,7 +11,7 @@ Item {
     required property PowerProfileState powerProfile
     property bool compact: false
     property bool frameConnected: false
-    readonly property bool frameHover: statusPress.containsMouse
+    readonly property bool frameHover: statusPress.pointerHovered
     readonly property bool framePressed: statusPress.visualPressed
 
     signal activated

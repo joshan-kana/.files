@@ -117,7 +117,7 @@ Column {
 
         IconShortcutAction {
             id: inlineMute
-            shortcut: quick.microphone ? "X" : ""
+            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "M" : (quick.microphone ? "X" : "")
             width: 48
             height: 66
             anchors.verticalCenter: parent.verticalCenter
@@ -397,28 +397,22 @@ Column {
                 handleSize: 12
                 onValueRequested: value => quick.system.setStreamVolume(streamRow.stream, value)
             }
-            ShellSurface {
+            IconShortcutAction {
                 id: streamMute
-                width: 30
-                height: 28
+                width: 48
+                height: 36
+                runtime: quick.runtime
                 theme: quick.theme
                 motion: quick.motion
-                surfaceLayer: ShellSurface.Control
-                selected: !!streamRow.stream?.audio?.muted
-                cornerRadius: quick.theme.radiusSmall
-
-                Text {
-                    anchors.centerIn: parent
-                    text: streamRow.stream?.audio?.muted ? "󰖁" : "󰕾"
-                    color: streamRow.stream?.audio?.muted ? quick.theme.warning : quick.theme.textStrong
-                    font.family: "Symbols Nerd Font"
-                    font.pixelSize: quick.theme.fontSize(13)
-                }
-                StateLayer {
-                    theme: quick.theme
-                    motion: quick.motion
-                    cornerRadius: quick.theme.radiusSmall
-                    onActivated: quick.system.toggleStreamMute(streamRow.stream)
+                icon: streamRow.stream?.audio?.muted ? "󰖁" : "󰕾"
+                title: "Mute application"
+                active: !!streamRow.stream?.audio?.muted
+                activeColor: quick.theme.warning
+                enabled: !!streamRow.stream?.audio
+                shortcut: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "M" : ""
+                onActivated: {
+                    quick.selectionRequested(quick.baseIndex + streamRow.index + 1);
+                    quick.system.toggleStreamMute(streamRow.stream);
                 }
             }
         }

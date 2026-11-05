@@ -76,7 +76,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(controls, /function adjustSlider\(direction: int\)/);
   assert.match(
     controls,
-    /event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)/,
+    /root\.cycleSlider\(event\.key === Qt\.Key_Backtab \|\| shifted \? -1 : 1\)/,
   );
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
@@ -148,39 +148,25 @@ test("the final Visual Modes row spans the full width with four tiles, not a pha
   assert.ok(cellWidth(5, 5, 670, 8) > cellWidth(0, 5, 670, 8));
 });
 
-test("reverse Backtab navigation remains owned by Controls when Night Light is selected", () => {
+test("one focused Controls handler owns forward and reverse slider traversal", () => {
   const controls = read("SystemContent.qml");
-  assert.match(controls, /Keys.onShortcutOverride: event =>/);
   const host = read("ShellExpansionHost.qml");
-  const shell = read("shell.qml");
-  assert.match(
-    host,
-    /sequence: "Shift\+Tab"\s+context: Qt\.WindowShortcut\s+autoRepeat: false/,
-  );
-  assert.match(
-    host,
-    /enabled: !!host\.systemContent && host\.systemContent\.sliderNavigationEnabled/,
-  );
-  assert.match(host, /onActivated: host\.systemContent\.cycleSlider\(-1\)/);
-  assert.match(shell, /function controlsSelectedSlider\(\): string/);
+  assert.match(controls, /Keys.onShortcutOverride: event =>/);
   assert.match(
     controls,
-    /sliderNavigationEnabled: engaged && !resetConfirmPending/,
+    /event.key === Qt.Key_Tab \|\| event.key === Qt.Key_Backtab/,
   );
   assert.match(
     controls,
-    /if \(root\.sliderNavigationEnabled && \(event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)\)\) \{/,
+    /root\.cycleSlider\(event.key === Qt.Key_Backtab \|\| shifted \? -1 : 1\)/,
   );
-  assert.match(controls, /root\.cycleSlider\(-1\)/);
+  assert.match(controls, /keyboardFocus\.forceActiveFocus\(\)/);
+  assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
+  assert.doesNotMatch(host, /autoRepeat: false/);
   assert.match(
-    controls,
-    /if \(root\.sliderNavigationEnabled && \(event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)\)\) \{/,
+    read("shell.qml"),
+    /function controlsSelectedSlider\(\): string/,
   );
-  assert.ok(
-    controls.indexOf("event.key === Qt.Key_Backtab || shifted ? -1 : 1") <
-      controls.indexOf("if (root.selectedSlider.length > 0)"),
-  );
-  assert.doesNotMatch(controls, /Keys.onBacktabPressed:/);
   const source = controls.match(
     /function cycleSlider\(direction: int\): void \{([\s\S]*?)\n    \}/,
   );
@@ -189,14 +175,15 @@ test("reverse Backtab navigation remains owned by Controls when Night Light is s
     "sliderTargets",
     "selectedSlider",
     "direction",
+    "keyboardFocus",
     source[1] + "\nreturn selectedSlider;",
   );
   const targets = ["windows", "glass", "nightLight"];
-  assert.equal(cycle(targets, "", 1), "windows");
-  assert.equal(cycle(targets, "windows", 1), "glass");
-  assert.equal(cycle(targets, "glass", 1), "nightLight");
-  assert.equal(cycle(targets, "nightLight", -1), "glass");
-  assert.equal(cycle(targets, "glass", -1), "windows");
+  const focus = { forceActiveFocus() {} };
+  let current = "";
+  for (const direction of [1, 1, 1, -1, -1, -1, -1])
+    current = cycle(targets, current, direction, focus);
+  assert.equal(current, "glass");
 });
 
 test("active slider status does not masquerade as keyboard focus after reverse traversal", () => {
@@ -220,28 +207,26 @@ test("active slider status does not masquerade as keyboard focus after reverse t
   }
 });
 
-test("a physical Shift+Tab press has exactly one reverse traversal owner", () => {
-  const host = read("ShellExpansionHost.qml");
+test("modifier-only keys cannot clear slider selection across repeated Shift+Tab presses", () => {
   const controls = read("SystemContent.qml");
-  assert.equal((host.match(/sequence: "Shift\+Tab"/g) || []).length, 1);
-  assert.match(
-    host,
-    /sequence: "Shift\+Tab"\s+context: Qt\.WindowShortcut\s+autoRepeat: false/,
-  );
-  assert.match(
-    host,
-    /sequence: "Shift\+Tab"[\s\S]*?onActivated: host\.systemContent\.cycleSlider\(-1\)/,
-  );
-  assert.doesNotMatch(
-    controls,
-    /root\.cycleSlider\(-1\);[\s\S]*?Qt\.Key_Backtab/,
-  );
+  const host = read("ShellExpansionHost.qml");
   const keyCode = controls
     .split("Keys.onPressed: event => {")[1]
     .split("if (root.selectedSlider.length > 0)")[0];
-  assert.doesNotMatch(keyCode, /root\.cycleSlider\(-1\)/);
   assert.match(
     keyCode,
-    /event.key === Qt.Key_Backtab \|\| \(event.key === Qt.Key_Tab && shifted\)/,
+    /event.key === Qt.Key_Shift \|\| event.key === Qt.Key_Control/,
   );
+  assert.match(keyCode, /event.accepted = true;\s*return;/);
+  const shiftGuard = keyCode.indexOf("event.key === Qt.Key_Shift");
+  const backtab = keyCode.indexOf(
+    "root.cycleSlider(event.key === Qt.Key_Backtab || shifted ? -1 : 1)",
+  );
+  const selectionReset = controls.indexOf(
+    'root.selectedSlider = ""',
+    controls.indexOf("Keys.onPressed: event => {"),
+  );
+  assert.ok(shiftGuard >= 0 && shiftGuard < backtab);
+  assert.ok(backtab >= 0 && backtab < selectionReset);
+  assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
 });

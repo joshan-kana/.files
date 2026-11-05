@@ -37,6 +37,8 @@ PanelWindow {
                         y: frameBounds.y + y,
                         width: toast.width,
                         height: bottom - y,
+                        hovered: toast.hovered,
+                        pressed: toast.pointerPressed,
                         visible: frameConnected && toast.attachmentProgress > 0.001
                     });
             }
@@ -125,6 +127,10 @@ PanelWindow {
                 }
             }
             readonly property color urgencyColor: notification && notification.urgency === NotificationUrgency.Critical ? popup.theme.critical : notification && notification.urgency === NotificationUrgency.Low ? popup.theme.textMuted : popup.theme.roleColor("notifications")
+            readonly property bool pointerPressed: toastPress.visualPressed
+            hovered: toastPress.pointerHovered && phase === "visible"
+            onHoveredChanged: popup.contourEpoch++
+            onPointerPressedChanged: popup.contourEpoch++
             x: popup.width - width
             y: slot * (popup.cardHeight + popup.cardGap)
             // Outgoing cards remain beneath the live stack. When another
@@ -183,9 +189,14 @@ PanelWindow {
             }
 
             StateLayer {
+                id: toastPress
                 theme: popup.theme
                 motion: popup.motion
                 cornerRadius: popup.theme.radiusPanel
+                stateColor: popup.theme.roleColor("notifications")
+                // The shared frame draws this exact attached contour. A
+                // second rectangular/pill overlay would double-highlight it.
+                showHover: !popup.frameConnected
                 disabled: toast.phase !== "visible"
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
 
