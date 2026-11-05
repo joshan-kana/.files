@@ -65,3 +65,31 @@ test("wallpaper operations receive the persisted target verbatim", () => {
   assert.match(gallery, /"reset", outputName/);
   assert.match(gallery, /"current", currentRequestOutput/);
 });
+
+test("login wallpaper restoration reads the Stylix theme, not the unrelated runtime config", () => {
+  const nix = fs.readFileSync(
+    path.join(__dirname, "../modules/desktop/hyprland/shell/default.nix"),
+    "utf8",
+  );
+  const restore = nix.slice(
+    nix.indexOf('name = "linux-desktop-wallpaper-apply";'),
+    nix.indexOf("wallpaperLibrary = pkgs.writeShellApplication"),
+  );
+  assert.match(restore, /linux-desktop\/theme\.json/);
+  assert.match(restore, /wallpaper="\$\(jq -er '\.wallpaper/);
+  assert.doesNotMatch(restore, /linux-desktop\/runtime\.json/);
+  assert.match(restore, /for entry in "\$state_dir"\/\*\.wall;/);
+  assert.match(restore, /cmp -s "\$entry" "\$state_dir\/all\.wall"/);
+  assert.match(
+    restore,
+    /systemctl --user stop --no-block "linux-desktop-wallpaper-video@\$output\.service"/,
+  );
+  assert.match(
+    restore,
+    /systemctl --user start --no-block "linux-desktop-wallpaper-video@\$output\.service"/,
+  );
+  assert.match(
+    nix,
+    /Path\.PathChanged = "%h\/\.config\/linux-desktop\/theme\.json"/,
+  );
+});

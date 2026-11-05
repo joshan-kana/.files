@@ -761,6 +761,10 @@ PanelWindow {
             // mouse grabs or cancel hover while the pointer crosses tiles.
             interactive: contentHeight > height && !host.detailVisible && host.expansionState.currentName !== "activity" && host.expansionState.currentName !== "calendar"
 
+            // Keep inactive prewarmed pages alive, but remove their zero-opacity
+            // items from hit-testing. Qt can still route pointer events into
+            // invisible Loader trees when opacity=0 and enabled=false. During
+            // a crossfade the incoming page stays above the outgoing one.
             Loader {
                 id: contentLoaderA
                 asynchronous: true
@@ -772,6 +776,8 @@ PanelWindow {
                 x: (contentViewport.width - width * scale) / 2
                 opacity: 0
                 enabled: host.activeSlot === 0
+                visible: host.activeSlot === 0 || opacity > 0.01
+                z: host.activeSlot === 0 ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: host.activeSlot === 0 ? host.motion.contentFade : host.motion.effectsFast
@@ -793,6 +799,8 @@ PanelWindow {
                 x: (contentViewport.width - width * scale) / 2
                 opacity: 0
                 enabled: host.activeSlot === 1
+                visible: host.activeSlot === 1 || opacity > 0.01
+                z: host.activeSlot === 1 ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: host.activeSlot === 1 ? host.motion.contentFade : host.motion.effectsFast
@@ -814,6 +822,8 @@ PanelWindow {
                 x: (contentViewport.width - width * scale) / 2
                 opacity: 0
                 enabled: host.activeSlot === 2
+                visible: host.activeSlot === 2 || opacity > 0.01
+                z: host.activeSlot === 2 ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: host.activeSlot === 2 ? host.motion.contentFade : host.motion.effectsFast
@@ -835,6 +845,8 @@ PanelWindow {
                 x: (contentViewport.width - width * scale) / 2
                 opacity: 0
                 enabled: host.activeSlot === 3
+                visible: host.activeSlot === 3 || opacity > 0.01
+                z: host.activeSlot === 3 ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: host.activeSlot === 3 ? host.motion.contentFade : host.motion.effectsFast
@@ -856,6 +868,8 @@ PanelWindow {
                 x: (contentViewport.width - width * scale) / 2
                 opacity: 0
                 enabled: host.activeSlot === 4
+                visible: host.activeSlot === 4 || opacity > 0.01
+                z: host.activeSlot === 4 ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: host.activeSlot === 4 ? host.motion.contentFade : host.motion.effectsFast
