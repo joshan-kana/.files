@@ -155,12 +155,12 @@ test("Controls audio hints stay inside the audio widget, never in the global foo
   for (const [shortcut, label] of [
     ["J/K", "Select audio"],
     ["H/L", "Level"],
-    ["M", "Mute"],
     ["X", "Mic"],
   ]) {
     assert.ok(controls.includes('shortcut: "' + shortcut + '"'));
     assert.ok(controls.includes('label: "' + label + '"'));
   }
+  assert.doesNotMatch(controls, /shortcut: "M",\s*label: "Mute"/);
   assert.match(
     host,
     /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "system" && !host\.detailVisible \? host\.theme\.spacing4 : 0\)/,
