@@ -29,12 +29,21 @@ ShellRoot {
         motion: motion
     }
 
+    function stopLockService(): void {
+        if (!armed)
+            return;
+
+        armed = false;
+        // The Wayland lock is already released; retire its process too so
+        // systemd permits another lock during this desktop session.
+        Qt.callLater(() => Quickshell.execDetached(["systemctl", "--user", "stop", "--no-block", "linux-desktop-lock.service"]));
+    }
+
     Component.onCompleted: {
         armed = true;
         lockScreen.lockSession();
-
         if (!lockScreen.locked)
-            Qt.quit();
+            stopLockService();
     }
 
     Connections {
@@ -42,7 +51,7 @@ ShellRoot {
 
         function onLockStateChanged(): void {
             if (root.armed && !lockScreen.locked)
-                Qt.callLater(() => Qt.quit());
+                root.stopLockService();
         }
     }
 }
