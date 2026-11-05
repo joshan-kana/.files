@@ -60,10 +60,6 @@ ShellRoot {
         musicReactiveEnergy: reactive.sustain
         musicReactiveBeat: reactive.beatPulse
         musicReactiveTreble: reactive.treble
-        musicReactiveBands: reactive.spectrumLevels
-        musicReactiveImpulses: reactive.impulseLevels
-        musicReactiveMovement: reactive.motionAmount
-        musicReactiveKick: reactive.kick
     }
 
     Motion {
@@ -1438,16 +1434,6 @@ ShellRoot {
 
         function musicReactiveBeatLevel(): real {
             return reactive.beatPulse;
-        }
-
-        // Read the actual nine rendered frequency envelopes. Unlike a
-        // ticking animation phase, unchanged bands mean an unchanged image.
-        function musicReactiveBandLevels(): string {
-            return JSON.stringify(reactive.spectrumLevels);
-        }
-
-        function musicReactiveMovementLevel(): real {
-            return theme.musicReactiveMovement;
         }
 
         function wallpaperSpectrumOn(): bool {

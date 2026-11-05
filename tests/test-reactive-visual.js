@@ -1,164 +1,116 @@
-const test = require("node:test");
+const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const theme = fs.readFileSync(
-  path.join(__dirname, "../modules/desktop/hyprland/shell/qml/Theme.qml"),
-  "utf8",
-);
-const match = theme.match(
-  /function reactiveFrameColor\(position: real, illuminated: bool\): color \{([\s\S]*?)\n    \}/,
-);
-assert.ok(match, "evaluate the actual QML frame-colour expression");
-const evaluate = new Function(
+const root = path.join(__dirname, "../modules/desktop/hyprland/shell");
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+const theme = read("qml/Theme.qml");
+const frame = read("qml/DesktopFrame.qml");
+const renderer = read("visuals/plugin.cpp");
+
+const expression = (name) => {
+  const match = theme.match(
+    new RegExp(`function ${name}\\([^)]*\\): color \\{([\\s\\S]*?)\\n    \\}`),
+  );
+  assert.ok(match, `${name} belongs to the shared Theme`);
+  return match[1];
+};
+const blend = (base, accent, weight) => ({
+  r: base.r + (accent.r - base.r) * weight,
+  g: base.g + (accent.g - base.g) * weight,
+  b: base.b + (accent.b - base.b) * weight,
+});
+const red = { r: 0.98, g: 0.3, b: 0.24 };
+const blue = { r: 0.24, g: 0.57, b: 0.98 };
+const cyan = { r: 0.32, g: 0.85, b: 0.96 };
+const background = { r: 0.07, g: 0.075, b: 0.08 };
+const spectrumColor = (position) =>
+  position <= 0.5
+    ? blend(red, blue, position * 2)
+    : blend(blue, cyan, (position - 0.5) * 2);
+const reactiveColorBody = new Function(
+  "base",
   "position",
-  "illuminated",
-  "musicReactiveBands",
-  "musicReactiveKick",
-  "musicReactiveImpulses",
-  "musicReactiveEnergy",
-  "background",
-  "spectrumColor",
+  "musicReactiveWash",
   "blend",
+  "spectrumColor",
+  expression("reactiveColor"),
+);
+const frameColorBody = new Function(
+  "position",
+  "reactiveColor",
+  "background",
   "Qt",
   "shellGlassEnabled",
   "glassOpacity",
-  match[1],
+  expression("reactiveFrameColor"),
 );
-const background = { r: 0.07, g: 0.075, b: 0.08 };
-const colors = [
-  { r: 0.98, g: 0.32, b: 0.26 },
-  { r: 0.24, g: 0.57, b: 0.98 },
-  { r: 0.35, g: 0.86, b: 0.96 },
-];
-const blend = (a, b, t) => ({
-  r: a.r + (b.r - a.r) * t,
-  g: a.g + (b.g - a.g) * t,
-  b: a.b + (b.b - a.b) * t,
-});
-const spectrumColor = (position) => {
-  const scaled = Math.max(0, Math.min(1, position)) * 2;
-  const i = Math.min(1, Math.floor(scaled));
-  return blend(colors[i], colors[i + 1], scaled - i);
-};
-const steady = [0.13, 0.24, 0.22, 0.17, 0.15, 0.14, 0.12, 0.1, 0.09];
-const empty = Array(9).fill(0);
-const frameColor = (
+const colorAt = (
   position,
-  levels = steady,
-  kick = 0,
+  energy,
+  beat,
   enabled = true,
   glass = false,
-  impulses = empty,
-  energy = 0.25,
-) =>
-  evaluate(
+  opacity = 0.7,
+) => {
+  const wash = enabled ? Math.min(0.42, energy * 0.58 + beat * 0.14) : 0;
+  const reactiveColor = (base, p) =>
+    reactiveColorBody(base, p, wash, blend, spectrumColor);
+  return frameColorBody(
     position,
-    enabled,
-    levels,
-    kick,
-    impulses,
-    energy,
+    reactiveColor,
     background,
-    spectrumColor,
-    blend,
     { rgba: (r, g, b, a) => ({ r, g, b, a }) },
     glass,
-    0.35,
+    opacity,
   );
-const difference = (a, b) =>
+};
+const contrast = (a, b) =>
   Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
 
-test("original Stylix red, blue and cyan survive the reactive spectrum treatment", () => {
-  const event = Array(9).fill(0.7);
-  const left = frameColor(0, steady, 0, true, false, event),
-    middle = frameColor(0.5, steady, 0, true, false, event),
-    right = frameColor(1, steady, 0, true, false, event);
-  assert.ok(left.r > left.g && left.r > left.b);
+test("the original spectrum gradient transitions red to blue to cyan, without per-band flashes", () => {
+  const left = colorAt(0, 0.75, 0.2);
+  const middle = colorAt(0.5, 0.75, 0.2);
+  const right = colorAt(1, 0.75, 0.2);
+  assert.ok(left.r > left.b && left.r > left.g);
   assert.ok(middle.b > middle.r);
-  assert.ok(right.b > right.r);
-});
-
-test("identical audio envelopes produce identical pixels, with no autonomous animation", () => {
-  for (const p of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-    assert.deepEqual(frameColor(p, steady), frameColor(p, [...steady]));
-  assert.doesNotMatch(theme, /musicReactiveFlow|flowPhase|Math\.sin\(phase/);
-});
-
-test("sustained 808s stay understated while local kick attacks punch through loud mids and treble", () => {
-  const loud = [0.63, 0.84, 0.79, 0.82, 0.89, 0.88, 0.76, 0.69, 0.58];
-  const pulse = [0, 0.72, 0.81, 0.55, 0, 0, 0, 0, 0];
-  const changes = Array.from({ length: 9 }, (_, i) =>
-    difference(
-      frameColor(i / 8, loud, 0, true, false, empty, 0.7),
-      frameColor(i / 8, loud, 0.91, true, false, pulse, 0.7),
-    ),
+  assert.ok(right.g > middle.g && right.b > right.r);
+  assert.match(
+    theme,
+    /musicReactiveWash: musicReactiveEnabled \? Math\.min\(0\.42,/,
   );
-  assert.ok(
-    changes[1] > 0.35,
-    "kick must be visibly stronger over loud bass/mids",
+  assert.doesNotMatch(
+    theme,
+    /musicReactiveBands|musicReactiveImpulses|reactiveSpectrumColor/,
   );
-  assert.ok(changes[2] > 0.27);
-  assert.ok(changes[1] > changes[6] * 5);
-  assert.ok(changes[2] > changes[8] * 5);
-});
-
-test("ambient is materially weaker than musical transients", () => {
-  const allLoud = Array(9).fill(0.72);
-  for (const pos of [0, 0.125, 0.25, 0.5, 0.75, 1]) {
-    const plain = frameColor(pos, empty, 0, true, false, empty, 0);
-    const ambient = frameColor(pos, allLoud, 0, true, false, empty, 0.75);
-    const event = frameColor(
-      pos,
-      allLoud,
-      0,
-      true,
-      false,
-      Array(9).fill(0.8),
-      0.75,
-    );
-    assert.ok(
-      difference(plain, ambient) < 0.15,
-      "steady loud music must not permanently light the whole shell",
-    );
-    assert.ok(
-      difference(ambient, event) > 0.2,
-      "real musical attacks must dominate the base",
-    );
-  }
-});
-
-test("midrange and cymbal transients illuminate only the right-hand spectral zones", () => {
-  const melody = [0, 0, 0, 0.58, 0.82, 0.88, 0.82, 0.67, 0.54];
-  const deltas = Array.from({ length: 9 }, (_, i) =>
-    difference(
-      frameColor(i / 8, steady, 0, true, false, empty, 0.25),
-      frameColor(i / 8, steady, 0, true, false, melody, 0.25),
-    ),
+  assert.doesNotMatch(
+    renderer,
+    /gradientBands_|gradientImpulses_|gradientMotionChanged/,
   );
-  assert.ok(deltas[5] > 0.2);
-  assert.ok(deltas[6] > 0.2);
-  assert.ok(deltas[0] < 0.001, "treble does not pump left-most sub-bass");
 });
 
-test("smooth silence fade has no cutoff floor and zero contribution at zero", () => {
-  for (const pos of [0, 0.25, 0.5, 0.75, 1]) {
-    const silent = frameColor(pos, empty, 0, true, false, empty, 0);
-    const almostSilent = frameColor(pos, empty, 0, true, false, empty, 0.001);
-    const justAbove = frameColor(pos, empty, 0, true, false, empty, 0.003);
-    assert.ok(difference(silent, almostSilent) < 0.001);
-    assert.ok(difference(almostSilent, justAbove) < 0.001);
-    assert.deepEqual(silent, { ...background, a: 1 });
-  }
-  assert.doesNotMatch(theme, /musicReactiveEnergy > 0\.002|0\.29 \+ 0\.78/);
-});
-
-test("paused music has no animated field and preserves actual pane opacity", () => {
-  const silent = Array(9).fill(0);
+test("the first gradient uses a common intensity envelope and preserves silence and glass alpha", () => {
   for (const p of [0, 0.25, 0.5, 0.75, 1]) {
-    assert.deepEqual(frameColor(p, silent), frameColor(p, [...silent]));
-    assert.equal(frameColor(p, silent, 0, true, true).a, 0.35);
-    assert.deepEqual(frameColor(p, silent, 0, false), { ...background, a: 1 });
+    assert.deepEqual(colorAt(p, 0, 0), { ...background, a: 1 });
+    assert.deepEqual(colorAt(p, 1, 1, false), { ...background, a: 1 });
+    const baseline = colorAt(p, 0.1, 0);
+    const accent = colorAt(p, 0.8, 0.9);
+    assert.ok(contrast(baseline, accent) > 0.1);
+    assert.equal(accent.a, 1);
+    assert.equal(colorAt(p, 0.8, 0.9, true, true, 0.37).a, 0.37);
+    assert.deepEqual(colorAt(p, 0.8, 0.9), colorAt(p, 0.8, 0.9));
   }
+});
+
+test("the connected frame uses the original five colour stops and keeps its clipped geometry", () => {
+  assert.match(frame, /gradientInset: Math\.max\(0\.005,/);
+  assert.match(frame, /position: output\.gradientInset/);
+  assert.match(frame, /position: 1 - output\.gradientInset/);
+  for (const p of ["0", "0.5", "1"])
+    assert.ok(frame.includes(`reactiveFrameColor(${p})`));
+  assert.equal((frame.match(/reactiveFrameColor\(/g) || []).length, 5);
+  assert.match(frame, /fillRule: Qt\.OddEvenFill/);
+  assert.match(frame, /strokeColor: frame\.reactiveBorder/);
+  assert.doesNotMatch(frame, /FrameRibbonItem|FrameFillItem/);
 });

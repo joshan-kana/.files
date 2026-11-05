@@ -117,8 +117,8 @@ Column {
 
         IconShortcutAction {
             id: inlineMute
-            shortcut: quick.microphone ? "X" : "M"
-            width: 44
+            shortcut: quick.microphone ? "X" : ""
+            width: 48
             height: 66
             anchors.verticalCenter: parent.verticalCenter
             runtime: quick.runtime
