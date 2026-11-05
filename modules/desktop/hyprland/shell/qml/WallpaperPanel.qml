@@ -373,7 +373,7 @@ Item {
                     readonly property bool current: index === panel.selectedIndex
                     readonly property bool applied: modelData === panel.currentPath
                     readonly property bool animatedFile: /\.(mp4|webm|mkv|mov|gif)$/i.test(modelData)
-                    readonly property bool previewActive: current || cardPress.containsMouse
+                    readonly property bool previewActive: current || cardPress.pointerHovered
                     property string posterPath: ""
                     property string motionPosterPath: ""
                     property StdioCollector motionPosterOutput: StdioCollector {}
