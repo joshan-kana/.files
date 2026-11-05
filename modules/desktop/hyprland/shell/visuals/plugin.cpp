@@ -258,14 +258,6 @@ class SquircleFillItem : public QQuickItem {
       QColor gradientMidColor MEMBER gradientMidColor_ NOTIFY gradientChanged)
   Q_PROPERTY(
       QColor gradientHighColor MEMBER gradientHighColor_ NOTIFY gradientChanged)
-  Q_PROPERTY(QVariantList gradientBands MEMBER gradientBands_ NOTIFY
-                 gradientMotionChanged)
-  Q_PROPERTY(QVariantList gradientImpulses MEMBER gradientImpulses_ NOTIFY
-                 gradientMotionChanged)
-  Q_PROPERTY(double gradientMovement MEMBER gradientMovement_ NOTIFY
-                 gradientMotionChanged)
-  Q_PROPERTY(
-      double gradientKick MEMBER gradientKick_ NOTIFY gradientMotionChanged)
   Q_PROPERTY(QColor lightColor MEMBER lightColor_ NOTIFY lightColorChanged)
   Q_PROPERTY(
       double lightStrength MEMBER lightStrength_ NOTIFY lightStrengthChanged)
@@ -283,8 +275,6 @@ public:
             &QQuickItem::update);
     connect(this, &SquircleFillItem::gradientChanged, this,
             &QQuickItem::update);
-    connect(this, &SquircleFillItem::gradientMotionChanged, this,
-            &QQuickItem::update);
     connect(this, &SquircleFillItem::lightColorChanged, this,
             &QQuickItem::update);
     connect(this, &SquircleFillItem::lightStrengthChanged, this,
@@ -301,7 +291,6 @@ signals:
   void fillColorChanged();
   void fillOpacityChanged();
   void gradientChanged();
-  void gradientMotionChanged();
   void lightColorChanged();
   void lightStrengthChanged();
   void lightSpreadChanged();
@@ -395,51 +384,23 @@ protected:
     const QPointF lightCenter(w * 0.15, h * -0.16);
     const float gradientStrength =
         std::clamp(float(gradientStrength_), 0.0f, 1.0f);
-    const float gradientKick = std::clamp(float(gradientKick_), 0.0f, 1.0f);
-    std::array<float, 9> levels{}, impulses{};
-    for (int i = 0; i < 9; ++i) {
-      if (i < gradientBands_.size())
-        levels[size_t(i)] = std::clamp(gradientBands_[i].toFloat(), 0.0f, 1.0f);
-      if (i < gradientImpulses_.size())
-        impulses[size_t(i)] =
-            std::clamp(gradientImpulses_[i].toFloat(), 0.0f, 1.0f);
-    }
     auto colorAt = [&](const QPointF &point) {
       float baseRed = fillColor_.redF(), baseGreen = fillColor_.greenF(),
             baseBlue = fillColor_.blueF();
       if (gradientStrength > 0.00001f) {
-        float position = std::clamp(float(point.x()) / w, 0.0f, 1.0f);
-        // Real FFT envelopes, not an oscillator. At steady spectral energy,
-        // every vertex colour stays unchanged. Kicks emphasise the low-mid
-        // region while sub-bass alone can only sustain a subdued foundation.
-        const float bandPosition = position * 8;
-        const int leftBand = std::clamp(int(bandPosition), 0, 8);
-        const int rightBand = std::min(8, leftBand + 1);
-        const float fraction = bandPosition - leftBand;
-        const float level = levels[size_t(leftBand)] * (1 - fraction) +
-                            levels[size_t(rightBand)] * fraction;
-        const float impulse = impulses[size_t(leftBand)] * (1 - fraction) +
-                              impulses[size_t(rightBand)] * fraction;
-        const float kickDistance = (position - 0.19f) / 0.16f;
-        const float kick =
-            gradientKick * std::exp(-kickDistance * kickDistance);
-        // Identical audio-driven spectral language to the connected frame.
-        // The existing squircle mesh remains clipped and unchanged.
-        const float localStrength =
-            std::clamp(gradientStrength * (0.4f + 0.4f * level) +
-                           0.68f * std::pow(impulse, 0.82f) + 0.78f * kick,
-                       0.0f, 0.94f);
+        const float position = std::clamp(float(point.x()) / w, 0.0f, 1.0f);
         const QColor &left =
             position < 0.5f ? gradientLowColor_ : gradientMidColor_;
         const QColor &right =
             position < 0.5f ? gradientMidColor_ : gradientHighColor_;
         const float t = position < 0.5f ? position * 2 : (position - 0.5f) * 2;
         const auto mix = [t](float a, float b) { return a + (b - a) * t; };
-        baseRed += (mix(left.redF(), right.redF()) - baseRed) * localStrength;
+        baseRed +=
+            (mix(left.redF(), right.redF()) - baseRed) * gradientStrength;
         baseGreen +=
-            (mix(left.greenF(), right.greenF()) - baseGreen) * localStrength;
+            (mix(left.greenF(), right.greenF()) - baseGreen) * gradientStrength;
         baseBlue +=
-            (mix(left.blueF(), right.blueF()) - baseBlue) * localStrength;
+            (mix(left.blueF(), right.blueF()) - baseBlue) * gradientStrength;
       }
       const double distance =
           std::hypot(point.x() - lightCenter.x(), point.y() - lightCenter.y());
@@ -527,8 +488,6 @@ private:
   QColor gradientLowColor_{Qt::transparent}, gradientMidColor_{Qt::transparent},
       gradientHighColor_{Qt::transparent};
   double fillOpacity_ = 1, gradientStrength_ = 0;
-  QVariantList gradientBands_, gradientImpulses_;
-  double gradientMovement_ = 0, gradientKick_ = 0;
   double lightStrength_ = 0, lightSpread_ = 1;
   double cornerRadius_ = 28, exponent_ = 4.5;
 };
