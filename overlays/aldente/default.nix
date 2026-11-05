@@ -13,6 +13,7 @@ _: {
           appName = "AlDente.app";
           homepage = "https://apphousekitchen.com";
           license = prev.lib.licenses.unfree;
+          unpacker = prev._7zz;
           url = r: "https://apphousekitchen.com/aldente/AlDente${r.version}.dmg";
         };
       }

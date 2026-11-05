@@ -16,6 +16,7 @@ _: {
           appName = "LibreOffice.app";
           homepage = "https://www.libreoffice.org";
           license = prev.lib.licenses.mpl20;
+          unpacker = prev._7zz;
           url =
             r:
             "https://download.documentfoundation.org/libreoffice/stable/${r.version}/mac/${

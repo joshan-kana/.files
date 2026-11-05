@@ -13,6 +13,10 @@ _: {
           appName = "krita.app";
           homepage = "https://krita.org";
           license = prev.lib.licenses.gpl3Only;
+          unpacker = prev._7zz;
+          unpackCmd = ''
+            7zz x -sns- -snld20 -y "$curSrc"
+          '';
           url = r: "https://download.kde.org/stable/krita/${r.version}/krita-${r.version}-signed.dmg";
         };
       }

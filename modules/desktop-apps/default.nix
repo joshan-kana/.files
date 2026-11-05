@@ -43,16 +43,9 @@ in
     };
   };
 
-  warp =
-    _:
-    (
-      lib.optionalAttrs isLinux {
-        home = _: { home.packages = [ pkgs.warp-terminal ]; };
-      }
-      // lib.optionalAttrs isDarwin {
-        homebrew.casks = [ "warp" ];
-      }
-    );
+  warp = _: {
+    home = _: { home.packages = [ pkgs.warp-terminal ]; };
+  };
 
   mullvad =
     _:
@@ -252,9 +245,16 @@ in
       };
     };
 
-  vlc = _: {
-    home = _: { home.packages = [ pkgs.vlc ]; };
-  };
+  vlc =
+    _:
+    (
+      lib.optionalAttrs isLinux {
+        home = _: { home.packages = [ pkgs.vlc ]; };
+      }
+      // lib.optionalAttrs isDarwin {
+        homebrew.casks = [ "vlc" ];
+      }
+    );
 
   mopidy = _: {
     home = _: {

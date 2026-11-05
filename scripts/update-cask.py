@@ -55,6 +55,12 @@ if args.arch_hashes:
         if len(variations) != 1 or next(iter(variations))[0] != version:
             sys.exit("Intel cask release differs from Apple Silicon; cannot update a shared version")
         hashes["x86_64-darwin"] = sri(next(iter(variations))[1])
+    for system, variation in (("x86_64-linux", "x86_64_linux"), ("aarch64-linux", "arm64_linux")):
+        if re.search(r"\b" + re.escape(system) + r"\s*=", body):
+            variant = release.get("variations", {}).get(variation, {})
+            if variant.get("version", version) != version or not isinstance(variant.get("sha256"), str):
+                sys.exit(f"No matching verified archive for {system}")
+            hashes[system] = sri(variant["sha256"])
     for system, hash_value in hashes.items():
         body, count = re.subn(
             r"(\b" + re.escape(system) + r'\s*=\s*")[^"]+(";)',
@@ -71,6 +77,13 @@ if args.arch_hashes:
         updated,
         count=1,
     )
+    if count == 0:
+        updated, count = re.subn(
+            r'(?m)^(\s*version\s*=\s*")[^"]+(";)',
+            lambda m: m[1] + version + m[2],
+            updated,
+            count=1,
+        )
 else:
     pattern = r'(release = \{\s*version = ")[^"]+(";\s*hash = ")[^"]+(";\s*\};)'
     updated, count = re.subn(pattern, lambda m: m[1] + version + m[2] + sri(digest) + m[3], source, count=1)

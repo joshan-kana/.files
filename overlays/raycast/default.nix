@@ -13,6 +13,7 @@ _: {
           appName = "Raycast.app";
           homepage = "https://raycast.com";
           license = prev.lib.licenses.unfree;
+          unpacker = prev._7zz;
           url =
             r: "https://x.raycast-releases.com/download?platform=macos&architecture=arm64&version=${r.version}";
         };
