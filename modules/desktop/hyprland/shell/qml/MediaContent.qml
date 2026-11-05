@@ -41,7 +41,7 @@ FocusScope {
         },
         {
             key: "Y",
-            action: "Show local synchronised lyrics (.lrc) / spectrum"
+            action: "Overlay local synchronised lyrics (.lrc)"
         },
         {
             key: "S",
@@ -234,8 +234,8 @@ FocusScope {
             spacing: 0
 
             Item {
-                // Spectrum, curves and lyrics share the same surface as
-                // the album artwork and track details above them.
+                // Spectrum and synced lyrics share the media canvas. Lyrics
+                // layer over the active spectrum instead of replacing it.
                 width: parent.width
                 // Let the spectrum use the area between artwork and the
                 // controls. The mode buttons now follow playback directly,
@@ -254,7 +254,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: !content.lyricsVisible && (content.visualizerMode === "curve" || opacity > 0.01)
+                    visible: content.visualizerMode === "curve" || opacity > 0.01
                     opacity: content.visualizerMode === "curve" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -281,7 +281,7 @@ FocusScope {
                         leftMargin: theme.spacing3
                     }
 
-                    visible: !content.lyricsVisible && (content.visualizerMode === "bars" || opacity > 0.01)
+                    visible: content.visualizerMode === "bars" || opacity > 0.01
                     opacity: content.visualizerMode === "bars" ? 1 : 0
 
                     spectrum: content.spectrum
@@ -304,7 +304,15 @@ FocusScope {
                     theme: content.theme
                     motion: content.motion
                     active: content.engaged && content.lyricsVisible
-                    visible: content.lyricsVisible
+                    visible: content.lyricsVisible || opacity > 0.01
+                    opacity: content.lyricsVisible ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: content.motion.contentFade
+                            easing.type: content.motion.enterType
+                            easing.bezierCurve: content.motion.enterCurve
+                        }
+                    }
                 }
 
                 Item {
@@ -362,6 +370,23 @@ FocusScope {
                     }
                 }
             }
+        }
+
+        // Lyrics sit above the spectrum, but the local-file hint belongs in
+        // the reserved gap underneath its clipped canvas. Keep the transport
+        // anchored to spectrumSlot rather than moving the playback controls.
+        Text {
+            id: lyricsFooter
+            anchors {
+                horizontalCenter: parent.horizontalCenter
+                top: spectrumSlot.bottom
+                topMargin: Math.max(0, (transport.anchors.topMargin - implicitHeight) / 2)
+            }
+            visible: content.engaged && content.lyricsVisible
+            text: "Y  TOGGLE LYRICS  ·  LOCAL FILES ONLY"
+            color: content.theme.textMuted
+            font.family: content.runtime.fontMono
+            font.pixelSize: content.theme.fontSize(9)
         }
 
         Column {

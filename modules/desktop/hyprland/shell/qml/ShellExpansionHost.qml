@@ -357,6 +357,17 @@ PanelWindow {
         onActivated: host.expansionState.close()
     }
 
+    // QQuickItem can consume Backtab while moving focus among children before
+    // Controls sees a key press. Bind reverse slider traversal on the hub's
+    // owning window instead; it remains disabled in every other view/detail.
+    Shortcut {
+        sequence: "Shift+Tab"
+        context: Qt.WindowShortcut
+        autoRepeat: false
+        enabled: !!host.systemContent && host.systemContent.sliderNavigationEnabled
+        onActivated: host.systemContent.cycleSlider(-1)
+    }
+
     Shortcut {
         sequence: "PgDown"
         context: Qt.ApplicationShortcut
