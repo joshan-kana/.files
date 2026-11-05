@@ -126,11 +126,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1793507292,
-        "narHash": "sha256-1eiqOYySWunDkRHAqiewbqSts5ZbTEvclhfvQhftsrU=",
+        "lastModified": 1793789346,
+        "narHash": "sha256-LPdZ4xWVkbXFR5Z8RgCQ+tKZdyYY+o4Q5Y3yu/d5j5g=",
         "owner": "raydak-labs",
         "repo": "configarr",
-        "rev": "5603fa8de032327dc9d9da546bbbcbc92d06f49b",
+        "rev": "d7c4a7e6dc4b22159c893feec3049ea604e23f12",
         "type": "github"
       },
       "original": {
@@ -905,11 +905,11 @@
     "schema-artifacts": {
       "flake": false,
       "locked": {
-        "lastModified": 1793596198,
-        "narHash": "sha256-gRKoBoVwy8CVgqJTKs/wsDbkYvAZu0OKlErnBCgtonQ=",
+        "lastModified": 1793888626,
+        "narHash": "sha256-ujUrkpMQkKhypjraWsyHnXQwlJbfDVbZDEKzn0sqklI=",
         "owner": "joshan-kana",
         "repo": ".files",
-        "rev": "36966777e525fc0ca4ec5adc12b1dcbc9c965077",
+        "rev": "9afa9f0399a1cf7f8cbcfc06bec90fb8e39e5a8c",
         "type": "github"
       },
       "original": {
