@@ -32,8 +32,8 @@ Item {
         height: 115
         theme: button.theme
         motion: button.motion
-        cornerRadius: button.selected || pointer.containsMouse ? width / 2 : button.theme.radiusLarge
-        exponent: button.selected || pointer.containsMouse ? 2.2 : button.theme.squircleExponent
+        cornerRadius: button.selected || pointer.pointerHovered ? width / 2 : button.theme.radiusLarge
+        exponent: button.selected || pointer.pointerHovered ? 2.2 : button.theme.squircleExponent
         fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
         borderColor: button.armed ? button.theme.warning : button.selected ? button.accentColor : "transparent"
         borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0

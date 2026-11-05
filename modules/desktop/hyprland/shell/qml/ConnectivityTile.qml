@@ -26,7 +26,7 @@ Item {
     signal activated
 
     implicitHeight: 92
-    scale: interaction.pressed ? 0.982 : interaction.containsMouse ? 1.012 : 1
+    scale: interaction.pressed ? 0.982 : interaction.pointerHovered ? 1.012 : 1
 
     Behavior on scale {
         Anim {
@@ -46,7 +46,7 @@ Item {
         cornerRadius: tile.theme.radiusLarge
         luminous: tile.connected || tile.pending || tile.scanning || tile.failed
         luminousColor: tile.signalColor
-        hovered: interaction.containsMouse
+        hovered: interaction.pointerHovered
         fillColor: tile.failed ? tile.theme.blend(tile.theme.groupBase, tile.theme.critical, 0.16) : tile.pending || tile.scanning ? tile.theme.blend(tile.theme.groupBase, tile.theme.warning, 0.14) : tile.connected ? tile.theme.blend(tile.theme.groupBase, tile.signalColor, tile.theme.dark ? 0.095 : 0.065) : tile.unavailable ? tile.theme.groupBase : tile.theme.expressiveSurfaceStrong
 
         ShellSurface {

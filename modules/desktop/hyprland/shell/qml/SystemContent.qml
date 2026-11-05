@@ -105,6 +105,7 @@ FocusScope {
             return;
         const index = targets.indexOf(selectedSlider);
         selectedSlider = targets[(index < 0 ? (direction > 0 ? 0 : targets.length - 1) : (index + direction + targets.length) % targets.length)];
+        keyboardFocus.forceActiveFocus();
     }
 
     function adjustSlider(direction: int): void {
@@ -1318,10 +1319,6 @@ FocusScope {
                                 label: "Level"
                             },
                             {
-                                shortcut: "M",
-                                label: "Mute"
-                            },
-                            {
                                 shortcut: "X",
                                 label: "Mic"
                             }
@@ -1787,11 +1784,11 @@ FocusScope {
             anchors.fill: parent
             focus: root.engaged
 
-            // Forward Tab stays in the Controls keyboard submap. Let the
-            // reverse Shift+Tab shortcut run at the host level, since Qt may
-            // consume Backtab for ordinary focus traversal before this item.
+            // Both Tab directions share one owner. Capture Backtab before Qt
+            // can interpret Shift+Tab as ordinary focus traversal; a held key
+            // repeats through the same path as an individual press.
             Keys.onShortcutOverride: event => {
-                if (root.sliderNavigationEnabled && event.key === Qt.Key_Tab && !(event.modifiers & Qt.ShiftModifier))
+                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab))
                     event.accepted = true;
             }
 
@@ -2105,15 +2102,15 @@ FocusScope {
                 }
 
                 const shifted = !!(event.modifiers & Qt.ShiftModifier);
-                // Reverse traversal is handled once by ShellExpansionHost's
-                // Shift+Tab shortcut. Qt can deliver the same physical press
-                // here as Backtab, so never cycle in both handlers.
-                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && shifted))) {
+                // Shift release/press is not a command. Previously pressing
+                // Shift by itself cleared selectedSlider, so the next Backtab
+                // restarted selection at the final (Night Light) slider.
+                if (event.key === Qt.Key_Shift || event.key === Qt.Key_Control || event.key === Qt.Key_Alt || event.key === Qt.Key_Meta || event.key === Qt.Key_AltGr) {
                     event.accepted = true;
                     return;
                 }
-                if (root.sliderNavigationEnabled && event.key === Qt.Key_Tab) {
-                    root.cycleSlider(1);
+                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab)) {
+                    root.cycleSlider(event.key === Qt.Key_Backtab || shifted ? -1 : 1);
                     event.accepted = true;
                     return;
                 }

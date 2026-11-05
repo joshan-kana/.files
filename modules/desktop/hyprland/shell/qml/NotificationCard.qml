@@ -73,30 +73,40 @@ SquircleSurface {
     borderColor: notification && notification.urgency === NotificationUrgency.Critical ? theme.critical : selected ? theme.roleColor("notifications") : theme.outline
     borderWidth: selected ? theme.borderFocus : theme.borderThin
 
-    MouseArea {
+    StateLayer {
         id: pointer
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
+        theme: card.theme
+        motion: card.motion
+        cornerRadius: card.cornerRadius
+        exponent: card.exponent
+        stateColor: card.theme.roleColor("notifications")
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         property bool dragged: false
         drag.target: card
         drag.axis: Drag.XAxis
         drag.threshold: 12
-        onPressed: dragged = false
-        onPositionChanged: {
-            if (drag.active)
-                dragged = true;
-        }
-        onReleased: {
-            if (dragged) {
-                if (Math.abs(card.x) >= 70)
-                    card.dismissAnimated();
-                else
-                    card.x = 0;
+        Connections {
+            target: pointer
+            function onPressed() {
+                pointer.dragged = false;
+            }
+            function onPositionChanged() {
+                if (pointer.drag.active)
+                    pointer.dragged = true;
+            }
+            function onReleased() {
+                if (pointer.dragged) {
+                    if (Math.abs(card.x) >= 70)
+                        card.dismissAnimated();
+                    else
+                        card.x = 0;
+                }
+            }
+            function onCanceled() {
+                card.x = 0;
             }
         }
-        onCanceled: card.x = 0
-        onClicked: mouse => {
+        onActivated: mouse => {
             if (dragged)
                 return;
             if (mouse.button === Qt.MiddleButton)

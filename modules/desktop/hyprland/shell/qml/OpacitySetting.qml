@@ -23,7 +23,7 @@ ShellSurface {
     Accessible.role: Accessible.Button
     Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity"
 
-    scale: toggleArea.pressed ? 0.94 : toggleArea.containsMouse ? 1.018 : 1
+    scale: toggleArea.pressed ? 0.94 : toggleArea.pointerHovered ? 1.018 : 1
     Behavior on scale {
         Anim {
             motion: setting.motion
@@ -41,7 +41,7 @@ ShellSurface {
     luminousColor: roleAccent
     borderWidth: keyboardSelected ? theme.borderFocus : 0
     borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : "transparent"
-    hovered: toggleArea.containsMouse
+    hovered: toggleArea.pointerHovered
     fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
         Anim {
