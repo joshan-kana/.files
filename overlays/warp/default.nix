@@ -37,21 +37,9 @@ in
                   }.pkg.tar.zst";
               hash = if isDarwin then release.hash else linuxHashes.${system};
             };
-            passthru =
-              (builtins.removeAttrs (old.passthru or { }) [ "updateScript" ])
-              // {
-                autoUpdate = isDarwin;
-                updateGroup = "warp-terminal";
-                updateFilename = "overlays/warp/default.nix";
-              }
-              // prev.lib.optionalAttrs isDarwin {
-                updateScript = [
-                  "${prev.python3}/bin/python3"
-                  "${../../scripts/update-cask.py}"
-                  "warp"
-                  "overlays/warp/default.nix"
-                ];
-              };
+            passthru = (builtins.removeAttrs (old.passthru or { }) [ "updateScript" ]) // {
+              autoUpdate = false;
+            };
           });
         }
     )
