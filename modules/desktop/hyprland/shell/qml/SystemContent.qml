@@ -1787,17 +1787,12 @@ FocusScope {
             anchors.fill: parent
             focus: root.engaged
 
-            // Qt may consume Backtab for focus traversal before onPressed.
-            // Keep the Controls slider submap on its owning FocusScope.
+            // Forward Tab stays in the Controls keyboard submap. Let the
+            // reverse Shift+Tab shortcut run at the host level, since Qt may
+            // consume Backtab for ordinary focus traversal before this item.
             Keys.onShortcutOverride: event => {
-                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab))
+                if (root.sliderNavigationEnabled && event.key === Qt.Key_Tab && !(event.modifiers & Qt.ShiftModifier))
                     event.accepted = true;
-            }
-            Keys.onBacktabPressed: event => {
-                if (root.sliderNavigationEnabled) {
-                    root.cycleSlider(-1);
-                    event.accepted = true;
-                }
             }
 
             Keys.onPressed: event => {
@@ -2110,8 +2105,15 @@ FocusScope {
                 }
 
                 const shifted = !!(event.modifiers & Qt.ShiftModifier);
+                // Reverse traversal is handled once by ShellExpansionHost's
+                // Shift+Tab shortcut. Qt can deliver the same physical press
+                // here as Backtab, so never cycle in both handlers.
+                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && shifted))) {
+                    event.accepted = true;
+                    return;
+                }
                 if (root.sliderNavigationEnabled && event.key === Qt.Key_Tab) {
-                    root.cycleSlider(shifted ? -1 : 1);
+                    root.cycleSlider(1);
                     event.accepted = true;
                     return;
                 }

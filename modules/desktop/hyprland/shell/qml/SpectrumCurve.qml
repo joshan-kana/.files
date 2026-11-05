@@ -8,7 +8,6 @@ Item {
     required property SpectrumState spectrum
     required property Theme theme
     required property SpectrumScale frequencyScale
-    readonly property color curveColor: theme.spectrumColor(0.68)
 
     // Keep the shared QML interpolation active only while an actual curve
     // is visible. Hidden prewarmed media pages do not drive display frames.
@@ -35,13 +34,15 @@ Item {
         if (!root.enabled || !root.visible || root.opacity <= 0 || !spectrum.hasEnergy)
             return {
                 outline: "",
-                filled: ""
+                filled: "",
+                ribbon: ""
             };
         const values = spectrum.bands || [];
         if (values.length < 2)
             return {
                 outline: "",
-                filled: ""
+                filled: "",
+                ribbon: ""
             };
 
         const points = [];
@@ -55,7 +56,8 @@ Item {
         if (points.length < 2)
             return {
                 outline: "",
-                filled: ""
+                filled: "",
+                ribbon: ""
             };
 
         let outline = "M " + points[0].x + " " + points[0].y;
@@ -65,9 +67,21 @@ Item {
         }
         const last = points[points.length - 1];
         outline += " L " + last.x + " " + last.y;
+
+        // A ShapePath stroke can only have one colour. Fill a thin closed
+        // ribbon along the same quadratic curve so its left-to-right colour
+        // comes from the same three spectrum stops as the bars and frame.
+        const thickness = 2.2;
+        let ribbon = outline + " L " + last.x + " " + (last.y + thickness);
+        for (let i = points.length - 2; i > 0; i--) {
+            const previous = points[i - 1];
+            ribbon += " Q " + points[i].x + " " + (points[i].y + thickness) + " " + (points[i].x + previous.x) / 2 + " " + ((points[i].y + previous.y) / 2 + thickness);
+        }
+        ribbon += " L " + points[0].x + " " + (points[0].y + thickness) + " Z";
         return {
             outline,
-            filled: outline + " L " + last.x + " " + height + " L " + points[0].x + " " + height + " Z"
+            filled: outline + " L " + last.x + " " + height + " L " + points[0].x + " " + height + " Z",
+            ribbon
         };
     }
 
@@ -81,15 +95,19 @@ Item {
             fillGradient: LinearGradient {
                 x1: 0
                 y1: 0
-                x2: 0
-                y2: root.height
+                x2: root.width
+                y2: 0
                 GradientStop {
                     position: 0
-                    color: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.28)
+                    color: Qt.rgba(root.theme.spectrumColor(0).r, root.theme.spectrumColor(0).g, root.theme.spectrumColor(0).b, 0.12)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: Qt.rgba(root.theme.spectrumColor(0.5).r, root.theme.spectrumColor(0.5).g, root.theme.spectrumColor(0.5).b, 0.12)
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.02)
+                    color: Qt.rgba(root.theme.spectrumColor(1).r, root.theme.spectrumColor(1).g, root.theme.spectrumColor(1).b, 0.12)
                 }
             }
             PathSvg {
@@ -97,13 +115,27 @@ Item {
             }
         }
         ShapePath {
-            fillColor: "transparent"
-            strokeColor: Qt.rgba(root.curveColor.r, root.curveColor.g, root.curveColor.b, 0.92)
-            strokeWidth: 2.2
-            capStyle: ShapePath.RoundCap
-            joinStyle: ShapePath.RoundJoin
+            strokeColor: "transparent"
+            fillGradient: LinearGradient {
+                x1: 0
+                y1: 0
+                x2: root.width
+                y2: 0
+                GradientStop {
+                    position: 0
+                    color: root.theme.spectrumColor(0)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: root.theme.spectrumColor(0.5)
+                }
+                GradientStop {
+                    position: 1
+                    color: root.theme.spectrumColor(1)
+                }
+            }
             PathSvg {
-                path: root.geometry.outline
+                path: root.geometry.ribbon
             }
         }
     }

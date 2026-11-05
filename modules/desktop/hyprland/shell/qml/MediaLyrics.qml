@@ -13,6 +13,8 @@ Item {
     property var lines: []
     readonly property int currentLine: Lyrics.currentIndex(lines, media.position)
     readonly property bool hasLyrics: lines.length > 0
+    readonly property int rowHeight: Math.max(56, theme.fontSize(17) * 3)
+    property int previousLine: -1
 
     FileView {
         id: sidecar
@@ -27,12 +29,27 @@ Item {
         onFileChanged: reload()
     }
 
+    onCurrentLineChanged: {
+        // Normal progression uses the ListView's built-in highlight motion.
+        // On an initial load or a long seek, jump straight to the new verse
+        // instead of animating through dozens of unrelated lines.
+        if (active && hasLyrics && (previousLine < 0 || Math.abs(currentLine - previousLine) > 3)) {
+            Qt.callLater(() => {
+                if (root.active && root.hasLyrics && root.currentLine >= 0)
+                    lyricList.positionViewAtIndex(root.currentLine, ListView.Center);
+            });
+        }
+        previousLine = currentLine;
+    }
+
     Column {
-        anchors.centerIn: parent
-        width: parent.width - root.theme.spacing5 * 2
-        spacing: root.theme.spacing4
+        anchors.fill: parent
+        anchors.margins: root.theme.spacing3
+        spacing: root.theme.spacing2
         visible: root.active
+
         Text {
+            id: heading
             anchors.horizontalCenter: parent.horizontalCenter
             text: "LOCAL · SYNCHRONISED LYRICS"
             color: root.theme.readableRoleColor("media")
@@ -41,30 +58,85 @@ Item {
             font.weight: Font.DemiBold
             font.letterSpacing: 1.3
         }
-        Repeater {
-            model: root.hasLyrics ? 3 : 1
-            delegate: Text {
-                required property int index
+
+        Item {
+            width: parent.width
+            height: parent.height - heading.height - parent.spacing
+            clip: true
+
+            ListView {
+                id: lyricList
+                anchors.fill: parent
+                clip: true
+                interactive: false
+                focus: false
+                model: root.active && root.hasLyrics ? root.lines : []
+                currentIndex: root.currentLine
+                spacing: root.theme.spacing2
+                reuseItems: true
+                // Keep the current lyric centered as the actual list glides
+                // through its neighbours. Reused delegates stay inexpensive
+                // even for long LRC files.
+                highlightRangeMode: ListView.StrictlyEnforceRange
+                preferredHighlightBegin: Math.max(0, (height - root.rowHeight) / 2)
+                preferredHighlightEnd: preferredHighlightBegin + root.rowHeight
+                highlightMoveVelocity: -1
+                highlightMoveDuration: root.motion.spatialNormal
+
+                delegate: Item {
+                    id: lineRow
+                    required property int index
+                    required property var modelData
+                    readonly property bool current: index === root.currentLine
+                    width: lyricList.width
+                    height: root.rowHeight
+                    opacity: current ? 1 : 0.55
+                    scale: current ? 1 : 0.86
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.motion.contentFade
+                            easing.type: root.motion.enterType
+                            easing.bezierCurve: root.motion.enterCurve
+                        }
+                    }
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: root.motion.spatialNormal
+                            easing.type: root.motion.spatialType
+                            easing.bezierCurve: root.motion.spatialCurve
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width
+                        text: lineRow.modelData.words
+                        textFormat: Text.PlainText
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        color: lineRow.current ? root.theme.textStrong : root.theme.textMuted
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(17)
+                        font.weight: lineRow.current ? Font.DemiBold : Font.Normal
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
                 width: parent.width
-                readonly property int lyricIndex: root.currentLine + index - 1
-                readonly property bool current: index === 1 && root.currentLine >= 0
-                text: !root.hasLyrics ? (root.media.lyricsPath.length > 0 ? "No synced lyrics found · Add a .lrc beside this track" : "No local track · Lyrics are never fetched online") : lyricIndex >= 0 && lyricIndex < root.lines.length ? root.lines[lyricIndex].words : " "
+                visible: !root.hasLyrics
+                text: root.media.lyricsPath.length > 0 ? "No synced lyrics found · Add a .lrc beside this track" : "No local track · Lyrics are never fetched online"
                 textFormat: Text.PlainText
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                color: current ? root.theme.textStrong : root.theme.textMuted
-                opacity: current ? 1 : 0.65
+                color: root.theme.textMuted
                 font.family: root.runtime.fontMono
-                font.pixelSize: root.theme.fontSize(current ? 17 : 11)
-                font.weight: current ? Font.DemiBold : Font.Normal
+                font.pixelSize: root.theme.fontSize(12)
             }
-        }
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "Y  SPECTRUM / LYRICS  ·  LOCAL FILES ONLY"
-            color: root.theme.textMuted
-            font.family: root.runtime.fontMono
-            font.pixelSize: root.theme.fontSize(9)
         }
     }
 }

@@ -76,7 +76,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
   assert.match(controls, /function adjustSlider\(direction: int\)/);
   assert.match(
     controls,
-    /event\.key === Qt\.Key_Tab \|\| event\.key === Qt\.Key_Backtab/,
+    /event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)/,
   );
   assert.match(controls, /root\.selectedSlider = ""/);
   assert.match(
@@ -151,17 +151,36 @@ test("the final Visual Modes row spans the full width with four tiles, not a pha
 test("reverse Backtab navigation remains owned by Controls when Night Light is selected", () => {
   const controls = read("SystemContent.qml");
   assert.match(controls, /Keys.onShortcutOverride: event =>/);
-  assert.match(controls, /Keys.onBacktabPressed: event =>/);
+  const host = read("ShellExpansionHost.qml");
+  const shell = read("shell.qml");
+  assert.match(
+    host,
+    /sequence: "Shift\+Tab"\s+context: Qt\.WindowShortcut\s+autoRepeat: false/,
+  );
+  assert.match(
+    host,
+    /enabled: !!host\.systemContent && host\.systemContent\.sliderNavigationEnabled/,
+  );
+  assert.match(host, /onActivated: host\.systemContent\.cycleSlider\(-1\)/);
+  assert.match(shell, /function controlsSelectedSlider\(\): string/);
   assert.match(
     controls,
     /sliderNavigationEnabled: engaged && !resetConfirmPending/,
   );
-  assert.match(controls, /if \(root\.sliderNavigationEnabled\) \{/);
+  assert.match(
+    controls,
+    /if \(root\.sliderNavigationEnabled && \(event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)\)\) \{/,
+  );
   assert.match(controls, /root\.cycleSlider\(-1\)/);
   assert.match(
     controls,
-    /if \(root\.sliderNavigationEnabled && event\.key === Qt\.Key_Tab\) \{/,
+    /if \(root\.sliderNavigationEnabled && \(event\.key === Qt\.Key_Backtab \|\| \(event\.key === Qt\.Key_Tab && shifted\)\)\) \{/,
   );
+  assert.ok(
+    controls.indexOf("event.key === Qt.Key_Backtab || shifted ? -1 : 1") <
+      controls.indexOf("if (root.selectedSlider.length > 0)"),
+  );
+  assert.doesNotMatch(controls, /Keys.onBacktabPressed:/);
   const source = controls.match(
     /function cycleSlider\(direction: int\): void \{([\s\S]*?)\n    \}/,
   );
@@ -178,4 +197,51 @@ test("reverse Backtab navigation remains owned by Controls when Night Light is s
   assert.equal(cycle(targets, "glass", 1), "nightLight");
   assert.equal(cycle(targets, "nightLight", -1), "glass");
   assert.equal(cycle(targets, "glass", -1), "windows");
+});
+
+test("active slider status does not masquerade as keyboard focus after reverse traversal", () => {
+  for (const name of ["OpacitySetting.qml", "AdjustableSetting.qml"]) {
+    const tile = read(name);
+    assert.match(tile, /outlined: keyboardSelected/);
+    assert.match(
+      tile,
+      /borderWidth: keyboardSelected \? theme\.borderFocus : 0/,
+    );
+    assert.match(
+      tile,
+      /borderColor: keyboardSelected \? theme\.blend\(roleAccent, theme\.textStrong, 0\.55\) : "transparent"/,
+    );
+    assert.match(tile, /luminous: active \|\| keyboardSelected/);
+    assert.match(
+      tile,
+      /fillColor: active \? theme\.blend\(theme\.controlBase, roleAccent,/,
+    );
+    assert.doesNotMatch(tile, /outlined: active \|\| keyboardSelected/);
+  }
+});
+
+test("a physical Shift+Tab press has exactly one reverse traversal owner", () => {
+  const host = read("ShellExpansionHost.qml");
+  const controls = read("SystemContent.qml");
+  assert.equal((host.match(/sequence: "Shift\+Tab"/g) || []).length, 1);
+  assert.match(
+    host,
+    /sequence: "Shift\+Tab"\s+context: Qt\.WindowShortcut\s+autoRepeat: false/,
+  );
+  assert.match(
+    host,
+    /sequence: "Shift\+Tab"[\s\S]*?onActivated: host\.systemContent\.cycleSlider\(-1\)/,
+  );
+  assert.doesNotMatch(
+    controls,
+    /root\.cycleSlider\(-1\);[\s\S]*?Qt\.Key_Backtab/,
+  );
+  const keyCode = controls
+    .split("Keys.onPressed: event => {")[1]
+    .split("if (root.selectedSlider.length > 0)")[0];
+  assert.doesNotMatch(keyCode, /root\.cycleSlider\(-1\)/);
+  assert.match(
+    keyCode,
+    /event.key === Qt.Key_Backtab \|\| \(event.key === Qt.Key_Tab && shifted\)/,
+  );
 });
