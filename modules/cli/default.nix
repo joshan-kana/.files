@@ -54,6 +54,9 @@ in
 {
   home = _: {
     home.sessionVariables = sessionVariables;
+    systemd.user.sessionVariables = lib.optionalAttrs isLinux {
+      inherit (sessionVariables) FLK_PROFILE;
+    };
   };
 
   terminfo = _: {
