@@ -123,8 +123,6 @@ in
       networkmanagerapplet
       playerctl
       grimblast
-      nwg-panel
-      nwg-dock-hyprland
       nwg-displays
       wlr-randr
     ];
@@ -134,8 +132,6 @@ in
 
     home.shellAliases = {
       h = "uwsm start hyprland.desktop";
-      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
-      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
     };
 
     wayland.windowManager.hyprland =
