@@ -629,7 +629,7 @@ PanelWindow {
         // Wallpaper. Do not wait until the outer squircle is nearly full size.
         readonly property real contentReveal: {
             const fraction = Math.min(width / Math.max(1, host.closing ? host.closeLayoutWidth : host.contentWidth), height / Math.max(1, host.closing ? host.closeLayoutHeight : host.contentHeight));
-            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.18) / 0.72));
+            return host.chromeOpacity * Math.max(0, Math.min(1, (fraction - 0.68) / 0.30));
         }
 
         HubTabs {
