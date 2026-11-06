@@ -387,8 +387,8 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@Hyprland.target -- nm-applet --indicator")
-                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@Hyprland.target -- dropbox")
+                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@hyprland.desktop.target -- nm-applet --indicator")
+                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@hyprland.desktop.target -- dropbox")
                 end
               '')
             ];
