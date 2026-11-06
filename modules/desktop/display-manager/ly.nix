@@ -33,22 +33,6 @@ let
       source ${config.services.displayManager.sessionData.wrapper}
     fi
   '';
-
-  # Ly remembers the selected session by position, not by desktop filename.
-  # Keep the Hyprland entry in place, but launch it through UWSM instead.
-  lyWaylandSessions = pkgs.runCommand "ly-wayland-sessions" { } ''
-    mkdir -p "$out"
-    for session in ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions/*.desktop; do
-      name="''${session##*/}"
-      case "$name" in
-        hyprland.desktop)
-          ln -s ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions/hyprland-uwsm.desktop "$out/$name"
-          ;;
-        hyprland-uwsm.desktop) ;;
-        *) ln -s "$session" "$out/$name" ;;
-      esac
-    done
-  '';
 in
 {
   services.xserver.displayManager.lightdm.enable = false;
@@ -59,8 +43,5 @@ in
   # Backport the Ly shell-session fix:
   # keep Ly's built-in shell attached to the TTY, while preserving normal
   # display-manager logging for graphical sessions.
-  services.displayManager.ly.settings = {
-    setup_cmd = lib.getExe lySessionWrapper;
-    waylandsessions = lib.mkIf config.programs.hyprland.withUWSM "${lyWaylandSessions}";
-  };
+  services.displayManager.ly.settings.setup_cmd = lib.getExe lySessionWrapper;
 }
