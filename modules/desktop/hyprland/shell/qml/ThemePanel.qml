@@ -639,8 +639,6 @@ Item {
             }
         }
 
-        // Progress belongs in the status text below. Only offer a second
-        // control while cancellation is actually safe.
         TextMetrics {
             id: cancelLabelMetrics
             font.family: panel.runtime.fontMono
@@ -649,21 +647,41 @@ Item {
             text: "Cancel build"
         }
 
-        ShellAction {
-            id: cancelButton
-            anchors.right: parent.right
-            width: Math.max(180, cancelLabelMetrics.advanceWidth + panel.theme.spacing3 * 2 + panel.theme.spacing2 * 2 + panel.theme.fontSize(15) + panel.theme.keycapHeight)
-            height: 36
-            visible: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
-            runtime: panel.runtime
-            theme: panel.theme
-            motion: panel.motion
-            compact: true
-            horizontalCompact: true
-            title: "Cancel build"
-            icon: "󰜺"
-            shortcut: "X"
-            onActivated: panel.cancelOperation()
+        Row {
+            width: parent.width
+            visible: panel.statusText.length > 0 || panel.operationRunning
+            spacing: panel.theme.spacing2
+
+            Text {
+                id: operationStatus
+                width: Math.max(1, parent.width - (cancelButton.visible ? cancelButton.width + parent.spacing : 0))
+                anchors.verticalCenter: parent.verticalCenter
+                text: panel.statusText
+                color: panel.statusError ? panel.theme.readableRoleColor("critical") : panel.operationRunning ? panel.theme.accent : panel.operationPhase === "cancelled" ? panel.theme.warning : panel.theme.readableRoleColor("positive")
+                font.family: panel.runtime.fontMono
+                font.pixelSize: panel.theme.fontKeyHint
+                font.weight: Font.DemiBold
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                textFormat: Text.PlainText
+            }
+
+            ShellAction {
+                id: cancelButton
+                width: Math.max(180, cancelLabelMetrics.advanceWidth + panel.theme.spacing3 * 2 + panel.theme.spacing2 * 2 + panel.theme.fontSize(15) + panel.theme.keycapHeight)
+                height: 36
+                visible: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
+                runtime: panel.runtime
+                theme: panel.theme
+                motion: panel.motion
+                compact: true
+                horizontalCompact: true
+                title: "Cancel build"
+                icon: "󰜺"
+                shortcut: "X"
+                onActivated: panel.cancelOperation()
+            }
         }
         Text {
             width: parent.width
@@ -676,19 +694,6 @@ Item {
             color: panel.theme.textMuted
             font.family: panel.runtime.fontMono
             font.pixelSize: panel.theme.fontSize(9)
-        }
-
-        Text {
-            width: parent.width
-            visible: panel.statusText.length > 0
-            text: panel.statusText
-            color: panel.theme.readableRoleColor(panel.statusError ? "critical" : "positive")
-            horizontalAlignment: Text.AlignRight
-            elide: Text.ElideRight
-            font.family: panel.runtime.fontMono
-            font.pixelSize: panel.theme.fontSize(8)
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.6
         }
     }
 }
