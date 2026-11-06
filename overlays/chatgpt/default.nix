@@ -16,8 +16,8 @@ _: {
         updateScript = [
           "${prev.python3}/bin/python3"
           "${../../scripts/update-version.py}"
-          "https://persistent.oaistatic.com/codex-app-prod/appcast.xml"
-          "<sparkle:shortVersionString>([^<]+)"
+          "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh"
+          ''versions=\(([0-9.]+)''
           "chatgpt"
           system
           "overlays/chatgpt/default.nix"
