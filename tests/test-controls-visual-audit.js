@@ -8,7 +8,7 @@ const read = (name) => fs.readFileSync(path.join(base, name), "utf8");
 
 test("nine Controls visual modes form two consistent rows at normal desktop width", () => {
   const controls = read("SystemContent.qml");
-  assert.match(controls, /width < 680 \? 3 : 5/);
+  assert.match(controls, /width < 450 \? 3 : 5/);
   assert.match(controls, /const row = Math\.floor\(index \/ columns\)/);
   assert.match(
     controls,
@@ -118,7 +118,7 @@ test("the final Visual Modes row spans the full width with four tiles, not a pha
     .split("id: visualModeStrip")[1]
     .split("ShellSurface {")[0];
   const match = section.match(
-    /function cellWidth\(index: int\): real \{([\s\S]*?)\n                \}/,
+    /function cellWidth\(index: int\): real \{([\s\S]*?)\n\s+\}/,
   );
   assert.ok(match);
   const cellWidth = new Function(
@@ -229,4 +229,156 @@ test("modifier-only keys cannot clear slider selection across repeated Shift+Tab
   assert.ok(shiftGuard >= 0 && shiftGuard < backtab);
   assert.ok(backtab >= 0 && backtab < selectionReset);
   assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
+});
+
+test("Controls uses an adaptive compound matrix and a focused workspace", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(
+    controls,
+    /implicitWidth: themeOpen \|\| wallpaperOpen \? theme\.controlsDetailWidth : 1020/,
+  );
+  assert.match(controls, /id: commandMatrix/);
+  assert.match(controls, /id: audioSection/);
+  assert.match(controls, /id: everydaySection/);
+  assert.match(controls, /id: appearanceSection/);
+  assert.match(controls, /id: focusDirectory/);
+  assert.match(
+    controls,
+    /root\.controlsLayout === "matrix" \? "Focus" : "Matrix"/,
+  );
+  assert.match(controls, /function moveFocusGroup\(delta: int\)/);
+  assert.match(controls, /shifted && event\.key === Qt\.Key_I/);
+  assert.match(controls, /root\.controlsLayout === "focus" && shifted/);
+});
+
+test("Controls keeps all visual controls and primary detail destinations", () => {
+  const controls = read("SystemContent.qml");
+  for (const id of [
+    "appearanceButton",
+    "wallpaperButton",
+    "sessionButton",
+    "connectionTiles",
+    "actionStrip",
+    "visualModeStrip",
+    "audioDeck",
+    "mediaInlineTransport",
+    "mediaQuickExtras",
+    "trayItem",
+    "brightnessHint",
+  ])
+    assert.match(controls, new RegExp("id: " + id));
+  for (const action of [
+    "openTheme",
+    "openWallpaper",
+    "openSession",
+    "openNetwork",
+    "openBluetooth",
+    "openResources",
+    "openRecordings",
+    "openMixer",
+  ])
+    assert.match(controls, new RegExp("root\\." + action + "\\("));
+});
+
+test("focus directory reflows while preserving the same actions and local shortcuts", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(
+    controls,
+    /readonly property int columns: width < 680 \|\| root\.theme\.textScale >= 1\.5 \? 2 : 4/,
+  );
+  assert.match(controls, /root\.controlsLayout === "matrix" && width >= 820/);
+  assert.match(
+    controls,
+    /root\.controlsLayout === "matrix" \|\| root\.focusGroup === "audio"/,
+  );
+  assert.match(
+    controls,
+    /root\.controlsLayout === "matrix" \|\| root\.focusGroup === "appearance"/,
+  );
+  assert.match(controls, /shifted && event\.key === Qt\.Key_I/);
+  assert.match(
+    controls,
+    /root\.moveFocusGroup\(event\.key === Qt\.Key_J \? 1 : -1\)/,
+  );
+  assert.match(controls, /audioDeck\.deviceChooserOpen/);
+});
+
+test("the compact mixer reserves first-frame geometry without delaying rendering", () => {
+  const mixer = read("AudioMixerContent.qml");
+  assert.match(mixer, /compact \? Math\.max\(300, body\.implicitHeight/);
+  assert.match(mixer, /body\.implicitHeight < 140/);
+  assert.match(
+    mixer,
+    /monitoring: mixer\.active && list\.visible && streamRow\.inViewport/,
+  );
+  assert.doesNotMatch(mixer, /setInterval|setTimeout|Timer \{/);
+  assert.doesNotMatch(mixer, /shortcut: "ESC"/);
+});
+
+test("Controls positions visual modes above audio and media in the adaptive matrix", () => {
+  const controls = read("SystemContent.qml");
+  const visual = controls.indexOf("id: appearanceSection");
+  const everyday = controls.indexOf("id: everydaySection");
+  const bottom = controls.indexOf("id: mediaMatrix");
+  const audio = controls.indexOf("id: audioSection");
+  const media = controls.indexOf('text: root.media.available ? "MEDIA"');
+  assert.ok(visual > 0 && visual < everyday && everyday < bottom);
+  assert.ok(bottom < audio && audio < media);
+  assert.match(
+    controls,
+    /id: appearanceSection[\s\S]*?width: commandMatrix\.cellWidth/,
+  );
+  assert.match(
+    controls,
+    /id: audioSection[\s\S]*?width: mediaMatrix\.cellWidth/,
+  );
+  assert.match(
+    controls,
+    /id: mediaMatrix[\s\S]*?columns: root\.controlsLayout === "matrix" && width >= 820/,
+  );
+  assert.match(
+    controls,
+    /width < 410 \|\| root\.theme\.textScale >= 1\.3 \? 2 : width < 450 \? 3 : 5/,
+  );
+});
+
+test("the media slot has a bounded empty state and preserves its Now Playing action", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(
+    controls,
+    /visible: !root\.media\.available[\s\S]*?Accessible\.name: "Open Now Playing"/,
+  );
+  assert.match(controls, /height: visible \? 248 : 0/);
+  assert.match(controls, /onActivated: root\.mediaRequested\(\)/);
+  assert.match(controls, /text: "No active player"/);
+});
+
+test("normal desktop tiles use two visual-mode rows without clipping controls", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(
+    controls,
+    /id: visualModeStrip[\s\S]*?readonly property int columns: width < 340[\s\S]*?width < 450 \? 3 : 5/,
+  );
+  assert.match(
+    controls,
+    /id: actionStrip[\s\S]*?readonly property int columns: width < 410[\s\S]*?width < 450 \|\| root\.theme\.textScale >= 1\.3 \? 3 : 5/,
+  );
+  assert.match(controls, /function cellWidth\(index: int\): real/);
+});
+
+test("focused Controls category order follows the matrix's spatial hierarchy", () => {
+  const controls = read("SystemContent.qml");
+  assert.match(controls, /property string focusGroup: "appearance"/);
+  assert.match(
+    controls,
+    /readonly property var focusGroups: \["appearance", "everyday", "audio", "media"\]/,
+  );
+  const first = controls.indexOf(
+    'key: "appearance"',
+    controls.indexOf("id: focusDirectory"),
+  );
+  const second = controls.indexOf('key: "everyday"', first);
+  const third = controls.indexOf('key: "audio"', second);
+  const fourth = controls.indexOf('key: "media"', third);
+  assert.ok(first > 0 && first < second && second < third && third < fourth);
 });
