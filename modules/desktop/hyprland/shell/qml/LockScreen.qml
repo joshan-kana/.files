@@ -166,7 +166,7 @@ WlSessionLock {
             if (!pendingPoster.length || posterProcess.running || posterInFlight === pendingPoster)
                 return;
             posterInFlight = pendingPoster;
-            posterProcess.exec([lock.runtime.wallpaperLibrary, "thumbnail", pendingPoster]);
+            posterProcess.exec([lock.runtime.wallpaperLibrary, "poster", pendingPoster]);
         }
         function resolveWallpaper(): void {
             if (lock.runtime.wallpaperLibrary.length === 0 || currentProcess.running)
