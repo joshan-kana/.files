@@ -51,7 +51,7 @@ test("brightness slider is in Controls, not a draggable brightness OSD", () => {
   const brightness = read("BrightnessState.qml");
   const osd = read("OsdPopup.qml");
   const osdState = read("OsdState.qml");
-  assert.match(controls, /"No hardware backlight"/);
+  assert.match(controls, /"Hardware unavailable"/);
   assert.match(
     controls,
     /onValueRequested: next => root\.brightness\.setPercent\(next\)/,
@@ -231,27 +231,25 @@ test("modifier-only keys cannot clear slider selection across repeated Shift+Tab
   assert.doesNotMatch(host, /sequence: "Shift\+Tab"/);
 });
 
-test("Controls uses an adaptive compound matrix and a focused workspace", () => {
+test("Controls keeps a single responsive dashboard with existing dedicated details", () => {
   const controls = read("SystemContent.qml");
-  assert.match(
-    controls,
-    /implicitWidth: themeOpen \|\| wallpaperOpen \? theme\.controlsDetailWidth : 1020/,
-  );
   assert.match(controls, /id: commandMatrix/);
-  assert.match(controls, /id: audioSection/);
-  assert.match(controls, /id: everydaySection/);
-  assert.match(controls, /id: appearanceSection/);
-  assert.match(controls, /id: focusDirectory/);
-  assert.match(
-    controls,
-    /root\.controlsLayout === "matrix" \? "Focus" : "Matrix"/,
+  assert.match(controls, /id: mediaMatrix/);
+  assert.match(controls, /id: commandRight/);
+  assert.ok(
+    controls.includes(
+      "columns: width >= 860 && root.theme.textScale < 1.4 ? 2 : 1",
+    ),
   );
-  assert.match(controls, /function moveFocusGroup\(delta: int\)/);
-  assert.match(controls, /shifted && event\.key === Qt\.Key_I/);
-  assert.match(controls, /root\.controlsLayout === "focus" && shifted/);
+  assert.doesNotMatch(
+    controls,
+    /focusDirectory|focusGroup|controlsLayout|CONTROL SURFACE|ALL SYSTEMS/,
+  );
+  assert.match(controls, /onExpandRequested: root.openMixer\(\)/);
+  assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
 });
 
-test("Controls keeps all visual controls and primary detail destinations", () => {
+test("Controls preserves primary actions and shared audio/visual controls", () => {
   const controls = read("SystemContent.qml");
   for (const id of [
     "appearanceButton",
@@ -261,12 +259,12 @@ test("Controls keeps all visual controls and primary detail destinations", () =>
     "actionStrip",
     "visualModeStrip",
     "audioDeck",
-    "mediaInlineTransport",
-    "mediaQuickExtras",
+    "commandRight",
     "trayItem",
     "brightnessHint",
   ])
     assert.match(controls, new RegExp("id: " + id));
+  assert.match(controls, /ControlsMediaCard \{/);
   for (const action of [
     "openTheme",
     "openWallpaper",
@@ -280,77 +278,78 @@ test("Controls keeps all visual controls and primary detail destinations", () =>
     assert.match(controls, new RegExp("root\\." + action + "\\("));
 });
 
-test("focus directory reflows while preserving the same actions and local shortcuts", () => {
+test("Dashboard controls retain direct keys and no additional focus navigation mode", () => {
   const controls = read("SystemContent.qml");
+  assert.match(controls, /shortcut: "Q"\s+onActivated: root.openTheme\(\)/);
+  assert.match(controls, /shortcut: "E"\s+onActivated: root.openSession\(\)/);
+  assert.match(controls, /event.key === Qt.Key_Q\)\s*\{\s*root.openTheme\(\)/);
   assert.match(
     controls,
-    /readonly property int columns: width < 680 \|\| root\.theme\.textScale >= 1\.5 \? 2 : 4/,
+    /event.key === Qt.Key_E\)\s*\{\s*root.openSession\(\)/,
   );
-  assert.match(controls, /root\.controlsLayout === "matrix" && width >= 820/);
-  assert.match(
-    controls,
-    /root\.controlsLayout === "matrix" \|\| root\.focusGroup === "audio"/,
-  );
-  assert.match(
-    controls,
-    /root\.controlsLayout === "matrix" \|\| root\.focusGroup === "appearance"/,
-  );
-  assert.match(controls, /shifted && event\.key === Qt\.Key_I/);
-  assert.match(
-    controls,
-    /root\.moveFocusGroup\(event\.key === Qt\.Key_J \? 1 : -1\)/,
-  );
-  assert.match(controls, /audioDeck\.deviceChooserOpen/);
+  assert.doesNotMatch(controls, /toggleControlsLayout|moveFocusGroup|Shift\+I/);
+  assert.match(controls, /audioDeck.deviceChooserOpen/);
 });
 
-test("the compact mixer reserves first-frame geometry without delaying rendering", () => {
+test("The compact mixer uses content-driven height and does not delay rendering", () => {
   const mixer = read("AudioMixerContent.qml");
-  assert.match(mixer, /compact \? Math\.max\(300, body\.implicitHeight/);
-  assert.match(mixer, /body\.implicitHeight < 140/);
+  assert.match(mixer, /compact \? Math.max\(1, body.implicitHeight/);
+  assert.match(mixer, /body.implicitHeight < 140/);
   assert.match(
     mixer,
-    /monitoring: mixer\.active && list\.visible && streamRow\.inViewport/,
+    /monitoring: mixer.active && list.visible && streamRow.inViewport/,
   );
   assert.doesNotMatch(mixer, /setInterval|setTimeout|Timer \{/);
   assert.doesNotMatch(mixer, /shortcut: "ESC"/);
 });
 
-test("Controls positions visual modes above audio and media in the adaptive matrix", () => {
+test("Dashboard hierarchy puts connectivity above Quick actions and audio/media at bottom", () => {
   const controls = read("SystemContent.qml");
-  const visual = controls.indexOf("id: appearanceSection");
-  const everyday = controls.indexOf("id: everydaySection");
-  const bottom = controls.indexOf("id: mediaMatrix");
+  const appearance = controls.indexOf("id: appearanceSection");
+  const connectivity = controls.indexOf("id: connectionTiles");
+  const actions = controls.indexOf("id: actionStrip");
+  const lower = controls.indexOf("id: mediaMatrix");
   const audio = controls.indexOf("id: audioSection");
-  const media = controls.indexOf('text: root.media.available ? "MEDIA"');
-  assert.ok(visual > 0 && visual < everyday && everyday < bottom);
-  assert.ok(bottom < audio && audio < media);
+  const media = controls.indexOf("ControlsMediaCard {");
+  assert.ok(
+    appearance >= 0 && appearance < connectivity && connectivity < actions,
+  );
+  assert.ok(actions < lower && lower < audio && audio < media);
+  assert.match(controls, /title: "Quick actions"/);
+  assert.match(controls, /title: "Connectivity"/);
   assert.match(
     controls,
-    /id: appearanceSection[\s\S]*?width: commandMatrix\.cellWidth/,
+    /id: appearanceSection[\s\S]*?width: commandMatrix.cellWidth/,
   );
   assert.match(
     controls,
-    /id: audioSection[\s\S]*?width: mediaMatrix\.cellWidth/,
+    /id: audioSection[\s\S]*?width: mediaMatrix.cellWidth/,
   );
   assert.match(
     controls,
-    /id: mediaMatrix[\s\S]*?columns: root\.controlsLayout === "matrix" && width >= 820/,
-  );
-  assert.match(
-    controls,
-    /width < 410 \|\| root\.theme\.textScale >= 1\.3 \? 2 : width < 450 \? 3 : 5/,
+    /width < 410 \|\| root.theme.textScale >= 1.3 \? 2 : width < 450 \? 3 : 5/,
   );
 });
 
-test("the media slot has a bounded empty state and preserves its Now Playing action", () => {
+test("Compact Media keeps a small empty state and shares the full Now Playing destination", () => {
   const controls = read("SystemContent.qml");
+  const card = read("ControlsMediaCard.qml");
+  const transport = read("MediaTransport.qml");
+  assert.match(controls, /ControlsMediaCard \{/);
+  assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
+  assert.match(card, /implicitHeight: media.available \? 226 : 174/);
   assert.match(
-    controls,
-    /visible: !root\.media\.available[\s\S]*?Accessible\.name: "Open Now Playing"/,
+    card,
+    /text: card.media.available \? card.media.title : "No active player"/,
   );
-  assert.match(controls, /height: visible \? 248 : 0/);
-  assert.match(controls, /onActivated: root\.mediaRequested\(\)/);
-  assert.match(controls, /text: "No active player"/);
+  assert.match(card, /simple: true/);
+  assert.match(card, /shortcut: "N"/);
+  assert.match(card, /onActivated: card.fullRequested\(\)/);
+  assert.match(
+    transport,
+    /item.action === "previous" \|\| item.action === "play" \|\| item.action === "next"/,
+  );
+  assert.doesNotMatch(card, /lyrics|toggleShuffle|toggleRepeat|SpectrumBars/);
 });
 
 test("normal desktop tiles use two visual-mode rows without clipping controls", () => {
@@ -366,19 +365,61 @@ test("normal desktop tiles use two visual-mode rows without clipping controls", 
   assert.match(controls, /function cellWidth\(index: int\): real/);
 });
 
-test("focused Controls category order follows the matrix's spatial hierarchy", () => {
+test("Unavailable hardware remains visible with consistent messaging and disabled brightness", () => {
   const controls = read("SystemContent.qml");
-  assert.match(controls, /property string focusGroup: "appearance"/);
   assert.match(
     controls,
-    /readonly property var focusGroups: \["appearance", "everyday", "audio", "media"\]/,
+    /detail: root.brightness.supported \? root.brightness.percent \+ "%"\s*: "Hardware unavailable"/,
   );
-  const first = controls.indexOf(
-    'key: "appearance"',
-    controls.indexOf("id: focusDirectory"),
+  assert.match(controls, /enabled: root.brightness.supported/);
+  assert.match(
+    controls,
+    /onValueRequested: next => root.brightness.setPercent\(next\)/,
   );
-  const second = controls.indexOf('key: "everyday"', first);
-  const third = controls.indexOf('key: "audio"', second);
-  const fourth = controls.indexOf('key: "media"', third);
-  assert.ok(first > 0 && first < second && second < third && third < fourth);
+  assert.match(
+    controls,
+    /root.system.networkDevices.length === 0 \? "Hardware unavailable"/,
+  );
+  assert.match(controls, /detail: unavailable \? "Hardware unavailable"/);
+  assert.match(controls, /unavailable \? "" : root.system.networkConnected/);
+  assert.match(controls, /unavailable \? "" : root.system.bluetoothEnabled/);
+  assert.match(read("ConnectivityTile.qml"), /visible: tile.status.length > 0/);
+  assert.match(controls, /id: connectionTiles/);
+});
+
+test("shared hub tabs expose hover, press and selected feedback", () => {
+  const tabs = read("HubTabs.qml");
+  for (const fragment of [
+    "StateLayer {",
+    "hoverOpacity: 0.13",
+    "pressOpacity: 0.20",
+    "onActivated: root.tabRequested(tab.modelData.destination)",
+    "id: slidingSelection",
+  ])
+    assert.ok(tabs.includes(fragment));
+});
+
+test("two-row Session tiles use available horizontal space", () => {
+  const session = read("SessionPanel.qml");
+  for (const fragment of [
+    "width: buttonGrid.width",
+    "readonly property int rowCount: Math.min(",
+    "actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)",
+    "readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3",
+  ])
+    assert.ok(session.includes(fragment), fragment);
+});
+
+test("main panel and compact Media use measured geometry with bounded empty state", () => {
+  const controls = read("SystemContent.qml");
+  const media = read("ControlsMediaCard.qml");
+  const host = read("ShellExpansionHost.qml");
+  for (const [source, fragment] of [
+    [controls, "implicitWidth: theme.controlsDetailWidth"],
+    [controls, "active: root.engaged && !root.detailsVisible"],
+    [media, "implicitHeight: media.available ? 226 : 174"],
+    [host, "height: Math.min(host.viewportHeight, host.targetHeight)"],
+    [host, "(fraction - 0.68) / 0.30"],
+  ])
+    assert.ok(source.includes(fragment), fragment);
 });
