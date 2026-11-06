@@ -38,6 +38,9 @@ test("notification viewport remains stable as the number of toasts changes", () 
   assert.match(source, /readonly property int interactiveToastSlots: Math\.min\(maxToastSlots, toastCount\)/);
   assert.match(source, /height: popup\.interactiveToastSlots > 0 \? popup\.interactiveToastSlots \* popup\.cardHeight/);
   assert.match(source, /updatesEnabled: surfaceLifecycle\.needsRendering/);
+  const maskItem = source.match(/Item \{\s*id: toastInputArea([\s\S]*?)\n    \}/)?.[1];
+  assert.ok(maskItem);
+  assert.doesNotMatch(maskItem, /visible: false/);
 });
 
 test("selecting an all-display video clears stale output ownership before playback", () => {

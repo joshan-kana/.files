@@ -71,7 +71,6 @@ PanelWindow {
         id: toastInputArea
         width: popup.width
         height: popup.interactiveToastSlots > 0 ? popup.interactiveToastSlots * popup.cardHeight + (popup.interactiveToastSlots - 1) * popup.cardGap : 0
-        visible: false
     }
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
