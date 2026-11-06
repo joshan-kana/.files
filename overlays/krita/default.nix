@@ -16,8 +16,9 @@ _: {
           unpackCmd = ''
             7zz x -sns- -snld20 -y "$curSrc"
           '';
+          cask = "krita";
           passthru = {
-            autoUpdate = false;
+            autoUpdate = true;
             updateFilename = "overlays/krita/default.nix";
           };
           url = r: "https://download.kde.org/stable/krita/${r.version}/krita-${r.version}-signed.dmg";

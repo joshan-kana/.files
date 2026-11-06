@@ -9,10 +9,21 @@
   unpacker ? prev.undmg,
   unpackCmd ? null,
   passthru ? { },
+  cask ? null,
 }:
 prev.stdenvNoCC.mkDerivation (
   {
-    inherit pname passthru;
+    inherit pname;
+    passthru =
+      passthru
+      // prev.lib.optionalAttrs (cask != null) {
+        updateScript = [
+          "${prev.python3}/bin/python3"
+          "${../scripts/update-cask.py}"
+          cask
+          passthru.updateFilename
+        ];
+      };
     inherit (release) version;
     src = prev.fetchurl {
       url = url release;

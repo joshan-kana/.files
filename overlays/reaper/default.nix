@@ -17,8 +17,9 @@ _: {
               appName = "REAPER.app";
               homepage = "https://www.reaper.fm";
               license = prev.lib.licenses.unfree;
+              cask = "reaper";
               passthru = {
-                autoUpdate = false;
+                autoUpdate = true;
                 updateFilename = "overlays/reaper/default.nix";
               };
               url =

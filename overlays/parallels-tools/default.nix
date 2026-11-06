@@ -6,6 +6,9 @@ _: {
         prl-tools = prev.prl-tools.overrideAttrs (
           _finalAttrs: previousAttrs: {
             version = "27.0.0-58628";
+            passthru = (previousAttrs.passthru or { }) // {
+              autoUpdate = false;
+            };
             src = previousAttrs.src.overrideAttrs {
               outputHash = "sha256-WH3Ivc+ahWzlAbBpjlh37yUtSCIb27TqvxJmrR1Rq+8=";
             };

@@ -97,7 +97,8 @@ update_package() {
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name].group // empty' <<<"$package_metadata")"
-  if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
+  group_handled="$(nix eval --json ".#packages.$system.$1.passthru.updateGroupHandled" 2>/dev/null || echo false)"
+  if [[ -n "$group" && "$source_before" != "$source_after" && "$group_handled" != true ]]; then
     # One upstream release can publish different archives and hashes per platform.
     while IFS=$'\t' read -r sibling_system sibling; do
       # Update scripts may change a shared version without rehashing this platform.

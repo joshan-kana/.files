@@ -58,7 +58,7 @@ _: {
                   dependencies = [ anyio ];
                 };
               in
-              python.withPackages (_: [
+              (python.withPackages (_: [
                 (wheel {
                   pname = "mcp";
                   version = "2.0.0";
@@ -116,7 +116,12 @@ _: {
                     ps.uvicorn
                   ];
                 })
-              ])
+              ])).overrideAttrs
+                (old: {
+                  passthru = (old.passthru or { }) // {
+                    autoUpdate = false;
+                  };
+                })
             )
             {
               python = final.python3;

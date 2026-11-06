@@ -17,8 +17,9 @@ _: {
               appName = "Linear.app";
               homepage = "https://linear.app";
               license = prev.lib.licenses.unfree;
+              cask = "linear";
               passthru = {
-                autoUpdate = false;
+                autoUpdate = true;
                 updateFilename = "overlays/linear/default.nix";
               };
               url = r: "https://releases.linear.app/Linear-${r.version}-universal.dmg";

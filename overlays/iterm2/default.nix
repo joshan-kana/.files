@@ -17,8 +17,9 @@ _: {
               appName = "iTerm.app";
               homepage = "https://iterm2.com";
               license = prev.lib.licenses.gpl2Only;
+              cask = "iterm2";
               passthru = {
-                autoUpdate = false;
+                autoUpdate = true;
                 updateFilename = "overlays/iterm2/default.nix";
               };
               url =

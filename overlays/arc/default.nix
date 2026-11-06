@@ -18,8 +18,9 @@ _: {
               appName = "Arc.app";
               homepage = "https://arc.net";
               license = prev.lib.licenses.unfree;
+              cask = "arc";
               passthru = {
-                autoUpdate = false;
+                autoUpdate = true;
                 updateFilename = "overlays/arc/default.nix";
               };
               url = r: "https://releases.arc.net/release/Arc-${r.version}-${r.build}.zip";

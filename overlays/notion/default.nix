@@ -17,8 +17,9 @@ _: {
               appName = "Notion.app";
               homepage = "https://www.notion.so";
               license = prev.lib.licenses.unfree;
+              cask = "notion";
               passthru = {
-                autoUpdate = false;
+                autoUpdate = true;
                 updateFilename = "overlays/notion/default.nix";
               };
               url = r: "https://desktop-release.notion-static.com/Notion-${r.version}-arm64.dmg";

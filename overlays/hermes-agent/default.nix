@@ -16,6 +16,7 @@
         hermes-agent = upstream.overrideAttrs (old: {
           passthru = (old.passthru or { }) // {
             inherit hermesVenv;
+            autoUpdate = false;
           };
         });
       }

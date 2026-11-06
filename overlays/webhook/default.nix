@@ -9,6 +9,9 @@ _:
           (old: {
             version = "${old.version}-patched";
             __intentionallyOverridingVersion = true;
+            passthru = (old.passthru or { }) // {
+              autoUpdate = false;
+            };
 
             patches = (old.patches or [ ]) ++ [
               ../../patches/webhook/max-body-size.patch

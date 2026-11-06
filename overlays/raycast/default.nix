@@ -13,8 +13,9 @@ _: {
           homepage = "https://raycast.com";
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
+          cask = "raycast";
           passthru = {
-            autoUpdate = false;
+            autoUpdate = true;
             updateFilename = "overlays/raycast/default.nix";
           };
           url =

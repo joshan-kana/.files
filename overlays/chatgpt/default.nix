@@ -6,13 +6,22 @@ _: {
         inherit (prev) lib;
         system = prev.stdenv.hostPlatform.system;
         release = {
-          version = "26.1029.61003";
-          hash = "sha256-Q975gJnpSDfwe5dr6YE4JRhZrliDHQV9VIPosgkGqaQ=";
+          version = "26.1103.31037";
+          hashes = {
+            "aarch64-darwin" = "sha256-e60UfUBEYZJ1fb/dceJlKRRoI63ivMUrPW5lJd6BZhM=";
+            "aarch64-linux" = "sha256-ujasFe3uls1B2/rvqw6JvHKkOK1D+8Z/sII/IYAV50Y=";
+            "x86_64-linux" = "sha256-/O1rSTYSwzmzvbxpx0TkNI7fXBeGiKEBWcrlMfVjymU=";
+          };
         };
-        linuxHashes = {
-          x86_64 = "sha256-BayLVMODb2+Z5PGtuLZsHwqg7W191es25JdqAdM2uYY=";
-          aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
-        };
+        updateScript = [
+          "${prev.python3}/bin/python3"
+          "${../../scripts/update-cask.py}"
+          "chatgpt"
+          "overlays/chatgpt/default.nix"
+          "--package"
+          "chatgpt"
+          "--arch-hashes"
+        ];
         inherit (release) version;
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
         isLinux = builtins.elem system [
@@ -23,15 +32,18 @@ _: {
       in
       lib.optionalAttrs isDarwin {
         chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
-          inherit release;
+          release = release // {
+            hash = release.hashes.aarch64-darwin;
+          };
           pname = "chatgpt";
           appName = "ChatGPT.app";
           homepage = "https://chatgpt.com/";
           license = lib.licenses.unfree;
           passthru = {
-            autoUpdate = false;
+            autoUpdate = true;
             updateGroup = "chatgpt";
-            updateFilename = "overlays/chatgpt/default.nix";
+            updateGroupHandled = true;
+            inherit updateScript;
           };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
           unpacker = prev.unzip;
@@ -43,7 +55,7 @@ _: {
           inherit version;
           src = prev.fetchurl {
             url = "https://persistent.oaistatic.com/codex-app-prod/linux/arch/${version}/${linuxArch}/chatgpt-bin-${version}-1-${linuxArch}.pkg.tar.zst";
-            hash = linuxHashes.${linuxArch};
+            hash = release.hashes.${system};
           };
           sourceRoot = ".";
           nativeBuildInputs = with prev; [
@@ -110,7 +122,10 @@ _: {
             runHook postInstall
           '';
           passthru = {
+            autoUpdate = true;
             updateGroup = "chatgpt";
+            updateGroupHandled = true;
+            inherit updateScript;
           };
           meta = {
             homepage = "https://chatgpt.com/";

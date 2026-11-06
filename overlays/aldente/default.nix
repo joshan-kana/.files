@@ -13,8 +13,9 @@ _: {
           homepage = "https://apphousekitchen.com";
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
+          cask = "aldente";
           passthru = {
-            autoUpdate = false;
+            autoUpdate = true;
             updateFilename = "overlays/aldente/default.nix";
           };
           url = r: "https://apphousekitchen.com/aldente/AlDente${r.version}.dmg";
