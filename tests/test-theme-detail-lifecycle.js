@@ -41,3 +41,19 @@ test("a stale queued expansion cannot reopen a closing or replaced hub", () => {
     /if \(host\.transitionEpoch === epoch && host\.expansionState\.hasCurrent\)\s*host\.contentExpanded = true/,
   );
 });
+
+test("theme progress has one status owner and an untruncated cancel action", () => {
+  const source = qml("ThemePanel.qml");
+  const footer = source.slice(source.indexOf('id: footer'));
+  assert.match(source, /preparing: "PREPARING"/);
+  assert.match(source, /building: "BUILDING"/);
+  assert.match(source, /activating: "APPLYING"/);
+  assert.match(footer, /text: panel\.statusText/);
+  assert.doesNotMatch(footer, /panel\.operationPhase\.toUpperCase\(\)/);
+  assert.match(footer, /id: cancelLabelMetrics/);
+  assert.match(footer, /width: Math\.max\(180, cancelLabelMetrics\.advanceWidth/);
+  assert.match(footer, /title: "Cancel build"/);
+  assert.match(footer, /icon: "󰜺"/);
+  assert.match(footer, /visible: panel\.operationRunning && \(panel\.operationPhase === "building" \|\| panel\.operationPhase === "preparing"\)/);
+  assert.doesNotMatch(footer, /title:.*"Activating"/);
+});
