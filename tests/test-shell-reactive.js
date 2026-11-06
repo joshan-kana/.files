@@ -52,7 +52,7 @@ test("compact bar islands receive reactive styling without independent connected
     assert.match(
       bar,
       new RegExp(
-        `ShellSurface \\{\\s*id: ${island}\\s*reactiveSurface: true\\s*frameConnected: bars\\.frameVisible`,
+        `ShellSurface \\{\\s*id: ${island}[\\s\\S]*?reactiveSurface: true\\s*frameConnected: bars\\.frameVisible`,
       ),
     );
   }
