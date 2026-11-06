@@ -33,6 +33,11 @@ test("notification viewport remains stable as the number of toasts changes", () 
   assert.match(source, /visible: slot < popup\.maxToastSlots \|\| evicted/);
   assert.doesNotMatch(source, /implicitHeight:[^\n]*(toastCount|visibleToastCount)/);
   assert.match(source, /y: slot \* \(popup\.cardHeight \+ popup\.cardGap\)/);
+  // The fixed backing must not block clicks in unoccupied slots.
+  assert.match(source, /interactiveItem: toastInputArea/);
+  assert.match(source, /readonly property int interactiveToastSlots: Math\.min\(maxToastSlots, toastCount\)/);
+  assert.match(source, /height: popup\.interactiveToastSlots > 0 \? popup\.interactiveToastSlots \* popup\.cardHeight/);
+  assert.match(source, /updatesEnabled: surfaceLifecycle\.needsRendering/);
 });
 
 test("selecting an all-display video clears stale output ownership before playback", () => {
@@ -88,4 +93,32 @@ test("selecting an all-display video clears stale output ownership before playba
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
+});
+
+
+test("other transient Wayland surfaces keep their backing geometry stable", () => {
+  for (const name of ["OsdPopup.qml", "ResizeOverlay.qml", "ModalSurfaceHost.qml", "ShellExpansionHost.qml"]) {
+    const source = qml(name);
+    // Each of these surfaces must have a viewport independent of whether
+    // dynamic content has arrived. Internal Item morphs are intentional.
+    const width = source.match(/^[ \t]*implicitWidth: ([^\n]+)/m)?.[1];
+    const height = source.match(/^[ \t]*implicitHeight: ([^\n]+)/m)?.[1];
+    assert.ok(width && height, `${name} is missing stable root geometry`);
+    assert.doesNotMatch(`${width} ${height}`, /(?:popups\.count|notificationState\.count|activePanel|isActive|\.open\s*\?|\.visible\s*\?)/, `${name} changes its Wayland size with appearing content`);
+  }
+  // Polkit uses a full-screen, edge-anchored panel instead of implicit sizes.
+  const polkit = qml("PolkitDialog.qml");
+  assert.match(polkit, /PanelWindow \{/);
+  assert.match(polkit, /anchors \{\s*top: true\s*right: true\s*bottom: true\s*left: true/);
+  // The per-screen bar and shared frame are dimensioned from the monitor,
+  // while the wallpaper spectrum's fixed region is independent of audio energy.
+  const frame = qml("DesktopFrame.qml");
+  assert.match(frame, /implicitWidth: screen \? screen\.width : 1/);
+  assert.match(frame, /implicitHeight: screen \? screen\.height : 1/);
+  const spectrum = qml("WallpaperSpectrum.qml");
+  assert.match(spectrum, /implicitWidth: Math\.max\(1, screen \? screen\.width \* 0\.88 : 1\)/);
+  assert.match(spectrum, /implicitHeight: Math\.max\(1, screen \? Math\.min\(screen\.height \* 0\.38, 560\) : 1\)/);
+  assert.match(qml("ModalSurfaceHost.qml"), /updatesEnabled: surfaceLifecycle\.needsRendering/);
+  assert.match(qml("OsdPopup.qml"), /updatesEnabled: surfaceLifecycle\.needsRendering/);
+  assert.match(qml("ResizeOverlay.qml"), /updatesEnabled: surfaceLifecycle\.needsRendering/);
 });
