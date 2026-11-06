@@ -218,7 +218,7 @@ in
                 [ "$output" = all ] || args=(--outputs "$output")
                 case "''${image,,}" in
                   *.mp4|*.webm|*.mkv|*.mov)
-                    still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
+                    still="$(${lib.getExe wallpaperLibrary} poster "$image")" || continue
                     awww img "''${args[@]}" --resize "$resize" --transition-type none "$still"
                     if [ -f "$quiet" ]; then
                       systemctl --user stop --no-block "linux-desktop-wallpaper-video@$output.service" || true
@@ -229,7 +229,7 @@ in
                   *)
                     still="$image"
                     if [ -f "$quiet" ] && [[ "''${image,,}" = *.gif ]]; then
-                      still="$(${lib.getExe wallpaperLibrary} thumbnail "$image")" || continue
+                      still="$(${lib.getExe wallpaperLibrary} poster "$image")" || continue
                     fi
                     awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
                     ;;
@@ -286,22 +286,32 @@ in
             printf '%s\n' "$thumb"
             exit 0
           fi
-          if [ "$action" = thumbnail ]; then
+          if [ "$action" = thumbnail ] || [ "$action" = poster ]; then
             image="$output"
             [ -f "$image" ] && [[ "$image" = /* ]] || exit 2
-            # Grid cards share the video poster cache. Even stills can be
-            # multi-megabyte 4K images; decode once instead of keeping full
-            # resolution textures alive for every visible thumbnail.
+            # Full-screen posters are cached at source resolution as lossless
+            # PNGs; only gallery thumbnails are deliberately downscaled.
+            if [ "$action" = poster ]; then
+              case "''${image,,}" in
+                *.png|*.jpg|*.jpeg|*.webp|*.bmp) printf '%s\n' "$image"; exit 0 ;;
+              esac
+            fi
             cache="''${XDG_CACHE_HOME:-$HOME/.cache}/linux-desktop/wallpaper-thumbnails"
             mkdir -p "$cache"
             key="$(printf '%s:%s' "$image" "$(stat -c '%Y:%s' "$image")" | sha256sum | cut -d' ' -f1)"
-            thumb="$cache/$key.png"
+            suffix=""
+            [ "$action" != poster ] || suffix="-poster"
+            thumb="$cache/$key$suffix.png"
             exec 8>"$cache/$key.lock"
             flock 8
             if [ ! -s "$thumb" ]; then
               tmp="$(mktemp "$cache/.thumb.XXXXXXXX.png")"
               trap 'rm -f "$tmp"' EXIT
-              ffmpeg -nostdin -v error -i "$image" -frames:v 1 -vf 'scale=380:250:force_original_aspect_ratio=decrease' -update 1 -y "$tmp"
+              if [ "$action" = poster ]; then
+                ffmpeg -nostdin -v error -i "$image" -frames:v 1 -update 1 -y "$tmp"
+              else
+                ffmpeg -nostdin -v error -i "$image" -frames:v 1 -vf 'scale=380:250:force_original_aspect_ratio=decrease' -update 1 -y "$tmp"
+              fi
               mv -f "$tmp" "$thumb"
             fi
             printf '%s\n' "$thumb"
@@ -388,18 +398,18 @@ in
                   *.mp4|*.webm|*.mkv|*.mov)
                     # The video layer covers the image layer. Retain its poster
                     # before stopping it, so the next image has a visible old frame.
-                    previous_poster="$($0 thumbnail "$previous")"
+                    previous_poster="$($0 poster "$previous")"
                     awww img "''${args[@]}" --resize "$resize" --transition-type none "$previous_poster"
                     ;;
                 esac
               fi
               if [ "$kind" = video ]; then
                 ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$image" | grep -qx video || exit 2
-                still="$($0 thumbnail "$image")"
+                still="$($0 poster "$image")"
               else
                 still="$image"
                 if [ -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] && [[ "''${image,,}" = *.gif ]]; then
-                  still="$($0 thumbnail "$image")"
+                  still="$($0 poster "$image")"
                 fi
               fi
               systemctl --user stop "$unit" || true
@@ -409,22 +419,51 @@ in
               trap 'rm -f "$temp"' EXIT
               printf '%s\n%s\n' "$resize" "$image" > "$temp"
               mv -f "$temp" "$state_file"
+              if [ "$output" = all ]; then
+                # An override identical to the all-display selection uses the
+                # shared video layer rather than a second monitor player.
+                for selection in "$state_dir"/*.wall; do
+                  [ -f "$selection" ] && [ "$selection" != "$state_file" ] || continue
+                  if cmp -s "$state_file" "$selection"; then
+                    monitor="$(basename "$selection" .wall)"
+                    systemctl --user stop "linux-desktop-wallpaper-video@$monitor.service" || true
+                  fi
+                done
+              elif [ -f "$state_dir/all.wall" ]; then
+                # Recompute global video coverage after an override changes.
+                case "$(tail -n 1 "$state_dir/all.wall")" in
+                  *.mp4|*.webm|*.mkv|*.mov)
+                    systemctl --user restart linux-desktop-wallpaper-video@all.service || true
+                    ;;
+                esac
+              fi
               if [ "$kind" = video ]; then
                 if [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ]; then
                   # Let the eased poster transition finish before playing the
                   # same first frame as video, avoiding an abrupt hard swap.
                   sleep ${wallpaperTransitionDuration}
                 fi
-                systemctl --user restart "$unit"
+                if [ "$output" != all ] && [ -f "$state_dir/all.wall" ] && cmp -s "$state_file" "$state_dir/all.wall"; then
+                  systemctl --user stop "$unit" || true
+                else
+                  systemctl --user restart "$unit"
+                fi
               fi
               ;;
             reset)
               systemctl --user stop "linux-desktop-wallpaper-video@$output.service" || true
               rm -f "$state_file"
+              if [ "$output" != all ] && [ -f "$state_dir/all.wall" ]; then
+                case "$(tail -n 1 "$state_dir/all.wall")" in
+                  *.mp4|*.webm|*.mkv|*.mov)
+                    systemctl --user restart linux-desktop-wallpaper-video@all.service || true
+                    ;;
+                esac
+              fi
               systemctl --user start --no-block linux-desktop-wallpaper-image.service
               ;;
             *)
-              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
+              printf 'Usage: linux-desktop-wallpaper-library {list|current [output]|set output crop\|fit /abs/file|reset [output]|thumbnail /abs/file|poster /abs/file|thumbnail-animated /abs/file|motion on\|off}\n' >&2
               exit 2
               ;;
           esac
@@ -434,21 +473,51 @@ in
       wallpaperVideoFromState = pkgs.writeShellApplication {
         name = "linux-desktop-wallpaper-video-from-state";
         runtimeInputs = [
+          pkgs.awww
           pkgs.mpvpaper
           pkgs.coreutils
         ];
         text = ''
           output="''${1:?Output required}"
-          file="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers/$output.wall"
+          state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}/linux-desktop/wallpapers"
+          file="$state_dir/$output.wall"
           [ -r "$file" ] || exit 0
           { IFS= read -r resize && IFS= read -r video; } < "$file" || exit 1
           [ -f "$video" ] || exit 1
           case "''${video,,}" in *.mp4|*.webm|*.mkv|*.mov) ;; *) exit 0 ;; esac
-          [ "$output" != all ] || output='*'
           [ ! -f "$XDG_RUNTIME_DIR/linux-desktop-wallpaper-motion-disabled" ] || exit 0
           options='no-audio loop-file=inf hwdec=auto'
           [ "$resize" != crop ] || options="$options panscan=1"
-          exec mpvpaper -p -a full -l background -o "$options" "$output" "$video"
+          if [ "$output" != all ]; then
+            exec mpvpaper -p -a full -l background -o "$options" "$output" "$video"
+          fi
+
+          # The all-display selection is a default, not another layer over a
+          # monitor override. A wildcard player could obscure newer video
+          # selections after a theme switch changed service restart order.
+          outputs=""
+          for _ in {1..25}; do
+            if outputs="$(awww query 2>/dev/null)"; then break; fi
+            sleep 0.2
+          done
+          [ -n "$outputs" ] || exit 1
+          pids=()
+          while IFS= read -r line; do
+            [[ "$line" = ': '* ]] || continue
+            monitor="''${line#: }"
+            monitor="''${monitor%%:*}"
+            [ -n "$monitor" ] || continue
+            if [ -f "$state_dir/$monitor.wall" ] && ! cmp -s "$file" "$state_dir/$monitor.wall"; then
+              continue
+            fi
+            mpvpaper -p -a full -l background -o "$options" "$monitor" "$video" &
+            pids+=("$!")
+          done <<< "$outputs"
+          [ "''${#pids[@]}" -gt 0 ] || exit 0
+          trap 'kill "''${pids[@]}" 2>/dev/null || true' EXIT
+          # Relaunch the coverage set if any player exits unexpectedly.
+          wait -n "''${pids[@]}" || true
+          exit 1
         '';
       };
 
