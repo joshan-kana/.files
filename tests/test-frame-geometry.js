@@ -1274,3 +1274,65 @@ test("outer island shoulders join the monitor corner without a stray top-edge li
   assert.match(frame.inner, /C[^M]*L2506 26 C/);
   assert.doesNotMatch(frame.inner, /^M54 26 L58 26 C/);
 });
+
+test("island collision suppression holds layout until the hub clears the hysteresis band", () => {
+  const island = { x: 100, y: 12, width: 80, height: 46 };
+  const hub = { x: 176, y: 20, width: 500, height: 320, visible: true };
+  assert.equal(context.islandOccluded(island, hub, false), true);
+  assert.equal(
+    context.islandOccluded(island, { ...hub, x: 178 }, false),
+    false,
+  );
+  assert.equal(context.islandOccluded(island, { ...hub, x: 184 }, true), true);
+  assert.equal(context.islandOccluded(island, { ...hub, x: 190 }, true), false);
+  assert.equal(context.islandOccluded(island, { ...hub, y: 80 }, false), false);
+  assert.equal(
+    context.islandOccluded(island, { ...hub, visible: false }, true),
+    false,
+  );
+  assert.equal(
+    context.islandOccluded(island, { ...hub, width: 0 }, true),
+    false,
+  );
+  assert.equal(context.islandOccluded(island, { ...hub, x: NaN }, true), false);
+});
+
+test("island rendering, hit targets, and contour geometry share occlusion flags", () => {
+  const qml = (name) =>
+    fs.readFileSync(
+      path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
+      "utf8",
+    );
+  const bar = qml("AmbientBar.qml");
+  const media = qml("NowPlayingIsland.qml");
+  const shell = qml("shell.qml");
+  const host = qml("ShellExpansionHost.qml");
+  for (const name of [
+    "workspace",
+    "media",
+    "notification",
+    "recording",
+    "system",
+  ]) {
+    assert.match(bar, new RegExp("property bool " + name + "Occluded: false"));
+    assert.match(
+      bar,
+      new RegExp(
+        "item === " +
+          (name === "notification" ? "notification" : name) +
+          "Island && bar\\." +
+          name +
+          "Occluded",
+      ),
+    );
+  }
+  assert.match(bar, /enabled: !bar\.recordingOccluded/);
+  assert.match(bar, /opacity: bar\.recordingOccluded \? 0 : 1/);
+  assert.match(media, /enabled: !occluded/);
+  assert.match(media, /enabled: !island\.occluded/);
+  assert.match(shell, /hubBounds: expansionHost\.frameBounds/);
+  assert.match(shell, /hubScreen: expansionHost\.screen/);
+  assert.match(host, /recordingStatusInHub/);
+  assert.match(host, /onActivated: host\.recordingStopRequested\(\)/);
+  assert.match(host, /onActivated: host\.navigate\("activity"\)/);
+});

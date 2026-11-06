@@ -209,10 +209,10 @@ test("audio device and mixer hints match the Controls keyboard dispatcher", () =
   const controls = qml("SystemContent.qml");
   assert.match(
     quick,
-    /id: inlineDevices[\s\S]*?shortcut: quick\.selectedAudioIndex === quick\.baseIndex \? "P" : ""/,
+    /id: deviceHint[\s\S]*?shortcut: quick\.selectedAudioIndex === quick\.baseIndex \? "P" : ""/,
   );
   assert.match(quick, /id: deviceLink[\s\S]*?shortcut: "P"/);
-  assert.match(quick, /id: inlineMixer[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(quick, /id: mixerHint[\s\S]*?shortcut: "SHIFT\+M"/);
   assert.match(quick, /id: mixerLink[\s\S]*?shortcut: "SHIFT\+M"/);
   assert.match(
     controls,

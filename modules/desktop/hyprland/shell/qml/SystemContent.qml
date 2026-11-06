@@ -129,22 +129,37 @@ FocusScope {
         else if (selectedSlider === "brightness")
             brightness.refresh();
     }
+    // Audio selection is tied to the live PipeWire node, not its current
+    // position in the dynamically updated stream list.
+    property var selectedAudioNode: null
     readonly property var quickAudioTargets: [
         {
             kind: "output"
         }
-    ].concat(system.audioApplicationStreams.slice(0, 2).map(node => ({
+    ].concat(system.audioApplicationStreams.map(node => ({
                 kind: "stream",
-                node: node
+                node: node,
+                capture: false
             }))).concat(system.microphoneAvailable ? [
         {
             kind: "input"
         }
-    ] : []).concat(system.audioCaptureStreams.slice(0, 2).map(node => ({
+    ] : []).concat(system.audioCaptureStreams.map(node => ({
                 kind: "stream",
-                node: node
+                node: node,
+                capture: true
             })))
-    readonly property int microphoneAudioIndex: 1 + Math.min(2, system.audioApplicationStreams.length)
+    readonly property int microphoneAudioIndex: 1 + system.audioApplicationStreams.length
+
+    function selectAudioIndex(index: int): void {
+        selectedAudioIndex = Math.max(0, Math.min(quickAudioTargets.length - 1, index));
+        selectedAudioNode = quickAudioTargets[selectedAudioIndex]?.node || null;
+    }
+
+    onQuickAudioTargetsChanged: {
+        const index = selectedAudioNode ? quickAudioTargets.findIndex(target => target.node === selectedAudioNode) : -1;
+        selectAudioIndex(index >= 0 ? index : 0);
+    }
     readonly property bool audioChooserOpen: outputQuick.chooserOpen || inputQuick.chooserOpen
 
     readonly property bool trayMenuOpen: trayMenu.open
@@ -332,11 +347,11 @@ FocusScope {
                     ] : [
                         {
                             key: "J/K · ↑/↓",
-                            action: "Select audio stream"
+                            action: "Select output or microphone"
                         },
                         {
                             key: "H/L · ←/→",
-                            action: "Adjust selected audio level"
+                            action: "Adjust selected device level"
                         },
                         {
                             key: "TAB / SHIFT+TAB",
@@ -657,7 +672,7 @@ FocusScope {
     }
 
     function moveAudioSelection(direction: int): void {
-        selectedAudioIndex = (selectedAudioIndex + direction + quickAudioTargets.length) % quickAudioTargets.length;
+        selectAudioIndex((selectedAudioIndex + direction + quickAudioTargets.length) % quickAudioTargets.length);
     }
 
     function adjustSelectedAudio(delta: real): void {
@@ -676,6 +691,12 @@ FocusScope {
             outputQuick.toggleDeviceChooser();
         else if (target.kind === "input")
             inputQuick.toggleDeviceChooser();
+        else if (target.kind === "stream") {
+            if (target.capture)
+                inputQuick.toggleDeviceChooser();
+            else
+                outputQuick.toggleDeviceChooser();
+        }
     }
 
     function muteSelectedAudio(): void {
@@ -1271,14 +1292,14 @@ FocusScope {
                         width: audioStack.width
                         showMixer: true
                         inline: true
-                        meterEnabled: root.visible && !root.mixerOpen
+                        meterEnabled: root.engaged && !root.detailsVisible
                         onChooserOpenChanged: {
                             if (chooserOpen)
                                 inputQuick.chooserOpen = false;
                         }
                         baseIndex: 0
                         selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
+                        onSelectionRequested: index => root.selectAudioIndex(index)
                         onMixerRequested: root.openMixer()
                         system: root.system
                         runtime: root.runtime
@@ -1292,13 +1313,13 @@ FocusScope {
                             if (chooserOpen)
                                 outputQuick.chooserOpen = false;
                         }
-                        visible: root.system.microphoneAvailable
+                        visible: root.system.microphoneAvailable || root.system.audioCaptureStreams.length > 0
                         microphone: true
                         inline: true
-                        meterEnabled: root.visible && !root.mixerOpen
+                        meterEnabled: root.engaged && !root.detailsVisible
                         baseIndex: root.microphoneAudioIndex
                         selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectedAudioIndex = index
+                        onSelectionRequested: index => root.selectAudioIndex(index)
                         system: root.system
                         runtime: root.runtime
                         theme: root.theme
@@ -1788,7 +1809,7 @@ FocusScope {
             // can interpret Shift+Tab as ordinary focus traversal; a held key
             // repeats through the same path as an individual press.
             Keys.onShortcutOverride: event => {
-                if (root.sliderNavigationEnabled && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab))
+                if ((root.sliderNavigationEnabled || root.mixerOpen) && (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab))
                     event.accepted = true;
             }
 
@@ -1831,7 +1852,7 @@ FocusScope {
 
                 if (root.mixerOpen) {
                     mixerView.finishLoading();
-                    if (mixerView.panel && mixerView.panel.handleKey(event.key))
+                    if (mixerView.panel && mixerView.panel.handleKey(event.key, event.modifiers))
                         event.accepted = true;
                     return;
                 }

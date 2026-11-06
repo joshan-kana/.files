@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "FrameGeometry.js" as FrameGeometry
 
 Variants {
     id: bars
@@ -21,6 +22,23 @@ Variants {
     property bool controlsExpanded: false
     property real clockReveal: 1
     property bool frameVisible: false
+    property var hubBounds: ({
+            visible: false
+        })
+    property var hubScreen: null
+    property var occludedIslands: ({})
+
+    function setOccluded(screen: var, state: var): void {
+        const key = screenKey(screen);
+        if (!key)
+            return;
+        const previous = occludedIslands[key] || {};
+        if (previous.workspace === state.workspace && previous.media === state.media && previous.notifications === state.notifications && previous.recording === state.recording && previous.system === state.system)
+            return;
+        const next = Object.assign({}, occludedIslands);
+        next[key] = state;
+        occludedIslands = next;
+    }
 
     onShownChanged: {
         if (!shown)
@@ -122,6 +140,7 @@ Variants {
         function publishOrigins(): void {
             if (!barContent || !mediaIsland || !systemIsland)
                 return;
+            updateOcclusion();
 
             bars.setOrigin(modelData, "media", bar.screenOffset + barContent.x + mediaIsland.x + mediaIsland.width / 2, mediaIsland.width, mediaIsland.height);
             bars.setOrigin(modelData, "system", bar.screenOffset + barContent.x + clockIsland.x + clockIsland.width / 2, clockIsland.width, clockIsland.height);
@@ -129,7 +148,7 @@ Variants {
             bars.setOrigin(modelData, "activity", bar.screenOffset + barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
             const surfaces = [workspaceIsland, mediaIsland, clockIsland, notificationIsland, recordingIsland, systemIsland];
             const islands = [];
-            for (const item of surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2)) {
+            for (const item of surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2 && !(item === workspaceIsland && bar.workspaceOccluded) && !(item === mediaIsland && bar.mediaOccluded) && !(item === notificationIsland && bar.notificationOccluded) && !(item === recordingIsland && bar.recordingOccluded) && !(item === systemIsland && bar.systemOccluded))) {
                 const x = bar.screenOffset + barContent.x + item.x;
                 const y = barContent.y + item.y;
                 if (item === mediaIsland) {
@@ -178,6 +197,12 @@ Variants {
             function onControlsExpandedChanged(): void {
                 Qt.callLater(bar.publishOrigins);
             }
+            function onHubBoundsChanged(): void {
+                Qt.callLater(bar.updateOcclusion);
+            }
+            function onHubScreenChanged(): void {
+                Qt.callLater(bar.updateOcclusion);
+            }
             function onShownChanged(): void {
                 Qt.callLater(bar.publishOrigins);
             }
@@ -219,6 +244,49 @@ Variants {
         readonly property int workspaceCellGap: 6
         readonly property real fullWorkspaceWidth: workspaceIds.length > 0 ? workspaceIds.length * workspaceCellWidth + Math.max(0, workspaceIds.length - 1) * workspaceCellGap + bars.theme.spacing3 * 2 : 0
 
+        // Suppression never changes width, anchors or presence in a Row:
+        // neighbouring islands must not slide into a just-vacated gap.
+        property bool workspaceOccluded: false
+        property bool mediaOccluded: false
+        property bool notificationOccluded: false
+        property bool recordingOccluded: false
+        property bool systemOccluded: false
+
+        function updateOcclusion(): void {
+            if (!barContent || !workspaceIsland || !mediaIsland || !systemIsland)
+                return;
+            const here = bars.hubScreen && modelData && bars.hubScreen.name === modelData.name && bars.hubBounds.visible && bar.visible;
+            const hub = here ? bars.hubBounds : null;
+            function covered(item, previous) {
+                if (!hub || !item || !item.visible)
+                    return false;
+                return FrameGeometry.islandOccluded({
+                    x: bar.screenOffset + barContent.x + item.x,
+                    y: barContent.y + item.y,
+                    width: item.width,
+                    height: item.height
+                }, hub, previous, bars.theme.spacing2);
+            }
+            workspaceOccluded = covered(workspaceIsland, workspaceOccluded);
+            mediaOccluded = covered(mediaIsland, mediaOccluded);
+            notificationOccluded = covered(notificationIsland, notificationOccluded);
+            recordingOccluded = covered(recordingIsland, recordingOccluded);
+            systemOccluded = covered(systemIsland, systemOccluded);
+            bars.setOccluded(modelData, {
+                workspace: workspaceOccluded,
+                media: mediaOccluded,
+                notifications: notificationOccluded,
+                recording: recordingOccluded,
+                system: systemOccluded
+            });
+        }
+
+        onWorkspaceOccludedChanged: Qt.callLater(publishOrigins)
+        onMediaOccludedChanged: Qt.callLater(publishOrigins)
+        onNotificationOccludedChanged: Qt.callLater(publishOrigins)
+        onRecordingOccludedChanged: Qt.callLater(publishOrigins)
+        onSystemOccludedChanged: Qt.callLater(publishOrigins)
+
         Item {
             id: barContent
 
@@ -242,6 +310,8 @@ Variants {
 
             ShellSurface {
                 id: workspaceIsland
+                enabled: !bar.workspaceOccluded
+                opacity: bar.workspaceOccluded ? 0 : 1
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -394,6 +464,7 @@ Variants {
 
             NowPlayingIsland {
                 id: mediaIsland
+                occluded: bar.mediaOccluded
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onHeightChanged: Qt.callLater(bar.publishOrigins)
                 onMainHoverChanged: bar.publishOrigins()
@@ -502,6 +573,8 @@ Variants {
 
             ShellSurface {
                 id: notificationIsland
+                enabled: !bar.notificationOccluded
+                opacity: bar.notificationOccluded ? 0 : 1
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -574,6 +647,8 @@ Variants {
 
             ShellSurface {
                 id: recordingIsland
+                enabled: !bar.recordingOccluded
+                opacity: bar.recordingOccluded ? 0 : 1
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -633,6 +708,8 @@ Variants {
 
             SystemIsland {
                 id: systemIsland
+                enabled: !bar.systemOccluded
+                opacity: bar.systemOccluded ? 0 : 1
                 onFrameHoverChanged: Qt.callLater(bar.publishOrigins)
                 onFramePressedChanged: bar.publishOrigins()
                 onYChanged: Qt.callLater(bar.publishOrigins)
