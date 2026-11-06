@@ -92,7 +92,17 @@ Item {
                     panel.switchLaunched();
                 else
                     panel.switchFinished();
-                if (status.phase === "completed" || status.phase === "failed" || status.phase === "cancelled") {
+                if (status.running) {
+                    const target = panel.themeLabel(status.target).toUpperCase();
+                    const phaseLabels = {
+                        preparing: "PREPARING",
+                        building: "BUILDING",
+                        authorizing: "AWAITING AUTHORIZATION FOR",
+                        activating: "APPLYING"
+                    };
+                    panel.statusText = (phaseLabels[status.phase] || "APPLYING") + " " + target + "…";
+                    panel.statusError = false;
+                } else if (status.phase === "completed" || status.phase === "failed" || status.phase === "cancelled") {
                     panel.statusText = status.phase === "completed" ? "THEME ACTIVATED" : status.phase === "cancelled" ? "THEME BUILD CANCELLED" : "LAST THEME ACTIVATION FAILED";
                     panel.statusError = status.phase === "failed";
                 }
@@ -629,34 +639,31 @@ Item {
             }
         }
 
-        Row {
-            width: parent.width
-            visible: panel.operationRunning
-            spacing: panel.theme.spacing2
-            Text {
-                width: Math.max(1, parent.width - cancelButton.width - parent.spacing)
-                anchors.verticalCenter: parent.verticalCenter
-                text: panel.operationPhase.toUpperCase() + " · " + panel.themeLabel(panel.operationTarget)
-                color: panel.theme.accent
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontKeyHint
-                elide: Text.ElideRight
-            }
-            ShellAction {
-                id: cancelButton
-                width: 125
-                height: 36
-                runtime: panel.runtime
-                theme: panel.theme
-                motion: panel.motion
-                compact: true
-                horizontalCompact: true
-                title: panel.operationPhase === "building" || panel.operationPhase === "preparing" ? "Cancel build" : "Activating"
-                icon: "󰅖"
-                shortcut: "X"
-                enabled: panel.operationPhase === "building" || panel.operationPhase === "preparing"
-                onActivated: panel.cancelOperation()
-            }
+        // Progress belongs in the status text below. Only offer a second
+        // control while cancellation is actually safe.
+        TextMetrics {
+            id: cancelLabelMetrics
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(10)
+            font.weight: Font.DemiBold
+            text: "Cancel build"
+        }
+
+        ShellAction {
+            id: cancelButton
+            anchors.right: parent.right
+            width: Math.max(180, cancelLabelMetrics.advanceWidth + panel.theme.spacing3 * 2 + panel.theme.spacing2 * 2 + panel.theme.fontSize(15) + panel.theme.keycapHeight)
+            height: 36
+            visible: panel.operationRunning && (panel.operationPhase === "building" || panel.operationPhase === "preparing")
+            runtime: panel.runtime
+            theme: panel.theme
+            motion: panel.motion
+            compact: true
+            horizontalCompact: true
+            title: "Cancel build"
+            icon: "󰜺"
+            shortcut: "X"
+            onActivated: panel.cancelOperation()
         }
         Text {
             width: parent.width
