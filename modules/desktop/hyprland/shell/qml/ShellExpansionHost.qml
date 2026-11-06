@@ -12,7 +12,16 @@ PanelWindow {
     required property Theme theme
     required property Motion motion
     required property ShellExpansionState expansionState
+    required property RecordingState recordingState
+    required property NotificationState notificationState
+    property var occludedIslands: ({})
     property var barWindows: []
+
+    readonly property var currentOcclusions: screen && occludedIslands[screen.name] ? occludedIslands[screen.name] : ({})
+    readonly property bool recordingStatusInHub: expansionState.hasCurrent && !!currentOcclusions.recording && recordingState.visibleInBar
+    readonly property bool notificationStatusInHub: expansionState.hasCurrent && !!currentOcclusions.notifications && notificationState.unreadCount > 0
+
+    signal recordingStopRequested
 
     property Component mediaComponent: null
     property Component systemComponent: null
@@ -387,6 +396,13 @@ PanelWindow {
         onActivated: host.cycleTab(1)
     }
 
+    Shortcut {
+        sequence: "Shift+Q"
+        context: Qt.ApplicationShortcut
+        enabled: host.recordingStatusInHub && host.recordingState.capturing
+        onActivated: host.recordingStopRequested()
+    }
+
     // The Controls root keeps U/D half-page navigation as well as PageUp/Down.
     // Never intercept D in the captures detail, where it requests deletion.
     Shortcut {
@@ -662,6 +678,48 @@ PanelWindow {
             // the shorter Home, Now Playing and Activity panels.
             y: Math.max(0, host.visibleFooterBottom - height - host.footerBottomClearance)
             spacing: host.theme.spacing1
+
+            // The footer stays inside the visible silhouette even on a
+            // small screen. Critical actions are transferred here whenever
+            // their bar island is covered by the expanding hub.
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: host.theme.spacing2
+                visible: host.recordingStatusInHub || host.notificationStatusInHub
+                height: visible ? host.theme.spacing6 + host.theme.spacing4 : 0
+
+                ShellAction {
+                    visible: host.recordingStatusInHub
+                    width: visible ? Math.min(220, Math.max(140, implicitWidth)) : 0
+                    height: parent.height
+                    runtime: host.runtime
+                    theme: host.theme
+                    motion: host.motion
+                    compact: true
+                    horizontalCompact: true
+                    active: host.recordingState.capturing
+                    activeColor: host.theme.warning
+                    enabled: host.recordingState.capturing
+                    title: host.recordingState.capturing ? "● REC " + host.recordingState.elapsedLabel + " · Stop" : host.recordingState.finalising ? "Saving recording" : host.recordingState.phase === "completed" ? "Recording saved" : "Recording failed"
+                    shortcut: host.recordingState.capturing ? "SHIFT+Q" : ""
+                    onActivated: host.recordingStopRequested()
+                }
+
+                ShellAction {
+                    visible: host.notificationStatusInHub
+                    width: visible ? Math.min(210, Math.max(120, implicitWidth)) : 0
+                    height: parent.height
+                    runtime: host.runtime
+                    theme: host.theme
+                    motion: host.motion
+                    compact: true
+                    horizontalCompact: true
+                    active: host.notificationState.hasCriticalUnread
+                    activeColor: host.theme.critical
+                    title: host.notificationState.hasCriticalUnread ? "● Critical alerts" : host.notificationState.unreadCount + " notifications"
+                    onActivated: host.navigate("activity")
+                }
+            }
 
             // Global navigation lives here; local widget hints remain
             // next to their controls in each view.

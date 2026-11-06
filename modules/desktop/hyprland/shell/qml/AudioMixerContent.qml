@@ -11,20 +11,31 @@ FocusScope {
 
     property bool active: false
     property int selectedIndex: 0
+    property var selectedNode: null
     readonly property var streams: (system.audioApplicationStreams || []).concat(system.audioCaptureStreams || [])
 
     signal closeRequested
     signal keyboardRequested
 
     implicitWidth: 730
-    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + (streams.length > 0 ? 120 : 148) + footer.implicitHeight
+    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + (streams.length > 0 ? 318 : 148) + footer.implicitHeight
     visible: active
     focus: active
 
-    onStreamsChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, streams.length - 1)))
+    // A PipeWire node can move in the model while remaining the same active
+    // stream. Keep keyboard focus attached to its object identity.
+    function selectIndex(index: int): void {
+        selectedIndex = Math.max(0, Math.min(index, Math.max(0, streams.length - 1)));
+        selectedNode = streams[selectedIndex] || null;
+    }
+
+    onStreamsChanged: {
+        const current = streams.indexOf(selectedNode);
+        selectIndex(current >= 0 ? current : selectedIndex);
+    }
     onActiveChanged: {
         if (active) {
-            selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, streams.length - 1)));
+            selectIndex(selectedIndex);
             Qt.callLater(() => {
                 if (mixer.active)
                     mixer.keyboardRequested();
@@ -77,7 +88,7 @@ FocusScope {
             bottomMargin: mixer.theme.spacing4
         }
         model: mixer.streams.length
-        orientation: ListView.Horizontal
+        orientation: ListView.Vertical
         spacing: mixer.theme.spacing3
         clip: true
         currentIndex: mixer.selectedIndex
@@ -87,122 +98,64 @@ FocusScope {
                 positionViewAtIndex(currentIndex, ListView.Contain);
         }
 
-        delegate: ShellSurface {
+        // Only delegates in the visible viewport (and the small ListView
+        // cache) create PipeWire peak monitors. Large stream sets stay bounded.
+        delegate: Item {
             id: streamRow
             required property int index
             readonly property var stream: mixer.streams[index] || null
             readonly property bool chosen: index === mixer.selectedIndex
+            readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
+            readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
+            readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
 
-            width: Math.min(340, Math.max(245, (list.width - mixer.theme.spacing3) / 2))
-            height: 112
-            theme: mixer.theme
-            motion: mixer.motion
-            cornerRadius: theme.radiusMedium
-            surfaceLayer: ShellSurface.Group
-            fillColor: chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
-            borderColor: chosen ? theme.roleColor("audio") : "transparent"
-            borderWidth: chosen ? theme.borderFocus : 0
+            width: list.width
+            height: 92 + (sectionStart ? 26 : 0)
 
-            StateLayer {
-                theme: mixer.theme
-                motion: mixer.motion
-                cornerRadius: mixer.theme.radiusMedium
-                onActivated: mixer.selectedIndex = streamRow.index
+            Text {
+                visible: streamRow.sectionStart
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                }
+                height: 23
+                text: streamRow.capture ? "CAPTURE · " + mixer.system.audioCaptureStreams.length : "PLAYBACK · " + mixer.system.audioApplicationStreams.length
+                color: mixer.theme.readableRoleColor("audio")
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(10)
+                font.weight: Font.DemiBold
             }
 
-            Column {
+            ShellSurface {
                 anchors {
-                    fill: parent
-                    margins: mixer.theme.spacing3
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    topMargin: streamRow.sectionStart ? 26 : 0
                 }
-                spacing: mixer.theme.spacing2
+                height: 92
+                theme: mixer.theme
+                motion: mixer.motion
+                cornerRadius: theme.radiusMedium
+                surfaceLayer: ShellSurface.Group
+                fillColor: streamRow.chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
+                borderColor: streamRow.chosen ? theme.roleColor("audio") : "transparent"
+                borderWidth: streamRow.chosen ? theme.borderFocus : 0
 
-                Row {
-                    width: parent.width
-                    spacing: mixer.theme.spacing2
-
-                    Column {
-                        width: parent.width - volumeLabel.implicitWidth - muteButton.width - parent.spacing * 2
-                        spacing: 2
-                        MarqueeText {
-                            width: parent.width
-                            text: streamRow.stream ? mixer.system.streamDisplayName(streamRow.stream) : ""
-                            color: streamRow.stream?.audio && streamRow.stream?.audio.muted ? mixer.theme.warning : mixer.theme.textStrong
-                            font.family: mixer.runtime.fontMono
-                            font.pixelSize: mixer.theme.fontSize(12)
-                            font.weight: Font.DemiBold
-                        }
-                        MarqueeText {
-                            width: parent.width
-                            text: (mixer.system.audioCaptureStreams.indexOf(streamRow.stream) >= 0 ? "INPUT · " : "OUTPUT · ") + (streamRow.stream ? mixer.system.streamTechnicalName(streamRow.stream) : "")
-                            color: mixer.theme.textMuted
-                            font.family: mixer.runtime.fontMono
-                            font.pixelSize: mixer.theme.fontSize(9)
-                        }
+                AudioStreamControl {
+                    anchors {
+                        fill: parent
+                        margins: mixer.theme.spacing3
                     }
-
-                    Text {
-                        id: volumeLabel
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: streamRow.stream?.audio ? (streamRow.stream?.audio.muted ? "MUTED" : Math.round(streamRow.stream?.audio.volume * 100) + "%") : "—"
-                        color: mixer.theme.audioLevelColor(!!streamRow.stream?.audio?.muted)
-                        font.family: mixer.runtime.fontMono
-                        font.pixelSize: mixer.theme.fontSize(10)
-                        font.weight: Font.DemiBold
-                    }
-
-                    IconShortcutAction {
-                        id: muteButton
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 48
-                        height: 36
-                        runtime: mixer.runtime
-                        theme: mixer.theme
-                        motion: mixer.motion
-                        icon: streamRow.stream?.audio?.muted ? "󰝟" : "󰕾"
-                        title: "Mute application"
-                        active: !!streamRow.stream?.audio?.muted
-                        activeColor: mixer.theme.warning
-                        enabled: !!streamRow.stream?.audio
-                        shortcut: streamRow.chosen ? "M" : ""
-                        onActivated: {
-                            mixer.selectedIndex = streamRow.index;
-                            mixer.system.toggleStreamMute(streamRow.stream);
-                        }
-                    }
-                }
-
-                Row {
-                    width: parent.width
-                    height: 32
-                    spacing: mixer.theme.spacing3
-
-                    AudioPeakMeter {
-                        id: streamMeter
-                        width: Math.min(154, Math.max(105, parent.width * 0.23))
-                        height: 29
-                        anchors.verticalCenter: parent.verticalCenter
-                        theme: mixer.theme
-                        node: streamRow.stream
-                        muted: !!streamRow.stream?.audio?.muted
-                        monitoring: mixer.active
-                    }
-
-                    ShellSlider {
-                        width: Math.max(1, parent.width - streamMeter.width - parent.spacing)
-                        anchors.verticalCenter: parent.verticalCenter
-                        theme: mixer.theme
-                        motion: mixer.motion
-                        enabled: !!streamRow.stream?.audio
-                        value: streamRow.stream?.audio ? streamRow.stream?.audio.volume : 0
-                        accentColor: mixer.theme.audioLevelColor(!!streamRow.stream?.audio?.muted)
-                        trackHeight: 11
-                        handleSize: 19
-                        onValueRequested: value => {
-                            mixer.selectedIndex = streamRow.index;
-                            mixer.system.setStreamVolume(streamRow.stream, value);
-                        }
-                    }
+                    system: mixer.system
+                    runtime: mixer.runtime
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    stream: streamRow.stream
+                    selected: streamRow.chosen
+                    capture: streamRow.capture
+                    monitoring: mixer.active && list.visible && streamRow.inViewport
+                    onSelectedRequested: mixer.selectIndex(streamRow.index)
                 }
             }
         }
@@ -264,11 +217,11 @@ FocusScope {
         theme: mixer.theme
         hints: [
             {
-                shortcut: "J/K · ARROWS",
+                shortcut: "TAB · J/K",
                 label: "Select"
             },
             {
-                shortcut: "U/D · PGUP/PGDN",
+                shortcut: "PGUP/PGDN",
                 label: "Page"
             },
             {
@@ -284,24 +237,23 @@ FocusScope {
 
     // One keyboard owner per hub. The parent FocusScope forwards local keys
     // here rather than racing a nested FocusScope for layer-shell focus.
-    function handleKey(key: int): bool {
+    function handleKey(key: int, modifiers: int): bool {
         if (!active)
             return false;
         if (key === Qt.Key_Escape) {
             closeRequested();
-        } else if (key === Qt.Key_Up || key === Qt.Key_K) {
-            selectedIndex = Math.max(0, selectedIndex - 1);
-        } else if (key === Qt.Key_Down || key === Qt.Key_J) {
-            selectedIndex = Math.min(Math.max(0, streams.length - 1), selectedIndex + 1);
+        } else if (key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Down || key === Qt.Key_J || key === Qt.Key_Tab || key === Qt.Key_Backtab) {
+            const backwards = key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Backtab || (key === Qt.Key_Tab && (modifiers & Qt.ShiftModifier));
+            selectIndex(Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + (backwards ? -1 : 1))));
         } else if (key === Qt.Key_U || key === Qt.Key_PageUp || key === Qt.Key_D || key === Qt.Key_PageDown) {
-            const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 64;
-            const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight) / 2));
-            selectedIndex = Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows)));
+            const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
+            const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight)));
+            selectIndex(Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows))));
         } else if (key === Qt.Key_Left || key === Qt.Key_H) {
             adjustSelected(-0.05);
         } else if (key === Qt.Key_Right || key === Qt.Key_L) {
             adjustSelected(0.05);
-        } else if (key === Qt.Key_M) {
+        } else if (key === Qt.Key_M || key === Qt.Key_Return || key === Qt.Key_Enter) {
             toggleSelectedMute();
         } else {
             return false;

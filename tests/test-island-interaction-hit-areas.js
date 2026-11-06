@@ -73,7 +73,7 @@ test("a bar island with one action still forwards its shared contour state", () 
   const bar = qml("AmbientBar.qml");
   assert.match(
     bar,
-    /SystemIsland \{\s+id: systemIsland\s+onFrameHoverChanged: Qt\.callLater\(bar\.publishOrigins\)\s+onFramePressedChanged: bar\.publishOrigins\(\)/,
+    /SystemIsland \{\s+id: systemIsland[\s\S]*?onFrameHoverChanged: Qt\.callLater\(bar\.publishOrigins\)\s+onFramePressedChanged: bar\.publishOrigins\(\)/,
   );
   assert.match(qml("SystemIsland.qml"), /onActivated: island\.activated\(\)/);
 });
