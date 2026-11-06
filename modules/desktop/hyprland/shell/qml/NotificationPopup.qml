@@ -20,7 +20,10 @@ PanelWindow {
     readonly property int cardGap: theme.spacing2 + theme.spacing1
     readonly property int toastCount: notificationState.popups.count
     property int contourEpoch: 0
-    readonly property int visibleToastCount: Math.max(1, Math.min(3, toastCount, Math.floor(((screen ? screen.height : 1440) - margins.top - theme.frameThickness + cardGap) / (cardHeight + cardGap))))
+    // Reserve the full bounded stack, including when there are no toasts.
+    // Resizing the right-anchored Wayland surface as notifications arrive
+    // causes the compositor to glide the entire popup instead of just cards.
+    readonly property int maxToastSlots: Math.max(1, Math.min(3, Math.floor(((screen ? screen.height : 1440) - dockTop - theme.frameThickness + cardGap) / (cardHeight + cardGap))))
     readonly property var frameDocks: {
         const epoch = contourEpoch;
         const result = [];
@@ -64,7 +67,7 @@ PanelWindow {
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
     implicitWidth: Math.max(1, Math.min(440, (screen ? screen.width : 440) - (frameConnected ? theme.frameThickness : theme.panelSideOffset) * 2))
-    implicitHeight: Math.max(1, visibleToastCount * cardHeight + Math.max(0, visibleToastCount - 1) * cardGap)
+    implicitHeight: Math.max(1, maxToastSlots * cardHeight + Math.max(0, maxToastSlots - 1) * cardGap)
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
@@ -144,7 +147,7 @@ PanelWindow {
             width: popup.frameConnected ? popup.width * attachmentProgress : popup.width
             height: popup.cardHeight
             clip: popup.frameConnected
-            visible: slot < popup.visibleToastCount || evicted
+            visible: slot < popup.maxToastSlots || evicted
 
             Behavior on y {
                 NumberAnimation {
