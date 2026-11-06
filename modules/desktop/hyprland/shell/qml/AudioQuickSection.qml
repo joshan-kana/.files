@@ -19,6 +19,16 @@ Column {
 
     property bool chooserOpen: false
     property int chooserIndex: 0
+    property var chooserNode: null
+    onDevicesChanged: {
+        if (chooserOpen) {
+            const next = devices.indexOf(chooserNode);
+            chooserIndex = next < 0 ? Math.min(chooserIndex, Math.max(0, devices.length - 1)) : next;
+            chooserNode = devices[chooserIndex] || null;
+            if (devices.length === 0)
+                chooserOpen = false;
+        }
+    }
     function toggleDeviceChooser(): void {
         if (devices.length === 0)
             return;
@@ -26,12 +36,15 @@ Column {
             chooserOpen = false;
         } else {
             chooserIndex = Math.max(0, devices.indexOf(device));
+            chooserNode = devices[chooserIndex] || null;
             chooserOpen = true;
         }
     }
     function moveDeviceSelection(delta: int): void {
-        if (devices.length > 0)
+        if (devices.length > 0) {
             chooserIndex = (chooserIndex + delta + devices.length) % devices.length;
+            chooserNode = devices[chooserIndex];
+        }
     }
     function selectDevice(index: int): void {
         const node = devices[index];
@@ -46,127 +59,262 @@ Column {
     readonly property int percent: microphone ? system.microphoneVolumePercent : system.volumePercent
     readonly property var device: microphone ? system.audioSource : system.audioSink
     readonly property var devices: microphone ? system.inputDevices : system.outputDevices
-    readonly property var streams: (microphone ? system.audioCaptureStreams : system.audioApplicationStreams).slice(0, 2)
+    readonly property var streams: microphone ? system.audioCaptureStreams : system.audioApplicationStreams
+    readonly property int activeStreamCount: streams.length
 
     spacing: theme.spacing2
 
-    Row {
+    // One surface contains the device, stream controls and the full mixer entry.
+    // The scrollable stream viewport stays bounded as applications change.
+    ShellSurface {
         id: inlineControl
         visible: quick.inline
         width: parent.width
-        height: 66
-        spacing: quick.theme.spacing2
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: quick.muted ? (quick.microphone ? "󰍭" : "󰖁") : (quick.microphone ? "󰍬" : "󰕾")
-            color: quick.theme.audioLevelColor(quick.muted)
-            font.family: "Symbols Nerd Font"
-            font.pixelSize: quick.theme.fontSize(19)
+        height: inlineContents.implicitHeight + quick.theme.spacing2 * 2
+        theme: quick.theme
+        motion: quick.motion
+        surfaceLayer: ShellSurface.Control
+        cornerRadius: quick.theme.radiusMedium
+        Accessible.role: Accessible.Grouping
+        Accessible.name: (quick.microphone ? "Input" : "Output") + ", " + (quick.muted ? "muted" : quick.percent + " percent")
+        hovered: tileHover.hovered
+        HoverHandler {
+            id: tileHover
         }
+        fillColor: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.expressiveSurfaceStrong : quick.theme.expressiveSurface
+        borderColor: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.roleColor("audio") : "transparent"
+        borderWidth: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.borderFocus : 0
 
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            width: 82
-            text: (quick.selectedAudioIndex === quick.baseIndex ? "▸ " : "") + (quick.microphone ? "Input" : "Output")
-            color: quick.selectedAudioIndex === quick.baseIndex ? quick.theme.audioLevelColor(quick.muted) : quick.theme.textStrong
-            font.family: quick.runtime.fontMono
-            font.pixelSize: quick.theme.fontSize(12)
-            font.weight: Font.DemiBold
-        }
+        Column {
+            id: inlineContents
+            x: quick.theme.spacing2
+            y: quick.theme.spacing2
+            width: Math.max(1, parent.width - quick.theme.spacing2 * 2)
+            spacing: quick.theme.spacing1
 
-        AudioPeakMeter {
-            id: inlineMeter
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(106, Math.max(66, inlineControl.width * 0.15))
-            height: 29
-            theme: quick.theme
-            node: quick.device
-            muted: quick.muted
-            monitoring: quick.meterEnabled
-        }
+            Item {
+                width: parent.width
+                height: 30
 
-        ShellSlider {
-            width: Math.max(1, inlineControl.width - 82 - inlineControl.children[0].implicitWidth - inlineMeter.width - 39 - inlineMute.width - inlineDevices.width - inlineMixer.width - inlineControl.spacing * (quick.showMixer ? 7 : 6))
-            anchors.verticalCenter: parent.verticalCenter
-            theme: quick.theme
-            motion: quick.motion
-            enabled: quick.available
-            value: quick.level
-            animateValueChanges: true
-            accentColor: quick.theme.audioLevelColor(quick.muted)
-            trackHeight: 11
-            handleSize: 18
-            onValueRequested: value => {
-                if (quick.microphone)
-                    quick.system.setMicrophoneVolume(value);
-                else
-                    quick.system.setVolume(value);
+                StateLayer {
+                    anchors.fill: parent
+                    theme: quick.theme
+                    motion: quick.motion
+                    cornerRadius: quick.theme.radiusMedium
+                    disabled: !quick.available
+                    Accessible.role: Accessible.Button
+                    Accessible.name: (quick.microphone ? "Toggle microphone mute" : "Toggle output mute")
+                    onActivated: {
+                        quick.selectionRequested(quick.baseIndex);
+                        if (quick.microphone)
+                            quick.system.toggleMicrophoneMute();
+                        else
+                            quick.system.toggleMute();
+                    }
+                }
+
+                Row {
+                    anchors.fill: parent
+                    spacing: quick.theme.spacing2
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: quick.muted ? (quick.microphone ? "󰍭" : "󰖁") : (quick.microphone ? "󰍬" : "󰕾")
+                        color: quick.theme.audioLevelColor(quick.muted)
+                        font.family: "Symbols Nerd Font"
+                        font.pixelSize: quick.theme.fontSize(19)
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - parent.children[0].implicitWidth - percentage.implicitWidth - muteHint.implicitWidth - parent.spacing * 3)
+                        text: quick.microphone ? "Input" : "Output"
+                        elide: Text.ElideRight
+                        color: quick.theme.textStrong
+                        font.family: quick.runtime.fontMono
+                        font.pixelSize: quick.theme.fontSize(12)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        id: percentage
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: quick.muted ? "MUTE" : quick.percent + "%"
+                        color: quick.theme.audioLevelColor(quick.muted)
+                        font.family: quick.runtime.fontMono
+                        font.pixelSize: quick.theme.fontSize(10)
+                    }
+                    KeyHint {
+                        id: muteHint
+                        anchors.verticalCenter: parent.verticalCenter
+                        runtime: quick.runtime
+                        theme: quick.theme
+                        shortcut: quick.microphone ? "X" : "M"
+                        compact: true
+                        emphasized: quick.selectedAudioIndex === quick.baseIndex
+                    }
+                }
             }
-        }
 
-        Text {
-            width: 39
-            anchors.verticalCenter: parent.verticalCenter
-            text: quick.muted ? "MUTE" : quick.percent + "%"
-            horizontalAlignment: Text.AlignRight
-            color: quick.theme.text
-            font.family: quick.runtime.fontMono
-            font.pixelSize: quick.theme.fontSize(11)
-        }
+            Row {
+                width: parent.width
+                height: 27
+                spacing: quick.theme.spacing3
 
-        IconShortcutAction {
-            id: inlineMute
-            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "M" : (quick.microphone ? "X" : "")
-            width: 48
-            height: 66
-            anchors.verticalCenter: parent.verticalCenter
-            runtime: quick.runtime
-            theme: quick.theme
-            motion: quick.motion
-            active: quick.muted
-            activeColor: quick.theme.warning
-            enabled: quick.available
-            icon: quick.microphone ? (quick.muted ? "󰍭" : "󰍬") : (quick.muted ? "󰖁" : "󰕾")
-            title: "Mute"
-            onActivated: {
-                if (quick.microphone)
-                    quick.system.toggleMicrophoneMute();
-                else
-                    quick.system.toggleMute();
+                AudioPeakMeter {
+                    id: inlineMeter
+                    width: Math.min(106, Math.max(65, parent.width * 0.2))
+                    height: 27
+                    anchors.verticalCenter: parent.verticalCenter
+                    theme: quick.theme
+                    node: quick.device
+                    muted: quick.muted
+                    monitoring: quick.meterEnabled && quick.inline
+                }
+                ShellSlider {
+                    width: Math.max(1, parent.width - inlineMeter.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    theme: quick.theme
+                    motion: quick.motion
+                    enabled: quick.available
+                    value: quick.level
+                    animateValueChanges: true
+                    accentColor: quick.theme.audioLevelColor(quick.muted)
+                    trackHeight: 10
+                    handleSize: 18
+                    Accessible.role: Accessible.Slider
+                    Accessible.name: quick.microphone ? "Microphone level" : "Output level"
+                    onInteractionStarted: quick.selectionRequested(quick.baseIndex)
+                    onValueRequested: value => {
+                        quick.selectionRequested(quick.baseIndex);
+                        if (quick.microphone)
+                            quick.system.setMicrophoneVolume(value);
+                        else
+                            quick.system.setVolume(value);
+                    }
+                }
             }
-        }
 
-        IconShortcutAction {
-            id: inlineDevices
-            // The selected audio row owns the device-picker key hint.
-            shortcut: quick.selectedAudioIndex === quick.baseIndex ? "P" : ""
-            width: 44
-            height: 66
-            anchors.verticalCenter: parent.verticalCenter
-            runtime: quick.runtime
-            theme: quick.theme
-            motion: quick.motion
-            active: quick.chooserOpen
-            enabled: quick.devices.length > 0
-            icon: "󰏴"
-            title: "Select audio device"
-            onActivated: quick.toggleDeviceChooser()
-        }
+            Item {
+                width: parent.width
+                height: 25
 
-        IconShortcutAction {
-            id: inlineMixer
-            shortcut: "SHIFT+M"
-            visible: quick.showMixer
-            width: quick.showMixer ? 44 : 0
-            height: 66
-            anchors.verticalCenter: parent.verticalCenter
-            runtime: quick.runtime
-            theme: quick.theme
-            motion: quick.motion
-            icon: "󰓃"
-            title: "Application mixer"
-            onActivated: quick.mixerRequested()
+                StateLayer {
+                    anchors.fill: parent
+                    theme: quick.theme
+                    motion: quick.motion
+                    cornerRadius: quick.theme.radiusSmall
+                    disabled: quick.devices.length === 0
+                    Accessible.role: Accessible.Button
+                    Accessible.name: quick.microphone ? "Choose input device" : "Choose output device"
+                    onActivated: {
+                        quick.selectionRequested(quick.baseIndex);
+                        quick.toggleDeviceChooser();
+                    }
+                }
+                Row {
+                    anchors.fill: parent
+                    spacing: quick.theme.spacing2
+                    MarqueeText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - deviceHint.implicitWidth - parent.spacing)
+                        text: quick.device ? (quick.device.description || quick.device.name) : "No audio device"
+                        color: quick.theme.textMuted
+                        font.family: quick.runtime.fontMono
+                        font.pixelSize: quick.theme.fontSize(10)
+                    }
+                    KeyHint {
+                        id: deviceHint
+                        anchors.verticalCenter: parent.verticalCenter
+                        shortcut: quick.selectedAudioIndex === quick.baseIndex ? "P" : ""
+                        runtime: quick.runtime
+                        theme: quick.theme
+                        compact: true
+                    }
+                }
+            }
+
+            Text {
+                visible: quick.activeStreamCount > 0
+                width: parent.width
+                height: visible ? 16 : 0
+                text: (quick.microphone ? "CAPTURE STREAMS · " : "APPLICATION STREAMS · ") + quick.activeStreamCount
+                color: quick.theme.readableRoleColor("audio")
+                font.family: quick.runtime.fontMono
+                font.pixelSize: quick.theme.fontSize(9)
+                font.weight: Font.DemiBold
+            }
+
+            ListView {
+                id: inlineStreams
+                width: parent.width
+                visible: quick.activeStreamCount > 0
+                height: visible ? Math.min(2, quick.activeStreamCount) * 64 + Math.max(0, Math.min(2, quick.activeStreamCount) - 1) * spacing : 0
+                model: quick.activeStreamCount
+                orientation: ListView.Vertical
+                spacing: quick.theme.spacing1
+                clip: true
+                cacheBuffer: 70
+                interactive: quick.activeStreamCount > 2
+                boundsBehavior: Flickable.StopAtBounds
+                currentIndex: quick.selectedAudioIndex > quick.baseIndex && quick.selectedAudioIndex <= quick.baseIndex + quick.activeStreamCount ? quick.selectedAudioIndex - quick.baseIndex - 1 : -1
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0)
+                        positionViewAtIndex(currentIndex, ListView.Contain);
+                }
+
+                delegate: AudioStreamControl {
+                    id: streamEntry
+                    required property int index
+                    readonly property bool inViewport: y + height > inlineStreams.contentY && y < inlineStreams.contentY + inlineStreams.height
+                    width: inlineStreams.width
+                    height: 64
+                    compact: true
+                    capture: quick.microphone
+                    selected: quick.selectedAudioIndex === quick.baseIndex + index + 1
+                    monitoring: quick.meterEnabled && quick.inline && streamEntry.inViewport
+                    stream: quick.streams[index] || null
+                    system: quick.system
+                    runtime: quick.runtime
+                    theme: quick.theme
+                    motion: quick.motion
+                    onSelectedRequested: quick.selectionRequested(quick.baseIndex + index + 1)
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: 19
+                visible: quick.showMixer
+                StateLayer {
+                    anchors.fill: parent
+                    theme: quick.theme
+                    motion: quick.motion
+                    cornerRadius: quick.theme.radiusSmall
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Open application mixer"
+                    onActivated: quick.mixerRequested()
+                }
+                Row {
+                    anchors.fill: parent
+                    spacing: quick.theme.spacing2
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(1, parent.width - mixerHint.implicitWidth - parent.spacing)
+                        text: quick.system.audioApplicationStreams.length + " playback · " + quick.system.audioCaptureStreams.length + " capture streams"
+                        color: quick.theme.textMuted
+                        font.family: quick.runtime.fontMono
+                        font.pixelSize: quick.theme.fontSize(9)
+                        elide: Text.ElideRight
+                    }
+                    KeyHint {
+                        id: mixerHint
+                        anchors.verticalCenter: parent.verticalCenter
+                        shortcut: "SHIFT+M"
+                        runtime: quick.runtime
+                        theme: quick.theme
+                        compact: true
+                    }
+                }
+            }
         }
     }
 
@@ -233,6 +381,7 @@ Column {
 
     ListView {
         id: deviceList
+        parent: quick.inline ? inlineContents : quick
         width: parent.width
         height: quick.chooserOpen ? Math.min(4, quick.devices.length) * 40 : 0
         visible: quick.chooserOpen
@@ -342,77 +491,6 @@ Column {
                         quick.system.toggleMicrophoneMute();
                     else
                         quick.system.toggleMute();
-                }
-            }
-        }
-    }
-
-    Repeater {
-        // Retain two delegates across transient PipeWire stream changes.
-        // The underlying JS-array model must not own delegate metaobjects.
-        model: 2
-
-        delegate: Row {
-            id: streamRow
-            required property int index
-            readonly property var stream: quick.streams[index] || null
-            visible: !!stream
-            width: quick.width
-            height: visible ? 36 : 0
-            spacing: quick.theme.spacing2
-
-            Text {
-                width: 116
-                anchors.verticalCenter: parent.verticalCenter
-                text: (quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "▸ " : "") + (streamRow.stream ? quick.system.streamDisplayName(streamRow.stream) : "")
-                elide: Text.ElideRight
-                color: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? quick.theme.audioLevelColor(!!streamRow.stream?.audio?.muted) : quick.theme.textMuted
-                font.family: quick.runtime.fontMono
-                font.pixelSize: quick.theme.fontSize(9)
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: quick.selectionRequested(quick.baseIndex + streamRow.index + 1)
-                }
-            }
-            AudioPeakMeter {
-                id: streamMeter
-                anchors.verticalCenter: parent.verticalCenter
-                width: 105
-                height: 28
-                theme: quick.theme
-                node: streamRow.stream
-                muted: !!streamRow.stream?.audio?.muted
-                monitoring: quick.meterEnabled
-            }
-            ShellSlider {
-                width: Math.max(1, parent.width - parent.children[0].width - streamMeter.width - streamMute.width - parent.spacing * 3)
-                anchors.verticalCenter: parent.verticalCenter
-                theme: quick.theme
-                motion: quick.motion
-                value: streamRow.stream?.audio?.volume ?? 0
-                animateValueChanges: true
-                enabled: !!streamRow.stream?.audio
-                accentColor: quick.theme.audioLevelColor(!!streamRow.stream?.audio?.muted)
-                trackHeight: 5
-                handleSize: 12
-                onValueRequested: value => quick.system.setStreamVolume(streamRow.stream, value)
-            }
-            IconShortcutAction {
-                id: streamMute
-                width: 48
-                height: 36
-                runtime: quick.runtime
-                theme: quick.theme
-                motion: quick.motion
-                icon: streamRow.stream?.audio?.muted ? "󰖁" : "󰕾"
-                title: "Mute application"
-                active: !!streamRow.stream?.audio?.muted
-                activeColor: quick.theme.warning
-                enabled: !!streamRow.stream?.audio
-                shortcut: quick.selectedAudioIndex === quick.baseIndex + streamRow.index + 1 ? "M" : ""
-                onActivated: {
-                    quick.selectionRequested(quick.baseIndex + streamRow.index + 1);
-                    quick.system.toggleStreamMute(streamRow.stream);
                 }
             }
         }

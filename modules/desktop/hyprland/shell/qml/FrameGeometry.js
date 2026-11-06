@@ -1,3 +1,37 @@
+// Occluded islands retain their layout geometry but yield rendering and input
+// to an expanded shell surface. Separate enter/exit thresholds keep the bar
+// from flashing at fractional-pixel crossings during animation.
+function islandOccluded(island, hub, wasOccluded, clearance = 8) {
+  if (!hub || hub.visible === false || !island) return false;
+  if (
+    ![
+      island.x,
+      island.y,
+      island.width,
+      island.height,
+      hub.x,
+      hub.y,
+      hub.width,
+      hub.height,
+    ].every(Number.isFinite)
+  )
+    return false;
+  if (
+    island.width <= 0 ||
+    island.height <= 0 ||
+    hub.width <= 0 ||
+    hub.height <= 0
+  )
+    return false;
+  const margin = wasOccluded ? Math.max(0, clearance) : -3;
+  return (
+    island.x < hub.x + hub.width + margin &&
+    island.x + island.width > hub.x - margin &&
+    island.y < hub.y + hub.height + margin &&
+    island.y + island.height > hub.y - margin
+  );
+}
+
 // Match the lower limit used by connected frame notches when positioning
 // the navigation footer inside their visible rounded contour.
 function hubBottomLimit(width, height, thickness, radius) {
