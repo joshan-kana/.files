@@ -134,9 +134,9 @@ in
     stylix.targets.hyprland.hyprpaper.enable = false;
 
     home.shellAliases = {
-      h = "start-hyprland";
-      HI = "WLR_DRM_DEVICES=/dev/dri/card1 ${lib.getExe' config.programs.hyprland.package "start-hyprland"}";
-      HN = "WLR_DRM_DEVICES=/dev/dri/card0 LIBVA_DRIVER_NAME=nvidia GBM_BACKEND=nvidia-drm __GLX_VENDOR_LIBRARY_NAME=nvidia ${lib.getExe' config.programs.hyprland.package "start-hyprland"}";
+      h = "uwsm start hyprland.desktop";
+      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
+      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
     };
 
     wayland.windowManager.hyprland =
@@ -387,8 +387,8 @@ in
               "hyprland.start"
               (lua ''
                 function()
-                  hl.exec_cmd("systemd-run --user --quiet --collect -- nm-applet --indicator")
-                  hl.exec_cmd("systemd-run --user --quiet --collect -- dropbox")
+                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@Hyprland.target -- nm-applet --indicator")
+                  hl.exec_cmd("systemd-run --user --quiet --collect --property=PartOf=wayland-session@Hyprland.target -- dropbox")
                 end
               '')
             ];
