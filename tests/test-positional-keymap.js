@@ -204,16 +204,12 @@ test("Controls media card advertises the key that actually opens Now Playing", (
   );
 });
 
-test("audio device and mixer hints match the Controls keyboard dispatcher", () => {
-  const quick = qml("AudioQuickSection.qml");
+test("mixer and device hints match the shared Controls keyboard dispatcher", () => {
+  const mixer = qml("AudioMixerContent.qml");
+  const device = qml("AudioDeviceControl.qml");
   const controls = qml("SystemContent.qml");
-  assert.match(
-    quick,
-    /id: deviceHint[\s\S]*?shortcut: quick\.selectedAudioIndex === quick\.baseIndex \? "P" : ""/,
-  );
-  assert.match(quick, /id: deviceLink[\s\S]*?shortcut: "P"/);
-  assert.match(quick, /id: mixerHint[\s\S]*?shortcut: "SHIFT\+M"/);
-  assert.match(quick, /id: mixerLink[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(mixer, /id: expandAction[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(device, /shortcut: deviceControl\.selected \? "P" : "⌄"/);
   assert.match(
     controls,
     /shifted && event\.key === Qt\.Key_M\)\s*\{\s*root\.openMixer\(\)/,
@@ -222,6 +218,7 @@ test("audio device and mixer hints match the Controls keyboard dispatcher", () =
     controls,
     /event\.key === Qt\.Key_P\)\s*\{\s*root\.toggleSelectedAudioDeviceChooser\(\)/,
   );
+  assert.match(controls, /if \(audioDeck\.deviceChooserOpen\) \{/);
 });
 
 test("Bluetooth scanning hints never advertise paging's plain D key", () => {
