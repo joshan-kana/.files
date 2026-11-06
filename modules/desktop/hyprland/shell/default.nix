@@ -6,6 +6,8 @@
 }:
 
 let
+  sessionTarget = "wayland-session@Hyprland.target";
+
   windowEffectsToggle = pkgs.writeShellApplication {
     name = "linux-desktop-window-effects-toggle";
     runtimeInputs = [ pkgs.quickshell ];
@@ -1511,8 +1513,8 @@ in
       sessionCommand = pkgs.writeShellApplication {
         name = "linux-desktop-session";
         runtimeInputs = [
-          pkgs.hyprland
           pkgs.systemd
+          pkgs.uwsm
         ];
         text = ''
           case "''${1:-}" in
@@ -1520,7 +1522,7 @@ in
               exec systemctl suspend
               ;;
             logout)
-              exec hyprctl dispatch "hl.dsp.exit()"
+              exec uwsm stop
               ;;
             reboot)
               exec systemctl reboot
@@ -1578,8 +1580,9 @@ in
 
       systemd.user.paths.linux-desktop-wallpaper-image = {
         Unit.Description = "Reload wallpaper when the selected theme changes";
+        Unit.PartOf = [ sessionTarget ];
         Path.PathChanged = "%h/.config/linux-desktop/theme.json";
-        Install.WantedBy = [ "hyprland-session.target" ];
+        Install.WantedBy = [ sessionTarget ];
       };
 
       systemd.user.timers.linux-desktop-ical-sync = {
@@ -1597,7 +1600,7 @@ in
         linux-desktop-palette-index = {
           Unit = {
             Description = "Watch local files and bookmarks for command palette indexing";
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
           };
           Service = {
             Type = "simple";
@@ -1605,7 +1608,7 @@ in
             Restart = "on-failure";
             RestartSec = "5s";
           };
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
 
         linux-desktop-ical-sync = {
@@ -1625,9 +1628,9 @@ in
             Wants = [ "awww.service" ];
             After = [
               "awww.service"
-              "hyprland-session.target"
+              sessionTarget
             ];
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
           };
 
           Service = {
@@ -1637,17 +1640,17 @@ in
             RestartSec = 2;
           };
 
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
 
         "linux-desktop-wallpaper-video@" = {
           Unit = {
             Description = "Selected video wallpaper on %i";
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
             Wants = [ "awww.service" ];
             After = [
               "awww.service"
-              "hyprland-session.target"
+              sessionTarget
             ];
           };
           Service = {
@@ -1660,8 +1663,8 @@ in
         linux-desktop-night-light = {
           Unit = {
             Description = "Manual Hyprland colour temperature";
-            After = [ "hyprland-session.target" ];
-            PartOf = [ "hyprland-session.target" ];
+            After = [ sessionTarget ];
+            PartOf = [ sessionTarget ];
             # Rapid manual temperature changes must never permanently lock
             # Night Light out with start-limit-hit.
             StartLimitIntervalSec = 0;
@@ -1679,21 +1682,21 @@ in
         linux-desktop-night-light-apply = {
           Unit = {
             Description = "Restore manual Night Light state at session start";
-            After = [ "hyprland-session.target" ];
+            After = [ sessionTarget ];
           };
           Service = {
             Type = "oneshot";
             ExecStart = "${lib.getExe nightLightControl} apply";
           };
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
 
         linux-desktop-spectrum = {
           Unit = {
             Description = "Hyprland desktop audio spectrum analyser";
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
             After = [
-              "hyprland-session.target"
+              sessionTarget
               "pipewire.service"
             ];
           };
@@ -1704,14 +1707,14 @@ in
             RestartSec = 1;
           };
 
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
 
         linux-desktop-recording = {
           Unit = {
             Description = "Record a selected Wayland screen region";
-            PartOf = [ "hyprland-session.target" ];
-            After = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
+            After = [ sessionTarget ];
           };
           Service = {
             ExecStart = lib.getExe recordRegion;
@@ -1725,8 +1728,8 @@ in
         linux-desktop-lock = {
           Unit = {
             Description = "Hyprland desktop session lock";
-            PartOf = [ "hyprland-session.target" ];
-            After = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
+            After = [ sessionTarget ];
             X-SwitchMethod = "keep-old";
           };
 
@@ -1746,10 +1749,10 @@ in
               runtimeConfig
               config.xdg.configFile."linux-desktop/theme.json".source
             ];
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
             Wants = [ "linux-desktop-spectrum.service" ];
             After = [
-              "hyprland-session.target"
+              sessionTarget
               "linux-desktop-spectrum.service"
             ];
           };
@@ -1761,17 +1764,17 @@ in
             RestartSec = 1;
           };
 
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
       }
       // lib.optionalAttrs (scopeConfig.videoWallpaper != null) {
         linux-desktop-wallpaper = {
           Unit = {
             Description = "Hyprland desktop video wallpaper";
-            PartOf = [ "hyprland-session.target" ];
+            PartOf = [ sessionTarget ];
             Wants = [ "awww.service" ];
             After = [
-              "hyprland-session.target"
+              sessionTarget
               "awww.service"
             ];
             ConditionPathExists = scopeConfig.videoWallpaper;
@@ -1783,7 +1786,7 @@ in
             RestartSec = 2;
           };
 
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ sessionTarget ];
         };
       };
     };
