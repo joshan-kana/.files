@@ -27,8 +27,8 @@ ShellSurface {
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
     fillColor: selected ? theme.expressiveSurfaceStrong : theme.expressiveSurface
-    borderColor: selected ? theme.roleColor("audio") : "transparent"
-    borderWidth: selected ? theme.borderFocus : 0
+    borderColor: selected ? (compact ? theme.blend(theme.roleColor("audio"), theme.groupBase, 0.55) : theme.roleColor("audio")) : "transparent"
+    borderWidth: selected ? (compact ? theme.borderThin : theme.borderFocus) : 0
     Accessible.role: Accessible.Grouping
     Accessible.name: (microphone ? "Input" : "Output") + " audio, " + (muted ? "muted" : percent + " percent")
 
@@ -143,7 +143,8 @@ ShellSurface {
             spacing: deviceControl.theme.spacing2
             AudioPeakMeter {
                 id: meter
-                width: Math.min(105, Math.max(60, parent.width * 0.20))
+                visible: !deviceControl.compact
+                width: visible ? Math.min(105, Math.max(60, parent.width * 0.20)) : 0
                 height: 26
                 anchors.verticalCenter: parent.verticalCenter
                 theme: deviceControl.theme

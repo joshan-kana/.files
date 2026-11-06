@@ -192,15 +192,15 @@ test("capture confirmation uses Enter, never Space", () => {
   assert.match(source, /event\.key === Qt\.Key_E\)/);
 });
 
-test("Controls media card advertises the key that actually opens Now Playing", () => {
+test("Compact Media advertises the direct Now Playing key and shares its destination", () => {
   const controls = qml("SystemContent.qml");
+  const card = qml("ControlsMediaCard.qml");
+  assert.match(card, /shortcut: "N"/);
+  assert.match(card, /onActivated: card.fullRequested\(\)/);
+  assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(
     controls,
-    /Accessible\.name: "Open full media player"[\s\S]*?onActivated: root\.mediaRequested\(\)[\s\S]*?text: "N"/,
-  );
-  assert.match(
-    controls,
-    /event\.key === Qt\.Key_N\)\s*\{\s*root\.mediaRequested\(\)/,
+    /event.key === Qt.Key_N\)\s*\{\s*root.mediaRequested\(\)/,
   );
 });
 
