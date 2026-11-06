@@ -3,7 +3,6 @@
   configurationName,
   configurationOutputName,
   inputs,
-  configurationName,
   lib,
   pkgs,
   scopeConfig,
