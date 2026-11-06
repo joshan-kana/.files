@@ -99,11 +99,16 @@ Item {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.tabRequested(tab.modelData.destination)
+                    StateLayer {
+                        theme: root.theme
+                        motion: root.motion
+                        cornerRadius: root.theme.radiusMedium
+                        stateColor: root.theme.textStrong
+                        hoverOpacity: 0.13
+                        pressOpacity: 0.20
+                        Accessible.role: Accessible.Button
+                        Accessible.name: tab.modelData.label
+                        onActivated: root.tabRequested(tab.modelData.destination)
                     }
                 }
             }

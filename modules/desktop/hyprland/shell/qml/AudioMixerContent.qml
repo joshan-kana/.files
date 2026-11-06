@@ -19,20 +19,20 @@ FocusScope {
         {
             kind: "output"
         }
-    ].concat(system.audioApplicationStreams.map(node => ({
-                kind: "stream",
-                node: node,
-                capture: false
-            }))).concat(system.microphoneAvailable ? [
+    ].concat(system.microphoneAvailable ? [
         {
             kind: "input"
         }
-    ] : []).concat(system.audioCaptureStreams.map(node => ({
+    ] : []).concat(system.audioApplicationStreams.map(node => ({
+                kind: "stream",
+                node: node,
+                capture: false
+            }))).concat(system.audioCaptureStreams.map(node => ({
                 kind: "stream",
                 node: node,
                 capture: true
             })))
-    readonly property int microphoneIndex: 1 + system.audioApplicationStreams.length
+    readonly property int microphoneIndex: 1
     readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen
     readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.indexOf(selectedTarget.node) : -1
     readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
@@ -42,7 +42,7 @@ FocusScope {
     signal expandRequested
 
     implicitWidth: compact ? 490 : 950
-    implicitHeight: compact ? Math.max(300, body.implicitHeight + theme.spacing3 * 2) : body.implicitHeight + theme.spacing2 * 2
+    implicitHeight: compact ? Math.max(1, body.implicitHeight + theme.spacing3 * 2) : body.implicitHeight + theme.spacing2 * 2
     visible: active
     focus: active && !compact
 
@@ -201,7 +201,7 @@ FocusScope {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.max(1, parent.width - expandAction.width - parent.spacing)
-                text: "AUDIO · " + mixer.streams.length + (mixer.streams.length === 1 ? " LIVE CHANNEL" : " LIVE CHANNELS")
+                text: mixer.streams.length > 0 ? mixer.streams.length + (mixer.streams.length === 1 ? " channel" : " channels") : "Volume & devices"
                 color: mixer.theme.readableRoleColor("audio")
                 font.family: mixer.runtime.fontMono
                 font.pixelSize: mixer.theme.fontPanelEyebrow
@@ -211,7 +211,7 @@ FocusScope {
             }
             ShellAction {
                 id: expandAction
-                width: 134
+                width: 160
                 height: 32
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: mixer.runtime
@@ -242,7 +242,7 @@ FocusScope {
         Grid {
             id: deviceGrid
             width: parent.width
-            columns: width >= 450 && mixer.theme.textScale < 1.5 ? 2 : 1
+            columns: !mixer.compact && width >= 600 && mixer.theme.textScale < 1.5 ? 2 : 1
             columnSpacing: mixer.theme.spacing2
             rowSpacing: mixer.theme.spacing2
             readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
@@ -314,7 +314,7 @@ FocusScope {
         ListView {
             id: list
             width: parent.width
-            height: mixer.streams.length === 0 ? 0 : mixer.compact ? Math.min(2, mixer.streams.length) * 72 + 20 : 330
+            height: mixer.streams.length === 0 ? 0 : mixer.compact ? Math.min(2, mixer.streams.length) * 72 + 10 : Math.min(330, mixer.streams.length * 102 + 36)
             visible: mixer.streams.length > 0
             model: mixer.streams.length
             orientation: ListView.Vertical
@@ -394,7 +394,7 @@ FocusScope {
             cornerRadius: mixer.theme.radiusMedium
             Text {
                 anchors.centerIn: parent
-                text: mixer.compact ? "No active application audio" : "No application channels · Start playback or capture"
+                text: mixer.compact ? "No application audio" : "No application channels · Start playback or capture"
                 color: mixer.theme.textMuted
                 font.family: mixer.runtime.fontMono
                 font.pixelSize: mixer.theme.fontSize(11)

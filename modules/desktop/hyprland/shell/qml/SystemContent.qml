@@ -35,21 +35,6 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
-    property string controlsLayout: "matrix"
-    property string focusGroup: "appearance"
-    readonly property var focusGroups: ["appearance", "everyday", "audio", "media"]
-
-    function toggleControlsLayout(): void {
-        controlsLayout = controlsLayout === "matrix" ? "focus" : "matrix";
-        selectedSlider = "";
-    }
-
-    function moveFocusGroup(delta: int): void {
-        const index = focusGroups.indexOf(focusGroup);
-        focusGroup = focusGroups[(index + delta + focusGroups.length) % focusGroups.length];
-        selectedSlider = "";
-    }
-
     readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
@@ -105,7 +90,7 @@ FocusScope {
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
-    readonly property bool sliderNavigationEnabled: engaged && (controlsLayout === "matrix" || focusGroup === "appearance") && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
+    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass"], nightLight.supported ? ["nightLight"] : [])
 
     function selectSlider(target: string): void {
@@ -410,7 +395,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: themeOpen || wallpaperOpen ? theme.controlsDetailWidth : 1020
+    implicitWidth: theme.controlsDetailWidth
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -749,7 +734,7 @@ FocusScope {
                     horizontalCompact: true
                     icon: "󰏘"
                     title: "Themes"
-                    shortcut: "E"
+                    shortcut: "Q"
                     onActivated: root.openTheme()
                 }
                 ShellAction {
@@ -781,7 +766,7 @@ FocusScope {
                     horizontalCompact: true
                     icon: "󰐥"
                     title: "Session"
-                    shortcut: "Q"
+                    shortcut: "E"
                     onActivated: root.openSession()
                 }
 
@@ -800,96 +785,10 @@ FocusScope {
                 }
             }
 
-            Row {
-                id: controlLayoutSwitch
-                width: parent.width
-                height: 38
-                spacing: root.theme.spacing2
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(1, parent.width - layoutToggle.width - parent.spacing)
-                    text: root.controlsLayout === "matrix" ? "CONTROL SURFACE  /  ALL SYSTEMS" : "CONTROL SURFACE  /  " + root.focusGroup.toUpperCase()
-                    color: root.theme.readableRoleColor("audio")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.0
-                    elide: Text.ElideRight
-                }
-                ShellAction {
-                    id: layoutToggle
-                    width: 146
-                    height: 34
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    compact: true
-                    horizontalCompact: true
-                    icon: root.controlsLayout === "matrix" ? "󰕰" : "󰕮"
-                    title: root.controlsLayout === "matrix" ? "Focus" : "Matrix"
-                    shortcut: "SHIFT+I"
-                    onActivated: root.toggleControlsLayout()
-                }
-            }
-
-            Flow {
-                id: focusDirectory
-                visible: root.controlsLayout === "focus"
-                width: parent.width
-                spacing: root.theme.spacing2
-                height: visible ? implicitHeight : 0
-                readonly property int columns: width < 680 || root.theme.textScale >= 1.5 ? 2 : 4
-                readonly property real tabWidth: Math.max(1, (width - spacing * (columns - 1)) / columns)
-
-                Repeater {
-                    model: [
-                        {
-                            key: "appearance",
-                            title: "Appearance",
-                            icon: "󰏘"
-                        },
-                        {
-                            key: "everyday",
-                            title: "Everyday",
-                            icon: "󰀻"
-                        },
-                        {
-                            key: "audio",
-                            title: "Audio",
-                            icon: "󰓃"
-                        },
-                        {
-                            key: "media",
-                            title: "Media",
-                            icon: "󰎆"
-                        }
-                    ]
-                    delegate: ShellAction {
-                        required property var modelData
-                        width: focusDirectory.tabWidth
-                        height: 40
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                        compact: true
-                        horizontalCompact: true
-                        icon: modelData.icon
-                        title: modelData.title
-                        active: root.focusGroup === modelData.key
-                        onActivated: {
-                            root.focusGroup = modelData.key;
-                            root.selectedSlider = "";
-                        }
-                    }
-                }
-            }
-
             Grid {
                 id: commandMatrix
                 width: parent.width
-                visible: root.controlsLayout === "matrix" || root.focusGroup === "appearance" || root.focusGroup === "everyday"
-                columns: root.controlsLayout === "matrix" && width >= 820 && root.theme.textScale < 1.4 ? 2 : 1
+                columns: width >= 860 && root.theme.textScale < 1.4 ? 2 : 1
                 columnSpacing: root.theme.spacing4
                 rowSpacing: root.theme.spacing4
                 readonly property real cellWidth: Math.max(1, (width - columnSpacing * (columns - 1)) / columns)
@@ -897,11 +796,11 @@ FocusScope {
                 ShellSection {
                     id: appearanceSection
                     width: commandMatrix.cellWidth
-                    visible: root.controlsLayout === "matrix" || root.focusGroup === "appearance"
                     runtime: root.runtime
                     theme: root.theme
                     title: "Appearance & display"
-                    detail: "Visual modes · keyboard-adjustable levels"
+                    emphasized: true
+                    accentRole: "display"
 
                     ShellSurface {
                         width: parent.width
@@ -918,8 +817,8 @@ FocusScope {
                             }
                             runtime: root.runtime
                             theme: root.theme
-                            title: root.brightness.supported ? "Display  " + root.brightness.percent + "%" : "Display brightness"
-                            detail: root.brightness.supported ? root.brightness.device : "No hardware backlight"
+                            title: "Display brightness"
+                            detail: root.brightness.supported ? root.brightness.percent + "%" : "Hardware unavailable"
 
                             Row {
                                 width: parent.width
@@ -932,9 +831,9 @@ FocusScope {
                                     to: 100
                                     value: root.brightness.percent
                                     enabled: root.brightness.supported
-                                    accentColor: theme.positive
-                                    trackHeight: 8
-                                    handleSize: 16
+                                    accentColor: root.theme.roleColor("display")
+                                    trackHeight: 12
+                                    handleSize: 20
                                     onInteractionStarted: root.selectSlider("brightness")
                                     onValueRequested: next => root.brightness.setPercent(next)
                                 }
@@ -1179,101 +1078,18 @@ FocusScope {
                     }
                 }
 
-                ShellSection {
-                    id: everydaySection
+                Column {
+                    id: commandRight
                     width: commandMatrix.cellWidth
-                    visible: root.controlsLayout === "matrix" || root.focusGroup === "everyday"
-                    runtime: root.runtime
-                    theme: root.theme
-                    title: "Everyday"
-                    detail: (root.notificationState.silent ? "Silent alerts" : "Alerts on") + " · " + (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power unavailable")
-
-                    Flow {
-                        id: actionStrip
-                        width: parent.width
-                        spacing: root.theme.spacing2
-                        readonly property int columns: width < 410 || root.theme.textScale >= 1.5 ? 2 : width < 450 || root.theme.textScale >= 1.3 ? 3 : 5
-
-                        function cellWidth(index: int): real {
-                            const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
-                            return (width - spacing * (itemsInRow - 1)) / itemsInRow;
-                        }
-
-                        QuickSettingChip {
-                            width: actionStrip.cellWidth(0)
-                            height: 78
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                            title: root.notificationState.silent ? "Silent" : "Alerts"
-                            shortcut: "A"
-                            active: root.notificationState.silent
-                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
-                            onActivated: root.notificationState.toggleSilent()
-                        }
-
-                        QuickSettingChip {
-                            width: actionStrip.cellWidth(1)
-                            height: 78
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.system.idleInhibited ? "󰅶" : "󰒲"
-                            title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                            shortcut: "S"
-                            active: root.system.idleInhibited
-                            activeColor: root.theme.roleColor("warmth")
-                            onActivated: root.system.toggleIdleInhibited()
-                        }
-
-                        QuickSettingChip {
-                            width: actionStrip.cellWidth(2)
-                            height: 78
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: "󰍛"
-                            title: "Resources"
-                            shortcut: "R"
-                            activeColor: root.theme.roleColor("resources")
-                            onActivated: root.openResources()
-                        }
-
-                        QuickSettingChip {
-                            width: actionStrip.cellWidth(3)
-                            height: 78
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                            title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                            shortcut: "V"
-                            enabled: root.powerProfile.available && !root.powerProfile.applying
-                            active: root.powerProfile.current === "power-saver"
-                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                            onActivated: root.powerProfile.cycle()
-                        }
-
-                        QuickSettingChip {
-                            width: actionStrip.cellWidth(4)
-                            height: 78
-                            runtime: root.runtime
-                            theme: root.theme
-                            motion: root.motion
-                            icon: "󰕧"
-                            title: "Captures"
-                            shortcut: "C"
-                            activeColor: root.theme.roleColor("capture")
-                            onActivated: root.openRecordings()
-                        }
-                    }
+                    spacing: root.theme.spacing4
 
                     ShellSection {
                         width: parent.width
                         runtime: root.runtime
                         theme: root.theme
                         title: "Connectivity"
+                        emphasized: true
+                        accentRole: "connectivity"
 
                         Grid {
                             id: connectionTiles
@@ -1290,8 +1106,8 @@ FocusScope {
                                 theme: root.theme
                                 motion: root.motion
                                 title: "Network"
-                                detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
-                                status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
+                                detail: root.system.networkDevices.length === 0 ? "Hardware unavailable" : root.system.networkConnected ? root.system.networkName : "No connection"
+                                status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : unavailable ? "" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : "OFFLINE"
                                 glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
                                 shortcut: "F"
                                 connected: root.system.networkConnected
@@ -1308,8 +1124,8 @@ FocusScope {
                                 theme: root.theme
                                 motion: root.motion
                                 title: "Bluetooth"
-                                detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
-                                status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
+                                detail: unavailable ? "Hardware unavailable" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
+                                status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
                                 glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
                                 shortcut: "G"
                                 connected: root.system.bluetoothEnabled
@@ -1321,14 +1137,104 @@ FocusScope {
                             }
                         }
                     }
+
+                    ShellSection {
+                        id: everydaySection
+                        width: parent.width
+                        runtime: root.runtime
+                        theme: root.theme
+                        title: "Quick actions"
+                        emphasized: true
+                        accentRole: "attention"
+
+                        Flow {
+                            id: actionStrip
+                            width: parent.width
+                            spacing: root.theme.spacing2
+                            readonly property int columns: width < 410 || root.theme.textScale >= 1.5 ? 2 : width < 450 || root.theme.textScale >= 1.3 ? 3 : 5
+
+                            function cellWidth(index: int): real {
+                                const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
+                                return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(0)
+                                height: 78
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                                title: root.notificationState.silent ? "Silent" : "Alerts"
+                                shortcut: "A"
+                                active: root.notificationState.silent
+                                activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                                onActivated: root.notificationState.toggleSilent()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(1)
+                                height: 78
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.system.idleInhibited ? "󰅶" : "󰒲"
+                                title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
+                                shortcut: "S"
+                                active: root.system.idleInhibited
+                                activeColor: root.theme.roleColor("warmth")
+                                onActivated: root.system.toggleIdleInhibited()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(2)
+                                height: 78
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰍛"
+                                title: "Resources"
+                                shortcut: "R"
+                                activeColor: root.theme.roleColor("resources")
+                                onActivated: root.openResources()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(3)
+                                height: 78
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                                title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                                shortcut: "V"
+                                enabled: root.powerProfile.available && !root.powerProfile.applying
+                                active: root.powerProfile.current === "power-saver"
+                                activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                                onActivated: root.powerProfile.cycle()
+                            }
+
+                            QuickSettingChip {
+                                width: actionStrip.cellWidth(4)
+                                height: 78
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                icon: "󰕧"
+                                title: "Captures"
+                                shortcut: "C"
+                                activeColor: root.theme.roleColor("capture")
+                                onActivated: root.openRecordings()
+                            }
+                        }
+                    }
                 }
             }
 
             Grid {
                 id: mediaMatrix
                 width: parent.width
-                visible: root.controlsLayout === "matrix" || root.focusGroup === "audio" || root.focusGroup === "media"
-                columns: root.controlsLayout === "matrix" && width >= 820 && root.theme.textScale < 1.4 ? 2 : 1
+                columns: width >= 860 && root.theme.textScale < 1.4 ? 2 : 1
                 columnSpacing: root.theme.spacing4
                 rowSpacing: root.theme.spacing4
                 readonly property real cellWidth: Math.max(1, (width - columnSpacing * (columns - 1)) / columns)
@@ -1336,11 +1242,11 @@ FocusScope {
                 ShellSection {
                     id: audioSection
                     width: mediaMatrix.cellWidth
-                    visible: root.controlsLayout === "matrix" || root.focusGroup === "audio"
                     runtime: root.runtime
                     theme: root.theme
                     title: "Audio & levels"
-                    detail: root.system.audioApplicationStreams.length + " playback · " + root.system.audioCaptureStreams.length + " capture"
+                    emphasized: true
+                    accentRole: "audio"
 
                     AudioMixerContent {
                         id: audioDeck
@@ -1356,287 +1262,22 @@ FocusScope {
                     }
                 }
 
-                Column {
+                ShellSection {
                     width: mediaMatrix.cellWidth
-                    visible: root.controlsLayout === "matrix" || root.focusGroup === "media"
-                    spacing: root.theme.spacing2
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Media"
+                    emphasized: true
+                    accentRole: "media"
 
-                    Text {
+                    ControlsMediaCard {
                         width: parent.width
-                        height: 30
-                        verticalAlignment: Text.AlignVCenter
-                        text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                        color: root.theme.readableRoleColor("media")
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(10)
-                        font.weight: Font.DemiBold
-                        font.letterSpacing: 1
-                    }
-
-                    ShellSurface {
-                        width: parent.width
-                        height: root.media.available ? 250 : 0
-                        visible: root.media.available
+                        active: root.engaged && !root.detailsVisible
+                        media: root.media
+                        runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
-                        surfaceLayer: ShellSurface.Group
-                        cornerRadius: theme.radiusLarge
-                        luminous: true
-                        lightIntensity: 1.25
-                        luminousColor: root.theme.roleColor("media")
-                        fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
-
-                        StateLayer {
-                            theme: root.theme
-                            motion: root.motion
-                            cornerRadius: root.theme.radiusLarge
-                            Accessible.role: Accessible.Button
-                            Accessible.name: "Open full media player"
-                            onActivated: root.mediaRequested()
-                        }
-
-                        Text {
-                            anchors {
-                                top: parent.top
-                                right: parent.right
-                                margins: root.theme.spacing3
-                            }
-                            z: 1
-                            text: "N"
-                            visible: root.media.available
-                            color: root.theme.textMuted
-                            font.family: root.runtime.fontMono
-                            font.pixelSize: root.theme.fontSize(11)
-                        }
-
-                        Column {
-                            anchors {
-                                fill: parent
-                                margins: root.theme.spacing3
-                            }
-                            spacing: root.theme.spacing2
-
-                            Row {
-                                width: parent.width
-                                height: 60
-                                spacing: root.theme.spacing3
-
-                                ShellSurface {
-                                    width: 60
-                                    height: 60
-                                    theme: root.theme
-                                    motion: root.motion
-                                    surfaceLayer: ShellSurface.Control
-                                    cornerRadius: theme.radiusMedium
-                                    clip: true
-
-                                    Image {
-                                        anchors.fill: parent
-                                        source: root.media.artUrl
-                                        asynchronous: true
-                                        cache: true
-                                        fillMode: Image.PreserveAspectCrop
-                                        visible: root.media.artUrl.length > 0
-                                    }
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        visible: root.media.artUrl.length === 0
-                                        text: "♫"
-                                        color: root.theme.roleColor("media")
-                                        font.family: root.runtime.fontMono
-                                        font.pixelSize: root.theme.fontSize(28)
-                                    }
-                                }
-
-                                Column {
-                                    width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: root.theme.spacing1
-
-                                    MarqueeText {
-                                        text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
-                                        width: parent.width
-                                        color: root.theme.roleColor("media")
-                                        font.family: root.runtime.fontMono
-                                        font.pixelSize: root.theme.fontSize(10)
-                                    }
-
-                                    MarqueeText {
-                                        text: root.media.available ? root.media.title : "No active media player"
-                                        width: parent.width
-                                        color: root.theme.textStrong
-                                        font.family: root.runtime.fontMono
-                                        font.pixelSize: root.theme.fontSize(16)
-                                        font.weight: Font.DemiBold
-                                    }
-
-                                    MarqueeText {
-                                        text: root.media.artist
-                                        visible: root.media.available
-                                        width: parent.width
-                                        color: root.theme.textMuted
-                                        font.family: root.runtime.fontMono
-                                        font.pixelSize: root.theme.fontSize(10)
-                                    }
-                                }
-                            }
-
-                            Row {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                height: 38
-                                spacing: root.theme.spacing3
-                                visible: root.media.available
-                                MediaTransport {
-                                    id: mediaInlineTransport
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    visible: root.media.available
-                                    width: root.media.available ? implicitWidth : 0
-                                    media: root.media
-                                    runtime: root.runtime
-                                    theme: root.theme
-                                    motion: root.motion
-                                    compact: true
-                                    minimal: true
-                                }
-
-                                Row {
-                                    id: mediaQuickExtras
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: root.theme.spacing1
-                                    visible: root.media.available
-                                    width: root.media.available ? implicitWidth : 0
-
-                                    ShellAction {
-                                        width: 70
-                                        height: 36
-                                        runtime: root.runtime
-                                        theme: root.theme
-                                        motion: root.motion
-                                        compact: true
-                                        horizontalCompact: true
-                                        icon: "󰒝"
-                                        title: root.media.shuffled ? "ON" : "OFF"
-                                        shortcut: "Z"
-                                        active: root.media.shuffled
-                                        enabled: root.media.shuffleAvailable
-                                        onActivated: root.media.toggleShuffle()
-                                    }
-                                    ShellAction {
-                                        width: 84
-                                        height: 36
-                                        runtime: root.runtime
-                                        theme: root.theme
-                                        motion: root.motion
-                                        compact: true
-                                        horizontalCompact: true
-                                        icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
-                                        title: root.media.repeatLabel
-                                        shortcut: "B"
-                                        active: root.media.repeatState !== 0
-                                        enabled: root.media.repeatAvailable
-                                        onActivated: root.media.toggleRepeat()
-                                    }
-                                    ShellAction {
-                                        width: 70
-                                        height: 36
-                                        runtime: root.runtime
-                                        theme: root.theme
-                                        motion: root.motion
-                                        compact: true
-                                        horizontalCompact: true
-                                        icon: "󰎄"
-                                        title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
-                                        shortcut: "⇧P"
-                                        active: root.media.playerCount > 1
-                                        enabled: root.media.playerCount > 1
-                                        onActivated: root.media.cyclePlayer()
-                                    }
-                                }
-                            }
-
-                            Item {
-                                width: parent.width
-                                height: root.media.available ? 94 : 60
-                                visible: true
-
-                                SpectrumScale {
-                                    id: compactFrequency
-                                    lowHz: root.spectrum.lowHz
-                                    highHz: root.spectrum.highHz
-                                }
-
-                                SpectrumBars {
-                                    anchors.fill: parent
-                                    spectrum: root.spectrum
-                                    theme: root.theme
-                                    frequencyScale: compactFrequency
-                                    barCount: 36
-                                }
-                            }
-                        }
-                    }
-
-                    ShellSurface {
-                        width: parent.width
-                        height: visible ? 248 : 0
-                        visible: !root.media.available
-                        theme: root.theme
-                        motion: root.motion
-                        surfaceLayer: ShellSurface.Group
-                        cornerRadius: root.theme.radiusLarge
-
-                        StateLayer {
-                            theme: root.theme
-                            motion: root.motion
-                            cornerRadius: root.theme.radiusLarge
-                            Accessible.role: Accessible.Button
-                            Accessible.name: "Open Now Playing"
-                            onActivated: root.mediaRequested()
-                        }
-
-                        Column {
-                            anchors.centerIn: parent
-                            width: Math.max(1, parent.width - root.theme.spacing4 * 2)
-                            spacing: root.theme.spacing3
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "󰎆"
-                                font.family: "Symbols Nerd Font"
-                                font.pixelSize: root.theme.fontSize(34)
-                                color: root.theme.roleColor("media")
-                            }
-
-                            Text {
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
-                                text: "No active player"
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(13)
-                                font.weight: Font.DemiBold
-                                color: root.theme.textStrong
-                            }
-
-                            Text {
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                                text: "Playback controls and spectrum appear when a player connects"
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
-                                color: root.theme.textMuted
-                            }
-
-                            KeyHint {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                shortcut: "N"
-                                label: "Now Playing"
-                                compact: true
-                                runtime: root.runtime
-                                theme: root.theme
-                            }
-                        }
+                        onFullRequested: root.mediaRequested()
                     }
                 }
             }
@@ -1644,7 +1285,7 @@ FocusScope {
             Row {
                 width: parent.width
                 height: 37
-                visible: root.system.trayCount > 0 && (root.controlsLayout === "matrix" || root.focusGroup === "media")
+                visible: root.system.trayCount > 0
                 spacing: root.theme.spacing2
 
                 Text {
@@ -2239,10 +1880,6 @@ FocusScope {
                     root.frameToggleRequested();
                 } else if (shifted && event.key === Qt.Key_E) {
                     root.motion.toggle();
-                } else if (shifted && event.key === Qt.Key_I) {
-                    root.toggleControlsLayout();
-                } else if (root.controlsLayout === "focus" && shifted && (event.key === Qt.Key_J || event.key === Qt.Key_K)) {
-                    root.moveFocusGroup(event.key === Qt.Key_J ? 1 : -1);
                 } else if (shifted && event.key === Qt.Key_M) {
                     root.openMixer();
                 } else if (shifted && event.key === Qt.Key_P) {
@@ -2253,20 +1890,20 @@ FocusScope {
                     root.media.seekStep(-1);
                 } else if (shifted && event.key === Qt.Key_L) {
                     root.media.seekStep(1);
-                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_H || event.key === Qt.Key_Left)) {
+                } else if ((event.key === Qt.Key_H || event.key === Qt.Key_Left)) {
                     root.adjustSelectedAudio(-0.05);
-                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_L || event.key === Qt.Key_Right)) {
+                } else if ((event.key === Qt.Key_L || event.key === Qt.Key_Right)) {
                     root.adjustSelectedAudio(0.05);
-                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_K || event.key === Qt.Key_Up)) {
+                } else if ((event.key === Qt.Key_K || event.key === Qt.Key_Up)) {
                     root.moveAudioSelection(-1);
-                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_J || event.key === Qt.Key_Down)) {
+                } else if ((event.key === Qt.Key_J || event.key === Qt.Key_Down)) {
                     root.moveAudioSelection(1);
                 } else if (event.key === Qt.Key_Q) {
-                    root.openSession();
+                    root.openTheme();
                 } else if (event.key === Qt.Key_W) {
                     root.openWallpaper();
                 } else if (event.key === Qt.Key_E) {
-                    root.openTheme();
+                    root.openSession();
                 } else if (event.key === Qt.Key_R) {
                     root.openResources();
                 } else if (event.key === Qt.Key_F) {
