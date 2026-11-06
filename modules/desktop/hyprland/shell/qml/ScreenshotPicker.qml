@@ -376,7 +376,7 @@ Item {
         anchors.fill: parent
         visible: picker.open
         z: 1
-        readonly property color scrim: picker.theme.dark ? picker.theme.background : picker.theme.textStrong
+        readonly property color scrim: picker.theme.scrimBase
         readonly property real dim: 0.48
 
         Rectangle {

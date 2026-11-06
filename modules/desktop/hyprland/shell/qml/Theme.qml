@@ -172,10 +172,13 @@ QtObject {
     readonly property color panelFill: panelBase
     readonly property color panelBorder: Qt.rgba(accent.r, accent.g, accent.b, dark ? 0.26 : 0.31)
     readonly property color focusFill: Qt.rgba(surfaceRaised.r, surfaceRaised.g, surfaceRaised.b, runtime.focusOpacity)
-    readonly property color scrim: Qt.rgba(background.r, background.g, background.b, runtime.scrimOpacity)
-    readonly property color contextualScrim: Qt.rgba(background.r, background.g, background.b, Math.min(0.18, runtime.scrimOpacity))
-    readonly property color scrimStrong: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.06))
-    readonly property color scrimHeavy: Qt.rgba(background.r, background.g, background.b, Math.min(1, runtime.scrimOpacity + 0.12))
+    // A light palette must not produce a light veil over authentication or
+    // modal content. Use a dark Stylix role for every shared dimming level.
+    readonly property color scrimBase: dark ? background : textStrong
+    readonly property color scrim: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, runtime.scrimOpacity)
+    readonly property color contextualScrim: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(0.18, runtime.scrimOpacity))
+    readonly property color scrimStrong: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(1, runtime.scrimOpacity + 0.06))
+    readonly property color scrimHeavy: Qt.rgba(scrimBase.r, scrimBase.g, scrimBase.b, Math.min(1, runtime.scrimOpacity + 0.12))
     readonly property color subtleBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, dark ? 0.12 : 0.17)
     readonly property color glassContourBorder: Qt.rgba(textStrong.r, textStrong.g, textStrong.b, dark ? 0.22 : 0.25)
     readonly property color layer0: background
