@@ -16,14 +16,14 @@ _: {
           unpackCmd = ''
             7zz x -sns- -snld20 -y "$curSrc"
           '';
-          passthru = {
+          passthru = rec {
             autoUpdate = true;
             updateUrl = "https://formulae.brew.sh/api/cask/krita.json";
             updateRegex = ''"version"\s*:\s*"([^"]+)"'';
             updateScript = [
               "${prev.python3}/bin/python3"
               "${../../scripts/update-version.py}"
-              "krita"
+              updateFilename
               prev.stdenv.hostPlatform.system
             ];
             updateFilename = "overlays/krita/default.nix";

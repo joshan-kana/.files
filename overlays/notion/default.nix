@@ -17,14 +17,14 @@ _: {
               appName = "Notion.app";
               homepage = "https://www.notion.so";
               license = prev.lib.licenses.unfree;
-              passthru = {
+              passthru = rec {
                 autoUpdate = true;
                 updateUrl = "https://formulae.brew.sh/api/cask/notion.json";
                 updateRegex = ''"version"\s*:\s*"([^"]+)"'';
                 updateScript = [
                   "${prev.python3}/bin/python3"
                   "${../../scripts/update-version.py}"
-                  "notion-mac"
+                  updateFilename
                   prev.stdenv.hostPlatform.system
                 ];
                 updateFilename = "overlays/notion/default.nix";

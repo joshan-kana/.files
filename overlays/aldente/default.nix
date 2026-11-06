@@ -13,14 +13,14 @@ _: {
           homepage = "https://apphousekitchen.com";
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
-          passthru = {
+          passthru = rec {
             autoUpdate = true;
             updateUrl = "https://formulae.brew.sh/api/cask/aldente.json";
             updateRegex = ''"version"\s*:\s*"([^"]+)"'';
             updateScript = [
               "${prev.python3}/bin/python3"
               "${../../scripts/update-version.py}"
-              "aldente"
+              updateFilename
               prev.stdenv.hostPlatform.system
             ];
             updateFilename = "overlays/aldente/default.nix";

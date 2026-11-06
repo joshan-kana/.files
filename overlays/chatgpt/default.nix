@@ -13,12 +13,6 @@ _: {
           x86_64 = "sha256-BayLVMODb2+Z5PGtuLZsHwqg7W191es25JdqAdM2uYY=";
           aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
         };
-        updateScript = [
-          "${prev.python3}/bin/python3"
-          "${../../scripts/update-version.py}"
-          "chatgpt"
-          system
-        ];
         inherit (release) version;
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
         isLinux = builtins.elem system [
@@ -34,13 +28,18 @@ _: {
           appName = "ChatGPT.app";
           homepage = "https://chatgpt.com/";
           license = lib.licenses.unfree;
-          passthru = {
+          passthru = rec {
             autoUpdate = true;
             updateGroup = "chatgpt";
             updateFilename = "overlays/chatgpt/default.nix";
             updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
             updateRegex = ''versions=\(([0-9.]+)'';
-            inherit updateScript;
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              updateFilename
+              system
+            ];
           };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
           unpacker = prev.unzip;
@@ -118,13 +117,18 @@ _: {
             cp usr/share/pixmaps/chatgpt.png "$out/share/pixmaps/"
             runHook postInstall
           '';
-          passthru = {
+          passthru = rec {
             autoUpdate = true;
             updateGroup = "chatgpt";
             updateFilename = "overlays/chatgpt/default.nix";
             updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
             updateRegex = ''versions=\(([0-9.]+)'';
-            inherit updateScript;
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              updateFilename
+              system
+            ];
           };
           meta = {
             homepage = "https://chatgpt.com/";
