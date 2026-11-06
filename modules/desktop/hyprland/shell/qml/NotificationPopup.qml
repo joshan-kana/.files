@@ -24,6 +24,7 @@ PanelWindow {
     // Resizing the right-anchored Wayland surface as notifications arrive
     // causes the compositor to glide the entire popup instead of just cards.
     readonly property int maxToastSlots: Math.max(1, Math.min(3, Math.floor(((screen ? screen.height : 1440) - dockTop - theme.frameThickness + cardGap) / (cardHeight + cardGap))))
+    readonly property int interactiveToastSlots: Math.min(maxToastSlots, toastCount)
     readonly property var frameDocks: {
         const epoch = contourEpoch;
         const result = [];
@@ -63,6 +64,14 @@ PanelWindow {
         id: surfaceLifecycle
         popup: popup
         exposed: popup.notificationState.popupVisible
+        // Only actual cards accept input, not the transparent reserved slots.
+        interactiveItem: toastInputArea
+    }
+    Item {
+        id: toastInputArea
+        width: popup.width
+        height: popup.interactiveToastSlots > 0 ? popup.interactiveToastSlots * popup.cardHeight + (popup.interactiveToastSlots - 1) * popup.cardGap : 0
+        visible: false
     }
     mask: surfaceLifecycle.inputRegion
     color: "transparent"
