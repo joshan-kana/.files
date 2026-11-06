@@ -1,0 +1,81 @@
+--- a/internal/player/player.go
++++ b/internal/player/player.go
+@@ -14,7 +14,7 @@
+ 	"github.com/xdagiz/xytz/internal/ytdlp"
+ )
+ 
+-type ExitHandler func(video types.VideoItem, url string)
++type ExitHandler func(video types.VideoItem, url string, err error)
+ 
+ type PlayerState struct {
+ 	Process             *exec.Cmd
+@@ -135,7 +135,7 @@
+ 				log.Error("mpv exited with error", "err", err)
+ 			}
+ 			if onExit != nil {
+-				onExit(video, url)
++				onExit(video, url, err)
+ 			}
+ 		}
+ 	}()
+@@ -223,7 +223,7 @@
+ 				log.Error("ffplay exited with error", "err", err)
+ 			}
+ 			if onExit != nil {
+-				onExit(video, url)
++				onExit(video, url, err)
+ 			}
+ 		}
+ 	}()
+--- a/internal/tui/update.go
++++ b/internal/tui/update.go
+@@ -1594,16 +1594,17 @@
+ }
+ 
+ func (m *Model) playVideo(msg types.PlayVideoMsg) (tea.Model, tea.Cmd) {
+-	if msg.ErrMsg != "" {
+-		m.ErrMsg = msg.ErrMsg
+-		m.playbackOrigin = ""
+-		return m, nil
+-	}
+-
+ 	if msg.IsPlayerExit {
+ 		if m.State == types.StateVideoPlaying {
+ 			m.transitionTo(m.playbackBackTarget())
+ 		}
++		m.ErrMsg = msg.ErrMsg
++		m.playbackOrigin = ""
++		return m, nil
++	}
++
++	if msg.ErrMsg != "" {
++		m.ErrMsg = msg.ErrMsg
+ 		m.playbackOrigin = ""
+ 		return m, nil
+ 	}
+@@ -2071,9 +2072,13 @@
+ 
+ func (m *Model) playURLCmd(url, ytdlFormat, backendPreference string, video types.VideoItem) tea.Cmd {
+ 	return func() tea.Msg {
+-		res := m.Ctx.PlayerManager.Start(url, ytdlFormat, backendPreference, video, func(v types.VideoItem, u string) {
++		res := m.Ctx.PlayerManager.Start(url, ytdlFormat, backendPreference, video, func(v types.VideoItem, u string, err error) {
+ 			if m.Program != nil {
+-				m.Program.Send(types.PlayVideoMsg{SelectedVideo: v, IsPlayerExit: true, URL: u})
++				msg := types.PlayVideoMsg{SelectedVideo: v, IsPlayerExit: true, URL: u}
++				if err != nil {
++					msg.ErrMsg = fmt.Sprintf("Playback failed: %v", err)
++				}
++				m.Program.Send(msg)
+ 			}
+ 		})
+ 
+--- a/internal/tui/view.go
++++ b/internal/tui/view.go
+@@ -83,6 +83,7 @@
+ 	statusBar := m.Ctx.Styles.StatusBarStyle.Height(1).Width(m.Width).Render(left)
+ 
+ 	if right != "" {
++		left = lipgloss.NewStyle().MaxWidth(max(0, m.Width-lipgloss.Width(right)-4)).Render(left)
+ 		rightSpace := m.Width - lipgloss.Width(left) - 4
+ 		if rightSpace > 0 {
+ 			color := m.Ctx.Styles.StatusErrorColor

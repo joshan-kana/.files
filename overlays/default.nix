@@ -54,6 +54,7 @@ _: {
     ./neodisk
     ./ncmpcpp
     ./mpv
+    ./xytz
     ./openclaw
     ./openai-tunnel-client
     ./parallels-tools

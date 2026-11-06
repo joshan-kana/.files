@@ -35,7 +35,7 @@
       ollama.enable = false;
       cava.enable = false;
       ncmpcpp.enable = false;
-      youtubeTui.enable = false;
+      xytz.enable = false;
       stow.enable = false;
       killall.enable = false;
       xdgUtils.enable = false;

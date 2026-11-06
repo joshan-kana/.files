@@ -747,6 +747,7 @@ in
           config = {
             demuxer-max-bytes = "3GiB";
             demuxer-max-back-bytes = "256MiB";
+            ytdl-raw-options = "extractor-args=youtube:player_client=web_embedded";
             target-colorspace-hint = "yes";
             input-commands-append = [
               ''keybind Ctrl+! "apply-profile hdr-standard ; show-text \"HDR: Standard\""''
@@ -815,9 +816,9 @@ in
       environment.systemPackages = [ pkgs.systemd-manager-tui ];
     };
 
-  youtubeTui = _: {
+  xytz = _: {
     home = _: {
-      home.packages = [ pkgs.youtube-tui ];
+      home.packages = [ pkgs.xytz ];
     };
   };
 
