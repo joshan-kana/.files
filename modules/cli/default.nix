@@ -956,7 +956,7 @@ in
               "${dotfiles.secretsDir}/spotify-client-id"
             ];
           };
-
+          device.volume = 100;
           login_redirect_uri = "http://127.0.0.1:8989/login";
         };
       };
