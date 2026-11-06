@@ -8,6 +8,8 @@ Column {
 
     property string title: ""
     property string detail: ""
+    property bool emphasized: false
+    property string accentRole: ""
     default property alias contentData: body.data
 
     width: parent ? parent.width : implicitWidth
@@ -23,10 +25,11 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             runtime: root.runtime
             theme: root.theme
-            text: root.title
-            color: theme.textStrong
-            font.pixelSize: theme.fontSize(11)
+            text: root.emphasized ? root.title.toUpperCase() : root.title
+            color: root.emphasized ? theme.readableRoleColor(root.accentRole) : theme.textStrong
+            font.pixelSize: root.emphasized ? theme.fontPanelEyebrow : theme.fontSize(11)
             font.weight: Font.DemiBold
+            font.letterSpacing: root.emphasized ? 0.8 : 0
         }
 
         Item {

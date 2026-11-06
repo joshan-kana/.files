@@ -205,6 +205,7 @@ Item {
 
     Column {
         id: buttonGrid
+        width: parent.width
         anchors {
             top: header.bottom
             topMargin: panel.theme.spacing5
@@ -218,7 +219,8 @@ Item {
             delegate: Row {
                 id: actionRow
                 required property int index
-                anchors.horizontalCenter: parent.horizontalCenter
+                readonly property int rowCount: Math.min(panel.gridColumns, panel.entries.length - index * panel.gridColumns)
+                width: buttonGrid.width
                 spacing: panel.theme.spacing3
 
                 Repeater {
@@ -227,6 +229,7 @@ Item {
                     delegate: SessionActionButton {
                         required property var modelData
                         readonly property int actionIndex: panel.entries.findIndex(entry => entry.id === modelData.id)
+                        width: Math.max(1, (actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)) / actionRow.rowCount)
 
                         runtime: panel.runtime
                         theme: panel.theme

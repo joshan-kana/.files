@@ -10,6 +10,7 @@ Item {
     required property Motion motion
     property bool compact: false
     property bool minimal: false
+    property bool simple: false
 
     implicitWidth: buttons.implicitWidth
     implicitHeight: buttons.implicitHeight
@@ -55,7 +56,7 @@ Item {
                     action: "next",
                     glyph: "󰒭"
                 }
-            ]
+            ].filter(item => !root.simple || item.action === "previous" || item.action === "play" || item.action === "next")
 
             delegate: ShellAction {
                 required property var modelData
