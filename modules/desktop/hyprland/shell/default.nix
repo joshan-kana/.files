@@ -6,7 +6,7 @@
 }:
 
 let
-  sessionTarget = "wayland-session@Hyprland.target";
+  sessionTarget = "wayland-session@hyprland.desktop.target";
 
   windowEffectsToggle = pkgs.writeShellApplication {
     name = "linux-desktop-window-effects-toggle";
