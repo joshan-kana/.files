@@ -196,6 +196,10 @@ ShellRoot {
         motion: motion
         frameEnabled: appearance.frameVisible
         barVisible: appearance.barVisible
+        recordingState: recording
+        notificationState: notifications
+        occludedIslands: ambientBar.occludedIslands
+        onRecordingStopRequested: actions.toggleRecording()
         dockOrigin: ambientBar.originFor(expansionState.screen || Quickshell.screens[0], "system")
         expansionState: expansionState
         barWindows: ambientBar.instances
@@ -297,6 +301,8 @@ ShellRoot {
         // opening and closing transition, not only while Controls is active.
         // Let the clock join the frame while the hub finishes retracting.
         controlsExpanded: expansionState.hasCurrent || (expansionHost.closing && expansionHost.clockReveal < 0.05) || resizeOverlay.open || resizeOverlay.closing
+        hubBounds: expansionHost.frameBounds
+        hubScreen: expansionHost.screen
         clockReveal: resizeOverlay.open || resizeOverlay.closing ? 0 : expansionHost.clockReveal
         shown: appearance.barVisible
         frameVisible: appearance.frameVisible
