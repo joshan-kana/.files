@@ -48,7 +48,29 @@ test("theme progress has one status owner and an untruncated cancel action", () 
   assert.match(source, /preparing: "PREPARING"/);
   assert.match(source, /building: "BUILDING"/);
   assert.match(source, /activating: "APPLYING"/);
+  const statusRow = footer.indexOf(
+    "Row {",
+    footer.indexOf("id: cancelLabelMetrics"),
+  );
+  const statusLabel = footer.indexOf("id: operationStatus", statusRow);
+  const cancelControl = footer.indexOf("id: cancelButton", statusRow);
+  assert.ok(
+    statusRow >= 0 && statusLabel > statusRow && cancelControl > statusLabel,
+  );
+  assert.match(
+    footer,
+    /visible: panel\.statusText\.length > 0 \|\| panel\.operationRunning/,
+  );
   assert.match(footer, /text: panel\.statusText/);
+  assert.match(footer, /font\.pixelSize: panel\.theme\.fontKeyHint/);
+  assert.match(footer, /wrapMode: Text\.WrapAtWordBoundaryOrAnywhere/);
+  assert.match(
+    footer,
+    /width: Math\.max\(1, parent\.width - \(cancelButton\.visible/,
+  );
+  assert.doesNotMatch(footer, /horizontalAlignment: Text\.AlignRight/);
+  assert.doesNotMatch(footer, /font\.pixelSize: panel\.theme\.fontSize\(8\)/);
+  assert.equal((footer.match(/text: panel\.statusText/g) || []).length, 1);
   assert.doesNotMatch(footer, /panel\.operationPhase\.toUpperCase\(\)/);
   assert.match(footer, /id: cancelLabelMetrics/);
   assert.match(
