@@ -114,3 +114,36 @@ test("compact and expanded audio handling retain the complete keyboard contract"
   );
   assert.match(controls, /root\.muteSelectedAudio\(\)/);
 });
+
+test("mixer selection follows visual left-to-right order before descending through streams", () => {
+  const mixer = qml("AudioMixerContent.qml");
+  const start = mixer.indexOf("readonly property var targets: ");
+  const end = mixer.indexOf("readonly property int microphoneIndex", start);
+  assert.ok(start > 0 && end > start);
+  const expression = mixer
+    .slice(start + "readonly property var targets: ".length, end)
+    .trim();
+  const targets = new Function("system", "return (" + expression + ");");
+  const result = targets({
+    microphoneAvailable: true,
+    audioApplicationStreams: [{ id: "music" }, { id: "browser" }],
+    audioCaptureStreams: [{ id: "recorder" }],
+  });
+  assert.deepEqual(
+    result.map((item) => (item.kind === "stream" ? item.node.id : item.kind)),
+    ["output", "input", "music", "browser", "recorder"],
+  );
+  assert.ok(mixer.includes("key === Qt.Key_Down || key === Qt.Key_J"));
+  assert.ok(mixer.includes("function moveAudioSelection(delta: int)"));
+});
+
+test("full mixer height matches visible channels before virtual scrolling", () => {
+  const mixer = qml("AudioMixerContent.qml");
+  assert.ok(mixer.includes("Math.min(330, mixer.streams.length * 102 + 36)"));
+  assert.ok(mixer.includes("cacheBuffer: 90"));
+  assert.ok(
+    mixer.includes(
+      "monitoring: mixer.active && list.visible && streamRow.inViewport",
+    ),
+  );
+});
