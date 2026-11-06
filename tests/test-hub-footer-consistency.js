@@ -38,7 +38,7 @@ test("Escape label follows the actual focus owner", () => {
   );
   assert.match(
     controls,
-    /readonly property bool audioChooserOpen: outputQuick\.chooserOpen \|\| inputQuick\.chooserOpen/,
+    /readonly property bool audioChooserOpen: audioDeck\.deviceChooserOpen/,
   );
   assert.match(
     controls,
@@ -46,7 +46,7 @@ test("Escape label follows the actual focus owner", () => {
   );
   assert.match(
     controls,
-    /if \(outputQuick\.chooserOpen \|\| inputQuick\.chooserOpen\) \{[\s\S]*?event\.key === Qt\.Key_Escape/,
+    /if \(audioDeck\.deviceChooserOpen\) \{[\s\S]*?audioDeck\.handleKey\(event\.key, event\.modifiers\)/,
   );
 });
 
@@ -148,17 +148,15 @@ test("Controls audio hints stay inside the audio widget, never in the global foo
     host,
     /shortcut: "I"[\s\S]*?shortcut: "O"[\s\S]*?shortcut: "ESC"[\s\S]*?shortcut: "SHIFT\+ESC"/,
   );
-  assert.match(
-    controls,
-    /id: audioStack[\s\S]*?KeyHintStrip \{[\s\S]*?label: "Select audio"/,
-  );
+  const mixer = source("AudioMixerContent.qml");
+  assert.match(mixer, /hints: mixer\.compact \? \[/);
   for (const [shortcut, label] of [
     ["J/K", "Select audio"],
     ["H/L", "Level"],
     ["X", "Mic"],
   ]) {
-    assert.ok(controls.includes('shortcut: "' + shortcut + '"'));
-    assert.ok(controls.includes('label: "' + label + '"'));
+    assert.ok(mixer.includes('shortcut: "' + shortcut + '"'));
+    assert.ok(mixer.includes('label: "' + label + '"'));
   }
   assert.doesNotMatch(controls, /shortcut: "M",\s*label: "Mute"/);
   assert.match(
