@@ -129,6 +129,13 @@ in
       h = "uwsm start hyprland.desktop";
     };
 
+    # Home Manager's sourced-once flags belong to individual shells, not the
+    # user manager. Their presence suppresses fresh session variables in new
+    # shells after a themed system activation.
+    xdg.configFile."uwsm/env".text = ''
+      export UWSM_NEVER_EXPORT_VARNAMES="__HM_SESS_VARS_SOURCED __HM_ZSH_SESS_VARS_SOURCED"
+    '';
+
     wayland.windowManager.hyprland =
       let
         lua = lib.generators.mkLuaInline;
