@@ -33,12 +33,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Terminal YouTube browser.
-    xytz = {
-      url = "github:xdagiz/xytz/v0.9.3";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Prebuilt AI agent packages.
     llm-agents.url = "github:numtide/llm-agents.nix";
 
