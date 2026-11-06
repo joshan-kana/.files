@@ -4,7 +4,6 @@
   configurationOutputName,
   pkgs,
   lib,
-  inputs,
   system,
   ...
 }:
@@ -819,7 +818,7 @@ in
 
   xytz = _: {
     home = _: {
-      home.packages = [ inputs.xytz.packages.${system}.default ];
+      home.packages = [ pkgs.xytz ];
     };
   };
 
