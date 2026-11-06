@@ -104,6 +104,7 @@ Item {
             MarqueeText {
                 width: parent.width
                 text: tile.status
+                visible: tile.status.length > 0
                 color: tile.signalColor
                 opacity: tile.failed || tile.pending || tile.scanning ? 1 : 0.88
                 font.family: tile.runtime.fontMono

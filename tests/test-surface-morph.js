@@ -19,7 +19,7 @@ test("all hub views reveal progressively while geometry expands", () => {
     qml,
     /const fraction = Math\.min\(width \/ Math\.max\(1, host\.closing \? host\.closeLayoutWidth : host\.contentWidth\), height \/ Math\.max\(1, host\.closing \? host\.closeLayoutHeight : host\.contentHeight\)\)/,
   );
-  assert.match(qml, /\(fraction - 0\.18\) \/ 0\.72/);
+  assert.match(qml, /\(fraction - 0\.68\) \/ 0\.30/);
   for (const id of ["tabs", "hubFooter", "contentViewport"])
     assert.match(
       qml,
