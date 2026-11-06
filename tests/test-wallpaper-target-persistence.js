@@ -101,9 +101,17 @@ test("full-screen video and lock-screen posters retain source resolution", () =>
   );
   const poster = nix.slice(
     nix.indexOf('if [ "$action" = thumbnail ] || [ "$action" = poster ]; then'),
-    nix.indexOf('case "$output" in', nix.indexOf('if [ "$action" = thumbnail ] || [ "$action" = poster ]; then')),
+    nix.indexOf(
+      'case "$output" in',
+      nix.indexOf(
+        'if [ "$action" = thumbnail ] || [ "$action" = poster ]; then',
+      ),
+    ),
   );
-  assert.match(poster, /if \[ "\$action" = poster \]; then\s+ffmpeg[^\n]*-frames:v 1 -update 1/);
+  assert.match(
+    poster,
+    /if \[ "\$action" = poster \]; then\s+ffmpeg[^\n]*-frames:v 1 -update 1/,
+  );
   assert.match(poster, /\$key\$suffix\.png/);
   assert.match(poster, /scale=380:250:force_original_aspect_ratio=decrease/);
   assert.match(nix, /wallpaperLibrary\} poster "\$image"/);
@@ -117,15 +125,21 @@ test("all-display video does not cover explicit monitor overrides", () => {
     "utf8",
   );
   const player = nix.slice(
-    nix.indexOf('wallpaperVideoFromState = pkgs.writeShellApplication'),
-    nix.indexOf('videoWallpaper = pkgs.writeShellApplication'),
+    nix.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
+    nix.indexOf("videoWallpaper = pkgs.writeShellApplication"),
   );
   assert.match(player, /awww query/);
-  assert.match(player, /if \[ -f "\$state_dir\/\$monitor\.wall" \] && ! cmp -s "\$file" "\$state_dir\/\$monitor\.wall"; then/);
+  assert.match(
+    player,
+    /if \[ -f "\$state_dir\/\$monitor\.wall" \] && ! cmp -s "\$file" "\$state_dir\/\$monitor\.wall"; then/,
+  );
   assert.match(player, /mpvpaper[^\n]*"\$monitor" "\$video" &/);
   assert.doesNotMatch(player, /output='\*'/);
   assert.match(player, /wait -n/);
-  assert.match(nix, /systemctl --user restart linux-desktop-wallpaper-video@all\.service/);
+  assert.match(
+    nix,
+    /systemctl --user restart linux-desktop-wallpaper-video@all\.service/,
+  );
 });
 
 test("video player launches only on displays not owned by another selection", () => {
@@ -136,11 +150,14 @@ test("video player launches only on displays not owned by another selection", ()
     "utf8",
   );
   const player = nix.slice(
-    nix.indexOf('wallpaperVideoFromState = pkgs.writeShellApplication'),
-    nix.indexOf('videoWallpaper = pkgs.writeShellApplication'),
+    nix.indexOf("wallpaperVideoFromState = pkgs.writeShellApplication"),
+    nix.indexOf("videoWallpaper = pkgs.writeShellApplication"),
   );
   const script = player
-    .slice(player.indexOf("text = ''") + "text = ''".length, player.lastIndexOf("'';"))
+    .slice(
+      player.indexOf("text = ''") + "text = ''".length,
+      player.lastIndexOf("'';"),
+    )
     .replaceAll("''${", "${");
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "wallpaper-owner-"));
   try {
@@ -153,7 +170,10 @@ test("video player launches only on displays not owned by another selection", ()
     fs.writeFileSync(allVideo, "");
     fs.writeFileSync(overrideVideo, "");
     fs.writeFileSync(path.join(state, "all.wall"), `crop\n${allVideo}\n`);
-    fs.writeFileSync(path.join(state, "Virtual-1.wall"), `crop\n${overrideVideo}\n`);
+    fs.writeFileSync(
+      path.join(state, "Virtual-1.wall"),
+      `crop\n${overrideVideo}\n`,
+    );
     fs.writeFileSync(
       path.join(bin, "awww"),
       "#!/bin/sh\nprintf ': Virtual-1: 2560x1440\\n: DP-1: 3840x2160\\n'\n",
@@ -161,22 +181,26 @@ test("video player launches only on displays not owned by another selection", ()
     );
     fs.writeFileSync(
       path.join(bin, "mpvpaper"),
-      '#!/bin/sh\nprintf "%s\\n" "$*" >> "$PLAYER_LOG"\n',
+      '#!/bin/sh\nprintf "%s\\n" "$*" >> "$PLAYER_LOG"\nsleep 0.1\n',
       { mode: 0o755 },
     );
     const log = path.join(scratch, "players.log");
     const run = (output) => {
       fs.writeFileSync(log, "");
-      const result = spawnSync("bash", ["-euo", "pipefail", "-c", script, "wallpaper-player", output], {
-        env: {
-          ...process.env,
-          PATH: `${bin}:${process.env.PATH}`,
-          XDG_STATE_HOME: path.join(scratch, "state"),
-          XDG_RUNTIME_DIR: scratch,
-          PLAYER_LOG: log,
+      const result = spawnSync(
+        "bash",
+        ["-euo", "pipefail", "-c", script, "wallpaper-player", output],
+        {
+          env: {
+            ...process.env,
+            PATH: `${bin}:${process.env.PATH}`,
+            XDG_STATE_HOME: path.join(scratch, "state"),
+            XDG_RUNTIME_DIR: scratch,
+            PLAYER_LOG: log,
+          },
+          encoding: "utf8",
         },
-        encoding: "utf8",
-      });
+      );
       assert.equal(result.error, undefined);
       return { status: result.status, players: fs.readFileSync(log, "utf8") };
     };
