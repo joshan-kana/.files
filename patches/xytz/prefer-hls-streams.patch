@@ -1,0 +1,37 @@
+--- a/internal/config/config.go
++++ b/internal/config/config.go
+@@ -218,6 +218,14 @@
+ 	return ResolveQuality(c.DefaultQuality)
+ }
+ 
++func (c *Config) GetPlaybackFormat() string {
++	format := c.GetDefaultFormat()
++	if c.DefaultQuality == "" || c.DefaultQuality == "best" {
++		return "best[protocol=m3u8_native]/" + format
++	}
++	return format
++}
++
+ func (c *Config) ExpandPath(path string) string {
+ 	if strings.HasPrefix(path, "~/") {
+ 		homeDir, err := os.UserHomeDir()
+--- a/internal/tui/update.go
++++ b/internal/tui/update.go
+@@ -1611,7 +1611,7 @@
+ 	m.player.Video = msg.SelectedVideo
+ 	m.player.URL = medialink.ResolveVideoItemURL(msg.SelectedVideo)
+ 	m.player.SiteName = medialink.GetSiteNameFromURL(m.player.URL)
+-	playFormat := m.Ctx.Config.GetDefaultFormat()
++	playFormat := m.Ctx.Config.GetPlaybackFormat()
+ 	m.playbackOrigin = types.StateVideoList
+ 	if m.Ctx != nil && m.Ctx.PlayerManager != nil {
+ 		return m, m.playURLCmd(m.player.URL, playFormat, m.Ctx.Config.Player, msg.SelectedVideo)
+@@ -1654,7 +1654,7 @@
+ 	m.playbackOrigin = types.StateSearchInput
+ 	m.transitionTo(types.StateVideoPlaying)
+ 
+-	playFormat := m.Ctx.Config.GetDefaultFormat()
++	playFormat := m.Ctx.Config.GetPlaybackFormat()
+ 	return m, m.playURLCmd(m.player.URL, playFormat, m.Ctx.Config.Player, msg.SelectedVideo)
+ }
+ 
