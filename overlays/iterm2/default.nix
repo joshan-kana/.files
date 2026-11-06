@@ -17,9 +17,17 @@ _: {
               appName = "iTerm.app";
               homepage = "https://iterm2.com";
               license = prev.lib.licenses.gpl2Only;
-              cask = "iterm2";
               passthru = {
                 autoUpdate = true;
+                updateScript = [
+                  "${prev.python3}/bin/python3"
+                  "${../../scripts/update-version.py}"
+                  "https://formulae.brew.sh/api/cask/iterm2.json"
+                  ''"version"\s*:\s*"([^"]+)"''
+                  "iterm2-mac"
+                  prev.stdenv.hostPlatform.system
+                  "overlays/iterm2/default.nix"
+                ];
                 updateFilename = "overlays/iterm2/default.nix";
               };
               url =

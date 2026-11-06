@@ -13,9 +13,17 @@ _: {
           homepage = "https://raycast.com";
           license = prev.lib.licenses.unfree;
           unpacker = prev._7zz;
-          cask = "raycast";
           passthru = {
             autoUpdate = true;
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              "https://formulae.brew.sh/api/cask/raycast.json"
+              ''"version"\s*:\s*"([^"]+)"''
+              "raycast"
+              prev.stdenv.hostPlatform.system
+              "overlays/raycast/default.nix"
+            ];
             updateFilename = "overlays/raycast/default.nix";
           };
           url =

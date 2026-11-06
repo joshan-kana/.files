@@ -6,21 +6,21 @@ _: {
         inherit (prev) lib;
         system = prev.stdenv.hostPlatform.system;
         release = {
-          version = "26.1103.31037";
-          hashes = {
-            "aarch64-darwin" = "sha256-e60UfUBEYZJ1fb/dceJlKRRoI63ivMUrPW5lJd6BZhM=";
-            "aarch64-linux" = "sha256-ujasFe3uls1B2/rvqw6JvHKkOK1D+8Z/sII/IYAV50Y=";
-            "x86_64-linux" = "sha256-/O1rSTYSwzmzvbxpx0TkNI7fXBeGiKEBWcrlMfVjymU=";
-          };
+          version = "26.1029.61003";
+          hash = "sha256-Q975gJnpSDfwe5dr6YE4JRhZrliDHQV9VIPosgkGqaQ=";
+        };
+        linuxHashes = {
+          x86_64 = "sha256-BayLVMODb2+Z5PGtuLZsHwqg7W191es25JdqAdM2uYY=";
+          aarch64 = "sha256-XYwXNRPkqXFziWH9Ekp/ps+QmQhdAR5E3FUnl4zf/go=";
         };
         updateScript = [
           "${prev.python3}/bin/python3"
-          "${../../scripts/update-cask.py}"
+          "${../../scripts/update-version.py}"
+          "https://persistent.oaistatic.com/codex-app-prod/appcast.xml"
+          "<sparkle:shortVersionString>([^<]+)"
           "chatgpt"
+          system
           "overlays/chatgpt/default.nix"
-          "--package"
-          "chatgpt"
-          "--arch-hashes"
         ];
         inherit (release) version;
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
@@ -32,9 +32,7 @@ _: {
       in
       lib.optionalAttrs isDarwin {
         chatgpt = import ../../lib/mac-app.nix { inherit prev; } {
-          release = release // {
-            hash = release.hashes.aarch64-darwin;
-          };
+          inherit release;
           pname = "chatgpt";
           appName = "ChatGPT.app";
           homepage = "https://chatgpt.com/";
@@ -42,7 +40,7 @@ _: {
           passthru = {
             autoUpdate = true;
             updateGroup = "chatgpt";
-            updateGroupHandled = true;
+            updateFilename = "overlays/chatgpt/default.nix";
             inherit updateScript;
           };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
@@ -55,7 +53,7 @@ _: {
           inherit version;
           src = prev.fetchurl {
             url = "https://persistent.oaistatic.com/codex-app-prod/linux/arch/${version}/${linuxArch}/chatgpt-bin-${version}-1-${linuxArch}.pkg.tar.zst";
-            hash = release.hashes.${system};
+            hash = linuxHashes.${linuxArch};
           };
           sourceRoot = ".";
           nativeBuildInputs = with prev; [
@@ -124,7 +122,7 @@ _: {
           passthru = {
             autoUpdate = true;
             updateGroup = "chatgpt";
-            updateGroupHandled = true;
+            updateFilename = "overlays/chatgpt/default.nix";
             inherit updateScript;
           };
           meta = {

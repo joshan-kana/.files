@@ -16,9 +16,17 @@ _: {
           unpackCmd = ''
             7zz x -sns- -snld20 -y "$curSrc"
           '';
-          cask = "krita";
           passthru = {
             autoUpdate = true;
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              "https://formulae.brew.sh/api/cask/krita.json"
+              ''"version"\s*:\s*"([^"]+)"''
+              "krita"
+              prev.stdenv.hostPlatform.system
+              "overlays/krita/default.nix"
+            ];
             updateFilename = "overlays/krita/default.nix";
           };
           url = r: "https://download.kde.org/stable/krita/${r.version}/krita-${r.version}-signed.dmg";

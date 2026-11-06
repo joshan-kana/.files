@@ -30,9 +30,6 @@ in
           comin = upstream.packages.${final.stdenv.hostPlatform.system}.comin.overrideAttrs (old: {
             version = "${old.version}-patched";
             __intentionallyOverridingVersion = true;
-            passthru = (old.passthru or { }) // {
-              autoUpdate = false;
-            };
 
             patches = (old.patches or [ ]) ++ [
               ../../patches/comin/allow-force-push.patch

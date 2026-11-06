@@ -111,7 +111,6 @@ in
             pname = "technitium-roaming-dns";
             inherit (technitium-dns-server) version;
             src = ./.;
-            passthru.autoUpdate = false;
             nativeBuildInputs = [ dotnetCorePackages.sdk_10_0 ];
             dontConfigure = true;
             dontStrip = true;

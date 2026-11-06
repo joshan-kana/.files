@@ -17,9 +17,17 @@ _: {
               appName = "REAPER.app";
               homepage = "https://www.reaper.fm";
               license = prev.lib.licenses.unfree;
-              cask = "reaper";
               passthru = {
                 autoUpdate = true;
+                updateScript = [
+                  "${prev.python3}/bin/python3"
+                  "${../../scripts/update-version.py}"
+                  "https://formulae.brew.sh/api/cask/reaper.json"
+                  ''"version"\s*:\s*"([^"]+)"''
+                  "reaper-mac"
+                  prev.stdenv.hostPlatform.system
+                  "overlays/reaper/default.nix"
+                ];
                 updateFilename = "overlays/reaper/default.nix";
               };
               url =

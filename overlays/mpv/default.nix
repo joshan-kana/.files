@@ -14,18 +14,8 @@ _: {
           hash = "sha256-PYi21y7uAZUsbn9nqn4ZP8QB9iQ9pRvnIKdOtG0WeIw=";
         };
       });
-      mpv-unwrapped =
-        (prev.mpv-unwrapped.override { libplacebo = final.libplacebo-mpv; }).overrideAttrs
-          (old: {
-            passthru = (old.passthru or { }) // {
-              autoUpdate = false;
-            };
-          });
-      mpv = (prev.mpv.override { inherit (final) mpv-unwrapped; }).overrideAttrs (old: {
-        passthru = (old.passthru or { }) // {
-          autoUpdate = false;
-        };
-      });
+      mpv-unwrapped = prev.mpv-unwrapped.override { libplacebo = final.libplacebo-mpv; };
+      mpv = prev.mpv.override { inherit (final) mpv-unwrapped; };
     })
   ];
 }

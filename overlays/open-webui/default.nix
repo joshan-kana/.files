@@ -29,16 +29,13 @@ _: {
               mcp = prev.python3Packages.mcp_1;
             };
           }).overrideAttrs
-            (old: {
-              passthru = (old.passthru or { }) // {
-                autoUpdate = false;
-              };
+            {
               makeWrapperArgs = [
                 "--set"
                 "FRONTEND_BUILD_DIR"
                 "${prev.open-webui.frontend}/share/open-webui"
               ];
-            });
+            };
       }
     )
   ];

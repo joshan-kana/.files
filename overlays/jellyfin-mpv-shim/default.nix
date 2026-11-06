@@ -21,9 +21,6 @@ _: {
                 ])
               ) (old.nativeBuildInputs or [ ]);
               preFixup = "";
-              passthru = (old.passthru or { }) // {
-                autoUpdate = false;
-              };
               meta = old.meta // {
                 platforms = prev.lib.platforms.darwin;
               };

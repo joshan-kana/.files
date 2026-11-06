@@ -17,9 +17,17 @@ _: {
               appName = "Notion.app";
               homepage = "https://www.notion.so";
               license = prev.lib.licenses.unfree;
-              cask = "notion";
               passthru = {
                 autoUpdate = true;
+                updateScript = [
+                  "${prev.python3}/bin/python3"
+                  "${../../scripts/update-version.py}"
+                  "https://formulae.brew.sh/api/cask/notion.json"
+                  ''"version"\s*:\s*"([^"]+)"''
+                  "notion-mac"
+                  prev.stdenv.hostPlatform.system
+                  "overlays/notion/default.nix"
+                ];
                 updateFilename = "overlays/notion/default.nix";
               };
               url = r: "https://desktop-release.notion-static.com/Notion-${r.version}-arm64.dmg";

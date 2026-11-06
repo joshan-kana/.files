@@ -17,9 +17,17 @@ _: {
               appName = "Linear.app";
               homepage = "https://linear.app";
               license = prev.lib.licenses.unfree;
-              cask = "linear";
               passthru = {
                 autoUpdate = true;
+                updateScript = [
+                  "${prev.python3}/bin/python3"
+                  "${../../scripts/update-version.py}"
+                  "https://formulae.brew.sh/api/cask/linear.json"
+                  ''"version"\s*:\s*"([^"]+)"''
+                  "linear-mac"
+                  prev.stdenv.hostPlatform.system
+                  "overlays/linear/default.nix"
+                ];
                 updateFilename = "overlays/linear/default.nix";
               };
               url = r: "https://releases.linear.app/Linear-${r.version}-universal.dmg";

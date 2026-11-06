@@ -4,9 +4,6 @@ _: {
       _final: prev:
       prev.lib.optionalAttrs prev.stdenv.hostPlatform.isLinux {
         brave = prev.brave.overrideAttrs (old: {
-          passthru = (old.passthru or { }) // {
-            autoUpdate = false;
-          };
           postInstall = (old.postInstall or "") + ''
             cat > "$out/opt/brave.com/brave/initial_preferences" <<'EOF'
             ${builtins.toJSON { extensions.theme.system_theme = 2; }}
