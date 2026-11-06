@@ -10,7 +10,10 @@ let
   terminal = config.dotfiles.defaults.terminal;
 in
 {
-  programs.hyprland.xwayland.enable = xwaylandEnabled;
+  programs.hyprland = {
+    xwayland.enable = xwaylandEnabled;
+    withUWSM = true;
+  };
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
   eww = _: {
@@ -203,6 +206,7 @@ in
       in
       {
         xwayland.enable = xwaylandEnabled;
+        systemd.enable = false;
         configType = "lua";
 
         settings = {
@@ -396,7 +400,7 @@ in
 
             # Window management
             (modBind "Q" "hl.dsp.window.close()")
-            (modBind "M" "hl.dsp.exit()")
+            (modBind "M" (exec "uwsm stop"))
             (modBind "SHIFT + F" "hl.dsp.window.float()")
             (modBind "SHIFT + P" "hl.dsp.window.pin()")
             (modBind "P" "hl.dsp.window.pseudo()")
