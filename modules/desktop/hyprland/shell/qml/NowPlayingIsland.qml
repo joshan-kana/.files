@@ -13,6 +13,8 @@ Item {
 
     // Leave the centered clock island unobstructed on narrow logical screens.
     property bool frameConnected: false
+    property bool occluded: false
+    enabled: !occluded
     readonly property real playbackWidth: playbackZone.width
     readonly property bool mainHover: mainHitArea.containsMouse
     readonly property bool playbackHover: playbackHitArea.containsMouse && media.canTogglePlaying
@@ -22,7 +24,7 @@ Item {
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
     height: theme.barIslandHeight
     visible: width > 1
-    opacity: media.available ? 1 : 0
+    opacity: media.available && !occluded ? 1 : 0
 
     Behavior on width {
         // Layout reductions must follow monitor geometry immediately.
@@ -35,6 +37,7 @@ Item {
     }
 
     Behavior on opacity {
+        enabled: !island.occluded
         NumberAnimation {
             duration: island.motion.fast
             easing.type: island.motion.effectsType
