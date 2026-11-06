@@ -1,5 +1,6 @@
 {
   inputs,
+  configurationName,
   lib,
   pkgs,
   scopeConfig,
@@ -383,6 +384,13 @@ in
     }:
     {
       stylix.targets.qt.platform = "kde";
+      home.activation.themeWarmCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        cacheDir=${lib.escapeShellArg "${config.xdg.stateHome}/dotfiles/theme-cache/${configurationName}"}
+        if [ -d "$cacheDir" ] && [ "$(cat "$cacheDir/.revision" 2>/dev/null)" != ${lib.escapeShellArg (toString inputs.self.outPath)} ]; then
+          find "$cacheDir" -maxdepth 1 -type l -delete
+          rm -f -- "$cacheDir/.revision"
+        fi
+      '';
     }
     // lib.optionalAttrs isLinux {
       dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkForce (

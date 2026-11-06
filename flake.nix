@@ -805,10 +805,12 @@
                 ''}
               fi
 
+              staging="$(mktemp -d)"
+              trap 'rm -rf -- "$staging"' EXIT
               targets=()
               batch=0
               buildBatch() {
-                nix build "$@" --out-link "$cacheDir/batch-$batch" "''${targets[@]}"
+                nix build "$@" --out-link "$staging/batch-$batch" "''${targets[@]}"
                 targets=()
                 batch=$((batch + 1))
               }
@@ -826,6 +828,17 @@
               if [ "''${#targets[@]}" -gt 0 ]; then
                 buildBatch "$@"
               fi
+
+              # Publish only complete warm runs; remove superseded GC roots.
+              for link in "$staging"/batch-*; do
+                nix-store --realise --add-root "$cacheDir/''${link##*/}" "$(readlink "$link")" > /dev/null
+              done
+              for link in "$cacheDir"/*; do
+                [ -L "$link" ] || continue
+                [ -L "$staging/''${link##*/}" ] || rm -- "$link"
+              done
+              printf '%s\n' ${lib.escapeShellArg (toString self.outPath)} > "$cacheDir/.revision.$$"
+              mv -- "$cacheDir/.revision.$$" "$cacheDir/.revision"
             '';
           };
 
