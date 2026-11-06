@@ -114,7 +114,6 @@ in
       localScratchpad
       wl-clipboard
       brightnessctl
-      polkit_gnome
       awww
       networkmanagerapplet
       playerctl
