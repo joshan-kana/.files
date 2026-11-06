@@ -9,255 +9,437 @@ FocusScope {
     required property Theme theme
     required property Motion motion
 
+    property bool compact: false
     property bool active: false
     property int selectedIndex: 0
     property var selectedNode: null
-    readonly property var streams: (system.audioApplicationStreams || []).concat(system.audioCaptureStreams || [])
+    property string selectedKind: "output"
+    readonly property var streams: system.audioApplicationStreams.concat(system.audioCaptureStreams)
+    readonly property var targets: [
+        {
+            kind: "output"
+        }
+    ].concat(system.audioApplicationStreams.map(node => ({
+                kind: "stream",
+                node: node,
+                capture: false
+            }))).concat(system.microphoneAvailable ? [
+        {
+            kind: "input"
+        }
+    ] : []).concat(system.audioCaptureStreams.map(node => ({
+                kind: "stream",
+                node: node,
+                capture: true
+            })))
+    readonly property int microphoneIndex: 1 + system.audioApplicationStreams.length
+    readonly property bool deviceChooserOpen: outputDevice.chooserOpen || inputDevice.chooserOpen
+    readonly property int selectedStreamIndex: selectedTarget?.kind === "stream" ? streams.indexOf(selectedTarget.node) : -1
+    readonly property var selectedTarget: targets[Math.max(0, Math.min(selectedIndex, targets.length - 1))] || null
 
     signal closeRequested
     signal keyboardRequested
+    signal expandRequested
 
-    implicitWidth: 730
-    implicitHeight: header.implicitHeight + theme.spacing4 * 2 + (streams.length > 0 ? 318 : 148) + footer.implicitHeight
+    implicitWidth: compact ? 490 : 950
+    implicitHeight: compact ? Math.max(300, body.implicitHeight + theme.spacing3 * 2) : body.implicitHeight + theme.spacing2 * 2
     visible: active
-    focus: active
+    focus: active && !compact
 
-    // A PipeWire node can move in the model while remaining the same active
-    // stream. Keep keyboard focus attached to its object identity.
     function selectIndex(index: int): void {
-        selectedIndex = Math.max(0, Math.min(index, Math.max(0, streams.length - 1)));
-        selectedNode = streams[selectedIndex] || null;
+        selectedIndex = Math.max(0, Math.min(index, Math.max(0, targets.length - 1)));
+        const target = targets[selectedIndex];
+        selectedNode = target?.node || null;
+        selectedKind = target?.kind || "output";
     }
 
-    onStreamsChanged: {
-        const current = streams.indexOf(selectedNode);
-        selectIndex(current >= 0 ? current : selectedIndex);
+    onTargetsChanged: {
+        const index = selectedNode ? targets.findIndex(target => target.node === selectedNode) : targets.findIndex(target => target.kind === selectedKind);
+        selectIndex(index >= 0 ? index : 0);
     }
+
     onActiveChanged: {
-        if (active) {
-            selectIndex(selectedIndex);
+        if (!active) {
+            outputDevice.chooserOpen = false;
+            inputDevice.chooserOpen = false;
+            return;
+        }
+        selectIndex(selectedIndex);
+        if (!compact)
             Qt.callLater(() => {
                 if (mixer.active)
                     mixer.keyboardRequested();
             });
-        }
     }
 
     function focusKeyboard(): void {
-        if (active)
+        if (active && !compact)
             keyboardRequested();
     }
 
     function selectedStream(): var {
-        return streams.length > 0 ? streams[Math.max(0, Math.min(selectedIndex, streams.length - 1))] : null;
+        return selectedTarget?.kind === "stream" ? selectedTarget.node : null;
+    }
+
+    function selectStreamIndex(index: int): void {
+        const node = streams[index];
+        if (!node)
+            return;
+        const target = targets.findIndex(candidate => candidate.kind === "stream" && candidate.node === node);
+        if (target >= 0)
+            selectIndex(target);
+    }
+
+    function moveAudioSelection(delta: int): void {
+        if (targets.length)
+            selectIndex((selectedIndex + delta + targets.length) % targets.length);
     }
 
     function adjustSelected(delta: real): void {
-        const stream = selectedStream();
-        if (stream)
-            system.adjustStreamVolume(stream, delta);
+        const target = selectedTarget;
+        if (target?.kind === "output")
+            system.adjustVolume(delta);
+        else if (target?.kind === "input")
+            system.setMicrophoneVolume(system.microphoneVolume + delta);
+        else if (target?.node)
+            system.adjustStreamVolume(target.node, delta);
     }
 
     function toggleSelectedMute(): void {
-        const stream = selectedStream();
-        if (stream)
-            system.toggleStreamMute(stream);
+        const target = selectedTarget;
+        if (target?.kind === "output")
+            system.toggleMute();
+        else if (target?.kind === "input")
+            system.toggleMicrophoneMute();
+        else if (target?.node)
+            system.toggleStreamMute(target.node);
     }
 
-    DetailHero {
-        id: header
-        width: parent.width
-        runtime: mixer.runtime
-        theme: mixer.theme
-        motion: mixer.motion
-        glyph: "♫"
-        glyphColor: mixer.theme.roleColor("audio")
-        eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active source" : " active sources")
-        title: "Application mixer"
-        detail: "Live per-channel signal, volume and mute"
+    function toggleSelectedDeviceChooser(): void {
+        const target = selectedTarget;
+        if (target?.kind === "input" || target?.capture)
+            inputDevice.toggleDeviceChooser();
+        else
+            outputDevice.toggleDeviceChooser();
     }
 
-    ListView {
-        id: list
-        anchors {
-            top: header.bottom
-            right: parent.right
-            bottom: footer.top
-            left: parent.left
-            topMargin: mixer.theme.spacing4
-            bottomMargin: mixer.theme.spacing4
-        }
-        model: mixer.streams.length
-        orientation: ListView.Vertical
-        spacing: mixer.theme.spacing3
-        clip: true
-        currentIndex: mixer.selectedIndex
-        boundsBehavior: Flickable.StopAtBounds
-        onCurrentIndexChanged: {
-            if (currentIndex >= 0)
-                positionViewAtIndex(currentIndex, ListView.Contain);
-        }
-
-        // Only delegates in the visible viewport (and the small ListView
-        // cache) create PipeWire peak monitors. Large stream sets stay bounded.
-        delegate: Item {
-            id: streamRow
-            required property int index
-            readonly property var stream: mixer.streams[index] || null
-            readonly property bool chosen: index === mixer.selectedIndex
-            readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
-            readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
-            readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
-
-            width: list.width
-            height: 92 + (sectionStart ? 26 : 0)
-
-            Text {
-                visible: streamRow.sectionStart
-                anchors {
-                    top: parent.top
-                    left: parent.left
-                }
-                height: 23
-                text: streamRow.capture ? "CAPTURE · " + mixer.system.audioCaptureStreams.length : "PLAYBACK · " + mixer.system.audioApplicationStreams.length
-                color: mixer.theme.readableRoleColor("audio")
-                font.family: mixer.runtime.fontMono
-                font.pixelSize: mixer.theme.fontSize(10)
-                font.weight: Font.DemiBold
-            }
-
-            ShellSurface {
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    top: parent.top
-                    topMargin: streamRow.sectionStart ? 26 : 0
-                }
-                height: 92
-                theme: mixer.theme
-                motion: mixer.motion
-                cornerRadius: theme.radiusMedium
-                surfaceLayer: ShellSurface.Group
-                fillColor: streamRow.chosen ? theme.expressiveSurfaceStrong : theme.expressiveSurface
-                borderColor: streamRow.chosen ? theme.roleColor("audio") : "transparent"
-                borderWidth: streamRow.chosen ? theme.borderFocus : 0
-
-                AudioStreamControl {
-                    anchors {
-                        fill: parent
-                        margins: mixer.theme.spacing3
-                    }
-                    system: mixer.system
-                    runtime: mixer.runtime
-                    theme: mixer.theme
-                    motion: mixer.motion
-                    stream: streamRow.stream
-                    selected: streamRow.chosen
-                    capture: streamRow.capture
-                    monitoring: mixer.active && list.visible && streamRow.inViewport
-                    onSelectedRequested: mixer.selectIndex(streamRow.index)
-                }
-            }
-        }
-    }
-
-    ShellSurface {
-        anchors.centerIn: list
-        width: list.width
-        height: 120
-        visible: mixer.streams.length === 0
-        theme: mixer.theme
-        motion: mixer.motion
-        surfaceLayer: ShellSurface.Group
-        cornerRadius: mixer.theme.radiusLarge
-        fillColor: mixer.theme.expressiveSurface
-
-        Column {
-            anchors.centerIn: parent
-            spacing: mixer.theme.spacing2
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "󰎆"
-                color: mixer.theme.roleColor("audio")
-                font.family: "Symbols Nerd Font"
-                font.pixelSize: mixer.theme.fontSize(32)
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "No application audio streams"
-                color: mixer.theme.textStrong
-                font.family: mixer.runtime.fontMono
-                font.pixelSize: mixer.theme.fontSize(13)
-                font.weight: Font.DemiBold
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Active applications appear here automatically"
-                color: mixer.theme.textMuted
-                font.family: mixer.runtime.fontMono
-                font.pixelSize: mixer.theme.fontSize(10)
-            }
-        }
-    }
-
-    Text {
-        anchors.centerIn: list
-        visible: false
-        text: "No applications playing audio"
-        color: mixer.theme.textStrong
-        font.family: mixer.runtime.fontMono
-        font.pixelSize: mixer.theme.fontSize(11)
-    }
-
-    KeyHintStrip {
-        id: footer
-        width: parent.width
-        anchors.bottom: parent.bottom
-        runtime: mixer.runtime
-        theme: mixer.theme
-        hints: [
-            {
-                shortcut: "TAB · J/K",
-                label: "Select"
-            },
-            {
-                shortcut: "PGUP/PGDN",
-                label: "Page"
-            },
-            {
-                shortcut: "H/L · ARROWS",
-                label: "Volume"
-            },
-            {
-                shortcut: "ESC",
-                label: "Back"
-            }
-        ]
-    }
-
-    // One keyboard owner per hub. The parent FocusScope forwards local keys
-    // here rather than racing a nested FocusScope for layer-shell focus.
     function handleKey(key: int, modifiers: int): bool {
         if (!active)
             return false;
-        if (key === Qt.Key_Escape) {
+        const picker = outputDevice.chooserOpen ? outputDevice : inputDevice.chooserOpen ? inputDevice : null;
+        if (picker) {
+            if (key === Qt.Key_Escape || key === Qt.Key_Backspace || key === Qt.Key_D) {
+                picker.chooserOpen = false;
+            } else if (key === Qt.Key_J || key === Qt.Key_Down) {
+                picker.moveDeviceSelection(1);
+            } else if (key === Qt.Key_K || key === Qt.Key_Up) {
+                picker.moveDeviceSelection(-1);
+            } else if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+                picker.selectDevice(picker.chooserIndex);
+            } else {
+                return false;
+            }
+            return true;
+        }
+        if (key === Qt.Key_Escape && !compact)
             closeRequested();
-        } else if (key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Down || key === Qt.Key_J || key === Qt.Key_Tab || key === Qt.Key_Backtab) {
+        else if (key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Down || key === Qt.Key_J || (!compact && (key === Qt.Key_Tab || key === Qt.Key_Backtab))) {
             const backwards = key === Qt.Key_Up || key === Qt.Key_K || key === Qt.Key_Backtab || (key === Qt.Key_Tab && (modifiers & Qt.ShiftModifier));
-            selectIndex(Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + (backwards ? -1 : 1))));
-        } else if (key === Qt.Key_U || key === Qt.Key_PageUp || key === Qt.Key_D || key === Qt.Key_PageDown) {
-            const rowHeight = list.currentItem ? list.currentItem.height + list.spacing : 92;
-            const rows = Math.max(1, Math.floor(list.height / Math.max(1, rowHeight)));
-            selectIndex(Math.max(0, Math.min(Math.max(0, streams.length - 1), selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows))));
+            moveAudioSelection(backwards ? -1 : 1);
+        } else if (!compact && (key === Qt.Key_U || key === Qt.Key_PageUp || key === Qt.Key_D || key === Qt.Key_PageDown)) {
+            const rows = Math.max(1, Math.floor(list.height / (compact ? 72 : 106)));
+            selectIndex(Math.max(0, Math.min(targets.length - 1, selectedIndex + ((key === Qt.Key_D || key === Qt.Key_PageDown) ? rows : -rows))));
         } else if (key === Qt.Key_Left || key === Qt.Key_H) {
             adjustSelected(-0.05);
         } else if (key === Qt.Key_Right || key === Qt.Key_L) {
             adjustSelected(0.05);
-        } else if (key === Qt.Key_M || key === Qt.Key_Return || key === Qt.Key_Enter) {
+        } else if (key === Qt.Key_M || (!compact && (key === Qt.Key_Return || key === Qt.Key_Enter))) {
             toggleSelectedMute();
+        } else if (key === Qt.Key_P) {
+            toggleSelectedDeviceChooser();
+        } else if (key === Qt.Key_X) {
+            system.toggleMicrophoneMute();
         } else {
             return false;
         }
         return true;
+    }
+
+    ShellSurface {
+        anchors.fill: parent
+        visible: mixer.compact
+        theme: mixer.theme
+        motion: mixer.motion
+        surfaceLayer: ShellSurface.Group
+        cornerRadius: mixer.theme.radiusLarge
+        fillColor: mixer.theme.groupBase
+    }
+
+    Text {
+        anchors.centerIn: parent
+        visible: mixer.compact && mixer.active && body.implicitHeight < 140
+        text: "󰓃  AUDIO CONTROLS"
+        font.family: mixer.runtime.fontMono
+        font.pixelSize: mixer.theme.fontSize(11)
+        color: mixer.theme.textMuted
+    }
+
+    Column {
+        id: body
+        x: mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2
+        y: mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2
+        width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2) * 2)
+        spacing: mixer.theme.spacing3
+
+        Row {
+            id: compactHeader
+            visible: mixer.compact
+            width: parent.width
+            height: visible ? 34 : 0
+            spacing: mixer.theme.spacing2
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(1, parent.width - expandAction.width - parent.spacing)
+                text: "AUDIO · " + mixer.streams.length + (mixer.streams.length === 1 ? " LIVE CHANNEL" : " LIVE CHANNELS")
+                color: mixer.theme.readableRoleColor("audio")
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontPanelEyebrow
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1
+                elide: Text.ElideRight
+            }
+            ShellAction {
+                id: expandAction
+                width: 134
+                height: 32
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                compact: true
+                horizontalCompact: true
+                icon: "󰓃"
+                title: "Full mixer"
+                shortcut: "SHIFT+M"
+                onActivated: mixer.expandRequested()
+            }
+        }
+
+        DetailHero {
+            visible: !mixer.compact
+            width: parent.width
+            runtime: mixer.runtime
+            theme: mixer.theme
+            motion: mixer.motion
+            glyph: "♫"
+            glyphColor: mixer.theme.roleColor("audio")
+            eyebrow: "Audio / " + mixer.streams.length + (mixer.streams.length === 1 ? " active channel" : " active channels")
+            title: "Audio mixer"
+            detail: "Output, input and every application channel"
+        }
+
+        Grid {
+            id: deviceGrid
+            width: parent.width
+            columns: width >= 450 && mixer.theme.textScale < 1.5 ? 2 : 1
+            columnSpacing: mixer.theme.spacing2
+            rowSpacing: mixer.theme.spacing2
+            readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
+
+            AudioDeviceControl {
+                id: outputDevice
+                width: deviceGrid.cellWidth
+                height: implicitHeight
+                microphone: false
+                compact: mixer.compact
+                active: mixer.active
+                selected: mixer.selectedIndex === 0
+                system: mixer.system
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                onChooserOpenChanged: {
+                    if (chooserOpen)
+                        inputDevice.chooserOpen = false;
+                }
+                onSelectedRequested: mixer.selectIndex(0)
+            }
+
+            AudioDeviceControl {
+                id: inputDevice
+                visible: mixer.system.microphoneAvailable || mixer.system.audioCaptureStreams.length > 0
+                width: deviceGrid.cellWidth
+                height: implicitHeight
+                microphone: true
+                compact: mixer.compact
+                active: mixer.active
+                selected: mixer.selectedIndex === mixer.microphoneIndex
+                system: mixer.system
+                runtime: mixer.runtime
+                theme: mixer.theme
+                motion: mixer.motion
+                onChooserOpenChanged: {
+                    if (chooserOpen)
+                        outputDevice.chooserOpen = false;
+                }
+                onSelectedRequested: mixer.selectIndex(mixer.microphoneIndex)
+            }
+        }
+
+        Row {
+            width: parent.width
+            height: 20
+            spacing: mixer.theme.spacing2
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
+                text: "APPLICATION CHANNELS"
+                color: mixer.theme.readableRoleColor("audio")
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(10)
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.9
+            }
+            Text {
+                id: channelCount
+                anchors.verticalCenter: parent.verticalCenter
+                text: mixer.system.audioApplicationStreams.length + " PLAY · " + mixer.system.audioCaptureStreams.length + " REC"
+                color: mixer.theme.textMuted
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(9)
+            }
+        }
+
+        ListView {
+            id: list
+            width: parent.width
+            height: mixer.streams.length === 0 ? 0 : mixer.compact ? Math.min(2, mixer.streams.length) * 72 + 20 : 330
+            visible: mixer.streams.length > 0
+            model: mixer.streams.length
+            orientation: ListView.Vertical
+            spacing: mixer.theme.spacing1
+            cacheBuffer: 90
+            clip: true
+            interactive: mixer.streams.length > (mixer.compact ? 2 : 3)
+            boundsBehavior: Flickable.StopAtBounds
+            currentIndex: mixer.selectedStreamIndex
+            onCurrentIndexChanged: {
+                if (currentIndex >= 0)
+                    positionViewAtIndex(currentIndex, ListView.Contain);
+            }
+
+            delegate: Item {
+                id: streamRow
+                required property int index
+                readonly property var stream: mixer.streams[index] || null
+                readonly property bool capture: index >= mixer.system.audioApplicationStreams.length
+                readonly property bool sectionStart: index === 0 || index === mixer.system.audioApplicationStreams.length
+                readonly property bool inViewport: y + height > list.contentY && y < list.contentY + list.height
+                width: list.width
+                height: (mixer.compact ? 72 : 102) + (sectionStart && !mixer.compact ? 18 : 0)
+
+                Text {
+                    visible: streamRow.sectionStart && !mixer.compact
+                    height: visible ? 18 : 0
+                    text: streamRow.capture ? "CAPTURE" : "PLAYBACK"
+                    color: mixer.theme.readableRoleColor("audio")
+                    font.family: mixer.runtime.fontMono
+                    font.pixelSize: mixer.theme.fontSize(9)
+                }
+
+                ShellSurface {
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: parent.top
+                        topMargin: streamRow.sectionStart && !mixer.compact ? 18 : 0
+                    }
+                    height: mixer.compact ? 72 : 102
+                    theme: mixer.theme
+                    motion: mixer.motion
+                    surfaceLayer: ShellSurface.Control
+                    cornerRadius: mixer.theme.radiusMedium
+                    fillColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.expressiveSurfaceStrong : mixer.theme.expressiveSurface
+                    borderColor: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.roleColor("audio") : "transparent"
+                    borderWidth: mixer.selectedStreamIndex === streamRow.index ? mixer.theme.borderFocus : 0
+
+                    AudioStreamControl {
+                        anchors {
+                            fill: parent
+                            margins: mixer.theme.spacing2
+                        }
+                        compact: mixer.compact
+                        selected: mixer.selectedStreamIndex === streamRow.index
+                        stream: streamRow.stream
+                        capture: streamRow.capture
+                        system: mixer.system
+                        runtime: mixer.runtime
+                        theme: mixer.theme
+                        motion: mixer.motion
+                        monitoring: mixer.active && list.visible && streamRow.inViewport
+                        onSelectedRequested: mixer.selectStreamIndex(streamRow.index)
+                    }
+                }
+            }
+        }
+
+        ShellSurface {
+            width: parent.width
+            height: mixer.compact ? 46 : 120
+            visible: mixer.streams.length === 0
+            theme: mixer.theme
+            motion: mixer.motion
+            surfaceLayer: ShellSurface.Control
+            cornerRadius: mixer.theme.radiusMedium
+            Text {
+                anchors.centerIn: parent
+                text: mixer.compact ? "No active application audio" : "No application channels · Start playback or capture"
+                color: mixer.theme.textMuted
+                font.family: mixer.runtime.fontMono
+                font.pixelSize: mixer.theme.fontSize(11)
+            }
+        }
+
+        KeyHintStrip {
+            width: parent.width
+            runtime: mixer.runtime
+            theme: mixer.theme
+            hints: mixer.compact ? [
+                {
+                    shortcut: "J/K",
+                    label: "Select audio"
+                },
+                {
+                    shortcut: "H/L",
+                    label: "Level"
+                },
+                {
+                    shortcut: "X",
+                    label: "Mic"
+                }
+            ] : [
+                {
+                    shortcut: "J/K · TAB",
+                    label: "Select"
+                },
+                {
+                    shortcut: "H/L",
+                    label: "Level"
+                },
+                {
+                    shortcut: "M",
+                    label: "Mute"
+                },
+                {
+                    shortcut: "P",
+                    label: "Devices"
+                },
+                {
+                    shortcut: "X",
+                    label: "Mic"
+                }
+            ]
+        }
     }
 }

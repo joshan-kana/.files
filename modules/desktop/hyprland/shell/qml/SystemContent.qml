@@ -35,6 +35,21 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
+    property string controlsLayout: "matrix"
+    property string focusGroup: "appearance"
+    readonly property var focusGroups: ["appearance", "everyday", "audio", "media"]
+
+    function toggleControlsLayout(): void {
+        controlsLayout = controlsLayout === "matrix" ? "focus" : "matrix";
+        selectedSlider = "";
+    }
+
+    function moveFocusGroup(delta: int): void {
+        const index = focusGroups.indexOf(focusGroup);
+        focusGroup = focusGroups[(index + delta + focusGroups.length) % focusGroups.length];
+        selectedSlider = "";
+    }
+
     readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
@@ -86,12 +101,11 @@ FocusScope {
     required property bool returnToControls
     property bool helpOpen: false
     property int trayIndex: 0
-    property int selectedAudioIndex: 0
     // One Controls-wide slider selection mode. Tab cycles only available
     // sliders; H/L and arrows edit the selected value without stealing the
     // existing audio keys outside this mode.
     property string selectedSlider: ""
-    readonly property bool sliderNavigationEnabled: engaged && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
+    readonly property bool sliderNavigationEnabled: engaged && (controlsLayout === "matrix" || focusGroup === "appearance") && !resetConfirmPending && !helpOpen && !mixerOpen && !audioChooserOpen && !themeOpen && !wallpaperOpen && !sessionOpen && !networkOpen && !bluetoothOpen && !resourcesOpen && !recordingsOpen && !trayMenuOpen
     readonly property var sliderTargets: (brightness.supported ? ["brightness"] : []).concat(["windows", "glass"], nightLight.supported ? ["nightLight"] : [])
 
     function selectSlider(target: string): void {
@@ -129,38 +143,7 @@ FocusScope {
         else if (selectedSlider === "brightness")
             brightness.refresh();
     }
-    // Audio selection is tied to the live PipeWire node, not its current
-    // position in the dynamically updated stream list.
-    property var selectedAudioNode: null
-    readonly property var quickAudioTargets: [
-        {
-            kind: "output"
-        }
-    ].concat(system.audioApplicationStreams.map(node => ({
-                kind: "stream",
-                node: node,
-                capture: false
-            }))).concat(system.microphoneAvailable ? [
-        {
-            kind: "input"
-        }
-    ] : []).concat(system.audioCaptureStreams.map(node => ({
-                kind: "stream",
-                node: node,
-                capture: true
-            })))
-    readonly property int microphoneAudioIndex: 1 + system.audioApplicationStreams.length
-
-    function selectAudioIndex(index: int): void {
-        selectedAudioIndex = Math.max(0, Math.min(quickAudioTargets.length - 1, index));
-        selectedAudioNode = quickAudioTargets[selectedAudioIndex]?.node || null;
-    }
-
-    onQuickAudioTargetsChanged: {
-        const index = selectedAudioNode ? quickAudioTargets.findIndex(target => target.node === selectedAudioNode) : -1;
-        selectAudioIndex(index >= 0 ? index : 0);
-    }
-    readonly property bool audioChooserOpen: outputQuick.chooserOpen || inputQuick.chooserOpen
+    readonly property bool audioChooserOpen: audioDeck.deviceChooserOpen
 
     readonly property bool trayMenuOpen: trayMenu.open
     readonly property int trayMenuItemCount: trayMenu.itemCount
@@ -427,7 +410,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: themeOpen || wallpaperOpen ? theme.controlsDetailWidth : 710
+    implicitWidth: themeOpen || wallpaperOpen ? theme.controlsDetailWidth : 1020
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -672,41 +655,19 @@ FocusScope {
     }
 
     function moveAudioSelection(direction: int): void {
-        selectAudioIndex((selectedAudioIndex + direction + quickAudioTargets.length) % quickAudioTargets.length);
+        audioDeck.moveAudioSelection(direction);
     }
 
     function adjustSelectedAudio(delta: real): void {
-        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
-        if (target.kind === "output")
-            system.adjustVolume(delta);
-        else if (target.kind === "input")
-            system.setMicrophoneVolume(system.microphoneVolume + delta);
-        else
-            system.adjustStreamVolume(target.node, delta);
+        audioDeck.adjustSelected(delta);
     }
 
     function toggleSelectedAudioDeviceChooser(): void {
-        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
-        if (target.kind === "output")
-            outputQuick.toggleDeviceChooser();
-        else if (target.kind === "input")
-            inputQuick.toggleDeviceChooser();
-        else if (target.kind === "stream") {
-            if (target.capture)
-                inputQuick.toggleDeviceChooser();
-            else
-                outputQuick.toggleDeviceChooser();
-        }
+        audioDeck.toggleSelectedDeviceChooser();
     }
 
     function muteSelectedAudio(): void {
-        const target = quickAudioTargets[Math.min(selectedAudioIndex, quickAudioTargets.length - 1)];
-        if (target.kind === "output")
-            system.toggleMute();
-        else if (target.kind === "input")
-            system.toggleMicrophoneMute();
-        else
-            system.toggleStreamMute(target.node);
+        audioDeck.toggleSelectedMute();
     }
 
     function activateTrayItem(): void {
@@ -739,6 +700,7 @@ FocusScope {
             }
             spacing: root.theme.spacing2
 
+            // Live state, actions and parameters share one adaptive surface.
             Row {
                 id: controlsClock
                 visible: true
@@ -838,731 +800,841 @@ FocusScope {
                 }
             }
 
-            ShellSurface {
+            Row {
+                id: controlLayoutSwitch
                 width: parent.width
-                height: 84
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
+                height: 38
+                spacing: root.theme.spacing2
 
-                ShellSection {
-                    anchors {
-                        fill: parent
-                        margins: theme.spacing4
-                    }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(1, parent.width - layoutToggle.width - parent.spacing)
+                    text: root.controlsLayout === "matrix" ? "CONTROL SURFACE  /  ALL SYSTEMS" : "CONTROL SURFACE  /  " + root.focusGroup.toUpperCase()
+                    color: root.theme.readableRoleColor("audio")
+                    font.family: root.runtime.fontMono
+                    font.pixelSize: root.theme.fontPanelEyebrow
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.0
+                    elide: Text.ElideRight
+                }
+                ShellAction {
+                    id: layoutToggle
+                    width: 146
+                    height: 34
                     runtime: root.runtime
                     theme: root.theme
-                    title: root.brightness.supported ? "Display  " + root.brightness.percent + "%" : "Display brightness"
-                    detail: root.brightness.supported ? root.brightness.device : "No hardware backlight"
+                    motion: root.motion
+                    compact: true
+                    horizontalCompact: true
+                    icon: root.controlsLayout === "matrix" ? "󰕰" : "󰕮"
+                    title: root.controlsLayout === "matrix" ? "Focus" : "Matrix"
+                    shortcut: "SHIFT+I"
+                    onActivated: root.toggleControlsLayout()
+                }
+            }
 
-                    Row {
-                        width: parent.width
-                        spacing: root.theme.spacing2
-                        ShellSlider {
-                            width: Math.max(1, parent.width - (root.selectedSlider === "brightness" ? brightnessHint.implicitWidth + parent.spacing : 0))
-                            theme: root.theme
-                            motion: root.motion
-                            from: 1
-                            to: 100
-                            value: root.brightness.percent
-                            enabled: root.brightness.supported
-                            accentColor: theme.positive
-                            trackHeight: 8
-                            handleSize: 16
-                            onInteractionStarted: root.selectSlider("brightness")
-                            onValueRequested: next => root.brightness.setPercent(next)
+            Flow {
+                id: focusDirectory
+                visible: root.controlsLayout === "focus"
+                width: parent.width
+                spacing: root.theme.spacing2
+                height: visible ? implicitHeight : 0
+                readonly property int columns: width < 680 || root.theme.textScale >= 1.5 ? 2 : 4
+                readonly property real tabWidth: Math.max(1, (width - spacing * (columns - 1)) / columns)
+
+                Repeater {
+                    model: [
+                        {
+                            key: "appearance",
+                            title: "Appearance",
+                            icon: "󰏘"
+                        },
+                        {
+                            key: "everyday",
+                            title: "Everyday",
+                            icon: "󰀻"
+                        },
+                        {
+                            key: "audio",
+                            title: "Audio",
+                            icon: "󰓃"
+                        },
+                        {
+                            key: "media",
+                            title: "Media",
+                            icon: "󰎆"
                         }
-                        KeyHint {
-                            id: brightnessHint
-                            visible: root.selectedSlider === "brightness"
-                            shortcut: "H/L"
-                            compact: true
-                            runtime: root.runtime
-                            theme: root.theme
-                            emphasized: true
-                            emphasisColor: root.theme.positive
+                    ]
+                    delegate: ShellAction {
+                        required property var modelData
+                        width: focusDirectory.tabWidth
+                        height: 40
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        compact: true
+                        horizontalCompact: true
+                        icon: modelData.icon
+                        title: modelData.title
+                        active: root.focusGroup === modelData.key
+                        onActivated: {
+                            root.focusGroup = modelData.key;
+                            root.selectedSlider = "";
                         }
                     }
                 }
             }
 
             Grid {
-                id: connectionTiles
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                columns: width < 560 || root.theme.textScale >= 1.5 ? 1 : 2
-                columnSpacing: root.theme.spacing3
-                rowSpacing: root.theme.spacing3
-                readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
-
-                ConnectivityTile {
-                    width: connectionTiles.cellWidth
-                    height: 84
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Network"
-                    detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
-                    status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
-                    glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
-                    shortcut: "F"
-                    connected: root.system.networkConnected
-                    pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
-                    failed: networkPanel.open && networkPanel.statusError
-                    unavailable: root.system.networkDevices.length === 0
-                    onActivated: root.openNetwork()
-                }
-
-                ConnectivityTile {
-                    width: connectionTiles.cellWidth
-                    height: 84
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    title: "Bluetooth"
-                    detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
-                    status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
-                    glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
-                    shortcut: "G"
-                    connected: root.system.bluetoothEnabled
-                    scanning: root.system.bluetoothDiscovering
-                    pending: root.system.bluetoothDevices.some(device => device && device.pairing)
-                    failed: bluetoothPanel.open && bluetoothPanel.statusError
-                    unavailable: !root.system.bluetoothAvailable
-                    onActivated: root.openBluetooth()
-                }
-            }
-
-            Row {
+                id: commandMatrix
                 width: parent.width
-                height: 36
+                visible: root.controlsLayout === "matrix" || root.focusGroup === "appearance" || root.focusGroup === "everyday"
+                columns: root.controlsLayout === "matrix" && width >= 820 && root.theme.textScale < 1.4 ? 2 : 1
+                columnSpacing: root.theme.spacing4
+                rowSpacing: root.theme.spacing4
+                readonly property real cellWidth: Math.max(1, (width - columnSpacing * (columns - 1)) / columns)
 
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "QUICK ACTIONS"
-                    color: root.theme.readableRoleColor("attention")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.1
-                }
-            }
-
-            Item {
-                width: 1
-                height: root.theme.spacing1
-            }
-
-            Flow {
-                id: actionStrip
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                spacing: root.theme.spacing2
-                readonly property int columns: width < 520 || root.theme.textScale >= 1.5 ? 2 : width < 680 || root.theme.textScale >= 1.3 ? 3 : 5
-
-                function cellWidth(index: int): real {
-                    const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
-                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(0)
-                    height: 78
+                ShellSection {
+                    id: appearanceSection
+                    width: commandMatrix.cellWidth
+                    visible: root.controlsLayout === "matrix" || root.focusGroup === "appearance"
                     runtime: root.runtime
                     theme: root.theme
-                    motion: root.motion
-                    icon: root.notificationState.silent ? "󰂛" : "󰂚"
-                    title: root.notificationState.silent ? "Silent" : "Alerts"
-                    shortcut: "A"
-                    active: root.notificationState.silent
-                    activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
-                    onActivated: root.notificationState.toggleSilent()
-                }
+                    title: "Appearance & display"
+                    detail: "Visual modes · keyboard-adjustable levels"
 
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(1)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.system.idleInhibited ? "󰅶" : "󰒲"
-                    title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
-                    shortcut: "S"
-                    active: root.system.idleInhibited
-                    activeColor: root.theme.roleColor("warmth")
-                    onActivated: root.system.toggleIdleInhibited()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(2)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰍛"
-                    title: "Resources"
-                    shortcut: "R"
-                    activeColor: root.theme.roleColor("resources")
-                    onActivated: root.openResources()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(3)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
-                    title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
-                    shortcut: "V"
-                    enabled: root.powerProfile.available && !root.powerProfile.applying
-                    active: root.powerProfile.current === "power-saver"
-                    activeColor: root.theme.powerProfileColor(root.powerProfile.current)
-                    onActivated: root.powerProfile.cycle()
-                }
-
-                QuickSettingChip {
-                    width: actionStrip.cellWidth(4)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰕧"
-                    title: "Captures"
-                    shortcut: "C"
-                    activeColor: root.theme.roleColor("capture")
-                    onActivated: root.openRecordings()
-                }
-            }
-
-            Row {
-                width: parent.width
-                height: 36
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "VISUAL MODES"
-                    color: root.theme.readableRoleColor("display")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontPanelEyebrow
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1.1
-                }
-                Item {
-                    width: Math.max(0, parent.width - parent.children[0].width - sliderSelectionHint.implicitWidth)
-                    height: 1
-                }
-                KeyHint {
-                    id: sliderSelectionHint
-                    anchors.verticalCenter: parent.verticalCenter
-                    shortcut: "TAB"
-                    label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
-                    compact: true
-                    runtime: root.runtime
-                    theme: root.theme
-                    emphasized: root.selectedSlider.length > 0
-                }
-            }
-
-            Item {
-                width: 1
-                height: root.theme.spacing1
-            }
-
-            Flow {
-                id: visualModeStrip
-                x: root.theme.spacing2
-                width: Math.max(1, parent.width - root.theme.spacing2 * 2)
-                spacing: root.theme.spacing2
-                readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 560 || root.theme.textScale >= 1.3 ? 2 : width < 680 ? 3 : 5
-
-                function cellWidth(index: int): real {
-                    const row = Math.floor(index / columns);
-                    const itemsInRow = Math.min(columns, 9 - row * columns);
-                    return (width - spacing * (itemsInRow - 1)) / itemsInRow;
-                }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(0)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰸉"
-                    title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
-                    shortcut: "SHIFT+F"
-                    active: root.wallpaperSpectrumEnabled
-                    activeColor: root.theme.roleColor("workspace")
-                    onActivated: root.wallpaperSpectrumToggleRequested()
-                }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(1)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "♫"
-                    title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
-                    shortcut: "SHIFT+G"
-                    active: root.musicReactiveEnabled
-                    activeColor: root.theme.roleColor("audio")
-                    onActivated: root.musicReactiveToggleRequested()
-                }
-
-                OpacitySetting {
-                    width: visualModeStrip.cellWidth(2)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰍹"
-                    label: "Windows"
-                    opacityValue: root.appearance.windowOpacity
-                    shortcut: "SHIFT+D"
-                    active: root.windowTransparencyEnabled
-                    keyboardSelected: root.selectedSlider === "windows"
-                    onSliderActivated: root.selectSlider("windows")
-                    roleAccent: root.theme.roleColor("display")
-                    onToggleRequested: root.windowTransparencyToggleRequested()
-                    onOpacityRequested: value => root.appearance.setWindowOpacity(value)
-                }
-
-                OpacitySetting {
-                    width: visualModeStrip.cellWidth(3)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰊠"
-                    label: "Frosted glass"
-                    opacityValue: root.appearance.glassOpacity
-                    shortcut: "SHIFT+R"
-                    active: root.shellGlassEnabled
-                    keyboardSelected: root.selectedSlider === "glass"
-                    onSliderActivated: root.selectSlider("glass")
-                    roleAccent: root.theme.roleColor("connectivity")
-                    onToggleRequested: root.shellGlassToggleRequested()
-                    onOpacityRequested: value => root.appearance.setGlassOpacity(value)
-                }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(4)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰀻"
-                    title: root.barVisible ? "Bar visible" : "Bar hidden"
-                    shortcut: "SHIFT+A"
-                    active: !root.barVisible
-                    activeColor: root.theme.roleColor("positive")
-                    onActivated: root.barToggleRequested()
-                }
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(5)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.frameVisible ? "󰏗" : "󰏖"
-                    title: root.frameVisible ? "Frame visible" : "Frame hidden"
-                    shortcut: "SHIFT+S"
-                    active: root.frameVisible
-                    activeColor: root.theme.roleColor("display")
-                    onActivated: root.frameToggleRequested()
-                }
-
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(6)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.motion.enabled ? "󰐊" : "󰏤"
-                    title: root.motion.enabled ? "Animations" : "Reduced motion"
-                    shortcut: "SHIFT+E"
-                    active: !root.motion.enabled
-                    activeColor: root.theme.roleColor("warning")
-                    onActivated: root.motion.toggle()
-                }
-
-                AdjustableSetting {
-                    width: visualModeStrip.cellWidth(7)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: root.nightLight.active ? "󰖔" : "󰖙"
-                    label: "Night Light"
-                    valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
-                    keyboardSelected: root.selectedSlider === "nightLight"
-                    onSliderActivated: root.selectSlider("nightLight")
-                    value: root.nightLight.temperature
-                    from: 2500
-                    to: 6500
-                    onValueRequested: value => root.nightLight.setTemperature(value)
-                    toggleShortcut: "T"
-                    roleAccent: root.theme.roleColor("warmth")
-                    active: root.nightLight.active
-                    canToggle: root.nightLight.supported && !root.nightLight.busy
-                    canAdjust: root.nightLight.supported
-                    onToggleRequested: root.nightLight.toggle()
-                }
-                QuickSettingChip {
-                    width: visualModeStrip.cellWidth(8)
-                    height: 78
-                    runtime: root.runtime
-                    theme: root.theme
-                    motion: root.motion
-                    icon: "󰑓"
-                    title: root.resetRunning ? "Restoring…" : "Restore defaults"
-                    shortcut: "SHIFT+C"
-                    active: root.resetConfirmPending
-                    enabled: !root.resetRunning
-                    activeColor: root.theme.roleColor("warning")
-                    onActivated: root.resetConfirmPending = !root.resetConfirmPending
-                }
-            }
-
-            ShellSurface {
-                visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
-                width: parent.width
-                height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: root.theme.radiusMedium
-                fillColor: root.theme.groupBase
-
-                Column {
-                    id: resetContents
-                    width: parent.width - root.theme.spacing3 * 2
-                    anchors.centerIn: parent
-                    spacing: root.theme.spacing2
-                    Text {
+                    ShellSurface {
                         width: parent.width
-                        wrapMode: Text.WordWrap
-                        text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
-                        color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(11)
-                    }
-                    KeyHintStrip {
-                        visible: root.resetConfirmPending
-                        width: parent.width
-                        runtime: root.runtime
+                        height: 84
                         theme: root.theme
-                        hints: [
-                            {
-                                shortcut: "ENTER",
-                                label: "Restore"
-                            },
-                            {
-                                shortcut: "ESC",
-                                label: "Cancel"
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: theme.radiusLarge
+
+                        ShellSection {
+                            anchors {
+                                fill: parent
+                                margins: theme.spacing4
                             }
-                        ]
-                    }
-                }
-            }
+                            runtime: root.runtime
+                            theme: root.theme
+                            title: root.brightness.supported ? "Display  " + root.brightness.percent + "%" : "Display brightness"
+                            detail: root.brightness.supported ? root.brightness.device : "No hardware backlight"
 
-            ShellSurface {
-                width: parent.width
-                height: audioStack.implicitHeight + root.theme.spacing3 * 2
-                theme: root.theme
-                motion: root.motion
-                surfaceLayer: ShellSurface.Group
-                cornerRadius: theme.radiusLarge
-                fillColor: root.theme.groupBase
-
-                Column {
-                    id: audioStack
-                    anchors {
-                        left: parent.left
-                        right: parent.right
-                        top: parent.top
-                        margins: root.theme.spacing3
-                    }
-                    spacing: root.theme.spacing1
-
-                    AudioQuickSection {
-                        id: outputQuick
-                        width: audioStack.width
-                        showMixer: true
-                        inline: true
-                        meterEnabled: root.engaged && !root.detailsVisible
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                inputQuick.chooserOpen = false;
-                        }
-                        baseIndex: 0
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectAudioIndex(index)
-                        onMixerRequested: root.openMixer()
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                    }
-                    AudioQuickSection {
-                        id: inputQuick
-                        width: audioStack.width
-                        onChooserOpenChanged: {
-                            if (chooserOpen)
-                                outputQuick.chooserOpen = false;
-                        }
-                        visible: root.system.microphoneAvailable || root.system.audioCaptureStreams.length > 0
-                        microphone: true
-                        inline: true
-                        meterEnabled: root.engaged && !root.detailsVisible
-                        baseIndex: root.microphoneAudioIndex
-                        selectedAudioIndex: root.selectedAudioIndex
-                        onSelectionRequested: index => root.selectAudioIndex(index)
-                        system: root.system
-                        runtime: root.runtime
-                        theme: root.theme
-                        motion: root.motion
-                    }
-
-                    KeyHintStrip {
-                        width: parent.width
-                        runtime: root.runtime
-                        theme: root.theme
-                        hints: [
-                            {
-                                shortcut: "J/K",
-                                label: "Select audio"
-                            },
-                            {
-                                shortcut: "H/L",
-                                label: "Level"
-                            },
-                            {
-                                shortcut: "X",
-                                label: "Mic"
+                            Row {
+                                width: parent.width
+                                spacing: root.theme.spacing2
+                                ShellSlider {
+                                    width: Math.max(1, parent.width - (root.selectedSlider === "brightness" ? brightnessHint.implicitWidth + parent.spacing : 0))
+                                    theme: root.theme
+                                    motion: root.motion
+                                    from: 1
+                                    to: 100
+                                    value: root.brightness.percent
+                                    enabled: root.brightness.supported
+                                    accentColor: theme.positive
+                                    trackHeight: 8
+                                    handleSize: 16
+                                    onInteractionStarted: root.selectSlider("brightness")
+                                    onValueRequested: next => root.brightness.setPercent(next)
+                                }
+                                KeyHint {
+                                    id: brightnessHint
+                                    visible: root.selectedSlider === "brightness"
+                                    shortcut: "H/L"
+                                    compact: true
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    emphasized: true
+                                    emphasisColor: root.theme.positive
+                                }
                             }
-                        ]
-                    }
-                }
-            }
-
-            Column {
-                width: parent.width
-                spacing: root.theme.spacing2
-
-                Text {
-                    width: parent.width
-                    height: 30
-                    verticalAlignment: Text.AlignVCenter
-                    text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
-                    color: root.theme.readableRoleColor("media")
-                    font.family: root.runtime.fontMono
-                    font.pixelSize: root.theme.fontSize(10)
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1
-                }
-
-                ShellSurface {
-                    width: parent.width
-                    height: root.media.available ? 250 : 0
-                    visible: root.media.available
-                    theme: root.theme
-                    motion: root.motion
-                    surfaceLayer: ShellSurface.Group
-                    cornerRadius: theme.radiusLarge
-                    luminous: true
-                    lightIntensity: 1.25
-                    luminousColor: root.theme.roleColor("media")
-                    fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
-
-                    StateLayer {
-                        theme: root.theme
-                        motion: root.motion
-                        cornerRadius: root.theme.radiusLarge
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Open full media player"
-                        onActivated: root.mediaRequested()
-                    }
-
-                    Text {
-                        anchors {
-                            top: parent.top
-                            right: parent.right
-                            margins: root.theme.spacing3
                         }
-                        z: 1
-                        text: "N"
-                        visible: root.media.available
-                        color: root.theme.textMuted
-                        font.family: root.runtime.fontMono
-                        font.pixelSize: root.theme.fontSize(11)
                     }
 
-                    Column {
-                        anchors {
-                            fill: parent
-                            margins: root.theme.spacing3
-                        }
+                    Row {
+                        width: parent.width
+                        height: 24
                         spacing: root.theme.spacing2
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "VISUAL MODES"
+                            color: root.theme.readableRoleColor("display")
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontPanelEyebrow
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1.0
+                        }
+                        Item {
+                            width: Math.max(0, parent.width - parent.children[0].implicitWidth - sliderSelectionHint.implicitWidth - parent.spacing * 2)
+                            height: 1
+                        }
+                        KeyHint {
+                            id: sliderSelectionHint
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: "TAB"
+                            label: root.selectedSlider.length > 0 ? "Next slider" : "Select slider"
+                            compact: true
+                            runtime: root.runtime
+                            theme: root.theme
+                            emphasized: root.selectedSlider.length > 0
+                        }
+                    }
 
-                        Row {
-                            width: parent.width
-                            height: 60
-                            spacing: root.theme.spacing3
+                    Flow {
+                        id: visualModeStrip
+                        width: parent.width
+                        spacing: root.theme.spacing2
+                        readonly property int columns: width < 340 || root.theme.textScale >= 1.5 ? 1 : width < 410 || root.theme.textScale >= 1.3 ? 2 : width < 450 ? 3 : 5
 
-                            ShellSurface {
-                                width: 60
-                                height: 60
-                                theme: root.theme
-                                motion: root.motion
-                                surfaceLayer: ShellSurface.Control
-                                cornerRadius: theme.radiusMedium
-                                clip: true
-
-                                Image {
-                                    anchors.fill: parent
-                                    source: root.media.artUrl
-                                    asynchronous: true
-                                    cache: true
-                                    fillMode: Image.PreserveAspectCrop
-                                    visible: root.media.artUrl.length > 0
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    visible: root.media.artUrl.length === 0
-                                    text: "♫"
-                                    color: root.theme.roleColor("media")
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(28)
-                                }
-                            }
-
-                            Column {
-                                width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: root.theme.spacing1
-
-                                MarqueeText {
-                                    text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
-                                    width: parent.width
-                                    color: root.theme.roleColor("media")
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(10)
-                                }
-
-                                MarqueeText {
-                                    text: root.media.available ? root.media.title : "No active media player"
-                                    width: parent.width
-                                    color: root.theme.textStrong
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(16)
-                                    font.weight: Font.DemiBold
-                                }
-
-                                MarqueeText {
-                                    text: root.media.artist
-                                    visible: root.media.available
-                                    width: parent.width
-                                    color: root.theme.textMuted
-                                    font.family: root.runtime.fontMono
-                                    font.pixelSize: root.theme.fontSize(10)
-                                }
-                            }
+                        function cellWidth(index: int): real {
+                            const row = Math.floor(index / columns);
+                            const itemsInRow = Math.min(columns, 9 - row * columns);
+                            return (width - spacing * (itemsInRow - 1)) / itemsInRow;
                         }
 
-                        Row {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            height: 38
-                            spacing: root.theme.spacing3
-                            visible: root.media.available
-                            MediaTransport {
-                                id: mediaInlineTransport
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: root.media.available
-                                width: root.media.available ? implicitWidth : 0
-                                media: root.media
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(0)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰸉"
+                            title: root.wallpaperSpectrumEnabled ? "Wallpaper spectrum" : "Spectrum off"
+                            shortcut: "SHIFT+F"
+                            active: root.wallpaperSpectrumEnabled
+                            activeColor: root.theme.roleColor("workspace")
+                            onActivated: root.wallpaperSpectrumToggleRequested()
+                        }
+
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(1)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "♫"
+                            title: root.musicReactiveEnabled ? "Audio reactive" : "Reactive off"
+                            shortcut: "SHIFT+G"
+                            active: root.musicReactiveEnabled
+                            activeColor: root.theme.roleColor("audio")
+                            onActivated: root.musicReactiveToggleRequested()
+                        }
+
+                        OpacitySetting {
+                            width: visualModeStrip.cellWidth(2)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰍹"
+                            label: "Windows"
+                            opacityValue: root.appearance.windowOpacity
+                            shortcut: "SHIFT+D"
+                            active: root.windowTransparencyEnabled
+                            keyboardSelected: root.selectedSlider === "windows"
+                            onSliderActivated: root.selectSlider("windows")
+                            roleAccent: root.theme.roleColor("display")
+                            onToggleRequested: root.windowTransparencyToggleRequested()
+                            onOpacityRequested: value => root.appearance.setWindowOpacity(value)
+                        }
+
+                        OpacitySetting {
+                            width: visualModeStrip.cellWidth(3)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰊠"
+                            label: "Frosted glass"
+                            opacityValue: root.appearance.glassOpacity
+                            shortcut: "SHIFT+R"
+                            active: root.shellGlassEnabled
+                            keyboardSelected: root.selectedSlider === "glass"
+                            onSliderActivated: root.selectSlider("glass")
+                            roleAccent: root.theme.roleColor("connectivity")
+                            onToggleRequested: root.shellGlassToggleRequested()
+                            onOpacityRequested: value => root.appearance.setGlassOpacity(value)
+                        }
+
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(4)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰀻"
+                            title: root.barVisible ? "Bar visible" : "Bar hidden"
+                            shortcut: "SHIFT+A"
+                            active: !root.barVisible
+                            activeColor: root.theme.roleColor("positive")
+                            onActivated: root.barToggleRequested()
+                        }
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(5)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.frameVisible ? "󰏗" : "󰏖"
+                            title: root.frameVisible ? "Frame visible" : "Frame hidden"
+                            shortcut: "SHIFT+S"
+                            active: root.frameVisible
+                            activeColor: root.theme.roleColor("display")
+                            onActivated: root.frameToggleRequested()
+                        }
+
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(6)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.motion.enabled ? "󰐊" : "󰏤"
+                            title: root.motion.enabled ? "Animations" : "Reduced motion"
+                            shortcut: "SHIFT+E"
+                            active: !root.motion.enabled
+                            activeColor: root.theme.roleColor("warning")
+                            onActivated: root.motion.toggle()
+                        }
+
+                        AdjustableSetting {
+                            width: visualModeStrip.cellWidth(7)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.nightLight.active ? "󰖔" : "󰖙"
+                            label: "Night Light"
+                            valueText: root.nightLight.supported ? root.nightLight.temperature + " K" : "Unavailable"
+                            keyboardSelected: root.selectedSlider === "nightLight"
+                            onSliderActivated: root.selectSlider("nightLight")
+                            value: root.nightLight.temperature
+                            from: 2500
+                            to: 6500
+                            onValueRequested: value => root.nightLight.setTemperature(value)
+                            toggleShortcut: "T"
+                            roleAccent: root.theme.roleColor("warmth")
+                            active: root.nightLight.active
+                            canToggle: root.nightLight.supported && !root.nightLight.busy
+                            canAdjust: root.nightLight.supported
+                            onToggleRequested: root.nightLight.toggle()
+                        }
+                        QuickSettingChip {
+                            width: visualModeStrip.cellWidth(8)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰑓"
+                            title: root.resetRunning ? "Restoring…" : "Restore defaults"
+                            shortcut: "SHIFT+C"
+                            active: root.resetConfirmPending
+                            enabled: !root.resetRunning
+                            activeColor: root.theme.roleColor("warning")
+                            onActivated: root.resetConfirmPending = !root.resetConfirmPending
+                        }
+                    }
+
+                    ShellSurface {
+                        visible: root.resetConfirmPending || root.resetRunning || root.resetStatus.length > 0
+                        width: parent.width
+                        height: visible ? resetContents.implicitHeight + root.theme.spacing3 * 2 : 0
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: root.theme.radiusMedium
+                        fillColor: root.theme.groupBase
+
+                        Column {
+                            id: resetContents
+                            width: parent.width - root.theme.spacing3 * 2
+                            anchors.centerIn: parent
+                            spacing: root.theme.spacing2
+                            Text {
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                text: root.resetConfirmPending ? "Restore Nix defaults for appearance, motion, notifications, captures and wallpapers? Personal files and the active system generation stay intact." : root.resetStatus
+                                color: root.resetConfirmPending ? root.theme.textStrong : root.theme.textMuted
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(11)
+                            }
+                            KeyHintStrip {
+                                visible: root.resetConfirmPending
+                                width: parent.width
+                                runtime: root.runtime
+                                theme: root.theme
+                                hints: [
+                                    {
+                                        shortcut: "ENTER",
+                                        label: "Restore"
+                                    },
+                                    {
+                                        shortcut: "ESC",
+                                        label: "Cancel"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+
+                ShellSection {
+                    id: everydaySection
+                    width: commandMatrix.cellWidth
+                    visible: root.controlsLayout === "matrix" || root.focusGroup === "everyday"
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Everyday"
+                    detail: (root.notificationState.silent ? "Silent alerts" : "Alerts on") + " · " + (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power unavailable")
+
+                    Flow {
+                        id: actionStrip
+                        width: parent.width
+                        spacing: root.theme.spacing2
+                        readonly property int columns: width < 410 || root.theme.textScale >= 1.5 ? 2 : width < 450 || root.theme.textScale >= 1.3 ? 3 : 5
+
+                        function cellWidth(index: int): real {
+                            const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
+                            return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                        }
+
+                        QuickSettingChip {
+                            width: actionStrip.cellWidth(0)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.notificationState.silent ? "󰂛" : "󰂚"
+                            title: root.notificationState.silent ? "Silent" : "Alerts"
+                            shortcut: "A"
+                            active: root.notificationState.silent
+                            activeColor: root.notificationState.silent ? root.theme.roleColor("warning") : root.theme.roleColor("attention")
+                            onActivated: root.notificationState.toggleSilent()
+                        }
+
+                        QuickSettingChip {
+                            width: actionStrip.cellWidth(1)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.idleInhibited ? "󰅶" : "󰒲"
+                            title: root.system.idleInhibited ? "Stay awake" : "Idle allowed"
+                            shortcut: "S"
+                            active: root.system.idleInhibited
+                            activeColor: root.theme.roleColor("warmth")
+                            onActivated: root.system.toggleIdleInhibited()
+                        }
+
+                        QuickSettingChip {
+                            width: actionStrip.cellWidth(2)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰍛"
+                            title: "Resources"
+                            shortcut: "R"
+                            activeColor: root.theme.roleColor("resources")
+                            onActivated: root.openResources()
+                        }
+
+                        QuickSettingChip {
+                            width: actionStrip.cellWidth(3)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: root.system.batteryAvailable ? root.system.batteryLevelIcon : "󰐥"
+                            title: (root.powerProfile.available ? root.powerProfile.label(root.powerProfile.current) : "Power") + (root.system.batteryAvailable ? " " + root.system.batteryPercent + "%" : "")
+                            shortcut: "V"
+                            enabled: root.powerProfile.available && !root.powerProfile.applying
+                            active: root.powerProfile.current === "power-saver"
+                            activeColor: root.theme.powerProfileColor(root.powerProfile.current)
+                            onActivated: root.powerProfile.cycle()
+                        }
+
+                        QuickSettingChip {
+                            width: actionStrip.cellWidth(4)
+                            height: 78
+                            runtime: root.runtime
+                            theme: root.theme
+                            motion: root.motion
+                            icon: "󰕧"
+                            title: "Captures"
+                            shortcut: "C"
+                            activeColor: root.theme.roleColor("capture")
+                            onActivated: root.openRecordings()
+                        }
+                    }
+
+                    ShellSection {
+                        width: parent.width
+                        runtime: root.runtime
+                        theme: root.theme
+                        title: "Connectivity"
+
+                        Grid {
+                            id: connectionTiles
+                            width: parent.width
+                            columns: width < 380 || root.theme.textScale >= 1.5 ? 1 : 2
+                            columnSpacing: root.theme.spacing3
+                            rowSpacing: root.theme.spacing3
+                            readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
+
+                            ConnectivityTile {
+                                width: connectionTiles.cellWidth
+                                height: 84
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
-                                compact: true
-                                minimal: true
+                                title: "Network"
+                                detail: root.system.networkConnected ? root.system.networkName : root.system.networkDevices.length === 0 ? "No network interface" : "No connection"
+                                status: failed ? "CONNECTION FAILED" : pending ? networkPanel.pendingNetwork ? "AUTHENTICATION REQUIRED" : "UPDATING CONNECTION" : root.system.networkConnected ? (root.system.wifiConnected ? "WI-FI · CONNECTED" : "ETHERNET · CONNECTED") : unavailable ? "UNAVAILABLE" : "OFFLINE"
+                                glyph: root.system.wifiConnected ? "󰤨" : root.system.networkConnected ? "󰈀" : "󰤭"
+                                shortcut: "F"
+                                connected: root.system.networkConnected
+                                pending: networkPanel.open && (networkPanel.profileActionRunning || networkPanel.pendingNetwork !== null)
+                                failed: networkPanel.open && networkPanel.statusError
+                                unavailable: root.system.networkDevices.length === 0
+                                onActivated: root.openNetwork()
+                            }
+
+                            ConnectivityTile {
+                                width: connectionTiles.cellWidth
+                                height: 84
+                                runtime: root.runtime
+                                theme: root.theme
+                                motion: root.motion
+                                title: "Bluetooth"
+                                detail: unavailable ? "No Bluetooth adapter" : root.system.bluetoothEnabled ? root.system.bluetoothConnectedCount + " connected devices" : "Radio disabled"
+                                status: failed ? "ACTION FAILED" : scanning ? "SCANNING FOR DEVICES" : pending ? "PAIRING DEVICE" : unavailable ? "UNAVAILABLE" : root.system.bluetoothEnabled ? "ADAPTER ON" : "RADIO OFF"
+                                glyph: root.system.bluetoothEnabled ? "󰂯" : "󰂲"
+                                shortcut: "G"
+                                connected: root.system.bluetoothEnabled
+                                scanning: root.system.bluetoothDiscovering
+                                pending: root.system.bluetoothDevices.some(device => device && device.pairing)
+                                failed: bluetoothPanel.open && bluetoothPanel.statusError
+                                unavailable: !root.system.bluetoothAvailable
+                                onActivated: root.openBluetooth()
+                            }
+                        }
+                    }
+                }
+            }
+
+            Grid {
+                id: mediaMatrix
+                width: parent.width
+                visible: root.controlsLayout === "matrix" || root.focusGroup === "audio" || root.focusGroup === "media"
+                columns: root.controlsLayout === "matrix" && width >= 820 && root.theme.textScale < 1.4 ? 2 : 1
+                columnSpacing: root.theme.spacing4
+                rowSpacing: root.theme.spacing4
+                readonly property real cellWidth: Math.max(1, (width - columnSpacing * (columns - 1)) / columns)
+
+                ShellSection {
+                    id: audioSection
+                    width: mediaMatrix.cellWidth
+                    visible: root.controlsLayout === "matrix" || root.focusGroup === "audio"
+                    runtime: root.runtime
+                    theme: root.theme
+                    title: "Audio & levels"
+                    detail: root.system.audioApplicationStreams.length + " playback · " + root.system.audioCaptureStreams.length + " capture"
+
+                    AudioMixerContent {
+                        id: audioDeck
+                        width: parent.width
+                        height: implicitHeight
+                        compact: true
+                        active: root.engaged && !root.detailsVisible && audioSection.visible
+                        runtime: root.runtime
+                        theme: root.theme
+                        motion: root.motion
+                        system: root.system
+                        onExpandRequested: root.openMixer()
+                    }
+                }
+
+                Column {
+                    width: mediaMatrix.cellWidth
+                    visible: root.controlsLayout === "matrix" || root.focusGroup === "media"
+                    spacing: root.theme.spacing2
+
+                    Text {
+                        width: parent.width
+                        height: 30
+                        verticalAlignment: Text.AlignVCenter
+                        text: root.media.available ? "MEDIA" : "MEDIA  ·  NO ACTIVE PLAYER"
+                        color: root.theme.readableRoleColor("media")
+                        font.family: root.runtime.fontMono
+                        font.pixelSize: root.theme.fontSize(10)
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1
+                    }
+
+                    ShellSurface {
+                        width: parent.width
+                        height: root.media.available ? 250 : 0
+                        visible: root.media.available
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: theme.radiusLarge
+                        luminous: true
+                        lightIntensity: 1.25
+                        luminousColor: root.theme.roleColor("media")
+                        fillColor: root.theme.blend(root.theme.groupBase, root.theme.roleColor("media"), root.theme.dark ? 0.045 : 0.025)
+
+                        StateLayer {
+                            theme: root.theme
+                            motion: root.motion
+                            cornerRadius: root.theme.radiusLarge
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Open full media player"
+                            onActivated: root.mediaRequested()
+                        }
+
+                        Text {
+                            anchors {
+                                top: parent.top
+                                right: parent.right
+                                margins: root.theme.spacing3
+                            }
+                            z: 1
+                            text: "N"
+                            visible: root.media.available
+                            color: root.theme.textMuted
+                            font.family: root.runtime.fontMono
+                            font.pixelSize: root.theme.fontSize(11)
+                        }
+
+                        Column {
+                            anchors {
+                                fill: parent
+                                margins: root.theme.spacing3
+                            }
+                            spacing: root.theme.spacing2
+
+                            Row {
+                                width: parent.width
+                                height: 60
+                                spacing: root.theme.spacing3
+
+                                ShellSurface {
+                                    width: 60
+                                    height: 60
+                                    theme: root.theme
+                                    motion: root.motion
+                                    surfaceLayer: ShellSurface.Control
+                                    cornerRadius: theme.radiusMedium
+                                    clip: true
+
+                                    Image {
+                                        anchors.fill: parent
+                                        source: root.media.artUrl
+                                        asynchronous: true
+                                        cache: true
+                                        fillMode: Image.PreserveAspectCrop
+                                        visible: root.media.artUrl.length > 0
+                                    }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: root.media.artUrl.length === 0
+                                        text: "♫"
+                                        color: root.theme.roleColor("media")
+                                        font.family: root.runtime.fontMono
+                                        font.pixelSize: root.theme.fontSize(28)
+                                    }
+                                }
+
+                                Column {
+                                    width: Math.max(1, parent.width - 60 - parent.spacing - root.theme.spacing2)
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: root.theme.spacing1
+
+                                    MarqueeText {
+                                        text: root.media.available ? (root.media.identity || "Now playing") : "Open Now Playing  ↗"
+                                        width: parent.width
+                                        color: root.theme.roleColor("media")
+                                        font.family: root.runtime.fontMono
+                                        font.pixelSize: root.theme.fontSize(10)
+                                    }
+
+                                    MarqueeText {
+                                        text: root.media.available ? root.media.title : "No active media player"
+                                        width: parent.width
+                                        color: root.theme.textStrong
+                                        font.family: root.runtime.fontMono
+                                        font.pixelSize: root.theme.fontSize(16)
+                                        font.weight: Font.DemiBold
+                                    }
+
+                                    MarqueeText {
+                                        text: root.media.artist
+                                        visible: root.media.available
+                                        width: parent.width
+                                        color: root.theme.textMuted
+                                        font.family: root.runtime.fontMono
+                                        font.pixelSize: root.theme.fontSize(10)
+                                    }
+                                }
                             }
 
                             Row {
-                                id: mediaQuickExtras
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: root.theme.spacing1
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                height: 38
+                                spacing: root.theme.spacing3
                                 visible: root.media.available
-                                width: root.media.available ? implicitWidth : 0
+                                MediaTransport {
+                                    id: mediaInlineTransport
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: root.media.available
+                                    width: root.media.available ? implicitWidth : 0
+                                    media: root.media
+                                    runtime: root.runtime
+                                    theme: root.theme
+                                    motion: root.motion
+                                    compact: true
+                                    minimal: true
+                                }
 
-                                ShellAction {
-                                    width: 70
-                                    height: 36
-                                    runtime: root.runtime
-                                    theme: root.theme
-                                    motion: root.motion
-                                    compact: true
-                                    horizontalCompact: true
-                                    icon: "󰒝"
-                                    title: root.media.shuffled ? "ON" : "OFF"
-                                    shortcut: "Z"
-                                    active: root.media.shuffled
-                                    enabled: root.media.shuffleAvailable
-                                    onActivated: root.media.toggleShuffle()
+                                Row {
+                                    id: mediaQuickExtras
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: root.theme.spacing1
+                                    visible: root.media.available
+                                    width: root.media.available ? implicitWidth : 0
+
+                                    ShellAction {
+                                        width: 70
+                                        height: 36
+                                        runtime: root.runtime
+                                        theme: root.theme
+                                        motion: root.motion
+                                        compact: true
+                                        horizontalCompact: true
+                                        icon: "󰒝"
+                                        title: root.media.shuffled ? "ON" : "OFF"
+                                        shortcut: "Z"
+                                        active: root.media.shuffled
+                                        enabled: root.media.shuffleAvailable
+                                        onActivated: root.media.toggleShuffle()
+                                    }
+                                    ShellAction {
+                                        width: 84
+                                        height: 36
+                                        runtime: root.runtime
+                                        theme: root.theme
+                                        motion: root.motion
+                                        compact: true
+                                        horizontalCompact: true
+                                        icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
+                                        title: root.media.repeatLabel
+                                        shortcut: "B"
+                                        active: root.media.repeatState !== 0
+                                        enabled: root.media.repeatAvailable
+                                        onActivated: root.media.toggleRepeat()
+                                    }
+                                    ShellAction {
+                                        width: 70
+                                        height: 36
+                                        runtime: root.runtime
+                                        theme: root.theme
+                                        motion: root.motion
+                                        compact: true
+                                        horizontalCompact: true
+                                        icon: "󰎄"
+                                        title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
+                                        shortcut: "⇧P"
+                                        active: root.media.playerCount > 1
+                                        enabled: root.media.playerCount > 1
+                                        onActivated: root.media.cyclePlayer()
+                                    }
                                 }
-                                ShellAction {
-                                    width: 84
-                                    height: 36
-                                    runtime: root.runtime
-                                    theme: root.theme
-                                    motion: root.motion
-                                    compact: true
-                                    horizontalCompact: true
-                                    icon: root.media.repeatState === 1 ? "󰑘" : "󰑖"
-                                    title: root.media.repeatLabel
-                                    shortcut: "B"
-                                    active: root.media.repeatState !== 0
-                                    enabled: root.media.repeatAvailable
-                                    onActivated: root.media.toggleRepeat()
+                            }
+
+                            Item {
+                                width: parent.width
+                                height: root.media.available ? 94 : 60
+                                visible: true
+
+                                SpectrumScale {
+                                    id: compactFrequency
+                                    lowHz: root.spectrum.lowHz
+                                    highHz: root.spectrum.highHz
                                 }
-                                ShellAction {
-                                    width: 70
-                                    height: 36
-                                    runtime: root.runtime
+
+                                SpectrumBars {
+                                    anchors.fill: parent
+                                    spectrum: root.spectrum
                                     theme: root.theme
-                                    motion: root.motion
-                                    compact: true
-                                    horizontalCompact: true
-                                    icon: "󰎄"
-                                    title: String(Math.max(1, root.media.selectedPlayerIndex + 1))
-                                    shortcut: "⇧P"
-                                    active: root.media.playerCount > 1
-                                    enabled: root.media.playerCount > 1
-                                    onActivated: root.media.cyclePlayer()
+                                    frequencyScale: compactFrequency
+                                    barCount: 36
                                 }
                             }
                         }
+                    }
 
-                        Item {
-                            width: parent.width
-                            height: root.media.available ? 94 : 60
-                            visible: true
+                    ShellSurface {
+                        width: parent.width
+                        height: visible ? 248 : 0
+                        visible: !root.media.available
+                        theme: root.theme
+                        motion: root.motion
+                        surfaceLayer: ShellSurface.Group
+                        cornerRadius: root.theme.radiusLarge
 
-                            SpectrumScale {
-                                id: compactFrequency
-                                lowHz: root.spectrum.lowHz
-                                highHz: root.spectrum.highHz
+                        StateLayer {
+                            theme: root.theme
+                            motion: root.motion
+                            cornerRadius: root.theme.radiusLarge
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Open Now Playing"
+                            onActivated: root.mediaRequested()
+                        }
+
+                        Column {
+                            anchors.centerIn: parent
+                            width: Math.max(1, parent.width - root.theme.spacing4 * 2)
+                            spacing: root.theme.spacing3
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "󰎆"
+                                font.family: "Symbols Nerd Font"
+                                font.pixelSize: root.theme.fontSize(34)
+                                color: root.theme.roleColor("media")
                             }
 
-                            SpectrumBars {
-                                anchors.fill: parent
-                                spectrum: root.spectrum
+                            Text {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "No active player"
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(13)
+                                font.weight: Font.DemiBold
+                                color: root.theme.textStrong
+                            }
+
+                            Text {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                text: "Playback controls and spectrum appear when a player connects"
+                                font.family: root.runtime.fontMono
+                                font.pixelSize: root.theme.fontSize(10)
+                                color: root.theme.textMuted
+                            }
+
+                            KeyHint {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                shortcut: "N"
+                                label: "Now Playing"
+                                compact: true
+                                runtime: root.runtime
                                 theme: root.theme
-                                frequencyScale: compactFrequency
-                                barCount: 36
                             }
                         }
                     }
@@ -1572,7 +1644,7 @@ FocusScope {
             Row {
                 width: parent.width
                 height: 37
-                visible: root.system.trayCount > 0
+                visible: root.system.trayCount > 0 && (root.controlsLayout === "matrix" || root.focusGroup === "media")
                 spacing: root.theme.spacing2
 
                 Text {
@@ -1857,19 +1929,9 @@ FocusScope {
                     return;
                 }
 
-                if (outputQuick.chooserOpen || inputQuick.chooserOpen) {
-                    const picker = outputQuick.chooserOpen ? outputQuick : inputQuick;
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace || event.key === Qt.Key_D)
-                        picker.chooserOpen = false;
-                    else if (event.key === Qt.Key_J || event.key === Qt.Key_Down)
-                        picker.moveDeviceSelection(1);
-                    else if (event.key === Qt.Key_K || event.key === Qt.Key_Up)
-                        picker.moveDeviceSelection(-1);
-                    else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                        picker.selectDevice(picker.chooserIndex);
-                    else
-                        return;
-                    event.accepted = true;
+                if (audioDeck.deviceChooserOpen) {
+                    if (audioDeck.handleKey(event.key, event.modifiers))
+                        event.accepted = true;
                     return;
                 }
 
@@ -2177,6 +2239,10 @@ FocusScope {
                     root.frameToggleRequested();
                 } else if (shifted && event.key === Qt.Key_E) {
                     root.motion.toggle();
+                } else if (shifted && event.key === Qt.Key_I) {
+                    root.toggleControlsLayout();
+                } else if (root.controlsLayout === "focus" && shifted && (event.key === Qt.Key_J || event.key === Qt.Key_K)) {
+                    root.moveFocusGroup(event.key === Qt.Key_J ? 1 : -1);
                 } else if (shifted && event.key === Qt.Key_M) {
                     root.openMixer();
                 } else if (shifted && event.key === Qt.Key_P) {
@@ -2187,13 +2253,13 @@ FocusScope {
                     root.media.seekStep(-1);
                 } else if (shifted && event.key === Qt.Key_L) {
                     root.media.seekStep(1);
-                } else if (event.key === Qt.Key_H || event.key === Qt.Key_Left) {
+                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_H || event.key === Qt.Key_Left)) {
                     root.adjustSelectedAudio(-0.05);
-                } else if (event.key === Qt.Key_L || event.key === Qt.Key_Right) {
+                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_L || event.key === Qt.Key_Right)) {
                     root.adjustSelectedAudio(0.05);
-                } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
+                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_K || event.key === Qt.Key_Up)) {
                     root.moveAudioSelection(-1);
-                } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+                } else if ((root.controlsLayout === "matrix" || root.focusGroup === "audio") && (event.key === Qt.Key_J || event.key === Qt.Key_Down)) {
                     root.moveAudioSelection(1);
                 } else if (event.key === Qt.Key_Q) {
                     root.openSession();
