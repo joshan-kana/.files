@@ -413,6 +413,16 @@ in
                 fi
               fi
               systemctl --user stop "$unit" || true
+              if [ "$output" = all ]; then
+                # Applying to all displays replaces earlier monitor-specific
+                # selections. Stop their video layers before painting the new
+                # wallpaper so they cannot hide the transition or playback.
+                for selection in "$state_dir"/*.wall; do
+                  [ -f "$selection" ] && [ "$selection" != "$state_file" ] || continue
+                  monitor="$(basename "$selection" .wall)"
+                  systemctl --user stop "linux-desktop-wallpaper-video@$monitor.service" || true
+                done
+              fi
               awww img "''${args[@]}" --resize "$resize" "''${transition_args[@]}" "$still"
               mkdir -p "$state_dir"
               temp="$(mktemp "$state_dir/.wallpaper.XXXXXXXX")"
@@ -420,14 +430,11 @@ in
               printf '%s\n%s\n' "$resize" "$image" > "$temp"
               mv -f "$temp" "$state_file"
               if [ "$output" = all ]; then
-                # An override identical to the all-display selection uses the
-                # shared video layer rather than a second monitor player.
+                # Do not retain stale output overrides after an all-display
+                # selection; later per-display choices can override it again.
                 for selection in "$state_dir"/*.wall; do
                   [ -f "$selection" ] && [ "$selection" != "$state_file" ] || continue
-                  if cmp -s "$state_file" "$selection"; then
-                    monitor="$(basename "$selection" .wall)"
-                    systemctl --user stop "linux-desktop-wallpaper-video@$monitor.service" || true
-                  fi
+                  rm -f "$selection"
                 done
               elif [ -f "$state_dir/all.wall" ]; then
                 # Recompute global video coverage after an override changes.
