@@ -28,10 +28,18 @@ _: {
           appName = "ChatGPT.app";
           homepage = "https://chatgpt.com/";
           license = lib.licenses.unfree;
-          passthru = {
-            autoUpdate = false;
+          passthru = rec {
+            autoUpdate = true;
             updateGroup = "chatgpt";
             updateFilename = "overlays/chatgpt/default.nix";
+            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
+            updateRegex = ''versions=\(([0-9.]+)'';
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              updateFilename
+              system
+            ];
           };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
           unpacker = prev.unzip;
@@ -109,8 +117,18 @@ _: {
             cp usr/share/pixmaps/chatgpt.png "$out/share/pixmaps/"
             runHook postInstall
           '';
-          passthru = {
+          passthru = rec {
+            autoUpdate = true;
             updateGroup = "chatgpt";
+            updateFilename = "overlays/chatgpt/default.nix";
+            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
+            updateRegex = ''versions=\(([0-9.]+)'';
+            updateScript = [
+              "${prev.python3}/bin/python3"
+              "${../../scripts/update-version.py}"
+              updateFilename
+              system
+            ];
           };
           meta = {
             homepage = "https://chatgpt.com/";
