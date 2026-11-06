@@ -19,14 +19,13 @@ _: {
               license = prev.lib.licenses.unfree;
               passthru = {
                 autoUpdate = true;
+                updateUrl = "https://formulae.brew.sh/api/cask/linear.json";
+                updateRegex = ''"version"\s*:\s*"([^"]+)"'';
                 updateScript = [
                   "${prev.python3}/bin/python3"
                   "${../../scripts/update-version.py}"
-                  "https://formulae.brew.sh/api/cask/linear.json"
-                  ''"version"\s*:\s*"([^"]+)"''
                   "linear-mac"
                   prev.stdenv.hostPlatform.system
-                  "overlays/linear/default.nix"
                 ];
                 updateFilename = "overlays/linear/default.nix";
               };

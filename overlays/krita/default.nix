@@ -18,14 +18,13 @@ _: {
           '';
           passthru = {
             autoUpdate = true;
+            updateUrl = "https://formulae.brew.sh/api/cask/krita.json";
+            updateRegex = ''"version"\s*:\s*"([^"]+)"'';
             updateScript = [
               "${prev.python3}/bin/python3"
               "${../../scripts/update-version.py}"
-              "https://formulae.brew.sh/api/cask/krita.json"
-              ''"version"\s*:\s*"([^"]+)"''
               "krita"
               prev.stdenv.hostPlatform.system
-              "overlays/krita/default.nix"
             ];
             updateFilename = "overlays/krita/default.nix";
           };

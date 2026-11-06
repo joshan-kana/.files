@@ -19,14 +19,13 @@ _: {
               license = prev.lib.licenses.gpl2Only;
               passthru = {
                 autoUpdate = true;
+                updateUrl = "https://formulae.brew.sh/api/cask/iterm2.json";
+                updateRegex = ''"version"\s*:\s*"([^"]+)"'';
                 updateScript = [
                   "${prev.python3}/bin/python3"
                   "${../../scripts/update-version.py}"
-                  "https://formulae.brew.sh/api/cask/iterm2.json"
-                  ''"version"\s*:\s*"([^"]+)"''
                   "iterm2-mac"
                   prev.stdenv.hostPlatform.system
-                  "overlays/iterm2/default.nix"
                 ];
                 updateFilename = "overlays/iterm2/default.nix";
               };

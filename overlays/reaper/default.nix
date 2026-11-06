@@ -19,14 +19,13 @@ _: {
               license = prev.lib.licenses.unfree;
               passthru = {
                 autoUpdate = true;
+                updateUrl = "https://formulae.brew.sh/api/cask/reaper.json";
+                updateRegex = ''"version"\s*:\s*"([^"]+)"'';
                 updateScript = [
                   "${prev.python3}/bin/python3"
                   "${../../scripts/update-version.py}"
-                  "https://formulae.brew.sh/api/cask/reaper.json"
-                  ''"version"\s*:\s*"([^"]+)"''
                   "reaper-mac"
                   prev.stdenv.hostPlatform.system
-                  "overlays/reaper/default.nix"
                 ];
                 updateFilename = "overlays/reaper/default.nix";
               };

@@ -19,14 +19,13 @@ _: {
               license = prev.lib.licenses.unfree;
               passthru = {
                 autoUpdate = true;
+                updateUrl = "https://formulae.brew.sh/api/cask/notion.json";
+                updateRegex = ''"version"\s*:\s*"([^"]+)"'';
                 updateScript = [
                   "${prev.python3}/bin/python3"
                   "${../../scripts/update-version.py}"
-                  "https://formulae.brew.sh/api/cask/notion.json"
-                  ''"version"\s*:\s*"([^"]+)"''
                   "notion-mac"
                   prev.stdenv.hostPlatform.system
-                  "overlays/notion/default.nix"
                 ];
                 updateFilename = "overlays/notion/default.nix";
               };

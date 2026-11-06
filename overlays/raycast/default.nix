@@ -15,14 +15,13 @@ _: {
           unpacker = prev._7zz;
           passthru = {
             autoUpdate = true;
+            updateUrl = "https://formulae.brew.sh/api/cask/raycast.json";
+            updateRegex = ''"version"\s*:\s*"([^"]+)"'';
             updateScript = [
               "${prev.python3}/bin/python3"
               "${../../scripts/update-version.py}"
-              "https://formulae.brew.sh/api/cask/raycast.json"
-              ''"version"\s*:\s*"([^"]+)"''
               "raycast"
               prev.stdenv.hostPlatform.system
-              "overlays/raycast/default.nix"
             ];
             updateFilename = "overlays/raycast/default.nix";
           };

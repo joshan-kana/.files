@@ -16,11 +16,8 @@ _: {
         updateScript = [
           "${prev.python3}/bin/python3"
           "${../../scripts/update-version.py}"
-          "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh"
-          ''versions=\(([0-9.]+)''
           "chatgpt"
           system
-          "overlays/chatgpt/default.nix"
         ];
         inherit (release) version;
         isDarwin = prev.stdenv.hostPlatform.isDarwin;
@@ -41,6 +38,8 @@ _: {
             autoUpdate = true;
             updateGroup = "chatgpt";
             updateFilename = "overlays/chatgpt/default.nix";
+            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
+            updateRegex = ''versions=\(([0-9.]+)'';
             inherit updateScript;
           };
           url = r: "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-${r.version}.zip";
@@ -123,6 +122,8 @@ _: {
             autoUpdate = true;
             updateGroup = "chatgpt";
             updateFilename = "overlays/chatgpt/default.nix";
+            updateUrl = "https://persistent.oaistatic.com/codex-app-prod/linux/install-arch.sh";
+            updateRegex = ''versions=\(([0-9.]+)'';
             inherit updateScript;
           };
           meta = {

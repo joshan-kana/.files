@@ -15,14 +15,13 @@ _: {
           unpacker = prev._7zz;
           passthru = {
             autoUpdate = true;
+            updateUrl = "https://formulae.brew.sh/api/cask/aldente.json";
+            updateRegex = ''"version"\s*:\s*"([^"]+)"'';
             updateScript = [
               "${prev.python3}/bin/python3"
               "${../../scripts/update-version.py}"
-              "https://formulae.brew.sh/api/cask/aldente.json"
-              ''"version"\s*:\s*"([^"]+)"''
               "aldente"
               prev.stdenv.hostPlatform.system
-              "overlays/aldente/default.nix"
             ];
             updateFilename = "overlays/aldente/default.nix";
           };
