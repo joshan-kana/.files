@@ -55,6 +55,8 @@ in
     };
   };
 
+  crashRecovery = import ./crash-recovery;
+
   eww = _: {
     home = _: {
       programs.eww = {
