@@ -1,5 +1,5 @@
 diff --git a/src/core/restore.rs b/src/core/restore.rs
-index 8c3240a..b247bf5 100644
+index 8c3240a..71bd8c4 100644
 --- a/src/core/restore.rs
 +++ b/src/core/restore.rs
 @@ -1583,11 +1583,15 @@ impl RestoreEngine {
@@ -66,7 +66,7 @@ index 8c3240a..b247bf5 100644
      }
  
      async fn wait_for_open_event(
-@@ -1663,6 +1663,55 @@ impl RestoreEngine {
+@@ -1663,6 +1663,66 @@ impl RestoreEngine {
      }
  }
  
@@ -80,26 +80,28 @@ index 8c3240a..b247bf5 100644
 +) -> Result<()> {
 +    let (x, y) = position;
 +    let (w, h) = size;
-+    // Window modes are toggles in Hyprland's Lua dispatcher. Reconcile the
-+    // live fullscreen/float state before restoring a non-fullscreen float.
-+    // A maximized/fullscreen client rejects all resize and move commands.
-+    let client = ctl.get_client_by_address(address).await.ok().flatten();
-+    if let Some(ref client) = client {
-+        let mode = match client.fullscreen_mode {
-+            1 => Some(1), // maximized
-+            2 => Some(0), // fullscreen
-+            _ => None,
-+        };
-+        if let Some(mode) = mode {
-+            ctl.dispatch(&format!("fullscreen {mode},address:0x{address}"))
++    // Window mode requests may arrive after the first open event. Re-check
++    // fullscreen and floating state on each bounded geometry correction.
++    let mut stable_checks = 0;
++    for attempt in 0..6 {
++        let client = ctl.get_client_by_address(address).await.ok().flatten();
++        if let Some(ref client) = client {
++            let mode = match client.fullscreen_mode {
++                1 => Some(1), // maximized
++                2 => Some(0), // fullscreen
++                _ => None,
++            };
++            if let Some(mode) = mode {
++                ctl.dispatch(&format!("fullscreen {mode},address:0x{address}"))
++                    .await?;
++            }
++        }
++        if client.as_ref().is_some_and(|client| !client.floating)
++            || (attempt == 0 && client.is_none())
++        {
++            ctl.dispatch(&format!("setfloating address:0x{address}"))
 +                .await?;
 +        }
-+    }
-+    if !client.is_some_and(|client| client.floating) {
-+        ctl.dispatch(&format!("setfloating address:0x{address}"))
-+            .await?;
-+    }
-+    for _ in 0..3 {
 +        ctl.dispatch(&format!(
 +            "resizewindowpixel exact {w} {h},address:0x{address}"
 +        ))
@@ -109,11 +111,20 @@ index 8c3240a..b247bf5 100644
 +        ))
 +        .await?;
 +        tokio::time::sleep(Duration::from_millis(200)).await;
-+        if let Ok(Some(client)) = ctl.get_client_by_address(address).await
++        let Ok(Some(client)) = ctl.get_client_by_address(address).await else {
++            break;
++        };
++        if client.fullscreen_mode == 0
++            && client.floating
 +            && client.at == position
 +            && client.size == size
 +        {
-+            break;
++            stable_checks += 1;
++            if stable_checks >= 4 {
++                break;
++            }
++        } else {
++            stable_checks = 0;
 +        }
 +    }
 +    Ok(())
@@ -122,7 +133,7 @@ index 8c3240a..b247bf5 100644
  /// Background task that watches for windows that didn't appear during the main
  /// restore loop. Keeps their Hyprland window rules active and listens on
  /// socket2 until every pending window appears or the grace period expires.
-@@ -1858,24 +1907,11 @@ async fn apply_late_window(
+@@ -1858,24 +1918,11 @@ async fn apply_late_window(
  
      if restore_geometry
          && pw.floating
