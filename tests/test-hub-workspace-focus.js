@@ -43,3 +43,16 @@ test("genuine focus losses still close, but workspace focus round-trip cannot", 
     /if \(!host\.expansionState\.hasCurrent \|\| host\.themeTerminalActive\)/,
   );
 });
+
+test("bar and frame visibility transitions rearm the same compositor keyboard grab", () => {
+  assert.match(host, /onBarVisibleChanged: restoreKeyboardAfterWorkspace\(\)/);
+  assert.match(
+    host,
+    /onFrameVisibleChanged: restoreKeyboardAfterWorkspace\(\)/,
+  );
+  assert.match(
+    host,
+    /focusGrabLost.stop\(\);\s*restoringWorkspaceFocus = true/,
+  );
+  assert.match(host, /host.loadedContent.forceActiveFocus\(\)/);
+});

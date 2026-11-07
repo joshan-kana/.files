@@ -1297,7 +1297,7 @@ test("island collision suppression holds layout until the hub clears the hystere
   assert.equal(context.islandOccluded(island, { ...hub, x: NaN }, true), false);
 });
 
-test("island rendering, hit targets, and contour geometry share occlusion flags", () => {
+test("island occlusion fades through the shared contour while hit regions close immediately", () => {
   const qml = (name) =>
     fs.readFileSync(
       path.join(__dirname, "../modules/desktop/hyprland/shell/qml", name),
@@ -1307,32 +1307,25 @@ test("island rendering, hit targets, and contour geometry share occlusion flags"
   const media = qml("NowPlayingIsland.qml");
   const shell = qml("shell.qml");
   const host = qml("ShellExpansionHost.qml");
-  for (const name of [
-    "workspace",
-    "media",
-    "notification",
-    "recording",
-    "system",
-  ]) {
+
+  for (const name of ["workspace", "notification", "recording", "system"]) {
     assert.match(bar, new RegExp("property bool " + name + "Occluded: false"));
-    assert.match(
-      bar,
-      new RegExp(
-        "item === " +
-          (name === "notification" ? "notification" : name) +
-          "Island && bar\\." +
-          name +
-          "Occluded",
-      ),
-    );
+    assert.match(bar, new RegExp("bar\\." + name + "Occluded \\? 0 : 1"));
   }
-  assert.match(bar, /enabled: !bar\.recordingOccluded/);
-  assert.match(bar, /opacity: bar\.recordingOccluded \? 0 : 1/);
+  assert.match(bar, /property bool mediaOccluded: false/);
+  assert.match(media, /opacity: media.available && !occluded \? 1 : 0/);
+  assert.match(bar, /item.opacity > 0.01/);
+  assert.match(bar, /height: item.height \* item.opacity/);
+  assert.match(bar, /enabled: !bar.recordingOccluded/);
+  assert.match(
+    bar,
+    /onOpacityChanged: if \(bars.frameVisible\)\s+Qt.callLater\(bar.publishOrigins\)/,
+  );
   assert.match(media, /enabled: !occluded/);
-  assert.match(media, /enabled: !island\.occluded/);
-  assert.match(shell, /hubBounds: expansionHost\.frameBounds/);
-  assert.match(shell, /hubScreen: expansionHost\.screen/);
+  assert.match(media, /duration: island.motion.effectsNormal/);
+  assert.match(shell, /hubBounds: expansionHost.frameBounds/);
+  assert.match(shell, /hubScreen: expansionHost.screen/);
   assert.match(host, /recordingStatusInHub/);
-  assert.match(host, /onActivated: host\.recordingStopRequested\(\)/);
-  assert.match(host, /onActivated: host\.navigate\("activity"\)/);
+  assert.match(host, /onActivated: host.recordingStopRequested\(\)/);
+  assert.match(host, /onActivated: host.navigate\("activity"\)/);
 });

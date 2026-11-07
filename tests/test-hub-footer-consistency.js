@@ -136,33 +136,30 @@ test("footer background retains physical clearance even when content is taller t
   }
 });
 
-test("Controls audio hints stay inside the audio widget, never in the global footer", () => {
+test("Audio and Media keyboard legends live in their section and detail headers", () => {
   const host = source("ShellExpansionHost.qml");
   const controls = source("SystemContent.qml");
+  const section = source("ShellSection.qml");
+  const mixer = source("AudioMixerContent.qml");
+  const media = source("MediaContent.qml");
   assert.doesNotMatch(
     host,
     /controlsAudioHints|Select audio|label: "Mute"|label: "Mic"/,
   );
   assert.match(host, /id: hubFooter[\s\S]*?id: footerHints/);
-  assert.match(
-    host,
-    /shortcut: "I"[\s\S]*?shortcut: "O"[\s\S]*?shortcut: "ESC"[\s\S]*?shortcut: "SHIFT\+ESC"/,
+  assert.match(section, /id: headerHints/);
+  assert.match(controls, /shortcut: "J\/K",\s*label: "Select"/);
+  assert.match(controls, /shortcut: "H\/L",\s*label: "Level"/);
+  assert.doesNotMatch(
+    controls.slice(
+      controls.indexOf('title: "Media"'),
+      controls.indexOf("ControlsMediaCard {"),
+    ),
+    /hints: \[/,
   );
-  const mixer = source("AudioMixerContent.qml");
-  assert.match(mixer, /hints: mixer\.compact \? \[/);
-  for (const [shortcut, label] of [
-    ["J/K", "Select audio"],
-    ["H/L", "Level"],
-    ["X", "Mic"],
-  ]) {
-    assert.ok(mixer.includes('shortcut: "' + shortcut + '"'));
-    assert.ok(mixer.includes('label: "' + label + '"'));
-  }
-  assert.doesNotMatch(controls, /shortcut: "M",\s*label: "Mute"/);
-  assert.match(
-    host,
-    /bottomMargin: host\.theme\.spacing3 \+ \(host\.expansionState\.currentName === "system" && !host\.detailVisible \? host\.theme\.spacing4 : 0\)/,
-  );
+  assert.match(mixer, /id: mixerHints/);
+  assert.match(media, /shortcut: "\?",\s*label: "Help"/);
+  assert.match(host, /bottomMargin: host.theme.spacing3/);
 });
 
 test("Controls reserves its own lower frame clearance without moving other panels", () => {
