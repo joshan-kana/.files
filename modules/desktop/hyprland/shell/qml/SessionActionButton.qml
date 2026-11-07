@@ -11,6 +11,7 @@ Item {
     property string icon: ""
     property string label: ""
     property bool selected: false
+    property bool active: false
     property bool armed: false
     property color accentColor: theme.roleColor("resources")
 
@@ -34,9 +35,9 @@ Item {
         motion: button.motion
         cornerRadius: button.selected || pointer.pointerHovered ? width / 2 : button.theme.radiusLarge
         exponent: button.selected || pointer.pointerHovered ? 2.2 : button.theme.squircleExponent
-        fillColor: button.armed ? button.theme.focusFill : button.selected ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
-        borderColor: button.armed ? button.theme.warning : button.selected ? button.accentColor : "transparent"
-        borderWidth: button.selected || button.armed ? button.theme.borderFocus : 0
+        fillColor: button.armed ? button.theme.focusFill : button.selected || button.active ? button.theme.blend(button.theme.controlBase, button.accentColor, button.theme.dark ? 0.24 : 0.14) : button.theme.expressiveSurfaceStrong
+        borderColor: button.armed ? button.theme.warning : button.selected || button.active ? button.accentColor : "transparent"
+        borderWidth: button.selected || button.armed || button.active ? button.theme.borderFocus : 0
 
         Behavior on cornerRadius {
             NumberAnimation {
