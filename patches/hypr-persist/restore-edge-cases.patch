@@ -1,5 +1,5 @@
 diff --git a/src/core/daemon.rs b/src/core/daemon.rs
-index 47324d5..9b818ec 100644
+index 47324d5..59e3294 100644
 --- a/src/core/daemon.rs
 +++ b/src/core/daemon.rs
 @@ -38,8 +38,9 @@ pub async fn run(config: Config) -> Result<()> {
@@ -13,7 +13,7 @@ index 47324d5..9b818ec 100644
      if config.general.restore_on_start && (restore_from_crash || restore_explicit) {
          tracing::info!("waiting for compositor to settle...");
          wait_for_settle(&mut event_rx).await;
-@@ -56,6 +57,12 @@ pub async fn run(config: Config) -> Result<()> {
+@@ -56,6 +57,17 @@ pub async fn run(config: Config) -> Result<()> {
                  "requested"
              }
          );
@@ -22,11 +22,16 @@ index 47324d5..9b818ec 100644
 +        // The saved snapshot stays available for an intentional manual retry.
 +        if !restore_from_crash {
 +            snapshot.clear_restore_pending()?;
++            // This runtime snapshot belongs to a different session. Do not
++            // replay it if the daemon restarts before the next periodic save.
++            if crash_snapshot.exists("last") {
++                crash_snapshot.delete("last")?;
++            }
 +        }
          match source.load("last") {
              Ok(session) => {
                  let live_windows: Vec<crate::models::TrackedWindow> =
-@@ -64,19 +71,31 @@ pub async fn run(config: Config) -> Result<()> {
+@@ -64,19 +76,31 @@ pub async fn run(config: Config) -> Result<()> {
                      config.general.restore_geometry,
                      config.general.restore_layout,
                  );
