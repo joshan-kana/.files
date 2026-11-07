@@ -473,6 +473,9 @@ PanelWindow {
         }
     }
 
+    onBarVisibleChanged: restoreKeyboardAfterWorkspace()
+    onFrameVisibleChanged: restoreKeyboardAfterWorkspace()
+
     // Focus only the expansion surface at first. Hyprland may otherwise
     // select the non-keyboard-focusable bar when a grab initially registers
     // multiple committed surfaces. Admit the bar after this window acquires
@@ -481,8 +484,10 @@ PanelWindow {
         target: host.contentItem ? host.contentItem.Window.window : null
 
         function onActiveChanged(): void {
-            if (host.contentItem.Window.window.active && host.expansionState.hasCurrent)
+            if (host.contentItem.Window.window.active && host.expansionState.hasCurrent) {
+                focusGrabLost.stop();
                 host.keyboardFocusReady = true;
+            }
         }
     }
 

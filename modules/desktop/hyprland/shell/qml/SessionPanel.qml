@@ -187,6 +187,7 @@ Item {
         armTimer.restart();
     }
 
+    implicitWidth: 3 * 154 + 2 * theme.spacing3 + theme.spacing5 * 2
     implicitHeight: header.implicitHeight + buttonGrid.implicitHeight + footer.implicitHeight + theme.spacing5 * 3
 
     DetailHero {
@@ -205,7 +206,7 @@ Item {
 
     Column {
         id: buttonGrid
-        width: parent.width
+        width: Math.min(parent.width, panel.gridColumns * 154 + (panel.gridColumns - 1) * panel.theme.spacing3)
         anchors {
             top: header.bottom
             topMargin: panel.theme.spacing5
@@ -220,7 +221,8 @@ Item {
                 id: actionRow
                 required property int index
                 readonly property int rowCount: Math.min(panel.gridColumns, panel.entries.length - index * panel.gridColumns)
-                width: buttonGrid.width
+                width: Math.min(buttonGrid.width, rowCount * 154 + (rowCount - 1) * panel.theme.spacing3)
+                anchors.horizontalCenter: parent.horizontalCenter
                 spacing: panel.theme.spacing3
 
                 Repeater {

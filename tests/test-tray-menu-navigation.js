@@ -31,3 +31,17 @@ test("Shift+Esc remains the global close-all command", () => {
     /sequence: "Shift\+Esc"[\s\S]*?onActivated: host\.expansionState\.close\(\)/,
   );
 });
+
+test("tray keyboard selection uses one persistent highlight rather than swapping tile surfaces", () => {
+  const controls = qml("SystemContent.qml");
+  const start = controls.indexOf("id: trayChoices");
+  const end = controls.indexOf("KeyHintStrip {", start);
+  assert.ok(start >= 0 && end > start);
+  const tray = controls.slice(start, end);
+  assert.match(tray, /id: traySelection/);
+  assert.match(tray, /root.trayIndex/);
+  assert.match(tray, /Behavior on x/);
+  assert.match(tray, /model: root.system.trayItems/);
+  assert.match(tray, /selected: false/);
+  assert.doesNotMatch(tray, /selected: index === root.trayIndex/);
+});
