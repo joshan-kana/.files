@@ -223,3 +223,30 @@ test("connected footer clears the actual rounded frame contour rather than the b
   assert.equal(overflow, 30);
   assert.equal(40 - 8, 32);
 });
+
+test("shared key hints collapse empty keycaps without leaving layout gaps", () => {
+  const hint = source("KeyHint.qml");
+  assert.match(
+    hint,
+    /readonly property bool hasShortcut: shortcut\.trim\(\)\.length > 0/,
+  );
+  assert.match(hint, /property bool showLabel: label\.trim\(\)\.length > 0/);
+  assert.match(hint, /visible: hasShortcut \|\| showLabel/);
+  assert.match(hint, /visible: hint\.hasShortcut/);
+  assert.match(hint, /implicitWidth: \(hasShortcut \? cap\.width : 0\)/);
+  assert.match(
+    hint,
+    /implicitHeight: Math\.max\(hasShortcut \? cap\.height : 0/,
+  );
+  assert.match(
+    hint,
+    /x: hint\.hasShortcut \? cap\.width \+ hint\.theme\.keyHintGap : 0/,
+  );
+  const audio = source("AudioDeviceControl.qml");
+  assert.match(
+    audio,
+    /shortcut: deviceControl\.selected \? "M" : deviceControl\.microphone \? "X" : ""/,
+  );
+  const action = source("ShellAction.qml");
+  assert.match(action, /shortcut: root\.shortcut/);
+});
