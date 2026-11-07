@@ -17,6 +17,14 @@ Item {
     property bool open: false
     property bool returnToControls: false
     property var themes: []
+    property string searchText: ""
+    readonly property var filteredThemes: themes.filter(entry => (entry.label || entry.name).toLowerCase().includes(searchText.toLowerCase()) || entry.name.toLowerCase().includes(searchText.toLowerCase()))
+    readonly property bool searching: searchField.activeFocus
+    onSearchTextChanged: {
+        selectedIndex = 0;
+        if (searchText.length === 0)
+            selectCurrentTheme();
+    }
     property string defaultTheme: ""
     property string currentTheme: ""
     property int selectedIndex: 0
@@ -35,8 +43,9 @@ Item {
         }
     }
 
-    implicitHeight: header.height + panel.theme.spacing4 * 3 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
+    implicitHeight: header.height + panel.theme.spacing4 * 3 + searchSurface.height + panel.theme.spacing3 + Math.min(505, Math.max(280, Math.ceil(themes.length / Math.max(1, themeList.columnCount)) * themeList.cellHeight)) + footer.implicitHeight
     visible: open
+    onFilteredThemesChanged: selectedIndex = Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))
 
     property StdioCollector registryOutput: StdioCollector {}
     property StdioCollector registryError: StdioCollector {}
@@ -173,20 +182,20 @@ Item {
     }
 
     function selectedTheme(): var {
-        if (themes.length === 0)
+        if (filteredThemes.length === 0)
             return null;
 
-        return themes[Math.max(0, Math.min(selectedIndex, themes.length - 1))];
+        return filteredThemes[Math.max(0, Math.min(selectedIndex, filteredThemes.length - 1))];
     }
 
     function selectCurrentTheme(): void {
-        if (themes.length === 0) {
+        if (filteredThemes.length === 0) {
             selectedIndex = 0;
             return;
         }
 
-        for (let index = 0; index < themes.length; index++) {
-            if (themes[index].name === currentTheme) {
+        for (let index = 0; index < filteredThemes.length; index++) {
+            if (filteredThemes[index].name === currentTheme) {
                 selectedIndex = index;
                 return;
             }
@@ -235,8 +244,17 @@ Item {
         if (!open)
             return;
         open = false;
+        searchField.text = "";
         statusText = "";
         statusError = false;
+    }
+
+    function enterSearch(): void {
+        searchField.forceActiveFocus();
+    }
+
+    function leaveSearch(): void {
+        keyboardRequested();
     }
 
     function moveHalfPage(direction: int): void {
@@ -245,9 +263,9 @@ Item {
     }
 
     function moveSelection(delta: int): void {
-        if (themes.length === 0)
+        if (filteredThemes.length === 0)
             return;
-        selectedIndex = Math.max(0, Math.min(themes.length - 1, selectedIndex + delta));
+        selectedIndex = Math.max(0, Math.min(filteredThemes.length - 1, selectedIndex + delta));
     }
 
     function moveGrid(x: int, y: int): void {
@@ -294,20 +312,74 @@ Item {
         detail: panel.currentTheme.length > 0 ? "Active · " + panel.themeLabel(panel.currentTheme) : "Resolving active theme…"
     }
 
+    SearchFieldSurface {
+        id: searchSurface
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: panel.theme.spacing3
+        }
+        height: 39
+        theme: panel.theme
+        motion: panel.motion
+        fieldFocused: searchField.activeFocus
+
+        TextInput {
+            id: searchField
+            anchors {
+                fill: parent
+                leftMargin: panel.theme.spacing3
+                rightMargin: panel.theme.spacing3
+            }
+            verticalAlignment: TextInput.AlignVCenter
+            text: panel.searchText
+            onTextChanged: panel.searchText = text
+            color: panel.theme.textStrong
+            selectionColor: panel.theme.accent
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(12)
+            focus: false
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) {
+                    panel.leaveSearch();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    panel.activateSelected();
+                    panel.leaveSearch();
+                    event.accepted = true;
+                }
+            }
+        }
+
+        Text {
+            anchors {
+                left: parent.left
+                leftMargin: panel.theme.spacing3
+                verticalCenter: parent.verticalCenter
+            }
+            visible: searchField.text.length === 0 && !searchField.activeFocus
+            text: "/  Search themes"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
+        }
+    }
+
     GridView {
         id: themeList
         anchors {
-            top: header.bottom
+            top: searchSurface.bottom
             right: parent.right
             bottom: footer.top
             left: parent.left
-            topMargin: panel.theme.spacing4
+            topMargin: panel.theme.spacing3
             bottomMargin: panel.theme.spacing3
         }
         readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
         cellWidth: width / columnCount
         cellHeight: 230
-        model: panel.themes
+        model: panel.filteredThemes
         clip: true
         currentIndex: panel.selectedIndex
         highlightMoveDuration: 0
@@ -315,6 +387,15 @@ Item {
         onCurrentIndexChanged: {
             if (currentIndex >= 0)
                 positionViewAtIndex(currentIndex, GridView.Contain);
+        }
+
+        Text {
+            anchors.centerIn: parent
+            visible: panel.filteredThemes.length === 0
+            text: panel.themes.length === 0 ? "Loading themes…" : "No matching themes"
+            color: panel.theme.textMuted
+            font.family: panel.runtime.fontMono
+            font.pixelSize: panel.theme.fontSize(11)
         }
 
         delegate: Item {
