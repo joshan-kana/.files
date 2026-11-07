@@ -55,7 +55,25 @@ in
     };
   };
 
-  crashRecovery = import ./crash-recovery;
+  crashRecovery = _: {
+    # Keep the Wayland socket alive while start-hyprland handles compositor
+    # crashes, safe-mode retries, and clean logout.
+    systemd.user.services =
+      lib.genAttrs
+        [
+          "wayland-wm@hyprland.desktop"
+          "wayland-wm@hyprland-uwsm.desktop"
+        ]
+        (_: {
+          overrideStrategy = "asDropin";
+          serviceConfig.ExecStart = [
+            ""
+            "${lib.getExe pkgs.uwsm} aux exec -- %I ${lib.getExe pkgs.wl-restart} -- ${lib.getExe' config.programs.hyprland.package "start-hyprland"} --"
+          ];
+        });
+
+    environment.sessionVariables.QT_WAYLAND_RECONNECT = "1";
+  };
 
   eww = _: {
     home = _: {
