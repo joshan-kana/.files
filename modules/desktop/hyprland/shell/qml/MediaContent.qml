@@ -186,12 +186,30 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: content.theme.spacing2
 
-                Text {
-                    text: content.media.available ? "Now playing" : "Media"
-                    color: content.theme.readableRoleColor("media")
-                    font.family: content.runtime.fontMono
-                    font.pixelSize: content.theme.fontSize(12)
-                    font.weight: Font.Medium
+                Row {
+                    width: parent.width
+                    spacing: content.theme.spacing2
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: content.media.available ? "Now playing" : "Media"
+                        color: content.theme.readableRoleColor("media")
+                        font.family: content.runtime.fontMono
+                        font.pixelSize: content.theme.fontSize(12)
+                        font.weight: Font.Medium
+                    }
+
+                    KeyHintStrip {
+                        width: Math.max(0, parent.width - parent.children[0].implicitWidth - parent.spacing)
+                        runtime: content.runtime
+                        theme: content.theme
+                        hints: [
+                            {
+                                shortcut: "?",
+                                label: "Help"
+                            }
+                        ]
+                    }
                 }
 
                 MarqueeText {

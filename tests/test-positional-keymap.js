@@ -195,7 +195,10 @@ test("capture confirmation uses Enter, never Space", () => {
 test("Compact Media advertises the direct Now Playing key and shares its destination", () => {
   const controls = qml("SystemContent.qml");
   const card = qml("ControlsMediaCard.qml");
-  assert.match(card, /shortcut: "N"/);
+  assert.match(
+    controls,
+    /event.key === Qt.Key_N\)\s*\{\s*root.mediaRequested\(\)/,
+  );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
   assert.match(
@@ -208,7 +211,10 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   const mixer = qml("AudioMixerContent.qml");
   const device = qml("AudioDeviceControl.qml");
   const controls = qml("SystemContent.qml");
-  assert.match(mixer, /shortcut: "SHIFT\+M"/);
+  assert.match(
+    controls,
+    /shifted && event.key === Qt.Key_M\)\s*\{\s*root.openMixer\(\)/,
+  );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
   assert.match(device, /shortcut: deviceControl\.selected \? "P" : "⌄"/);

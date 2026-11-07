@@ -148,7 +148,7 @@ Variants {
             bars.setOrigin(modelData, "activity", bar.screenOffset + barContent.x + notificationIsland.x + notificationIsland.width / 2, notificationIsland.width, notificationIsland.height);
             const surfaces = [workspaceIsland, mediaIsland, clockIsland, notificationIsland, recordingIsland, systemIsland];
             const islands = [];
-            for (const item of surfaces.filter(item => bar.visible && item.visible && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2 && !(item === workspaceIsland && bar.workspaceOccluded) && !(item === mediaIsland && bar.mediaOccluded) && !(item === notificationIsland && bar.notificationOccluded) && !(item === recordingIsland && bar.recordingOccluded) && !(item === systemIsland && bar.systemOccluded))) {
+            for (const item of surfaces.filter(item => bar.visible && item.visible && item.opacity > 0.01 && (!bars.controlsExpanded || item !== clockIsland) && item.width > 2)) {
                 const x = bar.screenOffset + barContent.x + item.x;
                 const y = barContent.y + item.y;
                 if (item === mediaIsland) {
@@ -160,7 +160,7 @@ Variants {
                         x,
                         y,
                         width: mainWidth,
-                        height: item.height,
+                        height: item.height * item.opacity,
                         hovered: item.mainHover,
                         pressed: item.mainPressed,
                         interactionGroup: "media",
@@ -169,7 +169,7 @@ Variants {
                         x: x + mainWidth,
                         y,
                         width: item.playbackWidth,
-                        height: item.height,
+                        height: item.height * item.opacity,
                         hovered: item.playbackHover,
                         pressed: item.playbackPressed,
                         interactionGroup: "media",
@@ -179,9 +179,9 @@ Variants {
                 }
                 islands.push({
                     x,
-                    y,
+                    y: y + item.height * (1 - item.opacity) / 2,
                     width: item.width,
-                    height: item.height,
+                    height: item.height * item.opacity,
                     hovered: item === workspaceIsland ? false : item === clockIsland ? clockPress.pointerHovered : item === notificationIsland ? notificationPress.pointerHovered : item === recordingIsland ? recordingPress.pointerHovered : item === systemIsland ? item.frameHover : false,
                     pressed: item === workspaceIsland ? false : item === clockIsland ? clockPress.visualPressed : item === notificationIsland ? notificationPress.visualPressed : item === recordingIsland ? recordingPress.visualPressed : item === systemIsland ? item.framePressed : false,
                     visible: true
@@ -312,6 +312,23 @@ Variants {
                 id: workspaceIsland
                 enabled: !bar.workspaceOccluded
                 opacity: bar.workspaceOccluded ? 0 : 1
+                clip: true
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: bar.motion.effectsNormal
+                        easing.type: bar.motion.effectsType
+                        easing.bezierCurve: bar.motion.effectsCurve
+                    }
+                }
+                Behavior on width {
+                    NumberAnimation {
+                        duration: bar.motion.spatialNormal
+                        easing.type: bar.motion.spatialType
+                        easing.bezierCurve: bar.motion.spatialCurve
+                    }
+                }
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -344,38 +361,32 @@ Variants {
                     // their implicit width. Using Row.implicitWidth gave this
                     // 42px pill a 24px island and clipped the frame contour.
                     implicitWidth: Math.max(1, bar.visibleWorkspaceIds.length) * bar.workspaceCellWidth + Math.max(0, bar.visibleWorkspaceIds.length - 1) * bar.workspaceCellGap
+                    width: Math.max(bar.workspaceCellWidth, Math.min(implicitWidth, workspaceIsland.width - bars.theme.spacing3 * 2))
                     implicitHeight: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
                     // Keep the selection inside the island when an unused
                     // workspace vanishes and the track contracts.
                     clip: true
 
                     readonly property int activeIndex: Math.max(0, bar.visibleWorkspaceIds.indexOf(bar.focusedWorkspaceId))
-                    property var previousIds: []
-                    property int previousFocus: -1
+                    property real selectionPosition: 0
                     property bool settled: false
 
+                    Behavior on selectionPosition {
+                        enabled: workspaceTrack.settled
+                        NumberAnimation {
+                            duration: bars.motion.spatialFast
+                            easing.type: bars.motion.spatialType
+                            easing.bezierCurve: bars.motion.spatialCurve
+                        }
+                    }
+
                     function syncPosition(): void {
-                        const ids = bar.visibleWorkspaceIds.slice();
+                        const ids = bar.visibleWorkspaceIds;
                         const focused = bar.focusedWorkspaceId;
-                        // A newly focused, empty workspace can arrive before
-                        // Hyprland publishes its slot. Wait for the actual
-                        // workspace, rather than teleporting the pill to zero.
+                        // Workspace state may update before its new slot exists.
                         if (!ids.includes(focused))
                             return;
-                        const index = ids.indexOf(focused);
-                        const destination = index * (bar.workspaceCellWidth + bar.workspaceCellGap);
-                        const slide = settled && ids.length >= previousIds.length && ids.includes(previousFocus) && focused !== previousFocus && bars.motion.enabled;
-
-                        workspaceAnimation.stop();
-                        if (slide && workspaceSelection.x !== destination) {
-                            workspaceAnimation.from = workspaceSelection.x;
-                            workspaceAnimation.to = destination;
-                            workspaceAnimation.start();
-                        } else {
-                            workspaceSelection.x = destination;
-                        }
-                        previousIds = ids;
-                        previousFocus = focused;
+                        selectionPosition = ids.indexOf(focused) * (bar.workspaceCellWidth + bar.workspaceCellGap);
                         settled = true;
                     }
 
@@ -389,18 +400,9 @@ Variants {
                         }
                     }
 
-                    NumberAnimation {
-                        id: workspaceAnimation
-                        target: workspaceSelection
-                        property: "x"
-                        duration: bars.motion.enabled ? 135 : 0
-                        easing.type: bars.motion.spatialType
-                        easing.bezierCurve: bars.motion.spatialCurve
-                    }
-
                     SquircleSurface {
                         id: workspaceSelection
-                        x: 0
+                        x: Math.max(0, Math.min(workspaceTrack.selectionPosition, workspaceTrack.width - bar.workspaceCellWidth))
                         y: 0
                         width: bar.workspaceCellWidth
                         height: bars.theme.barIslandHeight - 2 * bars.theme.barSelectionInset
@@ -465,6 +467,8 @@ Variants {
             NowPlayingIsland {
                 id: mediaIsland
                 occluded: bar.mediaOccluded
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 onYChanged: Qt.callLater(bar.publishOrigins)
                 onHeightChanged: Qt.callLater(bar.publishOrigins)
                 onMainHoverChanged: bar.publishOrigins()
@@ -501,6 +505,8 @@ Variants {
                 onWidthChanged: Qt.callLater(bar.publishOrigins)
                 onHeightChanged: Qt.callLater(bar.publishOrigins)
                 onVisibleChanged: Qt.callLater(bar.publishOrigins)
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 // The hub immediately takes ownership of the centred island.
                 // An independent fade would draw clock text over its opening
                 // squircle, while the shared contour is already expanding.
@@ -558,8 +564,8 @@ Variants {
                 StateLayer {
                     id: clockPress
                     showHover: !bars.frameVisible
-                    onContainsMouseChanged: Qt.callLater(bar.publishOrigins)
-                    onPressedChanged: bar.publishOrigins()
+                    onPointerHoveredChanged: Qt.callLater(bar.publishOrigins)
+                    onVisualPressedChanged: bar.publishOrigins()
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
@@ -575,6 +581,15 @@ Variants {
                 id: notificationIsland
                 enabled: !bar.notificationOccluded
                 opacity: bar.notificationOccluded ? 0 : 1
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: bar.motion.effectsNormal
+                        easing.type: bar.motion.effectsType
+                        easing.bezierCurve: bar.motion.effectsCurve
+                    }
+                }
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -635,8 +650,8 @@ Variants {
                 StateLayer {
                     id: notificationPress
                     showHover: !bars.frameVisible
-                    onContainsMouseChanged: Qt.callLater(bar.publishOrigins)
-                    onPressedChanged: bar.publishOrigins()
+                    onPointerHoveredChanged: Qt.callLater(bar.publishOrigins)
+                    onVisualPressedChanged: bar.publishOrigins()
                     theme: bars.theme
                     motion: bars.motion
                     cornerRadius: bars.theme.radiusIsland
@@ -649,6 +664,15 @@ Variants {
                 id: recordingIsland
                 enabled: !bar.recordingOccluded
                 opacity: bar.recordingOccluded ? 0 : 1
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: bar.motion.effectsNormal
+                        easing.type: bar.motion.effectsType
+                        easing.bezierCurve: bar.motion.effectsCurve
+                    }
+                }
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 reactiveSurface: true
                 frameConnected: bars.frameVisible
                 onXChanged: Qt.callLater(bar.publishOrigins)
@@ -710,6 +734,15 @@ Variants {
                 id: systemIsland
                 enabled: !bar.systemOccluded
                 opacity: bar.systemOccluded ? 0 : 1
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: bar.motion.effectsNormal
+                        easing.type: bar.motion.effectsType
+                        easing.bezierCurve: bar.motion.effectsCurve
+                    }
+                }
+                onOpacityChanged: if (bars.frameVisible)
+                    Qt.callLater(bar.publishOrigins)
                 onFrameHoverChanged: Qt.callLater(bar.publishOrigins)
                 onFramePressedChanged: bar.publishOrigins()
                 onYChanged: Qt.callLater(bar.publishOrigins)

@@ -352,7 +352,7 @@ Item {
                     left: parent.left
                     right: parent.right
                 }
-                height: parent.height - 56
+                height: parent.height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 readonly property int columnCount: panel.theme.textScale >= 1.5 || width < 580 ? 1 : width < 950 ? 2 : 3
@@ -455,7 +455,7 @@ Item {
                                 bottom: filenameBar.top
                             }
                             source: entry.posterPath.length > 0 ? "file://" + entry.posterPath : ""
-                            sourceSize: Qt.size(300, 180)
+                            sourceSize: Qt.size(480, 300)
                             asynchronous: true
                             cache: true
                             fillMode: Image.PreserveAspectCrop
@@ -581,58 +581,24 @@ Item {
 
                 Rectangle {
                     anchors {
-                        bottom: parent.bottom
-                        left: parent.left
+                        top: parent.top
                         right: parent.right
+                        margins: panel.theme.spacing3
                     }
-                    height: 84
-                    color: Qt.rgba(panel.theme.background.r, panel.theme.background.g, panel.theme.background.b, 0.82)
+                    width: stylixLabel.implicitWidth + panel.theme.spacing3 * 2
+                    height: 28
+                    radius: panel.theme.radiusSmall
+                    color: Qt.rgba(0, 0, 0, 0.76)
 
-                    Column {
-                        anchors {
-                            fill: parent
-                            margins: panel.theme.spacing4
-                        }
-                        spacing: panel.theme.spacing2
-                        Text {
-                            text: "CURRENT · STYLIX"
-                            color: panel.theme.readableRoleColor("wallpaper")
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontPanelEyebrow
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            width: parent.width
-                            text: "Theme wallpaper"
-                            color: panel.theme.textStrong
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(16)
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            width: parent.width
-                            text: "Add files to ~/wallpapers to build a gallery"
-                            color: panel.theme.text
-                            font.family: panel.runtime.fontMono
-                            font.pixelSize: panel.theme.fontSize(10)
-                            elide: Text.ElideRight
-                        }
+                    Text {
+                        id: stylixLabel
+                        anchors.centerIn: parent
+                        text: "STYLIX"
+                        color: "#ffffff"
+                        font.family: panel.runtime.fontMono
+                        font.pixelSize: panel.theme.fontSize(10)
                     }
                 }
-            }
-
-            MarqueeText {
-                anchors {
-                    top: gallery.bottom
-                    left: parent.left
-                    right: parent.right
-                }
-                height: 44
-                alignCenter: true
-                text: panel.selectedPath().length > 0 ? panel.selectedPath().slice(panel.selectedPath().lastIndexOf("/") + 1) : ""
-                color: panel.theme.textMuted
-                font.family: panel.runtime.fontMono
-                font.pixelSize: panel.theme.fontSize(11)
             }
 
             Text {

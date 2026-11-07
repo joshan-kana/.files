@@ -399,7 +399,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
+    implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -869,7 +869,7 @@ FocusScope {
                             font.letterSpacing: 1.0
                         }
                         Item {
-                            width: Math.max(0, parent.width - parent.children[0].implicitWidth - sliderSelectionHint.implicitWidth - parent.spacing * 2)
+                            width: Math.max(0, parent.width - parent.children[0].implicitWidth - sliderSelectionHint.implicitWidth - (sliderNavigationHint.visible ? sliderNavigationHint.implicitWidth + parent.spacing : 0) - parent.spacing * 2)
                             height: 1
                         }
                         KeyHint {
@@ -881,6 +881,16 @@ FocusScope {
                             runtime: root.runtime
                             theme: root.theme
                             emphasized: root.selectedSlider.length > 0
+                        }
+                        KeyHint {
+                            id: sliderNavigationHint
+                            visible: root.selectedSlider.length > 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            shortcut: "J/K"
+                            label: "Select"
+                            compact: true
+                            runtime: root.runtime
+                            theme: root.theme
                         }
                     }
 
@@ -1155,10 +1165,12 @@ FocusScope {
                             id: actionStrip
                             width: parent.width
                             spacing: root.theme.spacing2
-                            readonly property int columns: width >= 590 && root.theme.textScale < 1.3 ? 5 : width < 440 || root.theme.textScale >= 1.5 ? 2 : 3
+                            readonly property int columns: width < 440 || root.theme.textScale >= 1.5 ? 2 : 3
 
                             function cellWidth(index: int): real {
-                                return (width - spacing * (columns - 1)) / columns;
+                                const row = Math.floor(index / columns);
+                                const itemsInRow = Math.min(columns, 5 - row * columns);
+                                return (width - spacing * (itemsInRow - 1)) / itemsInRow;
                             }
 
                             QuickSettingChip {
@@ -1250,6 +1262,16 @@ FocusScope {
                     title: "Audio & levels"
                     emphasized: true
                     accentRole: "audio"
+                    hints: [
+                        {
+                            shortcut: "J/K",
+                            label: "Select"
+                        },
+                        {
+                            shortcut: "H/L",
+                            label: "Level"
+                        }
+                    ]
 
                     AudioMixerContent {
                         id: audioDeck
@@ -1279,6 +1301,7 @@ FocusScope {
                         height: Math.max(implicitHeight, audioDeck.implicitHeight)
                         active: root.engaged && !root.detailsVisible
                         media: root.media
+                        spectrum: root.spectrum
                         runtime: root.runtime
                         theme: root.theme
                         motion: root.motion
@@ -1303,61 +1326,94 @@ FocusScope {
                     font.weight: Font.DemiBold
                 }
 
-                Repeater {
-                    model: root.system.trayItems
+                Item {
+                    id: trayChoices
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: root.system.trayCount * 98 + Math.max(0, root.system.trayCount - 1) * root.theme.spacing2
+                    height: 36
+                    clip: true
 
-                    delegate: ShellSurface {
-                        id: trayItem
-                        required property var modelData
-                        required property int index
-
+                    ShellSurface {
+                        id: traySelection
+                        x: Math.max(0, Math.min(root.trayIndex, root.system.trayCount - 1)) * (98 + root.theme.spacing2)
                         width: 98
-                        height: 36
+                        height: parent.height
                         theme: root.theme
                         motion: root.motion
                         surfaceLayer: ShellSurface.Control
-                        selected: index === root.trayIndex
-                        cornerRadius: theme.radiusSmall
+                        selected: true
+                        cornerRadius: root.theme.radiusSmall
 
-                        Row {
-                            anchors {
-                                fill: parent
-                                margins: root.theme.spacing2
-                            }
-                            spacing: root.theme.spacing1
-
-                            Image {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 19
-                                height: 19
-                                source: trayItem.modelData.icon.length > 0 ? trayItem.modelData.icon : Quickshell.iconPath("application-x-executable")
-                                fillMode: Image.PreserveAspectFit
-                                asynchronous: true
-                            }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: Math.max(1, parent.width - 19 - parent.spacing)
-                                text: trayItem.modelData.title || trayItem.modelData.id
-                                elide: Text.ElideRight
-                                color: root.theme.text
-                                font.family: root.runtime.fontMono
-                                font.pixelSize: root.theme.fontSize(10)
+                        Behavior on x {
+                            NumberAnimation {
+                                duration: root.motion.spatialFast
+                                easing.type: root.motion.spatialType
+                                easing.bezierCurve: root.motion.spatialCurve
                             }
                         }
-                        StateLayer {
-                            theme: root.theme
-                            motion: root.motion
-                            selected: trayItem.index === root.trayIndex
-                            cornerRadius: root.theme.radiusSmall
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            onActivated: event => {
-                                root.trayIndex = trayItem.index;
-                                if (event.button === Qt.RightButton)
-                                    trayItem.modelData.secondaryActivate();
-                                else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu)
-                                    trayMenu.openFor(trayItem.modelData);
-                                else
-                                    trayItem.modelData.activate();
+                    }
+
+                    Row {
+                        spacing: root.theme.spacing2
+
+                        Repeater {
+                            model: root.system.trayItems
+
+                            delegate: ShellSurface {
+                                id: trayItem
+                                required property var modelData
+                                required property int index
+
+                                width: 98
+                                height: 36
+                                theme: root.theme
+                                motion: root.motion
+                                surfaceLayer: ShellSurface.Control
+                                selected: false
+                                fillColor: "transparent"
+                                cornerRadius: theme.radiusSmall
+
+                                Row {
+                                    anchors {
+                                        fill: parent
+                                        margins: root.theme.spacing2
+                                    }
+                                    spacing: root.theme.spacing1
+
+                                    Image {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 19
+                                        height: 19
+                                        source: trayItem.modelData.icon.length > 0 ? trayItem.modelData.icon : Quickshell.iconPath("application-x-executable")
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: Math.max(1, parent.width - 19 - parent.spacing)
+                                        text: trayItem.modelData.title || trayItem.modelData.id
+                                        elide: Text.ElideRight
+                                        color: root.theme.text
+                                        font.family: root.runtime.fontMono
+                                        font.pixelSize: root.theme.fontSize(10)
+                                    }
+                                }
+                                StateLayer {
+                                    theme: root.theme
+                                    motion: root.motion
+                                    selected: false
+                                    cornerRadius: root.theme.radiusSmall
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    onActivated: event => {
+                                        root.trayIndex = trayItem.index;
+                                        if (event.button === Qt.RightButton)
+                                            trayItem.modelData.secondaryActivate();
+                                        else if (trayItem.modelData.hasMenu || trayItem.modelData.onlyMenu)
+                                            trayMenu.openFor(trayItem.modelData);
+                                        else
+                                            trayItem.modelData.activate();
+                                    }
+                                }
                             }
                         }
                     }
@@ -1726,7 +1782,10 @@ FocusScope {
                 }
 
                 if (themePanel.open) {
-                    if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
+                    if (event.key === Qt.Key_Slash) {
+                        themePanel.invoke("enterSearch");
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Backspace) {
                         root.backFromDetail();
                         event.accepted = true;
                     } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_K)) {

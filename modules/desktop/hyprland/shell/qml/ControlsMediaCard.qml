@@ -5,12 +5,20 @@ ShellSurface {
     id: card
 
     required property MediaState media
+    required property SpectrumState spectrum
     required property RuntimeConfig runtime
     property bool active: false
 
     signal fullRequested
 
+    SpectrumScale {
+        id: spectrumScale
+        lowHz: card.spectrum.lowHz
+        highHz: card.spectrum.highHz
+    }
+
     readonly property real heroSize: 64
+    readonly property real visualizerWidth: width >= 520 ? Math.min(180, width * 0.27) : 0
     implicitHeight: media.available ? 178 : 152
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
@@ -75,7 +83,7 @@ ShellSurface {
             }
 
             Column {
-                width: Math.max(1, parent.width - card.heroSize - parent.spacing)
+                width: Math.max(1, parent.width - card.heroSize - parent.spacing - (card.visualizerWidth > 0 ? card.visualizerWidth + parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: card.theme.spacing1
 
@@ -104,6 +112,18 @@ ShellSurface {
                     font.pixelSize: card.theme.fontSize(11)
                 }
             }
+
+            SpectrumBars {
+                width: card.visualizerWidth
+                height: 56
+                anchors.verticalCenter: parent.verticalCenter
+                visible: card.visualizerWidth > 0 && card.active && card.media.available
+                enabled: visible
+                spectrum: card.spectrum
+                theme: card.theme
+                frequencyScale: spectrumScale
+                barCount: 24
+            }
         }
 
         ShellSlider {
@@ -127,7 +147,32 @@ ShellSurface {
             height: 46
             spacing: card.theme.spacing2
 
+            ShellAction {
+                id: shuffleButton
+                width: 44
+                height: 42
+                anchors.verticalCenter: parent.verticalCenter
+                runtime: card.runtime
+                theme: card.theme
+                motion: card.motion
+                compact: true
+                iconOnly: true
+                iconHint: true
+                icon: "󰒝"
+                title: card.media.shuffled ? "Shuffle on" : "Shuffle off"
+                shortcut: "Z"
+                active: card.media.shuffled
+                enabled: card.media.shuffleAvailable
+                onActivated: card.media.toggleShuffle()
+            }
+
+            Item {
+                width: Math.max(0, (parent.width - shuffleButton.width - repeatButton.width - compactTransport.width - parent.spacing * 4) / 2)
+                height: 1
+            }
+
             MediaTransport {
+                id: compactTransport
                 width: implicitWidth
                 visible: card.media.available
                 anchors.verticalCenter: parent.verticalCenter
@@ -137,22 +182,31 @@ ShellSurface {
                 motion: card.motion
                 compact: true
                 minimal: true
-                simple: true
+                simple: card.width < 490
             }
 
             Item {
-                width: Math.max(0, parent.width - (card.media.available ? parent.children[0].implicitWidth : 0) - openHint.implicitWidth - parent.spacing * (card.media.available ? 2 : 1))
+                width: Math.max(0, (parent.width - shuffleButton.width - repeatButton.width - compactTransport.width - parent.spacing * 4) / 2)
                 height: 1
             }
 
-            KeyHint {
-                id: openHint
+            ShellAction {
+                id: repeatButton
+                width: 44
+                height: 42
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: card.runtime
                 theme: card.theme
+                motion: card.motion
                 compact: true
-                shortcut: "N"
-                label: "Open"
+                iconOnly: true
+                iconHint: true
+                icon: card.media.repeatState === 1 ? "󰑘" : "󰑖"
+                title: "Repeat " + card.media.repeatLabel
+                shortcut: "B"
+                active: card.media.repeatState !== 0
+                enabled: card.media.repeatAvailable
+                onActivated: card.media.toggleRepeat()
             }
         }
     }

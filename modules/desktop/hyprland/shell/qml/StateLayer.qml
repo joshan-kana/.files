@@ -18,6 +18,11 @@ MouseArea {
     // the pointer crosses interactive descendants, flickering shared tiles.
     property bool pointerHovered: false
     function updatePointerHover(): void {
+        if (!visible || !enabled) {
+            hoverExit.stop();
+            pointerHovered = false;
+            return;
+        }
         if (containsMouse || hoverHandler.hovered) {
             hoverExit.stop();
             pointerHovered = true;
@@ -26,6 +31,7 @@ MouseArea {
         }
     }
     onContainsMouseChanged: updatePointerHover()
+    onVisibleChanged: updatePointerHover()
     onEnabledChanged: {
         if (!enabled) {
             hoverExit.stop();
@@ -42,7 +48,7 @@ MouseArea {
     Timer {
         id: hoverExit
         interval: 55
-        onTriggered: root.pointerHovered = root.enabled && (root.containsMouse || hoverHandler.hovered)
+        onTriggered: root.pointerHovered = root.visible && root.enabled && (root.containsMouse || hoverHandler.hovered)
     }
     property bool showHover: true
     property color stateColor: selected ? theme.accent : theme.textStrong

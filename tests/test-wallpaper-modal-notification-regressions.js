@@ -234,3 +234,20 @@ test("other transient Wayland surfaces keep their backing geometry stable", () =
     /updatesEnabled: surfaceLifecycle\.needsRendering/,
   );
 });
+
+test("Wallpaper gallery keeps thumbnail names and ACTIVE but removes redundant selected-name row", () => {
+  const wallpaper = qml("WallpaperPanel.qml");
+  assert.match(wallpaper, /id: gallery[\s\S]*?height: parent.height/);
+  assert.match(wallpaper, /id: filenameBar/);
+  assert.match(
+    wallpaper,
+    /id: stateLabel[\s\S]*?text: entry.applied \? "ACTIVE" : ""/,
+  );
+  assert.match(wallpaper, /bottom: filenameBar.top/);
+  assert.doesNotMatch(
+    wallpaper,
+    /selectedPath\(\).length > 0 \? panel.selectedPath\(\).slice/,
+  );
+  assert.match(wallpaper, /sourceSize: Qt.size\(480, 300\)/);
+  assert.match(wallpaper, /id: currentWallpaperPreview[\s\S]*?id: stylixLabel/);
+});

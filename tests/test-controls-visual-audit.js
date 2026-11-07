@@ -306,7 +306,7 @@ test("The compact mixer uses content-driven height and does not delay rendering"
   assert.doesNotMatch(mixer, /shortcut: "ESC"/);
 });
 
-test("Dashboard hierarchy puts connectivity above Quick actions and audio/media at bottom", () => {
+test("Dashboard hierarchy retains balanced two-row quick actions and bottom audio/media", () => {
   const controls = read("SystemContent.qml");
   const appearance = controls.indexOf("id: appearanceSection");
   const connectivity = controls.indexOf("id: connectionTiles");
@@ -322,41 +322,58 @@ test("Dashboard hierarchy puts connectivity above Quick actions and audio/media 
   assert.match(controls, /title: "Connectivity"/);
   assert.match(
     controls,
-    /id: appearanceSection[\s\S]*?width: commandMatrix.cellWidth/,
+    /readonly property int columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
   );
   assert.match(
     controls,
-    /id: audioSection[\s\S]*?width: mediaMatrix.cellWidth/,
+    /const itemsInRow = Math\.min\(columns, 5 - row \* columns\)/,
   );
   assert.match(
     controls,
-    /readonly property int columns: width >= 590 && root.theme.textScale < 1.3 \? 5 : width < 440/,
+    /height: Math.max\(implicitHeight, mediaCard.implicitHeight\)/,
+  );
+  assert.match(
+    controls,
+    /height: Math.max\(implicitHeight, audioDeck.implicitHeight\)/,
   );
 });
 
-test("Compact Media keeps a small empty state and shares the full Now Playing destination", () => {
+test("Compact Media shares a live spectrum, controls and full Now Playing navigation", () => {
   const controls = read("SystemContent.qml");
   const card = read("ControlsMediaCard.qml");
   const transport = read("MediaTransport.qml");
-  assert.match(controls, /ControlsMediaCard \{/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
+  assert.match(controls, /spectrum: root.spectrum/);
   assert.match(card, /implicitHeight: media.available \? 178 : 152/);
   assert.match(
     card,
     /text: card.media.available \? card.media.title : "No active player"/,
   );
-  assert.match(card, /simple: true/);
-  assert.match(card, /shortcut: "N"/);
+  assert.match(card, /simple: card.width < 490/);
+  assert.match(card, /id: compactTransport[\s\S]*?minimal: true/);
+  assert.match(
+    card,
+    /parent.width - shuffleButton.width - repeatButton.width - compactTransport.width/,
+  );
+  assert.match(card, /SpectrumBars \{/);
+  assert.match(card, /barCount: 24/);
+  assert.match(
+    card,
+    /shortcut: "Z"[\s\S]*?onActivated: card.media.toggleShuffle\(\)/,
+  );
+  assert.match(
+    card,
+    /shortcut: "B"[\s\S]*?onActivated: card.media.toggleRepeat\(\)/,
+  );
   assert.match(card, /onActivated: card.fullRequested\(\)/);
-  assert.doesNotMatch(card, /id: fullPlayer|ShellAction \{/);
+  assert.doesNotMatch(card, /id: fullPlayer|lyrics/);
   assert.match(
     transport,
     /item.action === "previous" \|\| item.action === "play" \|\| item.action === "next"/,
   );
-  assert.doesNotMatch(card, /lyrics|toggleShuffle|toggleRepeat|SpectrumBars/);
 });
 
-test("normal desktop tiles use two visual-mode rows without clipping controls", () => {
+test("Visual modes retain their two-row layout independently of Quick Actions", () => {
   const controls = read("SystemContent.qml");
   assert.match(
     controls,
@@ -364,7 +381,7 @@ test("normal desktop tiles use two visual-mode rows without clipping controls", 
   );
   assert.match(
     controls,
-    /id: actionStrip[\s\S]*?readonly property int columns: width >= 590[\s\S]*?\? 5 : width < 440/,
+    /id: actionStrip[\s\S]*?readonly property int columns: width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
   );
   assert.match(controls, /function cellWidth\(index: int\): real/);
 });
@@ -403,15 +420,31 @@ test("shared hub tabs expose hover, press and selected feedback", () => {
     assert.ok(tabs.includes(fragment));
 });
 
-test("two-row Session tiles use available horizontal space", () => {
+test("Session actions keep their natural size in three-plus-two rows", () => {
   const session = read("SessionPanel.qml");
-  for (const fragment of [
-    "width: buttonGrid.width",
-    "readonly property int rowCount: Math.min(",
-    "actionRow.width - actionRow.spacing * (actionRow.rowCount - 1)",
-    "readonly property int gridColumns: width < 340 ? 1 : width < 510 ? 2 : 3",
-  ])
-    assert.ok(session.includes(fragment), fragment);
+  assert.match(
+    session,
+    /width: Math.min\(parent.width, panel.gridColumns \* 154/,
+  );
+  assert.match(
+    session,
+    /implicitWidth: 3 \* 154 \+ 2 \* theme.spacing3 \+ theme.spacing5 \* 2/,
+  );
+  assert.match(
+    read("SystemContent.qml"),
+    /implicitWidth: sessionPanel.open \? sessionPanel.implicitWidth/,
+  );
+  assert.match(session, /width: Math.min\(buttonGrid.width, rowCount \* 154/);
+  assert.match(session, /anchors.horizontalCenter: parent.horizontalCenter/);
+  assert.match(session, /readonly property int rowCount: Math.min\(/);
+  assert.match(
+    session,
+    /actionRow.width - actionRow.spacing \* \(actionRow.rowCount - 1\)/,
+  );
+  assert.match(
+    session,
+    /readonly property int gridColumns: width < 340 \? 1 : width < 510 \? 2 : 3/,
+  );
 });
 
 test("main panel and compact Media use measured geometry with bounded empty state", () => {
@@ -421,7 +454,7 @@ test("main panel and compact Media use measured geometry with bounded empty stat
   for (const [source, fragment] of [
     [
       controls,
-      "implicitWidth: detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
+      "implicitWidth: sessionPanel.open ? sessionPanel.implicitWidth : detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
     [media, "implicitHeight: media.available ? 178 : 152"],
@@ -455,58 +488,91 @@ test("Controls sizes naturally without inflating tiles or forcing scroll hints",
   );
 });
 
-test("compact widgets use clickable backgrounds, not dedicated full-view buttons", () => {
+test("Compact Audio and Media backgrounds open full views while child actions remain independent", () => {
   const mixer = read("AudioMixerContent.qml");
   const media = read("ControlsMediaCard.qml");
-  for (const [source, action] of [
-    [mixer, "onActivated: mixer.expandRequested()"],
-    [media, "onActivated: card.fullRequested()"],
-  ]) {
-    assert.match(source, /StateLayer \{/);
-    assert.ok(source.includes(action));
-  }
+  const controls = read("SystemContent.qml");
+  assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
+  assert.match(media, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction|title: "Full mixer"/);
   assert.doesNotMatch(media, /id: fullPlayer|title: "Now Playing"/);
-  assert.match(mixer, /shortcut: "SHIFT\+M"/);
-  assert.match(media, /shortcut: "N"/);
+  assert.match(
+    controls,
+    /shifted && event.key === Qt.Key_M\)\s*\{\s*root.openMixer\(\)/,
+  );
+  assert.doesNotMatch(
+    controls.slice(
+      controls.indexOf('title: "Media"'),
+      controls.indexOf("ControlsMediaCard {"),
+    ),
+    /hints: \[/,
+  );
   assert.match(mixer, /AudioDeviceControl \{/);
   assert.match(media, /MediaTransport \{/);
   assert.match(media, /ShellSlider \{/);
 });
 
-test("compact Audio shares Output/Input controls without application streams", () => {
+test("Compact Audio keeps Output/Input without app rows and shows correct header hints", () => {
   const mixer = read("AudioMixerContent.qml");
   const device = read("AudioDeviceControl.qml");
+  const controls = read("SystemContent.qml");
   assert.match(mixer, /columns: width >= \(mixer.compact \? 440 : 600\)/);
   assert.match(mixer, /model: mixer.compact \? 0 : mixer.streams.length/);
   assert.match(mixer, /visible: !mixer.compact && mixer.streams.length > 0/);
-  assert.match(mixer, /visible: !mixer.compact\s+height: visible \? 20 : 0/);
-  assert.match(
-    mixer,
-    /visible: !mixer.compact\s+width: parent.width\s+runtime: mixer.runtime/,
-  );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.match(device, /fillColor: compact \? "transparent"/);
-  assert.match(device, /function toggleDeviceChooser\(\)/);
-  assert.match(device, /system.toggleMicrophoneMute\(\)/);
-  assert.match(device, /system.toggleMute\(\)/);
-  assert.match(device, /system.setMicrophoneVolume\(value\)/);
-  assert.match(device, /system.setVolume\(value\)/);
+  for (const fragment of [
+    "toggleDeviceChooser",
+    "system.toggleMicrophoneMute()",
+    "system.toggleMute()",
+    "system.setMicrophoneVolume(value)",
+    "system.setVolume(value)",
+  ])
+    assert.ok(device.includes(fragment), fragment);
+  for (const fragment of [
+    /shortcut: "J\/K",\s*label: "Select"/,
+    /shortcut: "H\/L",\s*label: "Level"/,
+  ])
+    assert.match(controls, fragment);
+  assert.match(read("ShellSection.qml"), /id: headerHints/);
 });
 
-test("Quick Actions stay equally sized on a single desktop row", () => {
+test("Quick Actions fill both rows without changing tile height", () => {
   const controls = read("SystemContent.qml");
   const start = controls.indexOf("id: actionStrip");
   const actions = controls.slice(
     start,
     controls.indexOf("ShellSection {", start),
   );
-  assert.match(actions, /width >= 590 && root.theme.textScale < 1.3 \? 5/);
   assert.match(
     actions,
-    /return \(width - spacing \* \(columns - 1\)\) \/ columns/,
+    /width < 440 \|\| root.theme.textScale >= 1\.5 \? 2 : 3/,
   );
-  assert.doesNotMatch(actions, /itemsInRow/);
+  const expression = actions.match(
+    /function cellWidth\(index: int\): real \{([\s\S]*?)\n\s+\}/,
+  );
+  assert.ok(expression);
+  const cellWidth = new Function(
+    "index",
+    "columns",
+    "width",
+    "spacing",
+    expression[1],
+  );
+  for (const columns of [2, 3]) {
+    for (let row = 0; row < Math.ceil(5 / columns); row++) {
+      const count = Math.min(columns, 5 - row * columns);
+      const widths = Array.from({ length: count }, (_, i) =>
+        cellWidth(row * columns + i, columns, 615, 8),
+      );
+      assert.ok(widths.every((value) => value > 0));
+      assert.ok(
+        Math.abs(widths.reduce((a, b) => a + b, 0) + (count - 1) * 8 - 615) <
+          0.01,
+      );
+    }
+  }
+  assert.match(actions, /height: root.dashboardTileHeight/);
 });
 
 test("compact Media anchors artwork and player information above footer controls", () => {
@@ -529,4 +595,63 @@ test("hub expansion accounts for the actual inner viewport margins", () => {
   assert.match(host, /readonly property real contentHeight: loadedContent/);
   assert.match(host, /measuredContentHeight = loadedContent.implicitHeight/);
   assert.doesNotMatch(host, /PR211_TEMP_GEOMETRY/);
+});
+
+test("Session uses compact hub width, not the Controls dashboard width", () => {
+  const controls = read("SystemContent.qml");
+  const session = read("SessionPanel.qml");
+  const host = read("ShellExpansionHost.qml");
+  assert.match(
+    controls,
+    /implicitWidth: sessionPanel.open \? sessionPanel.implicitWidth : detailsVisible \? theme.controlsDetailWidth : dashboardWidthBudget/,
+  );
+  assert.match(
+    session,
+    /implicitWidth: 3 \* 154 \+ 2 \* theme.spacing3 \+ theme.spacing5 \* 2/,
+  );
+  assert.match(host, /Math.max\(loadedContent.implicitWidth, 600\)/);
+  assert.match(host, /width: Math.min\(host.viewportWidth, host.targetWidth\)/);
+});
+
+test("Controls Media transport has centered playback and all available seek controls", () => {
+  const card = read("ControlsMediaCard.qml");
+  const transport = read("MediaTransport.qml");
+  assert.match(
+    card,
+    /id: shuffleButton[\s\S]*?id: compactTransport[\s\S]*?id: repeatButton/,
+  );
+  assert.match(card, /simple: card.width < 490/);
+  assert.match(card, /id: compactTransport[\s\S]*?width: implicitWidth/);
+  assert.match(transport, /action: "back"/);
+  assert.match(transport, /action: "forward"/);
+  assert.match(transport, /action: "play"/);
+  assert.match(card, /spectrum: card.spectrum/);
+});
+test("slider mode retains Tab, J/K selection and H/L edits without duplicate legends", () => {
+  const controls = read("SystemContent.qml");
+  const opacity = read("OpacitySetting.qml");
+  const night = read("AdjustableSetting.qml");
+  assert.match(controls, /id: sliderNavigationHint[\s\S]*?shortcut: "J\/K"/);
+  assert.match(controls, /event.key === Qt.Key_K \|\| event.key === Qt.Key_Up/);
+  assert.match(
+    controls,
+    /event.key === Qt.Key_J \|\| event.key === Qt.Key_Down/,
+  );
+  assert.match(controls, /root.adjustSlider\(-1\)/);
+  assert.match(controls, /root.adjustSlider\(1\)/);
+  assert.match(
+    opacity,
+    /shortcut: setting.keyboardSelected \? "H\/L" : setting.shortcut/,
+  );
+  assert.match(
+    night,
+    /shortcut: setting.keyboardSelected \? "H\/L" : setting.toggleShortcut/,
+  );
+  assert.doesNotMatch(
+    controls.slice(
+      controls.indexOf('title: "Media"'),
+      controls.indexOf("ControlsMediaCard {"),
+    ),
+    /hints: \[/,
+  );
 });
