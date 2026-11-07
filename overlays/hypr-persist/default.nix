@@ -16,6 +16,7 @@ _: {
         patches = [
           ../../patches/hypr-persist/reconnect-ipc.patch
           ../../patches/hypr-persist/opt-in-restoration.patch
+          ../../patches/hypr-persist/restore-edge-cases.patch
           ../../patches/hypr-persist/settle-floating-geometry.patch
         ];
         passthru.autoUpdate = false;

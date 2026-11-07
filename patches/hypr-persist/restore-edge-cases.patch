@@ -1,0 +1,116 @@
+diff --git a/src/core/daemon.rs b/src/core/daemon.rs
+index 47324d5..9b818ec 100644
+--- a/src/core/daemon.rs
++++ b/src/core/daemon.rs
+@@ -38,8 +38,9 @@ pub async fn run(config: Config) -> Result<()> {
+ 
+     populate_initial_state(&state, &resolver, &ctl).await?;
+ 
+-    let restore_from_crash = crash_snapshot.exists("last");
+     let restore_explicit = snapshot.restore_pending() && snapshot.exists("last");
++    let restore_from_crash = crash_snapshot.exists("last")
++        && (!restore_explicit || snapshot.restore_requested_this_boot());
+     if config.general.restore_on_start && (restore_from_crash || restore_explicit) {
+         tracing::info!("waiting for compositor to settle...");
+         wait_for_settle(&mut event_rx).await;
+@@ -56,6 +57,12 @@ pub async fn run(config: Config) -> Result<()> {
+                 "requested"
+             }
+         );
++        // Consume explicit requests before attempting restoration. Even a
++        // partial failure must not relaunch the whole session on every login.
++        // The saved snapshot stays available for an intentional manual retry.
++        if !restore_from_crash {
++            snapshot.clear_restore_pending()?;
++        }
+         match source.load("last") {
+             Ok(session) => {
+                 let live_windows: Vec<crate::models::TrackedWindow> =
+@@ -64,19 +71,31 @@ pub async fn run(config: Config) -> Result<()> {
+                     config.general.restore_geometry,
+                     config.general.restore_layout,
+                 );
+-                let (report, _watcher) = engine.restore(&session, &ctl, live_windows).await?;
+-                if report.failed > 0 {
+-                    for (app, err) in &report.errors {
+-                        tracing::warn!("restore failed for {app}: {err}");
++                match engine.restore(&session, &ctl, live_windows).await {
++                    Ok((report, _watcher)) => {
++                        if report.failed > 0 {
++                            for (app, err) in &report.errors {
++                                tracing::warn!("restore failed for {app}: {err}");
++                            }
++                            tracing::warn!(
++                                "session restored partially ({} failed); saved session retained. Retry with 'hypr-persist restore last'",
++                                report.failed
++                            );
++                        }
+                     }
++                    Err(e) if !restore_from_crash => {
++                        tracing::error!(
++                            "session restoration failed: {e}; saved session retained. Retry with 'hypr-persist restore last'"
++                        );
++                    }
++                    Err(e) => return Err(e),
+                 }
+-                // An explicit reboot restore is a one-shot request. Consume
+-                // it only after the restore engine has started successfully.
+-                if !restore_from_crash {
+-                    snapshot.clear_restore_pending()?;
+-                }
+             }
+-            Err(e) => tracing::warn!("failed to load session 'last': {e}"),
++            Err(e) => {
++                tracing::warn!(
++                    "failed to load session 'last': {e}; saved session retained for manual recovery"
++                );
++            }
+         }
+     }
+ 
+diff --git a/src/core/snapshot.rs b/src/core/snapshot.rs
+index c4d662d..1eea1e0 100644
+--- a/src/core/snapshot.rs
++++ b/src/core/snapshot.rs
+@@ -176,9 +176,24 @@ impl SnapshotEngine {
+         self.session_dir.join(".restore-next").exists()
+     }
+ 
++    /// A request saved in this boot must survive compositor crashes until the
++    /// next clean graphical login. The boot ID distinguishes it after reboot.
++    pub fn restore_requested_this_boot(&self) -> bool {
++        let path = self.session_dir.join(".restore-next");
++        let Ok(saved_boot) = std::fs::read_to_string(path) else {
++            return false;
++        };
++        let Ok(current_boot) = std::fs::read_to_string("/proc/sys/kernel/random/boot_id") else {
++            return false;
++        };
++        !saved_boot.trim().is_empty() && saved_boot.trim() == current_boot.trim()
++    }
++
+     pub fn mark_restore_pending(&self) -> Result<()> {
+         let path = self.session_dir.join(".restore-next");
+-        std::fs::write(&path, b"")
++        let boot_id = std::fs::read_to_string("/proc/sys/kernel/random/boot_id")
++            .context("reading current boot ID for next-login restoration")?;
++        std::fs::write(&path, boot_id)
+             .with_context(|| format!("marking next-login restoration at {}", path.display()))
+     }
+ 
+@@ -533,11 +548,15 @@ mod tests {
+ 
+         engine.mark_restore_pending().unwrap();
+         assert!(engine.restore_pending());
++        assert!(engine.restore_requested_this_boot());
+         engine.clear_restore_pending().unwrap();
+         assert!(!engine.restore_pending());
+         assert!(engine.exists("last"));
+ 
+         engine.mark_restore_pending().unwrap();
++        std::fs::write(dir.path().join(".restore-next"), "previous-boot-id").unwrap();
++        assert!(engine.restore_pending());
++        assert!(!engine.restore_requested_this_boot());
+         engine.delete("last").unwrap();
+         assert!(!engine.restore_pending());
+         assert!(!engine.exists("last"));
