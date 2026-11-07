@@ -66,10 +66,13 @@ in
         ]
         (_: {
           overrideStrategy = "asDropin";
-          serviceConfig.ExecStart = [
-            ""
-            "${lib.getExe pkgs.uwsm} aux exec -- %I ${lib.getExe pkgs.wl-restart} -- ${lib.getExe' config.programs.hyprland.package "start-hyprland"} --"
-          ];
+          serviceConfig = {
+            Environment = "PATH=/etc/profiles/per-user/%u/bin:/run/current-system/sw/bin";
+            ExecStart = [
+              ""
+              "${lib.getExe pkgs.uwsm} aux exec -- %I ${lib.getExe pkgs.wl-restart} -- ${lib.getExe' config.programs.hyprland.package "start-hyprland"} --path ${lib.getExe' config.programs.hyprland.package "Hyprland"} --"
+            ];
+          };
         });
 
     environment.sessionVariables.QT_WAYLAND_RECONNECT = "1";
