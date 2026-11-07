@@ -33,6 +33,7 @@ in
           "^xdg-desktop-portal.*",
           "^org\\.kde\\.polkit.*",
           "^polkit-.*",
+          "^hyprland-dialog$",
         ]
       '';
 
@@ -46,6 +47,7 @@ in
           PartOf = [ "graphical-session.target" ];
         };
         Service = {
+          Environment = "PATH=/etc/profiles/per-user/%u/bin:/run/current-system/sw/bin";
           ExecStart = "${pkgs.hypr-persist}/bin/hypr-persist";
           Restart = "on-failure";
           RestartSec = 3;
