@@ -1,0 +1,113 @@
+diff --git a/src/core/restore.rs b/src/core/restore.rs
+index 8c3240a..dc6e38d 100644
+--- a/src/core/restore.rs
++++ b/src/core/restore.rs
+@@ -1603,34 +1603,29 @@ impl RestoreEngine {
+             )
+             .await?;
+ 
+-        let addr = match outcome {
++        let (addr, adopted) = match outcome {
+             LaunchOutcome::Adopted(addr) => {
+                 tracing::info!("  adopted {} (racing autostart, 0x{addr})", window.app_id);
+-                return Ok(true);
++                (addr, true)
+             }
+-            LaunchOutcome::Opened(addr) => addr,
++            LaunchOutcome::Opened(addr) => (addr, false),
+             LaunchOutcome::Deferred => return Ok(false),
+         };
+ 
+         if self.restore_geometry {
+             if window.floating
+-                && let (Some((x, y)), Some((w, h))) = (window.position, window.size)
++                && let (Some(position), Some(size)) = (window.position, window.size)
+             {
+-                ctl.dispatch(&format!("setfloating address:0x{addr}"))
+-                    .await?;
+-                ctl.dispatch(&format!("resizewindowpixel exact {w} {h},address:0x{addr}"))
+-                    .await?;
+-                ctl.dispatch(&format!("movewindowpixel exact {x} {y},address:0x{addr}"))
+-                    .await?;
++                restore_floating_geometry(ctl, &addr, position, size).await?;
+             }
+ 
+-            if window.fullscreen {
++            if window.fullscreen && !adopted {
+                 ctl.dispatch(&format!("fullscreen 0,address:0x{addr}"))
+                     .await?;
+             }
+         }
+ 
+-        Ok(false)
++        Ok(adopted)
+     }
+ 
+     async fn wait_for_open_event(
+@@ -1663,6 +1658,38 @@ impl RestoreEngine {
+     }
+ }
+ 
++/// Give newly opened floating clients time to apply their own first configure.
++/// Their initial size requests can otherwise overwrite the restored geometry.
++async fn restore_floating_geometry(
++    ctl: &HyprCtl,
++    address: &str,
++    position: (i32, i32),
++    size: (i32, i32),
++) -> Result<()> {
++    let (x, y) = position;
++    let (w, h) = size;
++    ctl.dispatch(&format!("setfloating address:0x{address}"))
++        .await?;
++    for _ in 0..3 {
++        ctl.dispatch(&format!(
++            "resizewindowpixel exact {w} {h},address:0x{address}"
++        ))
++        .await?;
++        ctl.dispatch(&format!(
++            "movewindowpixel exact {x} {y},address:0x{address}"
++        ))
++        .await?;
++        tokio::time::sleep(Duration::from_millis(200)).await;
++        if let Ok(Some(client)) = ctl.get_client_by_address(address).await
++            && client.at == position
++            && client.size == size
++        {
++            break;
++        }
++    }
++    Ok(())
++}
++
+ /// Background task that watches for windows that didn't appear during the main
+ /// restore loop. Keeps their Hyprland window rules active and listens on
+ /// socket2 until every pending window appears or the grace period expires.
+@@ -1858,24 +1885,10 @@ async fn apply_late_window(
+ 
+     if restore_geometry
+         && pw.floating
+-        && let (Some((x, y)), Some((w, h))) = (pw.position, pw.size)
++        && let (Some(position), Some(size)) = (pw.position, pw.size)
++        && let Err(e) = restore_floating_geometry(ctl, address, position, size).await
+     {
+-        drop(
+-            ctl.dispatch(&format!("setfloating address:0x{address}"))
+-                .await,
+-        );
+-        drop(
+-            ctl.dispatch(&format!(
+-                "resizewindowpixel exact {w} {h},address:0x{address}"
+-            ))
+-            .await,
+-        );
+-        drop(
+-            ctl.dispatch(&format!(
+-                "movewindowpixel exact {x} {y},address:0x{address}"
+-            ))
+-            .await,
+-        );
++        tracing::warn!("could not restore floating geometry for {}: {e}", pw.app_id);
+     }
+ 
+     if pw.fullscreen {

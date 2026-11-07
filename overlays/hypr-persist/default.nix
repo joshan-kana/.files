@@ -13,7 +13,10 @@ _: {
         };
 
         cargoHash = "sha256-OYJNkWU9Tfx/ZDlO0kfy9sqE0i1YsB9Dy5GR29IAtMI=";
-        patches = [ ../../patches/hypr-persist/reconnect-ipc.patch ];
+        patches = [
+          ../../patches/hypr-persist/reconnect-ipc.patch
+          ../../patches/hypr-persist/settle-floating-geometry.patch
+        ];
         passthru.autoUpdate = false;
         meta = {
           description = "Persist and restore Hyprland windows and layouts";
