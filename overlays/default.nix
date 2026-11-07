@@ -4,6 +4,7 @@ _: {
   imports = [
     ./bottles
     ./brave
+    ./breeze-icons
     ./comin
     ./configarr
     ./cosmic-noir-icons
@@ -38,6 +39,8 @@ _: {
     ./jellyfin-mpv-shim
     ./linear
     ./libreoffice
+    ./linux-desktop-spectrum
+    ./linux-desktop-visuals
     ./notion
     ./open-webui
     ./open-webui-mac
@@ -45,6 +48,7 @@ _: {
     ./python-matter-server
     ./prusaslicer
     ./qmk-toolbox
+    ./quickshell
     ./reaper
     ./squirreldisk
     ./seerr
