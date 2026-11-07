@@ -168,6 +168,7 @@ in
           CacheDirectoryMode = "0700";
           RuntimeDirectory = "open-webui-computer";
           RuntimeDirectoryMode = "0700";
+          ExecStartPre = "${lib.getExe pkgs.uv} cache prune";
           ExecStart = computerStart;
           Restart = "on-failure";
           RestartSec = "5s";
