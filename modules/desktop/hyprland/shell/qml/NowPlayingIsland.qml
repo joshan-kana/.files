@@ -37,9 +37,8 @@ Item {
     }
 
     Behavior on opacity {
-        enabled: !island.occluded
         NumberAnimation {
-            duration: island.motion.fast
+            duration: island.motion.effectsNormal
             easing.type: island.motion.effectsType
             easing.bezierCurve: island.motion.effectsCurve
         }

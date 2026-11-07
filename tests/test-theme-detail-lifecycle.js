@@ -85,3 +85,67 @@ test("theme progress has one status owner and an untruncated cancel action", () 
   );
   assert.doesNotMatch(footer, /title:.*"Activating"/);
 });
+
+test("Theme search uses filtered gallery items and the shared search field", () => {
+  const theme = qml("ThemePanel.qml");
+  const controls = qml("SystemContent.qml");
+  assert.match(theme, /SearchFieldSurface \{/);
+  assert.match(theme, /id: searchField/);
+  assert.match(theme, /text: "\/  Search themes"/);
+  assert.match(theme, /function enterSearch\(\): void/);
+  assert.match(theme, /function leaveSearch\(\): void/);
+  assert.match(theme, /model: panel.filteredThemes/);
+  assert.match(theme, /return filteredThemes\[Math.max/);
+  assert.match(theme, /searchField.text = ""/);
+  assert.match(
+    theme,
+    /text: panel.themes.length === 0 \? "Loading themes…" : "No matching themes"/,
+  );
+  assert.match(
+    controls,
+    /if \(themePanel.open\)[\s\S]*?event.key === Qt.Key_Slash\)[\s\S]*?themePanel.invoke\("enterSearch"\)/,
+  );
+  const source = theme.match(/readonly property var filteredThemes: (.+)/);
+  assert.ok(source);
+  const filter = new Function(
+    "themes",
+    "searchText",
+    "return (" + source[1] + ");",
+  );
+  const themes = [
+    { name: "catppuccin-mocha", label: "Catppuccin Mocha" },
+    { name: "gruvbox-material", label: "Gruvbox Material" },
+    { name: "tokyo-night", label: "Tokyo Night" },
+  ];
+  assert.deepEqual(
+    filter(themes, "GRUV").map((item) => item.name),
+    ["gruvbox-material"],
+  );
+  assert.deepEqual(
+    filter(themes, "tokyo-night").map((item) => item.name),
+    ["tokyo-night"],
+  );
+  assert.deepEqual(filter(themes, "nonexistent"), []);
+  assert.equal(filter(themes, "").length, themes.length);
+});
+
+test("Theme search returns focus to the shared keyboard owner", () => {
+  const theme = qml("ThemePanel.qml");
+  const controls = qml("SystemContent.qml");
+  assert.match(
+    theme,
+    /event.key === Qt.Key_Escape\)[\s\S]*?panel.leaveSearch\(\)/,
+  );
+  assert.match(
+    theme,
+    /Qt.Key_Return \|\| event.key === Qt.Key_Enter\)[\s\S]*?panel.activateSelected\(\);[\s\S]*?panel.leaveSearch\(\)/,
+  );
+  assert.match(
+    theme,
+    /function leaveSearch\(\): void \{\s*keyboardRequested\(\);/,
+  );
+  assert.match(
+    controls,
+    /ThemePanel \{[\s\S]*?onKeyboardRequested: keyboardFocus.forceActiveFocus\(\)/,
+  );
+});
