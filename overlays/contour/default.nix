@@ -1,15 +1,4 @@
 {
-  nixpkgs.overlays = [
-    (_final: prev: {
-      contour = prev.contour.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [ ./hide-active-pane-border.patch ];
-        passthru = (old.passthru or { }) // {
-          autoUpdate = false;
-        };
-      });
-    })
-  ];
-
   home-manager.sharedModules = [
     (
       {
