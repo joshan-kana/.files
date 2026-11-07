@@ -376,6 +376,11 @@
           hostModule = ./hosts/nixos-orbstack;
         };
 
+        nixos-utm = {
+          system = "aarch64-linux";
+          hostModule = ./hosts/nixos-utm;
+        };
+
         nixos-server = {
           system = "x86_64-linux";
           hostModule = ./hosts/nixos-server;
