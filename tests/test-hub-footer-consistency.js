@@ -118,10 +118,7 @@ test("local notification and wallpaper panels show their supported Escape action
 
 test("footer background retains physical clearance even when content is taller than the clipped surface", () => {
   const host = source("ShellExpansionHost.qml");
-  assert.match(
-    host,
-    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
-  );
+  assert.match(host, /footerBottomClearance: theme\.spacing5\s*\n/);
   assert.match(
     host,
     /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
@@ -129,10 +126,10 @@ test("footer background retains physical clearance even when content is taller t
   // The painted background extends spacing2 below the footer content.
   assert.match(host, /y: hubFooter\.y - host\.theme\.spacing2/);
   assert.match(host, /height: hubFooter\.height \+ host\.theme\.spacing2 \* 2/);
-  const baseInset = 32 + 8;
+  const baseInset = 24;
   for (const overflow of [0, 10, 45, 120]) {
     const paintedClearance = baseInset - 8;
-    assert.equal(paintedClearance, 32);
+    assert.equal(paintedClearance, 16);
   }
 });
 
@@ -164,10 +161,7 @@ test("Audio and Media keyboard legends live in their section and detail headers"
 
 test("Controls reserves its own lower frame clearance without moving other panels", () => {
   const host = source("ShellExpansionHost.qml");
-  assert.match(
-    host,
-    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
-  );
+  assert.match(host, /footerBottomClearance: theme\.spacing5\s*\n/);
   assert.match(
     host,
     /y: Math\.max\(0, host\.visibleFooterBottom - height - host\.footerBottomClearance\)/,
@@ -189,10 +183,7 @@ test("navigation footer has one visible-surface inset for every panel", () => {
     /bottom: parent\.bottom[\s\S]{0,450}contentLayoutHeight - shellSurface\.height/,
   );
   assert.match(host, /id: contentViewport[\s\S]*?bottom: hubFooter\.top/);
-  assert.match(
-    host,
-    /footerBottomClearance: theme\.spacing6 \+ theme\.spacing2/,
-  );
+  assert.match(host, /footerBottomClearance: theme\.spacing5\s*\n/);
 });
 
 test("connected footer clears the actual rounded frame contour rather than the backing rectangle", () => {
@@ -221,7 +212,7 @@ test("connected footer clears the actual rounded frame contour rather than the b
   const overflow = 26 + 1353 - visible;
   assert.equal(visible, 1349);
   assert.equal(overflow, 30);
-  assert.equal(40 - 8, 32);
+  assert.equal(24 - 8, 16);
 });
 
 test("shared key hints collapse empty keycaps without leaving layout gaps", () => {

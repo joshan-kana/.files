@@ -87,7 +87,7 @@ PanelWindow {
     property bool restoringWorkspaceFocus: false
     // The same visual bottom inset for every hub tab. Controls may exceed
     // the viewport, but that must scroll its content, not move navigation.
-    readonly property real footerBottomClearance: theme.spacing6 + theme.spacing2
+    readonly property real footerBottomClearance: theme.spacing5
     // A tall connected hub is clipped at the frame's rounded bottom corner.
     // The footer must clear that contour, not the unclipped backing rectangle.
     readonly property real visibleFooterBottom: frameVisible && screen ? Math.max(1, Math.min(shellSurface.height, FrameGeometry.hubBottomLimit(screen.width, screen.height, theme.frameThickness, theme.frameRounding) - topOffset)) : shellSurface.height
