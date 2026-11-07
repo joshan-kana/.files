@@ -8,6 +8,7 @@ _: {
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
+    ./hypr-persist
     ./gimp
     ./gtksourceview
     ./nh

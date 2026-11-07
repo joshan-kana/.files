@@ -1,0 +1,63 @@
+diff --git a/src/core/daemon.rs b/src/core/daemon.rs
+index d877b56..3d3bc7b 100644
+--- a/src/core/daemon.rs
++++ b/src/core/daemon.rs
+@@ -22,7 +22,7 @@ pub async fn run(config: Config) -> Result<()> {
+ 
+     let (event_tx, mut event_rx) = mpsc::channel::<HyprEvent>(256);
+     let paths = ctl.socket_paths().clone();
+-    let event_handle = tokio::spawn(async move {
++    let mut event_handle = tokio::spawn(async move {
+         if let Err(e) = event_listener::listen(&paths, event_tx).await {
+             tracing::error!("event listener error: {e}");
+         }
+@@ -78,6 +78,11 @@ pub async fn run(config: Config) -> Result<()> {
+                 save_with_refresh(&state, &snapshot, &ctl, "periodic").await;
+             }
+ 
++            result = &mut event_handle => {
++                tracing::warn!("Hyprland event stream ended ({result:?}), restarting daemon");
++                return Err(anyhow::anyhow!("Hyprland IPC disconnected"));
++            }
++
+             Some(sig) = futures::StreamExt::next(&mut signals) => {
+                 match sig {
+                     SIGTERM | SIGINT => {
+diff --git a/src/ipc/client.rs b/src/ipc/client.rs
+index bdeb9a1..23e9e8d 100644
+--- a/src/ipc/client.rs
++++ b/src/ipc/client.rs
+@@ -29,9 +29,32 @@ pub struct HyprSocketPaths {
+ 
+ impl HyprSocketPaths {
+     pub fn from_env() -> Result<Self> {
+-        let his = std::env::var("HYPRLAND_INSTANCE_SIGNATURE")
++        let expected = std::env::var("HYPRLAND_INSTANCE_SIGNATURE")
+             .context("HYPRLAND_INSTANCE_SIGNATURE not set — is Hyprland running?")?;
+         let runtime = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/run/user/1000".into());
++
++        // A compositor restarted by start-hyprland has a new signature, while
++        // the systemd user manager can still have the previous environment.
++        // Select a different instance only when there is exactly one live one.
++        let output = std::process::Command::new("hyprctl")
++            .args(["instances", "-j"])
++            .output()
++            .context("querying Hyprland instances")?;
++        anyhow::ensure!(output.status.success(), "cannot query Hyprland instances");
++        let instances: Vec<serde_json::Value> =
++            serde_json::from_slice(&output.stdout).context("parsing Hyprland instances")?;
++        let active: Vec<&str> = instances
++            .iter()
++            .filter_map(|instance| instance.get("instance").and_then(serde_json::Value::as_str))
++            .collect();
++        let his = if active.contains(&expected.as_str()) {
++            expected.as_str()
++        } else if let [only] = active.as_slice() {
++            only
++        } else {
++            anyhow::bail!("Hyprland instance is stale and no unique live instance is available");
++        };
++
+         let dir = PathBuf::from(runtime).join("hypr").join(his);
+         Ok(Self {
+             socket1: dir.join(".socket.sock"),
