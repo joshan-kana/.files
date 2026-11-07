@@ -18,7 +18,9 @@ _: {
             passthru = (old.passthru or { }) // {
               autoUpdate = false;
             };
-            patches = (old.patches or [ ]) ++ [ ./skip-invalid-paa-certificates.patch ];
+            patches = (old.patches or [ ]) ++ [
+              ../../patches/python-mater-bridge/skip-invalid-paa-certificates.patch
+            ];
           });
       }
     )
