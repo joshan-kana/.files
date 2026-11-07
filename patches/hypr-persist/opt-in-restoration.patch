@@ -1,0 +1,256 @@
+diff --git a/src/core/daemon.rs b/src/core/daemon.rs
+index 3d3bc7b..47324d5 100644
+--- a/src/core/daemon.rs
++++ b/src/core/daemon.rs
+@@ -1,6 +1,7 @@
+ use anyhow::{Context, Result};
+ use signal_hook::consts::{SIGINT, SIGTERM, SIGUSR1};
+ use signal_hook_tokio::Signals;
++use std::path::PathBuf;
+ use std::sync::Arc;
+ use std::time::Duration;
+ use tokio::sync::{Mutex, mpsc};
+@@ -18,7 +19,14 @@ pub async fn run(config: Config) -> Result<()> {
+     let ctl = Arc::new(HyprCtl::from_env()?);
+     let resolver = Arc::new(AppResolver::new(&config));
+     let state = Arc::new(Mutex::new(StateManager::new(&config)));
++    // Persistent sessions are opt-in; automatic crash snapshots live in the
++    // per-boot runtime directory, never in the next-login session store.
+     let snapshot = Arc::new(SnapshotEngine::new(&config)?);
++    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").context("XDG_RUNTIME_DIR is required")?;
++    let crash_snapshot = Arc::new(SnapshotEngine::new_with_dir(
++        PathBuf::from(runtime_dir).join("hypr-persist"),
++        config.general.per_window_launch,
++    )?);
+ 
+     let (event_tx, mut event_rx) = mpsc::channel::<HyprEvent>(256);
+     let paths = ctl.socket_paths().clone();
+@@ -30,11 +38,25 @@ pub async fn run(config: Config) -> Result<()> {
+ 
+     populate_initial_state(&state, &resolver, &ctl).await?;
+ 
+-    if config.general.restore_on_start && snapshot.exists("last") {
++    let restore_from_crash = crash_snapshot.exists("last");
++    let restore_explicit = snapshot.restore_pending() && snapshot.exists("last");
++    if config.general.restore_on_start && (restore_from_crash || restore_explicit) {
+         tracing::info!("waiting for compositor to settle...");
+         wait_for_settle(&mut event_rx).await;
+-        tracing::info!("restoring previous session...");
+-        match snapshot.load("last") {
++        let source = if restore_from_crash {
++            &crash_snapshot
++        } else {
++            &snapshot
++        };
++        tracing::info!(
++            "restoring {} session...",
++            if restore_from_crash {
++                "crash"
++            } else {
++                "requested"
++            }
++        );
++        match source.load("last") {
+             Ok(session) => {
+                 let live_windows: Vec<crate::models::TrackedWindow> =
+                     state.lock().await.windows().into_iter().cloned().collect();
+@@ -48,10 +70,13 @@ pub async fn run(config: Config) -> Result<()> {
+                         tracing::warn!("restore failed for {app}: {err}");
+                     }
+                 }
++                // An explicit reboot restore is a one-shot request. Consume
++                // it only after the restore engine has started successfully.
++                if !restore_from_crash {
++                    snapshot.clear_restore_pending()?;
++                }
+             }
+-            Err(e) => {
+-                tracing::warn!("failed to load session 'last': {e}");
+-            }
++            Err(e) => tracing::warn!("failed to load session 'last': {e}"),
+         }
+     }
+ 
+@@ -75,7 +100,7 @@ pub async fn run(config: Config) -> Result<()> {
+             }
+ 
+             _ = save_timer.tick() => {
+-                save_with_refresh(&state, &snapshot, &ctl, "periodic").await;
++                save_with_refresh(&state, &crash_snapshot, &ctl, "periodic").await;
+             }
+ 
+             result = &mut event_handle => {
+@@ -86,22 +111,22 @@ pub async fn run(config: Config) -> Result<()> {
+             Some(sig) = futures::StreamExt::next(&mut signals) => {
+                 match sig {
+                     SIGTERM | SIGINT => {
+-                        tracing::info!("received signal {sig}, saving and exiting...");
+-                        save_with_refresh(&state, &snapshot, &ctl, "final").await;
++                        tracing::info!("received signal {sig}, discarding crash-only session...");
++                        crash_snapshot.delete("last")?;
+                         break;
+                     }
+                     SIGUSR1 => {
+-                        tracing::info!("received SIGUSR1, saving session...");
+-                        save_with_refresh(&state, &snapshot, &ctl, "manual").await;
++                        tracing::info!("received SIGUSR1, saving requested session...");
++                        if save_with_refresh(&state, &snapshot, &ctl, "manual").await {
++                            snapshot.mark_restore_pending()?;
++                        }
+                     }
+                     _ => {}
+                 }
+             }
+ 
+             else => {
+-                tracing::info!("event stream ended, saving final session...");
+-                save_with_refresh(&state, &snapshot, &ctl, "final").await;
+-                break;
++                return Err(anyhow::anyhow!("Hyprland event stream ended"));
+             }
+         }
+     }
+@@ -119,10 +144,10 @@ async fn save_with_refresh(
+     snapshot: &SnapshotEngine,
+     ctl: &HyprCtl,
+     label: &str,
+-) {
++) -> bool {
+     let mut state = state.lock().await;
+     if state.window_count() == 0 {
+-        return;
++        return false;
+     }
+     let monitor_map = ctl.get_monitor_map().await.unwrap_or_default();
+     match ctl.get_clients().await {
+@@ -131,8 +156,12 @@ async fn save_with_refresh(
+     }
+     let save_result = snapshot.save(&state, "last");
+     drop(state);
+-    if let Err(e) = save_result {
+-        tracing::error!("{label} save failed: {e}");
++    match save_result {
++        Ok(_) => true,
++        Err(e) => {
++            tracing::error!("{label} save failed: {e}");
++            false
++        }
+     }
+ }
+ 
+diff --git a/src/core/snapshot.rs b/src/core/snapshot.rs
+index 94e6048..c4d662d 100644
+--- a/src/core/snapshot.rs
++++ b/src/core/snapshot.rs
+@@ -172,6 +172,27 @@ impl SnapshotEngine {
+         Ok(sessions)
+     }
+ 
++    pub fn restore_pending(&self) -> bool {
++        self.session_dir.join(".restore-next").exists()
++    }
++
++    pub fn mark_restore_pending(&self) -> Result<()> {
++        let path = self.session_dir.join(".restore-next");
++        std::fs::write(&path, b"")
++            .with_context(|| format!("marking next-login restoration at {}", path.display()))
++    }
++
++    pub fn clear_restore_pending(&self) -> Result<()> {
++        let path = self.session_dir.join(".restore-next");
++        match std::fs::remove_file(&path) {
++            Ok(()) => Ok(()),
++            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
++            Err(e) => {
++                Err(e).with_context(|| format!("clearing restore request {}", path.display()))
++            }
++        }
++    }
++
+     pub fn delete(&self, name: &str) -> Result<()> {
+         let name = sanitize_session_name(name)?;
+         let path = self.session_dir.join(format!("{name}.toml"));
+@@ -182,6 +203,9 @@ impl SnapshotEngine {
+         } else {
+             tracing::warn!("session '{name}' not found at {}", path.display());
+         }
++        if name == "last" {
++            self.clear_restore_pending()?;
++        }
+         Ok(())
+     }
+ 
+@@ -194,7 +218,6 @@ impl SnapshotEngine {
+         &self.session_dir
+     }
+ 
+-    #[cfg(test)]
+     pub(crate) fn new_with_dir(session_dir: PathBuf, per_window_launch: bool) -> Result<Self> {
+         std::fs::create_dir_all(&session_dir)
+             .with_context(|| format!("creating session dir {}", session_dir.display()))?;
+@@ -498,6 +521,51 @@ mod tests {
+         assert!(engine.exists("test"));
+     }
+ 
++    #[test]
++    fn explicit_restoration_requires_a_pending_request() {
++        let dir = tempfile::tempdir().unwrap();
++        let engine = SnapshotEngine::new_with_dir(dir.path().to_path_buf(), true).unwrap();
++        let state = make_state_with_windows(vec![("0xa", "kitty", "1", true)]);
++
++        // A legacy or automatically written last.toml is not opt-in.
++        engine.save(&state, "last").unwrap();
++        assert!(!engine.restore_pending());
++
++        engine.mark_restore_pending().unwrap();
++        assert!(engine.restore_pending());
++        engine.clear_restore_pending().unwrap();
++        assert!(!engine.restore_pending());
++        assert!(engine.exists("last"));
++
++        engine.mark_restore_pending().unwrap();
++        engine.delete("last").unwrap();
++        assert!(!engine.restore_pending());
++        assert!(!engine.exists("last"));
++    }
++
++    #[test]
++    fn crash_snapshots_are_separate_from_persistent_sessions() {
++        let dir = tempfile::tempdir().unwrap();
++        let saved = SnapshotEngine::new_with_dir(dir.path().join("saved"), true).unwrap();
++        let runtime = SnapshotEngine::new_with_dir(dir.path().join("runtime"), true).unwrap();
++        let fresh_runtime =
++            SnapshotEngine::new_with_dir(dir.path().join("next-boot"), true).unwrap();
++        let state = make_state_with_windows(vec![("0xa", "kitty", "1", true)]);
++
++        runtime.save(&state, "last").unwrap();
++        assert!(runtime.exists("last"));
++        assert!(!saved.exists("last"));
++        assert!(!saved.restore_pending());
++        assert!(!fresh_runtime.exists("last"));
++
++        saved.save(&state, "last").unwrap();
++        saved.mark_restore_pending().unwrap();
++        runtime.delete("last").unwrap();
++        assert!(!runtime.exists("last"));
++        assert!(saved.exists("last"));
++        assert!(saved.restore_pending());
++    }
++
+     #[test]
+     fn delete_removes_session() {
+         let dir = tempfile::tempdir().unwrap();
+diff --git a/src/main.rs b/src/main.rs
+index 98f0344..9f499cb 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -161,6 +161,9 @@ async fn cmd_save(cfg: &config::Config, name: Option<&str>) -> Result<()> {
+     }
+ 
+     let path = snapshot.save(&state, name)?;
++    if name == "last" {
++        snapshot.mark_restore_pending()?;
++    }
+     println!("Session '{name}' saved to {}", path.display());
+     Ok(())
+ }
