@@ -1,5 +1,5 @@
 diff --git a/src/core/restore.rs b/src/core/restore.rs
-index 8c3240a..dc6e38d 100644
+index 8c3240a..ff856fe 100644
 --- a/src/core/restore.rs
 +++ b/src/core/restore.rs
 @@ -1603,34 +1603,29 @@ impl RestoreEngine {
@@ -44,7 +44,7 @@ index 8c3240a..dc6e38d 100644
      }
  
      async fn wait_for_open_event(
-@@ -1663,6 +1658,38 @@ impl RestoreEngine {
+@@ -1663,6 +1658,48 @@ impl RestoreEngine {
      }
  }
  
@@ -58,8 +58,18 @@ index 8c3240a..dc6e38d 100644
 +) -> Result<()> {
 +    let (x, y) = position;
 +    let (w, h) = size;
-+    ctl.dispatch(&format!("setfloating address:0x{address}"))
-+        .await?;
++    // In Hyprland's Lua dispatcher, setfloating toggles rather than forces
++    // floating. Never tile an already-floating window during restoration.
++    let already_floating = ctl
++        .get_client_by_address(address)
++        .await
++        .ok()
++        .flatten()
++        .is_some_and(|client| client.floating);
++    if !already_floating {
++        ctl.dispatch(&format!("setfloating address:0x{address}"))
++            .await?;
++    }
 +    for _ in 0..3 {
 +        ctl.dispatch(&format!(
 +            "resizewindowpixel exact {w} {h},address:0x{address}"
@@ -83,7 +93,7 @@ index 8c3240a..dc6e38d 100644
  /// Background task that watches for windows that didn't appear during the main
  /// restore loop. Keeps their Hyprland window rules active and listens on
  /// socket2 until every pending window appears or the grace period expires.
-@@ -1858,24 +1885,10 @@ async fn apply_late_window(
+@@ -1858,24 +1895,10 @@ async fn apply_late_window(
  
      if restore_geometry
          && pw.floating
