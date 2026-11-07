@@ -59,12 +59,29 @@ test("media click zones share one clipped contour in detached mode", () => {
   assert.match(media, /leftMargin: island\.theme\.spacing2/);
   assert.match(
     media,
-    /id: playbackHitArea[\s\S]*?onClicked: island\.media\.togglePlaying\(\)/,
+    /StateLayer \{\s+id: playbackHitArea[\s\S]*?showHover: false[\s\S]*?onActivated: island\.media\.togglePlaying\(\)/,
   );
   assert.match(
     media,
-    /id: mainHitArea[\s\S]*?onClicked: island\.activated\(\)/,
+    /StateLayer \{\s+id: mainHitArea[\s\S]*?showHover: false[\s\S]*?onActivated: island\.activated\(\)/,
   );
+  assert.match(
+    media,
+    /readonly property bool mainHover: mainHitArea.pointerHovered && !playbackHitArea.pointerHovered/,
+  );
+  assert.match(
+    media,
+    /readonly property bool playbackHover: playbackHitArea.pointerHovered && media.canTogglePlaying/,
+  );
+  assert.match(
+    media,
+    /readonly property bool mainPressed: mainHitArea.visualPressed/,
+  );
+  assert.match(
+    media,
+    /readonly property bool playbackPressed: playbackHitArea.visualPressed/,
+  );
+  assert.doesNotMatch(media, /MouseArea \{/);
   assert.doesNotMatch(media, /manualHover: mainHitArea\.containsMouse/);
   assert.doesNotMatch(media, /manualHover: playbackHitArea\.containsMouse/);
 });
