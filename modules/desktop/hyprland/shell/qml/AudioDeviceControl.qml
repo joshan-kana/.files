@@ -23,12 +23,12 @@ ShellSurface {
 
     signal selectedRequested
 
-    implicitHeight: deviceContents.implicitHeight + theme.spacing2 * 2
+    implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing2 : theme.spacing2 * 2)
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
-    fillColor: selected ? theme.expressiveSurfaceStrong : theme.expressiveSurface
-    borderColor: selected ? (compact ? theme.blend(theme.roleColor("audio"), theme.groupBase, 0.55) : theme.roleColor("audio")) : "transparent"
-    borderWidth: selected ? (compact ? theme.borderThin : theme.borderFocus) : 0
+    fillColor: compact ? "transparent" : selected ? theme.expressiveSurfaceStrong : theme.expressiveSurface
+    borderColor: !compact && selected ? theme.roleColor("audio") : "transparent"
+    borderWidth: !compact && selected ? theme.borderFocus : 0
     Accessible.role: Accessible.Grouping
     Accessible.name: (microphone ? "Input" : "Output") + " audio, " + (muted ? "muted" : percent + " percent")
 
@@ -73,10 +73,10 @@ ShellSurface {
 
     Column {
         id: deviceContents
-        x: deviceControl.theme.spacing2
-        y: deviceControl.theme.spacing2
-        width: Math.max(1, parent.width - deviceControl.theme.spacing2 * 2)
-        spacing: deviceControl.theme.spacing1
+        x: deviceControl.compact ? 0 : deviceControl.theme.spacing2
+        y: deviceControl.compact ? deviceControl.theme.spacing1 : deviceControl.theme.spacing2
+        width: Math.max(1, parent.width - (deviceControl.compact ? 0 : deviceControl.theme.spacing2 * 2))
+        spacing: deviceControl.compact ? deviceControl.theme.spacing2 : deviceControl.theme.spacing1
 
         Item {
             width: parent.width
@@ -113,7 +113,7 @@ ShellSurface {
                     text: deviceControl.microphone ? "Input" : "Output"
                     color: deviceControl.theme.textStrong
                     font.family: deviceControl.runtime.fontMono
-                    font.pixelSize: deviceControl.theme.fontSize(11)
+                    font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 13 : 11)
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
@@ -123,7 +123,7 @@ ShellSurface {
                     text: deviceControl.available ? (deviceControl.muted ? "MUTED" : deviceControl.percent + "%") : "OFFLINE"
                     color: deviceControl.theme.audioLevelColor(deviceControl.muted)
                     font.family: deviceControl.runtime.fontMono
-                    font.pixelSize: deviceControl.theme.fontSize(10)
+                    font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 12 : 10)
                 }
                 KeyHint {
                     id: muteHint
@@ -161,8 +161,8 @@ ShellSurface {
                 value: deviceControl.level
                 animateValueChanges: true
                 accentColor: deviceControl.theme.audioLevelColor(deviceControl.muted)
-                trackHeight: 9
-                handleSize: 16
+                trackHeight: deviceControl.compact ? 11 : 9
+                handleSize: deviceControl.compact ? 20 : 16
                 Accessible.role: Accessible.Slider
                 Accessible.name: deviceControl.microphone ? "Microphone volume" : "Output volume"
                 onInteractionStarted: deviceControl.selectedRequested()
@@ -178,7 +178,7 @@ ShellSurface {
 
         Item {
             width: parent.width
-            height: 26
+            height: deviceControl.compact ? 30 : 26
             StateLayer {
                 anchors.fill: parent
                 theme: deviceControl.theme
@@ -198,7 +198,7 @@ ShellSurface {
                     text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "No audio device"
                     color: deviceControl.theme.textMuted
                     font.family: deviceControl.runtime.fontMono
-                    font.pixelSize: deviceControl.theme.fontSize(9)
+                    font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 11 : 9)
                 }
                 KeyHint {
                     id: pickerHint
