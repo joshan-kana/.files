@@ -13,6 +13,8 @@ _: {
         };
 
         cargoLock.lockFile = "${src}/Cargo.lock";
+        patches = [ ../../patches/hypr-persist/reconnect-ipc.patch ];
+        passthru.autoUpdate = false;
         meta = {
           description = "Persist and restore Hyprland windows and layouts";
           homepage = "https://github.com/ngamber/hypr-persist";
