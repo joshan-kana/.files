@@ -66,6 +66,7 @@ QtObject {
 
     readonly property real textScale: root.configData.accessibility.textScale
     readonly property bool animationsEnabled: root.configData.motion.animationsEnabled
+    readonly property bool restoreWindowsOnExit: root.configData.session.restoreWindowsOnExit
     readonly property real panelOpacity: root.configData.visual.panelOpacity
     readonly property real focusOpacity: root.configData.visual.focusOpacity
     readonly property real scrimOpacity: root.configData.visual.scrimOpacity
@@ -150,6 +151,10 @@ QtObject {
 
             property JsonObject motion: JsonObject {
                 property bool animationsEnabled: true
+            }
+
+            property JsonObject session: JsonObject {
+                property bool restoreWindowsOnExit: false
             }
 
             property JsonObject visual: JsonObject {

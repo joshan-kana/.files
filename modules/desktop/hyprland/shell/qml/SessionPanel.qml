@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import QtCore
 
 Item {
     id: panel
@@ -20,6 +21,28 @@ Item {
     property string armedAction: ""
     property string statusText: ""
     property bool statusError: false
+
+    Settings {
+        id: preferences
+        location: "file://" + Quickshell.env("HOME") + "/.config/linux-desktop/preferences.ini"
+        category: "Session"
+        property bool restoreWindowsOnExit: panel.runtime.restoreWindowsOnExit
+    }
+    readonly property bool restoreWindowsOnExit: preferences.restoreWindowsOnExit
+
+    function resetToDeclared(): void {
+        preferences.restoreWindowsOnExit = runtime.restoreWindowsOnExit;
+        preferences.setValue("restoreWindowsOnExit", preferences.restoreWindowsOnExit);
+        preferences.sync();
+    }
+
+    function toggleRestore(): void {
+        preferences.restoreWindowsOnExit = !preferences.restoreWindowsOnExit;
+        preferences.setValue("restoreWindowsOnExit", preferences.restoreWindowsOnExit);
+        preferences.sync();
+        statusText = restoreWindowsOnExit ? "WINDOW RESTORATION ENABLED" : "FRESH SESSION ENABLED";
+        statusError = false;
+    }
 
     readonly property var entries: [
         {
@@ -61,6 +84,14 @@ Item {
             icon: "󰐥",
             description: "Shut the machine down",
             destructive: true
+        },
+        {
+            id: "restore",
+            accentRole: "resources",
+            label: "Restore windows",
+            icon: "󰑓",
+            description: "Restore open windows after logout, reboot or shutdown",
+            destructive: false
         }
     ]
 
@@ -142,6 +173,11 @@ Item {
         if (!entry)
             return;
 
+        if (entry.id === "restore") {
+            toggleRestore();
+            return;
+        }
+
         if (entry.id === "lock") {
             if (runtime.lockSession.length === 0) {
                 statusText = "LOCK SERVICE UNAVAILABLE";
@@ -160,7 +196,7 @@ Item {
             return;
         }
 
-        Quickshell.execDetached([runtime.sessionCommand, entry.id]);
+        Quickshell.execDetached([runtime.sessionCommand, entry.id, restoreWindowsOnExit ? "restore" : "fresh"]);
         closeView();
     }
 
@@ -201,7 +237,7 @@ Item {
         glyphColor: panel.armedAction.length > 0 ? panel.theme.warning : panel.theme.roleColor("resources")
         eyebrow: "Device / secure session"
         title: "Power & session"
-        detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().description
+        detail: panel.armedAction.length > 0 ? "Confirm within 5 seconds" : panel.selectedEntry().id === "restore" ? (panel.restoreWindowsOnExit ? "Reopen windows after leaving the session" : "Start fresh after leaving the session") : panel.selectedEntry().description
     }
 
     Column {
@@ -237,8 +273,9 @@ Item {
                         theme: panel.theme
                         motion: panel.motion
                         icon: modelData.icon
-                        label: modelData.label
+                        label: modelData.id === "restore" ? (panel.restoreWindowsOnExit ? "Restore ON" : "Restore OFF") : modelData.label
                         accentColor: panel.theme.roleColor(modelData.accentRole)
+                        active: modelData.id === "restore" && panel.restoreWindowsOnExit
                         selected: panel.selectedIndex === actionIndex
                         armed: panel.armedAction === modelData.id
 

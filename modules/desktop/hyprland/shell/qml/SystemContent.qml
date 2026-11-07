@@ -66,6 +66,7 @@ FocusScope {
         resetRunning = true;
         resetStatus = "Restoring declared desktop preferences…";
         restoreDefaultsRequested();
+        sessionPanel.invoke("resetToDeclared");
         notificationState.resetToDeclared();
         resetOutputs = Quickshell.screens.map(screen => screen.name).filter(name => !!name).concat(["all"]);
         resetIndex = 0;

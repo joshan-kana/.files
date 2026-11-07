@@ -108,6 +108,12 @@ in
     description = "Enable motion and animated transitions in the Hyprland desktop shell.";
   };
 
+  scopeOptions.restoreWindowsOnExit = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Default to restoring windows after logout, reboot or poweroff from the desktop session panel.";
+  };
+
   scopeOptions.textScale = lib.mkOption {
     type = lib.types.float;
     default = 1.0;
@@ -1066,6 +1072,7 @@ in
 
         accessibility.textScale = scopeConfig.textScale;
         motion.animationsEnabled = scopeConfig.animationsEnabled;
+        session.restoreWindowsOnExit = scopeConfig.restoreWindowsOnExit;
         visual = shellVisual;
         keybindings = cheatsheetBindings;
         shortcutHints.launcherSlots = launcherSlotsHint;
@@ -1589,25 +1596,41 @@ in
       sessionCommand = pkgs.writeShellApplication {
         name = "linux-desktop-session";
         runtimeInputs = [
+          pkgs.coreutils
+          pkgs.hypr-persist
+          pkgs.libnotify
           pkgs.systemd
           pkgs.uwsm
         ];
         text = ''
           case "''${1:-}" in
-            suspend)
-              exec systemctl suspend
+            logout|reboot|poweroff)
+              case "''${2:-fresh}" in
+                restore)
+                  if ! hypr-persist save last; then
+                    notify-send -u critical "Session not saved" "Windows were not saved, so the session was not ended." || true
+                    exit 1
+                  fi
+                  ;;
+                fresh)
+                  # A saved layout can remain available for manual restore;
+                  # cancel only the one-shot request before exiting.
+                  rm -f -- "$HOME/.local/share/hypr-persist/sessions/.restore-next"
+                  ;;
+                *)
+                  printf 'Expected restore or fresh session mode.\n' >&2
+                  exit 2
+                  ;;
+              esac
               ;;
-            logout)
-              exec uwsm stop
-              ;;
-            reboot)
-              exec systemctl reboot
-              ;;
-            poweroff)
-              exec systemctl poweroff
-              ;;
+          esac
+          case "''${1:-}" in
+            suspend) exec systemctl suspend ;;
+            logout) exec uwsm stop ;;
+            reboot) exec systemctl reboot ;;
+            poweroff) exec systemctl poweroff ;;
             *)
-              printf 'Usage: linux-desktop-session {suspend|logout|reboot|poweroff}\n' >&2
+              printf 'Usage: linux-desktop-session {suspend|logout|reboot|poweroff} [restore|fresh]\n' >&2
               exit 2
               ;;
           esac
