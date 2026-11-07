@@ -35,6 +35,13 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
+    property real dashboardHeightBudget: 0
+    property real dashboardWidthBudget: theme.controlsDetailWidth
+    readonly property real dashboardBaseHeight: controlsClock.height + controlsHeading.height + commandMatrix.implicitHeight + mediaMatrix.implicitHeight + (trayRow.visible ? trayRow.height : 0)
+    readonly property int dashboardGaps: trayRow.visible ? 4 : 3
+    readonly property int dashboardTileHeight: dashboardHeightBudget >= 1090 ? 104 : dashboardHeightBudget >= 820 ? 90 : 78
+    readonly property int dashboardConnectivityHeight: dashboardHeightBudget >= 1090 ? 110 : dashboardHeightBudget >= 820 ? 96 : 84
+    readonly property int dashboardBrightnessHeight: dashboardHeightBudget >= 1090 ? 112 : dashboardHeightBudget >= 820 ? 96 : 84
     readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
@@ -395,7 +402,7 @@ FocusScope {
     signal mediaRequested
     signal revealContent(real top, real bottom)
 
-    implicitWidth: theme.controlsDetailWidth
+    implicitWidth: detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget
     implicitHeight: recordingsPanel.open ? recordingsPanel.implicitHeight : wallpaperPanel.open ? wallpaperPanel.implicitHeight : mixerOpen ? mixerView.implicitHeight : sessionPanel.open ? sessionPanel.implicitHeight : resourcesPanel.open ? resourcesPanel.implicitHeight : networkPanel.open ? networkPanel.implicitHeight : bluetoothPanel.open ? bluetoothPanel.implicitHeight : themePanel.open ? themePanel.implicitHeight : content.implicitHeight
     focus: engaged
 
@@ -683,7 +690,7 @@ FocusScope {
                     easing.bezierCurve: root.detailsVisible ? root.motion.exitCurve : root.motion.enterCurve
                 }
             }
-            spacing: root.theme.spacing2
+            spacing: root.dashboardHeightBudget > 0 ? Math.max(root.theme.spacing2, Math.min(root.theme.spacing6, (root.dashboardHeightBudget - root.dashboardBaseHeight) / root.dashboardGaps)) : root.theme.spacing3
 
             // Live state, actions and parameters share one adaptive surface.
             Row {
@@ -804,7 +811,7 @@ FocusScope {
 
                     ShellSurface {
                         width: parent.width
-                        height: 84
+                        height: root.dashboardBrightnessHeight
                         theme: root.theme
                         motion: root.motion
                         surfaceLayer: ShellSurface.Group
@@ -894,7 +901,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(0)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -908,7 +915,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(1)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -922,7 +929,7 @@ FocusScope {
 
                         OpacitySetting {
                             width: visualModeStrip.cellWidth(2)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -940,7 +947,7 @@ FocusScope {
 
                         OpacitySetting {
                             width: visualModeStrip.cellWidth(3)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -958,7 +965,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(4)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -971,7 +978,7 @@ FocusScope {
                         }
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(5)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -985,7 +992,7 @@ FocusScope {
 
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(6)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -999,7 +1006,7 @@ FocusScope {
 
                         AdjustableSetting {
                             width: visualModeStrip.cellWidth(7)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1021,7 +1028,7 @@ FocusScope {
                         }
                         QuickSettingChip {
                             width: visualModeStrip.cellWidth(8)
-                            height: 78
+                            height: root.dashboardTileHeight
                             runtime: root.runtime
                             theme: root.theme
                             motion: root.motion
@@ -1101,7 +1108,7 @@ FocusScope {
 
                             ConnectivityTile {
                                 width: connectionTiles.cellWidth
-                                height: 84
+                                height: root.dashboardConnectivityHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1119,7 +1126,7 @@ FocusScope {
 
                             ConnectivityTile {
                                 width: connectionTiles.cellWidth
-                                height: 84
+                                height: root.dashboardConnectivityHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1151,7 +1158,7 @@ FocusScope {
                             id: actionStrip
                             width: parent.width
                             spacing: root.theme.spacing2
-                            readonly property int columns: width < 410 || root.theme.textScale >= 1.5 ? 2 : width < 450 || root.theme.textScale >= 1.3 ? 3 : 5
+                            readonly property int columns: width < 440 || root.theme.textScale >= 1.5 ? 2 : 3
 
                             function cellWidth(index: int): real {
                                 const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
@@ -1160,7 +1167,7 @@ FocusScope {
 
                             QuickSettingChip {
                                 width: actionStrip.cellWidth(0)
-                                height: 78
+                                height: root.dashboardTileHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1174,7 +1181,7 @@ FocusScope {
 
                             QuickSettingChip {
                                 width: actionStrip.cellWidth(1)
-                                height: 78
+                                height: root.dashboardTileHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1188,7 +1195,7 @@ FocusScope {
 
                             QuickSettingChip {
                                 width: actionStrip.cellWidth(2)
-                                height: 78
+                                height: root.dashboardTileHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1201,7 +1208,7 @@ FocusScope {
 
                             QuickSettingChip {
                                 width: actionStrip.cellWidth(3)
-                                height: 78
+                                height: root.dashboardTileHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1216,7 +1223,7 @@ FocusScope {
 
                             QuickSettingChip {
                                 width: actionStrip.cellWidth(4)
-                                height: 78
+                                height: root.dashboardTileHeight
                                 runtime: root.runtime
                                 theme: root.theme
                                 motion: root.motion
@@ -1272,6 +1279,7 @@ FocusScope {
 
                     ControlsMediaCard {
                         width: parent.width
+                        height: Math.max(implicitHeight, audioDeck.implicitHeight)
                         active: root.engaged && !root.detailsVisible
                         media: root.media
                         runtime: root.runtime
@@ -1283,6 +1291,7 @@ FocusScope {
             }
 
             Row {
+                id: trayRow
                 width: parent.width
                 height: 37
                 visible: root.system.trayCount > 0
