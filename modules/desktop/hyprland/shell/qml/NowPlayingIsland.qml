@@ -16,10 +16,10 @@ Item {
     property bool occluded: false
     enabled: !occluded
     readonly property real playbackWidth: playbackZone.width
-    readonly property bool mainHover: mainHitArea.containsMouse
-    readonly property bool playbackHover: playbackHitArea.containsMouse && media.canTogglePlaying
-    readonly property bool mainPressed: mainHitArea.pressed
-    readonly property bool playbackPressed: playbackHitArea.pressed
+    readonly property bool mainHover: mainHitArea.pointerHovered && !playbackHitArea.pointerHovered
+    readonly property bool playbackHover: playbackHitArea.pointerHovered && media.canTogglePlaying
+    readonly property bool mainPressed: mainHitArea.visualPressed
+    readonly property bool playbackPressed: playbackHitArea.visualPressed
     property real maximumWidth: 458
     width: media.available && maximumWidth >= 165 ? Math.min(458, maximumWidth) : 0
     height: theme.barIslandHeight
@@ -237,8 +237,8 @@ Item {
                 surfaceLayer: ShellSurface.Control
                 selected: island.media.playing
                 cornerRadius: theme.radiusSmall
-                luminous: playbackHitArea.containsMouse && island.media.canTogglePlaying
-                hovered: playbackHitArea.containsMouse
+                luminous: island.playbackHover
+                hovered: island.playbackHover
                 lightIntensity: 0.8
 
                 Text {
@@ -252,31 +252,35 @@ Item {
 
             // The entire right-hand zone is a play/pause target, including
             // the spacing around the inset button. No dead strip at the edge.
-            MouseArea {
+            StateLayer {
                 id: playbackHitArea
-                anchors.fill: parent
+                theme: island.theme
+                motion: island.motion
+                showHover: false
+                disabled: !island.media.canTogglePlaying
                 Accessible.role: Accessible.Button
                 Accessible.name: island.media.playing ? "Pause playback" : "Resume playback"
-                enabled: island.media.canTogglePlaying
-                hoverEnabled: true
-                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: island.media.togglePlaying()
+                onActivated: island.media.togglePlaying()
             }
         }
 
-        MouseArea {
-            id: mainHitArea
-            Accessible.role: Accessible.Button
-            Accessible.name: "Open Now Playing"
+        Item {
             anchors {
                 left: parent.left
                 right: playbackZone.left
                 top: parent.top
                 bottom: parent.bottom
             }
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: island.activated()
+
+            StateLayer {
+                id: mainHitArea
+                theme: island.theme
+                motion: island.motion
+                showHover: false
+                Accessible.role: Accessible.Button
+                Accessible.name: "Open Now Playing"
+                onActivated: island.activated()
+            }
         }
     }
 }
