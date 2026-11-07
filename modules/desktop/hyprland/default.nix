@@ -16,6 +16,8 @@ in
   };
   environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 
+  sessionPersistence = import ./session-persistence;
+
   eww = _: {
     home = _: {
       programs.eww = {
