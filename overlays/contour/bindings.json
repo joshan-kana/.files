@@ -1,0 +1,172 @@
+[
+  { "mods": ["Alt"], "key": "Enter", "action": "ToggleFullscreen" },
+  {
+    "mods": [],
+    "key": "Escape",
+    "action": "CancelSelection",
+    "mode": "Insert|Select"
+  },
+  { "mods": ["Shift"], "key": "DownArrow", "action": "ScrollOneDown" },
+  { "mods": ["Shift"], "key": "End", "action": "ScrollToBottom" },
+  { "mods": ["Shift"], "key": "Home", "action": "ScrollToTop" },
+  { "mods": ["Shift"], "key": "PageDown", "action": "ScrollPageDown" },
+  { "mods": ["Shift"], "key": "PageUp", "action": "ScrollPageUp" },
+  { "mods": ["Shift"], "key": "UpArrow", "action": "ScrollOneUp" },
+  {
+    "mods": [],
+    "key": "F3",
+    "action": "FocusNextSearchMatch",
+    "mode": "Search"
+  },
+  {
+    "mods": ["Shift"],
+    "key": "F3",
+    "action": "FocusPreviousSearchMatch",
+    "mode": "Search"
+  },
+  { "mods": ["Shift"], "key": "LeftArrow", "action": "SwitchToTabLeft" },
+  { "mods": ["Shift"], "key": "RightArrow", "action": "SwitchToTabRight" },
+  { "mods": ["Control"], "key": "PageUp", "action": "SwitchToTabLeft" },
+  { "mods": ["Control"], "key": "PageDown", "action": "SwitchToTabRight" },
+  { "mods": ["Control"], "key": "Tab", "action": "SwitchToTabRight" },
+  { "mods": ["Shift", "Control"], "key": "Tab", "action": "SwitchToTabLeft" },
+  { "mods": ["Shift", "Alt"], "key": "LeftArrow", "action": "FocusPaneLeft" },
+  { "mods": ["Shift", "Alt"], "key": "RightArrow", "action": "FocusPaneRight" },
+  { "mods": ["Shift", "Alt"], "key": "UpArrow", "action": "FocusPaneUp" },
+  { "mods": ["Shift", "Alt"], "key": "DownArrow", "action": "FocusPaneDown" },
+  { "mods": ["Alt", "Control"], "key": "LeftArrow", "action": "SwapPaneLeft" },
+  {
+    "mods": ["Alt", "Control"],
+    "key": "RightArrow",
+    "action": "SwapPaneRight"
+  },
+  { "mods": ["Alt", "Control"], "key": "UpArrow", "action": "SwapPaneUp" },
+  { "mods": ["Alt", "Control"], "key": "DownArrow", "action": "SwapPaneDown" },
+  {
+    "mods": ["Shift", "Alt", "Control"],
+    "key": "LeftArrow",
+    "action": "ResizePane",
+    "direction": "Left",
+    "percent": 5
+  },
+  {
+    "mods": ["Shift", "Alt", "Control"],
+    "key": "RightArrow",
+    "action": "ResizePane",
+    "direction": "Right",
+    "percent": 5
+  },
+  {
+    "mods": ["Shift", "Alt", "Control"],
+    "key": "UpArrow",
+    "action": "ResizePane",
+    "direction": "Up",
+    "percent": 5
+  },
+  {
+    "mods": ["Shift", "Alt", "Control"],
+    "key": "DownArrow",
+    "action": "ResizePane",
+    "direction": "Down",
+    "percent": 5
+  },
+  {
+    "mods": ["Alt", "Control"],
+    "key": ",",
+    "action": "ToggleInputMethodHandling"
+  },
+  { "mods": ["Shift", "Control"], "key": "-", "action": "DecreaseFontSize" },
+  { "mods": ["Shift", "Control"], "key": "_", "action": "DecreaseFontSize" },
+  { "mods": ["Shift", "Control"], "key": "N", "action": "NewTerminal" },
+  { "mods": ["Alt", "Control"], "key": "V", "action": "PasteClipboard" },
+  { "mods": ["Shift", "Control"], "key": "V", "action": "PasteClipboard" },
+  { "mods": ["Alt", "Control"], "key": "S", "action": "ScreenshotVT" },
+  { "mods": ["Control"], "key": "0", "action": "ResetFontSize" },
+  { "mods": ["Shift", "Control"], "key": "T", "action": "CreateNewTab" },
+  { "mods": ["Shift", "Control"], "key": "S", "action": "SpeakSelection" },
+  { "mods": ["Shift", "Control"], "key": "E", "action": "SplitVertical" },
+  { "mods": ["Shift", "Control"], "key": "O", "action": "SplitHorizontal" },
+  { "mods": ["Shift", "Control"], "key": "X", "action": "ClosePane" },
+  { "mods": ["Shift", "Control"], "key": "P", "action": "OpenCommandPalette" },
+  {
+    "mods": ["Shift", "Control"],
+    "key": "\\",
+    "action": "ToggleSplitOrientation"
+  },
+  { "mods": ["Shift", "Control"], "key": "Z", "action": "TogglePaneZoom" },
+  { "mods": ["Alt"], "key": "1", "action": "SwitchToTab", "position": 1 },
+  { "mods": ["Alt"], "key": "2", "action": "SwitchToTab", "position": 2 },
+  { "mods": ["Alt"], "key": "3", "action": "SwitchToTab", "position": 3 },
+  { "mods": ["Alt"], "key": "4", "action": "SwitchToTab", "position": 4 },
+  { "mods": ["Alt"], "key": "5", "action": "SwitchToTab", "position": 5 },
+  { "mods": ["Alt"], "key": "6", "action": "SwitchToTab", "position": 6 },
+  { "mods": ["Alt"], "key": "7", "action": "SwitchToTab", "position": 7 },
+  { "mods": ["Alt"], "key": "8", "action": "SwitchToTab", "position": 8 },
+  { "mods": ["Alt"], "key": "9", "action": "SwitchToTab", "position": 9 },
+  { "mods": ["Alt"], "key": "0", "action": "SwitchToTab", "position": 10 },
+  {
+    "mods": ["Control"],
+    "key": "C",
+    "action": "CopySelection",
+    "mode": "Insert|Select"
+  },
+  {
+    "mods": ["Control"],
+    "key": "C",
+    "action": "CancelSelection",
+    "mode": "Insert|Select"
+  },
+  {
+    "mods": ["Control"],
+    "key": "V",
+    "action": "PasteClipboard",
+    "mode": "Insert|Select"
+  },
+  {
+    "mods": ["Control"],
+    "key": "V",
+    "action": "CancelSelection",
+    "mode": "Insert|Select"
+  },
+  {
+    "mods": ["Shift", "Control"],
+    "key": ",",
+    "action": "OpenConfiguration",
+    "mode": "Insert"
+  },
+  {
+    "mods": ["Shift", "Control"],
+    "key": " ",
+    "action": "ViNormalMode",
+    "mode": "Insert"
+  },
+  { "mods": ["Shift", "Control"], "key": ",", "action": "OpenConfiguration" },
+  { "mods": ["Shift", "Control"], "key": "Q", "action": "Quit" },
+  {
+    "mods": ["Alt", "Control"],
+    "key": "K",
+    "action": "ScrollMarkUp",
+    "mode": "~AltScreen"
+  },
+  {
+    "mods": ["Alt", "Control"],
+    "key": "J",
+    "action": "ScrollMarkDown",
+    "mode": "~AltScreen"
+  },
+  { "mods": ["Alt", "Control"], "key": "O", "action": "OpenFileManager" },
+  { "mods": ["Alt", "Control"], "key": ".", "action": "ToggleStatusLine" },
+  { "mods": ["Shift", "Control"], "key": "F", "action": "SearchReverse" },
+  { "mods": ["Shift", "Control"], "key": "H", "action": "NoSearchHighlight" },
+  { "mods": ["Shift", "Control"], "key": "U", "action": "HintMode" },
+  { "mods": ["Control"], "mouse": "Left", "action": "FollowHyperlink" },
+  { "mods": [], "mouse": "Middle", "action": "PasteSelection" },
+  { "mods": [], "mouse": "WheelDown", "action": "ScrollDown" },
+  { "mods": [], "mouse": "WheelUp", "action": "ScrollUp" },
+  { "mods": ["Alt"], "mouse": "WheelDown", "action": "DecreaseOpacity" },
+  { "mods": ["Alt"], "mouse": "WheelUp", "action": "IncreaseOpacity" },
+  { "mods": ["Control"], "mouse": "WheelDown", "action": "DecreaseFontSize" },
+  { "mods": ["Control"], "mouse": "WheelUp", "action": "IncreaseFontSize" },
+  { "mods": ["Shift"], "mouse": "WheelDown", "action": "ScrollPageDown" },
+  { "mods": ["Shift"], "mouse": "WheelUp", "action": "ScrollPageUp" }
+]

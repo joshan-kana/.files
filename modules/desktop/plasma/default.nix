@@ -13,6 +13,17 @@ in
   environment.sessionVariables.KWIN_FORCE_SW_CURSOR = "1";
 
   home = _: {
+    xdg.dataFile."applications/dotfiles-terminal.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Default Terminal
+      Exec=${terminal}
+      Icon=utilities-terminal
+      Terminal=false
+      NoDisplay=true
+      Categories=System;TerminalEmulator;
+    '';
+
     imports = [
       inputs.plasma-manager.homeModules.plasma-manager
       ./generated.nix
@@ -23,7 +34,7 @@ in
       enable = true;
       configFile.kdeglobals.General = {
         TerminalApplication = lib.mkForce terminal;
-        TerminalService = lib.mkForce "${terminal}.desktop";
+        TerminalService = lib.mkForce "dotfiles-terminal.desktop";
       };
     };
   };

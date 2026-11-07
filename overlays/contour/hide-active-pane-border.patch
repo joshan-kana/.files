@@ -1,0 +1,13 @@
+diff --git a/src/contour/qml/TerminalPane.qml b/src/contour/qml/TerminalPane.qml
+--- a/src/contour/qml/TerminalPane.qml
++++ b/src/contour/qml/TerminalPane.qml
+@@ -202,9 +201,0 @@
+-    // Active-pane focus border.
+-    Rectangle {
+-        anchors.fill: parent
+-        color: "transparent"
+-        border.width: pane.paneActive ? 1 : 0
+-        border.color: "#3daee9"
+-        z: 10
+-    }
+-
