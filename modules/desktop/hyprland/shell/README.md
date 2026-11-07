@@ -74,6 +74,14 @@ The local palette preferences file stores favourite identities and, when enabled
 
 System-control commands call the existing shell state/action owners. `volume 35` sets audio volume to 35%, and `brightness 40` targets supported hardware brightness. Selecting **Set Volume** or **Set Brightness** exposes an inline percentage input. Workspace moves use the existing compositor dispatcher.
 
+## Power and session
+
+The Power & Session panel provides Lock, Suspend, Log out, Reboot, Power off and a keyboard-accessible **Restore ON/OFF** choice. H/J/K/L or arrow keys select a tile; Enter activates it, with a second confirmation for actions that end or suspend the session.
+
+Restore defaults to **off** through `desktop.hyprland.shell.restoreWindowsOnExit`. A user selection is retained in the `Session` group of `~/.config/linux-desktop/preferences.ini` and takes precedence over the Nix default across shell restarts and reboots. Restoring declared desktop defaults resets this preference as well.
+
+For logout, reboot or poweroff from the panel, Restore ON saves `hypr-persist`'s `last` session first and aborts the action if saving fails. Restore OFF disarms any outstanding one-shot request without deleting the saved layout. Lock and Suspend never save or disarm sessions. Ordinary terminal `reboot` and `poweroff` do not consult the panel preference; they follow `hypr-persist`'s explicit one-shot request semantics.
+
 ## Night Light and output support
 
 Night Light uses the session-scoped `linux-desktop-night-light` user service and Hyprsunset, with manual temperature changes persisted across sessions. The Controls state indicates backend availability and whether that service is active, not whether the display hardware actually applied the colour transform.
