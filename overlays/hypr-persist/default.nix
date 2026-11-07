@@ -12,7 +12,7 @@ _: {
           hash = "sha256-Nh2+JpQQW6qi2ULUGjJyqhN8/3AKRHjlpHOXiVeD6h0=";
         };
 
-        cargoLock.lockFile = "${src}/Cargo.lock";
+        cargoHash = "sha256-OYJNkWU9Tfx/ZDlO0kfy9sqE0i1YsB9Dy5GR29IAtMI=";
         patches = [ ../../patches/hypr-persist/reconnect-ipc.patch ];
         passthru.autoUpdate = false;
         meta = {
