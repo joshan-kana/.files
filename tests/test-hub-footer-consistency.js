@@ -71,11 +71,11 @@ test("footer inset and panel height agree for both measured and live geometry", 
   );
   assert.match(
     host,
-    /contentHeight:.*theme\.spacing3 \+ footerBottomClearance \+ theme\.spacing4 \* 2/,
+    /contentHeight:.*tabs\.anchors\.topMargin \+ contentViewport\.anchors\.topMargin \+ contentViewport\.anchors\.bottomMargin \+ footerBottomClearance/,
   );
   assert.match(
     host,
-    /measuredContentHeight = .*theme\.spacing3 \+ footerBottomClearance \+ theme\.spacing4 \* 2/,
+    /measuredContentHeight = .*tabs\.anchors\.topMargin \+ contentViewport\.anchors\.topMargin \+ contentViewport\.anchors\.bottomMargin \+ footerBottomClearance/,
   );
   assert.match(host, /scrollBudget: .*host\.footerBottomClearance/);
 });
