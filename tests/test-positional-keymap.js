@@ -208,7 +208,9 @@ test("mixer and device hints match the shared Controls keyboard dispatcher", () 
   const mixer = qml("AudioMixerContent.qml");
   const device = qml("AudioDeviceControl.qml");
   const controls = qml("SystemContent.qml");
-  assert.match(mixer, /id: expandAction[\s\S]*?shortcut: "SHIFT\+M"/);
+  assert.match(mixer, /shortcut: "SHIFT\+M"/);
+  assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
+  assert.doesNotMatch(mixer, /id: expandAction/);
   assert.match(device, /shortcut: deviceControl\.selected \? "P" : "⌄"/);
   assert.match(
     controls,

@@ -42,7 +42,7 @@ FocusScope {
     signal expandRequested
 
     implicitWidth: compact ? 490 : 950
-    implicitHeight: compact ? Math.max(1, body.implicitHeight + theme.spacing3 * 2) : body.implicitHeight + theme.spacing2 * 2
+    implicitHeight: compact ? Math.max(1, body.implicitHeight + theme.spacing4 * 2) : body.implicitHeight + theme.spacing2 * 2
     visible: active
     focus: active && !compact
 
@@ -175,56 +175,26 @@ FocusScope {
         fillColor: mixer.theme.groupBase
     }
 
-    Text {
-        anchors.centerIn: parent
-        visible: mixer.compact && mixer.active && body.implicitHeight < 140
-        text: "󰓃  AUDIO CONTROLS"
-        font.family: mixer.runtime.fontMono
-        font.pixelSize: mixer.theme.fontSize(11)
-        color: mixer.theme.textMuted
+    StateLayer {
+        visible: mixer.compact
+        enabled: mixer.compact && mixer.active
+        theme: mixer.theme
+        motion: mixer.motion
+        stateColor: mixer.theme.roleColor("audio")
+        hoverOpacity: 0.08
+        pressOpacity: 0.13
+        cornerRadius: mixer.theme.radiusLarge
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open audio mixer"
+        onActivated: mixer.expandRequested()
     }
 
     Column {
         id: body
-        x: mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2
-        y: mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2
-        width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing3 : mixer.theme.spacing2) * 2)
+        x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
+        y: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
+        width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
         spacing: mixer.theme.spacing3
-
-        Row {
-            id: compactHeader
-            visible: mixer.compact
-            width: parent.width
-            height: visible ? 34 : 0
-            spacing: mixer.theme.spacing2
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(1, parent.width - expandAction.width - parent.spacing)
-                text: mixer.streams.length > 0 ? mixer.streams.length + (mixer.streams.length === 1 ? " channel" : " channels") : "Volume & devices"
-                color: mixer.theme.readableRoleColor("audio")
-                font.family: mixer.runtime.fontMono
-                font.pixelSize: mixer.theme.fontPanelEyebrow
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1
-                elide: Text.ElideRight
-            }
-            ShellAction {
-                id: expandAction
-                width: 160
-                height: 32
-                anchors.verticalCenter: parent.verticalCenter
-                runtime: mixer.runtime
-                theme: mixer.theme
-                motion: mixer.motion
-                compact: true
-                horizontalCompact: true
-                icon: "󰓃"
-                title: "Full mixer"
-                shortcut: "SHIFT+M"
-                onActivated: mixer.expandRequested()
-            }
-        }
 
         DetailHero {
             visible: !mixer.compact
@@ -266,6 +236,13 @@ FocusScope {
                 onSelectedRequested: mixer.selectIndex(0)
             }
 
+            Rectangle {
+                visible: mixer.compact
+                width: deviceGrid.cellWidth
+                height: 1
+                color: mixer.theme.subtleBorder
+            }
+
             AudioDeviceControl {
                 id: inputDevice
                 visible: mixer.system.microphoneAvailable || mixer.system.audioCaptureStreams.length > 0
@@ -289,12 +266,13 @@ FocusScope {
 
         Row {
             width: parent.width
-            height: 20
+            visible: !mixer.compact || mixer.streams.length > 0
+            height: visible ? 20 : 0
             spacing: mixer.theme.spacing2
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.max(1, parent.width - channelCount.implicitWidth - parent.spacing)
-                text: "APPLICATION CHANNELS"
+                text: mixer.compact ? "APPLICATION AUDIO" : "APPLICATION CHANNELS"
                 color: mixer.theme.readableRoleColor("audio")
                 font.family: mixer.runtime.fontMono
                 font.pixelSize: mixer.theme.fontSize(10)
@@ -387,7 +365,7 @@ FocusScope {
         ShellSurface {
             width: parent.width
             height: mixer.compact ? 46 : 120
-            visible: mixer.streams.length === 0
+            visible: !mixer.compact && mixer.streams.length === 0
             theme: mixer.theme
             motion: mixer.motion
             surfaceLayer: ShellSurface.Control
@@ -417,6 +395,10 @@ FocusScope {
                 {
                     shortcut: "X",
                     label: "Mic"
+                },
+                {
+                    shortcut: "SHIFT+M",
+                    label: "Open mixer"
                 }
             ] : [
                 {

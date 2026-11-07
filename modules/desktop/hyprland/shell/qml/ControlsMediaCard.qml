@@ -10,10 +10,23 @@ ShellSurface {
 
     signal fullRequested
 
-    implicitHeight: media.available ? 226 : 174
+    readonly property real heroSize: Math.min(180, Math.max(110, (height - 60) * 0.52))
+    implicitHeight: media.available ? 260 : 212
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
     fillColor: media.available ? theme.blend(theme.groupBase, theme.roleColor("media"), theme.dark ? 0.075 : 0.045) : theme.groupBase
+
+    StateLayer {
+        theme: card.theme
+        motion: card.motion
+        stateColor: card.theme.roleColor("media")
+        hoverOpacity: 0.08
+        pressOpacity: 0.13
+        cornerRadius: card.theme.radiusLarge
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open Now Playing"
+        onActivated: card.fullRequested()
+    }
 
     Timer {
         interval: 1000
@@ -31,12 +44,12 @@ ShellSurface {
 
         Row {
             width: parent.width
-            height: 76
-            spacing: card.theme.spacing3
+            height: card.heroSize
+            spacing: card.theme.spacing4
 
             ShellSurface {
-                width: 76
-                height: 76
+                width: card.heroSize
+                height: card.heroSize
                 theme: card.theme
                 motion: card.motion
                 surfaceLayer: ShellSurface.Control
@@ -56,13 +69,13 @@ ShellSurface {
                     visible: card.media.artUrl.length === 0
                     text: "󰎆"
                     font.family: "Symbols Nerd Font"
-                    font.pixelSize: card.theme.fontSize(29)
+                    font.pixelSize: card.theme.fontSize(38)
                     color: card.theme.roleColor("media")
                 }
             }
 
             Column {
-                width: Math.max(1, parent.width - 76 - parent.spacing)
+                width: Math.max(1, parent.width - card.heroSize - parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: card.theme.spacing1
 
@@ -80,17 +93,22 @@ ShellSurface {
                     text: card.media.available ? card.media.title : "No active player"
                     color: card.theme.textStrong
                     font.family: card.runtime.fontMono
-                    font.pixelSize: card.theme.fontSize(16)
+                    font.pixelSize: card.theme.fontSize(18)
                     font.weight: Font.DemiBold
                 }
                 MarqueeText {
                     width: parent.width
-                    text: card.media.available ? card.media.artist : "Playback controls appear when music starts"
+                    text: card.media.available ? card.media.artist : "No playback"
                     color: card.theme.textMuted
                     font.family: card.runtime.fontMono
                     font.pixelSize: card.theme.fontSize(11)
                 }
             }
+        }
+
+        Item {
+            width: parent.width
+            height: Math.max(0, parent.height - card.heroSize - (card.media.available ? 26 : 0) - 42 - parent.spacing * (card.media.available ? 3 : 2))
         }
 
         ShellSlider {
@@ -128,24 +146,18 @@ ShellSurface {
             }
 
             Item {
-                width: Math.max(0, parent.width - (card.media.available ? parent.children[0].implicitWidth : 0) - fullPlayer.width - parent.spacing * (card.media.available ? 2 : 1))
+                width: Math.max(0, parent.width - (card.media.available ? parent.children[0].implicitWidth : 0) - openHint.implicitWidth - parent.spacing * (card.media.available ? 2 : 1))
                 height: 1
             }
 
-            ShellAction {
-                id: fullPlayer
-                width: 142
-                height: 40
+            KeyHint {
+                id: openHint
                 anchors.verticalCenter: parent.verticalCenter
                 runtime: card.runtime
                 theme: card.theme
-                motion: card.motion
                 compact: true
-                horizontalCompact: true
-                icon: "󰎆"
-                title: "Now Playing"
                 shortcut: "N"
-                onActivated: card.fullRequested()
+                label: "Open"
             }
         }
     }

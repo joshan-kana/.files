@@ -243,6 +243,20 @@ PanelWindow {
         onTriggered: host.updateContentGeometry()
     }
 
+    Binding {
+        target: host.systemContent
+        property: "dashboardWidthBudget"
+        value: host.controlsPreferredWidth
+        when: !!host.systemContent
+    }
+
+    Binding {
+        target: host.systemContent
+        property: "dashboardHeightBudget"
+        value: Math.max(0, host.viewportHeight - tabs.implicitHeight - footerStatus.height - footerHints.implicitHeight - host.theme.spacing5 - host.theme.spacing3 - host.footerBottomClearance - host.theme.spacing4 * 2 - host.theme.spacing3)
+        when: !!host.systemContent
+    }
+
     Connections {
         target: host.systemContent
         function onRevealContent(top: real, bottom: real): void {
@@ -273,7 +287,8 @@ PanelWindow {
     // when Frosted Glass is enabled, especially on high-DPI displays.
     // Keep the detail viewport stable across the gallery's inner morph;
     // the top inset still follows the frame/bar visibility policy.
-    readonly property real viewportWidth: screen ? Math.max(1, Math.min(screen.width - theme.spacing4 * 2, theme.controlsDetailWidth + theme.spacing4 * 2)) : 1
+    readonly property real controlsPreferredWidth: screen ? Math.max(theme.controlsDetailWidth, Math.min(1480, screen.width * 0.62)) : theme.controlsDetailWidth
+    readonly property real viewportWidth: screen ? Math.max(1, Math.min(screen.width - theme.spacing4 * 2, controlsPreferredWidth + theme.spacing4 * 2)) : 1
     readonly property real viewportHeight: screen ? Math.max(1, screen.height - topOffset - theme.spacing4) : 1
     // Match the bar's measured source when it lies inside our compositor-safe
     // viewport. Off-viewport islands start at the nearest visible edge, rather
@@ -683,6 +698,7 @@ PanelWindow {
             // small screen. Critical actions are transferred here whenever
             // their bar island is covered by the expanding hub.
             Row {
+                id: footerStatus
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: host.theme.spacing2
                 visible: host.recordingStatusInHub || host.notificationStatusInHub

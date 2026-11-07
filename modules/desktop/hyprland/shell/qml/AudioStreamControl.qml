@@ -112,7 +112,8 @@ Item {
 
             AudioPeakMeter {
                 id: streamMeter
-                width: Math.min(channel.compact ? 105 : 154, Math.max(channel.compact ? 65 : 105, parent.width * (channel.compact ? 0.19 : 0.23)))
+                visible: !channel.compact
+                width: visible ? Math.min(154, Math.max(105, parent.width * 0.23)) : 0
                 height: 27
                 anchors.verticalCenter: parent.verticalCenter
                 theme: channel.theme
@@ -122,7 +123,7 @@ Item {
             }
 
             ShellSlider {
-                width: Math.max(1, parent.width - streamMeter.width - parent.spacing)
+                width: Math.max(1, parent.width - streamMeter.width - (streamMeter.visible ? parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 theme: channel.theme
                 motion: channel.motion
