@@ -292,7 +292,10 @@ test("Dashboard controls retain direct keys and no additional focus navigation m
 
 test("The compact mixer uses content-driven height and does not delay rendering", () => {
   const mixer = read("AudioMixerContent.qml");
-  assert.match(mixer, /compact \? Math.max\(1, body.implicitHeight/);
+  assert.match(
+    mixer,
+    /implicitHeight: body.implicitHeight \+ \(compact \? theme.spacing4 \* 2/,
+  );
   assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.doesNotMatch(mixer, /id: expandAction/);
   assert.match(
@@ -327,7 +330,7 @@ test("Dashboard hierarchy puts connectivity above Quick actions and audio/media 
   );
   assert.match(
     controls,
-    /readonly property int columns: width < 440 \|\| root.theme.textScale >= 1.5 \? 2 : 3/,
+    /readonly property int columns: width >= 590 && root.theme.textScale < 1.3 \? 5 : width < 440/,
   );
 });
 
@@ -337,7 +340,7 @@ test("Compact Media keeps a small empty state and shares the full Now Playing de
   const transport = read("MediaTransport.qml");
   assert.match(controls, /ControlsMediaCard \{/);
   assert.match(controls, /onFullRequested: root.mediaRequested\(\)/);
-  assert.match(card, /implicitHeight: media.available \? 260 : 212/);
+  assert.match(card, /implicitHeight: media.available \? 178 : 152/);
   assert.match(
     card,
     /text: card.media.available \? card.media.title : "No active player"/,
@@ -361,7 +364,7 @@ test("normal desktop tiles use two visual-mode rows without clipping controls", 
   );
   assert.match(
     controls,
-    /id: actionStrip[\s\S]*?readonly property int columns: width < 440[\s\S]*?root\.theme\.textScale >= 1\.5 \? 2 : 3/,
+    /id: actionStrip[\s\S]*?readonly property int columns: width >= 590[\s\S]*?\? 5 : width < 440/,
   );
   assert.match(controls, /function cellWidth\(index: int\): real/);
 });
@@ -421,45 +424,31 @@ test("main panel and compact Media use measured geometry with bounded empty stat
       "implicitWidth: detailsVisible ? theme.controlsDetailWidth : dashboardWidthBudget",
     ],
     [controls, "active: root.engaged && !root.detailsVisible"],
-    [media, "implicitHeight: media.available ? 260 : 212"],
+    [media, "implicitHeight: media.available ? 178 : 152"],
     [host, "height: Math.min(host.viewportHeight, host.targetHeight)"],
     [host, "(fraction - 0.68) / 0.30"],
   ])
     assert.ok(source.includes(fragment), fragment);
 });
 
-test("Controls consumes a bounded screen budget and distributes space across the dashboard", () => {
+test("Controls sizes naturally without inflating tiles or forcing scroll hints", () => {
   const host = read("ShellExpansionHost.qml");
   const controls = read("SystemContent.qml");
   assert.match(host, /property: "dashboardWidthBudget"/);
-  assert.match(
-    host,
-    /controlsPreferredWidth: screen \? Math.max\(theme.controlsDetailWidth, Math.min\(1480, screen.width \* 0.62\)\)/,
+  assert.match(host, /Math.min\(1340, screen.width \* 0.54\)/);
+  assert.doesNotMatch(host, /property: "dashboardHeightBudget"/);
+  assert.doesNotMatch(
+    controls,
+    /dashboardHeightBudget|dashboardBaseHeight|dashboardGaps/,
   );
-  assert.match(
-    host,
-    /viewportWidth: screen \? Math.max\(1, Math.min\(screen.width - theme.spacing4 \* 2, controlsPreferredWidth \+ theme.spacing4 \* 2\)\)/,
-  );
+  assert.match(controls, /spacing: root.theme.spacing3/);
+  assert.match(controls, /dashboardTileHeight: 72/);
+  assert.match(controls, /dashboardBrightnessHeight: 90/);
+  assert.match(controls, /dashboardConnectivityHeight: 84/);
   assert.match(
     controls,
-    /property real dashboardWidthBudget: theme.controlsDetailWidth/,
+    /height: Math.max\(implicitHeight, mediaCard.implicitHeight\)/,
   );
-  assert.match(host, /property: "dashboardHeightBudget"/);
-  assert.match(host, /target: host.systemContent/);
-  assert.match(
-    host,
-    /host.viewportHeight - tabs.implicitHeight - footerStatus.height - footerHints.implicitHeight/,
-  );
-  assert.match(controls, /property real dashboardHeightBudget: 0/);
-  assert.match(
-    controls,
-    /dashboardBaseHeight: controlsClock.height \+ controlsHeading.height \+ commandMatrix.implicitHeight \+ mediaMatrix.implicitHeight/,
-  );
-  assert.match(controls, /dashboardHeightBudget - root.dashboardBaseHeight/);
-  assert.match(controls, /id: trayRow/);
-  assert.match(controls, /height: root.dashboardTileHeight/);
-  assert.match(controls, /height: root.dashboardBrightnessHeight/);
-  assert.match(controls, /height: root.dashboardConnectivityHeight/);
   assert.match(
     controls,
     /height: Math.max\(implicitHeight, audioDeck.implicitHeight\)/,
@@ -485,43 +474,59 @@ test("compact widgets use clickable backgrounds, not dedicated full-view buttons
   assert.match(media, /ShellSlider \{/);
 });
 
-test("compact audio is one uncluttered group with input controls and conditional applications", () => {
+test("compact Audio shares Output/Input controls without application streams", () => {
   const mixer = read("AudioMixerContent.qml");
   const device = read("AudioDeviceControl.qml");
-  const stream = read("AudioStreamControl.qml");
+  assert.match(mixer, /columns: width >= \(mixer.compact \? 440 : 600\)/);
+  assert.match(mixer, /model: mixer.compact \? 0 : mixer.streams.length/);
+  assert.match(mixer, /visible: !mixer.compact && mixer.streams.length > 0/);
+  assert.match(mixer, /visible: !mixer.compact\s+height: visible \? 20 : 0/);
+  assert.match(
+    mixer,
+    /visible: !mixer.compact\s+width: parent.width\s+runtime: mixer.runtime/,
+  );
+  assert.match(mixer, /onActivated: mixer.expandRequested\(\)/);
   assert.match(device, /fillColor: compact \? "transparent"/);
-  assert.match(mixer, /visible: !mixer.compact \|\| mixer.streams.length > 0/);
-  assert.match(mixer, /visible: !mixer.compact && mixer.streams.length === 0/);
   assert.match(device, /function toggleDeviceChooser\(\)/);
   assert.match(device, /system.toggleMicrophoneMute\(\)/);
   assert.match(device, /system.toggleMute\(\)/);
   assert.match(device, /system.setMicrophoneVolume\(value\)/);
   assert.match(device, /system.setVolume\(value\)/);
-  assert.match(stream, /visible: !channel.compact/);
 });
 
-test("Quick Actions form two spacious rows with adaptive per-row widths", () => {
+test("Quick Actions stay equally sized on a single desktop row", () => {
   const controls = read("SystemContent.qml");
   const start = controls.indexOf("id: actionStrip");
   const actions = controls.slice(
     start,
     controls.indexOf("ShellSection {", start),
   );
-  assert.ok(actions.includes("root.theme.textScale >= 1.5 ? 2 : 3"));
-  assert.ok(
-    actions.includes(
-      "const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns)",
-    ),
+  assert.match(actions, /width >= 590 && root.theme.textScale < 1.3 \? 5/);
+  assert.match(
+    actions,
+    /return \(width - spacing \* \(columns - 1\)\) \/ columns/,
   );
+  assert.doesNotMatch(actions, /itemsInRow/);
 });
 
 test("compact Media anchors artwork and player information above footer controls", () => {
   const card = read("ControlsMediaCard.qml");
   assert.match(card, /height: card.heroSize/);
-  assert.match(
-    card,
-    /parent.height - card.heroSize - \(card.media.available \? 26 : 0\) - 42/,
-  );
+  assert.match(card, /implicitHeight: media.available \? 178 : 152/);
   assert.match(card, /onActivated: card.fullRequested\(\)/);
   assert.doesNotMatch(card, /id: fullPlayer/);
+});
+
+test("hub expansion accounts for the actual inner viewport margins", () => {
+  const host = read("ShellExpansionHost.qml");
+  for (const fragment of [
+    "tabs.anchors.topMargin",
+    "contentViewport.anchors.topMargin",
+    "contentViewport.anchors.bottomMargin",
+    "footerBottomClearance",
+  ])
+    assert.ok(host.includes(fragment), fragment);
+  assert.match(host, /readonly property real contentHeight: loadedContent/);
+  assert.match(host, /measuredContentHeight = loadedContent.implicitHeight/);
+  assert.doesNotMatch(host, /PR211_TEMP_GEOMETRY/);
 });
