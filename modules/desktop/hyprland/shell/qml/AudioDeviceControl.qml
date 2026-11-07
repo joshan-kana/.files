@@ -23,7 +23,7 @@ ShellSurface {
 
     signal selectedRequested
 
-    implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing2 : theme.spacing2 * 2)
+    implicitHeight: deviceContents.implicitHeight + (compact ? theme.spacing3 * 2 : theme.spacing2 * 2)
     surfaceLayer: ShellSurface.Control
     cornerRadius: theme.radiusMedium
     fillColor: compact ? "transparent" : selected ? theme.expressiveSurfaceStrong : theme.expressiveSurface
@@ -74,7 +74,7 @@ ShellSurface {
     Column {
         id: deviceContents
         x: deviceControl.compact ? 0 : deviceControl.theme.spacing2
-        y: deviceControl.compact ? deviceControl.theme.spacing1 : deviceControl.theme.spacing2
+        y: deviceControl.compact ? deviceControl.theme.spacing3 : deviceControl.theme.spacing2
         width: Math.max(1, parent.width - (deviceControl.compact ? 0 : deviceControl.theme.spacing2 * 2))
         spacing: deviceControl.compact ? deviceControl.theme.spacing2 : deviceControl.theme.spacing1
 
@@ -150,10 +150,10 @@ ShellSurface {
                 theme: deviceControl.theme
                 node: deviceControl.device
                 muted: deviceControl.muted
-                monitoring: deviceControl.active && deviceControl.visible
+                monitoring: deviceControl.active && deviceControl.visible && meter.visible
             }
             ShellSlider {
-                width: Math.max(1, parent.width - meter.width - parent.spacing)
+                width: Math.max(1, parent.width - meter.width - (meter.visible ? parent.spacing : 0))
                 anchors.verticalCenter: parent.verticalCenter
                 theme: deviceControl.theme
                 motion: deviceControl.motion
@@ -195,7 +195,7 @@ ShellSurface {
                 MarqueeText {
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.max(1, parent.width - pickerHint.implicitWidth - parent.spacing)
-                    text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "No audio device"
+                    text: deviceControl.device ? (deviceControl.device.description || deviceControl.device.name) : "Hardware unavailable"
                     color: deviceControl.theme.textMuted
                     font.family: deviceControl.runtime.fontMono
                     font.pixelSize: deviceControl.theme.fontSize(deviceControl.compact ? 11 : 9)
