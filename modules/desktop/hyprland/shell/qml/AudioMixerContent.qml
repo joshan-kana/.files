@@ -18,16 +18,16 @@ FocusScope {
     readonly property var targets: [
         {
             kind: "output"
-        }
-    ].concat(system.microphoneAvailable ? [
+        },
+    ].concat(compact || system.microphoneAvailable || system.audioCaptureStreams.length > 0 ? [
         {
             kind: "input"
         }
-    ] : []).concat(system.audioApplicationStreams.map(node => ({
+    ] : []).concat(compact ? [] : system.audioApplicationStreams.map(node => ({
                 kind: "stream",
                 node: node,
                 capture: false
-            }))).concat(system.audioCaptureStreams.map(node => ({
+            }))).concat(compact ? [] : system.audioCaptureStreams.map(node => ({
                 kind: "stream",
                 node: node,
                 capture: true
@@ -42,7 +42,7 @@ FocusScope {
     signal expandRequested
 
     implicitWidth: compact ? 490 : 950
-    implicitHeight: compact ? Math.max(1, body.implicitHeight + theme.spacing4 * 2) : body.implicitHeight + theme.spacing2 * 2
+    implicitHeight: body.implicitHeight + (compact ? theme.spacing4 * 2 : theme.spacing2 * 2)
     visible: active
     focus: active && !compact
 
@@ -192,7 +192,7 @@ FocusScope {
     Column {
         id: body
         x: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
-        y: mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2
+        y: mixer.compact ? Math.max(mixer.theme.spacing4, (mixer.height - implicitHeight) / 2) : mixer.theme.spacing2
         width: Math.max(1, parent.width - (mixer.compact ? mixer.theme.spacing4 : mixer.theme.spacing2) * 2)
         spacing: mixer.theme.spacing3
 
@@ -212,8 +212,8 @@ FocusScope {
         Grid {
             id: deviceGrid
             width: parent.width
-            columns: !mixer.compact && width >= 600 && mixer.theme.textScale < 1.5 ? 2 : 1
-            columnSpacing: mixer.theme.spacing2
+            columns: width >= (mixer.compact ? 440 : 600) && mixer.theme.textScale < 1.5 ? 2 : 1
+            columnSpacing: mixer.compact ? mixer.theme.spacing5 : mixer.theme.spacing2
             rowSpacing: mixer.theme.spacing2
             readonly property real cellWidth: Math.max(1, (width - (columns - 1) * columnSpacing) / columns)
 
@@ -236,16 +236,9 @@ FocusScope {
                 onSelectedRequested: mixer.selectIndex(0)
             }
 
-            Rectangle {
-                visible: mixer.compact
-                width: deviceGrid.cellWidth
-                height: 1
-                color: mixer.theme.subtleBorder
-            }
-
             AudioDeviceControl {
                 id: inputDevice
-                visible: mixer.system.microphoneAvailable || mixer.system.audioCaptureStreams.length > 0
+                visible: true
                 width: deviceGrid.cellWidth
                 height: implicitHeight
                 microphone: true
@@ -266,7 +259,7 @@ FocusScope {
 
         Row {
             width: parent.width
-            visible: !mixer.compact || mixer.streams.length > 0
+            visible: !mixer.compact
             height: visible ? 20 : 0
             spacing: mixer.theme.spacing2
             Text {
@@ -292,14 +285,14 @@ FocusScope {
         ListView {
             id: list
             width: parent.width
-            height: mixer.streams.length === 0 ? 0 : mixer.compact ? Math.min(2, mixer.streams.length) * 72 + 10 : Math.min(330, mixer.streams.length * 102 + 36)
-            visible: mixer.streams.length > 0
-            model: mixer.streams.length
+            height: !mixer.compact && mixer.streams.length > 0 ? Math.min(330, mixer.streams.length * 102 + 36) : 0
+            visible: !mixer.compact && mixer.streams.length > 0
+            model: mixer.compact ? 0 : mixer.streams.length
             orientation: ListView.Vertical
             spacing: mixer.theme.spacing1
             cacheBuffer: 90
             clip: true
-            interactive: mixer.streams.length > (mixer.compact ? 2 : 3)
+            interactive: !mixer.compact && mixer.streams.length > 3
             boundsBehavior: Flickable.StopAtBounds
             currentIndex: mixer.selectedStreamIndex
             onCurrentIndexChanged: {
@@ -380,6 +373,7 @@ FocusScope {
         }
 
         KeyHintStrip {
+            visible: !mixer.compact
             width: parent.width
             runtime: mixer.runtime
             theme: mixer.theme

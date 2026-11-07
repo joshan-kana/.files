@@ -10,8 +10,8 @@ ShellSurface {
 
     signal fullRequested
 
-    readonly property real heroSize: Math.min(180, Math.max(110, (height - 60) * 0.52))
-    implicitHeight: media.available ? 260 : 212
+    readonly property real heroSize: 64
+    implicitHeight: media.available ? 178 : 152
     surfaceLayer: ShellSurface.Group
     cornerRadius: theme.radiusLarge
     fillColor: media.available ? theme.blend(theme.groupBase, theme.roleColor("media"), theme.dark ? 0.075 : 0.045) : theme.groupBase
@@ -38,14 +38,14 @@ ShellSurface {
     Column {
         anchors {
             fill: parent
-            margins: card.theme.spacing4
+            margins: card.theme.spacing3
         }
-        spacing: card.theme.spacing3
+        spacing: card.theme.spacing2
 
         Row {
             width: parent.width
             height: card.heroSize
-            spacing: card.theme.spacing4
+            spacing: card.theme.spacing3
 
             ShellSurface {
                 width: card.heroSize
@@ -69,7 +69,7 @@ ShellSurface {
                     visible: card.media.artUrl.length === 0
                     text: "󰎆"
                     font.family: "Symbols Nerd Font"
-                    font.pixelSize: card.theme.fontSize(38)
+                    font.pixelSize: card.theme.fontSize(27)
                     color: card.theme.roleColor("media")
                 }
             }
@@ -93,7 +93,7 @@ ShellSurface {
                     text: card.media.available ? card.media.title : "No active player"
                     color: card.theme.textStrong
                     font.family: card.runtime.fontMono
-                    font.pixelSize: card.theme.fontSize(18)
+                    font.pixelSize: card.theme.fontSize(15)
                     font.weight: Font.DemiBold
                 }
                 MarqueeText {
@@ -106,14 +106,9 @@ ShellSurface {
             }
         }
 
-        Item {
-            width: parent.width
-            height: Math.max(0, parent.height - card.heroSize - (card.media.available ? 26 : 0) - 42 - parent.spacing * (card.media.available ? 3 : 2))
-        }
-
         ShellSlider {
             width: parent.width
-            height: 26
+            height: card.media.available ? 24 : 0
             visible: card.media.available
             theme: card.theme
             motion: card.motion
@@ -129,7 +124,7 @@ ShellSurface {
 
         Row {
             width: parent.width
-            height: 42
+            height: 46
             spacing: card.theme.spacing2
 
             MediaTransport {

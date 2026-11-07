@@ -35,13 +35,10 @@ FocusScope {
 
     property bool engaged: false
     property bool mixerOpen: false
-    property real dashboardHeightBudget: 0
     property real dashboardWidthBudget: theme.controlsDetailWidth
-    readonly property real dashboardBaseHeight: controlsClock.height + controlsHeading.height + commandMatrix.implicitHeight + mediaMatrix.implicitHeight + (trayRow.visible ? trayRow.height : 0)
-    readonly property int dashboardGaps: trayRow.visible ? 4 : 3
-    readonly property int dashboardTileHeight: dashboardHeightBudget >= 1090 ? 104 : dashboardHeightBudget >= 820 ? 90 : 78
-    readonly property int dashboardConnectivityHeight: dashboardHeightBudget >= 1090 ? 110 : dashboardHeightBudget >= 820 ? 96 : 84
-    readonly property int dashboardBrightnessHeight: dashboardHeightBudget >= 1090 ? 112 : dashboardHeightBudget >= 820 ? 96 : 84
+    readonly property int dashboardTileHeight: 72
+    readonly property int dashboardConnectivityHeight: 84
+    readonly property int dashboardBrightnessHeight: 90
     readonly property bool detailsVisible: trayMenu.open || networkPanel.open || bluetoothPanel.open || themePanel.open || wallpaperPanel.open || sessionPanel.open || resourcesPanel.open || mixerOpen || recordingsPanel.open
     property bool resetConfirmPending: false
     property bool resetRunning: false
@@ -690,7 +687,7 @@ FocusScope {
                     easing.bezierCurve: root.detailsVisible ? root.motion.exitCurve : root.motion.enterCurve
                 }
             }
-            spacing: root.dashboardHeightBudget > 0 ? Math.max(root.theme.spacing2, Math.min(root.theme.spacing6, (root.dashboardHeightBudget - root.dashboardBaseHeight) / root.dashboardGaps)) : root.theme.spacing3
+            spacing: root.theme.spacing3
 
             // Live state, actions and parameters share one adaptive surface.
             Row {
@@ -1158,11 +1155,10 @@ FocusScope {
                             id: actionStrip
                             width: parent.width
                             spacing: root.theme.spacing2
-                            readonly property int columns: width < 440 || root.theme.textScale >= 1.5 ? 2 : 3
+                            readonly property int columns: width >= 590 && root.theme.textScale < 1.3 ? 5 : width < 440 || root.theme.textScale >= 1.5 ? 2 : 3
 
                             function cellWidth(index: int): real {
-                                const itemsInRow = Math.min(columns, 5 - Math.floor(index / columns) * columns);
-                                return (width - spacing * (itemsInRow - 1)) / itemsInRow;
+                                return (width - spacing * (columns - 1)) / columns;
                             }
 
                             QuickSettingChip {
@@ -1258,7 +1254,7 @@ FocusScope {
                     AudioMixerContent {
                         id: audioDeck
                         width: parent.width
-                        height: implicitHeight
+                        height: Math.max(implicitHeight, mediaCard.implicitHeight)
                         compact: true
                         active: root.engaged && !root.detailsVisible && audioSection.visible
                         runtime: root.runtime
@@ -1278,6 +1274,7 @@ FocusScope {
                     accentRole: "media"
 
                     ControlsMediaCard {
+                        id: mediaCard
                         width: parent.width
                         height: Math.max(implicitHeight, audioDeck.implicitHeight)
                         active: root.engaged && !root.detailsVisible

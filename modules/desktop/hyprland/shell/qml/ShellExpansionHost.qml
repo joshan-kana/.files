@@ -227,13 +227,13 @@ PanelWindow {
     // a temporary initial implicitHeight can otherwise strand the host at
     // the height of a previously loaded detail panel.
     readonly property real contentWidth: loadedContent && loadedContent.implicitWidth > 0 ? Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2 : (measuredContentWidth > 0 ? measuredContentWidth : expansionState.originWidth)
-    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + footerBottomClearance + theme.spacing4 * 2 : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
+    readonly property real contentHeight: loadedContent && loadedContent.implicitHeight > 0 ? loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + tabs.anchors.topMargin + contentViewport.anchors.topMargin + contentViewport.anchors.bottomMargin + footerBottomClearance : (measuredContentHeight > 0 ? measuredContentHeight : expansionState.originHeight)
 
     function updateContentGeometry(): void {
         if (!loadedContent || loadedContent.implicitWidth <= 0 || loadedContent.implicitHeight <= 0)
             return;
         measuredContentWidth = Math.max(loadedContent.implicitWidth, 600) + theme.spacing4 * 2;
-        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + theme.spacing3 + footerBottomClearance + theme.spacing4 * 2;
+        measuredContentHeight = loadedContent.implicitHeight + tabs.implicitHeight + hubFooter.implicitHeight + tabs.anchors.topMargin + contentViewport.anchors.topMargin + contentViewport.anchors.bottomMargin + footerBottomClearance;
     }
 
     Timer {
@@ -247,13 +247,6 @@ PanelWindow {
         target: host.systemContent
         property: "dashboardWidthBudget"
         value: host.controlsPreferredWidth
-        when: !!host.systemContent
-    }
-
-    Binding {
-        target: host.systemContent
-        property: "dashboardHeightBudget"
-        value: Math.max(0, host.viewportHeight - tabs.implicitHeight - footerStatus.height - footerHints.implicitHeight - host.theme.spacing5 - host.theme.spacing3 - host.footerBottomClearance - host.theme.spacing4 * 2 - host.theme.spacing3)
         when: !!host.systemContent
     }
 
@@ -287,7 +280,7 @@ PanelWindow {
     // when Frosted Glass is enabled, especially on high-DPI displays.
     // Keep the detail viewport stable across the gallery's inner morph;
     // the top inset still follows the frame/bar visibility policy.
-    readonly property real controlsPreferredWidth: screen ? Math.max(theme.controlsDetailWidth, Math.min(1480, screen.width * 0.62)) : theme.controlsDetailWidth
+    readonly property real controlsPreferredWidth: screen ? Math.max(theme.controlsDetailWidth, Math.min(1340, screen.width * 0.54)) : theme.controlsDetailWidth
     readonly property real viewportWidth: screen ? Math.max(1, Math.min(screen.width - theme.spacing4 * 2, controlsPreferredWidth + theme.spacing4 * 2)) : 1
     readonly property real viewportHeight: screen ? Math.max(1, screen.height - topOffset - theme.spacing4) : 1
     // Match the bar's measured source when it lies inside our compositor-safe

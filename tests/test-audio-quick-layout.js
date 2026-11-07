@@ -54,7 +54,7 @@ test("the same virtualised stream control handles every playback and capture cli
     mixer,
     /readonly property var streams: system\.audioApplicationStreams\.concat\(system\.audioCaptureStreams\)/,
   );
-  assert.match(mixer, /model: mixer\.streams\.length/);
+  assert.match(mixer, /model: mixer\.compact \? 0 : mixer\.streams\.length/);
   assert.match(mixer, /orientation: ListView\.Vertical/);
   assert.match(mixer, /cacheBuffer: 90/);
   assert.match(
@@ -123,12 +123,22 @@ test("mixer selection follows visual left-to-right order before descending throu
   const expression = mixer
     .slice(start + "readonly property var targets: ".length, end)
     .trim();
-  const targets = new Function("system", "return (" + expression + ");");
-  const result = targets({
+  const targets = new Function(
+    "system",
+    "compact",
+    "return (" + expression + ");",
+  );
+  const system = {
     microphoneAvailable: true,
     audioApplicationStreams: [{ id: "music" }, { id: "browser" }],
     audioCaptureStreams: [{ id: "recorder" }],
-  });
+  };
+  const result = targets(system, false);
+  const compactResult = targets(system, true);
+  assert.deepEqual(
+    compactResult.map((item) => item.kind),
+    ["output", "input"],
+  );
   assert.deepEqual(
     result.map((item) => (item.kind === "stream" ? item.node.id : item.kind)),
     ["output", "input", "music", "browser", "recorder"],
