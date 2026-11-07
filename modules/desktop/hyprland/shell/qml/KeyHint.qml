@@ -8,18 +8,21 @@ Item {
     required property Theme theme
     required property string shortcut
     property string label: ""
-    property bool showLabel: label.length > 0
+    readonly property bool hasShortcut: shortcut.trim().length > 0
+    property bool showLabel: label.trim().length > 0
     property bool compact: false
     property bool emphasized: false
     property color emphasisColor: theme.accent
     property bool available: true
 
-    implicitWidth: cap.width + (showLabel ? theme.keyHintGap + caption.implicitWidth : 0)
-    implicitHeight: Math.max(cap.height, showLabel ? caption.implicitHeight : 0)
+    visible: hasShortcut || showLabel
+    implicitWidth: (hasShortcut ? cap.width : 0) + (showLabel ? (hasShortcut ? theme.keyHintGap : 0) + caption.implicitWidth : 0)
+    implicitHeight: Math.max(hasShortcut ? cap.height : 0, showLabel ? caption.implicitHeight : 0)
     opacity: available ? 1 : 0.55
 
     Rectangle {
         id: cap
+        visible: hint.hasShortcut
         height: hint.compact ? Math.max(20, hint.theme.keycapHeight - 5) : hint.theme.keycapHeight
         width: chord.implicitWidth + (hint.compact ? Math.max(8, hint.theme.keycapInset * 2 - 4) : hint.theme.keycapInset * 2)
         radius: Math.min(9, height / 3)
@@ -42,7 +45,7 @@ Item {
 
     Text {
         id: caption
-        x: cap.width + hint.theme.keyHintGap
+        x: hint.hasShortcut ? cap.width + hint.theme.keyHintGap : 0
         anchors.verticalCenter: parent.verticalCenter
         visible: hint.showLabel
         text: hint.label
