@@ -41,7 +41,8 @@ test("night light uses inline, interactive slider with value and shared KeyHint"
     /onValueRequested: next => setting\.valueRequested\(next\)/,
   );
   assert.match(tile, /KeyHint \{/);
-  assert.match(tile, /keyboardSelected \? "H\/L" : setting\.toggleShortcut/);
+  assert.match(tile, /id: adjustHint[\s\S]*?shortcut: "H\/L"/);
+  assert.match(tile, /shortcut: setting\.toggleShortcut/);
   assert.match(state, /function setTemperature\(target: real\)/);
 });
 
@@ -83,10 +84,7 @@ test("slider keyboard workflow respects direct actions, detail Escape and global
     /event\.key === Qt\.Key_Escape \|\| event\.key === Qt\.Key_Backspace/,
   );
   assert.match(controls, /shortcut: "TAB"/);
-  assert.match(
-    opacity,
-    /shortcut: setting\.keyboardSelected \? "H\/L" : setting\.shortcut/,
-  );
+  assert.match(opacity, /shortcut: setting\.shortcut/);
   assert.match(slider, /signal valueRequested\(real value\)/);
   assert.match(slider, /signal interactionStarted\(real value\)/);
 });
@@ -639,14 +637,12 @@ test("slider mode retains Tab, J/K selection and H/L edits without duplicate leg
   );
   assert.match(controls, /root.adjustSlider\(-1\)/);
   assert.match(controls, /root.adjustSlider\(1\)/);
-  assert.match(
-    opacity,
-    /shortcut: setting.keyboardSelected \? "H\/L" : setting.shortcut/,
-  );
-  assert.match(
-    night,
-    /shortcut: setting.keyboardSelected \? "H\/L" : setting.toggleShortcut/,
-  );
+  assert.match(opacity, /shortcut: setting.shortcut/);
+  assert.match(night, /shortcut: setting.toggleShortcut/);
+  for (const tile of [opacity, night]) {
+    assert.match(tile, /id: adjustHint[\s\S]*?shortcut: "H\/L"/);
+    assert.match(tile, /hovered: tileHover.hovered/);
+  }
   assert.doesNotMatch(
     controls.slice(
       controls.indexOf('title: "Media"'),

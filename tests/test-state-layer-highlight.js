@@ -51,8 +51,10 @@ test("shared passive hover stays active across interactive child surfaces withou
     "WallpaperPanel.qml",
     "ConnectivityTile.qml",
     "QuickSettingChip.qml",
-    "OpacitySetting.qml",
-    "AdjustableSetting.qml",
   ])
     assert.match(qml(name), /\.pointerHovered/);
+  for (const name of ["OpacitySetting.qml", "AdjustableSetting.qml"]) {
+    assert.match(qml(name), /HoverHandler \{\s*id: tileHover\s*\}/);
+    assert.match(qml(name), /hovered: tileHover\.hovered/);
+  }
 });
