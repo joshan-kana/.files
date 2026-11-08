@@ -208,16 +208,20 @@ FocusScope {
         }
     ] : mixerOpen ? [
         {
-            key: "J/K · U/D · PGUP/PGDN",
-            action: "Select stream / half page"
+            key: "J/K · TAB/SHIFT+TAB · U/D · PGUP/PGDN",
+            action: "Select output, input or stream / half page"
         },
         {
             key: "H/L · ←/→",
-            action: "Adjust volume"
+            action: "Adjust selected level"
         },
         {
-            key: "M",
-            action: "Mute selected stream"
+            key: "M / ENTER",
+            action: "Mute selected output, input or stream"
+        },
+        {
+            key: "P / X",
+            action: "Choose audio device / mute microphone"
         },
         {
             key: "ESC",
@@ -267,8 +271,12 @@ FocusScope {
                 action: "Join / disconnect"
             },
             {
-                key: "W",
-                action: "Toggle Wi-Fi"
+                key: "W / P",
+                action: "Toggle Wi-Fi / saved connections"
+            },
+            {
+                key: "I / R",
+                action: "Details / refresh current view"
             },
             {
                 key: "A",
@@ -280,12 +288,20 @@ FocusScope {
             }
         ] : (themePanel.open ? [
                 {
-                    key: "J/K · U/D · PGUP/PGDN",
-                    action: "Select theme"
+                    key: "H/J/K/L · ARROWS",
+                    action: "Choose theme in the grid"
                 },
                 {
-                    key: "ENTER",
-                    action: "Apply theme"
+                    key: "U/D · PGUP/PGDN",
+                    action: "Move half a page"
+                },
+                {
+                    key: "/",
+                    action: "Search themes"
+                },
+                {
+                    key: "ENTER / X",
+                    action: "Apply selected theme / cancel applying"
                 },
                 {
                     key: "ESC",
@@ -319,20 +335,20 @@ FocusScope {
                         }
                     ] : [
                         {
-                            key: "J/K · ↑/↓",
-                            action: "Select output or microphone"
+                            key: root.selectedSlider.length > 0 ? "J/K · TAB/SHIFT+TAB" : "J/K · ↑/↓",
+                            action: root.selectedSlider.length > 0 ? "Select the next available adjustment" : "Select output or microphone"
                         },
                         {
                             key: "H/L · ←/→",
-                            action: "Adjust selected device level"
+                            action: root.selectedSlider.length > 0 ? "Adjust selected slider" : "Adjust selected device level"
                         },
                         {
                             key: "TAB / SHIFT+TAB",
-                            action: "Select display, window, glass or Night Light slider"
+                            action: "Cycle available brightness, window, glass and Night Light sliders"
                         },
                         {
-                            key: "H/L · ←/→ · ENTER · ESC",
-                            action: "H/L adjust, J/K select, Enter toggle, Esc leave slider"
+                            key: "ENTER / ESC",
+                            action: "Activate selected setting / exit parameter focus"
                         },
                         {
                             key: "U/D · PGUP/PGDN",

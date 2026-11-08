@@ -23,7 +23,7 @@ ShellSurface {
     Accessible.role: Accessible.Button
     Accessible.name: label + ", " + Math.round(opacityValue * 100) + "% opacity"
 
-    scale: toggleArea.pressed ? 0.94 : toggleArea.pointerHovered ? 1.018 : 1
+    scale: toggleArea.pressed ? 0.94 : tileHover.hovered ? 1.018 : 1
     Behavior on scale {
         Anim {
             motion: setting.motion
@@ -41,7 +41,7 @@ ShellSurface {
     luminousColor: roleAccent
     borderWidth: keyboardSelected ? theme.borderFocus : 0
     borderColor: keyboardSelected ? theme.blend(roleAccent, theme.textStrong, 0.55) : "transparent"
-    hovered: toggleArea.pointerHovered
+    hovered: tileHover.hovered
     fillColor: active ? theme.blend(theme.controlBase, roleAccent, theme.dark ? 0.12 : 0.08) : theme.expressiveSurfaceStrong
     Behavior on cornerRadius {
         Anim {
@@ -52,6 +52,12 @@ ShellSurface {
 
     // Only the upper content area toggles. The independent slider takes
     // pointer focus below and never turns the setting off while dragging.
+    // The whole compound surface has one hover boundary, including its slider.
+    // The pointer handler observes hover without intercepting child controls.
+    HoverHandler {
+        id: tileHover
+    }
+
     StateLayer {
         id: toggleArea
         anchors {
@@ -94,7 +100,7 @@ ShellSurface {
                     right: parent.right
                     verticalCenter: parent.verticalCenter
                 }
-                shortcut: setting.keyboardSelected ? "H/L" : setting.shortcut
+                shortcut: setting.shortcut
                 compact: true
                 runtime: setting.runtime
                 theme: setting.theme
@@ -128,19 +134,39 @@ ShellSurface {
             }
         }
 
-        ShellSlider {
+        Row {
             width: parent.width
             height: 19
-            theme: setting.theme
-            motion: setting.motion
-            from: 0.20
-            to: 1
-            value: setting.opacityValue
-            trackHeight: 6
-            handleSize: 16
-            accentColor: setting.roleAccent
-            onInteractionStarted: setting.sliderActivated()
-            onValueRequested: next => setting.opacityRequested(next)
+            spacing: setting.theme.spacing1
+
+            ShellSlider {
+                width: Math.max(1, parent.width - (adjustHint.visible ? adjustHint.implicitWidth + parent.spacing : 0))
+                height: parent.height
+                theme: setting.theme
+                motion: setting.motion
+                from: 0.20
+                to: 1
+                value: setting.opacityValue
+                trackHeight: 6
+                handleSize: 16
+                accentColor: setting.roleAccent
+                onInteractionStarted: setting.sliderActivated()
+                onValueRequested: next => setting.opacityRequested(next)
+            }
+
+            // Adjustment appears next to the parameter, never in place of
+            // the primary action's persistent shortcut in the tile header.
+            KeyHint {
+                id: adjustHint
+                visible: setting.keyboardSelected
+                anchors.verticalCenter: parent.verticalCenter
+                shortcut: "H/L"
+                compact: true
+                runtime: setting.runtime
+                theme: setting.theme
+                emphasized: true
+                emphasisColor: setting.roleAccent
+            }
         }
     }
 }
