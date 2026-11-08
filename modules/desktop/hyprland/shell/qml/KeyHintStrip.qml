@@ -10,7 +10,6 @@ Item {
     property var hints: []
     property bool compact: true
     property int groupSpacing: theme.spacing2
-    property int rowSpacing: theme.spacing2
 
     implicitHeight: hintFlow.height
 
@@ -29,6 +28,7 @@ Item {
                 label: modelData.label
                 compact: strip.compact
                 emphasized: modelData.emphasized === true
+                available: modelData.available !== false
                 runtime: strip.runtime
                 theme: strip.theme
             }
