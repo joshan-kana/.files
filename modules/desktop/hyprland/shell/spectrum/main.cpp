@@ -137,6 +137,27 @@ public:
         clientCount_.load(std::memory_order_relaxed) == 0 || channels_ == 0)
       return;
 
+    // Skip DSP only after the complete sample block and all filter state
+    // have become inaudible. The first nonzero sample takes the normal path.
+    constexpr float settledAmplitude = 1.0e-7F;
+    if (std::all_of(samples, samples + frames * channels_,
+                    [](float sample) { return sample == 0.0F; }) &&
+        peakEnvelope_ <= settledAmplitude &&
+        rmsPower_ <= settledAmplitude * settledAmplitude &&
+        std::all_of(envelopes_.begin(), envelopes_.end(),
+                    [](float value) { return value <= settledAmplitude; }) &&
+        std::all_of(filters_.begin(), filters_.end(), [](const Biquad &filter) {
+          return std::abs(filter.z1) <= settledAmplitude &&
+                 std::abs(filter.z2) <= settledAmplitude;
+        })) {
+      framesSincePublish_ += static_cast<uint32_t>(frames);
+      if (framesSincePublish_ >= publishEveryFrames_) {
+        framesSincePublish_ %= publishEveryFrames_;
+        publish();
+      }
+      return;
+    }
+
     float localPeak = peakEnvelope_;
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
