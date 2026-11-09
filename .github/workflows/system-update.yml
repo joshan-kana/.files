@@ -176,8 +176,8 @@ jobs:
             exit 1
           fi
           if [[ "$GITHUB_EVENT_NAME" == "push" || ("$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.validate_only }}" == "true") ]]; then
-            nix flake check --all-systems --no-build --no-update-lock-file
             nix flake check --no-update-lock-file
+            nix flake check --all-systems --no-build --no-update-lock-file
           fi
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
