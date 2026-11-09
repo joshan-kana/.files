@@ -105,26 +105,14 @@
   { "mods": ["Alt"], "key": "9", "action": "SwitchToTab", "position": 9 },
   { "mods": ["Alt"], "key": "0", "action": "SwitchToTab", "position": 10 },
   {
-    "mods": ["Control"],
+    "mods": ["Shift", "Control"],
     "key": "C",
     "action": "CopySelection",
     "mode": "Insert|Select"
   },
   {
-    "mods": ["Control"],
+    "mods": ["Shift", "Control"],
     "key": "C",
-    "action": "CancelSelection",
-    "mode": "Insert|Select"
-  },
-  {
-    "mods": ["Control"],
-    "key": "V",
-    "action": "PasteClipboard",
-    "mode": "Insert|Select"
-  },
-  {
-    "mods": ["Control"],
-    "key": "V",
     "action": "CancelSelection",
     "mode": "Insert|Select"
   },
