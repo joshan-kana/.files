@@ -224,6 +224,53 @@ let
         };
       };
 
+  composedHomeScope =
+    semantic.editScope
+      (semantic.editScope
+        (_: {
+          app = _: {
+            home =
+              {
+                config,
+                lib,
+                pkgs,
+                ...
+              }:
+              {
+                options.semanticHomeEditValue = lib.mkOption {
+                  type = lib.types.str;
+                  default = "inherited";
+                };
+                config.home = {
+                  packages = [ pkgs.coreutils ];
+                  sessionVariables = {
+                    SEMANTIC_HOME_EDIT_BASE = config.semanticHomeEditValue;
+                    SEMANTIC_HOME_EDIT_OVERRIDE = lib.mkDefault "base";
+                  };
+                };
+              };
+          };
+        })
+        {
+          app = _: {
+            home = _: {
+              home.sessionVariables = {
+                SEMANTIC_HOME_EDIT_FIRST = "first";
+                SEMANTIC_HOME_EDIT_OVERRIDE = "first";
+              };
+            };
+          };
+        }
+      )
+      {
+        app = _: {
+          home = { pkgs, ... }: {
+            home.packages = [ pkgs.hello ];
+            home.sessionVariables.SEMANTIC_HOME_EDIT_SECOND = "second";
+          };
+        };
+      };
+
   invalidEditEvaluation = lib.evalModules {
     modules = [
       ({ lib, ... }: {
@@ -311,6 +358,7 @@ let
         environment.variables.SEMANTIC_FORCE = lib.mkForce "outside";
         environment.systemPackages = [ pkgs.coreutils ];
       })
+      (semantic.systemModule "composed-home" composedHomeScope)
       (semantic.systemModule "edited" editedScope)
       (semantic.rootModule (_: {
         widgets = _: {
@@ -734,6 +782,12 @@ assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_NESTED_ORIGINAL == "app";
 assert cfg.environment.variables.SEMANTIC_SCOPE_EDIT_NESTED == "theme";
 assert !(cfg.environment.variables ? SEMANTIC_SCOPE_EDIT_DISABLED_TARGET);
 assert !(cfg.environment.variables ? SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE);
+assert hm.home.sessionVariables.SEMANTIC_HOME_EDIT_BASE == "inherited";
+assert hm.home.sessionVariables.SEMANTIC_HOME_EDIT_FIRST == "first";
+assert hm.home.sessionVariables.SEMANTIC_HOME_EDIT_SECOND == "second";
+assert hm.home.sessionVariables.SEMANTIC_HOME_EDIT_OVERRIDE == "first";
+assert builtins.elem "coreutils" (map lib.getName hm.home.packages);
+assert builtins.elem "hello" (map lib.getName hm.home.packages);
 assert hm.home.sessionVariables.SEMANTIC_SCOPE_EDIT_ORIGINAL == "app";
 assert hm.home.sessionVariables.SEMANTIC_SCOPE_EDIT_HOME == "theme";
 assert !(hm.home.sessionVariables ? SEMANTIC_SCOPE_EDIT_DISABLED_SOURCE);

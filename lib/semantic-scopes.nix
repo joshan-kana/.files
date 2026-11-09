@@ -341,16 +341,25 @@ let
               childArgs:
               let
                 previous = callScope child childArgs;
-              in
-              lib.recursiveUpdate previous (
-                callScope edit (
+
+                changes = callScope edit (
                   childArgs
                   // {
                     inherited = previous;
                     inherit lib;
                   }
-                )
-              )
+                );
+              in
+              lib.recursiveUpdate previous changes
+              # Merge Home Manager modules as modules, rather than replacing the inherited function.
+              // lib.optionalAttrs (hasHomeBranch previous && hasHomeBranch changes) {
+                home = _: {
+                  imports = [
+                    previous.home
+                    changes.home
+                  ];
+                };
+              }
             )
             (
               (lib.functionArgs child)
