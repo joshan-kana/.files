@@ -1,4 +1,25 @@
 {
+  nixpkgs.overlays = [
+    (_final: prev: {
+      contour = prev.contour.overrideAttrs (old: {
+        version = "0.8.0.9335";
+        src = prev.fetchFromGitHub {
+          owner = "contour-terminal";
+          repo = "contour";
+          tag = "v0.8.0.9335";
+          hash = "sha256-WIBAIzHskEoxijHIIGm+NQ0jfvbnwyES1tiTfnetTxs=";
+        };
+        patches = (old.patches or [ ]) ++ [
+          ./hide-active-pane-border.patch
+          ./preserve-highlighted-ligatures.patch
+        ];
+        passthru = (old.passthru or { }) // {
+          autoUpdate = false;
+        };
+      });
+    })
+  ];
+
   home-manager.sharedModules = [
     (
       {
