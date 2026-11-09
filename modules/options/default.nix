@@ -177,7 +177,7 @@ in
 
     defaults.terminal = mkOption {
       type = types.str;
-      default = "contour";
+      default = "kitty";
       description = "Default terminal executable used by desktop integrations.";
     };
 
