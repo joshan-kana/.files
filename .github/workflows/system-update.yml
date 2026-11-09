@@ -114,13 +114,18 @@ jobs:
             git switch -c "$UPDATE_BRANCH" origin/main
           fi
 
-          nix run .#system-update -- --all
+          update_failed=false
+          nix run .#system-update -- --all || update_failed=true
           git add -u
           if ! git diff --cached --quiet; then
             git commit -m "update system"
           fi
 
           if git diff --quiet origin/main...HEAD && [[ -z "$pr_number" ]]; then
+            if [[ "$update_failed" == true ]]; then
+              echo "::error::System update failed without producing changes." >&2
+              exit 1
+            fi
             echo "No flake updates are available."
             exit 0
           fi
@@ -136,6 +141,7 @@ jobs:
               --body "Automated Nix and container image updates."
           fi
 
+          echo "update_failed=$update_failed" >> "$GITHUB_OUTPUT"
           echo "validate=true" >> "$GITHUB_OUTPUT"
 
       - name: Check flake and start native builds
@@ -164,6 +170,11 @@ jobs:
 
           report_status pending "Validating system update"
           trap 'report_status failure "Flake validation or build dispatch failed"' ERR
+          if [[ "${{ steps.prepare.outputs.update_failed }}" == true ]]; then
+            report_status failure "Update failed; inspect the saved pull request"
+            echo "::error::System update failed; changes were preserved on $UPDATE_BRANCH." >&2
+            exit 1
+          fi
           if [[ "$GITHUB_EVENT_NAME" == "push" || ("$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.validate_only }}" == "true") ]]; then
             nix flake check --all-systems --no-build --no-update-lock-file
             nix flake check --no-update-lock-file
