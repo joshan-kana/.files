@@ -165,7 +165,8 @@ jobs:
           report_status pending "Validating system update"
           trap 'report_status failure "Flake validation or build dispatch failed"' ERR
           if [[ "$GITHUB_EVENT_NAME" == "push" || ("$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.validate_only }}" == "true") ]]; then
-            nix flake check
+            nix flake check --all-systems --no-build --no-update-lock-file
+            nix flake check --no-update-lock-file
           fi
           gh workflow run nix-build-cache.yml \
             --repo "$GITHUB_REPOSITORY" \
