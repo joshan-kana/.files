@@ -806,6 +806,17 @@
             text = builtins.readFile ./scripts/system-update.sh;
           };
 
+          systemDiff = pkgs.writeShellApplication {
+            name = "system-diff";
+            runtimeInputs = [
+              pkgs.git
+              pkgs.python3
+            ];
+            text = ''
+              exec python3 ${./scripts/system-diff.py} "$@"
+            '';
+          };
+
           updatePlasma =
             if plasmaRc2nix == null then
               null
@@ -936,6 +947,11 @@
             type = "app";
             program = lib.getExe systemUpdate;
             meta.description = "Update inputs, packages, schemas and containers, then check the flake";
+          };
+          system-diff = {
+            type = "app";
+            program = lib.getExe systemDiff;
+            meta.description = "Compare evaluated system and Home Manager packages";
           };
           update-git-attributes = {
             type = "app";

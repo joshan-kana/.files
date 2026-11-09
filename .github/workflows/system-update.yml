@@ -138,11 +138,30 @@ jobs:
               --base main \
               --head "$UPDATE_BRANCH" \
               --title "chore: update system" \
-              --body "Automated Nix and container image updates."
+              --body "Evaluating package changes."
           fi
 
           echo "update_failed=$update_failed" >> "$GITHUB_OUTPUT"
           echo "validate=true" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh update PR package report
+        if: >-
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.validate_only) ||
+          steps.prepare.outputs.validate == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          pr_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$UPDATE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          [[ -n "$pr_number" ]] || exit 0
+
+          report="$(mktemp)"
+          trap 'rm -f "$report"' EXIT
+          if ! nix run .#system-diff -- --base origin/main > "$report"; then
+            printf 'Package comparison could not be evaluated. Inspect the workflow validation logs.\n' > "$report"
+          fi
+          gh pr edit "$pr_number" --repo "$GITHUB_REPOSITORY" --body-file "$report"
 
       - name: Check flake and start native builds
         if: >-
