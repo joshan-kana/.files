@@ -13,7 +13,7 @@ in
   environment.sessionVariables.KWIN_FORCE_SW_CURSOR = "1";
 
   home = _: {
-    xdg.dataFile."applications/dotfiles-terminal.desktop".text = ''
+    xdg.dataFile."applications/default-terminal.desktop".text = ''
       [Desktop Entry]
       Type=Application
       Name=Default Terminal
@@ -34,7 +34,7 @@ in
       enable = true;
       configFile.kdeglobals.General = {
         TerminalApplication = lib.mkForce terminal;
-        TerminalService = lib.mkForce "dotfiles-terminal.desktop";
+        TerminalService = lib.mkForce "default-terminal.desktop";
       };
     };
   };
