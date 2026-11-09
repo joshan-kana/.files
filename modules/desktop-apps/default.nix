@@ -139,6 +139,7 @@ in
             profiles.main = {
               initial_working_directory = config.home.homeDirectory;
               show_title_bar = false;
+              size_indicator_on_resize = false;
               wm_class = "contour";
               cursor = {
                 shape = "block";
