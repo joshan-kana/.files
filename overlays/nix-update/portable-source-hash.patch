@@ -1,0 +1,35 @@
+--- a/nix_update/dependency_hashes.py
++++ b/nix_update/dependency_hashes.py
+@@ -3,0 +4 @@
++import json
+@@ -60,0 +62,30 @@
++
++    if attr == "src" and opts.system:
++        host = run(
++            ["nix", "eval", "--raw", "--impure", "--expr", "builtins.currentSystem"]
++        ).stdout.strip()
++        if host != opts.system:
++            source = json.loads(
++                run(
++                    [
++                        "nix-instantiate",
++                        "--eval",
++                        "--json",
++                        "--strict",
++                        "--expr",
++                        f'let src = {expr}; in {{ urls = src.urls or []; mode = src.outputHashMode or ""; hash = src.outputHash or ""; algo = src.outputHashAlgo or "sha256"; }}',
++                        *opts.extra_flags,
++                    ],
++                ).stdout,
++            )
++            if source["urls"] and source["mode"] in {"flat", "recursive"}:
++                args = [
++                    "nix", "store", "prefetch-file", "--json", "--hash-type",
++                    source["hash"].split("-", 1)[0] if "-" in source["hash"] else source["algo"],
++                ]
++                if source["mode"] == "recursive":
++                    args.append("--unpack")
++                for url in source["urls"]:
++                    result = run([*args, url], check=False)
++                    if result.returncode == 0:
++                        return json.loads(result.stdout)["hash"]

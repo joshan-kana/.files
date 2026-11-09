@@ -13,6 +13,7 @@ _: {
     ./gtksourceview
     ./nh
     ./nixd
+    ./nix-update
     ./ollama
     ./polkit
     ./nixos-options-doc
