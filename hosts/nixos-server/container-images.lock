@@ -4,7 +4,7 @@
     "source": "ghcr.io/dicklesworthstone/mcp_agent_mail_rust:latest"
   },
   "n8n": {
-    "digest": "sha256:8602f5dfacbe2c931eeafd010de0e68182310e9f309921e780ab69182e92b3ae",
+    "digest": "sha256:e97b4f576cd21de5c7676858f7006126581faeca8046d9d23fda0e06468008d4",
     "source": "docker.io/n8nio/n8n:latest"
   },
   "onedev": {
