@@ -212,7 +212,10 @@ in
           ...
         }:
         lib.mkMerge [
-          { home.packages = [ pkgs.jellyfin-mpv-shim ]; }
+          {
+            home.packages = [ pkgs.jellyfin-mpv-shim ];
+            home.shellAliases.jm = "jellyfin-mpv-shim";
+          }
           (lib.optionalAttrs isLinux {
             services.jellyfin-mpv-shim = {
               enable = true;
