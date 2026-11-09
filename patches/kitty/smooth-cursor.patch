@@ -1,0 +1,84 @@
+--- a/kitty/shaders.c
++++ b/kitty/shaders.c
+@@ -843,7 +843,8 @@
+     const CursorRenderInfo *cursor,
+     OSWindow *os_window,
+     float inactive_text_alpha,
+-    float bg_alpha) {
++    float bg_alpha,
++    bool animate_main_cursor) {
+     struct GPUCellRenderData {
+         // Colors that are constant for the whole draw, pre-converted to linear
+         // space so the vertex shader does not do a gamma LUT lookup for them
+@@ -992,7 +993,7 @@
+         }
+         // store last rendered cursor color for trail rendering
+         screen->last_rendered.cursor_bg = main_cursor_bg;
+-        if (!cursor->is_visible) {
++        if (!cursor->is_visible || animate_main_cursor) {
+             // Move the main cursor off screen so that only it is hidden, the
+             // extra cursors keep their shape and colors.
+             rd->cursor_x1 = screen->columns + 1;
+@@ -2147,8 +2148,13 @@
+                                                                                                                                     : inactive_text_alpha);
+     float bg_alpha = effective_os_window_alpha(os_window);
+ 
++    // While moving, let the interpolated cursor replace the native one at the destination.
++    const CursorRenderInfo *cri = &screen->cursor_render_info;
++    const bool animate_main_cursor = window && is_active_window && !is_tab_bar && OPT(cursor_trail) && os_window->num_tabs &&
++                                     os_window->tabs[os_window->active_tab].cursor_trail.needs_render && cri->is_focused &&
++                                     cri->is_visible && cri->cursor_opacity > 0.f && cri->shape != CURSOR_HOLLOW;
+     color_type default_bg = cell_update_uniform_block(
+-        srd->vao_idx, screen, uniform_buffer, color_table_buffer, &screen->cursor_render_info, os_window, current_inactive_text_alpha, bg_alpha);
++        srd->vao_idx, screen, uniform_buffer, color_table_buffer, cri, os_window, current_inactive_text_alpha, bg_alpha, animate_main_cursor);
+     set_cell_uniforms(screen->reload_all_gpu_data);
+     WindowLogoRenderData *wl;
+     if (window && (wl = &window->window_logo) && wl->id && (wl->instance = find_window_logo(global_state.all_window_logos, wl->id)) &&
+@@ -2298,13 +2304,13 @@
+ // Cursor Trail {{{
+ void
+ draw_cursor_trail(CursorTrail *trail, Window *active_window) {
++    if (!active_window || !active_window->render_data.screen) return;
++    const CursorRenderInfo *cursor = &active_window->render_data.screen->cursor_render_info;
++    if (!cursor->is_focused || !cursor->is_visible || cursor->cursor_opacity <= 0.f || cursor->shape == CURSOR_HOLLOW) return;
+     bind_program(TRAIL_PROGRAM);
+ 
+     glUniform4fv(program_uniform_location(TRAIL_PROGRAM, "x_coords"), 1, trail->corner_x);
+     glUniform4fv(program_uniform_location(TRAIL_PROGRAM, "y_coords"), 1, trail->corner_y);
+-
+-    glUniform2fv(program_uniform_location(TRAIL_PROGRAM, "cursor_edge_x"), 1, trail->cursor_edge_x);
+-    glUniform2fv(program_uniform_location(TRAIL_PROGRAM, "cursor_edge_y"), 1, trail->cursor_edge_y);
+ 
+     color_type trail_color = OPT(cursor_trail_color);
+     if (trail_color == 0) { // 0 means "none" was specified
+@@ -2312,7 +2318,7 @@
+     }
+     color_vec3(program_uniform_location(TRAIL_PROGRAM, "trail_color"), trail_color);
+ 
+-    glUniform1f(program_uniform_location(TRAIL_PROGRAM, "trail_opacity"), trail->opacity);
++    glUniform1f(program_uniform_location(TRAIL_PROGRAM, "trail_opacity"), cursor->cursor_opacity);
+ 
+     draw_quad(true, 0);
+     unbind_program();
+--- a/kitty/shaders/trail.slang
++++ b/kitty/shaders/trail.slang
+@@ -22,16 +22,8 @@
+ // Main Fragment Shader Entry Point
+ [shader("fragment")]
+ float4
+-fragment_main(float2 frag_pos: TEXCOORD, uniform float2 cursor_edge_x, uniform float2 cursor_edge_y, uniform float3 trail_color, uniform float trail_opacity)
++fragment_main(float2 frag_pos: TEXCOORD, uniform float3 trail_color, uniform float trail_opacity)
+     : SV_Target {
+-    float opacity = trail_opacity;
+-    // Evaluate if the fragment falls inside the bounding box of the cursor
+-    float in_x = step(cursor_edge_x[0], frag_pos.x) * step(frag_pos.x, cursor_edge_x[1]);
+-    float in_y = step(cursor_edge_y[1], frag_pos.y) * step(frag_pos.y, cursor_edge_y[0]);
+-
+-    // Mask out opacity inside the active cursor area
+-    opacity *= 1.0f - (in_x * in_y);
+-
+-    // Output color with premultiplied alpha formatting
+-    return float4(trail_color * opacity, opacity);
++    // Draw the moving cursor itself, not the stretched trail between positions.
++    return float4(trail_color * trail_opacity, trail_opacity);
+ }

@@ -5,7 +5,7 @@ _: {
     ./bottles
     ./brave
     ./comin
-    ./contour
+    ./kitty
     ./configarr
     ./cosmic-noir-icons
     ./gh-dash
