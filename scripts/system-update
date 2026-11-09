@@ -154,9 +154,9 @@ case "$#:${1-}" in
         printf 'all\tUpdate inputs, packages, containers and schemas\n'
         printf 'all-inputs\tUpdate all inputs\n'
         printf 'all-containers\tUpdate all containers\n'
+        printf 'all-packages\tUpdate auto-updating overlay packages\n'
         printf 'all-schemas\tRefresh generated schemas\n'
-        printf 'all-packages\tUpdate ordinary overlay packages\n'
-        nix eval --json .#lib.routinePackageUpdates \
+        nix eval --json .#lib.updateablePackages \
           | jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
         nix flake metadata --json --no-update-lock-file \
           | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
