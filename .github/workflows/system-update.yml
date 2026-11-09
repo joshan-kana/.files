@@ -138,7 +138,7 @@ jobs:
               --base main \
               --head "$UPDATE_BRANCH" \
               --title "chore: update system" \
-              --body "Evaluating package changes."
+              --body ""
           fi
 
           echo "update_failed=$update_failed" >> "$GITHUB_OUTPUT"
