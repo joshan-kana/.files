@@ -13,10 +13,10 @@ update_package() {
   fi
 
   # These do not change between package updates in the same invocation.
-  if [[ -z "$native" ]]; then
+  if [[ -z $native ]]; then
     native="$(nix eval --raw --impure --expr builtins.currentSystem)"
   fi
-  if [[ -z "$package_metadata" ]]; then
+  if [[ -z $package_metadata ]]; then
     # Read update-group metadata alongside the existing package inventory.
     # shellcheck disable=SC2016 # Expressions are evaluated by Nix, not Bash.
     package_metadata="$(nix eval --impure --json --expr '
@@ -39,7 +39,7 @@ update_package() {
     [. | to_entries[] | select(.value | index($name)) | .key]
     | if index($native) != null then $native else .[0] // empty end
   ' <<<"$package_systems")}"
-  if [[ -z "$system" ]]; then
+  if [[ -z $system ]]; then
     printf 'Unknown manually updated package: %s\n' "$1" >&2
     exit 2
   fi
@@ -49,7 +49,7 @@ update_package() {
     exit 2
   fi
 
-  if [[ -z "$nixpkgs_path" ]]; then
+  if [[ -z $nixpkgs_path ]]; then
     nixpkgs_path="$(nix eval --raw --impure --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
     export NIX_PATH="nixpkgs=$nixpkgs_path${NIX_PATH:+:$NIX_PATH}"
   fi
@@ -64,15 +64,15 @@ update_package() {
   fi
   url="$(nix eval --raw ".#packages.$system.$1.passthru.updateUrl" 2>/dev/null || true)"
   url_args=()
-  [[ -z "$url" ]] || url_args=(--url "$url")
+  [[ -z $url ]] || url_args=(--url "$url")
   release_args=()
   if [[ "$(nix eval --json ".#packages.$system.$1.passthru.updateGithubReleases" 2>/dev/null || true)" == true ]]; then
     release_args=(--use-github-releases)
   fi
   regex="$(nix eval --raw ".#packages.$system.$1.passthru.updateRegex" 2>/dev/null || true)"
-  [[ -z "$regex" ]] || release_args+=(--version-regex "$regex")
+  [[ -z $regex ]] || release_args+=(--version-regex "$regex")
   if recipe="$(nix eval --json ".#packages.$system.$1.passthru.updateScript" 2>/dev/null)"; then
-    if [[ "$system" == "$native" ]]; then
+    if [[ $system == "$native" ]]; then
       nix-update --flake --system "$system" --use-update-script "$1"
     else
       mapfile -t command < <(jq -r '.[]' <<<"$recipe")
@@ -92,19 +92,19 @@ update_package() {
   else
     filename="$(nix eval --raw ".#packages.$system.$1.passthru.updateFilename" 2>/dev/null || true)"
     filename_args=()
-    [[ -z "$filename" ]] || filename_args=(--override-filename "$filename")
+    [[ -z $filename ]] || filename_args=(--override-filename "$filename")
     nix-update --flake --system "$system" "${filename_args[@]}" "${url_args[@]}" "${release_args[@]}" "${source_args[@]}" --version "$mode" "$1"
   fi
   source_after="$(nix eval --raw ".#packages.$system.$1.src.outPath")"
   group="$(jq -r --arg system "$system" --arg name "$1" '.[$system][$name].group // empty' <<<"$package_metadata")"
-  if [[ -n "$group" && "$source_before" != "$source_after" ]]; then
+  if [[ -n $group && $source_before != "$source_after" ]]; then
     # One upstream release can publish different archives and hashes per platform.
     while IFS=$'\t' read -r sibling_system sibling; do
       # Update scripts may change a shared version without rehashing this platform.
-      [[ "$sibling_system/$sibling" == "$system/$1" && -z "${recipe:-}" ]] && continue
+      [[ "$sibling_system/$sibling" == "$system/$1" && -z ${recipe:-} ]] && continue
       sibling_filename="$(nix eval --raw ".#packages.$sibling_system.$sibling.passthru.updateFilename" 2>/dev/null || true)"
       sibling_args=()
-      [[ -z "$sibling_filename" ]] || sibling_args=(--override-filename "$sibling_filename")
+      [[ -z $sibling_filename ]] || sibling_args=(--override-filename "$sibling_filename")
       nix-update --flake --system "$sibling_system" "${sibling_args[@]}" --version skip "$sibling"
     done < <(
       jq -r --arg group "$group" '
@@ -114,12 +114,12 @@ update_package() {
     )
   fi
   diff_after="$(git diff --binary -- overlays)"
-  if [[ "$source_before" == "$source_after" && "$mode" != skip && "$diff_before" != "$diff_after" ]]; then
+  if [[ $source_before == "$source_after" && $mode != skip && $diff_before != "$diff_after" ]]; then
     echo "$1 changed without updating its pinned source; check the diff before accepting the update" >&2
     exit 1
   fi
-  if [[ "$source_before" != "$source_after" || "$diff_before" != "$diff_after" ]]; then
-    if [[ "$system" == "$native" ]]; then
+  if [[ $source_before != "$source_after" || $diff_before != "$diff_after" ]]; then
+    if [[ $system == "$native" ]]; then
       nix build --no-link ".#packages.$system.$1"
     else
       echo "Updated $1 for $system; native build validation remains required on that platform"
@@ -131,42 +131,45 @@ update_package() {
 cd "$(git rev-parse --show-toplevel)"
 
 case "$#:${1-}" in
-  1:--help)
-    echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]'
-    echo 'Without options: interactively choose flake inputs, packages, OCI images or schemas.'
-    echo '--all: update routine packages, inputs, OCI images and schemas (manual pins excluded).'
-    exit 0
-    ;;
-  2:--package)
-    update_package "$2"
-    selections=""
-    ;;
-  4:--package)
-    [[ "$3" == "--system" ]] || exit 2
-    update_package "$2" "$4"
-    selections=""
-    ;;
-  0:)
-    selections=$(
-      set +o pipefail
-      {
-        printf 'all\tUpdate inputs, packages, containers and schemas\n'
-        printf 'all-inputs\tUpdate all inputs\n'
-        printf 'all-containers\tUpdate all containers\n'
-        printf 'all-packages\tUpdate auto-updating overlay packages\n'
-        printf 'all-schemas\tRefresh generated schemas\n'
-        nix eval --json .#lib.updateablePackages \
-          | jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
-        nix flake metadata --json --no-update-lock-file \
-          | jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
-        update-container-lock --list | jq -Rr '["container", .] | @tsv'
-        update-schemas --list | jq -Rr '["schema", .] | @tsv'
-      } | fzf --multi --no-sort --layout=reverse --border --height=85% --delimiter=$'\t' --with-nth=2 \
-        --header='Tab: select multiple • Enter: update'
-    ) || exit 0
-    ;;
-  1:--all) selections=$'all\t*' ;;
-  *) echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]' >&2; exit 1 ;;
+1:--help)
+  echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]'
+  echo 'Without options: interactively choose flake inputs, packages, OCI images or schemas.'
+  echo '--all: update routine packages, inputs, OCI images and schemas (manual pins excluded).'
+  exit 0
+  ;;
+2:--package)
+  update_package "$2"
+  selections=""
+  ;;
+4:--package)
+  [[ $3 == "--system" ]] || exit 2
+  update_package "$2" "$4"
+  selections=""
+  ;;
+0:)
+  selections=$(
+    set +o pipefail
+    {
+      printf 'all\tUpdate inputs, packages, containers and schemas\n'
+      printf 'all-inputs\tUpdate all inputs\n'
+      printf 'all-containers\tUpdate all containers\n'
+      printf 'all-packages\tUpdate auto-updating overlay packages\n'
+      printf 'all-schemas\tRefresh generated schemas\n'
+      nix eval --json .#lib.updateablePackages |
+        jq -r 'to_entries[] | .key as $system | .value[] | ["package", ($system + "/" + .)] | @tsv'
+      nix flake metadata --json --no-update-lock-file |
+        jq -r '.locks.nodes[.locks.root].inputs | keys[] | ["input", .] | @tsv'
+      update-container-lock --list | jq -Rr '["container", .] | @tsv'
+      update-schemas --list | jq -Rr '["schema", .] | @tsv'
+    } | fzf --multi --no-sort --layout=reverse --border --height=85% --delimiter=$'\t' --with-nth=2 \
+      --header='Tab: select multiple • Enter: update'
+  ) || exit 0
+  ;;
+1:--all) selections=$'all\t*' ;;
+*)
+  echo 'Usage: system-update [--all|--package PACKAGE [--system SYSTEM]]' >&2
+  exit 1
+  ;;
 esac
 
 inputs=()
@@ -175,15 +178,24 @@ schemas=()
 packages=()
 while IFS=$'\t' read -r kind name; do
   case "$kind" in
-    all) inputs=("*"); containers=("*"); schemas=("*"); packages=("*"); break ;;
-    all-inputs) inputs=("*"); schemas=("*") ;;
-    all-containers) containers=("*") ;;
-    all-schemas) schemas=("*") ;;
-    all-packages) packages=("*") ;;
-    package) packages+=("$name") ;;
-    input) [[ ${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
-    container) [[ ${containers[0]-} == "*" ]] || containers+=("$name") ;;
-    schema) [[ ${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
+  all)
+    inputs=("*")
+    containers=("*")
+    schemas=("*")
+    packages=("*")
+    break
+    ;;
+  all-inputs)
+    inputs=("*")
+    schemas=("*")
+    ;;
+  all-containers) containers=("*") ;;
+  all-schemas) schemas=("*") ;;
+  all-packages) packages=("*") ;;
+  package) packages+=("$name") ;;
+  input) [[ ${inputs[0]-} == "*" ]] || inputs+=("$name") ;;
+  container) [[ ${containers[0]-} == "*" ]] || containers+=("$name") ;;
+  schema) [[ ${schemas[0]-} == "*" ]] || schemas+=("$name") ;;
   esac
 done <<<"$selections"
 

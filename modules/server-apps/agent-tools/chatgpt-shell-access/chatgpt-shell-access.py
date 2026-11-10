@@ -1,3 +1,5 @@
+"""Provide bounded shell execution on explicitly configured hosts."""
+
 import asyncio
 import json
 import os
@@ -5,6 +7,7 @@ import shlex
 import signal
 import time
 import uuid
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Literal
@@ -23,10 +26,12 @@ CANCEL_GRACE_SECONDS = 2.0
 
 @dataclass(frozen=True)
 class RemoteTarget:
+    """Connection and agent-forwarding settings for a remote host."""
+
     ssh_target: str
     credential: str
     shell: str
-    forwardAgent: bool
+    forwardAgent: bool  # noqa: N815 - matches the serialized remote target schema
 
 
 CREDENTIALS = os.environ["CREDENTIALS_DIRECTORY"]
@@ -48,7 +53,7 @@ if not LOCAL_HOST or LOCAL_HOST in REMOTE_TARGETS:
     raise RuntimeError("local host must be nonempty and distinct from remote targets")
 
 # The runtime Literal is also the MCP tool schema: only Nix-configured hosts are accepted.
-Host = Literal[tuple([LOCAL_HOST, *REMOTE_TARGETS])]
+Host = Literal[LOCAL_HOST, *REMOTE_TARGETS]
 
 _ALLOWED_ENV = {
     "GH_TOKEN",
@@ -75,10 +80,13 @@ mcp = MCPServer("chatgpt-shell")
 
 @dataclass
 class OutputBuffer:
+    """Retain bounded command output for later retrieval."""
+
     data: bytearray = field(default_factory=bytearray)
     omitted: int = 0
 
     def append(self, chunk: bytes) -> None:
+        """Append output without exceeding the retained byte limit."""
         combined = self.data + chunk
         if self.omitted or len(combined) > MAX_OUTPUT_BYTES:
             self.omitted += max(0, len(combined) - MAX_OUTPUT_BYTES)
@@ -87,6 +95,7 @@ class OutputBuffer:
             self.data[:] = combined
 
     def drain(self) -> tuple[str, bool, int]:
+        """Return buffered output and clear the stored chunks."""
         raw = bytes(self.data)
         omitted = self.omitted
         self.data.clear()
@@ -100,6 +109,8 @@ class OutputBuffer:
 
 @dataclass
 class Job:
+    """Track the lifecycle and result of a shell command."""
+
     request_id: str
     host: Host
     output: OutputBuffer = field(default_factory=OutputBuffer)
@@ -189,10 +200,8 @@ async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -
         pass
     finally:
         process.stdin.close()
-        try:
+        with suppress(BrokenPipeError, ConnectionResetError):
             await process.stdin.wait_closed()
-        except (BrokenPipeError, ConnectionResetError):
-            pass
 
 
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
@@ -257,10 +266,8 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
 
 async def _result(job: Job, wait_seconds: float) -> dict[str, object]:
     if job.task is not None and not job.task.done() and wait_seconds:
-        try:
+        with suppress(TimeoutError):
             await asyncio.wait_for(asyncio.shield(job.task), timeout=wait_seconds)
-        except TimeoutError:
-            pass
     return _payload(job)
 
 
@@ -391,10 +398,8 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
             await _signal_target(job, "KILL")
 
     if job.task is not None and not job.task.done() and job.process is not None:
-        try:
+        with suppress(ProcessLookupError, PermissionError):
             os.killpg(job.process.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
         await job.task
 
     return _payload(job)

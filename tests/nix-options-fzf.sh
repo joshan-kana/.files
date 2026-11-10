@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo="$(git rev-parse --show-toplevel)"
-nf="$repo/scripts/nix-options-fzf"
+nf="$repo/scripts/nix-options-fzf.sh"
 host="${1:-nixos-orbstack}"
 hm_scope="home-manager:joshan"
 test_cache="$(mktemp -d "${TMPDIR:-/tmp}/nix-options-fzf-test.XXXXXX")"

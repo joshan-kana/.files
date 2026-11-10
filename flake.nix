@@ -179,10 +179,15 @@
           programs = {
             deadnix.enable = true;
             csharpier.enable = true;
+            biome = {
+              enable = true;
+              formatCommand = "lint";
+            };
             nixfmt.enable = true;
             prettier.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
+            taplo.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -190,19 +195,7 @@
             };
             rumdl-check.enable = true;
             rumdl-format.enable = true;
-            shellcheck = {
-              enable = true;
-              includes = [
-                ".envrc"
-                "scripts/**"
-                "tests/**/*.sh"
-              ];
-              excludes = [
-                "*.md"
-                "*.nix"
-                "*.py"
-              ];
-            };
+            shellcheck.enable = true;
             statix = {
               enable = true;
               disabled-lints = [ "repeated_keys" ];
@@ -210,13 +203,17 @@
             typos = {
               enable = true;
               configFile = toString typosConfig;
-              includes = [ "*.md" ];
+              includes = [
+                "*.md"
+                "*.inc"
+              ];
             };
             yamllint = {
               enable = true;
               settings = {
                 extends = "default";
                 rules = {
+                  comments.min-spaces-from-content = 1;
                   document-start = "disable";
                   line-length = "disable";
                   truthy.check-keys = false;
@@ -235,15 +232,55 @@
               ruff-check.options = [
                 "--isolated"
                 "--select"
-                "E4,E7,E9,F,I"
+                "E,F,I,B,C4,D,N,RET,RUF,SIM,UP,W,PERF,PLE,PIE,RSE,FURB"
+                "--ignore"
+                "E501"
+                "--config"
+                ''lint.pydocstyle.convention = "pep257"''
               ];
-              ruff-format.priority = 1;
+              ruff-format = {
+                priority = 1;
+                options = lib.mkAfter [
+                  "--config"
+                  "format.docstring-code-format = true"
+                ];
+              };
 
-              prettier.excludes = [ "*.md" ];
-              rumdl-format.options = markdownOptions;
+              prettier = {
+                includes = lib.mkAfter [
+                  "*.jsonc"
+                  "*.code-snippets"
+                  "*.code-workspace"
+                ];
+                excludes = [ "*.md" ];
+              };
+              rumdl-format = {
+                options = markdownOptions;
+                includes = lib.mkAfter [ "*.inc" ];
+              };
               rumdl-check = {
-                options = lib.mkForce ([ "check" ] ++ markdownOptions);
+                options = lib.mkForce (
+                  [
+                    "check"
+                    "--fix"
+                  ]
+                  ++ markdownOptions
+                );
                 priority = 2;
+              };
+              rumdl-fragment-check = {
+                command = lib.getExe pkgs.rumdl;
+                options = [
+                  "check"
+                  "--fix"
+                  "--disable"
+                  "MD013,MD057,MD041"
+                  "--extend-enable"
+                  "MD060"
+                  "--config"
+                  ''MD060.style = "aligned"''
+                ];
+                includes = [ "*.inc" ];
               };
               typos.priority = 1;
               lua-lint = {
@@ -257,6 +294,47 @@
                   ".github/workflows/*.yml"
                   ".github/workflows/*.yaml"
                 ];
+              };
+              yamllint.options = lib.mkAfter [ "--strict" ];
+              editorconfig-check = {
+                command = lib.getExe pkgs.editorconfig-checker;
+                options = [ "-disable-indent-size" ];
+                includes = [ "*" ];
+                excludes = [
+                  "*.lock"
+                  "*.patch"
+                  "*.png"
+                  "*.yuck"
+                ];
+              };
+              toml-lint = {
+                command = lib.getExe pkgs.taplo;
+                options = [ "lint" ];
+                includes = [ "*.toml" ];
+              };
+              nix-query-lint = {
+                command = toString (
+                  pkgs.writeShellScript "lint-nix-queries" ''
+                    exec ${lib.getExe pkgs.neovim} -l ${pkgs.writeText "lint-nix-queries.lua" ''
+                      vim.treesitter.language.add("nix", {
+                        path = "${pkgs.tree-sitter-grammars.tree-sitter-nix}/parser",
+                      })
+                      for _, path in ipairs(arg) do
+                        local ok, err = pcall(function()
+                          local file = assert(io.open(path, "r"))
+                          local source = file:read("*a")
+                          file:close()
+                          vim.treesitter.query.parse("nix", source)
+                        end)
+                        if not ok then
+                          io.stderr:write(path .. ": " .. err .. "\n")
+                          os.exit(1)
+                        end
+                      end
+                    ''} "$@" </dev/null
+                  ''
+                );
+                includes = [ ".nvim/queries/nix/*.scm" ];
               };
               csharp-lint = {
                 command = lib.getExe pkgs.dotnet-sdk_10;
@@ -287,7 +365,6 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
@@ -492,7 +569,7 @@
               pkgs.rsync
               pkgs.watchexec
             ];
-            text = builtins.readFile ./scripts/docs-serve;
+            text = builtins.readFile ./scripts/docs-serve.sh;
           };
         };
     in
@@ -550,7 +627,7 @@
             ];
             text = ''
               repo="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-              NIX_OPTIONS_FZF_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf" "$@"
+              NIX_OPTIONS_FZF_CMD_NAME="''${0##*/}" exec "$repo/scripts/nix-options-fzf.sh" "$@"
             '';
           };
 
@@ -693,7 +770,7 @@
               jq
               skopeo
             ];
-            text = builtins.readFile ./scripts/update-container-lock;
+            text = builtins.readFile ./scripts/update-container-lock.sh;
           };
 
           updateSchemas = pkgs.writeShellApplication {
@@ -702,7 +779,7 @@
               git
               jq
             ];
-            text = builtins.readFile ./scripts/update-schemas;
+            text = builtins.readFile ./scripts/update-schemas.sh;
           };
 
           buildSystems = pkgs.writeShellApplication {
@@ -712,7 +789,7 @@
               pkgs.jq
               pkgs.rom
             ];
-            text = builtins.readFile ./scripts/build-systems;
+            text = builtins.readFile ./scripts/build-systems.sh;
           };
 
           systemUpdate = pkgs.writeShellApplication {
@@ -726,7 +803,7 @@
               pkgs.nix-update
               pkgs.python3
             ];
-            text = builtins.readFile ./scripts/system-update;
+            text = builtins.readFile ./scripts/system-update.sh;
           };
 
           updatePlasma =

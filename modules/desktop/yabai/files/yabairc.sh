@@ -1,3 +1,4 @@
+#!/usr/bin/env sh
 # Restore the scripting addition after Dock starts or restarts.
 yabai_bin="$(realpath "$(command -v yabai)")"
 yabai -m signal --add event=dock_did_restart action="sudo -n ${yabai_bin} --load-sa"

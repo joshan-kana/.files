@@ -31,6 +31,7 @@ if not isinstance(version, str) or not isinstance(digest, str) or not re.fullmat
 
 
 def sri(value):
+    """Convert a hexadecimal digest to a Nix SRI hash."""
     if not re.fullmatch(r"[0-9a-f]{64}", value):
         raise ValueError(f"Invalid SHA-256 digest for {args.cask}")
     return "sha256-" + base64.b64encode(bytes.fromhex(value)).decode()
@@ -39,7 +40,7 @@ def sri(value):
 source = target.read_text()
 if args.arch_hashes:
     block_pattern = r"(hashes = \{)([^{}]*)(\};)"
-    blocks = list(re.finditer(block_pattern, source, re.S))
+    blocks = list(re.finditer(block_pattern, source, re.DOTALL))
     if len(blocks) != 1:
         sys.exit("Expected one platform hash map")
     block = blocks[0]
@@ -54,7 +55,7 @@ if args.arch_hashes:
     for system, hash_value in hashes.items():
         body, count = re.subn(
             r"(\b" + re.escape(system) + r'\s*=\s*")[^"]+(";)',
-            lambda m: m[1] + hash_value + m[2],
+            lambda m, hash_value=hash_value: m[1] + hash_value + m[2],
             body,
             count=1,
         )

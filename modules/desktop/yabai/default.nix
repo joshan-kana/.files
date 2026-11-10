@@ -1,7 +1,7 @@
 { lib, system, ... }:
 {
   home = _: {
-    xdg.configFile."yabai/yabairc".source = ./files/yabairc;
+    xdg.configFile."yabai/yabairc".source = ./files/yabairc.sh;
   };
 }
 // lib.optionalAttrs (lib.systems.elaborate system).isDarwin {

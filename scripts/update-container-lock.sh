@@ -36,7 +36,7 @@ targets=$(jq -c --argjson selected "$selected" '[
 
 unknown=$(jq -nr --argjson selected "$selected" --argjson targets "$targets" \
   '$selected - ($targets | map(.id)) | .[]')
-[[ -z "$unknown" ]] || {
+[[ -z $unknown ]] || {
   printf 'error: unknown container: %s\n' "$unknown" >&2
   exit 1
 }
@@ -49,7 +49,7 @@ fi
 
 for config in "${configs[@]}"; do
   lock_file=$(jq -r --arg config "$config" '.[$config].lockFile' <<<"$state")
-  [[ -f "$lock_file" ]] || {
+  [[ -f $lock_file ]] || {
     echo "error: container lock not found for $config: $lock_file" >&2
     exit 1
   }
@@ -64,7 +64,7 @@ resolve_source() {
 
   skopeo inspect --raw "docker://$source" >"$manifest" || return
   digest=$(skopeo manifest-digest "$manifest") || return
-  [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+  [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || {
     echo "error: $source returned malformed digest: $digest" >&2
     return 1
   }
@@ -90,14 +90,14 @@ for index in "${!sources[@]}"; do
   if ((active == 4)); then
     wait -n || failed=true
     active=$((active - 1))
-    [[ "$failed" == false ]] || break
+    [[ $failed == false ]] || break
   fi
 done
 while ((active)); do
   wait -n || failed=true
   active=$((active - 1))
 done
-[[ "$failed" == false ]] || exit 1
+[[ $failed == false ]] || exit 1
 
 resolved='{}'
 if ((${#sources[@]})); then
@@ -113,7 +113,7 @@ errors=$(jq -r --argjson resolved "$resolved" '
     ] | length == 0)
   | "\($target.id): \($target.source) has no \($target.os)/\($target.architecture) image"
 ' <<<"$targets")
-[[ -z "$errors" ]] || {
+[[ -z $errors ]] || {
   printf 'error: container platform validation failed:\n%s\n' "$errors" >&2
   exit 1
 }
@@ -133,7 +133,7 @@ for config in "${configs[@]}"; do
   else
     new_lock=$(jq -S . <<<"$updates")
   fi
-  [[ "$new_lock" == "$current_lock" ]] && continue
+  [[ $new_lock == "$current_lock" ]] && continue
 
   lock_tmp=$(mktemp "${lock_file}.tmp.XXXXXX")
   printf '%s\n' "$new_lock" >"$lock_tmp"

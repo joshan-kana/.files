@@ -241,8 +241,8 @@ in
 
     home.shellAliases = {
       h = "start-hyprland";
-      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel";
-      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia";
+      HI = "${config.dotfiles.paths.repoPath}/scripts/hyprland_intel.sh";
+      HN = "${config.dotfiles.paths.repoPath}/scripts/hyprland_nvidia.sh";
     };
 
     wayland.windowManager.hyprland =
@@ -454,11 +454,11 @@ in
             (modBind "ALT + 6" (exec "code"))
             (modBind "ALT + 7" (exec "obsidian --disable-gpu"))
             (modBind "ALT + E" (exec "nautilus"))
-            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer"))
-            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx"))
+            (modBind "SHIFT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/volume_mixer.sh"))
+            (modBind "ALT + V" (exec "${config.dotfiles.paths.repoPath}/scripts/audio_fx.sh"))
 
             # Applets and launchers
-            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch"))
+            (modBind "SPACE" (exec "${config.dotfiles.paths.repoPath}/scripts/app_launch.sh"))
             (modBind "V" (exec "cliphist list | tofi | cliphist decode | wl-copy"))
             (bind "ALT + SPACE" (exec "~/repos/rofi-desktop/scripts/rofi-desktop.sh"))
 

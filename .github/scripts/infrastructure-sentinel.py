@@ -11,7 +11,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Never
 
 OWNER = "joshan-kana"
 REPOSITORY = ".files"
@@ -29,21 +29,29 @@ COMMAND_RE = re.compile(r"<!--\s*infrastructure-sentinel-command:v1\s*\n(.*?)\n\
 
 
 class BridgeError(Exception):
+    """Report a bridge failure and any already-applied changes."""
+
     def __init__(self, message: str, *, applied: list[str] | None = None):
+        """Preserve the error message and completed mutations."""
         super().__init__(message)
         self.applied = applied or []
 
 
 def now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    """Return the current UTC time in the bridge's state format."""
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> Never:
+    """Raise a bridge validation error."""
     raise BridgeError(message)
 
 
 class GitHub:
+    """Make authenticated GitHub API calls for reconciliation."""
+
     def __init__(self, token: str, *, project: bool = False):
+        """Configure the GitHub credential and API context."""
         if not token:
             fail("required GitHub credential is missing")
         self.token = token
@@ -58,6 +66,7 @@ class GitHub:
         dependency: bool = False,
         allow_statuses: set[int] | None = None,
     ) -> Any:
+        """Send an authenticated REST request with explicit status handling."""
         headers = {
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {self.token}",
@@ -89,6 +98,7 @@ class GitHub:
             raise BridgeError(f"GitHub REST {method} {path} returned invalid JSON") from error
 
     def graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+        """Execute a GraphQL request and return its response data."""
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.token}",
@@ -115,6 +125,7 @@ class GitHub:
 
 
 def page_info(connection: dict[str, Any]) -> tuple[bool, str | None]:
+    """Extract pagination information from a GraphQL connection."""
     info = connection.get("pageInfo", {})
     return bool(info.get("hasNextPage")), info.get("endCursor")
 
@@ -222,6 +233,7 @@ mutation($projectId:ID!,$itemId:ID!){
 
 
 def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, Any]]]:
+    """Load project metadata and index its current items."""
     project: dict[str, Any] | None = None
     fields: list[dict[str, Any]] = []
     cursor = None
@@ -296,6 +308,7 @@ def project_data(client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, An
 
 
 def issue_list(client: GitHub, state: str) -> list[dict[str, Any]]:
+    """Collect issue records from the current bridge state."""
     result: list[dict[str, Any]] = []
     page = 1
     while True:
@@ -313,6 +326,7 @@ def issue_list(client: GitHub, state: str) -> list[dict[str, Any]]:
 
 
 def issue_metadata(client: GitHub, number: int, cache: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Resolve issue or pull-request metadata with caching."""
     if number not in cache:
         pull_request = client.request(
             "GET",
@@ -328,12 +342,14 @@ def issue_metadata(client: GitHub, number: int, cache: dict[int, dict[str, Any]]
 
 
 def dependencies(client: GitHub, number: int, cache: dict[int, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Read native blocking relationships for an issue."""
     if number not in cache:
         cache[number] = client.request("GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{number}/dependencies/blocked_by", dependency=True)
     return cache[number]
 
 
 def parent_issue(client: GitHub, number: int, cache: dict[int, dict[str, Any] | None]) -> dict[str, Any] | None:
+    """Look up the issue's current parent."""
     if number not in cache:
         cache[number] = client.request(
             "GET",
@@ -345,6 +361,7 @@ def parent_issue(client: GitHub, number: int, cache: dict[int, dict[str, Any] | 
 
 
 def sub_issues(client: GitHub, number: int, cache: dict[int, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Read child issues from native relationships."""
     if number not in cache:
         result: list[dict[str, Any]] = []
         page = 1
@@ -365,10 +382,12 @@ def sub_issues(client: GitHub, number: int, cache: dict[int, list[dict[str, Any]
 
 
 def relationship_ref(issue: dict[str, Any]) -> dict[str, Any]:
+    """Build a stable reference to a related issue."""
     return {"number": issue["number"], "state": issue.get("state", "UNKNOWN")}
 
 
 def parse_block(body: str, pattern: re.Pattern[str], label: str) -> dict[str, Any] | None:
+    """Extract and validate a serialized bridge body block."""
     match = pattern.search(body)
     if not match:
         return None
@@ -382,6 +401,7 @@ def parse_block(body: str, pattern: re.Pattern[str], label: str) -> dict[str, An
 
 
 def bridge_issue(client: GitHub) -> dict[str, Any]:
+    """Fetch the bridge issue used for reconciliation."""
     issue = client.request("GET", f"/repos/{OWNER}/{REPOSITORY}/issues/{BRIDGE_ISSUE_NUMBER}")
     if issue.get("state") != "closed":
         fail(f"bridge issue #{BRIDGE_ISSUE_NUMBER} must remain closed")
@@ -394,6 +414,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
     # The v1 marker already identifies the command protocol. Early producers
     # omitted the duplicate JSON version field, so infer it only when absent;
     # explicit values still go through the strict version check below.
+    """Validate requested changes before any mutations occur."""
     if "version" not in command:
         command = {"version": COMMAND_VERSION, **command}
     allowed_root = {"version", "request_id", "operations"}
@@ -410,7 +431,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
         fail("command operations must be an array")
 
     project_client = GitHub(os.environ.get("INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN", ""), project=True)
-    project, project_items = project_data(project_client)
+    project, _ = project_data(project_client)
     fields = project["fields"]
     issue_cache: dict[int, dict[str, Any]] = {}
     seen: set[int] = set()
@@ -488,15 +509,14 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
 
         parent_requested = "parent" in operation
         desired_parent = operation.get("parent")
-        if parent_requested:
-            if desired_parent is not None:
-                if isinstance(desired_parent, bool) or not isinstance(desired_parent, int):
-                    fail(f"operation for #{number} parent must be an integer or null")
-                if desired_parent == number:
-                    fail(f"issue #{number} cannot be its own parent")
-                parent = issue_metadata(client, desired_parent, issue_cache)
-                if parent.get("pull_request"):
-                    fail(f"parent #{desired_parent} is a pull request, not an issue")
+        if parent_requested and desired_parent is not None:
+            if isinstance(desired_parent, bool) or not isinstance(desired_parent, int):
+                fail(f"operation for #{number} parent must be an integer or null")
+            if desired_parent == number:
+                fail(f"issue #{number} cannot be its own parent")
+            parent = issue_metadata(client, desired_parent, issue_cache)
+            if parent.get("pull_request"):
+                fail(f"parent #{desired_parent} is a pull request, not an issue")
 
         relates_to_requested = "relates_to" in operation
         related = operation.get("relates_to")
@@ -538,25 +558,25 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
     for operation in normalized:
         if operation["blocked_by"] is not None:
             graph[operation["issue"]] = set(operation["blocked_by"])
+    stack: list[int] = []
+    visiting: set[int] = set()
+    visited: set[int] = set()
+
+    def visit(node: int) -> None:
+        if node in visiting:
+            cycle = " -> ".join(map(str, [*stack, node]))
+            fail(f"dependency cycle would result: {cycle}")
+        if node in visited:
+            return
+        visiting.add(node)
+        stack.append(node)
+        for dependency in graph.get(node, set()):
+            visit(dependency)
+        stack.pop()
+        visiting.remove(node)
+        visited.add(node)
+
     for start in graph:
-        stack: list[int] = []
-        visiting: set[int] = set()
-        visited: set[int] = set()
-
-        def visit(node: int) -> None:
-            if node in visiting:
-                cycle = " -> ".join(map(str, stack + [node]))
-                fail(f"dependency cycle would result: {cycle}")
-            if node in visited:
-                return
-            visiting.add(node)
-            stack.append(node)
-            for dependency in graph.get(node, set()):
-                visit(dependency)
-            stack.pop()
-            visiting.remove(node)
-            visited.add(node)
-
         visit(start)
 
     parent_graph: dict[int, int] = {}
@@ -579,7 +599,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
         current = start
         while current in parent_graph:
             if current in seen_parents:
-                cycle = " -> ".join(map(str, chain + [current]))
+                cycle = " -> ".join(map(str, [*chain, current]))
                 fail(f"parent cycle would result: {cycle}")
             seen_parents.add(current)
             chain.append(current)
@@ -588,18 +608,21 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
 
 
 def current_value(item: dict[str, Any] | None, field: dict[str, Any]) -> Any:
+    """Read a field value from the current project item."""
     if not item:
         return None
     return item.get("fields", {}).get(field["name"])
 
 
 def value_equal(field_type: str, current: Any, desired: Any) -> bool:
+    """Compare project field values using their field type."""
     if field_type == "MULTI_SELECT":
         return current is not None and set(current) == set(desired or [])
     return current == desired
 
 
 def field_payload(field_type: str, value: Any) -> dict[str, Any]:
+    """Encode a field value for the GitHub GraphQL API."""
     if field_type == "TEXT":
         return {"text": value}
     if field_type == "NUMBER":
@@ -616,10 +639,12 @@ def field_payload(field_type: str, value: Any) -> dict[str, Any]:
 
 
 def refresh_project(project_client: GitHub) -> tuple[dict[str, Any], dict[int, dict[str, Any]]]:
+    """Reload authoritative project state after a mutation."""
     return project_data(project_client)
 
 
 def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], list[str]]:
+    """Apply requested changes with native relationship verification."""
     operations = normalize_command(command, github)
     project_client = GitHub(os.environ.get("INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN", ""), project=True)
     project, project_items = refresh_project(project_client)
@@ -790,6 +815,7 @@ def apply_command(command: dict[str, Any], github: GitHub) -> tuple[list[str], l
 
 
 def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str, Any]) -> dict[str, Any]:
+    """Assemble the reconciled bridge state for publication."""
     project, project_items = project_data(project_client)
     open_items = issue_list(github, "open")
     open_issues = [issue for issue in open_items if not issue.get("pull_request")]
@@ -858,6 +884,7 @@ def build_snapshot(github: GitHub, project_client: GitHub, last_result: dict[str
 
 
 def replace_state(body: str, state: dict[str, Any], *, remove_request_id: str | None = None) -> str:
+    """Update the embedded state while preserving other body content."""
     state_block = f"<!-- infrastructure-sentinel-state:v2\n{json.dumps(state, indent=2, sort_keys=True)}\n-->"
     if STATE_RE.search(body):
         body = STATE_RE.sub(state_block, body, count=1)
@@ -880,6 +907,7 @@ def replace_state(body: str, state: dict[str, Any], *, remove_request_id: str | 
 
 
 def write_bridge_body(github: GitHub, state: dict[str, Any], *, remove_request_id: str | None = None) -> None:
+    """Publish the reconciled state to the bridge issue."""
     latest = bridge_issue(github)
     body = replace_state(latest.get("body") or "", state, remove_request_id=remove_request_id)
     github.request("PATCH", f"/repos/{OWNER}/{REPOSITORY}/issues/{BRIDGE_ISSUE_NUMBER}", {"body": body})
@@ -897,6 +925,7 @@ def write_bridge_body(github: GitHub, state: dict[str, Any], *, remove_request_i
 
 
 def main() -> int:
+    """Run the bridge reconciliation and report failures."""
     try:
         github = GitHub(os.environ.get("GITHUB_TOKEN", ""))
         project_client = GitHub(os.environ.get("INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN", ""), project=True)

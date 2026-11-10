@@ -1,3 +1,5 @@
+"""Inspect the default audio sink's current volume state."""
+
 #
 # volume_up.py: a script to turn up the volume and send a notification
 #

@@ -1,11 +1,11 @@
 {
-	"folders": [
-		{
-			"path": "."
-		},
-		// {
-		// 	"path": "../.config/home-manager"
-		// }
-	],
-	"settings": {}
+  "folders": [
+    {
+      "path": ".",
+    },
+    // {
+    // 	"path": "../.config/home-manager"
+    // }
+  ],
+  "settings": {},
 }
