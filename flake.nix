@@ -229,10 +229,6 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
-              # yabairc has a fixed name, so its language cannot be inferred from an extension.
-              shfmt.includes = lib.mkAfter [ "modules/desktop/yabai/files/yabairc" ];
-              shellcheck.includes = lib.mkAfter [ "modules/desktop/yabai/files/yabairc" ];
-
               ruff-check.options = [
                 "--isolated"
                 "--select"
@@ -328,7 +324,6 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|code-snippets|code-workspace|jsonc?|inc|lock|lua|md|nix|py|scss|scm|sh|toml|ts|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/|^modules/desktop/yabai/files/yabairc$";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };
