@@ -290,6 +290,10 @@
                 includes = [ "*.lua" ];
                 priority = 2;
               };
+              htmlhint = {
+                command = lib.getExe pkgs.htmlhint;
+                includes = [ "*.html" ];
+              };
               actionlint = {
                 command = lib.getExe pkgs.actionlint;
                 includes = [
