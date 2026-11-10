@@ -49,8 +49,8 @@ Item {
             }
         }
 
-        // Tiles share the same two-row layout: glyph and keycap above the
-        // title. Neither the shortcut nor its placement is widget-specific.
+        // Icon and title retain their own layout while shortcuts are anchored
+        // independently to the tile surface.
         Column {
             anchors {
                 fill: parent
@@ -74,19 +74,6 @@ Item {
                     font.family: "Symbols Nerd Font"
                     font.pixelSize: chip.theme.fontSize(20)
                 }
-                KeyHint {
-                    visible: chip.shortcut.length > 0
-                    anchors {
-                        right: parent.right
-                        verticalCenter: parent.verticalCenter
-                    }
-                    shortcut: chip.shortcut
-                    compact: true
-                    runtime: chip.runtime
-                    theme: chip.theme
-                    emphasized: chip.active
-                    emphasisColor: chip.activeColor
-                }
             }
 
             MarqueeText {
@@ -98,6 +85,22 @@ Item {
                 font.pixelSize: chip.theme.fontSize(10)
                 font.weight: chip.active ? Font.DemiBold : Font.Medium
             }
+        }
+        // All Visual Modes tiles use the same surface-relative top-right keycap.
+        KeyHint {
+            visible: chip.shortcut.length > 0
+            anchors {
+                top: parent.top
+                right: parent.right
+                topMargin: chip.theme.spacing2
+                rightMargin: chip.theme.spacing2
+            }
+            shortcut: chip.shortcut
+            compact: true
+            runtime: chip.runtime
+            theme: chip.theme
+            emphasized: chip.active
+            emphasisColor: chip.activeColor
         }
     }
 
