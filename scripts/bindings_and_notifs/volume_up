@@ -6,10 +6,10 @@ mute=on
 msgTag=volume
 
 if [ "$volume" = 0 ] || [ "$mute" = "off" ]; then
-    # Show the sound muted notification
-    dunstify -a "changeVolume" -u low -i audio-volume-muted -h string:x-dunst-stack-tag:"$msgTag" "Volume muted"
+  # Show the sound muted notification
+  dunstify -a "changeVolume" -u low -i audio-volume-muted -h string:x-dunst-stack-tag:"$msgTag" "Volume muted"
 else
-    # Show the volume notification
-    dunstify -a "changeVolume" -u low -i audio-volume-high -h string:x-dunst-stack-tag:"$msgTag" \
+  # Show the volume notification
+  dunstify -a "changeVolume" -u low -i audio-volume-high -h string:x-dunst-stack-tag:"$msgTag" \
     -h int:value:"$volume" "Volume: ${volume}%"
 fi

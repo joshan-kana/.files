@@ -35,7 +35,7 @@ class BridgeError(Exception):
 
 
 def now() -> str:
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def fail(message: str) -> None:
@@ -410,7 +410,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
         fail("command operations must be an array")
 
     project_client = GitHub(os.environ.get("INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN", ""), project=True)
-    project, project_items = project_data(project_client)
+    project, _ = project_data(project_client)
     fields = project["fields"]
     issue_cache: dict[int, dict[str, Any]] = {}
     seen: set[int] = set()
@@ -488,15 +488,14 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
 
         parent_requested = "parent" in operation
         desired_parent = operation.get("parent")
-        if parent_requested:
-            if desired_parent is not None:
-                if isinstance(desired_parent, bool) or not isinstance(desired_parent, int):
-                    fail(f"operation for #{number} parent must be an integer or null")
-                if desired_parent == number:
-                    fail(f"issue #{number} cannot be its own parent")
-                parent = issue_metadata(client, desired_parent, issue_cache)
-                if parent.get("pull_request"):
-                    fail(f"parent #{desired_parent} is a pull request, not an issue")
+        if parent_requested and desired_parent is not None:
+            if isinstance(desired_parent, bool) or not isinstance(desired_parent, int):
+                fail(f"operation for #{number} parent must be an integer or null")
+            if desired_parent == number:
+                fail(f"issue #{number} cannot be its own parent")
+            parent = issue_metadata(client, desired_parent, issue_cache)
+            if parent.get("pull_request"):
+                fail(f"parent #{desired_parent} is a pull request, not an issue")
 
         relates_to_requested = "relates_to" in operation
         related = operation.get("relates_to")
@@ -538,25 +537,25 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
     for operation in normalized:
         if operation["blocked_by"] is not None:
             graph[operation["issue"]] = set(operation["blocked_by"])
+    stack: list[int] = []
+    visiting: set[int] = set()
+    visited: set[int] = set()
+
+    def visit(node: int) -> None:
+        if node in visiting:
+            cycle = " -> ".join(map(str, [*stack, node]))
+            fail(f"dependency cycle would result: {cycle}")
+        if node in visited:
+            return
+        visiting.add(node)
+        stack.append(node)
+        for dependency in graph.get(node, set()):
+            visit(dependency)
+        stack.pop()
+        visiting.remove(node)
+        visited.add(node)
+
     for start in graph:
-        stack: list[int] = []
-        visiting: set[int] = set()
-        visited: set[int] = set()
-
-        def visit(node: int) -> None:
-            if node in visiting:
-                cycle = " -> ".join(map(str, stack + [node]))
-                fail(f"dependency cycle would result: {cycle}")
-            if node in visited:
-                return
-            visiting.add(node)
-            stack.append(node)
-            for dependency in graph.get(node, set()):
-                visit(dependency)
-            stack.pop()
-            visiting.remove(node)
-            visited.add(node)
-
         visit(start)
 
     parent_graph: dict[int, int] = {}
@@ -579,7 +578,7 @@ def normalize_command(command: dict[str, Any], client: GitHub) -> list[dict[str,
         current = start
         while current in parent_graph:
             if current in seen_parents:
-                cycle = " -> ".join(map(str, chain + [current]))
+                cycle = " -> ".join(map(str, [*chain, current]))
                 fail(f"parent cycle would result: {cycle}")
             seen_parents.add(current)
             chain.append(current)

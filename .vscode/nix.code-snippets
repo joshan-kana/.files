@@ -2,12 +2,8 @@
   "Option path attrset (adds };)": {
     "scope": "nix",
     "prefix": ["set;", "attrset;", "option;", "block;"],
-    "body": [
-      "${1:option.path} = {",
-      "\t$0",
-      "};"
-    ],
-    "description": "Create any option-path attrset block ending with };"
+    "body": ["${1:option.path} = {", "\t$0", "};"],
+    "description": "Create any option-path attrset block ending with };",
   },
 
   "Enableable option block": {
@@ -17,19 +13,16 @@
       "${1:option.path} = {",
       "\tenable = ${2:true};",
       "\t${3:configDir} = ${4:path};",
-      "};"
+      "};",
     ],
-    "description": "Expand an option path into a block with enable and one extra setting"
+    "description": "Expand an option path into a block with enable and one extra setting",
   },
 
   "Function args attrset (adds : )": {
     "scope": "nix",
     "prefix": ["args:", "fnargs:", "lambda:"],
-    "body": [
-      "{ ${1:args} }:",
-      "$0"
-    ],
-    "description": "Create a function argument attrset ending with ':'"
+    "body": ["{ ${1:args} }:", "$0"],
+    "description": "Create a function argument attrset ending with ':'",
   },
 
   "Module skeleton ({ ... }: { ... })": {
@@ -42,8 +35,8 @@
       "\t...",
       "}: {",
       "\t$0",
-      "}"
+      "}",
     ],
-    "description": "Common Nix module/function skeleton with args attrset and result attrset"
-  }
+    "description": "Common Nix module/function skeleton with args attrset and result attrset",
+  },
 }

@@ -156,6 +156,24 @@
       treefmtExcludes = map (dir: "${dir}**") repoToolExcludedDirs;
       preCommitExcludes = map (dir: "^${lib.escapeRegex dir}") repoToolExcludedDirs;
 
+      shellScriptPaths = [
+        ".envrc"
+        "modules/desktop/yabai/files/yabairc"
+        "scripts/app_launch"
+        "scripts/audio_fx"
+        "scripts/bindings_and_notifs/volume_up"
+        "scripts/build-systems"
+        "scripts/docs-serve"
+        "scripts/find_iommu_groups/io"
+        "scripts/hyprland_intel"
+        "scripts/hyprland_nvidia"
+        "scripts/nix-options-fzf"
+        "scripts/system-update"
+        "scripts/update-container-lock"
+        "scripts/update-schemas"
+        "scripts/volume_mixer"
+      ];
+
       treefmtFor =
         system:
         let
@@ -179,10 +197,15 @@
           programs = {
             deadnix.enable = true;
             csharpier.enable = true;
+            biome = {
+              enable = true;
+              formatCommand = "lint";
+            };
             nixfmt.enable = true;
             prettier.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
+            taplo.enable = true;
             ruff-check.enable = true;
             ruff-format = {
               enable = true;
@@ -193,15 +216,10 @@
             shellcheck = {
               enable = true;
               includes = [
-                ".envrc"
-                "scripts/**"
-                "tests/**/*.sh"
-              ];
-              excludes = [
-                "*.md"
-                "*.nix"
-                "*.py"
-              ];
+                "*.sh"
+                "*.bash"
+              ]
+              ++ shellScriptPaths;
             };
             statix = {
               enable = true;
@@ -210,13 +228,17 @@
             typos = {
               enable = true;
               configFile = toString typosConfig;
-              includes = [ "*.md" ];
+              includes = [
+                "*.md"
+                "*.inc"
+              ];
             };
             yamllint = {
               enable = true;
               settings = {
                 extends = "default";
                 rules = {
+                  comments.min-spaces-from-content = 1;
                   document-start = "disable";
                   line-length = "disable";
                   truthy.check-keys = false;
@@ -232,15 +254,27 @@
               statix.priority = 1;
               nixfmt.priority = 2;
 
+              shfmt.includes = lib.mkAfter shellScriptPaths;
+
               ruff-check.options = [
                 "--isolated"
                 "--select"
-                "E4,E7,E9,F,I"
+                "E4,E7,E9,F,I,B,UP,SIM,RUF"
               ];
               ruff-format.priority = 1;
 
-              prettier.excludes = [ "*.md" ];
-              rumdl-format.options = markdownOptions;
+              prettier = {
+                includes = lib.mkAfter [
+                  "*.jsonc"
+                  "*.code-snippets"
+                  "*.code-workspace"
+                ];
+                excludes = [ "*.md" ];
+              };
+              rumdl-format = {
+                options = markdownOptions;
+                includes = lib.mkAfter [ "*.inc" ];
+              };
               rumdl-check = {
                 options = lib.mkForce ([ "check" ] ++ markdownOptions);
                 priority = 2;
@@ -257,6 +291,46 @@
                   ".github/workflows/*.yml"
                   ".github/workflows/*.yaml"
                 ];
+              };
+              yamllint.options = lib.mkAfter [ "--strict" ];
+              toml-lint = {
+                command = lib.getExe pkgs.taplo;
+                options = [ "lint" ];
+                includes = [ "*.toml" ];
+              };
+              scss-check = {
+                command = toString (
+                  pkgs.writeShellScript "check-scss" ''
+                    for file in "$@"; do
+                      ${lib.getExe pkgs.dart-sass} --no-source-map "$file" >/dev/null
+                    done
+                  ''
+                );
+                includes = [ "*.scss" ];
+              };
+              nix-query-lint = {
+                command = toString (
+                  pkgs.writeShellScript "lint-nix-queries" ''
+                    exec ${lib.getExe pkgs.neovim} -l ${pkgs.writeText "lint-nix-queries.lua" ''
+                      vim.treesitter.language.add("nix", {
+                        path = "${pkgs.tree-sitter-grammars.tree-sitter-nix}/parser",
+                      })
+                      for _, path in ipairs(arg) do
+                        local ok, err = pcall(function()
+                          local file = assert(io.open(path, "r"))
+                          local source = file:read("*a")
+                          file:close()
+                          vim.treesitter.query.parse("nix", source)
+                        end)
+                        if not ok then
+                          io.stderr:write(path .. ": " .. err .. "\n")
+                          os.exit(1)
+                        end
+                      end
+                    ''} "$@" </dev/null
+                  ''
+                );
+                includes = [ ".nvim/queries/nix/*.scm" ];
               };
               csharp-lint = {
                 command = lib.getExe pkgs.dotnet-sdk_10;
@@ -287,7 +361,7 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(cs|csproj|lock|lua|md|nix|py|sh|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
+              files = "\\.(cs|csproj|code-snippets|code-workspace|jsonc?|inc|lock|lua|md|nix|py|scss|scm|sh|toml|ts|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/|^modules/desktop/yabai/files/yabairc$";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };

@@ -178,9 +178,9 @@ class PullRequestProjectTests(unittest.TestCase):
                 return_value={"id": 80, "node_id": "pr-node", "pull_request": {"url": "example"}},
             ),
             __import__("unittest").mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+            self.assertRaisesRegex(bridge.BridgeError, "only supports project membership/field operations"),
         ):
-            with self.assertRaisesRegex(bridge.BridgeError, "only supports project membership/field operations"):
-                bridge.normalize_command(command, FakeClient())
+            bridge.normalize_command(command, FakeClient())
 
     def test_snapshot_exposes_pull_request_project_fields(self) -> None:
         project = {"title": "infrastructure", "fields": {}}
@@ -259,9 +259,9 @@ class RelationshipTests(unittest.TestCase):
             mock.patch.object(bridge, "issue_metadata", side_effect=metadata),
             mock.patch.object(bridge, "parent_issue", side_effect=live_parent),
             mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+            self.assertRaisesRegex(bridge.BridgeError, "parent cycle"),
         ):
-            with self.assertRaisesRegex(bridge.BridgeError, "parent cycle"):
-                bridge.normalize_command(command, FakeClient())
+            bridge.normalize_command(command, FakeClient())
 
     def test_relates_to_fails_closed_without_becoming_blocked_by(self) -> None:
         command = {"version": 1, "request_id": "related", "operations": [{"issue": 12, "relates_to": [7]}]}
@@ -275,9 +275,9 @@ class RelationshipTests(unittest.TestCase):
             mock.patch.object(bridge, "dependencies", return_value=[]),
             mock.patch.object(bridge, "issue_metadata", side_effect=metadata),
             mock.patch.dict(os.environ, {"INFRASTRUCTURE_SENTINEL_PROJECT_TOKEN": "test-token"}),
+            self.assertRaisesRegex(bridge.BridgeError, "UNSUPPORTED_CAPABILITY"),
         ):
-            with self.assertRaisesRegex(bridge.BridgeError, "UNSUPPORTED_CAPABILITY"):
-                bridge.normalize_command(command, FakeClient())
+            bridge.normalize_command(command, FakeClient())
 
     def test_state_marker_is_upgraded_without_losing_command(self) -> None:
         old = (

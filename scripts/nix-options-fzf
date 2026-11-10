@@ -125,13 +125,13 @@ safe_remove_cache_tree() {
   fi
 
   case "$target" in
-    "$base"/*)
-      rm -rf -- "$target"
-      ;;
-    *)
-      echo "ERROR: refusing to remove cache path outside base: $target" >&2
-      return 1
-      ;;
+  "$base"/*)
+    rm -rf -- "$target"
+    ;;
+  *)
+    echo "ERROR: refusing to remove cache path outside base: $target" >&2
+    return 1
+    ;;
   esac
 }
 
@@ -150,17 +150,16 @@ clear_all_value_cache() {
   fi
 
   case "$value_cache_dir" in
-    "$cache_dir"/values-v3)
-      safe_remove_cache_tree "$value_cache_dir" "$cache_dir"
-      mkdir -p "$value_cache_dir"
-      ;;
-    *)
-      echo "ERROR: refusing to clear unexpected value cache path: $value_cache_dir" >&2
-      return 1
-      ;;
+  "$cache_dir"/values-v3)
+    safe_remove_cache_tree "$value_cache_dir" "$cache_dir"
+    mkdir -p "$value_cache_dir"
+    ;;
+  *)
+    echo "ERROR: refusing to clear unexpected value cache path: $value_cache_dir" >&2
+    return 1
+    ;;
   esac
 }
-
 
 host=""
 host_explicit=0
@@ -195,7 +194,7 @@ list_hosts() {
     local scope_lib_literal
     flake_literal="$(jq -Rn --arg s "$flake" '$s')"
     scope_lib_literal="$(jq -Rn --arg s "$repo/scripts/nix-options-scopes.nix" '$s')"
-    if "$nix_bin" eval --impure --json --expr "let scopes = import (builtins.toPath $scope_lib_literal) { flakeRef = $flake_literal; }; in scopes.hosts" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --expr "let scopes = import (builtins.toPath $scope_lib_literal) { flakeRef = $flake_literal; }; in scopes.hosts" >"$tmp"; then
       mv "$tmp" "$hosts_cache"
     else
       rm -f "$tmp"
@@ -215,13 +214,13 @@ host_aliases() {
   printf '%s\n' "$h"
 
   case "$stripped" in
-    *-*)
-      stripped="${stripped#*-}"
-      printf '%s\n' "$stripped"
-      ;;
+  *-*)
+    stripped="${stripped#*-}"
+    printf '%s\n' "$stripped"
+    ;;
   esac
 
-  IFS='-' read -r -a parts <<< "$stripped"
+  IFS='-' read -r -a parts <<<"$stripped"
   for part in "${parts[@]}"; do
     [ -n "$part" ] || continue
     printf '%s\n' "$part"
@@ -249,15 +248,15 @@ resolve_host_arg() {
     while IFS= read -r alias; do
       if [ "$alias" = "$arg" ]; then
         case "$matches" in
-          *"
+        *"
 $h
 "*)
-            ;;
-          *)
-            matches="${matches}${h}
+          ;;
+        *)
+          matches="${matches}${h}
 "
-            count=$((count + 1))
-            ;;
+          count=$((count + 1))
+          ;;
         esac
       fi
     done < <(host_aliases "$h")
@@ -287,111 +286,144 @@ show_host_table() {
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --hosts)
-      show_hosts=1
-      ;;
-    -r|--refresh)
-      refresh=1
-      ;;
-    --list)
-      list_only=1
-      ;;
-    --scope)
-      shift
-      requested_scope="${1:-}"
-      [ -n "$requested_scope" ] || { echo "ERROR: --scope requires a scope." >&2; exit 2; }
-      ;;
-    --scopes)
-      show_scopes=1
-      ;;
-    --refresh-all)
-      refresh=1
-      refresh_all=1
-      ;;
-    --cache-path)
-      print_cache=1
-      ;;
-    --default-host)
-      show_default_host=1
-      ;;
-    --clear-default-host)
-      clear_default_host=1
-      ;;
-    --clear-value-cache)
-      clear_value_cache=1
-      ;;
-    --preview)
-      shift
-      preview_name="${1:-}"
-      [ -n "$preview_name" ] || { echo "ERROR: --preview requires an option name." >&2; exit 2; }
-      ;;
-    --default)
-      shift
-      default_name="${1:-}"
-      [ -n "$default_name" ] || { echo "ERROR: --default requires an option name." >&2; exit 2; }
-      ;;
-    --value)
-      shift
-      value_name="${1:-}"
-      [ -n "$value_name" ] || { echo "ERROR: --value requires an option name." >&2; exit 2; }
-      ;;
-    --value-full)
-      shift
-      value_name="${1:-}"
-      value_full=1
-      [ -n "$value_name" ] || { echo "ERROR: --value-full requires an option name." >&2; exit 2; }
-      ;;
-    --value-items)
-      shift
-      value_items_name="${1:-}"
-      [ -n "$value_items_name" ] || { echo "ERROR: --value-items requires an option name." >&2; exit 2; }
-      ;;
-    --value-search)
-      shift
-      value_search_name="${1:-}"
-      [ -n "$value_search_name" ] || { echo "ERROR: --value-search requires an option name." >&2; exit 2; }
-      ;;
-    --definitions)
-      shift
-      definition_name="${1:-}"
-      [ -n "$definition_name" ] || { echo "ERROR: --definitions requires an option name." >&2; exit 2; }
-      ;;
-    --definition-items)
-      shift
-      definition_items_name="${1:-}"
-      [ -n "$definition_items_name" ] || { echo "ERROR: --definition-items requires an option name." >&2; exit 2; }
-      ;;
-    --definition-item)
-      shift
-      [ "$#" -gt 0 ] || { echo "ERROR: --definition-item requires an option name." >&2; exit 2; }
-      definition_item_name="$1"
-      shift
-      [ "$#" -gt 0 ] || { echo "ERROR: --definition-item requires an item value." >&2; exit 2; }
-      definition_item_value="$1"
-      ;;
-    *)
-      if resolved_host="$(resolve_host_arg "$1")"; then
-        host="$resolved_host"
-        host_explicit=1
-      else
-        status=$?
-        if [ "$status" -eq 2 ]; then
-          exit 2
-        fi
-
-        if [ -z "$prefix" ]; then
-          prefix="${1%/}"
-        else
-          echo "ERROR: unexpected argument: $1" >&2
-          usage >&2
-          exit 2
-        fi
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --hosts)
+    show_hosts=1
+    ;;
+  -r | --refresh)
+    refresh=1
+    ;;
+  --list)
+    list_only=1
+    ;;
+  --scope)
+    shift
+    requested_scope="${1:-}"
+    [ -n "$requested_scope" ] || {
+      echo "ERROR: --scope requires a scope." >&2
+      exit 2
+    }
+    ;;
+  --scopes)
+    show_scopes=1
+    ;;
+  --refresh-all)
+    refresh=1
+    refresh_all=1
+    ;;
+  --cache-path)
+    print_cache=1
+    ;;
+  --default-host)
+    show_default_host=1
+    ;;
+  --clear-default-host)
+    clear_default_host=1
+    ;;
+  --clear-value-cache)
+    clear_value_cache=1
+    ;;
+  --preview)
+    shift
+    preview_name="${1:-}"
+    [ -n "$preview_name" ] || {
+      echo "ERROR: --preview requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --default)
+    shift
+    default_name="${1:-}"
+    [ -n "$default_name" ] || {
+      echo "ERROR: --default requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --value)
+    shift
+    value_name="${1:-}"
+    [ -n "$value_name" ] || {
+      echo "ERROR: --value requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --value-full)
+    shift
+    value_name="${1:-}"
+    value_full=1
+    [ -n "$value_name" ] || {
+      echo "ERROR: --value-full requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --value-items)
+    shift
+    value_items_name="${1:-}"
+    [ -n "$value_items_name" ] || {
+      echo "ERROR: --value-items requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --value-search)
+    shift
+    value_search_name="${1:-}"
+    [ -n "$value_search_name" ] || {
+      echo "ERROR: --value-search requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --definitions)
+    shift
+    definition_name="${1:-}"
+    [ -n "$definition_name" ] || {
+      echo "ERROR: --definitions requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --definition-items)
+    shift
+    definition_items_name="${1:-}"
+    [ -n "$definition_items_name" ] || {
+      echo "ERROR: --definition-items requires an option name." >&2
+      exit 2
+    }
+    ;;
+  --definition-item)
+    shift
+    [ "$#" -gt 0 ] || {
+      echo "ERROR: --definition-item requires an option name." >&2
+      exit 2
+    }
+    definition_item_name="$1"
+    shift
+    [ "$#" -gt 0 ] || {
+      echo "ERROR: --definition-item requires an item value." >&2
+      exit 2
+    }
+    definition_item_value="$1"
+    ;;
+  *)
+    if resolved_host="$(resolve_host_arg "$1")"; then
+      host="$resolved_host"
+      host_explicit=1
+    else
+      status=$?
+      if [ "$status" -eq 2 ]; then
+        exit 2
       fi
-      ;;
+
+      if [ -z "$prefix" ]; then
+        prefix="${1%/}"
+      else
+        echo "ERROR: unexpected argument: $1" >&2
+        usage >&2
+        exit 2
+      fi
+    fi
+    ;;
   esac
   shift
 done
@@ -425,7 +457,7 @@ fi
 if [ "$refresh_all" -eq 0 ]; then
   if [ "$host_explicit" -eq 1 ]; then
     if [ "$print_cache" -eq 0 ]; then
-      printf '%s\n' "$host" > "$default_host_file"
+      printf '%s\n' "$host" >"$default_host_file"
     fi
   elif [ -n "${NIX_OPTIONS_FZF_DEFAULT_HOST:-}" ]; then
     if ! host="$(resolve_host_arg "$NIX_OPTIONS_FZF_DEFAULT_HOST")"; then
@@ -519,7 +551,7 @@ option_note() {
   ' "$cache" 2>/dev/null || true
 }
 
-cat > "$preview_script" <<'PREVIEW'
+cat >"$preview_script" <<'PREVIEW'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -746,7 +778,7 @@ write_docs_expr() {
   local host_literal="$3"
   local scope_lib_literal="$4"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -827,7 +859,7 @@ write_value_expr() {
   local max_keys="$8"
   local max_chars="$9"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -936,7 +968,7 @@ write_default_expr() {
   local path_literal="$5"
   local scope_lib_literal="$6"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -1027,7 +1059,7 @@ print_default() {
     scope_lib_literal="$(nix_string "$scope_lib_path")"
     write_default_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
-    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
         rm -f "$expr_file"
         mv "$tmp" "$cache_file"
@@ -1054,7 +1086,7 @@ write_items_expr() {
   local path_literal="$5"
   local scope_lib_literal="$6"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -1146,7 +1178,6 @@ in
 NIX
 }
 
-
 write_definitions_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
@@ -1155,7 +1186,7 @@ write_definitions_expr() {
   local path_literal="$5"
   local scope_lib_literal="$6"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -1184,7 +1215,6 @@ in
 if filesEval.success then filesEval.value else [ ]
 NIX
 }
-
 
 print_definitions() {
   local scope="$1"
@@ -1215,7 +1245,7 @@ print_definitions() {
 
     write_definitions_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
-    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
         rm -f "$expr_file"
         mv "$tmp" "$cache_file"
@@ -1253,8 +1283,6 @@ print_definitions() {
   ' "$cache_file"
 }
 
-
-
 write_definition_items_expr() {
   local expr_file="$1"
   local flake_ref_literal="$2"
@@ -1263,7 +1291,7 @@ write_definition_items_expr() {
   local path_literal="$5"
   local scope_lib_literal="$6"
 
-  cat > "$expr_file" <<NIX
+  cat >"$expr_file" <<NIX
 let
   flakeRef = $flake_ref_literal;
   host = $host_literal;
@@ -1374,7 +1402,6 @@ in
 NIX
 }
 
-
 print_origin_keys() {
   cat <<EOF
 keys
@@ -1418,7 +1445,7 @@ print_definition_items() {
 
     write_definition_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
-    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
         rm -f "$expr_file"
         mv "$tmp" "$cache_file"
@@ -1553,7 +1580,6 @@ print_definition_item() {
   print_origin_keys
 }
 
-
 build_cache() {
   local build_host="$1"
   local build_cache="$cache_dir/option-scopes-v3-$build_host.json"
@@ -1571,7 +1597,7 @@ build_cache() {
   echo "Building scoped option docs cache for $build_host using $nix_bin..." >&2
   write_docs_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_lib_literal"
 
-  if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+  if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
     rm -f "$expr_file"
     mv "$tmp" "$build_cache"
   else
@@ -1692,7 +1718,7 @@ print_value() {
 
     write_value_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal" "$max_items" "$max_keys" "$max_chars"
 
-    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
         rm -f "$expr_file"
         mv "$tmp" "$cache_file"
@@ -1751,7 +1777,7 @@ print_value_items() {
 
     write_items_expr "$expr_file" "$flake_ref_literal" "$host_literal" "$scope_literal" "$path_literal" "$scope_lib_literal"
 
-    if "$nix_bin" eval --impure --json --file "$expr_file" > "$tmp"; then
+    if "$nix_bin" eval --impure --json --file "$expr_file" >"$tmp"; then
       if jq -e . "$tmp" >/dev/null; then
         rm -f "$expr_file"
         mv "$tmp" "$cache_file"
@@ -1777,7 +1803,6 @@ print_value_items() {
   fi
 }
 
-
 search_value_items() {
   local scope="$1"
   local option="$2"
@@ -1785,7 +1810,7 @@ search_value_items() {
   local item_origin_preview
   local item_cache_file
 
-  if [ "$option" = ".." ] || [[ "$option" == */ ]]; then
+  if [ "$option" = ".." ] || [[ $option == */ ]]; then
     echo "Select a concrete option first, not a group."
     exit 0
   fi
@@ -1930,7 +1955,7 @@ list_entries() {
 
 prefix_parent() {
   local p="$1"
-  if [[ "$p" == *.* ]]; then
+  if [[ $p == *.* ]]; then
     printf '%s\n' "${p%.*}"
   else
     printf '%s\n' ""
@@ -1940,7 +1965,7 @@ prefix_parent() {
 parent_prefix() {
   local item="$1"
 
-  if [[ "$item" == *.* ]]; then
+  if [[ $item == *.* ]]; then
     printf '%s\n' "${item%.*}"
   else
     printf '%s\n' ""
@@ -1959,7 +1984,7 @@ zoom_prefix() {
     rest="$selected"
   fi
 
-  if [[ "$rest" == *.* ]]; then
+  if [[ $rest == *.* ]]; then
     first="${rest%%.*}"
     if [ -n "$current" ]; then
       printf '%s\n' "$current.$first"
@@ -2004,13 +2029,13 @@ browser_mode="${NIX_OPTIONS_FZF_LIST_MODE:-flat}"
 
 while true; do
   case "$browser_mode" in
-    flat|grouped)
-      ;;
-    *)
-      echo "ERROR: invalid NIX_OPTIONS_FZF_LIST_MODE: $browser_mode" >&2
-      echo "Use one of: flat, grouped" >&2
-      exit 2
-      ;;
+  flat | grouped)
+    ;;
+  *)
+    echo "ERROR: invalid NIX_OPTIONS_FZF_LIST_MODE: $browser_mode" >&2
+    echo "Use one of: flat, grouped" >&2
+    exit 2
+    ;;
   esac
 
   export NIX_OPTIONS_FZF_LIST_MODE="$browser_mode"
@@ -2021,20 +2046,20 @@ while true; do
   definition_items="'$repo/scripts/nix-options-fzf' '$host' --scope {3} --definition-items {1}"
 
   case "${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-full}" in
-    docs)
-      default_preview="$preview_docs"
-      ;;
-    value)
-      default_preview="$preview_value"
-      ;;
-    full)
-      default_preview="$preview_full"
-      ;;
-    *)
-      echo "ERROR: invalid NIX_OPTIONS_FZF_DEFAULT_PREVIEW: ${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-}" >&2
-      echo "Use one of: docs, value, full" >&2
-      exit 2
-      ;;
+  docs)
+    default_preview="$preview_docs"
+    ;;
+  value)
+    default_preview="$preview_value"
+    ;;
+  full)
+    default_preview="$preview_full"
+    ;;
+  *)
+    echo "ERROR: invalid NIX_OPTIONS_FZF_DEFAULT_PREVIEW: ${NIX_OPTIONS_FZF_DEFAULT_PREVIEW:-}" >&2
+    echo "Use one of: docs, value, full" >&2
+    exit 2
+    ;;
   esac
 
   prompt_prefix="$current_prefix"
@@ -2078,7 +2103,7 @@ while true; do
         --bind="alt-b:preview-bottom"
   )" || exit 0
 
-  mapfile -t fzf_lines <<< "$fzf_output"
+  mapfile -t fzf_lines <<<"$fzf_output"
 
   if [ "${#fzf_lines[@]}" -eq 1 ]; then
     key="enter"
@@ -2088,7 +2113,7 @@ while true; do
     selected_record="${fzf_lines[1]:-}"
   fi
 
-  IFS=$'\t' read -r selected _selected_label selected_scope <<< "$selected_record"
+  IFS=$'\t' read -r selected _selected_label selected_scope <<<"$selected_record"
 
   if [ "$key" = "ctrl-b" ]; then
     current_prefix="$(prefix_parent "$current_prefix")"
@@ -2113,7 +2138,7 @@ while true; do
     continue
   fi
 
-  if [[ "$selected" == */ ]]; then
+  if [[ $selected == */ ]]; then
     current_prefix="${selected%/}"
     continue
   fi

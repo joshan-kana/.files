@@ -5,6 +5,7 @@ import shlex
 import signal
 import time
 import uuid
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Literal
@@ -189,10 +190,8 @@ async def _write_stdin(process: asyncio.subprocess.Process, stdin: str | None) -
         pass
     finally:
         process.stdin.close()
-        try:
+        with suppress(BrokenPipeError, ConnectionResetError):
             await process.stdin.wait_closed()
-        except (BrokenPipeError, ConnectionResetError):
-            pass
 
 
 async def _run(job: Job, command: str, cwd: str | None, stdin: str | None) -> None:
@@ -257,10 +256,8 @@ def _payload(job: Job, *, include_output: bool = True) -> dict[str, object]:
 
 async def _result(job: Job, wait_seconds: float) -> dict[str, object]:
     if job.task is not None and not job.task.done() and wait_seconds:
-        try:
+        with suppress(TimeoutError):
             await asyncio.wait_for(asyncio.shield(job.task), timeout=wait_seconds)
-        except TimeoutError:
-            pass
     return _payload(job)
 
 
@@ -391,10 +388,8 @@ async def shell_cancel(request_id: str) -> dict[str, object]:
             await _signal_target(job, "KILL")
 
     if job.task is not None and not job.task.done() and job.process is not None:
-        try:
+        with suppress(ProcessLookupError, PermissionError):
             os.killpg(job.process.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
         await job.task
 
     return _payload(job)

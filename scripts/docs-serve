@@ -7,14 +7,14 @@ book="$work/book"
 watch_pid=""
 
 cleanup() {
-  if [[ -n "$watch_pid" ]]; then
+  if [[ -n $watch_pid ]]; then
     kill "$watch_pid" 2>/dev/null || true
   fi
   rm -rf -- "$work"
 }
 trap cleanup EXIT INT TERM
 
-cat > "$work/refresh" <<'REFRESH'
+cat >"$work/refresh" <<'REFRESH'
 #!/usr/bin/env bash
 set -euo pipefail
 repo="$1"

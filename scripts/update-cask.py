@@ -54,7 +54,7 @@ if args.arch_hashes:
     for system, hash_value in hashes.items():
         body, count = re.subn(
             r"(\b" + re.escape(system) + r'\s*=\s*")[^"]+(";)',
-            lambda m: m[1] + hash_value + m[2],
+            lambda m, hash_value=hash_value: m[1] + hash_value + m[2],
             body,
             count=1,
         )
