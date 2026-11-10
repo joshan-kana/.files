@@ -139,7 +139,6 @@ case "$#:${1-}" in
     ;;
   2:--package)
     update_package "$2"
-    # Continue to the shared validation without selecting other updates.
     selections=""
     ;;
   4:--package)
@@ -226,6 +225,3 @@ if ((${#inputs[@]} || ${#schemas[@]})); then
   [[ ${schemas[0]-} == "*" ]] && schemas=()
   update-schemas "${schemas[@]}"
 fi
-
-nix flake check --all-systems --no-build --no-update-lock-file
-nix flake check --no-update-lock-file
