@@ -848,7 +848,7 @@ test("motion-enabled frame loading uses the shared tapered glowing tracer", () =
   );
   assert.match(
     qml,
-    /            Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
+    / {12}Canvas\s*\{[\s\S]*?onPaint: \{[\s\S]*?OutlineTrace\.paint/,
   );
   assert.match(
     qml,

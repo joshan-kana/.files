@@ -40,7 +40,7 @@ test("session widget and global keybind use the same lock command", () => {
 });
 
 test("Home Manager switches preserve an active session lock without starting a new one", () => {
-  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n        \};/);
+  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n {8}\};/);
   assert.ok(lock, "the existing on-demand lock service is retained");
   assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
   assert.match(lock[1], /Restart = "no"/);
@@ -51,7 +51,7 @@ test("Home Manager switches preserve an active session lock without starting a n
 
 test("the lock service cannot retire during asynchronous acquisition or a rebuild", () => {
   const screen = fs.readFileSync(path.join(root, "qml/LockScreen.qml"), "utf8");
-  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n        \};/);
+  const lock = nix.match(/linux-desktop-lock = \{([\s\S]*?)\n {8}\};/);
   assert.ok(lock);
   assert.match(lock[1], /X-SwitchMethod = "keep-old"/);
   assert.match(lock[1], /Restart = "no"/);

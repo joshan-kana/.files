@@ -300,6 +300,9 @@
                 ];
               };
 
+              # QML JavaScript exposes functions through the QML engine rather than ES modules.
+              biome.excludes = [ "modules/desktop/hyprland/shell/qml/*.js" ];
+
               prettier = {
                 includes = lib.mkAfter [
                   "*.jsonc"
@@ -437,7 +440,6 @@
               enable = true;
               name = "Repository formatting and linting";
               entry = "nix build --no-link .#checks.${system}.repo-quality";
-              files = "\\.(c|cc|cjs|cpp|h|hh|hpp|js|cs|csproj|jsx|lock|lua|md|mjs|nix|py|qml|sh|ts|tsx|ya?ml)$|^\\.editorconfig$|^\\.envrc$|^scripts/";
               excludes = preCommitExcludes;
               pass_filenames = false;
             };

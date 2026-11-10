@@ -171,7 +171,7 @@ test("one focused Controls handler owns forward and reverse slider traversal", (
     /function controlsSelectedSlider\(\): string/,
   );
   const source = controls.match(
-    /function cycleSlider\(direction: int\): void \{([\s\S]*?)\n    \}/,
+    /function cycleSlider\(direction: int\): void \{([\s\S]*?)\n {4}\}/,
   );
   assert.ok(source);
   const cycle = new Function(

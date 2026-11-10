@@ -38,6 +38,7 @@ EXCLUDED = {
 
 
 def search_roots():
+    """Return configured, safe search roots for local file discovery."""
     home = Path.home()
     defaults = [home / name for name in ("Documents", "Downloads", "Desktop", "Projects", "repos", "src", "Uni")]
     config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))) / "linux-desktop/files.json"
@@ -47,14 +48,16 @@ def search_roots():
             defaults = [Path(os.path.expanduser(x)) for x in value["roots"] if isinstance(x, str)]
     except (OSError, ValueError, TypeError):
         pass
-    result = []
-    for root in defaults:
-        if root.is_absolute() and root.is_dir() and not root.is_symlink() and root != home and not str(root).startswith("/nix/"):
-            result.append(root)
+    result = [
+        root
+        for root in defaults
+        if root.is_absolute() and root.is_dir() and not root.is_symlink() and root != home and not str(root).startswith("/nix/")
+    ]
     return list(dict.fromkeys(result))
 
 
 def files():
+    """Yield indexable paths until the configured item limit is reached."""
     count = 0
     for root in search_roots():
         for directory, folders, names in os.walk(root, followlinks=False):
@@ -74,6 +77,7 @@ def files():
 
 
 def bookmarks():
+    """Yield browser bookmarks from local supported browser profiles."""
     home = Path.home()
     configs = [
         (home / ".config/chromium", "chromium"),
@@ -81,13 +85,13 @@ def bookmarks():
         (home / ".config/BraveSoftware/Brave-Browser", "brave-browser"),
     ]
     for folder, browser in configs:
-        for source in [folder / "Default/Bookmarks"] + sorted(folder.glob("Profile */Bookmarks"))[:12]:
+        for source in [folder / "Default/Bookmarks", *sorted(folder.glob("Profile */Bookmarks"))[:12]]:
             try:
                 data = json.loads(source.read_text())
             except (OSError, ValueError):
                 continue
 
-            def visit(node):
+            def visit(node, browser=browser):
                 if isinstance(node, dict):
                     if node.get("type") == "url" and isinstance(node.get("url"), str):
                         url = node["url"]
@@ -117,6 +121,7 @@ def bookmarks():
 
 
 def index():
+    """Rebuild the searchable SQLite index atomically."""
     BASE.mkdir(mode=0o700, parents=True, exist_ok=True)
     temp = BASE / f".search-{os.getpid()}.sqlite3"
     connection = sqlite3.connect(temp)
@@ -133,6 +138,7 @@ def index():
 
 
 def query(text):
+    """Search local indexed items and return ranked palette results."""
     if not DB.is_file() or not text.strip() or len(text) > 150:
         return []
     phrase = text.strip().lower()
@@ -199,6 +205,7 @@ def update_bookmarks():
 
 
 def installed_desktop_entry(desktop_id):
+    """Resolve a safe desktop entry name against installed applications."""
     if not isinstance(desktop_id, str) or not desktop_id or len(desktop_id) > 240:
         return None
     if "/" in desktop_id or "\\" in desktop_id or desktop_id.startswith("."):
@@ -392,6 +399,7 @@ def watch():
 
 
 def watch_changes(search_server, home, config):
+    """Apply filesystem and browser changes using event-driven watching."""
     from queue import Empty, Queue
 
     from watchdog.events import FileSystemEventHandler
@@ -405,13 +413,8 @@ def watch_changes(search_server, home, config):
         observer = Observer()
         watch_paths = set()
 
-        def add(path, recursive):
-            if path.is_dir() and not path.is_symlink() and (str(path), recursive) not in watch_paths:
-                observer.schedule(handler, str(path), recursive=recursive)
-                watch_paths.add((str(path), recursive))
-
         class Changes(FileSystemEventHandler):
-            def on_any_event(self, event):
+            def on_any_event(self, event, roots=roots, notifications=notifications):
                 if event.event_type in ("opened", "closed_no_write"):
                     return
                 source = Path(event.src_path)
@@ -428,6 +431,12 @@ def watch_changes(search_server, home, config):
                         return
 
         handler = Changes()
+
+        def add(path, recursive, observer=observer, handler=handler, watch_paths=watch_paths):
+            if path.is_dir() and not path.is_symlink() and (str(path), recursive) not in watch_paths:
+                observer.schedule(handler, str(path), recursive=recursive)
+                watch_paths.add((str(path), recursive))
+
         add(home, False)
         add(config.parent, False)
         for root in roots:
@@ -469,6 +478,7 @@ def watch_changes(search_server, home, config):
 
 
 def is_indexable(path, root):
+    """Check that an indexed path stays inside a permitted search root."""
     try:
         relative = path.relative_to(root)
     except ValueError:
@@ -477,12 +487,14 @@ def is_indexable(path, root):
 
 
 def is_bookmark_change(path):
+    """Recognize browser bookmark files that require reindexing."""
     if path.name == "Bookmarks" and (path.parent.name == "Default" or path.parent.name.startswith("Profile ")):
         return True
     return path.name.startswith("places.sqlite") and ".default" in path.parent.name
 
 
 def is_watch_layout_change(path, roots):
+    """Detect filesystem changes that require rebuilding the watcher layout."""
     if path in roots:
         return True
     if path.parent == Path.home() and path.name in {"Documents", "Downloads", "Desktop", "Projects", "repos", "src", "Uni"}:
